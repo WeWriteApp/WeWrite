@@ -13,8 +13,7 @@ export default function SubscriptionSuccessPage() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -25,23 +24,7 @@ export default function SubscriptionSuccessPage() {
     tier: 'Tier 1',
     amount: 10});
 
-  // If payments feature flag is disabled, show OpenCollective support instead
-  if (!isPaymentsEnabled) {
-    return (
-      <div className="max-w-md mx-auto p-4 pb-32 md:pb-4">
-        <div className="mb-4">
-          <Link href="/settings" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
-            <ArrowLeft className="h-3 w-3 mr-1" />
-            Back to Settings
-          </Link>
-        </div>
-        <OpenCollectiveSupport
-          title="Subscription Success Coming Soon!"
-          description="We're working on subscription functionality. In the meantime, please support WeWrite development through OpenCollective."
-        />
-      </div>
-    );
-  }
+
 
   useEffect(() => {
     if (!user) {

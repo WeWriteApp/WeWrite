@@ -79,8 +79,7 @@ function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: (
 export function PayoutsManager() {
   const { user } = useAuth();
   const { toast } = useToast();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
 
 
 

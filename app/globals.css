@@ -1011,6 +1011,43 @@ input[type="range"]::-moz-range-thumb,
   border-color: hsl(var(--primary)) !important;
 }
 
+/* Enhanced Stripe embedded elements dark mode support */
+.dark iframe[src*="js.stripe.com"] {
+  color-scheme: dark !important;
+}
+
+/* Stripe Payment Element dark mode */
+.dark .p-PaymentElement,
+.dark .p-PaymentMethodMessaging,
+.dark .p-PaymentMethodSelector {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Stripe input fields in dark mode */
+.dark .p-Input,
+.dark .p-Input--focus,
+.dark .p-Input--complete {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .p-Input::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Stripe Connect components dark mode */
+.dark .stripe-connect-component {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.dark .stripe-connect-component iframe {
+  color-scheme: dark !important;
+}
+
 /* Payment form containers */
 .payment-form-container {
   background-color: hsl(var(--background));

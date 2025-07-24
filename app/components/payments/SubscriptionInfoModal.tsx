@@ -28,13 +28,7 @@ interface TierModalProps {
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
   const { user } = useAuth();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
 
-  // If payments feature flag is disabled, just render the children without modal functionality
-  if (!isPaymentsEnabled) {
-    return <>{children}</>;
-  }
   // Use centralized tier definitions
   const tiers = [
     {

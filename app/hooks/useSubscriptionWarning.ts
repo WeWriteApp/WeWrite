@@ -23,11 +23,10 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   useEffect(() => {
-    if (!user?.uid || !paymentsEnabled) {
+    if (!user?.uid) {
       setIsLoading(false);
       setHasActiveSubscription(null);
       setSubscriptionStatus(null);

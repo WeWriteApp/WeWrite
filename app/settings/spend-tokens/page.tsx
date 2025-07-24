@@ -53,8 +53,7 @@ export default function SpendTokensPage() {
   const [allocationData, setAllocationData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   // State to track real-time allocation changes from the breakdown component
   const [liveAllocationData, setLiveAllocationData] = useState<any>(null);
@@ -249,13 +248,13 @@ export default function SpendTokensPage() {
 
 
 
-  if (!user || !paymentsEnabled) {
+  if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Spend Tokens</h1>
           <p className="text-muted-foreground">
-            {!user ? 'Please sign in to manage your token allocation.' : 'Payments are not available at this time.'}
+            Please sign in to manage your token allocation.
           </p>
         </div>
       </div>

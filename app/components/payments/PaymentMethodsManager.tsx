@@ -38,7 +38,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
   const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -100,19 +100,19 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
     style: {
       base: {
         fontSize: '16px',
-        color: theme === 'dark' ? '#ffffff' : '#424770',
+        color: resolvedTheme === 'dark' ? '#ffffff' : '#424770',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSmoothing: 'antialiased',
         backgroundColor: 'transparent',
         '::placeholder': {
-          color: theme === 'dark' ? '#71717a' : '#aab7c4'
+          color: resolvedTheme === 'dark' ? '#71717a' : '#aab7c4'
         },
-        iconColor: theme === 'dark' ? '#a1a1aa' : '#424770',
+        iconColor: resolvedTheme === 'dark' ? '#a1a1aa' : '#424770',
         ':focus': {
-          color: theme === 'dark' ? '#ffffff' : '#424770'
+          color: resolvedTheme === 'dark' ? '#ffffff' : '#424770'
         },
         ':disabled': {
-          color: theme === 'dark' ? '#52525b' : '#9ca3af'
+          color: resolvedTheme === 'dark' ? '#52525b' : '#9ca3af'
         }
       },
       invalid: {
@@ -120,8 +120,8 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
         iconColor: '#ef4444'
       },
       complete: {
-        color: theme === 'dark' ? '#22c55e' : '#16a34a',
-        iconColor: theme === 'dark' ? '#22c55e' : '#16a34a'
+        color: resolvedTheme === 'dark' ? '#22c55e' : '#16a34a',
+        iconColor: resolvedTheme === 'dark' ? '#22c55e' : '#16a34a'
       }
     }
   };
@@ -171,8 +171,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
 
 export function PaymentMethodsManager() {
   const { user } = useAuth();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -309,7 +308,7 @@ export function PaymentMethodsManager() {
 
   // Load payment methods on component mount
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (user) {
       const controller = new AbortController();
       fetchPaymentMethods(controller.signal);
 
@@ -318,12 +317,7 @@ export function PaymentMethodsManager() {
         controller.abort();
       };
     }
-  }, [, user, isPaymentsEnabled]);
-
-  // Don't render if payments feature is disabled
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  }, [, user]);
 
   // Get card brand icon
   const getCardBrandIcon = (brand: string) => {

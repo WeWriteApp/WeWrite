@@ -60,7 +60,7 @@ export function SubscriptionCheckout({
   successUrl,
   cancelUrl
 }: SubscriptionCheckoutProps) {
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
   const { user } = useAuth();
   
   // Checkout flow state
@@ -184,21 +184,21 @@ export function SubscriptionCheckout({
             options={{
               clientSecret,
               appearance: {
-                theme: theme === 'dark' ? 'night' : 'stripe',
+                theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
                 variables: {
                   colorPrimary: '#0057FF',
-                  colorBackground: theme === 'dark' ? '#0a0a0a' : '#ffffff',
-                  colorText: theme === 'dark' ? '#ffffff' : '#000000',
-                  colorTextSecondary: theme === 'dark' ? '#a1a1aa' : '#6b7280',
-                  colorTextPlaceholder: theme === 'dark' ? '#71717a' : '#9ca3af',
-                  colorIconTab: theme === 'dark' ? '#a1a1aa' : '#6b7280',
-                  colorIconTabSelected: theme === 'dark' ? '#ffffff' : '#000000',
+                  colorBackground: resolvedTheme === 'dark' ? '#0a0a0a' : '#ffffff',
+                  colorText: resolvedTheme === 'dark' ? '#ffffff' : '#000000',
+                  colorTextSecondary: resolvedTheme === 'dark' ? '#a1a1aa' : '#6b7280',
+                  colorTextPlaceholder: resolvedTheme === 'dark' ? '#71717a' : '#9ca3af',
+                  colorIconTab: resolvedTheme === 'dark' ? '#a1a1aa' : '#6b7280',
+                  colorIconTabSelected: resolvedTheme === 'dark' ? '#ffffff' : '#000000',
                   colorIconCardError: '#ef4444',
                   colorDanger: '#ef4444',
                   fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   fontSizeBase: '16px',
                   borderRadius: '8px',
-                  focusBoxShadow: theme === 'dark'
+                  focusBoxShadow: resolvedTheme === 'dark'
                     ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
                     : '0 0 0 2px rgba(59, 130, 246, 0.3)',
                   focusOutline: 'none'

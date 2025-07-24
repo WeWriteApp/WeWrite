@@ -68,8 +68,7 @@ export default function SubscriptionPage() {
   const [cancelling, setCancelling] = useState(false);
 
 
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   // Debug current state
   console.log('[SubscriptionPage] Component rendering...', {
@@ -333,15 +332,41 @@ export default function SubscriptionPage() {
   // Get button state based on slider position
   const getButtonState = () => {
     const currentAmount = currentSubscription?.amount || 0;
+    const hasActiveSubscription = currentSubscription &&
+      currentSubscription.status !== 'inactive' &&
+      currentSubscription.status !== null &&
+      currentSubscription.status !== 'cancelled';
 
     console.log('🔵 getButtonState:', {
       currentAmount,
       selectedAmount,
+      hasActiveSubscription,
+      subscriptionStatus: currentSubscription?.status,
       isEqual: selectedAmount === currentAmount,
       isZero: selectedAmount === 0,
       isDowngrade: selectedAmount < currentAmount
     });
 
+    // Handle new subscription (no active subscription)
+    if (!hasActiveSubscription) {
+      if (selectedAmount === 0) {
+        return {
+          text: 'Select an Amount',
+          variant: 'outline' as const,
+          disabled: true,
+          className: 'opacity-50 cursor-not-allowed'
+        };
+      } else {
+        return {
+          text: 'Subscribe Now',
+          variant: 'default' as const,
+          disabled: false,
+          className: 'bg-green-600 hover:bg-green-700 text-white'
+        };
+      }
+    }
+
+    // Handle existing subscription modifications
     if (selectedAmount === currentAmount) {
       return {
         text: 'Update Subscription',
@@ -558,19 +583,7 @@ export default function SubscriptionPage() {
     }
   };
 
-  if (!paymentsEnabled) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center py-12">
-          <CreditCard className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Payments Coming Soon</h2>
-          <p className="text-muted-foreground">
-            Subscription functionality is currently being developed.
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   if (loading) {
     return (
@@ -639,7 +652,7 @@ export default function SubscriptionPage() {
             console.log('[SubscriptionPage] Debug Info:', {
               loading,
               currentSubscription,
-              paymentsEnabled,
+
               hasSubscription: !!currentSubscription,
               subscriptionKeys: currentSubscription ? Object.keys(currentSubscription) : null,
               subscriptionStatus: currentSubscription?.status,
@@ -785,7 +798,7 @@ export default function SubscriptionPage() {
           )}
 
           {/* Show tier selector only for new subscriptions or when reactivating */}
-          {(!currentSubscription || currentSubscription.status === null || ((currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') && showReactivationFlow)) && (
+          {(!currentSubscription || currentSubscription.status === null || currentSubscription.status === 'inactive' || ((currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') && showReactivationFlow)) && (
             <div>
               {/* PWA Embedded Checkout Notice */}
               {isPWA && (

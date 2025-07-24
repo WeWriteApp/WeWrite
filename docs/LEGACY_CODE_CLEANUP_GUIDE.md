@@ -4,6 +4,14 @@
 
 This guide documents old patterns and legacy code that must be identified and removed during cleanup runs. It serves as a reference for maintaining code quality and security.
 
+## ✅ Recently Completed Cleanups
+
+### Payment Feature Flags (COMPLETED 2025-01-24)
+All payment feature flags have been **completely removed**. Payments are now always enabled throughout the application.
+
+### Theme Switching Optimization (COMPLETED 2025-01-24)
+Optimized theme switching to eliminate delays. Logo and Stripe Elements now switch themes instantly using `resolvedTheme` and CSS-based approaches.
+
 ## 🔒 CRITICAL: Security Vulnerabilities to Remove
 
 ### Email Exposure Patterns ⚠️

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
+import { useTheme } from '../../providers/ThemeProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -35,6 +36,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
   showTitle = true
 }) => {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,9 +144,20 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
 
     const mountComponents = async () => {
       try {
-        // Initialize Stripe Connect with the account user
+        // Initialize Stripe Connect with the account user and theme
         await stripeConnect.initialize({
-          clientSecret: accountSession.client_secret
+          clientSecret: accountSession.client_secret,
+          appearance: {
+            theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
+            variables: {
+              colorPrimary: '#0057FF',
+              colorBackground: resolvedTheme === 'dark' ? '#0a0a0a' : '#ffffff',
+              colorText: resolvedTheme === 'dark' ? '#ffffff' : '#000000',
+              colorTextSecondary: resolvedTheme === 'dark' ? '#a1a1aa' : '#6b7280',
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              borderRadius: '8px'
+            }
+          }
         });
 
         // Check if account needs onboarding or just management
@@ -190,7 +203,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
     };
 
     mountComponents();
-  }, [stripeConnect, accountSession, componentMounted]);
+  }, [stripeConnect, accountSession, componentMounted, resolvedTheme]);
 
   const checkOnboardingStatus = async (): Promise<boolean> => {
     try {

@@ -22,7 +22,7 @@ interface PaymentMethodSetupProps {
 
 const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCancel }) => {
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -115,19 +115,19 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
               style: {
                 base: {
                   fontSize: '16px',
-                  color: theme === 'dark' ? '#ffffff' : '#424770',
+                  color: resolvedTheme === 'dark' ? '#ffffff' : '#424770',
                   fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   fontSmoothing: 'antialiased',
                   backgroundColor: 'transparent',
                   '::placeholder': {
-                    color: theme === 'dark' ? '#71717a' : '#aab7c4'
+                    color: resolvedTheme === 'dark' ? '#71717a' : '#aab7c4'
                   },
-                  iconColor: theme === 'dark' ? '#a1a1aa' : '#424770',
+                  iconColor: resolvedTheme === 'dark' ? '#a1a1aa' : '#424770',
                   ':focus': {
-                    color: theme === 'dark' ? '#ffffff' : '#424770'
+                    color: resolvedTheme === 'dark' ? '#ffffff' : '#424770'
                   },
                   ':disabled': {
-                    color: theme === 'dark' ? '#52525b' : '#9ca3af'
+                    color: resolvedTheme === 'dark' ? '#52525b' : '#9ca3af'
                   }
                 },
                 invalid: {
@@ -207,21 +207,21 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
       stripe={stripePromise}
       options={{
         appearance: {
-          theme: theme === 'dark' ? 'night' : 'stripe',
+          theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
           variables: {
             colorPrimary: '#0057FF',
-            colorBackground: theme === 'dark' ? '#0a0a0a' : '#ffffff',
-            colorText: theme === 'dark' ? '#ffffff' : '#000000',
-            colorTextSecondary: theme === 'dark' ? '#a1a1aa' : '#6b7280',
-            colorTextPlaceholder: theme === 'dark' ? '#71717a' : '#9ca3af',
-            colorIconTab: theme === 'dark' ? '#a1a1aa' : '#6b7280',
-            colorIconTabSelected: theme === 'dark' ? '#ffffff' : '#000000',
+            colorBackground: resolvedTheme === 'dark' ? '#0a0a0a' : '#ffffff',
+            colorText: resolvedTheme === 'dark' ? '#ffffff' : '#000000',
+            colorTextSecondary: resolvedTheme === 'dark' ? '#a1a1aa' : '#6b7280',
+            colorTextPlaceholder: resolvedTheme === 'dark' ? '#71717a' : '#9ca3af',
+            colorIconTab: resolvedTheme === 'dark' ? '#a1a1aa' : '#6b7280',
+            colorIconTabSelected: resolvedTheme === 'dark' ? '#ffffff' : '#000000',
             colorIconCardError: '#ef4444',
             colorDanger: '#ef4444',
             fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             fontSizeBase: '16px',
             borderRadius: '8px',
-            focusBoxShadow: theme === 'dark'
+            focusBoxShadow: resolvedTheme === 'dark'
               ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
               : '0 0 0 2px rgba(59, 130, 246, 0.3)',
             focusOutline: 'none'

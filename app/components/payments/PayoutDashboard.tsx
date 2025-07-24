@@ -63,8 +63,7 @@ interface PayoutSetup {
 export default function PayoutDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
   const { trackPayoutFlow } = useLogRocket();
 
   const [setup, setSetup] = useState<PayoutSetup | null>(null);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
+import { useTheme } from '../../providers/ThemeProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -39,6 +40,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
   showTitle = true
 }) => {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,10 +220,21 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         console.log('StripeConnect instance methods:', Object.getOwnPropertyNames(stripeConnect));
         console.log('StripeConnect instance type:', typeof stripeConnect);
 
-        // Initialize Stripe Connect with the account user
+        // Initialize Stripe Connect with the account user and theme
         console.log('Calling stripeConnect.initialize...');
         await stripeConnect.initialize({
-          clientSecret: sessionData.client_secret
+          clientSecret: sessionData.client_secret,
+          appearance: {
+            theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
+            variables: {
+              colorPrimary: '#0057FF',
+              colorBackground: resolvedTheme === 'dark' ? '#0a0a0a' : '#ffffff',
+              colorText: resolvedTheme === 'dark' ? '#ffffff' : '#000000',
+              colorTextSecondary: resolvedTheme === 'dark' ? '#a1a1aa' : '#6b7280',
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              borderRadius: '8px'
+            }
+          }
         });
         console.log('StripeConnect initialized successfully');
 
@@ -256,7 +269,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         if (cleanupFn) cleanupFn();
       });
     };
-  }, [stripeConnect, user?.uid]);
+  }, [stripeConnect, user?.uid, resolvedTheme]);
 
 
 

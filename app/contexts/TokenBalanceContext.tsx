@@ -24,8 +24,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   const fetchTokenBalance = useCallback(async () => {
     if (!user?.uid || !paymentsEnabled) {

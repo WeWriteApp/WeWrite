@@ -16,12 +16,11 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
   const [earnings, setEarnings] = useState<UserEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   useEffect(() => {
     const fetchEarnings = async () => {
-      if (!user?.uid || !paymentsEnabled) {
+      if (!user?.uid) {
         setEarnings(null);
         setLoading(false);
         return;

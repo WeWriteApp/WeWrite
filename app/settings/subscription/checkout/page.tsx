@@ -20,13 +20,11 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   // Debug logging (development only)
   if (process.env.NODE_ENV === 'development') {
     console.log('[CheckoutPage] Debug Info:', {
-      paymentsEnabled,
       user: user?.email,
       currentAccountUid: user?.uid
     });
@@ -54,25 +52,7 @@ function CheckoutPageContent() {
     router.push(returnTo);
   };
 
-  if (!paymentsEnabled) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
-        <div className="text-center py-12">
-          <CreditCard className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Payments Coming Soon</h2>
-          <p className="text-muted-foreground mb-6">
-            Subscription functionality is currently being developed.
-          </p>
-          <Button asChild>
-            <Link href="/settings/subscription">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Subscription
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-background">

@@ -48,8 +48,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
 
-  // Payments feature is now always enabled
-  const paymentsEnabled = true;
+
 
   // Get bank setup status, token balance, and user earnings
   const bankSetupStatus = useBankSetupStatus();
@@ -77,9 +76,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     }
   }, [isAuthenticated, isLoading, router, user]);
 
-  // Check subscription status when payments are enabled and user is available
+  // Check subscription status when user is available
   useEffect(() => {
-    if (!user || !paymentsEnabled) {
+    if (!user) {
       setHasActiveSubscription(null);
       return;
     }
@@ -115,7 +114,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     };
 
     checkSubscriptionStatus();
-  }, [user, paymentsEnabled]);
+  }, [user]);
 
   if (!isAuthenticated) {
     return <PageLoader message="Loading settings..." />;
@@ -174,12 +173,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   ];
 
   // Filter sections based on feature flags
-  const availableSections = settingsSections.filter(section => {
-    if (section.requiresPayments && !paymentsEnabled) {
-      return false;
-    }
-    return true;
-  });
+  const availableSections = settingsSections;
 
   const handleSectionClick = (href: string) => {
     router.push(href);
@@ -234,7 +228,6 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   // Show warning dots only for truly problematic states, not for active subscriptions
                   // Don't show warning dots when we have status icons or when loading
                   const showWarning = section.id === 'subscription' &&
-                    paymentsEnabled &&
                     hasActiveSubscription !== null && // Don't show while loading
                     (
                       // Show warning for completely inactive subscriptions
@@ -275,7 +268,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         <span className="flex-1 text-left">{section.title}</span>
 
                         {/* Status icons for specific sections - show success and warnings */}
-                        {section.id === 'subscription' && paymentsEnabled && hasActiveSubscription !== null && (
+                        {section.id === 'subscription' && hasActiveSubscription !== null && (
                           hasActiveSubscription === true ? (
                             <StatusIcon status="success" size="sm" position="static" />
                           ) : (
@@ -283,7 +276,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                           )
                         )}
 
-                        {section.id === 'earnings' && paymentsEnabled && (() => {
+                        {section.id === 'earnings' && (() => {
                           // Only show warning if user has funds but bank isn't set up
                           if (earnings?.hasEarnings && !bankSetupStatus.isSetup) {
                             return <StatusIcon status="warning" size="sm" position="static" />;
@@ -296,7 +289,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                           return null;
                         })()}
 
-                        {section.id === 'spend-tokens' && paymentsEnabled && tokenBalance && (
+                        {section.id === 'spend-tokens' && tokenBalance && (
                           <TokenPieChart
                             allocatedTokens={tokenBalance.allocatedTokens}
                             totalTokens={tokenBalance.totalTokens}

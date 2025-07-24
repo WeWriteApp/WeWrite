@@ -1,89 +1,226 @@
-WeWrite is a social wiki where every page you write is a fundraiser. Learn more about us via the links below 👇
-- [Bento](https://bento.me/wewrite)
-- [Instagram](https://www.instagram.com/getwewrite/)
-- [YouTube](https://www.youtube.com/@WeWriteApp)
+# WeWrite
 
-![17E8B098-9821-4C3F-8A5C-72A6B0042A1B_1_105_c](https://github.com/user-attachments/assets/ce72dc43-145b-43c0-b525-967a523902ca)
+**A social wiki where every page you write is a fundraiser.**
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app). 
+WeWrite transforms knowledge sharing into a collaborative economy where writers earn from their contributions and readers support the content they value.
 
-## Getting Started
+![WeWrite Platform](https://github.com/user-attachments/assets/ce72dc43-145b-43c0-b525-967a523902ca)
 
-First, install dependencies and run the development server:
+## 🌐 Connect With Us
+
+- **🔗 [Bento](https://bento.me/wewrite)** - All our links in one place
+- **📸 [Instagram](https://www.instagram.com/getwewrite/)** - Behind the scenes and updates
+- **🎥 [YouTube](https://www.youtube.com/@WeWriteApp)** - Tutorials and feature demos
+- **🐦 [Twitter](https://twitter.com/getwewrite)** - Real-time updates and community
+- **💬 [Discord](https://discord.gg/wewrite)** - Join our community discussions
+
+## ✨ What Makes WeWrite Special
+
+- **📝 Collaborative Writing** - Create and edit pages together
+- **💰 Writer Earnings** - Get paid for your contributions
+- **🔗 Smart Linking** - Connect ideas across the platform
+- **🌙 Beautiful Interface** - Clean, modern design with dark mode
+- **🔒 Secure & Private** - Your data is protected and encrypted
+
+## 🚀 Quick Start
+
+WeWrite is built with [Next.js](https://nextjs.org/) and uses modern web technologies for optimal performance.
+
+### Prerequisites
+
+- **Node.js** 18+
+- **pnpm** (preferred package manager)
+
+### Installation
 
 ```bash
-# Install dependencies (required first time)
+# Install pnpm if you don't have it
+npm install -g pnpm
+
+# Clone the repository
+git clone https://github.com/WeWriteApp/WeWrite.git
+cd WeWrite
+
+# Install dependencies
 pnpm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your configuration
 
 # Run the development server
 pnpm dev
 ```
 
-**Note:** This project uses pnpm as the package manager. If you don't have pnpm installed:
-```bash
-npm install -g pnpm
+Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! 🎉
+
+## 📚 Documentation
+
+### 🔒 Security & Core Systems (Essential Reading)
+
+- **[USERNAME_SECURITY_GUIDELINES](docs/USERNAME_SECURITY_GUIDELINES.md)** - **🔒 CRITICAL**: Prevent email exposure vulnerabilities
+- **[VERSION_SYSTEM](docs/VERSION_SYSTEM.md)** - **ESSENTIAL**: Unified version system for page edit tracking
+- **[AUTHENTICATION_ARCHITECTURE](docs/AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
+- **[USER_DATA_FETCHING_PATTERNS](docs/USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for secure user data handling
+
+### 💰 Payment & Subscription System
+
+- **[SUBSCRIPTION_SYSTEM](docs/SUBSCRIPTION_SYSTEM.md)** - Complete subscription architecture and implementation
+- **[PAYOUT_SYSTEM_DOCUMENTATION](docs/PAYOUT_SYSTEM_DOCUMENTATION.md)** - Writer compensation and payout system
+- **[PAYMENT_FLOW_TESTING_GUIDE](docs/PAYMENT_FLOW_TESTING_GUIDE.md)** - Comprehensive payment testing procedures
+- **[ENHANCED_PAYMENT_ERROR_MESSAGING](docs/ENHANCED_PAYMENT_ERROR_MESSAGING.md)** - User-friendly payment error handling
+- **[PAYMENT_FAILURE_TRACKING](docs/PAYMENT_FAILURE_TRACKING.md)** - Payment failure audit and tracking system
+- **[SUBSCRIPTION_TROUBLESHOOTING](docs/SUBSCRIPTION_TROUBLESHOOTING.md)** - Common payment issues and solutions
+- **[PLATFORM_FEE_MANAGEMENT_SYSTEM](docs/PLATFORM_FEE_MANAGEMENT_SYSTEM.md)** - Platform fee configuration and management
+- **[EMBEDDED_BANK_ACCOUNT_MANAGEMENT](docs/EMBEDDED_BANK_ACCOUNT_MANAGEMENT.md)** - Bank account setup and management
+- **[PAYOUT_TROUBLESHOOTING_GUIDE](docs/PAYOUT_TROUBLESHOOTING_GUIDE.md)** - Payout system troubleshooting
+- **[WEBHOOK_SETUP_GUIDE](docs/WEBHOOK_SETUP_GUIDE.md)** - Stripe webhook configuration
+
+### 🏗️ Architecture & Environment
+
+- **[ENVIRONMENT_ARCHITECTURE](docs/ENVIRONMENT_ARCHITECTURE.md)** - Multi-environment setup and configuration
+- **[ENVIRONMENT_QUICK_REFERENCE](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Quick environment configuration reference
+- **[FIREBASE_MIGRATION_ARCHITECTURE](docs/FIREBASE_MIGRATION_ARCHITECTURE.md)** - Firebase project migration architecture
+- **[SIMPLIFIED_ACTIVITY_SYSTEM](docs/SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Activity tracking using recent pages
+- **[SESSION_MANAGEMENT_ARCHITECTURE](docs/SESSION_MANAGEMENT_ARCHITECTURE.md)** - Session management and authentication
+- **[DEPENDENCY_MANAGEMENT_STANDARDS](docs/DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
+- **[ARCHITECTURE_SIMPLIFICATION](docs/ARCHITECTURE_SIMPLIFICATION.md)** - System architecture improvements
+
+### 🎨 User Interface & Experience
+
+- **[SETTINGS_NAVIGATION_SYSTEM](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - User settings navigation and organization
+- **[SETTINGS_PAYMENT_REORGANIZATION](docs/SETTINGS_PAYMENT_REORGANIZATION.md)** - Payment settings UI improvements
+- **[BORDER_STYLING_GUIDELINES](docs/BORDER_STYLING_GUIDELINES.md)** - UI border styling standards
+- **[DOM_ELEMENT_IDENTIFIERS](docs/DOM_ELEMENT_IDENTIFIERS.md)** - Standardized DOM element identification
+- **[LINE_BASED_EDITOR](docs/LINE_BASED_EDITOR.md)** - Rich text editor implementation
+- **[LINK_CURSOR_BEHAVIOR](docs/LINK_CURSOR_BEHAVIOR.md)** - Link interaction and cursor behavior
+- **[SEARCH_SYSTEM](docs/SEARCH_SYSTEM.md)** - Search functionality and implementation
+
+### ⚡ Performance & Optimization
+
+- **[PERFORMANCE_OPTIMIZATION_SUMMARY](docs/PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance improvements
+- **[DATABASE_SCHEMA_OPTIMIZATION_GUIDE](docs/DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization strategies
+- **[FIREBASE_INDEX_OPTIMIZATION](docs/FIREBASE_INDEX_OPTIMIZATION.md)** - Firestore index optimization
+
+### 🛠️ Development & Maintenance
+
+- **[LEGACY_CODE_CLEANUP_GUIDE](docs/LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Identifying and removing deprecated patterns
+- **[AUTH_CLEANUP_GUIDE](docs/AUTH_CLEANUP_GUIDE.md)** - Authentication system cleanup procedures
+- **[DEVELOPMENT_AUTH_GUIDE](docs/DEVELOPMENT_AUTH_GUIDE.md)** - Development authentication setup
+- **[PRODUCTION_DEPLOYMENT_GUIDE](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - Production deployment procedures
+- **[AUTOMATED_ROUTE_TESTING](docs/AUTOMATED_ROUTE_TESTING.md)** - Automated testing procedures
+- **[ADMIN_ACCOUNT_SETUP](docs/ADMIN_ACCOUNT_SETUP.md)** - Admin account configuration
+- **[SUBSCRIPTION_QUICK_REFERENCE](docs/SUBSCRIPTION_QUICK_REFERENCE.md)** - Quick reference for subscription system
+
+## 🛠️ Technology Stack
+
+### Core Technologies
+
+- **⚛️ [Next.js 14](https://nextjs.org/)** - React framework with App Router
+- **🔥 [Firebase](https://firebase.google.com/)** - Backend-as-a-Service platform
+- **🎨 [Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
+- **📝 [Lexical](https://lexical.dev/)** - Extensible rich text editor by Meta
+- **💳 [Stripe](https://stripe.com/)** - Payment processing and subscriptions
+
+### Firebase Services
+
+- **🗄️ Firestore** - NoSQL document database for pages, users, and versions
+- **🔐 Authentication** - Email/password authentication with session management
+- **☁️ Functions** - Serverless functions for webhooks and background processing
+- **📁 Storage** - File storage for images and attachments
+
+### Development & Deployment
+
+- **📦 [pnpm](https://pnpm.io/)** - Fast, disk space efficient package manager
+- **🚀 [Vercel](https://vercel.com/)** - Deployment platform with automatic CI/CD
+- **📊 [LogRocket](https://logrocket.com/)** - Session replay and error tracking
+- **🔍 [TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript development
+
+### Key Features
+
+- **🌙 Dark Mode** - System-aware theme switching
+- **📱 Responsive Design** - Mobile-first responsive interface
+- **🔗 Smart Linking** - Automatic page linking and backlinks
+- **💰 Token Economy** - Writer earnings and reader contributions
+- **🔒 Security** - Comprehensive security measures and data protection
+
+## 📁 Project Structure
+
+```
+WeWrite/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes and endpoints
+│   ├── auth/              # Authentication pages
+│   ├── components/        # Reusable UI components
+│   ├── contexts/          # React contexts for global state
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utility libraries and helpers
+│   ├── providers/         # Context providers
+│   ├── settings/          # User settings pages
+│   └── utils/             # Utility functions
+├── docs/                  # Technical documentation
+├── public/                # Static assets
+└── functions/             # Firebase Cloud Functions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Key Directories
 
-## Documentation
+- **`app/`** - Next.js 14 App Router with file-based routing
+- **`app/components/`** - Reusable UI components organized by feature
+- **`app/api/`** - API routes for backend functionality
+- **`docs/`** - Comprehensive technical documentation
+- **`functions/`** - Firebase Cloud Functions for webhooks and background tasks
 
-### Subscription System
-- **[Subscription System Overview](docs/SUBSCRIPTION_SYSTEM.md)** - Complete architecture and implementation details
-- **[Troubleshooting Guide](docs/SUBSCRIPTION_TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Quick Reference](docs/SUBSCRIPTION_QUICK_REFERENCE.md)** - Developer cheat sheet
+## 🚀 Deployment
 
-### Development
-- Environment setup and configuration
-- API endpoint documentation
-- Database schema and relationships
+### Automatic Deployment
 
-## Tools & Platforms
+WeWrite uses Vercel for automatic deployment:
 
-### Firebase
-Firebase isn't just a database anymore. This is an ecosystem of authentication, storage, databases (both relational and nonrelational) built on top of Google Cloud Platform. For the MVP, we chose Firebase for its ease of implementation and its free tier should be sufficient to handle all activities for free. Current services used for the project.
+- **Production**: Deploys from `main` branch to [wewrite.app](https://wewrite.app)
+- **Preview**: Deploys from `dev` branch for testing
+- **Environment Variables**: Configured in Vercel dashboard
 
-Currently, the database is in test mode with no security rules. This will be updated as the project progresses.
+### Manual Deployment
 
-- Firestore
-	- This is the relational database that handles all pages in the system and versions as subcollections. Learn more about Firestore's data model [here](https://firebase.google.com/docs/firestore/data-model)
-- Authentication
-	- Built-in authentciation for email and password was used for th MVP. This is extendable to a variety of other auth types, but for now this works well.
-- Functions
-	- Powerful serverless functions that can be hosted as both APIs and be triggered from database activities. A great example would be when an invite is sent, this can trigger invites to be added to multiple collections, notification sends, etc. 
+```bash
+# Build for production
+pnpm build
 
-### Vercel
-Vercel is a hosting platform for javascript projects. They are the creators and managers of NextJS -- which is the server side rendering engine of the MVP application. This is also where domain name assignment occurs. 
+# Deploy to Vercel
+pnpm deploy
+```
 
-### Github
-Github, as all devs know, handles the source code. Vercel is connected to the Github repo and auto deploys when configured to do so.  
+For detailed deployment procedures, see [PRODUCTION_DEPLOYMENT_GUIDE](docs/PRODUCTION_DEPLOYMENT_GUIDE.md).
 
-### Lexical Editor
-This is the editor that is used to create pages. It is built and maintained as an open-source project by Facebook. It has tons of extensible features and is a great tool for creating a WYSIWYG editor that also allows for custom components. Documentation for this can be found [here](https://lexical.dev/docs/intro). At the time of writing, this is our current selection, but SlateJS is also a great option. Found [here](https://www.slatejs.org/)
+## 🤝 Contributing
 
-## Project Structure
+We welcome contributions! Please see our contributing guidelines:
 
-### Pages
-NextJS uses a file-based routing system. This means that each file in the pages directory is a route in the application. This is a great way to keep the project organized and easy to navigate. We are not using the Pages router, but instead the App router. This is a custom router that is built on top of the NextJS router. This allows for a more dynamic routing system that can be used for more complex applications. The documentation for this can be found [here](https://nextjs.org/docs/app)
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Follow our coding standards** (see documentation)
+4. **Write tests** for new functionality
+5. **Submit a pull request**
 
-Directories used as pages for context:
-- /auth
-- /new
-- /pages/[id]/edit
+### Development Guidelines
 
-### Functions
-Firebase functions are serverless functions that can be triggered by database activities or by API calls. These are written in NodeJS and can be used to handle complex operations that are not possible in the client. These are found in the /functions directory. Documentation can be found [here] (https://firebase.google.com/docs/functions)
+- **Security First**: Follow [USERNAME_SECURITY_GUIDELINES](docs/USERNAME_SECURITY_GUIDELINES.md)
+- **Clean Code**: Use [LEGACY_CODE_CLEANUP_GUIDE](docs/LEGACY_CODE_CLEANUP_GUIDE.md)
+- **Testing**: Write comprehensive tests for all features
+- **Documentation**: Update docs for any new features or changes
 
-### Components
-Components are reusable pieces of code that can be used throughout the application. These are found in the /components directory.
+## 📄 License
 
-### Providers
-Providers are higher-order components that wrap the application in a context. This is used to provide global state to the application. This is found in the /providers directory.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 💬 Support
 
+- **📧 Email**: [support@wewrite.app](mailto:support@wewrite.app)
+- **💬 Discord**: [Join our community](https://discord.gg/wewrite)
+- **🐛 Issues**: [GitHub Issues](https://github.com/WeWriteApp/WeWrite/issues)
+- **📖 Documentation**: [docs/](docs/) directory
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+**Made with ❤️ by the WeWrite team**

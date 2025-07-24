@@ -63,8 +63,7 @@ export default function RevenueSplitManager({
 }: RevenueSplitManagerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
   
   const [revenueSplit, setRevenueSplit] = useState<RevenueSplit | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,10 +76,10 @@ export default function RevenueSplitManager({
   });
 
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (user) {
       loadRevenueSplit();
     }
-  }, [user, isPaymentsEnabled, resourceType, resourceId]);
+  }, [user, resourceType, resourceId]);
 
   const loadRevenueSplit = async () => {
     try {

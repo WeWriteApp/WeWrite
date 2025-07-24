@@ -33,8 +33,7 @@ export default function Header() {
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { earnings } = useUserEarnings();
 
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
 
   // Helper function to render earnings display
   const renderEarningsDisplay = () => {
@@ -113,12 +112,11 @@ export default function Header() {
   React.useEffect(() => {
     console.log('🎯 Header: Subscription effect triggered', {
       user: !!user,
-      isPaymentsEnabled,
       currentAccountUid: user?.uid
     });
 
-    if (!user || !isPaymentsEnabled) {
-      console.log('🎯 Header: No user or payments disabled, clearing subscription');
+    if (!user) {
+      console.log('🎯 Header: No user, clearing subscription');
       setSubscription(null);
       return;
     }
@@ -146,13 +144,12 @@ export default function Header() {
     return () => {
       console.log('🎯 Header: No cleanup needed for API calls');
     };
-  }, [user, isPaymentsEnabled]);
+  }, [user]);
 
   // Token balance is now provided by context - no need to fetch separately
 
   // Load unfunded token balance for users without subscriptions
   React.useEffect(() => {
-    if (!isPaymentsEnabled) return;
 
     const loadUnfundedTokens = () => {
       // Load unfunded tokens for logged-out users or users without subscriptions
@@ -187,7 +184,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [user, isPaymentsEnabled, subscription]);
+  }, [user, subscription]);
 
   // Calculate and update header height
   React.useEffect(() => {
@@ -265,7 +262,7 @@ export default function Header() {
             <div className={`flex-1 min-w-0 flex items-center h-full px-3 sm:px-4 md:px-6 header-padding-mobile transition-all duration-300 ease-in-out`}>
               {/* Earnings Display (left side) */}
               <div className="flex-1 flex justify-start">
-                {isPaymentsEnabled && renderEarningsDisplay()}
+                {renderEarningsDisplay()}
               </div>
 
               {/* Logo/Title (centered) - clickable to go home */}
@@ -277,20 +274,8 @@ export default function Header() {
 
               {/* Remaining Tokens Counter (right side) */}
               <div className="flex-1 flex justify-end">
-                {isPaymentsEnabled ? (
-                  // Show remaining tokens counter if user has any token allocations (funded or unfunded)
-                  renderRemainingTokensDisplay()
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-                    onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Header Support Button')}
-                  >
-                    <Heart className="h-4 w-4 text-white fill-white" />
-                    <span>Support Us</span>
-                  </Button>
-                )}
+                {/* Show remaining tokens counter if user has any token allocations (funded or unfunded) */}
+                {renderRemainingTokensDisplay()}
               </div>
             </div>
           </div>

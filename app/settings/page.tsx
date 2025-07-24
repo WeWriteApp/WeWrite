@@ -46,7 +46,6 @@ export default function SettingsIndexPage() {
   const tokenBalance = useTokenBalance();
 
   // All features are now always enabled
-  const paymentsEnabled = true;
   const tokenSystemEnabled = true;
 
   const settingsSections: SettingsSection[] = [
@@ -99,9 +98,9 @@ export default function SettingsIndexPage() {
     }
   ];
 
-  // Check subscription status when payments are enabled and user is available
+  // Check subscription status when user is available
   useEffect(() => {
-    if (!user || !paymentsEnabled) {
+    if (!user) {
       setHasActiveSubscription(null);
       return;
     }
@@ -130,7 +129,7 @@ export default function SettingsIndexPage() {
     };
 
     checkSubscriptionStatus();
-  }, [user, paymentsEnabled]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -140,9 +139,6 @@ export default function SettingsIndexPage() {
 
     // Filter sections based on feature flags to get available sections
     const availableSections = settingsSections.filter(section => {
-      if (section.requiresPayments && !paymentsEnabled) {
-        return false;
-      }
       if (section.requiresTokenSystem && !tokenSystemEnabled) {
         return false;
       }
@@ -169,15 +165,12 @@ export default function SettingsIndexPage() {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [, user, router, paymentsEnabled, tokenSystemEnabled]);
+  }, [, user, router, tokenSystemEnabled]);
 
 
 
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
-    if (section.requiresPayments && !paymentsEnabled) {
-      return false;
-    }
     if (section.requiresTokenSystem && !tokenSystemEnabled) {
       return false;
     }
@@ -222,7 +215,7 @@ export default function SettingsIndexPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Status icons for specific sections - show success and warnings */}
-                    {section.id === 'subscription' && paymentsEnabled && hasActiveSubscription !== null && (
+                    {section.id === 'subscription' && hasActiveSubscription !== null && (
                       hasActiveSubscription === true ? (
                         <StatusIcon status="success" size="sm" position="static" />
                       ) : (
@@ -230,7 +223,7 @@ export default function SettingsIndexPage() {
                       )
                     )}
 
-                    {section.id === 'earnings' && paymentsEnabled && (
+                    {section.id === 'earnings' && (
                       bankSetupStatus.isSetup ? (
                         <StatusIcon status="success" size="sm" position="static" />
                       ) : (
@@ -238,7 +231,7 @@ export default function SettingsIndexPage() {
                       )
                     )}
 
-                    {section.id === 'spend-tokens' && paymentsEnabled && tokenBalance && (
+                    {section.id === 'spend-tokens' && tokenBalance && (
                       <TokenPieChart
                         allocatedTokens={tokenBalance.allocatedTokens}
                         totalTokens={tokenBalance.totalTokens}

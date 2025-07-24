@@ -61,8 +61,7 @@ interface Pledge {
 
 function CombinedSubscriptionSectionInner() {
   const { user } = useAuth();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
 
   // Removed enhanced error tracking
 
@@ -166,7 +165,7 @@ function CombinedSubscriptionSectionInner() {
   // CRITICAL: All hooks must be called before any early returns
   useEffect(() => {
     return trackEffect('subscriptionAndPaymentSetup', () => {
-      if (user?.uid && isPaymentsEnabled) {
+      if (user?.uid) {
         const unsubscribeSubscription = setupSubscriptionListener();
         fetchPaymentMethods();
         fetchPledges();
@@ -179,13 +178,9 @@ function CombinedSubscriptionSectionInner() {
         };
       }
     });
-  }, [user, isPaymentsEnabled, trackEffect]);
+  }, [user, trackEffect]);
 
-  // If payments feature flag is disabled, don't render anything
-  // But do this AFTER all hooks are declared
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+
 
   function handlePaymentMethodAdded() {
     setShowPaymentMethodSetup(false);

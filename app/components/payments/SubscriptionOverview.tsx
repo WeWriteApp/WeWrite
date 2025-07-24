@@ -26,8 +26,7 @@ interface Subscription {
 
 export function SubscriptionOverview() {
   const { user } = useAuth();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+
 
   // Use API-first approach instead of complex smart subscription state
   const [subscription, setSubscription] = useState(null);
@@ -54,15 +53,10 @@ export function SubscriptionOverview() {
       }
     };
 
-    if (user && isPaymentsEnabled) {
+    if (user) {
       fetchSubscription();
     }
-  }, [user, isPaymentsEnabled]);
-
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  }, [user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
