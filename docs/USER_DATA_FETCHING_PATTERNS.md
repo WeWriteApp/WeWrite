@@ -4,9 +4,10 @@
 
 This document establishes the standardized patterns for fetching user data (usernames, subscription info, etc.) across the WeWrite application to ensure consistency and prevent bugs.
 
-## Core Principle
+## Core Principles
 
-**All user data should be fetched using the standardized `/api/users/batch` endpoint on the client side.**
+1. **All user data should be fetched using the standardized `/api/users/batch` endpoint on the client side.**
+2. **🔒 CRITICAL SECURITY: Never expose email addresses as username fallbacks.** Use security utilities for all username displays.
 
 ## The Problem We Solved
 
@@ -49,6 +50,8 @@ Previously, different parts of the application had inconsistent user data fetchi
 **Components should use the batch user API to fetch all user data at once.**
 
 ```typescript
+import { sanitizeUsername } from '../../utils/usernameSecurity';
+
 // ✅ CORRECT: Standard pattern for any component displaying user info
 const [items, setItems] = useState([]);
 
@@ -57,29 +60,29 @@ useEffect(() => {
     // 1. Fetch core data from specific API
     const response = await fetch('/api/trending');
     const { trendingPages } = await response.json();
-    
+
     // 2. Extract unique user IDs
     const userIds = [...new Set(trendingPages.map(page => page.userId).filter(Boolean))];
-    
+
     // 3. Fetch user data using batch API
     if (userIds.length > 0) {
       const userData = await getBatchUserData(userIds);
-      
-      // 4. Merge user data with core data
+
+      // 4. Merge user data with core data (with security sanitization)
       const itemsWithUserData = trendingPages.map(page => ({
         ...page,
-        username: userData[page.userId]?.username,
+        username: sanitizeUsername(userData[page.userId]?.username), // 🔒 SECURITY: Sanitize username
         tier: userData[page.userId]?.tier,
         subscriptionStatus: userData[page.userId]?.subscriptionStatus,
         subscriptionAmount: userData[page.userId]?.subscriptionAmount
       }));
-      
+
       setItems(itemsWithUserData);
     } else {
       setItems(trendingPages);
     }
   };
-  
+
   fetchData();
 }, []);
 ```
@@ -113,10 +116,13 @@ When implementing user data display in any component:
 
 - [ ] API endpoint returns only core data + `userId` field
 - [ ] Component extracts unique user IDs from core data
-- [ ] Component calls `getBatchUserData(userIds)` 
+- [ ] Component calls `getBatchUserData(userIds)`
 - [ ] Component merges user data with core data
 - [ ] Component handles loading states properly
 - [ ] Subscription badges receive `tier`, `subscriptionStatus`, `subscriptionAmount`
+- [ ] 🔒 **SECURITY**: All usernames are sanitized using `sanitizeUsername()`
+- [ ] 🔒 **SECURITY**: No email addresses are used as username fallbacks
+- [ ] 🔒 **SECURITY**: Loading states show "Loading..." not email addresses
 
 ## Benefits
 
@@ -167,3 +173,5 @@ If you find components with inconsistent user data fetching:
 - `/app/firebase/batchUserData.ts` - Client-side batch fetching utility
 - `/app/components/ui/SubscriptionTierBadge.tsx` - Subscription badge component
 - `/app/utils/subscriptionTiers.ts` - Subscription tier utilities
+- `/app/utils/usernameSecurity.ts` - 🔒 Username security utilities
+- `/docs/USERNAME_SECURITY_GUIDELINES.md` - 🔒 Complete security documentation

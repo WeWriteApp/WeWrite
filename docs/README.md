@@ -6,42 +6,36 @@ This directory contains all technical documentation for the WeWrite platform. Al
 
 ### System Architecture & Core Features
 
-- **[Environment-Aware Collections Guide](./ENVIRONMENT_AWARE_COLLECTIONS_GUIDE.md)** - **ESSENTIAL**: Complete guide for using environment-aware Firebase collections
-- **[Firebase Migration Architecture](./FIREBASE_MIGRATION_ARCHITECTURE.md)** - Environment separation architecture documentation
+- **[Version System](./VERSION_SYSTEM.md)** - **ESSENTIAL**: Unified version system for page edit tracking
+- **[Username Security Guidelines](./USERNAME_SECURITY_GUIDELINES.md)** - **🔒 CRITICAL**: Security guidelines for preventing email exposure
+- **[User Data Fetching Patterns](./USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for user data fetching
+- **[Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
+- **[Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md)** - Environment separation and configuration
 - **[Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md)** - Quick reference for environment configuration
-- **[Mock Earnings System](./Mock%20Earnings%20System.md)** - Complete documentation for the admin mock earnings testing system
-- **[Mock Earnings Test Checklist](./Mock%20Earnings%20Test%20Checklist.md)** - Step-by-step testing procedures for mock earnings
-- **[Token Writer Payout System](./Token%20Writer%20Payout%20System.md)** - Documentation for the token-based writer compensation system
-- **[Automated Payout System](./Automated%20Payout%20System.md)** - Automated payment processing documentation
-- **[Payout System](./Payout%20System.md)** - General payout system documentation
-- **[Subscription Management](./Subscription%20Management.md)** - User subscription and billing system
+- **[Simplified Activity System](./SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Simplified activity tracking using recent pages
+- **[Subscription System](./SUBSCRIPTION_SYSTEM.md)** - User subscription and billing system
+- **[Payout System Documentation](./PAYOUT_SYSTEM_DOCUMENTATION.md)** - Writer compensation and payout system
 
 ### User Interface & Experience
 
-- **[Click to Edit Implementation](./Click%20to%20Edit%20Implementation.md)** - Click-to-edit functionality for links in the editor
-- **[Insert Link Modal Improvements](./Insert%20Link%20Modal%20Improvements.md)** - Enhanced link insertion modal features
-- **[Mobile Modal Implementation](./Mobile%20Modal%20Implementation.md)** - Mobile-optimized modal interfaces
-- **[Settings Navigation System](./Settings%20Navigation%20System.md)** - User settings navigation and organization
-- **[Settings Payment Reorganization](./Settings%20Payment%20Reorganization.md)** - Payment settings UI improvements
+- **[Settings Navigation System](./SETTINGS_NAVIGATION_SYSTEM.md)** - User settings navigation and organization
+- **[Settings Payment Reorganization](./SETTINGS_PAYMENT_REORGANIZATION.md)** - Payment settings UI improvements
+- **[Border Styling Guidelines](./BORDER_STYLING_GUIDELINES.md)** - UI border styling standards
+- **[DOM Element Identifiers](./DOM_ELEMENT_IDENTIFIERS.md)** - Standardized DOM element identification
 
 ### Performance & Optimization
 
-- **[Notifications Performance Improvements](./Notifications%20Performance%20Improvements.md)** - Notification system optimization
-- **[Recent Activity Deduplication](./Recent%20Activity%20Deduplication.md)** - Activity feed deduplication logic
-- **[No-Op Edit Filtering Implementation](./No-Op%20Edit%20Filtering%20Implementation.md)** - Filtering unnecessary edit operations
-- **[Console Monitoring](./Console%20Monitoring.md)** - System monitoring and logging
+- **[Performance Optimization Summary](./PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance improvements
+- **[Database Schema Optimization Guide](./DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization strategies
+- **[Firebase Index Optimization](./FIREBASE_INDEX_OPTIMIZATION.md)** - Firestore index optimization
 
-### Bug Fixes & Improvements
+### Development & Security
 
-- **[Fixes Summary](./Fixes%20Summary.md)** - Summary of major bug fixes and improvements
-- **[Link Notification Fix](./Link%20Notification%20Fix.md)** - Fix for link-related notification issues
-- **[Notification Menu Fix](./Notification%20Menu%20Fix.md)** - Notification menu UI fixes
-- **[Soft Delete Implementation Summary](./Soft%20Delete%20Implementation%20Summary.md)** - Soft delete functionality implementation
-
-### Development & Features
-
-- **[Contributors Feature Implementation](./Contributors%20Feature%20Implementation.md)** - Page contributors feature documentation
-- **[Border Styling Guidelines](./Border%20Styling%20Guidelines.md)** - UI border styling standards
+- **[Legacy Code Cleanup Guide](./LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Guide for identifying and removing deprecated patterns
+- **[Implementation Fixes Summary](./IMPLEMENTATION_FIXES_SUMMARY.md)** - Summary of major bug fixes and improvements
+- **[Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md)** - Guide for cleaning up old authentication code
+- **[Architecture Simplification](./ARCHITECTURE_SIMPLIFICATION.md)** - System architecture improvements
+- **[Dependency Management Standards](./DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
 
 ## 📁 Documentation Organization
 
@@ -58,17 +52,28 @@ This makes the documentation more accessible and professional while maintaining 
 
 ### By Category
 
-- **Financial Systems**: Mock Earnings, Token Payout, Subscription Management
-- **User Interface**: Click to Edit, Modal Improvements, Settings Navigation
-- **Performance**: Notifications, Activity Deduplication, Edit Filtering
-- **Bug Fixes**: Various fix summaries and specific issue resolutions
+- **🔒 Security**: Username security, authentication architecture, user data patterns
+- **📊 Core Systems**: Version system, activity tracking, subscription management
+- **🎨 User Interface**: Settings navigation, styling guidelines, DOM standards
+- **⚡ Performance**: Database optimization, caching, system improvements
+- **🛠️ Development**: Architecture simplification, dependency management, cleanup guides
 
-### By Recency
+### By Priority
 
-The most recently updated documentation includes:
-1. Mock Earnings System (comprehensive cleanup and documentation)
-2. Click to Edit Implementation (link editing functionality)
-3. Settings reorganization documents
+**🔒 CRITICAL SECURITY** (Read First):
+1. **Username Security Guidelines** - Prevent email exposure vulnerabilities
+2. **Authentication Architecture** - Environment-specific auth rules
+3. **User Data Fetching Patterns** - Secure user data handling
+
+**📊 CORE SYSTEMS** (Essential Understanding):
+1. **Version System** - Unified page edit tracking
+2. **Simplified Activity System** - Activity tracking architecture
+3. **Environment Architecture** - Multi-environment setup
+
+**🛠️ DEVELOPMENT** (Maintenance & Cleanup):
+1. **Legacy Code Cleanup Guide** - Identifying and removing deprecated patterns
+2. **Architecture Simplification** - System architecture improvements
+3. **Dependency Management Standards** - Package management standards
 
 ## 📝 Contributing to Documentation
 
