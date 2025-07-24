@@ -13,6 +13,12 @@ The payment flow testing suite covers all aspects of the token-based payment sys
 - **Payout Processing**: Requests, fee calculations, bank transfers, and status tracking
 - **Integration**: End-to-end flows and cross-service communication
 
+## ✅ Recent Updates
+
+**Payment Feature Flags Removed** (2025-01-24): All payment functionality is now always enabled. No feature flags control payment access.
+
+**Theme Switching Optimized** (2025-01-24): Stripe Elements and payment forms now switch themes instantly in dark mode.
+
 ## Quick Start
 
 ### Run All Payment Flow Tests

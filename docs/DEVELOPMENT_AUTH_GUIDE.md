@@ -4,6 +4,12 @@
 
 WeWrite uses a clean Firebase authentication system. The complex development auth wrapper has been removed in favor of standard Firebase Auth for better maintainability and reliability.
 
+## ✅ Recent Updates
+
+**Payment Feature Flags Removed** (2025-01-24): All payment functionality is now always available to authenticated users. No feature flags control payment access.
+
+**Authentication Simplified** (Ongoing): Continued removal of complex auth patterns in favor of simple Firebase Auth.
+
 ## Authentication System
 
 ### Firebase Auth

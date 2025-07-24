@@ -31,7 +31,10 @@ This directory contains all technical documentation for the WeWrite platform. Al
 
 ### Development & Security
 
+- **[Recent Improvements Summary](./RECENT_IMPROVEMENTS_SUMMARY.md)** - **⭐ START HERE**: Overview of all recent improvements and cleanup
 - **[Legacy Code Cleanup Guide](./LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Guide for identifying and removing deprecated patterns
+- **[Payment Feature Flags Removal](./PAYMENT_FEATURE_FLAGS_REMOVAL.md)** - **NEW**: Complete removal of payment feature flags
+- **[Theme Switching Optimization](./THEME_SWITCHING_OPTIMIZATION.md)** - **NEW**: Instant theme switching improvements
 - **[Implementation Fixes Summary](./IMPLEMENTATION_FIXES_SUMMARY.md)** - Summary of major bug fixes and improvements
 - **[Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md)** - Guide for cleaning up old authentication code
 - **[Architecture Simplification](./ARCHITECTURE_SIMPLIFICATION.md)** - System architecture improvements

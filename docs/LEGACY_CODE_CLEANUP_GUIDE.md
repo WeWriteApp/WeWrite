@@ -135,6 +135,27 @@ style={{ border: '1px solid #ccc' }} // Use design system
 <div className="legacy-container">
 ```
 
+#### Payment Feature Flag Patterns ❌ **CRITICAL REMOVAL**
+```typescript
+// REMOVE THESE PATTERNS - PAYMENTS ARE ALWAYS ENABLED
+const paymentsEnabled = true; // Delete this line
+const isPaymentsEnabled = true; // Delete this line
+if (!paymentsEnabled) { return null; } // Delete entire conditional
+if (!isPaymentsEnabled) { // Delete entire conditional
+  return <PaymentsComingSoon />;
+}
+{paymentsEnabled && <Component />} // Remove condition, keep component
+{isPaymentsEnabled ? <Component /> : <Fallback />} // Remove condition, keep component
+```
+
+#### Theme Detection Patterns ❌
+```typescript
+// REMOVE THESE PATTERNS - CAUSES THEME SWITCHING DELAYS
+const [mounted, setMounted] = useState(false);
+if (!mounted) return '/images/logos/logo-light.svg';
+theme === 'dark' // Use resolvedTheme instead
+```
+
 #### ✅ Replace With Modern Patterns
 ```typescript
 // USE THESE PATTERNS
@@ -142,6 +163,13 @@ import { Modal } from '../components/ui/Modal';
 import { cn } from '../lib/utils';
 <Modal variant="fullscreen" />
 className={cn("border-border", additionalClasses)}
+
+// CORRECT: Always show payment components
+<PaymentComponent /> // No feature flag needed
+
+// CORRECT: Use resolvedTheme for instant theme switching
+const { resolvedTheme } = useTheme();
+resolvedTheme === 'dark' ? 'night' : 'stripe'
 ```
 
 ## 🔍 Search Patterns for Cleanup
@@ -168,6 +196,11 @@ grep -r "useRecentActivity" app/
 # Find old auth patterns
 grep -r "oldAuth\|legacyAuth\|simpleAuth" app/
 grep -r "LegacyAuth\|OldAuth" app/
+
+# Find payment feature flags (SHOULD BE REMOVED)
+grep -r "paymentsEnabled\|isPaymentsEnabled" app/
+grep -r "Payments.*enabled\|payments.*feature.*flag" app/
+grep -r "Payments Coming Soon" app/
 ```
 
 #### Database Collection Issues
@@ -175,6 +208,14 @@ grep -r "LegacyAuth\|OldAuth" app/
 # Find hardcoded collection names
 grep -r "collection('pages')\|collection('users')" app/ --exclude-dir=node_modules
 grep -r "DEV_\|PROD_" app/ --include="*.ts" --include="*.tsx"
+```
+
+#### Theme and UI Issues
+```bash
+# Find old theme patterns that cause delays
+grep -r "mounted.*theme\|theme.*mounted" app/
+grep -r "!mounted.*return" app/components/ --include="*.tsx"
+grep -r "theme.*===.*'dark'" app/ | grep -v "resolvedTheme"
 ```
 
 ## 📋 Cleanup Checklist
@@ -192,6 +233,14 @@ grep -r "DEV_\|PROD_" app/ --include="*.ts" --include="*.tsx"
 - [ ] Remove old authentication imports
 - [ ] Update to environment-aware collections
 - [ ] Remove deprecated UI components
+- [ ] **CRITICAL**: Remove all payment feature flags (`paymentsEnabled`, `isPaymentsEnabled`)
+- [ ] **CRITICAL**: Remove "Payments Coming Soon" messages and fallbacks
+
+### Theme and UI Cleanup
+- [ ] Replace `theme` with `resolvedTheme` for instant theme switching
+- [ ] Remove hydration mismatch prevention that causes delays
+- [ ] Update Stripe Elements to use `resolvedTheme` for dark mode
+- [ ] Remove mounted state checks that delay theme detection
 
 ### Code Quality
 - [ ] Remove unused imports

@@ -124,6 +124,10 @@ PayoutsManager (Updated)
 
 ## Feature Flag Handling
 
+**⚠️ UPDATE (2025-01-24): Payment feature flags have been completely removed.**
+
+All payment functionality is now always enabled. The sections below are for historical reference only.
+
 Both sections properly respect the payments feature flag:
 - Only render when `payments` feature flag is enabled
 - Graceful fallback when feature is disabled
