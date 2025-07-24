@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../lib/utils';
 
 export interface LogoProps {
@@ -48,29 +47,6 @@ export function Logo({
   priority = false,
   styled = false
 }: LogoProps) {
-  const { theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  // Ensure component is mounted before using theme
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Determine which logo to use based on resolved theme
-  const logoSrc = React.useMemo(() => {
-    // During SSR or before mounting, always use light logo to prevent hydration mismatch
-    if (!mounted) {
-      return '/images/logos/logo-light.svg';
-    }
-
-    // resolvedTheme gives us the actual theme being used (light/dark)
-    // even when theme is set to "system"
-    const currentTheme = resolvedTheme || theme;
-    return currentTheme === 'dark'
-      ? '/images/logos/logo-dark.svg'
-      : '/images/logos/logo-light.svg';
-  }, [theme, resolvedTheme, mounted]);
-
   // Get dimensions
   const dimensions = React.useMemo(() => {
     if (width && height) {
@@ -82,25 +58,39 @@ export function Logo({
   const logoElement = (
     <div
       className={cn(
-        'inline-flex items-center justify-center transition-all duration-200',
+        'inline-flex items-center justify-center relative',
         styled && [
           'border border-theme-medium bg-background shadow-sm rounded-lg overflow-hidden',
           'hover:shadow-md hover:border-theme-medium',
           size === 'sm' ? 'h-5 w-5' : 'h-9 w-9'
         ],
-        clickable && 'hover:opacity-80 cursor-pointer',
+        clickable && 'hover:opacity-80 cursor-pointer transition-opacity duration-200',
         className
       )}
       onClick={onClick}
     >
+      {/* Light theme logo */}
       <Image
-        src={logoSrc}
+        src="/images/logos/logo-light.svg"
         alt={alt}
         width={styled ? (size === 'sm' ? 20 : 36) : dimensions.width}
         height={styled ? (size === 'sm' ? 20 : 36) : dimensions.height}
         priority={priority}
         className={cn(
-          'transition-opacity duration-200',
+          'transition-opacity duration-150 ease-in-out dark:opacity-0',
+          styled && 'object-cover w-full h-full'
+        )}
+      />
+
+      {/* Dark theme logo */}
+      <Image
+        src="/images/logos/logo-dark.svg"
+        alt={alt}
+        width={styled ? (size === 'sm' ? 20 : 36) : dimensions.width}
+        height={styled ? (size === 'sm' ? 20 : 36) : dimensions.height}
+        priority={priority}
+        className={cn(
+          'absolute inset-0 transition-opacity duration-150 ease-in-out opacity-0 dark:opacity-100',
           styled && 'object-cover w-full h-full'
         )}
       />
