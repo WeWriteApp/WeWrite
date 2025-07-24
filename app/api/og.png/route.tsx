@@ -30,7 +30,7 @@ async function fetchPageData(pageId: string) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
                    (process.env.NODE_ENV === 'production' ? 'https://wewrite.app' : 'http://localhost:3000'));
-
+    
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       headers: {
         'User-Agent': 'WeWrite-OG-Generator/1.0'
@@ -65,7 +65,7 @@ async function fetchSponsorCount(pageId: string) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
                    (process.env.NODE_ENV === 'production' ? 'https://wewrite.app' : 'http://localhost:3000'));
-
+    
     const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
       headers: {
         'User-Agent': 'WeWrite-OG-Generator/1.0'
@@ -85,8 +85,8 @@ async function fetchSponsorCount(pageId: string) {
 }
 
 export async function GET(request: Request) {
-  console.log('🖼️ [OG] Route called with URL:', request.url);
-
+  console.log('🖼️ [OG.PNG] Route called with URL:', request.url);
+  
   try {
     const { searchParams } = new URL(request.url);
     const pageId = searchParams.get('id');
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
     const content = searchParams.get('content');
     const sponsors = searchParams.get('sponsors');
 
-    console.log('🖼️ [OG] Generating image for:', {
+    console.log('🖼️ [OG.PNG] Generating image for:', {
       pageId,
       type,
       hasTitle: !!title,
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
 
     // Test mode - simple red image for testing
     if (pageId === 'test') {
-      console.log('🖼️ [OG] Test mode');
+      console.log('🖼️ [OG.PNG] Test mode');
       return new ImageResponse(
         (
           <div
@@ -122,12 +122,12 @@ export async function GET(request: Request) {
             }}
           >
             <div style={{ color: 'white', fontSize: 48 }}>
-              MINIMAL TEST WORKING
+              PNG TEST WORKING
             </div>
           </div>
         ),
-        {
-          width: 1200,
+        { 
+          width: 1200, 
           height: 630
         }
       );
@@ -135,7 +135,7 @@ export async function GET(request: Request) {
 
     // Default WeWrite branding if no pageId
     if (!pageId) {
-      console.log('🖼️ [OG] Default WeWrite branding');
+      console.log('🖼️ [OG.PNG] Default WeWrite branding');
       return new ImageResponse(
         (
           <div
@@ -198,7 +198,7 @@ export async function GET(request: Request) {
     let sponsorCount = 0;
 
     if (pageId && !title && !author && !content) {
-      console.log('🖼️ [OG] Fetching real data for pageId:', pageId);
+      console.log('🖼️ [OG.PNG] Fetching real data for pageId:', pageId);
       pageData = await fetchPageData(pageId);
       sponsorCount = await fetchSponsorCount(pageId);
     }
@@ -247,7 +247,7 @@ export async function GET(request: Request) {
     // Truncate content for display
     contentPreview = truncateText(contentPreview, 300);
 
-    console.log('🖼️ [OG] Generating image with data:', {
+    console.log('🖼️ [OG.PNG] Generating image with data:', {
       displayTitle: truncateText(displayTitle, 50),
       displayAuthor,
       contentLength: contentPreview.length,
@@ -390,7 +390,7 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    console.error('🖼️ [OG] Error generating image:', error);
+    console.error('🖼️ [OG.PNG] Error generating image:', error);
     return new Response('Error generating image', { status: 500 });
   }
 }
