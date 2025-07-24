@@ -193,20 +193,21 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fetch real page data if pageId is provided and no manual data is passed
+    // Temporarily disable API calls to debug
     let pageData = null;
     let sponsorCount = 0;
 
-    if (pageId && !title && !author && !content) {
-      console.log('🖼️ [OG] Fetching real data for pageId:', pageId);
-      pageData = await fetchPageData(pageId);
-      sponsorCount = await fetchSponsorCount(pageId);
-    }
+    // DISABLED FOR DEBUGGING - API calls might be causing issues in edge runtime
+    // if (pageId && !title && !author && !content) {
+    //   console.log('🖼️ [OG] Fetching real data for pageId:', pageId);
+    //   pageData = await fetchPageData(pageId);
+    //   sponsorCount = await fetchSponsorCount(pageId);
+    // }
 
     // Generate dynamic content based on parameters or fetched data
-    const displayTitle = title || pageData?.title || 'Untitled Page';
+    const displayTitle = title || pageData?.title || (pageId ? `Page: ${pageId.substring(0, 12)}...` : 'Untitled Page');
     const displayAuthor = author || pageData?.authorUsername || pageData?.username || 'WeWrite User';
-    const displayContent = content || pageData?.content || '';
+    const displayContent = content || pageData?.content || 'This is a sample content preview for testing the OpenGraph image generation. The actual content will be fetched from the page data.';
     const displaySponsorCount = sponsors ? parseInt(sponsors) : sponsorCount;
 
     // Process content to get a clean preview
