@@ -137,11 +137,12 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
 }
 
 /**
- * Extended hook for graph visualization with 2-hop connections
+ * Extended hook for graph visualization with 3-hop connections
  */
 export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
   const baseConnections = usePageConnections(pageId, pageTitle);
   const [secondHopConnections, setSecondHopConnections] = useState<PageConnection[]>([]);
+  const [thirdHopConnections, setThirdHopConnections] = useState<PageConnection[]>([]);
   const [graphLoading, setGraphLoading] = useState(false);
 
   const fetchSecondHopConnections = useCallback(async () => {
@@ -149,9 +150,9 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
 
     try {
       setGraphLoading(true);
-      console.log('🔗 usePageConnectionsGraph: Fetching 2-hop connections');
+      console.log('🔗 usePageConnectionsGraph: Fetching 3-hop connections');
 
-      // Use the page connections API with second-hop enabled
+      // Use the page connections API with second-hop enabled (which now includes third-hop)
       const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=true&limit=50`);
 
       if (!response.ok) {
@@ -162,12 +163,13 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
 
       const data = await response.json();
       console.log('🔗 usePageConnectionsGraph: API response:', data);
-      console.log('🔗 usePageConnectionsGraph: Second-hop API response:', data.stats);
+      console.log('🔗 usePageConnectionsGraph: Multi-hop API response:', data.stats);
 
       setSecondHopConnections(data.secondHopConnections || []);
+      setThirdHopConnections(data.thirdHopConnections || []);
 
     } catch (error) {
-      console.error('Error fetching 2-hop connections:', error);
+      console.error('Error fetching 3-hop connections:', error);
     } finally {
       setGraphLoading(false);
     }
@@ -180,6 +182,7 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
   return {
     ...baseConnections,
     secondHopConnections,
+    thirdHopConnections,
     graphLoading: baseConnections.loading || graphLoading
   };
 }

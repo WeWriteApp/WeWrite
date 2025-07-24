@@ -184,15 +184,16 @@ export async function GET(request: NextRequest) {
       outgoing.some(outgoingPage => outgoingPage.id === incomingPage.id)
     );
 
-    // Get second-hop connections if requested
+    // Get second-hop and third-hop connections if requested
     let secondHopConnections: PageConnection[] = [];
-    
+    let thirdHopConnections: PageConnection[] = [];
+
     if (includeSecondHop && incoming.length > 0) {
       console.log('🔗 [PAGE_CONNECTIONS_API] Fetching second-hop connections');
-      
+
       // Sample first-level connections to avoid too many requests
       const firstLevelSample = incoming.slice(0, 5);
-      
+
       for (const firstLevelPage of firstLevelSample) {
         try {
           const secondHopSnapshot = await db.collection(getCollectionName('backlinks'))
@@ -200,7 +201,7 @@ export async function GET(request: NextRequest) {
             .where('isPublic', '==', true)
             .limit(3) // Limit per first-level page
             .get();
-          
+
           secondHopSnapshot.docs.forEach(doc => {
             const data = doc.data();
             if (data.sourcePageId !== pageId && !incoming.some(p => p.id === data.sourcePageId)) {
@@ -218,8 +219,47 @@ export async function GET(request: NextRequest) {
           console.warn(`Failed to fetch second-hop for ${firstLevelPage.id}:`, error);
         }
       }
-      
+
       console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${secondHopConnections.length} second-hop connections`);
+
+      // Get third-hop connections from second-hop pages
+      if (secondHopConnections.length > 0) {
+        console.log('🔗 [PAGE_CONNECTIONS_API] Fetching third-hop connections');
+
+        // Sample second-level connections to avoid too many requests
+        const secondLevelSample = secondHopConnections.slice(0, 3);
+
+        for (const secondLevelPage of secondLevelSample) {
+          try {
+            const thirdHopSnapshot = await db.collection(getCollectionName('backlinks'))
+              .where('targetPageId', '==', secondLevelPage.id)
+              .where('isPublic', '==', true)
+              .limit(2) // Limit per second-level page
+              .get();
+
+            thirdHopSnapshot.docs.forEach(doc => {
+              const data = doc.data();
+              // Exclude if already in previous levels
+              if (data.sourcePageId !== pageId &&
+                  !incoming.some(p => p.id === data.sourcePageId) &&
+                  !secondHopConnections.some(p => p.id === data.sourcePageId)) {
+                thirdHopConnections.push({
+                  id: data.sourcePageId,
+                  title: data.sourcePageTitle,
+                  username: data.sourceUsername,
+                  lastModified: data.lastModified,
+                  isPublic: data.isPublic,
+                  linkText: data.linkText
+                });
+              }
+            });
+          } catch (error) {
+            console.warn(`Failed to fetch third-hop for ${secondLevelPage.id}:`, error);
+          }
+        }
+
+        console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${thirdHopConnections.length} third-hop connections`);
+      }
     }
 
     const result = {
@@ -227,11 +267,13 @@ export async function GET(request: NextRequest) {
       outgoing,
       bidirectional,
       secondHopConnections,
+      thirdHopConnections,
       stats: {
         incomingCount: incoming.length,
         outgoingCount: outgoing.length,
         bidirectionalCount: bidirectional.length,
-        secondHopCount: secondHopConnections.length
+        secondHopCount: secondHopConnections.length,
+        thirdHopCount: thirdHopConnections.length
       },
       timestamp: new Date().toISOString()
     };
