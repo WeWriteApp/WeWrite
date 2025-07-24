@@ -452,6 +452,44 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       }
     });
 
+    // Apply directional positioning to first-level nodes
+    nodes.forEach(node => {
+      if (node.level === 0) {
+        // Center node stays in the center
+        node.fx = width / 2;
+        node.fy = height / 2;
+      } else if (node.level === 1) {
+        // First level nodes: position based on connection type
+        const isOutgoing = outgoing.some(conn => conn.id === node.id);
+        const isIncoming = incoming.some(conn => conn.id === node.id);
+        const isBidirectional = bidirectional.some(conn => conn.id === node.id);
+
+        if (isBidirectional) {
+          // Bidirectional nodes go slightly to the right (since they're both incoming and outgoing)
+          node.x = width / 2 + settings.linkDistance * 0.8;
+        } else if (isOutgoing) {
+          // Outgoing links (embedded on current page) go to the right
+          node.x = width / 2 + settings.linkDistance * 1.2;
+        } else if (isIncoming) {
+          // Incoming links (backlinks from other pages) go to the left
+          node.x = width / 2 - settings.linkDistance * 1.2;
+        }
+
+        // Add some vertical spread for first-level nodes
+        const firstLevelNodes = nodes.filter(n => n.level === 1);
+        const nodeIndex = firstLevelNodes.indexOf(node);
+        const totalFirstLevel = firstLevelNodes.length;
+
+        if (totalFirstLevel > 1) {
+          const angle = (nodeIndex / (totalFirstLevel - 1)) * Math.PI - Math.PI / 2;
+          node.y = height / 2 + Math.sin(angle) * settings.linkDistance * 0.6;
+        } else {
+          node.y = height / 2;
+        }
+      }
+      // Level 2+ nodes and related nodes start with default positioning
+    });
+
     // Create force simulation with settings
     const simulation = d3.forceSimulation<GraphNode>(nodes)
       .force("link", d3.forceLink<GraphNode, GraphLink>(links)
@@ -474,6 +512,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .force("charge", d3.forceManyBody().strength(d => {
         // Related pages have weaker repulsion so they float more freely
         if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
+        // First-level nodes have reduced charge to maintain directional positioning
+        if (d.level === 1) return settings.chargeStrength * 0.4;
         return settings.chargeStrength;
       }))
       .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
@@ -482,6 +522,28 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
         return settings.collisionRadius;
       }))
+      .force("directional", () => {
+        // Maintain directional positioning for first-level nodes
+        nodes.forEach(node => {
+          if (node.level === 1) {
+            const isOutgoing = outgoing.some(conn => conn.id === node.id);
+            const isIncoming = incoming.some(conn => conn.id === node.id);
+            const isBidirectional = bidirectional.some(conn => conn.id === node.id);
+
+            // Apply gentle force to maintain horizontal positioning
+            if (isBidirectional && node.x !== undefined) {
+              const targetX = width / 2 + settings.linkDistance * 0.8;
+              node.vx = (node.vx || 0) + (targetX - node.x) * 0.08;
+            } else if (isOutgoing && node.x !== undefined) {
+              const targetX = width / 2 + settings.linkDistance * 1.2;
+              node.vx = (node.vx || 0) + (targetX - node.x) * 0.08;
+            } else if (isIncoming && node.x !== undefined) {
+              const targetX = width / 2 - settings.linkDistance * 1.2;
+              node.vx = (node.vx || 0) + (targetX - node.x) * 0.08;
+            }
+          }
+        });
+      })
       .force("boundary", () => {
         // Keep nodes within container bounds with gentle constraints
         const padding = 20;
@@ -514,8 +576,9 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .data(links)
       .enter().append("line")
       .attr("stroke", d => {
-        if (d.type === 'bidirectional') return "hsl(var(--primary) / 0.8)";
-        if (d.type === 'outgoing') return "hsl(var(--primary))";
+        if (d.type === 'bidirectional') return "hsl(var(--primary) / 0.9)"; // Strong primary for bidirectional
+        if (d.type === 'outgoing') return "hsl(var(--primary))"; // Primary for outgoing (to the right)
+        if (d.type === 'incoming') return "hsl(var(--secondary))"; // Secondary for incoming (to the left)
         return "#999";
       })
       .attr("stroke-opacity", 0.7)
@@ -578,8 +641,24 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         if (d.nodeType === 'related') return "hsl(var(--muted-foreground) / 0.3)"; // Grey for related pages
         return "hsl(var(--primary) / 0.4)";
       })
-      .attr("stroke", d => d.nodeType === 'related' ? "hsl(var(--muted-foreground) / 0.5)" : "#fff")
-      .attr("stroke-width", 2);
+      .attr("stroke", d => {
+        if (d.nodeType === 'related') return "hsl(var(--muted-foreground) / 0.5)";
+        if (d.level === 1) {
+          // Add directional indicators for first-level nodes
+          const isOutgoing = outgoing.some(conn => conn.id === d.id);
+          const isIncoming = incoming.some(conn => conn.id === d.id);
+          const isBidirectional = bidirectional.some(conn => conn.id === d.id);
+
+          if (isBidirectional) return "hsl(var(--primary))"; // Primary border for bidirectional
+          if (isOutgoing) return "hsl(var(--primary) / 0.8)"; // Lighter primary for outgoing
+          if (isIncoming) return "hsl(var(--secondary))"; // Secondary for incoming
+        }
+        return "#fff";
+      })
+      .attr("stroke-width", d => {
+        if (d.level === 1) return 3; // Thicker border for first-level nodes
+        return 2;
+      });
 
     // Add labels
     node.append("text")
@@ -875,6 +954,27 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
             className="bg-background h-96 transition-all duration-300"
           >
             <svg ref={svgRef} className="w-full h-full" />
+
+            {/* Directional legend */}
+            {!loading && !relatedLoading && nodes.length > 1 && (
+              <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg p-3 text-xs border">
+                <div className="font-medium mb-2">Graph Direction</div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-0.5 bg-primary"></div>
+                    <span>Outgoing links (right)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-0.5 bg-secondary"></div>
+                    <span>Incoming links (left)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-0.5 bg-primary opacity-90"></div>
+                    <span>Bidirectional</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Empty state message */}
             {!loading && !relatedLoading && nodes.length <= 1 && (
