@@ -18,7 +18,6 @@ interface PageConnection {
   title: string;
   username: string;
   lastModified: any;
-  isPublic: boolean;
   linkText?: string;
 }
 
@@ -78,15 +77,19 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🔗 [PAGE_CONNECTIONS_API] Getting connections for page ${pageId}`);
+    console.log(`🔗 [PAGE_CONNECTIONS_API] Getting connections for page ${pageId}`, {
+      includeSecondHop,
+      limit,
+      timestamp: new Date().toISOString()
+    });
 
     // Get incoming connections (backlinks) - try index first, then fallback
     let incoming: PageConnection[] = [];
     
     try {
+      // Get all backlinks (no isPublic filter since private pages no longer exist)
       const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
         .where('targetPageId', '==', pageId)
-        .where('isPublic', '==', true)
         .limit(limit)
         .get();
       
@@ -97,7 +100,6 @@ export async function GET(request: NextRequest) {
           title: data.sourcePageTitle,
           username: data.sourceUsername,
           lastModified: data.lastModified,
-          isPublic: data.isPublic,
           linkText: data.linkText
         };
       });
@@ -156,13 +158,13 @@ export async function GET(request: NextRequest) {
                 
                 if (linkedPageDoc.exists) {
                   const linkedPageData = linkedPageDoc.data();
-                  if (linkedPageData.isPublic && !linkedPageData.deleted) {
+                  // Only exclude deleted pages (no isPublic check since private pages no longer exist)
+                  if (!linkedPageData.deleted) {
                     outgoing.push({
                       id: linkedPageId,
                       title: linkedPageData.title || 'Untitled',
                       username: linkedPageData.username || 'Unknown',
-                      lastModified: linkedPageData.lastModified,
-                      isPublic: linkedPageData.isPublic
+                      lastModified: linkedPageData.lastModified
                     });
                   }
                 }
@@ -198,7 +200,6 @@ export async function GET(request: NextRequest) {
         try {
           const secondHopSnapshot = await db.collection(getCollectionName('backlinks'))
             .where('targetPageId', '==', firstLevelPage.id)
-            .where('isPublic', '==', true)
             .limit(3) // Limit per first-level page
             .get();
 
@@ -233,7 +234,6 @@ export async function GET(request: NextRequest) {
           try {
             const thirdHopSnapshot = await db.collection(getCollectionName('backlinks'))
               .where('targetPageId', '==', secondLevelPage.id)
-              .where('isPublic', '==', true)
               .limit(2) // Limit per second-level page
               .get();
 

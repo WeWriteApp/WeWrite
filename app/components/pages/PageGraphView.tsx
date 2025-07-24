@@ -159,7 +159,9 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       secondHop: secondHopConnections.length,
       thirdHop: thirdHopConnections.length,
       related: relatedPages.length,
-      allConnectionIds: allConnections.map(c => c.id)
+      allConnectionIds: allConnections.map(c => c.id),
+      hasAnyConnections: allConnections.length > 0 || secondHopConnections.length > 0 || thirdHopConnections.length > 0,
+      hasRelatedPages: relatedPages.length > 0
     });
 
     // Create center node
@@ -202,6 +204,10 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     }));
 
     // Create related pages nodes (floating without connections) - only show others' pages
+    // If there are no connections, show more related pages to make the graph useful
+    const hasAnyConnections = allConnections.length > 0 || secondHopConnections.length > 0 || thirdHopConnections.length > 0;
+    const maxRelatedPages = hasAnyConnections ? 5 : 10; // Show more related pages when there are no connections
+
     const relatedNodes: GraphNode[] = relatedPages
       .filter(page =>
         // Exclude pages that are already in the graph as connections
@@ -212,6 +218,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         // Only show related pages by other people (exclude current user's pages)
         page.username !== user?.username
       )
+      .slice(0, maxRelatedPages) // Limit the number of related pages
       .map(page => ({
         id: page.id,
         title: page.title,
@@ -287,6 +294,12 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           type: 'incoming'
         });
       }
+    });
+
+    // Add all related pages as disconnected nodes (no links)
+    relatedNodes.forEach(relatedNode => {
+      // Don't add links for related pages - they should appear as disconnected nodes
+      console.log('🎯 Adding related page as disconnected node:', relatedNode.title);
     });
 
     setNodes(allNodes);
@@ -420,6 +433,25 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       }
     });
 
+    // Check for bidirectional connections to make them closer
+    const bidirectionalPairs = new Set<string>();
+    links.forEach(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+
+      // Check if reverse link exists
+      const reverseExists = links.some(otherLink => {
+        const otherSourceId = typeof otherLink.source === 'string' ? otherLink.source : otherLink.source.id;
+        const otherTargetId = typeof otherLink.target === 'string' ? otherLink.target : otherLink.target.id;
+        return otherSourceId === targetId && otherTargetId === sourceId;
+      });
+
+      if (reverseExists) {
+        const pairKey = [sourceId, targetId].sort().join('-');
+        bidirectionalPairs.add(pairKey);
+      }
+    });
+
     // Create force simulation with settings
     const simulation = d3.forceSimulation<GraphNode>(nodes)
       .force("link", d3.forceLink<GraphNode, GraphLink>(links)
@@ -427,6 +459,15 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         .distance(d => {
           const source = d.source as GraphNode;
           const target = d.target as GraphNode;
+          const sourceId = typeof source === 'string' ? source : source.id;
+          const targetId = typeof target === 'string' ? target : target.id;
+          const pairKey = [sourceId, targetId].sort().join('-');
+
+          // Bidirectional connections should be closer together
+          if (bidirectionalPairs.has(pairKey)) {
+            return settings.linkDistance * 0.6;
+          }
+
           if (source.level === 0 || target.level === 0) return settings.linkDistance; // Center connections
           return settings.linkDistance * 0.8; // Other connections
         }))
@@ -834,6 +875,19 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
             className="bg-background h-96 transition-all duration-300"
           >
             <svg ref={svgRef} className="w-full h-full" />
+
+            {/* Empty state message */}
+            {!loading && !relatedLoading && nodes.length <= 1 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center text-muted-foreground max-w-md">
+                  <div className="text-sm mb-2">No page connections found</div>
+                  <div className="text-xs">
+                    This page doesn't link to other pages yet. Create links to other pages to see connections in the graph.
+                    {relatedPages.length > 0 && " Related pages are shown based on content similarity."}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
