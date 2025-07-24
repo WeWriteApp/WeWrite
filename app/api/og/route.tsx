@@ -27,7 +27,10 @@ function truncateText(text: string, maxLength: number): string {
 // Helper function to fetch page data
 async function fetchPageData(pageId: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    // Get base URL with proper fallbacks for different environments
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
+                   (process.env.NODE_ENV === 'production' ? 'https://wewrite.app' : 'http://localhost:3000'));
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       headers: {
         'User-Agent': 'WeWrite-OG-Generator/1.0'
@@ -58,7 +61,10 @@ async function fetchPageData(pageId: string) {
 // Helper function to fetch sponsor count
 async function fetchSponsorCount(pageId: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    // Get base URL with proper fallbacks for different environments
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
+                   (process.env.NODE_ENV === 'production' ? 'https://wewrite.app' : 'http://localhost:3000'));
     const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
       headers: {
         'User-Agent': 'WeWrite-OG-Generator/1.0'
@@ -90,13 +96,22 @@ export async function GET(request: Request) {
     const content = searchParams.get('content');
     const sponsors = searchParams.get('sponsors');
 
+    console.log('🖼️ [OG] Generating image for:', {
+      pageId,
+      type,
+      hasTitle: !!title,
+      hasAuthor: !!author,
+      hasContent: !!content,
+      sponsors
+    });
+
     if (!pageId) {
+      console.log('🖼️ [OG] No pageId provided, returning default WeWrite image');
       return new ImageResponse(
         (
           <div
             style={{
-              backgroundColor: 'black',
-              backgroundSize: '150px 150px',
+              backgroundColor: '#000000',
               height: '100%',
               width: '100%',
               display: 'flex',
@@ -104,53 +119,54 @@ export async function GET(request: Request) {
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'column',
-              flexWrap: 'nowrap'}}
+              fontFamily: 'system-ui, -apple-system, sans-serif'
+            }}
           >
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 20}}
+                fontSize: 80,
+                fontWeight: 'bold',
+                color: 'white',
+                marginBottom: 20
+              }}
             >
-              <span
-                style={{
-                  fontSize: 60,
-                  fontStyle: 'normal',
-                  letterSpacing: '-0.025em',
-                  color: 'white',
-                  marginTop: 30,
-                  marginBottom: 10,
-                  padding: '0 120px',
-                  lineHeight: 1.4,
-                  whiteSpace: 'pre-wrap'}}
-              >
-                WeWrite
-              </span>
+              WeWrite
             </div>
             <div
               style={{
-                fontSize: 30,
-                fontStyle: 'normal',
-                letterSpacing: '-0.025em',
-                color: 'white',
-                opacity: 0.6,
-                marginTop: 10,
-                padding: '0 120px',
-                lineHeight: 1.4,
-                whiteSpace: 'pre-wrap'}}
+                fontSize: 32,
+                color: 'rgba(255, 255, 255, 0.8)',
+                marginBottom: 40
+              }}
             >
-              Write together
+              The social wiki where every page is a fundraiser
+            </div>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 'bold',
+                color: 'white',
+                padding: '16px 40px',
+                borderRadius: '50px',
+                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+            >
+              Start writing today →
             </div>
           </div>
         ),
         {
           width: 1200,
           height: 630,
-          // Add explicit content type and cache headers
           headers: {
             'content-type': 'image/png',
-            'cache-control': 'public, immutable, no-transform, max-age=31536000'}});
+            'cache-control': 'public, immutable, no-transform, max-age=31536000'
+          }
+        }
+      );
     }
 
     // Fetch real page data if pageId is provided and no manual data is passed

@@ -75,8 +75,12 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
       const description = metadata.description ||
         'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.';
 
-      const canonicalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/${id}`;
-      const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og?id=${id}`;
+      // Get base URL with fallback for different environments
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://wewrite.app');
+
+      const canonicalUrl = `${baseUrl}/${id}`;
+      const imageUrl = `${baseUrl}/api/og?id=${id}`;
 
       return {
         title: formattedTitle,
