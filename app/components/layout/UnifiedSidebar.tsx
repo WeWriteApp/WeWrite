@@ -22,6 +22,7 @@ import { CheckCircle } from 'lucide-react';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 // Context for sidebar state management
 interface SidebarContextType {
@@ -496,7 +497,7 @@ function UnifiedSidebarContent({
               {showContent && (
                 <div className="mb-3 px-3 py-2">
                   <div className="text-sm font-medium text-foreground truncate">
-                    {user.username || 'User'}
+                    {sanitizeUsername(user.username, 'Loading...', 'User')}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {user.email}

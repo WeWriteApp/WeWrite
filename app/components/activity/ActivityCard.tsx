@@ -12,6 +12,7 @@ import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { format } from "date-fns";
 import { getPageById } from "../../firebase/database/pages";
+import { sanitizeUsername } from "../../utils/usernameSecurity";
 import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import DiffPreview, { DiffStats } from "./DiffPreview";
@@ -360,7 +361,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 {/* Don't make user links clickable for sample data */}
                 {activity.isSample ? (
                   <span className="text-primary flex-shrink-0">
-                    {activity.username || "Missing username"}
+                    {sanitizeUsername(activity.username)}
                   </span>
                 ) : (
                   <UsernameBadge

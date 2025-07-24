@@ -3,6 +3,7 @@ import React, { useState, useEffect} from "react";
 import { getSingleUserData } from "../../firebase/batchUserData";
 import { UsernameSkeleton } from "../ui/skeleton";
 import Link from "next/link";
+import { sanitizeUsername } from "../../utils/usernameSecurity";
 
 // Simple in-memory cache to prevent duplicate API calls
 const userCache = new Map();
@@ -86,7 +87,7 @@ const User = ({ uid, showUsername = true, className = "" }) => {
       {isLoading ? (
         <UsernameSkeleton />
       ) : (
-        username
+        sanitizeUsername(username)
       )}
     </Link>
   );

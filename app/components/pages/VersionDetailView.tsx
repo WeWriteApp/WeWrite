@@ -8,6 +8,7 @@ import PageHeader from './PageHeader';
 import { SmartLoader } from '../ui/smart-loader';
 import { ErrorDisplay } from '../ui/error-display';
 import { formatDistanceToNow } from 'date-fns';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 // Helper function to extract text from structured content
 const extractTextFromContent = (content: any): string => {
@@ -338,7 +339,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-semibold">{currentVersion.title}</h2>
                 <div className="text-sm text-muted-foreground">
-                  by {currentVersion.username}
+                  by {sanitizeUsername(currentVersion.username)}
                 </div>
               </div>
 

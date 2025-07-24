@@ -8,6 +8,7 @@ import { PillLink } from '../utils/PillLink';
 // Simple tooltips using title attribute
 import { SubscriptionTiersModal } from '../modals/SubscriptionTiersModal';
 import { cn } from '../../lib/utils';
+import { sanitizeUsername, needsUsernameRefresh, getDisplayUsername } from '../../utils/usernameSecurity';
 
 // Simple in-memory cache to prevent duplicate API calls
 const usernameCache = new Map<string, { username: string; timestamp: number }>();
@@ -62,11 +63,8 @@ export function UsernameBadge({
         return;
       }
 
-      // Only fetch if we don't have a username or it looks stale
-      const needsFreshFetch = !username ||
-        username === 'Missing username' ||
-        username === 'Anonymous' ||
-        username.trim() === '';
+      // SECURITY: Use centralized logic to determine if username needs refresh
+      const needsFreshFetch = needsUsernameRefresh(username);
 
       if (!needsFreshFetch) {
         // Still fetch in background to verify, but don't show loading
@@ -149,8 +147,11 @@ export function UsernameBadge({
     };
   }, [userId]);
 
-  // Use fresh username if available, otherwise fall back to provided username
-  const displayUsername = freshUsername || username || 'Missing username';
+  // SECURITY: Use centralized username sanitization
+  const displayUsername = getDisplayUsername(
+    freshUsername || username,
+    isLoadingUsername
+  );
 
   // Determine if user is inactive (no active subscription)
   const isInactive = !subscriptionStatus || subscriptionStatus !== 'active';
