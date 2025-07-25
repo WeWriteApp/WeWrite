@@ -38,6 +38,9 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     
     // Convert content to string for storage and comparison
     const contentString = typeof data.content === 'string' ? data.content : JSON.stringify(data.content);
+
+    // Keep the original content object for diff calculation
+    const contentForDiff = data.content;
     
     if (!contentString || contentString.trim() === '') {
       console.error("🔴 VERSION SERVER: Content is empty or invalid");
@@ -66,8 +69,8 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     // Enhanced no-op detection: Check if content has changed
     let isNoOpEdit = false;
     if (!isNewPage && pageData?.content) {
-      const currentContent = typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content);
-      isNoOpEdit = !hasContentChangedSync(contentString, currentContent);
+      // Use the original content objects for comparison, not JSON strings
+      isNoOpEdit = !hasContentChangedSync(contentForDiff, pageData.content);
 
       if (isNoOpEdit) {
         console.log("🔵 VERSION SERVER: No-op edit detected, but still updating lastModified for recent edits tracking");
@@ -95,9 +98,10 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     try {
       const { calculateDiff } = await import('../../utils/diffService');
       const currentPageContent = pageData?.content || '';
-      const currentContentString = typeof currentPageContent === 'string' ? currentPageContent : JSON.stringify(currentPageContent);
 
-      diffResult = await calculateDiff(contentString, currentContentString);
+      // Pass the actual content objects to calculateDiff, not JSON strings
+      // The diff service will handle text extraction internally
+      diffResult = await calculateDiff(contentForDiff, currentPageContent);
       console.log("✅ VERSION SERVER: Diff calculated:", {
         added: diffResult.added,
         removed: diffResult.removed,

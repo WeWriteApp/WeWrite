@@ -2450,12 +2450,15 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
 }
 
 /* SIMPLIFIED: Save header body class for consistent content pushing */
-body {
-  transition: padding-top 300ms ease-out;
-}
+/* DON'T add padding to body - that pushes the save header down too! */
+/* Instead, push down only the main content areas */
 
-body.has-sticky-save-header {
-  padding-top: 56px !important; /* Push all content down by save header height */
+body.has-sticky-save-header .slide-up-page,
+body.has-sticky-save-header .new-page-container,
+body.has-sticky-save-header main,
+body.has-sticky-save-header [data-page-content] {
+  padding-top: 56px !important; /* Push content down by save header height */
+  transition: padding-top 300ms ease-out;
 }
 
 /* Remove all complex header spacing rules that interfere with simple layout */

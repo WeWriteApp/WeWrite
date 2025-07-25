@@ -1140,19 +1140,19 @@ function NewPageContent() {
   // Render using the exact same structure as SinglePageView
   return (
     <SlideUpPage>
+      {/* Sticky Save Header - slides down from top when there are unsaved changes */}
+      <StickySaveHeader
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSave={() => handleSave(editorState, 'button')}
+        onCancel={handleCancel}
+        isSaving={isSaving}
+        isAnimatingOut={saveSuccess && !hasUnsavedChanges}
+      />
+
       <Layout>
         <Head>
           <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
         </Head>
-
-        {/* Sticky Save Header - slides down from top when there are unsaved changes */}
-        <StickySaveHeader
-          hasUnsavedChanges={hasUnsavedChanges}
-          onSave={() => handleSave(editorState, 'button')}
-          onCancel={handleCancel}
-          isSaving={isSaving}
-          isAnimatingOut={saveSuccess && !hasUnsavedChanges}
-        />
 
         <PageHeader
           title={title}

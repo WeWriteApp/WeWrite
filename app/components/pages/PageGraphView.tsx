@@ -64,12 +64,12 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   const { user } = useAuth();
   // const { settings, openDrawer } = useGraphSettings();
   const [settings, setSettings] = useState({
-    chargeStrength: -400,
-    linkDistance: 120,
-    centerStrength: 0.8,
-    collisionRadius: 35,
+    chargeStrength: -200,    // Reduced repulsion for comfortable clustering
+    linkDistance: 80,        // Shorter links to keep nodes closer together
+    centerStrength: 0.5,     // Balanced center force for natural positioning
+    collisionRadius: 25,     // Smaller collision radius for tighter layout
     alphaDecay: 0.02,
-    velocityDecay: 0.3
+    velocityDecay: 0.4       // Slightly higher damping for stability
   });
   const openDrawer = () => {};
 
@@ -114,12 +114,12 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   const handleResetSettings = () => {
     const defaultSettings = {
-      chargeStrength: -400,
-      linkDistance: 120,
-      centerStrength: 0.8,
-      collisionRadius: 35,
+      chargeStrength: -200,    // Reduced repulsion for comfortable clustering
+      linkDistance: 80,        // Shorter links to keep nodes closer together
+      centerStrength: 0.5,     // Balanced center force for natural positioning
+      collisionRadius: 25,     // Smaller collision radius for tighter layout
       alphaDecay: 0.02,
-      velocityDecay: 0.3
+      velocityDecay: 0.4       // Slightly higher damping for stability
     };
     handleSettingsChange(defaultSettings);
   };

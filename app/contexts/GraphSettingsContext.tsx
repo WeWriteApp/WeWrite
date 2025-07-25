@@ -21,10 +21,10 @@ export interface GraphSettingsContextType {
 }
 
 const defaultSettings: GraphPhysicsSettings = {
-  chargeStrength: -300,
-  linkDistance: 100,
-  centerStrength: 0.3,
-  collisionRadius: 30,
+  chargeStrength: -200,    // Reduced repulsion so nodes don't spread to edges
+  linkDistance: 80,        // Shorter links to keep connected nodes closer
+  centerStrength: 0.6,     // Stronger center force to pull nodes toward middle
+  collisionRadius: 25,     // Smaller collision radius for tighter clustering
   alphaDecay: 0.0228,
   velocityDecay: 0.4
 };

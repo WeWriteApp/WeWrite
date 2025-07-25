@@ -67,12 +67,12 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
   }, []);
   // const { settings, openDrawer } = useGraphSettings();
   const [settings, setSettings] = useState({
-    chargeStrength: -300,
-    linkDistance: 100,
-    centerStrength: 0.3,
-    collisionRadius: 30,
+    chargeStrength: -150,    // Further reduced repulsion for tighter clustering
+    linkDistance: 60,        // Even shorter links to keep nodes compact
+    centerStrength: 0.8,     // Strong center force to pull nodes toward middle
+    collisionRadius: 20,     // Smaller collision radius for tighter layout
     alphaDecay: 0.0228,
-    velocityDecay: 0.4
+    velocityDecay: 0.5       // Higher damping for more stable positioning
   });
   const openDrawer = () => {};
 
@@ -106,12 +106,12 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
 
   const handleResetSettings = () => {
     const defaultSettings = {
-      chargeStrength: -300,
-      linkDistance: 100,
-      centerStrength: 0.3,
-      collisionRadius: 30,
+      chargeStrength: -150,    // Further reduced repulsion for tighter clustering
+      linkDistance: 60,        // Even shorter links to keep nodes compact
+      centerStrength: 0.8,     // Strong center force to pull nodes toward middle
+      collisionRadius: 20,     // Smaller collision radius for tighter layout
       alphaDecay: 0.0228,
-      velocityDecay: 0.4
+      velocityDecay: 0.5       // Higher damping for more stable positioning
     };
     handleSettingsChange(defaultSettings);
   };
@@ -282,9 +282,9 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
     // Initialize node positions for better distribution
     nodes.forEach((node, i) => {
       if (node.x === undefined || node.y === undefined) {
-        // Distribute nodes in a circle for better initial layout
+        // Start nodes closer to center with smaller initial radius
         const angle = (i / nodes.length) * 2 * Math.PI;
-        const radius = Math.min(width, height) * 0.3;
+        const radius = Math.min(width, height) * 0.15; // Much smaller initial radius
         node.x = width / 2 + Math.cos(angle) * radius;
         node.y = height / 2 + Math.sin(angle) * radius;
       }
@@ -299,21 +299,21 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
       .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
       .force("collision", d3.forceCollide().radius(settings.collisionRadius))
       .force("boundary", () => {
-        // Keep nodes within container bounds with gentle constraints
-        const padding = 30;
+        // Keep nodes within container bounds with stronger constraints
+        const padding = 40;
         nodes.forEach(node => {
           if (node.x !== undefined && node.y !== undefined) {
-            // Apply gentle boundary forces instead of hard constraints
+            // Apply stronger boundary forces to keep nodes in view
             if (node.x < padding) {
-              node.vx = (node.vx || 0) + (padding - node.x) * 0.1;
+              node.vx = (node.vx || 0) + (padding - node.x) * 0.3;
             } else if (node.x > width - padding) {
-              node.vx = (node.vx || 0) + (width - padding - node.x) * 0.1;
+              node.vx = (node.vx || 0) + (width - padding - node.x) * 0.3;
             }
 
             if (node.y < padding) {
-              node.vy = (node.vy || 0) + (padding - node.y) * 0.1;
+              node.vy = (node.vy || 0) + (padding - node.y) * 0.3;
             } else if (node.y > height - padding) {
-              node.vy = (node.vy || 0) + (height - padding - node.y) * 0.1;
+              node.vy = (node.vy || 0) + (height - padding - node.y) * 0.3;
             }
           }
         });
@@ -402,6 +402,40 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
 
       node.attr("transform", d => `translate(${d.x},${d.y})`);
     });
+
+    // Auto-fit viewport when simulation settles (only for non-fullscreen)
+    if (!isFullscreen) {
+      simulation.on("end", () => {
+        // Calculate bounding box of all nodes
+        const nodePositions = nodes.filter(n => n.x !== undefined && n.y !== undefined);
+        if (nodePositions.length === 0) return;
+
+        const padding = 60;
+        const minX = Math.min(...nodePositions.map(n => n.x!)) - padding;
+        const maxX = Math.max(...nodePositions.map(n => n.x!)) + padding;
+        const minY = Math.min(...nodePositions.map(n => n.y!)) - padding;
+        const maxY = Math.max(...nodePositions.map(n => n.y!)) + padding;
+
+        const contentWidth = maxX - minX;
+        const contentHeight = maxY - minY;
+
+        // Calculate scale to fit content in viewport
+        const scaleX = width / contentWidth;
+        const scaleY = height / contentHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+
+        // Calculate translation to center the content
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const translateX = width / 2 - centerX * scale;
+        const translateY = height / 2 - centerY * scale;
+
+        // Apply transform smoothly
+        g.transition()
+          .duration(1000)
+          .attr("transform", `translate(${translateX},${translateY}) scale(${scale})`);
+      });
+    }
 
     // Cleanup
     return () => {
