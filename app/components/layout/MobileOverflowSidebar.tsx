@@ -13,8 +13,7 @@ import { logoutUser } from "../../firebase/auth"
 import { useAuth } from '../../providers/AuthProvider';
 
 import MapEditor from "../editor/MapEditor"
-import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
-import RandomPageFilterMenu from "../ui/RandomPageFilterMenu"
+import { navigateToRandomPage } from "../../utils/randomPageNavigation"
 import { WarningDot } from '../ui/warning-dot';
 import { StatusIcon } from '../ui/status-icon';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
@@ -42,7 +41,7 @@ interface SidebarProps {
 export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarProps) {
   const router = useRouter()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
-  const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
+
   const { user } = useAuth();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
@@ -133,31 +132,16 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               </button>
 
               {/* Random Pages */}
-              <div className="relative group">
-                <button
-                  onClick={() => {
-                    onClose();
-                    router.push('/random-pages');
-                  }}
-                  className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-                >
-                  <Shuffle className="h-5 w-5 mr-3" />
-                  <span>Random Pages</span>
-                </button>
-
-                {/* Random Page Filter Menu */}
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                  <RandomPageFilterMenu
-                    size="sm"
-                    onFiltersChange={(filters: RandomPageFilters) => {
-                      // Filters are automatically persisted by the component
-                    }}
-                    onOpenChange={(isOpen) => {
-                      setIsRandomMenuOpen(isOpen);
-                    }}
-                  />
-                </div>
-              </div>
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push('/random-pages');
+                }}
+                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
+              >
+                <Shuffle className="h-5 w-5 mr-3" />
+                <span>Random Pages</span>
+              </button>
 
               {/* Trending Pages */}
               <button
@@ -305,12 +289,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
           "fixed inset-0 bg-black/60 z-[999] transition-opacity duration-300 min-h-screen w-screen",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={() => {
-          // Don't close if the random menu is open
-          if (!isRandomMenuOpen) {
-            onClose();
-          }
-        }}
+        onClick={onClose}
         aria-hidden="true"
       />
 
