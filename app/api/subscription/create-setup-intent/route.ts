@@ -30,10 +30,13 @@ export async function POST(request: NextRequest) {
     const { tier, amount, tierName, tokens, successUrl, cancelUrl } = body;
 
     if (!amount || !tier) {
-      return NextResponse.json({ 
-        error: 'amount and tier are required' 
+      return NextResponse.json({
+        error: 'amount and tier are required'
       }, { status: 400 });
     }
+
+    // Generate a shared correlation ID for all related audit events
+    const setupCorrelationId = `setup_intent_${Date.now()}_${userId}`;
 
     console.log(`[CREATE SETUP INTENT] Creating setup intent for user ${userId}, tier: ${tier}, amount: $${amount}`);
 
@@ -108,7 +111,7 @@ export async function POST(request: NextRequest) {
           reason: isRecreation ? 'Previous customer deleted from Stripe' : 'New customer'
         },
         source: 'system',
-        correlationId: `customer_${isRecreation ? 'recreated' : 'created'}_${customerId}`,
+        correlationId: setupCorrelationId,
         severity: isRecreation ? 'warning' : 'info'
       });
 

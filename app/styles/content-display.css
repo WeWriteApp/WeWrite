@@ -1,0 +1,298 @@
+/**
+ * WeWrite Content Display Styles
+ * 
+ * This file contains all styling for the unified content display system.
+ * It replaces scattered styling across multiple files with a centralized,
+ * well-documented approach.
+ * 
+ * Architecture Principles:
+ * 1. Clear Naming: All classes follow wewrite-* convention
+ * 2. Separation of Concerns: Editing vs viewing styles are clearly separated
+ * 3. No Borders: User preference - clean, borderless design
+ * 4. Consistent Inheritance: Proper text color and spacing inheritance
+ * 5. Maintainable: Easy to understand and modify
+ */
+
+/* ============================================================================
+   UNIFIED CONTENT DISPLAY SYSTEM
+   ============================================================================ */
+
+/**
+ * Base Content Display Container
+ * 
+ * Common styles for all content display modes.
+ * Provides consistent foundation for both editing and viewing.
+ */
+.wewrite-content-display {
+  @apply w-full max-w-none;
+  
+  /* Ensure proper text color inheritance */
+  color: inherit;
+  
+  /* Clean, borderless design as per user preference */
+  background: transparent;
+  border: none;
+  outline: none;
+  
+  /* Responsive design */
+  box-sizing: border-box;
+}
+
+/* ============================================================================
+   EDITABLE CONTENT STYLES
+   ============================================================================ */
+
+/**
+ * Editable Content Container
+ * 
+ * Styles for editing mode. Clean and minimal to focus on content.
+ * No borders or visual containers as per user preference.
+ */
+.wewrite-editable-content {
+  @apply w-full;
+  
+  /* Inherit base content display styles */
+  @extend .wewrite-content-display;
+  
+  /* Editing-specific positioning */
+  position: relative;
+  
+  /* Ensure proper text color in editing mode */
+  color: hsl(var(--foreground));
+}
+
+/**
+ * Editor Container (SlateEditor wrapper)
+ * 
+ * Clean container for the Slate.js editor with no visual styling.
+ * Replaces the old editor-container class with clear naming.
+ */
+.wewrite-editor-container {
+  @apply w-full;
+  
+  /* No borders, no background, no padding - clean editing experience */
+  background: transparent;
+  border: none;
+  padding: 0;
+  
+  /* Proper text color inheritance */
+  color: hsl(var(--foreground));
+  
+  /* Positioning for editor features */
+  position: relative;
+}
+
+/**
+ * Slate Editor Editable Area
+ * 
+ * Styles for the actual Slate.js editable content area.
+ */
+.wewrite-slate-editable {
+  @apply min-h-[200px] focus:outline-none max-w-none;
+  
+  /* Typography */
+  line-height: 1.5;
+  font-size: 1rem;
+  font-family: inherit;
+  
+  /* Ensure proper text color */
+  color: inherit;
+  
+  /* Clean appearance */
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+/* ============================================================================
+   VIEWABLE CONTENT STYLES
+   ============================================================================ */
+
+/**
+ * Viewable Content Container
+ * 
+ * Styles for viewing mode. Clean and focused on readability.
+ */
+.wewrite-viewable-content {
+  @apply w-full;
+  
+  /* Inherit base content display styles */
+  @extend .wewrite-content-display;
+  
+  /* Viewing-specific spacing */
+  @apply space-y-4;
+}
+
+/**
+ * Content Viewer Container
+ * 
+ * Clean container for the ContentViewer component.
+ * Replaces the old content-viewer-container class.
+ */
+.wewrite-viewer-container {
+  @apply w-full max-w-none;
+  
+  /* Clean viewing experience - no borders, no input styling */
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  
+  /* Proper text alignment */
+  text-align: left;
+}
+
+/**
+ * Viewer Content Area
+ * 
+ * Styles for the actual content viewing area.
+ */
+.wewrite-viewer-content {
+  @apply w-full text-left;
+  
+  /* Clean appearance */
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  
+  /* Proper text color */
+  color: hsl(var(--foreground));
+}
+
+/**
+ * Normal Mode Viewer
+ * 
+ * Standard paragraph block layout for viewing.
+ */
+.wewrite-viewer-content.normal-mode {
+  @apply space-y-4;
+}
+
+/**
+ * Dense Mode Viewer
+ * 
+ * Compact layout for dense viewing mode.
+ */
+.wewrite-viewer-content.dense-mode {
+  @apply space-y-1;
+}
+
+/* ============================================================================
+   PARAGRAPH STYLES
+   ============================================================================ */
+
+/**
+ * Viewer Paragraph
+ * 
+ * Clean paragraph styling for viewing mode.
+ * No hover effects or editing indicators.
+ */
+.wewrite-viewer-paragraph {
+  @apply flex items-start gap-3 py-2;
+  
+  /* Clean paragraph styling without hover effects */
+  transition: none;
+}
+
+/**
+ * Dense Paragraph
+ * 
+ * Inline paragraph styling for dense mode.
+ */
+.wewrite-viewer-paragraph.dense {
+  @apply inline-block mr-4;
+}
+
+/**
+ * Normal Paragraph
+ * 
+ * Block paragraph styling for normal mode.
+ */
+.wewrite-viewer-paragraph.normal {
+  @apply block;
+}
+
+/**
+ * Paragraph Number
+ * 
+ * Line number styling for paragraphs.
+ */
+.wewrite-paragraph-number {
+  @apply text-xs text-muted-foreground font-mono min-w-[2rem] text-right select-none;
+}
+
+/**
+ * Paragraph Content
+ * 
+ * Main content area within paragraphs.
+ */
+.wewrite-paragraph-content {
+  @apply flex-1 leading-relaxed;
+  
+  /* Ensure proper text color */
+  color: hsl(var(--foreground));
+}
+
+/* ============================================================================
+   CONTENT FLOW STYLES
+   ============================================================================ */
+
+/**
+ * Dense Content Flow
+ * 
+ * Continuous text flow for dense mode.
+ */
+.wewrite-dense-content-flow {
+  @apply leading-relaxed;
+}
+
+/**
+ * Normal Content Flow
+ * 
+ * Standard block layout for normal mode.
+ */
+.wewrite-normal-content-flow {
+  @apply space-y-3;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+/**
+ * Mobile Optimizations
+ * 
+ * Ensure content displays properly on mobile devices.
+ */
+@media (max-width: 767px) {
+  .wewrite-content-display,
+  .wewrite-editable-content,
+  .wewrite-viewable-content {
+    /* Ensure proper mobile width */
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    
+    /* Prevent horizontal scrolling */
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  
+  .wewrite-viewer-paragraph {
+    /* Adjust paragraph spacing on mobile */
+    @apply gap-2 py-1;
+  }
+}
+
+/**
+ * High Contrast Mode
+ * 
+ * Enhanced visibility for accessibility.
+ */
+html[data-high-contrast="true"] .wewrite-content-display,
+html[data-high-contrast="true"] .wewrite-editable-content,
+html[data-high-contrast="true"] .wewrite-viewable-content {
+  /* Enhanced text contrast */
+  color: hsl(var(--foreground)) !important;
+}

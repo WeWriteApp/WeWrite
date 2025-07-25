@@ -6,7 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getEnvironmentType, getEnvironmentContext, logEnvironmentConfig } from '../../../utils/environmentConfig';
+import { getEnvironmentType, logEnvironmentConfig } from '../../../utils/environmentConfig';
+import { getEnvironmentContext } from '../../../utils/environmentDetection';
 
 // GET endpoint - Get authentication environment information
 export async function GET(request: NextRequest) {

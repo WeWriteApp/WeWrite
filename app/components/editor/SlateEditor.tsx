@@ -974,7 +974,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   }
 
   return (
-    <div className="w-full">
+    <div className="wewrite-editor-container">
       {showToolbar && (
         <div className="flex items-center gap-2 p-2 border-b-only bg-muted/30">
           <Button
@@ -1045,13 +1045,11 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             onDragEnd={handleDragEnd}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className="min-h-[200px] focus:outline-none max-w-none"
+            className="wewrite-slate-editable"
             style={{
               lineHeight: '1.5',
               fontSize: '1rem',
-              fontFamily: 'inherit',
-              padding: '0.75rem', // CONSISTENT padding on all sides
-              borderRadius: '0.5rem'
+              fontFamily: 'inherit'
             }}
           />
 

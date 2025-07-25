@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Generate a shared correlation ID for all related audit events
+    const subscriptionCorrelationId = `subscription_creation_${Date.now()}_${userId}`;
+
     console.log(`[CREATE SUBSCRIPTION] Creating subscription for user ${userId}, tier: ${tier}, amount: $${amount}`, {
       environment: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV,
@@ -121,7 +124,7 @@ export async function POST(request: NextRequest) {
           amount
         },
         source: 'system',
-        correlationId: `customer_${isRecreation ? 'recreated' : 'created'}_${customerId}`,
+        correlationId: subscriptionCorrelationId,
         severity: isRecreation ? 'warning' : 'info'
       });
 
@@ -300,7 +303,7 @@ export async function POST(request: NextRequest) {
     try {
       await subscriptionAuditService.logSubscriptionCreated(userId, subscriptionData, {
         source: 'user',
-        correlationId: `create_${subscription.id}`,
+        correlationId: subscriptionCorrelationId,
         metadata: {
           tier,
           tierName,

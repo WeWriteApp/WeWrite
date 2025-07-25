@@ -6,6 +6,19 @@ This guide documents old patterns and legacy code that must be identified and re
 
 ## ✅ Recently Completed Cleanups
 
+### Content Display System Unification (COMPLETED 2025-01-25)
+**MAJOR REFACTORING**: Replaced scattered editor/viewer components with unified `ContentDisplay` architecture:
+- **REMOVED**: `Editor.tsx` wrapper component (redundant)
+- **UNIFIED**: All content display through single `ContentDisplay` component
+- **UPDATED**: CSS classes to `wewrite-*` naming convention
+- **IMPROVED**: Diff algorithm for intelligent change detection
+
+### Diff Algorithm Enhancement (COMPLETED 2025-01-25)
+**CRITICAL FIX**: Replaced simplistic diff algorithm with intelligent word-level LCS algorithm:
+- **FIXED**: Recent edits showing entire lines as both added and removed
+- **IMPROVED**: Now shows only actual changes, not entire line replacements
+- **ENHANCED**: Word-level diffing with proper longest common subsequence
+
 ### Payment Feature Flags (COMPLETED 2025-01-24)
 All payment feature flags have been **completely removed**. Payments are now always enabled throughout the application.
 
@@ -46,6 +59,84 @@ const safeUsername = getDisplayUsername(username, isLoading);
 ```
 
 ## 📊 Deprecated System Patterns
+
+### Old Content Display System ❌ **NEW - HIGH PRIORITY**
+
+**REMOVE ALL REFERENCES** - The scattered editor/viewer system has been replaced with unified `ContentDisplay`:
+
+#### Files to Delete
+```bash
+# These files should no longer exist
+app/components/editor/Editor.tsx  # REMOVED - redundant wrapper
+```
+
+#### Code Patterns to Remove
+```typescript
+// REMOVE THESE PATTERNS
+import Editor from "../components/editor/Editor";
+import { Editor } from "../components/editor/Editor";
+
+// Complex conditional rendering
+{shouldUseEditor ? (
+  <Editor readOnly={!canEdit} />
+) : (
+  <ContentViewer />
+)}
+
+// Old CSS classes
+className="editor-container"
+className="content-viewer-container"
+className="content-viewer"
+```
+
+#### ✅ Replace With Unified System
+```typescript
+// USE THESE PATTERNS
+import ContentDisplay from "../components/content/ContentDisplay";
+
+// Simple unified rendering
+<ContentDisplay
+  content={content}
+  isEditable={canEdit}
+  onChange={handleChange}
+/>
+
+// New CSS classes
+className="wewrite-editor-container"
+className="wewrite-viewer-container"
+className="wewrite-content-display"
+```
+
+### Old Diff Algorithm ❌ **NEW - CRITICAL**
+
+**REMOVE SIMPLE DIFF LOGIC** - The prefix/suffix diff algorithm has been replaced with intelligent LCS:
+
+#### Code Patterns to Remove
+```typescript
+// REMOVE THESE PATTERNS - CAUSES POOR DIFF DISPLAY
+// Simple prefix/suffix algorithm that marks entire sections as changed
+function simpleDiff(oldText, newText) {
+  // Find prefix/suffix, mark middle as both added and removed
+  const oldMiddle = oldText.substring(prefixLength, oldText.length - suffixLength);
+  const newMiddle = newText.substring(prefixLength, newText.length - suffixLength);
+
+  if (oldMiddle && newMiddle) {
+    // This causes entire lines to show as both red and green
+    operations.push({ type: 'remove', text: oldMiddle });
+    operations.push({ type: 'add', text: newMiddle });
+  }
+}
+```
+
+#### ✅ Replace With Intelligent Algorithm
+```typescript
+// USE THESE PATTERNS - PROPER WORD-LEVEL DIFFING
+import { calculateDiff } from '../utils/diffService';
+
+// Intelligent word-level diff with LCS
+const diffResult = await calculateDiff(currentContent, previousContent);
+// Shows only actual changes, not entire line replacements
+```
 
 ### Old Activity System ❌
 
@@ -186,6 +277,26 @@ resolvedTheme === 'dark' ? 'night' : 'stripe'
 
 Use these commands to find legacy patterns:
 
+#### 🎨 Content Display Issues (NEW 2025 - HIGH PRIORITY)
+```bash
+# Find old Editor component imports
+grep -r "from.*editor/Editor" app/ --include="*.tsx" --include="*.ts"
+grep -r "import.*Editor.*from.*editor/Editor" app/ --include="*.tsx"
+
+# Find old CSS classes
+grep -r "editor-container\|content-viewer-container" app/ --include="*.tsx" --include="*.css"
+grep -r "content-viewer[^-]" app/ --include="*.tsx" --include="*.css"
+
+# Find complex conditional rendering
+grep -r "shouldUseEditor\|useEditor.*?" app/ --include="*.tsx"
+grep -r "Editor.*readOnly\|readOnly.*Editor" app/ --include="*.tsx"
+
+# Find old diff algorithm patterns
+grep -r "prefixLength.*suffixLength" app/api/ --include="*.ts"
+grep -r "oldMiddle.*newMiddle" app/api/ --include="*.ts"
+grep -r "substring.*substring" app/api/diff/ --include="*.ts"
+```
+
 #### 🎨 UI/Styling Issues (NEW 2024)
 ```bash
 # Find inconsistent padding patterns
@@ -254,6 +365,16 @@ grep -r "theme.*===.*'dark'" app/ | grep -v "resolvedTheme"
 
 ## 📋 Cleanup Checklist
 
+### 🎨 Content Display Cleanup (NEW 2025 - CRITICAL PRIORITY)
+- [ ] Search for old Editor component imports (`from.*editor/Editor`)
+- [ ] Remove redundant Editor.tsx wrapper component references
+- [ ] Update old CSS classes to `wewrite-*` naming convention
+- [ ] Replace complex conditional rendering with unified `ContentDisplay`
+- [ ] Verify all content display uses new architecture
+- [ ] Remove old diff algorithm patterns (prefix/suffix logic)
+- [ ] Test Recent Edits shows intelligent diffs, not entire line changes
+- [ ] Update any remaining `editor-container` or `content-viewer-container` classes
+
 ### 🎨 UI/Styling Cleanup (NEW 2024 - HIGH PRIORITY)
 - [ ] Search for inconsistent padding patterns (px-1, px-2, px-3, py-0.5, py-1)
 - [ ] Replace with standardized px-4 and py-2/py-4 patterns
@@ -296,22 +417,34 @@ grep -r "theme.*===.*'dark'" app/ | grep -v "resolvedTheme"
 
 ## 🚨 High-Priority Cleanup Areas
 
-### 1. Username Security (CRITICAL)
+### 1. Content Display System (CRITICAL - NEW 2025)
+- **Priority**: Immediate
+- **Risk**: Build failures, inconsistent UX
+- **Action**: Remove old Editor.tsx references, update CSS classes
+- **Search**: `grep -r "from.*editor/Editor" app/`
+
+### 2. Diff Algorithm (CRITICAL - NEW 2025)
+- **Priority**: Immediate
+- **Risk**: Poor user experience in Recent Edits
+- **Action**: Remove simple prefix/suffix diff logic
+- **Search**: `grep -r "oldMiddle.*newMiddle" app/api/`
+
+### 3. Username Security (CRITICAL)
 - **Priority**: Immediate
 - **Risk**: Email exposure vulnerability
 - **Action**: Audit all username displays
 
-### 2. Activity System Migration
+### 4. Activity System Migration
 - **Priority**: High
 - **Risk**: Data inconsistency
 - **Action**: Remove all activity system code
 
-### 3. Authentication Unification
+### 5. Authentication Unification
 - **Priority**: High
 - **Risk**: Auth failures
 - **Action**: Remove old auth patterns
 
-### 4. Collection Name Standardization
+### 6. Collection Name Standardization
 - **Priority**: Medium
 - **Risk**: Environment confusion
 - **Action**: Use environment-aware collections

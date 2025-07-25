@@ -4,6 +4,59 @@
 
 This document identifies outdated UI patterns that must be systematically removed during cleanup runs. These patterns cause inconsistency, maintenance burden, and user experience issues.
 
+## 🆕 **Content Display Patterns (NEW 2025 - CRITICAL)**
+
+### ❌ Old Editor Component (DELETE THESE)
+
+#### Redundant Editor Wrapper
+```typescript
+// ❌ DELETE: Redundant Editor.tsx wrapper component
+import Editor from "../components/editor/Editor";
+import { Editor } from "../components/editor/Editor";
+
+// Complex conditional rendering
+{shouldUseEditor ? (
+  <Editor
+    readOnly={!canEdit}
+    initialContent={content}
+    onChange={handleChange}
+  />
+) : (
+  <ContentViewer content={content} />
+)}
+```
+
+#### ✅ REPLACE WITH: Unified ContentDisplay
+```typescript
+// ✅ USE: Single unified component
+import ContentDisplay from "../components/content/ContentDisplay";
+
+<ContentDisplay
+  content={content}
+  isEditable={canEdit}
+  onChange={handleChange}
+/>
+```
+
+### ❌ Old CSS Classes (DELETE THESE)
+
+```css
+/* ❌ DELETE: Old scattered CSS classes */
+.editor-container
+.content-viewer-container
+.content-viewer              /* without wewrite- prefix */
+.page-editor-stable
+```
+
+#### ✅ REPLACE WITH: Unified CSS System
+```css
+/* ✅ USE: New wewrite-* naming convention */
+.wewrite-editor-container
+.wewrite-viewer-container
+.wewrite-viewer-content
+.wewrite-content-display
+```
+
 ## 🎨 **Border & Styling Patterns**
 
 ### ❌ Inconsistent Padding (DELETE THESE)

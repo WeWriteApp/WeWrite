@@ -9,11 +9,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { ServerTokenService } from '../../../services/tokenService.server';
-import { initAdmin } from '../../../firebase/admin';
-
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminDb = admin.firestore();
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { serverTimestamp } from 'firebase-admin/firestore';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -53,6 +49,8 @@ export async function POST(request: NextRequest) {
         PAYMENT_COLLECTIONS.SUBSCRIPTIONS
       );
       
+      const admin = getFirebaseAdmin();
+      const adminDb = admin.firestore();
       const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
       const subscriptionDoc = await subscriptionRef.get();
       const currentData = subscriptionDoc.data();
@@ -144,6 +142,8 @@ export async function POST(request: NextRequest) {
       PAYMENT_COLLECTIONS.SUBSCRIPTIONS
     );
     
+    const admin = getFirebaseAdmin();
+    const adminDb = admin.firestore();
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
     await subscriptionRef.update(subscriptionData);
 

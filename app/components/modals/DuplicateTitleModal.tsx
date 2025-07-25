@@ -53,7 +53,7 @@ export function DuplicateTitleModal({
 
         <div className="space-y-4">
           {/* Error Message */}
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border-theme-medium rounded-lg" style={{ borderColor: 'hsl(45 93% 47% / 0.3)' }}>
             <p className="text-sm text-amber-800 dark:text-amber-200">
               You already have a page titled <strong>"{existingPage.title}"</strong>
             </p>
@@ -104,7 +104,7 @@ export function DuplicateTitleModal({
 
           {/* Content Warning Hint */}
           {hasUnsavedContent && (
-            <div className="text-xs text-muted-foreground text-center p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
+            <div className="text-xs text-muted-foreground text-center p-2 bg-blue-50 dark:bg-blue-950/20 border-theme-medium rounded" style={{ borderColor: 'hsl(217 91% 60% / 0.3)' }}>
               <p>
                 💡 Since you have unsaved content, we'll check before navigating away
               </p>

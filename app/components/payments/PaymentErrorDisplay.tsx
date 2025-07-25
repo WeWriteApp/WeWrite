@@ -75,28 +75,32 @@ export function PaymentErrorDisplay({
       case 'critical':
         return {
           bg: 'bg-red-50 dark:bg-red-950/20',
-          border: 'border-red-200 dark:border-red-800',
+          border: 'border-theme-medium',
+          borderStyle: { borderColor: 'hsl(0 84% 60% / 0.3)' },
           text: 'text-red-800 dark:text-red-200',
           icon: 'text-red-600 dark:text-red-400'
         };
       case 'high':
         return {
           bg: 'bg-orange-50 dark:bg-orange-950/20',
-          border: 'border-orange-200 dark:border-orange-800',
+          border: 'border-theme-medium',
+          borderStyle: { borderColor: 'hsl(30 80% 50% / 0.3)' },
           text: 'text-orange-800 dark:text-orange-200',
           icon: 'text-orange-600 dark:text-orange-400'
         };
       case 'medium':
         return {
           bg: 'bg-yellow-50 dark:bg-yellow-950/20',
-          border: 'border-yellow-200 dark:border-yellow-800',
+          border: 'border-theme-medium',
+          borderStyle: { borderColor: 'hsl(45 93% 47% / 0.3)' },
           text: 'text-yellow-800 dark:text-yellow-200',
           icon: 'text-yellow-600 dark:text-yellow-400'
         };
       default:
         return {
           bg: 'bg-blue-50 dark:bg-blue-950/20',
-          border: 'border-blue-200 dark:border-blue-800',
+          border: 'border-theme-medium',
+          borderStyle: { borderColor: 'hsl(217 91% 60% / 0.3)' },
           text: 'text-blue-800 dark:text-blue-200',
           icon: 'text-blue-600 dark:text-blue-400'
         };
@@ -147,7 +151,7 @@ export function PaymentErrorDisplay({
   }
 
   return (
-    <Card className={cn('border-l-4', colors.border, colors.bg, className)}>
+    <Card className={cn('border-l-4', colors.border, colors.bg, className)} style={colors.borderStyle}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -253,7 +257,7 @@ export function PaymentErrorDisplay({
         )}
 
         {/* Help Text */}
-        <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="text-xs text-muted-foreground pt-2 border-t-only">
           <p>
             If you continue having issues, please contact your bank or{' '}
             <button 

@@ -29,6 +29,10 @@ interface RecentEdit {
     hasAdditions: boolean;
     hasRemovals: boolean;
   };
+  // Subscription data
+  tier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
 }
 
 interface UserRecentEditsProps {
@@ -187,7 +191,11 @@ export default function UserRecentEdits({
               isPublic: edit.isPublic,
               totalPledged: edit.totalPledged,
               pledgeCount: edit.pledgeCount,
-              activityType: 'page_edit' as const
+              activityType: 'page_edit' as const,
+              // Add subscription data for UsernameBadge
+              tier: edit.tier,
+              subscriptionStatus: edit.subscriptionStatus,
+              subscriptionAmount: edit.subscriptionAmount
             };
 
             return (

@@ -252,7 +252,7 @@ function EmailVerificationAlert({
       transition-all duration-300 ease-in-out overflow-hidden
       ${isAnimatingIn ? 'opacity-100 max-h-32 mb-4' : 'opacity-0 max-h-0 mb-0'}
     `}>
-      <Alert className={`border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/30 ${className}`}>
+      <Alert className={`bg-amber-50 dark:bg-amber-950/20 border-theme-medium ${className}`} style={{ borderColor: 'hsl(45 93% 47% / 0.3)' }}>
       <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
       <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-4">
         <div className="flex-1 min-w-0">

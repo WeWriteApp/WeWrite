@@ -17,7 +17,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import PageHeader from "../components/pages/PageHeader";
 import PageFooter from "../components/pages/PageFooter";
-import Editor from "../components/editor/Editor";
+import ContentDisplay from "../components/content/ContentDisplay";
 
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
@@ -1116,10 +1116,9 @@ function NewPageContent() {
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
-                  <Editor
-                    title={isReply ? "" : title}
-                    setTitle={handleTitleChange}
-                    initialContent={editorState}
+                  <ContentDisplay
+                    content={editorState}
+                    isEditable={true}
                     onChange={handleContentChange}
                     location={location}
                     setLocation={setLocation}

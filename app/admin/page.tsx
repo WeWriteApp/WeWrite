@@ -17,6 +17,7 @@ import { useToast } from '../components/ui/use-toast';
 import { usePWA } from '../providers/PWAProvider';
 import Link from 'next/link';
 import { UserManagement } from '../components/admin/UserManagement';
+import { PayoutFlowValidator } from '../components/admin/PayoutFlowValidator';
 import { isAdmin } from '../utils/isAdmin';
 
 interface User {
@@ -859,7 +860,7 @@ export default function AdminPage() {
               <span className="text-sm text-muted-foreground mb-3">
                 Test payout systems, token earnings, and subscription states
               </span>
-              <div className="mt-2 space-y-2">
+              <div className="mt-2 space-y-4">
 
                 <Button
                   variant="outline"
@@ -875,6 +876,11 @@ export default function AdminPage() {
                   )}
                   Test Monthly Distribution
                 </Button>
+
+                {/* Payout Flow Validator */}
+                <div className="border-t pt-4">
+                  <PayoutFlowValidator />
+                </div>
               </div>
             </div>
 

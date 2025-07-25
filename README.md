@@ -56,6 +56,10 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ## 📚 Documentation
 
+### 🆕 Recent Changes (Start Here for 2025 Updates)
+
+- **[RECENT_CHANGES_SUMMARY](docs/RECENT_CHANGES_SUMMARY.md)** - **🆕 2025**: Quick overview of major changes and what patterns to avoid
+
 ### 🔒 Security & Core Systems (Essential Reading)
 
 - **[USERNAME_SECURITY_GUIDELINES](docs/USERNAME_SECURITY_GUIDELINES.md)** - **🔒 CRITICAL**: Prevent email exposure vulnerabilities
@@ -78,6 +82,9 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ### 🏗️ Architecture & Environment
 
+- **[CONTENT_DISPLAY_ARCHITECTURE](docs/CONTENT_DISPLAY_ARCHITECTURE.md)** - **🆕 2025**: Unified content display system architecture
+- **[CONTENT_DISPLAY_MIGRATION_GUIDE](docs/CONTENT_DISPLAY_MIGRATION_GUIDE.md)** - **🆕 2025**: Migration guide for content display refactoring
+- **[CONTENT_DISPLAY_REFACTORING_SUMMARY](docs/CONTENT_DISPLAY_REFACTORING_SUMMARY.md)** - **🆕 2025**: Complete refactoring summary and benefits
 - **[ENVIRONMENT_ARCHITECTURE](docs/ENVIRONMENT_ARCHITECTURE.md)** - Multi-environment setup and configuration
 - **[ENVIRONMENT_QUICK_REFERENCE](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Quick environment configuration reference
 - **[FIREBASE_MIGRATION_ARCHITECTURE](docs/FIREBASE_MIGRATION_ARCHITECTURE.md)** - Firebase project migration architecture
@@ -105,6 +112,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 ### 🛠️ Development & Maintenance
 
 - **[LEGACY_CODE_CLEANUP_GUIDE](docs/LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Identifying and removing deprecated patterns
+- **[DEPRECATED_UI_PATTERNS](docs/DEPRECATED_UI_PATTERNS.md)** - **🆕 2025**: UI patterns that must be removed during cleanup
 - **[AUTH_CLEANUP_GUIDE](docs/AUTH_CLEANUP_GUIDE.md)** - Authentication system cleanup procedures
 - **[DEVELOPMENT_AUTH_GUIDE](docs/DEVELOPMENT_AUTH_GUIDE.md)** - Development authentication setup
 - **[PRODUCTION_DEPLOYMENT_GUIDE](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - Production deployment procedures
@@ -119,7 +127,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **⚛️ [Next.js 14](https://nextjs.org/)** - React framework with App Router
 - **🔥 [Firebase](https://firebase.google.com/)** - Backend-as-a-Service platform
 - **🎨 [Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
-- **📝 [Lexical](https://lexical.dev/)** - Extensible rich text editor by Meta
+- **📝 [Slate.js](https://slatejs.org/)** - Customizable rich text editor framework
 - **💳 [Stripe](https://stripe.com/)** - Payment processing and subscriptions
 
 ### Firebase Services

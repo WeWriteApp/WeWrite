@@ -107,9 +107,9 @@ export default function FollowedPages({
       // Use batch loading to reduce individual requests
       const pagePromises = paginatedIds.map(async (pageId) => {
         try {
-          // Use cached version to reduce database calls
-          const { getCachedPageById } = await import('../../utils/requestCache');
-          const result = await getCachedPageById(pageId, user?.uid);
+          // Use existing page fetching function
+          const { getPageById } = await import('../../firebase/database/pages');
+          const result = await getPageById(pageId, user?.uid);
           if (result.pageData && !result.error) {
             return result.pageData;
           }

@@ -45,46 +45,89 @@ export function DesktopOptimizedDashboard({
   granularity,
   globalFilters
 }: DesktopOptimizedDashboardProps) {
-  // Row heights state - each row can have different height
-  const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
+  // Global height state - all graphs use the same height
+  const [globalHeight, setGlobalHeight] = useState<number>(DEFAULT_ROW_HEIGHT);
+
+  // Get height for all rows (now unified)
+  const getRowHeight = () => globalHeight;
   
-  // Get default height for a row
-  const getRowHeight = (rowId: string) => rowHeights[rowId] || DEFAULT_ROW_HEIGHT;
-  
-  // Handle Option+Scroll for height adjustment
+  // Handle Option+Scroll for global height adjustment
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       // Only handle if Option/Alt key is pressed
       if (!e.altKey) return;
-      
+
       e.preventDefault();
-      
-      // Find which row we're hovering over
-      const target = e.target as Element;
-      const rowElement = target.closest('[data-row-id]');
-      if (!rowElement) return;
-      
-      const rowId = rowElement.getAttribute('data-row-id');
-      if (!rowId) return;
-      
+
       // Calculate height change (negative deltaY = scroll up = increase height)
       const heightChange = -e.deltaY * 0.5; // Adjust sensitivity
-      const currentHeight = getRowHeight(rowId);
-      const newHeight = Math.max(MIN_ROW_HEIGHT, Math.min(MAX_ROW_HEIGHT, currentHeight + heightChange));
-      
-      setRowHeights(prev => ({
-        ...prev,
-        [rowId]: newHeight
-      }));
+      const newHeight = Math.max(MIN_ROW_HEIGHT, Math.min(MAX_ROW_HEIGHT, globalHeight + heightChange));
+
+      setGlobalHeight(newHeight);
     };
-    
+
     // Add event listener to document
     document.addEventListener('wheel', handleWheel, { passive: false });
-    
+
     return () => {
       document.removeEventListener('wheel', handleWheel);
     };
-  }, [rowHeights]);
+  }, [globalHeight]);
+
+  // Handle mobile pinch for vertical height adjustment
+  useEffect(() => {
+    let initialPinchDistance: number | null = null;
+    let initialHeight: number | null = null;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+
+        // Calculate initial vertical distance between touches
+        const verticalDistance = Math.abs(touch2.clientY - touch1.clientY);
+        initialPinchDistance = verticalDistance;
+        initialHeight = globalHeight;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && initialPinchDistance !== null && initialHeight !== null) {
+        e.preventDefault(); // Prevent default pinch zoom
+
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+
+        // Calculate current vertical distance between touches
+        const currentVerticalDistance = Math.abs(touch2.clientY - touch1.clientY);
+
+        // Calculate the change in vertical distance
+        const distanceChange = currentVerticalDistance - initialPinchDistance;
+
+        // Apply height change based on vertical pinch (scale factor for sensitivity)
+        const heightChange = distanceChange * 0.8;
+        const newHeight = Math.max(MIN_ROW_HEIGHT, Math.min(MAX_ROW_HEIGHT, initialHeight + heightChange));
+
+        setGlobalHeight(newHeight);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      initialPinchDistance = null;
+      initialHeight = null;
+    };
+
+    // Add touch event listeners
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [globalHeight]);
 
   // Define dashboard rows
   const dashboardRows: DashboardRow[] = [
@@ -398,7 +441,7 @@ export function DesktopOptimizedDashboard({
     <div className="desktop-optimized-dashboard">
       {/* Instructions */}
       <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-        💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust row heights
+        💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights. On mobile, pinch vertically to resize.
       </div>
       
       {/* Dashboard Rows */}
@@ -410,7 +453,7 @@ export function DesktopOptimizedDashboard({
             dateRange={dateRange}
             granularity={granularity}
             globalFilters={globalFilters}
-            height={getRowHeight(row.id)}
+            height={getRowHeight()}
           />
         ))}
       </div>

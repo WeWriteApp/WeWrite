@@ -30,6 +30,8 @@ import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import TextView from "../editor/TextView";
+
+import DenseModeToggle from "../viewer/DenseModeToggle";
 import UnifiedLoader from "../ui/unified-loader";
 import { ErrorDisplay } from "../ui/error-display";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
@@ -38,12 +40,12 @@ import StickySaveHeader from "../layout/StickySaveHeader";
 // Duplicate title checking imports
 import { TitleValidationInput } from "../forms/TitleValidationInput";
 
-// Editor Components - Dynamic import to prevent hydration mismatches
-const Editor = dynamic(() => import("../editor/Editor"), {
+// Content Display Components - Unified system
+const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
   ssr: false,
   loading: () => (
     <div className="p-4 text-center">
-      <div className="animate-pulse">Loading editor...</div>
+      <div className="animate-pulse">Loading content...</div>
     </div>
   )
 });
@@ -1294,10 +1296,14 @@ export default function PageView({
             {/* Content container with title-like styling */}
             <div className="px-4 pb-32">
               <div
-                className={`bg-background/80 border rounded-lg px-4 py-4 outline-none transition-all duration-200 ${
-                  isEditorFocused && isEditing && canEdit
-                    ? "border-primary/50 ring-2 ring-primary/20"
-                    : "border-muted-foreground/30"
+                className={`px-4 py-4 outline-none transition-all duration-200 ${
+                  isEditing && canEdit
+                    ? `bg-background/80 border rounded-lg ${
+                        isEditorFocused
+                          ? "border-primary/50 ring-2 ring-primary/20"
+                          : "border-muted-foreground/30"
+                      }`
+                    : "bg-transparent border-none"
                 } min-h-[200px] w-full max-w-none`}
                 onClick={() => {
                   // Focus the editor when clicking the container
@@ -1324,49 +1330,44 @@ export default function PageView({
                       </div>
                     }>
 
-                      {/* Use Editor only when user is actively editing their own content */}
+                      {/* Unified content display system */}
                       {(() => {
-                        const shouldUseEditor = canEdit && isEditing;
-                        console.log('🔗 PAGE_VIEW: Choosing component to render:', {
+                        console.log('🔗 PAGE_VIEW: Rendering unified content display:', {
                           canEdit,
-                          isEditing,
-                          shouldUseEditor,
-                          component: shouldUseEditor ? 'Editor' : 'TextView'
+                          isEditable: canEdit,
+                          hasContent: !!editorState?.length
                         });
 
-                        return shouldUseEditor ? (
-                          <Editor
-                            ref={editorRef}
-                            title={title}
-                            setTitle={handleTitleChange}
-                            initialContent={editorState}
-                            onChange={handleContentChange}
-                            onEmptyLinesChange={handleEmptyLinesChange}
-                            location={location}
-                            setLocation={handleLocationChange}
-                            onSave={handleSave}
-                            onCancel={handleCancel}
-                            onDelete={handleDelete}
-                            isSaving={isSaving}
-                            error={error || ""}
-                            isNewPage={false}
-                            placeholder="Start typing..."
-                            showToolbar={false}
-                            readOnly={false}
-                            onInsertLinkRequest={handleInsertLinkRequest}
-                            pageId={pageId}
-                          />
-                        ) : (
-                          /* Use TextView for viewing content (other users' pages or when not editing) */
-                          <TextView
-                            content={editorState}
-                            viewMode="normal"
-                            // setIsEditing removed - no manual edit mode toggling allowed
-                            canEdit={canEdit}
-                            showDiff={showDiff}
-                            isEditing={false}
-                            showLineNumbers={true}
-                          />
+                        return (
+                          <div className="space-y-4">
+                            <ContentDisplay
+                              content={editorState}
+                              isEditable={canEdit}
+                              onChange={handleContentChange}
+                              onEmptyLinesChange={handleEmptyLinesChange}
+                              placeholder="Start typing..."
+                              location={location}
+                              setLocation={handleLocationChange}
+                              onSave={handleSave}
+                              onCancel={handleCancel}
+                              onDelete={handleDelete}
+                              isSaving={isSaving}
+                              error={error || ""}
+                              isNewPage={false}
+                              showToolbar={false}
+                              onInsertLinkRequest={handleInsertLinkRequest}
+                              pageId={pageId}
+                              showDiff={showDiff}
+                              showLineNumbers={true}
+                            />
+
+                            {/* Dense mode toggle below content - only show in view mode */}
+                            {!canEdit && (
+                              <div className="flex justify-center pt-4 border-t border-border/50">
+                                <DenseModeToggle />
+                              </div>
+                            )}
+                          </div>
                         );
                       })()}
                     </TextViewErrorBoundary>

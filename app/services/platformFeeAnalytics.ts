@@ -26,7 +26,7 @@ import {
 } from 'date-fns';
 import { db } from '../firebase/config';
 import { getCollectionName, COLLECTIONS } from '../utils/environmentConfig';
-import { getCachedData, setCachedData, getCacheKey } from '../utils/cacheUtils';
+import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
 
 export interface PlatformFeeDataPoint {
   date: string;
@@ -131,10 +131,10 @@ export async function getPlatformFeeAnalytics(
 ): Promise<PlatformFeeDataPoint[]> {
   try {
     // Generate cache key including granularity
-    const cacheKey = getCacheKey('platform-fees', dateRange) + (granularity ? `-g${granularity}` : '');
-    
+    const cacheKey = generateCacheKey('platform-fees', dateRange) + (granularity ? `-g${granularity}` : '');
+
     // Check cache first (30 minute TTL for platform fee data)
-    const cachedData = getCachedData<PlatformFeeDataPoint[]>(cacheKey);
+    const cachedData = getCacheItem<PlatformFeeDataPoint[]>(cacheKey);
     if (cachedData) {
       console.log('📦 [Platform Fee Analytics] Returning cached data:', cachedData.length, 'points');
       return cachedData;
@@ -213,7 +213,7 @@ export async function getPlatformFeeAnalytics(
     }).sort((a, b) => a.date.localeCompare(b.date));
 
     // Cache the result (30 minute TTL)
-    setCachedData(cacheKey, result, 30 * 60 * 1000);
+    setCacheItem(cacheKey, result, 30 * 60 * 1000);
     
     console.log('📊 [Platform Fee Analytics] Returning result:', {
       dataPoints: result.length,
@@ -234,8 +234,8 @@ export async function getPlatformFeeAnalytics(
  */
 export async function getPlatformFeeStats(dateRange: DateRange): Promise<PlatformFeeStats> {
   try {
-    const cacheKey = getCacheKey('platform-fee-stats', dateRange);
-    const cachedStats = getCachedData<PlatformFeeStats>(cacheKey);
+    const cacheKey = generateCacheKey('platform-fee-stats', dateRange);
+    const cachedStats = getCacheItem<PlatformFeeStats>(cacheKey);
     if (cachedStats) {
       return cachedStats;
     }
@@ -280,7 +280,7 @@ export async function getPlatformFeeStats(dateRange: DateRange): Promise<Platfor
     };
 
     // Cache stats for 15 minutes
-    setCachedData(cacheKey, stats, 15 * 60 * 1000);
+    setCacheItem(cacheKey, stats, 15 * 60 * 1000);
     return stats;
 
   } catch (error) {

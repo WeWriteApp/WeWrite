@@ -20,8 +20,8 @@ import type { UserBioTabProps } from "../../types/components";
 import type { EditorContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
 
-// Import the unified Editor component
-const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
+// Import the unified ContentDisplay component
+const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), { ssr: false });
 
 const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const { user } = useAuth();
@@ -248,8 +248,9 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         {isProfileOwner ? (
           <div className="animate-in fade-in-0 duration-300">
             <PageProvider>
-              <Editor
-                  initialContent={bioContent}
+              <ContentDisplay
+                  content={bioContent}
+                  isEditable={true}
                   onChange={handleContentChange}
                   isSaving={isLoading}
                   error={error || ""}

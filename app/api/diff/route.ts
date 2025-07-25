@@ -32,8 +32,9 @@ export interface DiffPreview {
 }
 
 /**
- * Robust character-level diff using Myers' algorithm (simplified)
- * This is the single source of truth for all diff calculations
+ * Improved word-level diff algorithm
+ * This provides more intelligent diffing by working at word boundaries
+ * and using a proper longest common subsequence algorithm
  */
 function calculateCharacterDiff(oldText: string, newText: string): { added: number; removed: number; operations: DiffOperation[] } {
   if (!oldText && !newText) {
@@ -56,72 +57,8 @@ function calculateCharacterDiff(oldText: string, newText: string): { added: numb
     };
   }
 
-  const operations: DiffOperation[] = [];
-  
-  // Find common prefix
-  let prefixLength = 0;
-  const minLength = Math.min(oldText.length, newText.length);
-  
-  while (prefixLength < minLength && oldText[prefixLength] === newText[prefixLength]) {
-    prefixLength++;
-  }
-
-  // Find common suffix
-  let suffixLength = 0;
-  while (suffixLength < minLength - prefixLength &&
-         oldText[oldText.length - 1 - suffixLength] === newText[newText.length - 1 - suffixLength]) {
-    suffixLength++;
-  }
-
-  // Add common prefix
-  if (prefixLength > 0) {
-    operations.push({
-      type: 'equal',
-      text: oldText.substring(0, prefixLength),
-      start: 0
-    });
-  }
-
-  // Handle middle section
-  const oldMiddle = oldText.substring(prefixLength, oldText.length - suffixLength);
-  const newMiddle = newText.substring(prefixLength, newText.length - suffixLength);
-
-  if (oldMiddle && newMiddle) {
-    // Both have content - this is a replacement
-    operations.push({
-      type: 'remove',
-      text: oldMiddle,
-      start: prefixLength
-    });
-    operations.push({
-      type: 'add',
-      text: newMiddle,
-      start: prefixLength
-    });
-  } else if (oldMiddle) {
-    // Only old has content - this is a deletion
-    operations.push({
-      type: 'remove',
-      text: oldMiddle,
-      start: prefixLength
-    });
-  } else if (newMiddle) {
-    // Only new has content - this is an addition
-    operations.push({
-      type: 'add',
-      text: newMiddle,
-      start: prefixLength
-    });
-  }
-
-  // Add common suffix
-  if (suffixLength > 0) {
-    operations.push({
-      type: 'equal',
-      text: oldText.substring(oldText.length - suffixLength),
-      start: oldText.length - suffixLength
-    });
-  }
+  // Use word-level diffing for better results
+  const operations = calculateWordLevelDiff(oldText, newText);
 
   // Calculate totals
   let added = 0;
@@ -136,6 +73,132 @@ function calculateCharacterDiff(oldText: string, newText: string): { added: numb
   });
 
   return { added, removed, operations };
+}
+
+/**
+ * Word-level diff using longest common subsequence
+ * This provides much better results than the simple prefix/suffix approach
+ */
+function calculateWordLevelDiff(oldText: string, newText: string): DiffOperation[] {
+  // Split into words while preserving whitespace
+  const oldWords = splitIntoWords(oldText);
+  const newWords = splitIntoWords(newText);
+
+  // Calculate LCS of words
+  const lcs = longestCommonSubsequence(oldWords, newWords);
+
+  // Convert LCS result back to operations
+  const operations: DiffOperation[] = [];
+  let oldIndex = 0;
+  let newIndex = 0;
+  let position = 0;
+
+  for (const op of lcs) {
+    if (op.type === 'equal') {
+      // Add any removed words before this equal section
+      while (oldIndex < op.oldIndex) {
+        operations.push({
+          type: 'remove',
+          text: oldWords[oldIndex],
+          start: position
+        });
+        oldIndex++;
+      }
+
+      // Add any added words before this equal section
+      while (newIndex < op.newIndex) {
+        operations.push({
+          type: 'add',
+          text: newWords[newIndex],
+          start: position
+        });
+        position += newWords[newIndex].length;
+        newIndex++;
+      }
+
+      // Add the equal section
+      operations.push({
+        type: 'equal',
+        text: oldWords[oldIndex],
+        start: position
+      });
+      position += oldWords[oldIndex].length;
+      oldIndex++;
+      newIndex++;
+    }
+  }
+
+  // Add any remaining removed words
+  while (oldIndex < oldWords.length) {
+    operations.push({
+      type: 'remove',
+      text: oldWords[oldIndex],
+      start: position
+    });
+    oldIndex++;
+  }
+
+  // Add any remaining added words
+  while (newIndex < newWords.length) {
+    operations.push({
+      type: 'add',
+      text: newWords[newIndex],
+      start: position
+    });
+    position += newWords[newIndex].length;
+    newIndex++;
+  }
+
+  return operations;
+}
+
+/**
+ * Split text into words while preserving whitespace and punctuation
+ */
+function splitIntoWords(text: string): string[] {
+  // Split on word boundaries but keep delimiters
+  return text.split(/(\s+|[.,!?;:])/g).filter(word => word.length > 0);
+}
+
+/**
+ * Calculate longest common subsequence for word arrays
+ */
+function longestCommonSubsequence(oldWords: string[], newWords: string[]): Array<{type: 'equal', oldIndex: number, newIndex: number}> {
+  const oldLen = oldWords.length;
+  const newLen = newWords.length;
+
+  // Create LCS table
+  const lcs: number[][] = Array(oldLen + 1).fill(null).map(() => Array(newLen + 1).fill(0));
+
+  // Fill LCS table
+  for (let i = 1; i <= oldLen; i++) {
+    for (let j = 1; j <= newLen; j++) {
+      if (oldWords[i - 1] === newWords[j - 1]) {
+        lcs[i][j] = lcs[i - 1][j - 1] + 1;
+      } else {
+        lcs[i][j] = Math.max(lcs[i - 1][j], lcs[i][j - 1]);
+      }
+    }
+  }
+
+  // Backtrack to find the actual LCS
+  const result: Array<{type: 'equal', oldIndex: number, newIndex: number}> = [];
+  let i = oldLen;
+  let j = newLen;
+
+  while (i > 0 && j > 0) {
+    if (oldWords[i - 1] === newWords[j - 1]) {
+      result.unshift({ type: 'equal', oldIndex: i - 1, newIndex: j - 1 });
+      i--;
+      j--;
+    } else if (lcs[i - 1][j] > lcs[i][j - 1]) {
+      i--;
+    } else {
+      j--;
+    }
+  }
+
+  return result;
 }
 
 /**

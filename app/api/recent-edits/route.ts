@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getCollectionName } from '../../utils/environmentConfig';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../utils/environmentConfig';
+import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
 // Initialize Firebase Admin SDK with unique app name for recent edits
 let recentEditsApp;
@@ -279,19 +280,37 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
       .slice(0, limit);
 
+    // Fetch subscription data for all unique user IDs
+    const uniqueUserIds = [...new Set(sortedEdits.map(edit => edit.userId).filter(Boolean))];
+    const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
+
+    // Add subscription data to edits
+    const editsWithSubscriptions = sortedEdits.map(edit => {
+      if (!edit.userId) return edit;
+
+      const userData = batchUserData[edit.userId];
+      return {
+        ...edit,
+        tier: userData?.tier,
+        subscriptionStatus: userData?.subscriptionStatus,
+        subscriptionAmount: userData?.subscriptionAmount,
+        username: userData?.username || edit.username
+      };
+    });
+
     // Determine if there are more items available
     const hasMore = validEdits.length >= limit;
 
     // Get the cursor for the next page (last item's lastModified date)
-    const nextCursor = sortedEdits.length > 0 ? sortedEdits[sortedEdits.length - 1].lastModified : null;
+    const nextCursor = editsWithSubscriptions.length > 0 ? editsWithSubscriptions[editsWithSubscriptions.length - 1].lastModified : null;
 
-    console.log(`📊 UNIFIED VERSION SYSTEM: Returning ${sortedEdits.length} recent edits from versions`);
+    console.log(`📊 UNIFIED VERSION SYSTEM: Returning ${editsWithSubscriptions.length} recent edits from versions with subscription data`);
 
     const result = {
-      edits: sortedEdits,
+      edits: editsWithSubscriptions,
       hasMore,
       nextCursor,
-      total: sortedEdits.length,
+      total: editsWithSubscriptions.length,
       timestamp: new Date().toISOString(),
       source: 'unified_version_system' // Indicate this is using the new system
     };
@@ -317,4 +336,85 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Fetch batch user data including subscription information
+ */
+async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<string, any>> {
+  if (userIds.length === 0) return {};
+
+  const results: Record<string, any> = {};
+
+  try {
+    // Batch fetch from Firestore (max 10 per query due to 'in' limitation)
+    const batchSize = 10;
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+
+      try {
+        // Fetch user profiles from Firestore
+        const usersQuery = db.collection('users').where('__name__', 'in', batch);
+        const usersSnapshot = await usersQuery.get();
+
+        // Fetch subscription data in parallel using environment-aware paths
+        const subscriptionPromises = batch.map(async (userId) => {
+          try {
+            // Use environment-aware collection paths
+            const { parentPath, subCollectionName } = getSubCollectionPath(
+              PAYMENT_COLLECTIONS.USERS,
+              userId,
+              PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+            );
+            const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
+            return {
+              userId,
+              subscription: subDoc.exists ? subDoc.data() : null
+            };
+          } catch (error) {
+            console.warn(`Error fetching subscription for user ${userId}:`, error);
+            return { userId, subscription: null };
+          }
+        });
+
+        const subscriptionResults = await Promise.all(subscriptionPromises);
+        const subscriptionMap = new Map(subscriptionResults.map(r => [r.userId, r.subscription]));
+
+        // Process Firestore results
+        usersSnapshot.forEach(doc => {
+          const userData = doc.data();
+          const subscription = subscriptionMap.get(doc.id);
+
+          // Use centralized tier determination logic
+          const effectiveTier = getEffectiveTier(
+            subscription?.amount || null,
+            subscription?.tier || null,
+            subscription?.status || null
+          );
+
+          results[doc.id] = {
+            uid: doc.id,
+            username: userData.username,
+            displayName: userData.displayName,
+            email: userData.email,
+            tier: String(effectiveTier), // Ensure tier is always a string
+            subscriptionStatus: subscription?.status,
+            subscriptionAmount: subscription?.amount,
+            pageCount: userData.pageCount || 0,
+            followerCount: userData.followerCount || 0,
+            viewCount: userData.viewCount || 0
+          };
+        });
+
+      } catch (error) {
+        console.warn(`Error fetching batch ${i}-${i + batchSize}:`, error);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in fetchBatchUserData:', error);
+  }
+
+  return results;
 }

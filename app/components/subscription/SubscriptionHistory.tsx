@@ -219,7 +219,7 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
         ) : (
           <div className="space-y-4">
             {history.map((event) => (
-              <div key={event.id} className="flex items-start gap-3 p-4 border rounded-lg">
+              <div key={event.id} className="flex items-start gap-3 p-4 border-theme-strong rounded-lg">
                 <div className="flex-shrink-0 mt-0.5">
                   {getEventIcon(event.type)}
                 </div>
@@ -238,7 +238,7 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
 
                   {/* Enhanced payment failure details */}
                   {event.type === 'payment_failed' && (
-                    <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                    <div className="mt-2 p-3 bg-destructive/10 border-theme-medium rounded-md" style={{ borderColor: 'hsl(var(--destructive) / 0.2)' }}>
                       <div className="flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -269,7 +269,7 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
 
                   {/* Enhanced payment recovery details */}
                   {event.type === 'payment_recovered' && (
-                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/20 border-theme-medium rounded-md" style={{ borderColor: 'hsl(120 60% 50% / 0.3)' }}>
                       <div className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -288,7 +288,7 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
 
                   {/* Refund details */}
                   {event.type === 'refund_issued' && (
-                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                    <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-950/20 border-theme-medium rounded-md" style={{ borderColor: 'hsl(30 80% 50% / 0.3)' }}>
                       <div className="flex items-start gap-2">
                         <ArrowLeftCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">

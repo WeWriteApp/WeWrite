@@ -45,7 +45,7 @@ export function LoginForm() {
       </div>
 
       {error && (
-        <Alert className="bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800">
+        <Alert className="bg-red-50 dark:bg-red-950 border-theme-medium" style={{ borderColor: 'hsl(0 84% 60% / 0.3)' }}>
           <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
           <AlertDescription className="text-red-600 dark:text-red-400">
             {error}

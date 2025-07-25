@@ -132,7 +132,7 @@ export function TitleValidationInput({
         <div className="space-y-2">
           {isDuplicate && validationResult.existingPage ? (
             // Duplicate title message with link
-            <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="p-3 bg-red-50 dark:bg-red-950/20 border-theme-medium rounded-lg" style={{ borderColor: 'hsl(0 84% 60% / 0.3)' }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <p className="text-sm text-red-800 dark:text-red-200 font-medium">
@@ -153,7 +153,7 @@ export function TitleValidationInput({
             </div>
           ) : validationResult.error ? (
             // Error message
-            <div className="p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="p-2 bg-amber-50 dark:bg-amber-950/20 border-theme-medium rounded-lg" style={{ borderColor: 'hsl(45 93% 47% / 0.3)' }}>
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 {validationMessage}
               </p>

@@ -5,6 +5,72 @@
 /* Import pledge bar animations */
 @import './styles/pledge-bar-animations.css';
 
+/* Import unified content display styles */
+@import './styles/content-display.css';
+
+/* ===== LEGACY CONTENT VIEWER STYLES (DEPRECATED) ===== */
+/* These classes are kept for backward compatibility during transition */
+/* New code should use wewrite-* classes from content-display.css */
+
+.content-viewer-container {
+  @apply w-full max-w-none;
+}
+
+.content-viewer {
+  @apply w-full text-left;
+  /* NO borders, NO input styling - pure viewing experience */
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.content-viewer.normal-mode {
+  @apply space-y-4;
+}
+
+.content-viewer.dense-mode {
+  @apply space-y-1;
+}
+
+.viewer-paragraph {
+  @apply flex items-start gap-3 py-2;
+  /* Clean paragraph styling without hover effects */
+}
+
+.viewer-paragraph.dense-paragraph {
+  @apply inline-block mr-4;
+}
+
+.viewer-paragraph.normal-paragraph {
+  @apply block;
+}
+
+.viewer-paragraph .paragraph-number {
+  @apply text-xs text-muted-foreground font-mono min-w-[2rem] text-right select-none;
+}
+
+.viewer-paragraph .paragraph-content {
+  @apply flex-1 leading-relaxed;
+}
+
+.viewer-text-content {
+  @apply text-foreground;
+}
+
+.viewer-pill-link {
+  @apply inline-flex items-center;
+  /* Links in viewer are not editable, just navigable */
+}
+
+.dense-content-flow {
+  @apply leading-relaxed;
+}
+
+.normal-content-flow {
+  @apply space-y-3;
+}
+
 /* REMOVED: Legacy slate-editor-container styles - using clean Slate.js now */
 
 /* Custom slider styles for subscription tier selector */
@@ -564,7 +630,7 @@ input[type="range"]::-moz-range-thumb,
   --border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Simple editor container */
+/* DEPRECATED: Legacy editor container - use wewrite-editor-container instead */
 .editor-container {
   position: relative;
   /* External margins applied inline for proper spacing from viewport edges */

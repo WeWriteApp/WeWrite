@@ -226,7 +226,7 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
           )}
         </div>
 
-        <DialogFooter className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+        <DialogFooter className="mt-4 pt-4 border-t-only">
           <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
             <Button
               variant="outline"
