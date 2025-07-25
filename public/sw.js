@@ -88,6 +88,13 @@ const PAYMENT_NEVER_CACHE_PATTERNS = [
   'lgrckt-in.com'
 ];
 
+// Map tile patterns that should use network-first strategy
+const MAP_TILE_PATTERNS = [
+  'tile.openstreetmap.org',
+  'basemaps.cartocdn.com',
+  'cdnjs.cloudflare.com/ajax/libs/leaflet'
+];
+
 // Cache-first strategies for these patterns
 const CACHE_FIRST_PATTERNS = [
   '/_next/static/',
@@ -178,18 +185,23 @@ async function handleRequest(request) {
       return await cacheFirstStrategy(request, FONT_CACHE);
     }
 
-    // Strategy 4: Never cache payment-related requests
+    // Strategy 4: Network-first for map tiles (ensure fresh tiles)
+    if (isMapTileResource(request.url)) {
+      return await networkFirstStrategy(request, IMAGE_CACHE, 5000); // 5 second timeout for map tiles
+    }
+
+    // Strategy 5: Never cache payment-related requests
     if (isPaymentNeverCache(request.url)) {
       // Silently bypass cache for payment requests to reduce console noise
       return fetch(request);
     }
 
-    // Strategy 5: Network-first for dynamic APIs
+    // Strategy 7: Network-first for dynamic APIs
     if (isNetworkFirstResource(pathname)) {
       return await networkFirstStrategy(request, API_CACHE);
     }
 
-    // Strategy 6: Stale-while-revalidate for cacheable APIs
+    // Strategy 8: Stale-while-revalidate for cacheable APIs
     if (isCacheableAPI(pathname)) {
       return await staleWhileRevalidateStrategy(request, API_CACHE);
     }
@@ -407,6 +419,10 @@ function isCacheableAPI(pathname) {
 
 function isPaymentNeverCache(url) {
   return PAYMENT_NEVER_CACHE_PATTERNS.some(pattern => url.includes(pattern));
+}
+
+function isMapTileResource(url) {
+  return MAP_TILE_PATTERNS.some(pattern => url.includes(pattern));
 }
 
 // Background sync for failed requests (if supported)

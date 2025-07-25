@@ -56,9 +56,12 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ## 📚 Documentation
 
+**📋 [COMPLETE DOCUMENTATION INDEX](docs/DOCUMENTATION_INDEX.md)** - **🗂️ NAVIGATION HUB**: Complete guide to all WeWrite documentation
+
 ### 🆕 Recent Changes (Start Here for 2025 Updates)
 
 - **[RECENT_CHANGES_SUMMARY](docs/RECENT_CHANGES_SUMMARY.md)** - **🆕 2025**: Quick overview of major changes and what patterns to avoid
+- **[EMERGENCY_COST_OPTIMIZATION_SUMMARY](EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - **🚨 CRITICAL**: Firebase cost optimization and real-time listener cleanup
 
 ### 🔒 Security & Core Systems (Essential Reading)
 
@@ -105,6 +108,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ### ⚡ Performance & Optimization
 
+- **[EMERGENCY_COST_OPTIMIZATION_SUMMARY](EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - **🚨 CRITICAL**: Firebase cost optimization and real-time listener cleanup
 - **[PERFORMANCE_OPTIMIZATION_SUMMARY](docs/PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance improvements
 - **[DATABASE_SCHEMA_OPTIMIZATION_GUIDE](docs/DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization strategies
 - **[FIREBASE_INDEX_OPTIMIZATION](docs/FIREBASE_INDEX_OPTIMIZATION.md)** - Firestore index optimization

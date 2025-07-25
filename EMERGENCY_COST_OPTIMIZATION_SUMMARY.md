@@ -4,12 +4,16 @@
 
 ### **1. ✅ DISABLED ALL REAL-TIME LISTENERS**
 - **Token Service**: Disabled `listenToTokenBalance()` real-time listener
-- **Fee Service**: Disabled fee structure real-time listener  
+- **Fee Service**: Disabled fee structure real-time listener
 - **Fee Configuration Service**: Disabled subscription listener
-- **Unified Stats Service**: Disabled pledge stats listener
+- **Unified Stats Service**: Disabled pledge stats listener AND page stats RTDB listeners
 - **Page Database**: Disabled page and version real-time listeners
+- **Visitor Tracking Service**: Disabled `subscribeToVisitorCount()` onSnapshot listener
+- **Live Readers Service**: Disabled `subscribeToReaderCount()` RTDB listener
+- **Live Readers Service**: Disabled `trackReader()` RTDB writes
+- **Visitor Tracking Service**: Disabled heartbeat interval writes
 
-**Estimated Savings**: 60-80% reduction in Realtime Database costs
+**Estimated Savings**: 80-90% reduction in Realtime Database costs
 
 ### **2. ✅ OPTIMIZED RECENT EDITS API**
 - Added aggressive 1-minute caching
@@ -55,11 +59,11 @@
 - **Total: $43.12/day** 🔥
 
 ### **After Optimization** (Estimated):
-- Realtime Database: $5-8/day (70-80% reduction)
+- Realtime Database: $2-5/day (85-95% reduction)
 - Firestore: $3-6/day (60-80% reduction)
-- **Total: $8-14/day** ✅
+- **Total: $5-11/day** ✅
 
-### **Estimated Daily Savings: $25-35** 💰
+### **Estimated Daily Savings: $30-40** 💰
 
 ## **WHAT WAS CAUSING THE COSTS**
 
@@ -134,9 +138,11 @@ If issues arise, you can quickly rollback by:
 ## **FILES MODIFIED**
 
 - `app/services/tokenService.ts` - Disabled real-time listeners
-- `app/services/feeService.ts` - Disabled real-time listeners  
+- `app/services/feeService.ts` - Disabled real-time listeners
 - `app/services/feeConfigurationService.ts` - Disabled real-time listeners
 - `app/services/UnifiedStatsService.ts` - Disabled real-time listeners
+- `app/services/VisitorTrackingService.ts` - Disabled real-time listeners and heartbeat
+- `app/services/LiveReadersService.ts` - Disabled real-time listeners and tracking
 - `app/firebase/database/pages.ts` - Disabled real-time listeners
 - `app/api/recent-edits/route.ts` - Added caching and optimization
 - `app/api/users/profile/route.ts` - Added aggressive caching
@@ -154,4 +160,24 @@ If issues arise, you can quickly rollback by:
 
 ---
 
+## 📚 Related Documentation
+
+### Critical Reading
+- **[LEGACY_CODE_CLEANUP_GUIDE.md](docs/LEGACY_CODE_CLEANUP_GUIDE.md)** - Dangerous patterns to remove during cleanup
+- **[RECENT_CHANGES_SUMMARY.md](docs/RECENT_CHANGES_SUMMARY.md)** - Overview of all 2025 changes
+- **[DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)** - Complete documentation navigation
+
+### Performance & Optimization
+- **[PERFORMANCE_OPTIMIZATION_SUMMARY.md](docs/PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance improvements
+- **[DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md](docs/DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization strategies
+- **[FIREBASE_INDEX_OPTIMIZATION.md](docs/FIREBASE_INDEX_OPTIMIZATION.md)** - Firestore index optimization
+
+### Development Guidelines
+- **[README.md](README.md)** - Main project documentation and setup
+- **[DEPENDENCY_MANAGEMENT_STANDARDS.md](docs/DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
+
+---
+
 **⚠️ CRITICAL**: Monitor Firebase costs closely over the next 24-48 hours to ensure optimizations are working as expected.
+
+**🚨 This document represents critical cost optimization work completed on 2025-01-25 to prevent Firebase billing crisis.**

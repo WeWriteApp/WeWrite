@@ -44,9 +44,9 @@ const DayContainer = React.memo(function DayContainer({
   isFullPage = false,
   timelineType = 'daily-notes'
 }: DayContainerProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const router = useRouter();
-  const isDark = theme === 'dark';
+  const isDark = resolvedTheme === 'dark';
 
   // Format date for display
   const dayName = format(date, 'EEE'); // Mon, Tue, etc.

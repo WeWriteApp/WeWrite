@@ -71,8 +71,8 @@ export async function GET(request: NextRequest) {
         exampleUsage: {
           users: getCollectionName('users'),
           pages: getCollectionName('pages'),
-          activities: getCollectionName('activities'),
-          subscriptions: getCollectionName('subscriptions')
+          subscriptions: getCollectionName('subscriptions'),
+          versions: getCollectionName('versions')
         }
       },
       migration: {
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
  */
 async function testCollectionNaming(parameters: any) {
   const { collections } = parameters || {};
-  const testCollections = collections || ['users', 'pages', 'activities'];
+  const testCollections = collections || ['users', 'pages', 'versions'];
   
   const results = testCollections.map((collectionName: string) => {
     const environmentSpecificName = getCollectionName(collectionName);

@@ -27,8 +27,8 @@ interface DayCardProps {
  * - Classic Mode: Uses outlined style instead of filled
  */
 const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColor = '#1768FF', noteCount = 0 }: DayCardProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const { pillStyle } = usePillStyle();
   const { formatDate } = useDateFormat();
 

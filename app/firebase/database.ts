@@ -88,52 +88,8 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
       }
     }
 
-    // Create activity record if title changed
-    if (result && originalPageData && pageData?.pageData && data.title && data.title !== originalPageData.title) {
-      try {
-        console.log('Title changed, creating activity record:', {
-          oldTitle: originalPageData.title,
-          newTitle: data.title,
-          pageId
-        });
-
-        // Import required functions
-        const { collection, addDoc, Timestamp } = await import('firebase/firestore');
-        const { db } = await import('./database/core');
-
-        // Create activity record for title change
-        const activityData = {
-          pageId,
-          pageName: data.title, // Use the new title
-          userId: pageData.pageData.userId,
-          username: pageData.pageData.username || 'Anonymous',
-          timestamp: Timestamp.now(),
-          diff: {
-            added: 0, // Title changes don't add/remove characters in content
-            removed: 0,
-            hasChanges: true // Always true for title changes
-          },
-          // No diff preview for title changes
-          diffPreview: null,
-          isPublic: pageData.pageData.isPublic || false,
-          isNewPage: false,
-          isTitleChange: true // Flag to identify title-only changes
-        };
-
-const activitiesRef = collection(db, getCollectionName('activities'));
-        const activityDocRef = await addDoc(activitiesRef, activityData);
-
-        console.log('Created activity record for title change', {
-          activityId: activityDocRef.id,
-          pageId,
-          oldTitle: originalPageData.title,
-          newTitle: data.title
-        });
-      } catch (activityError) {
-        console.error('Error creating activity record for title change (non-fatal):', activityError);
-        // Don't fail page update if activity recording fails
-      }
-    }
+    // Note: Activity system has been replaced with version system
+    // Title changes are now tracked through the version system
 
     // Trigger cache invalidation for page updates
     if (result && pageData?.pageData?.userId) {

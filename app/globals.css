@@ -8,30 +8,10 @@
 /* Import unified content display styles */
 @import './styles/content-display.css';
 
-/* ===== LEGACY CONTENT VIEWER STYLES (DEPRECATED) ===== */
-/* These classes are kept for backward compatibility during transition */
-/* New code should use wewrite-* classes from content-display.css */
+/* ===== LEGACY CONTENT VIEWER STYLES (REMOVED) ===== */
+/* Use wewrite-* classes from content-display.css instead */
 
-.content-viewer-container {
-  @apply w-full max-w-none;
-}
-
-.content-viewer {
-  @apply w-full text-left;
-  /* NO borders, NO input styling - pure viewing experience */
-  background: transparent;
-  border: none;
-  outline: none;
-  padding: 0;
-}
-
-.content-viewer.normal-mode {
-  @apply space-y-4;
-}
-
-.content-viewer.dense-mode {
-  @apply space-y-1;
-}
+/* REMOVED: Old content-viewer classes - use wewrite-viewer-content instead */
 
 .viewer-paragraph {
   @apply flex items-start gap-3 py-2;
@@ -220,7 +200,7 @@
   }
 
   /* Editor-specific zoom prevention */
-  .editor-container, [data-slate-editor], .simple-editor {
+  .wewrite-editor-container, [data-slate-editor], .simple-editor {
     touch-action: pan-x pan-y;
   }
 
@@ -630,12 +610,7 @@ input[type="range"]::-moz-range-thumb,
   --border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* DEPRECATED: Legacy editor container - use wewrite-editor-container instead */
-.editor-container {
-  position: relative;
-  /* External margins applied inline for proper spacing from viewport edges */
-  /* Internal padding reduced to p-2 (8px) for better visual balance */
-}
+/* REMOVED: Legacy editor container - use wewrite-editor-container instead */
 
 /* Seamless view/edit mode transitions - now handled by unified styling in editor-styles.css */
 .page-editor-stable,

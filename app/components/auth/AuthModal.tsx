@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "../ui/button";
-import Modal from "../ui/modal";
+import { Modal } from "../ui/modal";
 import {
   Tabs,
   TabsContent,

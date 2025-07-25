@@ -86,7 +86,7 @@ export default function PillLinkContextMenu({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.1 }}
-          className="fixed z-50 bg-white dark:bg-gray-800 border-theme-medium dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]"
+          className="fixed z-50 bg-background border-border rounded-lg shadow-lg py-1 min-w-[160px]"
           style={{
             left: adjustedPosition.x,
             top: adjustedPosition.y,

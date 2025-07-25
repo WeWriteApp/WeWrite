@@ -34,8 +34,7 @@ import { useLogRocket } from "../providers/LogRocketProvider";
 import LocationField from "../components/pages/LocationField";
 
 
-// Duplicate title checking imports
-import { TitleValidationInput } from "../components/forms/TitleValidationInput";
+// Duplicate title checking is now handled in PageHeader
 
 /**
  * Loading state component for new page creation
@@ -378,9 +377,8 @@ function NewPageContent() {
     }
   };
 
-  // Handle title validation changes from the validation component
-  const handleTitleValidationChange = (isValid: boolean, isDuplicate: boolean) => {
-    setIsTitleValid(isValid);
+  // Handle duplicate validation changes from PageHeader
+  const handleDuplicateValidationChange = (isDuplicate: boolean) => {
     setIsTitleDuplicate(isDuplicate);
   };
 
@@ -1164,23 +1162,14 @@ function NewPageContent() {
           isEditing={isEditing}
           setIsEditing={handleSetIsEditing}
           onTitleChange={handleTitleChange}
+          onDuplicateValidationChange={handleDuplicateValidationChange}
           titleError={titleError || isTitleDuplicate}
           canEdit={true} // User can always edit their new page
           isNewPage={true} // Enable auto-focus for new pages
           isReply={isReply} // Pass reply status for contextual text
         />
 
-        {/* Title Validation Feedback - Show below header */}
-        {title && title.trim() !== '' && (
-          <div className="px-4 -mt-2 mb-4">
-            <TitleValidationInput
-              value={title}
-              onChange={handleTitleChange}
-              onValidationChange={handleTitleValidationChange}
-              className="hidden" // Hide the input, we just want the validation feedback
-            />
-          </div>
-        )}
+        {/* Title validation is now handled directly in PageHeader */}
         {/* Full-width header area */}
         <div
           className="w-full"

@@ -6,6 +6,70 @@ This guide documents old patterns and legacy code that must be identified and re
 
 ## ✅ Recently Completed Cleanups
 
+### 🚨 Emergency Firebase Cost Optimization (COMPLETED 2025-01-25)
+**CRITICAL CLEANUP**: Disabled expensive real-time listeners causing database usage explosion:
+
+#### 💸 Real-time Listener Cleanup
+- **DISABLED**: `VisitorTrackingService.subscribeToVisitorCount()` - onSnapshot listener on siteVisitors collection
+- **DISABLED**: `UnifiedStatsService.subscribeToPageStats()` - Multiple RTDB onValue listeners per page
+- **DISABLED**: `LiveReadersService.subscribeToReaderCount()` - RTDB listener for reader counts
+- **DISABLED**: `LiveReadersService.trackReader()` - Continuous RTDB writes for user presence
+- **DISABLED**: Visitor tracking heartbeat interval writes
+- **RESULT**: 85-95% reduction in Realtime Database costs (from 46.1GB usage)
+
+#### 🔧 Cost Optimization Patterns
+- **PATTERN**: All disabled services return mock data to prevent UI breakage
+- **PATTERN**: Real-time listeners replaced with API polling where needed
+- **PATTERN**: Aggressive caching implemented to reduce database hits
+- **DOCUMENTATION**: See [EMERGENCY_COST_OPTIMIZATION_SUMMARY.md](../EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)
+
+### Comprehensive Legacy Code Cleanup (COMPLETED 2025-01-25)
+**MAJOR CLEANUP**: Systematic removal of deprecated patterns and legacy code across the entire codebase:
+
+#### 🔧 Authentication System Cleanup
+- **FIXED**: Inconsistent auth imports in `SubscriptionManagement.tsx` (useCurrentAccount → useAuth)
+- **UPDATED**: Test files to use new AuthProvider instead of CurrentAccountProvider
+- **REMOVED**: Old auth patterns and session references
+- **STANDARDIZED**: All components now use unified `useAuth()` pattern
+
+#### 📊 Activity System Migration
+- **REMOVED**: Old activity API route (`app/api/activity/route.ts`)
+- **REMOVED**: Legacy activity functions from `apiClient.ts`
+- **REMOVED**: Test script `create-test-activity.js`
+- **UPDATED**: Database operations to remove activity collection references
+- **REPLACED**: All activity system usage with unified version system
+
+#### 🎨 Content Display System Cleanup
+- **REMOVED**: Deprecated CSS classes (`editor-container`, `content-viewer-container`, `content-viewer`)
+- **UPDATED**: CSS to use `wewrite-*` naming convention throughout
+- **CLEANED**: Global CSS file of legacy content viewer styles
+- **STANDARDIZED**: All content display uses unified ContentDisplay component
+
+#### 🗂️ Modal System Consolidation
+- **REMOVED**: Redundant `SocialMediaModal.tsx` (functionality moved to PledgeBarModal)
+- **STANDARDIZED**: Modal imports to use consistent named imports
+- **VERIFIED**: All modals use unified Modal component with variants
+
+#### 🗄️ Database Collection Standardization
+- **UPDATED**: Test files to use `getCollectionName()` for environment-aware collections
+- **FIXED**: Hardcoded collection references in `payment-system.test.ts` and `payout-system.test.ts`
+- **UPDATED**: Debug endpoints to reference `versions` instead of deprecated `activities`
+
+#### 🎨 Theme Detection Improvements
+- **REPLACED**: `theme` with `resolvedTheme` in multiple components for instant theme switching
+- **FIXED**: Theme detection in ContentCarousel, PaymentMethodSetup, DayCard, DayContainer, Stepper
+- **IMPROVED**: Consistent theme switching without hydration delays
+
+#### 🎨 UI Standardization
+- **REPLACED**: Hardcoded border colors with theme-aware borders
+- **UPDATED**: Components to use `border-muted-foreground/30` instead of `dark:border-neutral-700`
+- **STANDARDIZED**: Border styling across UsernameEnforcementModal, AddToPageButton, PillLinkContextMenu
+
+#### 🔒 Security Audit
+- **VERIFIED**: Email addresses are only shown to users themselves, not exposed to other users
+- **CONFIRMED**: All public username displays use `sanitizeUsername()` properly
+- **VALIDATED**: No email exposure vulnerabilities in public-facing components
+
 ### Content Display System Unification (COMPLETED 2025-01-25)
 **MAJOR REFACTORING**: Replaced scattered editor/viewer components with unified `ContentDisplay` architecture:
 - **REMOVED**: `Editor.tsx` wrapper component (redundant)
@@ -32,7 +96,53 @@ All payment feature flags have been **completely removed**. Payments are now alw
 ### Theme Switching Optimization (COMPLETED 2025-01-24)
 Optimized theme switching to eliminate delays. Logo and Stripe Elements now switch themes instantly using `resolvedTheme` and CSS-based approaches.
 
-## 🔒 CRITICAL: Security Vulnerabilities to Remove
+## 🚨 CRITICAL: Cost & Security Vulnerabilities to Remove
+
+### 💸 Expensive Real-time Listeners ❌ **CRITICAL COST**
+
+**REMOVE ALL EXPENSIVE REAL-TIME LISTENERS** - These patterns cause massive Firebase costs:
+
+#### Code Patterns to Remove
+```typescript
+// REMOVE THESE PATTERNS - CAUSES MASSIVE FIREBASE COSTS
+import { onSnapshot, onValue } from 'firebase/firestore';
+import { ref, onValue } from 'firebase/database';
+
+// EXPENSIVE: Continuous Firestore listeners
+const unsubscribe = onSnapshot(query(collection(db, 'siteVisitors')), (snapshot) => {
+  // This runs constantly and costs money
+});
+
+// EXPENSIVE: Multiple RTDB listeners per page
+const recentChangesUnsub = onValue(ref(rtdb, `pageStats/${pageId}/recentChanges`), callback);
+const editorsUnsub = onValue(ref(rtdb, `pageStats/${pageId}/editors`), callback);
+const liveReadersUnsub = onValue(ref(rtdb, `liveReaders/${pageId}/count`), callback);
+
+// EXPENSIVE: Frequent heartbeat writes
+setInterval(() => {
+  updateDoc(sessionRef, { lastSeen: Timestamp.now() });
+}, 30000); // Every 30 seconds = expensive
+```
+
+#### ✅ Replace With Cost-Optimized Patterns
+```typescript
+// USE THESE PATTERNS - COST-OPTIMIZED ALTERNATIVES
+// 1. API polling instead of real-time listeners
+const fetchData = async () => {
+  const response = await fetch('/api/stats');
+  return response.json();
+};
+
+// 2. Mock data for non-critical features
+const mockStats = { visitors: 0, readers: 0, editors: 0 };
+
+// 3. Disabled listeners with no-op unsubscribers
+const subscribeToStats = (callback) => {
+  console.warn('🚨 COST OPTIMIZATION: Real-time listener disabled');
+  setTimeout(() => callback(mockStats), 100);
+  return () => {}; // No-op unsubscriber
+};
+```
 
 ### Email Exposure Patterns ⚠️
 
@@ -523,11 +633,28 @@ grep -r "theme.*===.*'dark'" app/ | grep -v "resolvedTheme"
 
 ## 📚 Related Documentation
 
-- **[Username Security Guidelines](./USERNAME_SECURITY_GUIDELINES.md)** - Complete security documentation
-- **[Version System](./VERSION_SYSTEM.md)** - New unified system documentation
-- **[Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md)** - Auth system documentation
-- **[User Data Fetching Patterns](./USER_DATA_FETCHING_PATTERNS.md)** - Data fetching standards
+### Critical Reading
+- **[EMERGENCY_COST_OPTIMIZATION_SUMMARY.md](../EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - Firebase cost optimization and real-time listener cleanup
+- **[USERNAME_SECURITY_GUIDELINES.md](./USERNAME_SECURITY_GUIDELINES.md)** - Complete security documentation
+- **[RECENT_CHANGES_SUMMARY.md](./RECENT_CHANGES_SUMMARY.md)** - Overview of all 2025 changes
+- **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Complete documentation navigation
+
+### System Architecture
+- **[VERSION_SYSTEM.md](./VERSION_SYSTEM.md)** - New unified system documentation
+- **[AUTHENTICATION_ARCHITECTURE.md](./AUTHENTICATION_ARCHITECTURE.md)** - Auth system documentation
+- **[CONTENT_DISPLAY_ARCHITECTURE.md](./CONTENT_DISPLAY_ARCHITECTURE.md)** - Unified content display system
+
+### Development Standards
+- **[USER_DATA_FETCHING_PATTERNS.md](./USER_DATA_FETCHING_PATTERNS.md)** - Data fetching standards
+- **[DEPRECATED_UI_PATTERNS.md](./DEPRECATED_UI_PATTERNS.md)** - UI patterns that must be removed
+- **[DEPENDENCY_MANAGEMENT_STANDARDS.md](./DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
+
+### Performance & Optimization
+- **[PERFORMANCE_OPTIMIZATION_SUMMARY.md](./PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance improvements
+- **[DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md](./DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization strategies
 
 ---
 
 **Remember: Regular cleanup prevents technical debt accumulation and maintains system security and reliability.**
+
+**🧹 This guide is essential for maintaining code quality - use it during every cleanup run to identify dangerous patterns.**

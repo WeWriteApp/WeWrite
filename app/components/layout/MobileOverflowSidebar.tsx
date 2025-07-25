@@ -11,6 +11,7 @@ import { Switch } from "../ui/switch"
 import { logoutUser } from "../../firebase/auth"
 
 import { useAuth } from '../../providers/AuthProvider';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage } from "../../utils/randomPageNavigation"

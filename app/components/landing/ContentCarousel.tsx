@@ -42,8 +42,8 @@ export default function ContentCarousel({
   const positionRef = useRef(0);
   const [isManualScrolling, setIsManualScrolling] = useState(false);
   const manualScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   // Animation control - using a ref to track if animation is already running
   const animationRunningRef = useRef(false);

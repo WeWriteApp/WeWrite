@@ -229,7 +229,7 @@ export default function UsernameEnforcementModal() {
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+        <div className="mt-4 pt-4 border-t border-muted-foreground/30">
           <Button
             onClick={handleSave}
             disabled={!isAvailable || isSaving || !isValidFormat}

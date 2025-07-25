@@ -215,11 +215,18 @@ class UnifiedStatsService {
   }
 
   /**
-   * Subscribe to real-time page statistics updates
+   * Subscribe to real-time page statistics updates - DISABLED FOR COST OPTIMIZATION
+   * Use API polling instead of real-time listeners to reduce Firebase costs
    */
   subscribeToPageStats(pageId: string, callback: (stats: UnifiedPageStats) => void): () => void {
+    console.warn('🚨 COST OPTIMIZATION: Page stats real-time listeners disabled. Use API polling instead.');
+
+    // Return a no-op unsubscriber to prevent breaking the UI
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
     const subscriptionKey = `pageStats:${pageId}`;
-    
+
     // Clean up existing subscription
     this.unsubscribe(subscriptionKey);
 
@@ -245,7 +252,7 @@ class UnifiedStatsService {
       // DISABLED FOR COST OPTIMIZATION - Firestore listener for pledge stats
       console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled.');
 
-      /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
+      // DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
       const pledgesQuery = query(
         collection(db, getCollectionName('pledges')),
         where('pageId', '==', pageId),
@@ -254,7 +261,6 @@ class UnifiedStatsService {
 
       const pledgesUnsub = onSnapshot(pledgesQuery, () => this.handleStatsUpdate(pageId, callback));
       unsubscribers.push(pledgesUnsub);
-      */
 
     } catch (error) {
       console.error('Error setting up page stats subscription:', error);
@@ -274,6 +280,7 @@ class UnifiedStatsService {
 
     this.activeSubscriptions.set(subscriptionKey, combinedUnsubscriber);
     return combinedUnsubscriber;
+    */
   }
 
   /**

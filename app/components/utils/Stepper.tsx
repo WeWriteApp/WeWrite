@@ -26,8 +26,8 @@ export default function Stepper({
   const [isOpen, setIsOpen] = useState(false);
   const [increment, setIncrement] = useState(1.00);
   const [customIncrement, setCustomIncrement] = useState('');
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const handleIncrement = (amount: number) => {
     const newValue = Math.min(max, value + (amount * increment));

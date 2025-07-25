@@ -351,7 +351,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
                 <AddToPageSearch onSelect={handleAddToPage} />
               </div>
 
-              <div className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+              <div className="mt-4 pt-4 border-t border-muted-foreground/30">
                 <Button
                   onClick={handleInsert}
                   disabled={!selectedPage || isAdding}

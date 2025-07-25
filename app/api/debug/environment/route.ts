@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       // Core collections
       users: getCollectionName('users'),
       pages: getCollectionName('pages'),
-      activities: getCollectionName('activities'),
+      versions: getCollectionName('versions'),
       config: getCollectionName('config'),
 
       // Payment collections

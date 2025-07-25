@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { AlertTriangle, CheckCircle, Monitor, Trash2, RefreshCw } from 'lucide-react';
-import { useCurrentAccount } from '../../hooks/useAuth';
+import { useAuth } from '../../providers/AuthProvider';
 
 interface MonitoringReport {
   timestamp: string;

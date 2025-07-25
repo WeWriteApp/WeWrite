@@ -179,35 +179,10 @@ export const pageApi = {
 };
 
 /**
- * Activity Operations
+ * Activity Operations - DEPRECATED
+ * Activity system has been replaced with version system
+ * Use firebase/activity.ts getRecentActivity() instead
  */
-export const activityApi = {
-  /**
-   * Get recent activity
-   */
-  async getRecentActivity(limit: number = 30): Promise<ApiResponse> {
-    return apiCall(`/api/activity?limit=${limit}`);
-  },
-
-  /**
-   * Record new activity
-   */
-  async recordActivity(activityData: {
-    type: string;
-    pageId: string;
-    pageName?: string;
-    content?: string;
-    previousContent?: string;
-    isPublic?: boolean;
-    groupId?: string;
-    groupName?: string;
-  }): Promise<ApiResponse> {
-    return apiCall('/api/activity', {
-      method: 'POST',
-      body: JSON.stringify(activityData)
-    });
-  }
-};
 
 /**
  * Search Operations
@@ -305,12 +280,9 @@ export async function getPageById(pageId: string, userId?: string) {
 }
 
 /**
- * Replace getRecentActivity from firebase/activity.ts
+ * DEPRECATED: Use firebase/activity.ts getRecentActivity() directly instead
+ * This wrapper function is no longer needed
  */
-export async function getRecentActivity(limitCount: number = 30, currentUserId?: string) {
-  const response = await activityApi.getRecentActivity(limitCount);
-  return response.success ? response.data : { activities: [], error: response.error };
-}
 
 /**
  * Follows Operations

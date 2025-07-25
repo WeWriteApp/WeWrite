@@ -135,8 +135,8 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
                   iconColor: '#ef4444'
                 },
                 complete: {
-                  color: theme === 'dark' ? '#22c55e' : '#16a34a',
-                  iconColor: theme === 'dark' ? '#22c55e' : '#16a34a'
+                  color: resolvedTheme === 'dark' ? '#22c55e' : '#16a34a',
+                  iconColor: resolvedTheme === 'dark' ? '#22c55e' : '#16a34a'
                 }
               }
             }}

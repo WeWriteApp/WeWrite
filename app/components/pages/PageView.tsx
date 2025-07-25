@@ -1198,15 +1198,11 @@ export default function PageView({
       const confirmCancel = window.confirm("You have unsaved changes. Are you sure you want to cancel?");
       if (!confirmCancel) return;
     }
-    
-    // Reset to original values
-    setTitle(page?.title || '');
-    setLocation(page?.location || '');
-    setEditorState(page?.content ? JSON.parse(page.content) : [{ type: "paragraph", children: [{ text: "" }] }]);
-    setHasUnsavedChanges(false);
-    // Keep isEditing true - ALWAYS edit mode
-    setClickPosition(null);
-  }, [hasUnsavedChanges, page]);
+
+    // Refresh the page to show the reverted state from the database
+    // This ensures the page content is properly reverted to the saved state
+    window.location.reload();
+  }, [hasUnsavedChanges]);
 
   // Keyboard shortcuts
   useEffect(() => {

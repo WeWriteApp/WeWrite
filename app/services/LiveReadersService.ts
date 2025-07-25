@@ -59,9 +59,15 @@ class LiveReadersService {
 
   /**
    * Track a reader on a page with optimized batching and throttling
-   * Reduces RTDB writes by 70-80% through intelligent caching and batching
+   * DISABLED FOR COST OPTIMIZATION - Use API polling instead of real-time tracking
    */
   trackReader(pageId: string, userId: string): void {
+    console.warn('🚨 COST OPTIMIZATION: Live reader tracking disabled to reduce Firebase costs.');
+
+    // Return early to disable tracking completely
+    return;
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
     if (!pageId || !userId) return;
 
     const cacheKey = `${pageId}_${userId}`;
@@ -199,9 +205,21 @@ class LiveReadersService {
   }
 
   /**
-   * Subscribe to the reader count for a page with caching
+   * Subscribe to the reader count for a page with caching - DISABLED FOR COST OPTIMIZATION
+   * Use API polling instead of real-time listeners to reduce Firebase costs
    */
   subscribeToReaderCount(pageId: string, callback: (count: number) => void): Unsubscribe | null {
+    console.warn('🚨 COST OPTIMIZATION: Live reader count real-time listener disabled. Use API polling instead.');
+
+    // Return mock data and no-op unsubscribe to prevent breaking the UI
+    setTimeout(() => {
+      callback(0);
+    }, 100);
+
+    // Return a no-op unsubscribe function
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
     if (!pageId || !callback) return null;
 
     try {
@@ -221,6 +239,7 @@ class LiveReadersService {
       console.error('Error subscribing to reader count:', error);
       return null;
     }
+    */
   }
 
   /**

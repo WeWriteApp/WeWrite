@@ -5,6 +5,7 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { initAdmin } from '../firebase/admin';
+import { getCollectionName } from '../utils/environmentConfig';
 import { UnifiedFeeCalculationService } from '../services/unifiedFeeCalculationService';
 import { PaymentRecoveryService } from '../services/paymentRecoveryService';
 import { SubscriptionSynchronizationService } from '../services/subscriptionSynchronizationService';
@@ -60,8 +61,8 @@ describe('Payment System Integration Tests', () => {
   afterAll(async () => {
     // Cleanup test data
     try {
-      await adminDb.collection('users').doc(testUserId).delete();
-      await adminDb.collection('subscriptions').doc(testSubscriptionId).delete();
+      await adminDb.collection(getCollectionName('users')).doc(testUserId).delete();
+      await adminDb.collection(getCollectionName('subscriptions')).doc(testSubscriptionId).delete();
     } catch (error) {
       console.warn('Cleanup error:', error);
     }

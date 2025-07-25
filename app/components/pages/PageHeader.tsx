@@ -93,6 +93,8 @@ export interface PageHeaderProps {
   setIsEditing?: (value: boolean) => void;
   /** Callback when title changes during editing */
   onTitleChange?: (newTitle: string) => void;
+  /** Callback when duplicate validation state changes */
+  onDuplicateValidationChange?: (isDuplicate: boolean) => void;
   /** Whether the current user can edit this page */
   canEdit?: boolean;
   /** Whether there's an error with the title */
@@ -122,6 +124,7 @@ export default function PageHeader({
   isEditing = true, // ALWAYS edit mode
   setIsEditing,
   onTitleChange,
+  onDuplicateValidationChange,
   canEdit: propCanEdit = false,
   titleError = false,
   pageId: propPageId = null,
@@ -428,7 +431,12 @@ export default function PageHeader({
       const data = await response.json();
 
       setIsTitleDuplicate(data.isDuplicate);
-      setDuplicatePageId(data.pageId || null);
+      setDuplicatePageId(data.existingPage?.id || null);
+
+      // Notify parent component of duplicate validation state
+      if (onDuplicateValidationChange) {
+        onDuplicateValidationChange(data.isDuplicate);
+      }
     } catch (error) {
       console.error('Error checking title duplicate:', error);
       setIsTitleDuplicate(false);
@@ -436,7 +444,24 @@ export default function PageHeader({
     } finally {
       setIsCheckingTitle(false);
     }
-  }, [userId, pageId]);
+  }, [userId, pageId, onDuplicateValidationChange]);
+
+  // Debounced version for real-time checking
+  const debouncedCheckTitleDuplicate = React.useCallback(
+    React.useMemo(
+      () => {
+        let timeoutId: NodeJS.Timeout;
+        return (titleToCheck: string) => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            checkTitleDuplicate(titleToCheck);
+          }, 300); // 300ms debounce for responsive feedback
+        };
+      },
+      [checkTitleDuplicate]
+    ),
+    [checkTitleDuplicate]
+  );
 
   // Auto-resize textarea when content changes
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -447,13 +472,23 @@ export default function PageHeader({
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
 
-    // Check for duplicates with debouncing
-    if (newTitle.trim() !== title?.trim()) {
-      checkTitleDuplicate(newTitle);
+    // Check for duplicates with debouncing as user types (real-time validation)
+    if (newTitle.trim() !== '' && newTitle.trim() !== title?.trim()) {
+      debouncedCheckTitleDuplicate(newTitle);
     } else {
-      // Reset validation state if title matches original
+      // Reset validation state if title is empty or matches original
       setIsTitleDuplicate(false);
       setDuplicatePageId(null);
+
+      // Notify parent component that duplicate state is cleared
+      if (onDuplicateValidationChange) {
+        onDuplicateValidationChange(false);
+      }
+    }
+
+    // Also call the parent's onTitleChange for real-time updates
+    if (onTitleChange) {
+      onTitleChange(newTitle);
     }
   };
 
@@ -970,23 +1005,24 @@ export default function PageHeader({
                   </div>
                 )}
 
-                {/* Duplicate Title Error Message */}
-                {isTitleDuplicate && isEditing && canEdit && !isDailyNote && (
+                {/* Duplicate Title Error Message - Show immediately when typing */}
+                {isTitleDuplicate && editingTitle.trim() !== '' && !isDailyNote && (
                   <div className="flex justify-center mt-2">
-                    <p className="text-sm text-destructive font-medium">
-                      You already have a page called "{editingTitle.trim()}"
+                    <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg max-w-md">
+                      <p className="text-sm text-red-800 dark:text-red-200 font-medium text-center">
+                        You already have a page called "{editingTitle.trim()}"!
+                      </p>
                       {duplicatePageId && (
-                        <>
-                          {" - "}
+                        <div className="text-center mt-2">
                           <Link
                             href={`/${duplicatePageId}`}
-                            className="underline hover:no-underline"
+                            className="text-sm text-red-700 dark:text-red-300 underline hover:no-underline"
                           >
-                            go there
+                            Go to existing page
                           </Link>
-                        </>
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
                 )}
 

@@ -24,9 +24,9 @@ jest.mock('next/navigation', () => ({
   redirect: jest.fn(),
 }));
 
-// Mock CurrentAccountProvider
-jest.mock('../providers/CurrentAccountProvider', () => ({
-  useCurrentAccount: jest.fn(),
+// Mock AuthProvider
+jest.mock('../providers/AuthProvider', () => ({
+  useAuth: jest.fn(),
 }));
 
 // Mock Firebase
@@ -44,50 +44,40 @@ class PageAuthenticationService {
   constructor() {
     this.authStates = {
       unauthenticated: {
-        currentAccount: null,
-        session: null,
+        user: null,
         isAuthenticated: false,
         isLoading: false,
-        isHydrated: true
+        error: null
       },
       authenticated: {
-        currentAccount: {
+        user: {
           uid: 'test-user-123',
           email: 'test@example.com',
           displayName: 'Test User',
-          sessionId: 'session-123'
-        },
-        session: {
-          uid: 'test-user-123',
-          email: 'test@example.com',
-          displayName: 'Test User'
+          username: 'testuser',
+          emailVerified: true
         },
         isAuthenticated: true,
         isLoading: false,
-        isHydrated: true
+        error: null
       },
       admin: {
-        currentAccount: {
+        user: {
           uid: 'admin-user-123',
           email: 'jamiegray2234@gmail.com',
           displayName: 'Admin User',
-          sessionId: 'admin-session-123'
-        },
-        session: {
-          uid: 'admin-user-123',
-          email: 'jamiegray2234@gmail.com',
-          displayName: 'Admin User'
+          username: 'admin',
+          emailVerified: true
         },
         isAuthenticated: true,
         isLoading: false,
-        isHydrated: true
+        error: null
       },
       loading: {
-        currentAccount: null,
-        session: null,
+        user: null,
         isAuthenticated: false,
         isLoading: true,
-        isHydrated: false
+        error: null
       }
     };
   }
@@ -96,14 +86,14 @@ class PageAuthenticationService {
    * Set up authentication state for testing
    */
   setupAuthState(stateName) {
-    const { useCurrentAccount } = require('../providers/CurrentAccountProvider');
+    const { useAuth } = require('../providers/AuthProvider');
     const state = this.authStates[stateName];
-    
+
     if (!state) {
       throw new Error(`Unknown auth state: ${stateName}`);
     }
 
-    useCurrentAccount.mockReturnValue(state);
+    useAuth.mockReturnValue(state);
     return state;
   }
 

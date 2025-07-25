@@ -5,6 +5,7 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/jest';
 import { initAdmin } from '../firebase/admin';
+import { getCollectionName } from '../utils/environmentConfig';
 import { StripePayoutService } from '../services/stripePayoutService';
 import { payoutService } from '../services/payoutService';
 import { UnifiedFeeCalculationService } from '../services/unifiedFeeCalculationService';
@@ -61,9 +62,9 @@ describe('Payout System Integration Tests', () => {
   afterAll(async () => {
     // Cleanup test data
     try {
-      await adminDb.collection('users').doc(testUserId).delete();
-      await adminDb.collection('users').doc(testCreatorId).delete();
-      await adminDb.collection('payouts').doc(testPayoutId).delete();
+      await adminDb.collection(getCollectionName('users')).doc(testUserId).delete();
+      await adminDb.collection(getCollectionName('users')).doc(testCreatorId).delete();
+      await adminDb.collection(getCollectionName('payouts')).doc(testPayoutId).delete();
     } catch (error) {
       console.warn('Cleanup error:', error);
     }
@@ -108,7 +109,7 @@ describe('Payout System Integration Tests', () => {
         }
       };
 
-      await adminDb.collection('payouts').doc(testPayoutId).set(payoutData);
+      await adminDb.collection(getCollectionName('payouts')).doc(testPayoutId).set(payoutData);
 
       const result = await stripePayoutService.processPayout(testPayoutId);
 
@@ -197,7 +198,7 @@ describe('Payout System Integration Tests', () => {
         stripeConnectedAccountId: 'acct_test_123'
       };
 
-      await adminDb.collection('payoutRecipients').doc(recipient.id).set(recipient);
+      await adminDb.collection(getCollectionName('payoutRecipients')).doc(recipient.id).set(recipient);
 
       const result = await payoutService.processRecipientPayout(recipient.id, '2024-01');
 
@@ -218,7 +219,7 @@ describe('Payout System Integration Tests', () => {
         }
       };
 
-      await adminDb.collection('payoutRecipients').doc(recipient.id).set(recipient);
+      await adminDb.collection(getCollectionName('payoutRecipients')).doc(recipient.id).set(recipient);
 
       const result = await payoutService.processRecipientPayout(recipient.id, '2024-01');
 
@@ -286,7 +287,7 @@ describe('Payout System Integration Tests', () => {
         createdAt: new Date()
       };
 
-      await adminDb.collection('earnings').doc(earnings.id).set(earnings);
+      await adminDb.collection(getCollectionName('earnings')).doc(earnings.id).set(earnings);
 
       // 2. Track payout request
       const trackingResult = await TransactionTrackingService.trackPayoutRequest(
@@ -317,7 +318,7 @@ describe('Payout System Integration Tests', () => {
         metadata: { correlationId }
       };
 
-      await adminDb.collection('payouts').doc(testPayoutId).set(payoutData);
+      await adminDb.collection(getCollectionName('payouts')).doc(testPayoutId).set(payoutData);
 
       const payoutResult = await stripePayoutService.processPayout(testPayoutId);
       expect(payoutResult.success).toBe(true);
@@ -338,7 +339,7 @@ describe('Payout System Integration Tests', () => {
         metadata: { correlationId }
       };
 
-      await adminDb.collection('payouts').doc(failingPayoutId).set(payoutData);
+      await adminDb.collection(getCollectionName('payouts')).doc(failingPayoutId).set(payoutData);
 
       const stripePayoutService = StripePayoutService.getInstance();
       const result = await stripePayoutService.processPayout(failingPayoutId);
@@ -348,7 +349,7 @@ describe('Payout System Integration Tests', () => {
       expect(result.error).toBeDefined();
 
       // Check that payout status was updated
-      const updatedPayout = await adminDb.collection('payouts').doc(failingPayoutId).get();
+      const updatedPayout = await adminDb.collection(getCollectionName('payouts')).doc(failingPayoutId).get();
       const updatedData = updatedPayout.data();
       expect(updatedData?.status).toBe('failed');
     });

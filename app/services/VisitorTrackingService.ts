@@ -326,9 +326,15 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
 
   /**
    * Enhanced heartbeat with interaction validation, bot behavior analysis, and batching
-   * OPTIMIZED: Reduced frequency and implemented batching to cut Firestore writes by 75%
+   * DISABLED FOR COST OPTIMIZATION - Use API polling instead of frequent heartbeat writes
    */
   private setupHeartbeat(): void {
+    console.warn('🚨 COST OPTIMIZATION: Visitor tracking heartbeat disabled to reduce Firebase writes.');
+
+    // Return early to disable heartbeat completely
+    return;
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
     // Clear existing heartbeat
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
@@ -427,7 +433,8 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }
 
   /**
-   * Subscribe to live visitor count with bot filtering
+   * Subscribe to live visitor count with bot filtering - DISABLED FOR COST OPTIMIZATION
+   * Use API polling instead of real-time listeners to reduce Firebase costs
    */
   subscribeToVisitorCount(callback: (counts: {
     total: number;
@@ -436,6 +443,23 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
     bots: number;
     legitimateVisitors: number;
   }) => void): Unsubscribe | null {
+    console.warn('🚨 COST OPTIMIZATION: Visitor count real-time listener disabled. Use API polling instead.');
+
+    // Return mock data and no-op unsubscribe to prevent breaking the UI
+    setTimeout(() => {
+      callback({
+        total: 0,
+        authenticated: 0,
+        anonymous: 0,
+        bots: 0,
+        legitimateVisitors: 0
+      });
+    }, 100);
+
+    // Return a no-op unsubscribe function
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
     try {
       // Query active visitors from the last 10 minutes
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -495,6 +519,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
       console.error('Error subscribing to visitor count:', error);
       return null;
     }
+    */
   }
 
   /**
