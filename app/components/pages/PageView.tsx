@@ -800,6 +800,67 @@ export default function PageView({
 
   // No need for handleSetIsEditing - always in edit mode
 
+  // Helper function to extract new page references from content
+  const extractNewPageReferences = (content: any[]): Array<{pageId: string, title: string}> => {
+    const newPages: Array<{pageId: string, title: string}> = [];
+
+    const processNode = (node: any) => {
+      if (node.type === 'link' && node.isNew && node.pageId && node.pageTitle) {
+        newPages.push({
+          pageId: node.pageId,
+          title: node.pageTitle
+        });
+      }
+
+      if (node.children) {
+        node.children.forEach(processNode);
+      }
+    };
+
+    content.forEach(processNode);
+    return newPages;
+  };
+
+  // Helper function to create new pages referenced in links
+  const createNewPagesFromLinks = async (newPageRefs: Array<{pageId: string, title: string}>): Promise<void> => {
+    if (!user?.uid || newPageRefs.length === 0) return;
+
+    console.log('🔵 PAGE SAVE: Creating new pages from links:', newPageRefs);
+
+    for (const pageRef of newPageRefs) {
+      try {
+        const pageData = {
+          title: pageRef.title,
+          content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
+          userId: user.uid,
+          username: user.username || user.displayName || 'Anonymous',
+          lastModified: new Date().toISOString(),
+          isReply: false,
+          groupId: null,
+          customDate: null
+        };
+
+        const response = await fetch('/api/pages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pageData),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ PAGE SAVE: Created new page from link:', { title: pageRef.title, id: result.id });
+        } else {
+          console.error('🔴 PAGE SAVE: Failed to create new page from link:', pageRef.title);
+        }
+      } catch (error) {
+        console.error('🔴 PAGE SAVE: Error creating new page from link:', error);
+      }
+    }
+  };
+
   const handleSave = useCallback(async (passedContent?: any) => {
     console.log('🔵 PAGE SAVE: Save initiated', {
       pageId,
@@ -856,6 +917,13 @@ export default function PageView({
         contentToSaveLength: contentToSave ? contentToSave.length : 0,
         contentToSaveSample: contentToSave ? JSON.stringify(contentToSave).substring(0, 200) : 'null'
       });
+
+      // Extract and create new pages referenced in links before saving the main page
+      const newPageRefs = extractNewPageReferences(contentToSave);
+      if (newPageRefs.length > 0) {
+        console.log('🔵 PAGE SAVE: Found new page references, creating them first:', newPageRefs);
+        await createNewPagesFromLinks(newPageRefs);
+      }
 
       const updateData = {
         id: pageId,

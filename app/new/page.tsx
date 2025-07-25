@@ -416,6 +416,67 @@ function NewPageContent() {
     setHasUnsavedChanges(hasContentChanged || hasTitleChanged);
   }, [hasContentChanged, hasTitleChanged]);
 
+  // Helper function to extract new page references from content
+  const extractNewPageReferences = (content: EditorNode[]): Array<{pageId: string, title: string}> => {
+    const newPages: Array<{pageId: string, title: string}> = [];
+
+    const processNode = (node: any) => {
+      if (node.type === 'link' && node.isNew && node.pageId && node.pageTitle) {
+        newPages.push({
+          pageId: node.pageId,
+          title: node.pageTitle
+        });
+      }
+
+      if (node.children) {
+        node.children.forEach(processNode);
+      }
+    };
+
+    content.forEach(processNode);
+    return newPages;
+  };
+
+  // Helper function to create new pages referenced in links
+  const createNewPagesFromLinks = async (newPageRefs: Array<{pageId: string, title: string}>): Promise<void> => {
+    if (!user?.uid || newPageRefs.length === 0) return;
+
+    console.log('🔵 DEBUG: Creating new pages from links:', newPageRefs);
+
+    for (const pageRef of newPageRefs) {
+      try {
+        const pageData = {
+          title: pageRef.title,
+          content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
+          userId: user.uid,
+          username: user.username || user.displayName || 'Anonymous',
+          lastModified: new Date().toISOString(),
+          isReply: false,
+          groupId: null,
+          customDate: null
+        };
+
+        const response = await fetch('/api/pages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pageData),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ DEBUG: Created new page from link:', { title: pageRef.title, id: result.id });
+        } else {
+          console.error('🔴 DEBUG: Failed to create new page from link:', pageRef.title);
+        }
+      } catch (error) {
+        console.error('🔴 DEBUG: Error creating new page from link:', error);
+      }
+    }
+  };
+
   // Handle save
   const handleSave = async (content: EditorNode[], saveMethod: 'keyboard' | 'button' = 'button'): Promise<boolean> => {
     console.log('🔵 DEBUG: handleSave called with:', {
@@ -680,6 +741,13 @@ function NewPageContent() {
 
         return true;
       } else {
+        // Extract and create new pages referenced in links before saving the main page
+        const newPageRefs = extractNewPageReferences(finalContent);
+        if (newPageRefs.length > 0) {
+          console.log('🔵 DEBUG: Found new page references, creating them first:', newPageRefs);
+          await createNewPagesFromLinks(newPageRefs);
+        }
+
         // Normal page creation for verified users - use API route instead of direct Firestore
         console.log('🔵 DEBUG: About to call API route with data:', { ...data, content: '(content omitted)' });
 

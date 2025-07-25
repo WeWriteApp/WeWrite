@@ -52,6 +52,7 @@ type LinkElement = {
   isOwned: boolean;
   isSuggestion?: boolean; // New flag for link suggestions
   suggestionData?: any; // Store original suggestion data for confirmation
+  isNew?: boolean; // Flag for new pages that need to be created
   children: Descendant[];
 };
 
@@ -713,12 +714,13 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       // Insert new link
       const link: LinkElement = {
         type: 'link',
-        url: linkData.url,
+        url: linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
         pageId: linkData.pageId,
         pageTitle: linkData.pageTitle,
         isExternal: linkData.type === 'external',
         isPublic: true,
         isOwned: false,
+        isNew: linkData.isNew, // Add isNew flag to the link element
         children: [{ text: linkData.text || linkData.pageTitle || 'Link' }]
       };
 
@@ -734,12 +736,13 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         editor,
         {
           type: 'link',
-          url: linkData.url,
+          url: linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
           pageId: linkData.pageId,
           pageTitle: linkData.pageTitle,
           isExternal: linkData.type === 'external',
           isPublic: true,
           isOwned: false,
+          isNew: linkData.isNew, // Add isNew flag to the link element
           children: []
         },
         { split: true }
