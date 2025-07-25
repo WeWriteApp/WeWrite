@@ -181,11 +181,10 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Check if page is recent (within 7 days)
+      // Process all pages (removed 7-day restriction to show all recent edits)
       const lastModifiedDate = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
-      const daysSinceModified = (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000);
 
-      if (daysSinceModified <= 7) {
+      // Always process pages to show all recent edits
         // Try to get the latest version for this page
         try {
           const versionsQuery = db.collection(getCollectionName('pages'))
@@ -265,7 +264,6 @@ export async function GET(request: NextRequest) {
             source: 'page_error_fallback'
           });
         }
-      }
     }
 
     // Apply following filter (placeholder - would need to fetch followed pages)
