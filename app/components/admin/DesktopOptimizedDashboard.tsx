@@ -16,7 +16,8 @@ import {
   useContentChangesMetrics,
   usePWAInstallsMetrics,
   useVisitorMetrics,
-  usePlatformFeeMetrics
+  usePlatformFeeMetrics,
+  useFollowedUsersMetrics
 } from '../../hooks/useDashboardAnalytics';
 
 interface DesktopOptimizedDashboardProps {
@@ -430,6 +431,57 @@ export function DesktopOptimizedDashboard({
               stroke="#10b981"
               strokeWidth={2}
               fill="url(#platformFeeGradient)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )
+    },
+    {
+      id: 'followed-users',
+      title: 'User Follows',
+      icon: <Users className="h-5 w-5" />,
+      color: '#8b5cf6',
+      hook: useFollowedUsersMetrics,
+      valueFormatter: (data) => {
+        const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
+        return total.toLocaleString();
+      },
+      chartComponent: ({ data, height }) => (
+        <ResponsiveContainer width="100%" height={height}>
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="followedUsersGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="label"
+              axisLine={false}
+              tickLine={false}
+              className="text-xs"
+              tick={{ fontSize: 10 }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              className="text-xs"
+              tick={{ fontSize: 10 }}
+              width={40}
+            />
+            <Tooltip
+              labelFormatter={(label) => `Date: ${label}`}
+              formatter={[
+                (value: number) => [value.toLocaleString(), 'User Follows']
+              ]}
+            />
+            <Area
+              type="monotone"
+              dataKey="count"
+              stroke="#8b5cf6"
+              strokeWidth={2}
+              fill="url(#followedUsersGradient)"
             />
           </AreaChart>
         </ResponsiveContainer>

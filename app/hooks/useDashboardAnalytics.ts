@@ -917,3 +917,61 @@ export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number
 
   return { data, stats, loading, error, refetch: fetchData };
 }
+
+/**
+ * Hook for followed users analytics
+ */
+export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      console.log('⏳ useFollowedUsersMetrics: Invalid date range, skipping fetch');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: (granularity || 24).toString()
+      });
+
+      const response = await fetch(`/api/admin/analytics/followed-users?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch followed users analytics: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setData(result.data || []);
+    } catch (err) {
+      console.error('Error fetching followed users analytics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch followed users analytics');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error };
+}

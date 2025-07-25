@@ -19,6 +19,8 @@ import ActivityCard from '../activity/ActivityCard';
 import { useAuth } from '../../providers/AuthProvider';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { SectionTitle } from '../ui/section-title';
+import { FollowUsersCard } from '../activity/FollowUsersCard';
+import { getUserFollowing } from '../../firebase/follows';
 
 interface RecentEdit {
   id: string;
@@ -59,6 +61,8 @@ export default function SimpleRecentEdits() {
     includeOwn: true, // TEMPORARILY show own edits by default for debugging
     followingOnly: false
   });
+  const [isFollowingAnyone, setIsFollowingAnyone] = useState<boolean | null>(null);
+  const [followCardDismissed, setFollowCardDismissed] = useState(false);
 
   const fetchRecentEdits = useCallback(async (cursor?: string, append = false) => {
     try {
@@ -125,6 +129,26 @@ export default function SimpleRecentEdits() {
   useEffect(() => {
     fetchRecentEdits();
   }, [fetchRecentEdits]);
+
+  // Check if user is following anyone
+  useEffect(() => {
+    const checkFollowingStatus = async () => {
+      if (!user?.uid) {
+        setIsFollowingAnyone(null);
+        return;
+      }
+
+      try {
+        const following = await getUserFollowing(user.uid);
+        setIsFollowingAnyone(following.length > 0);
+      } catch (error) {
+        console.error('Error checking following status:', error);
+        setIsFollowingAnyone(null);
+      }
+    };
+
+    checkFollowingStatus();
+  }, [user?.uid]);
 
   // Auto-refresh every 5 minutes to ensure recent edits stay fresh
   useEffect(() => {
@@ -237,6 +261,15 @@ export default function SimpleRecentEdits() {
           </DropdownMenuContent>
         </DropdownMenu>
       </SectionTitle>
+
+      {/* Follow Users Card - Show if user isn't following anyone and hasn't dismissed */}
+      {isFollowingAnyone === false && !followCardDismissed && (
+        <div className="mb-6">
+          <FollowUsersCard
+            onDismiss={() => setFollowCardDismissed(true)}
+          />
+        </div>
+      )}
 
       {/* Content */}
       {edits.length === 0 && !loading ? (
