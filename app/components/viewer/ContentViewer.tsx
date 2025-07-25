@@ -147,13 +147,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
           }`}
           data-mode={lineMode}
         >
-          {(!parsedContents || (Array.isArray(parsedContents) && parsedContents.length === 0)) && !isSearch && (
-            <div className="text-muted-foreground">
-              <span className="text-sm">No content available</span>
-            </div>
-          )}
-
-          {parsedContents && parsedContents.length > 0 && (
+          {parsedContents && (
             <ViewerContent
               key={`${renderKey}-${lineMode}`}
               contents={parsedContents}
@@ -180,16 +174,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
         }`}
         data-mode={lineMode}
       >
-        {(!parsedContents || (Array.isArray(parsedContents) && parsedContents.length === 0)) && !isSearch && (
-          <div className="text-muted-foreground">
-            <div className="viewer-paragraph">
-              {showLineNumbers && <span className="paragraph-number">1</span>}
-              <span className="viewer-text-content">No content available</span>
-            </div>
-          </div>
-        )}
-
-        {parsedContents && parsedContents.length > 0 && (
+        {parsedContents && (
           <ViewerContent
             key={`${renderKey}-${lineMode}`}
             contents={parsedContents}
