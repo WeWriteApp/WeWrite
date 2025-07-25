@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, AuthContextValue, AuthState, AuthError, AuthErrorCode } from '../types/auth';
 import { getEnvironmentType } from '../utils/environmentConfig';
+import { identifyUser } from '../utils/logrocket';
 
 // Create context
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -64,6 +65,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isLoading: false,
       error: null
     }));
+
+    // Identify user in LogRocket when user logs in
+    if (user) {
+      try {
+        console.log('🔍 AuthProvider: Attempting to identify user in LogRocket:', {
+          uid: user.uid,
+          username: user.username,
+          email: user.email,
+          hasUsername: !!user.username,
+          hasEmail: !!user.email
+        });
+
+        identifyUser({
+          id: user.uid,
+          username: user.username,
+          email: user.email,
+          accountType: 'user',
+          createdAt: user.createdAt
+        });
+        console.log('✅ LogRocket user identified successfully:', user.username || user.email);
+      } catch (error) {
+        console.error('❌ Failed to identify user in LogRocket:', error);
+      }
+    } else {
+      console.log('🔍 AuthProvider: User is null, skipping LogRocket identification');
+    }
   }, []);
 
   // Check current session

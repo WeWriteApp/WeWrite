@@ -218,7 +218,18 @@ class LogRocketService {
     createdAt?: string;
     // Don't include: tokens, balances, payment info, etc.
   }): void {
-    if (!this.isInitialized) return;
+    console.log('🔍 LogRocket.identify called with:', {
+      userId: user.id,
+      username: user.username,
+      email: user.email ? `${user.email.substring(0, 3)}***` : undefined,
+      isInitialized: this.isInitialized,
+      isProduction: this.isProduction
+    });
+
+    if (!this.isInitialized) {
+      console.log('⏭️ LogRocket not initialized, skipping user identification');
+      return;
+    }
 
     try {
       // Sanitize user data - only include safe, non-sensitive information
@@ -227,6 +238,12 @@ class LogRocketService {
         name: user.username,
         email: user.email ? this.sanitizeEmail(user.email) : undefined,
       };
+
+      console.log('🔍 LogRocket sanitized user data:', {
+        id: sanitizedUser.id,
+        name: sanitizedUser.name,
+        email: sanitizedUser.email ? `${sanitizedUser.email.substring(0, 3)}***` : undefined
+      });
 
       // Additional safe metadata
       const metadata = {
@@ -241,7 +258,7 @@ class LogRocketService {
       };
 
       LogRocket.identify(user.id, sanitizedUser);
-      
+
       // Track user session start
       this.track('user_session_start', {
         userId: user.id,
@@ -249,7 +266,10 @@ class LogRocketService {
         timestamp: new Date().toISOString(),
       });
 
-      console.log('👤 User identified in LogRocket:', user.id);
+      console.log('👤 User identified in LogRocket successfully:', {
+        userId: user.id,
+        username: user.username
+      });
     } catch (error) {
       console.error('❌ Failed to identify user in LogRocket:', error);
     }
