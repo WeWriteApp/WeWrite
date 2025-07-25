@@ -58,7 +58,7 @@ export default function SimpleRecentEdits() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({
-    includeOwn: false, // Hide my edits by default
+    includeOwn: true, // Show my edits by default - users want to see all recent activity including their own
     followingOnly: false
   });
   const [isFollowingAnyone, setIsFollowingAnyone] = useState<boolean | null>(null);
