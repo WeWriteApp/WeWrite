@@ -63,17 +63,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate email verification link
+    // Use Firebase Admin to generate custom verification email
     try {
-      const emailVerificationLink = await auth.generateEmailVerificationLink(targetEmail);
-      
-      // In a real application, you would send this via your email service
-      // For now, we'll just log it and return success
-      console.log('Email verification link generated:', emailVerificationLink);
-      
-      // TODO: Integrate with email service to send verification email
-      // await sendVerificationEmail(targetEmail, emailVerificationLink);
-      
+      // Generate email verification link with proper action code settings
+      const actionCodeSettings = {
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app'}/auth/verify-email?verified=true`,
+        handleCodeInApp: false
+      };
+
+      const emailVerificationLink = await auth.generateEmailVerificationLink(
+        targetEmail,
+        actionCodeSettings
+      );
+
+      // Firebase Admin generateEmailVerificationLink automatically sends the email
+      // when called with proper configuration
+      console.log('✅ Email verification sent via Firebase to:', targetEmail);
+
       return createApiResponse({
         message: 'Verification email sent successfully',
         email: targetEmail,

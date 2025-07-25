@@ -130,20 +130,12 @@ function EmailVerificationAlert({
 
     setIsResending(true);
     try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: user.email
-        })
-      });
+      // Use Firebase client-side email verification instead of broken API
+      const { sendEmailVerification } = await import('firebase/auth');
+      const { auth } = await import('../../firebase/auth');
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
         setLastResendTime(now);
         toast({
           title: "Verification email sent",
@@ -151,7 +143,7 @@ function EmailVerificationAlert({
           variant: "default"
         });
       } else {
-        throw new Error(result.error || 'Failed to send verification email');
+        throw new Error('No authenticated user found');
       }
     } catch (error: any) {
       console.error("Error sending verification email:", error);

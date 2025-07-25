@@ -41,25 +41,17 @@ export default function VerifyEmailPage() {
 
       setUserEmail(user.email || "");
 
-      // Send initial verification email using API
+      // Send initial verification email using Firebase client-side
       try {
-        const response = await fetch('/api/auth/verify-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: user.email
-          })
-        });
+        const { sendEmailVerification } = await import('firebase/auth');
+        const { auth } = await import('../../firebase/auth');
 
-        const result = await response.json();
-
-        if (response.ok && result.success) {
+        if (auth.currentUser) {
+          await sendEmailVerification(auth.currentUser);
           console.log("Initial verification email sent");
           setSuccess(true);
         } else {
-          throw new Error(result.error || 'Failed to send verification email');
+          throw new Error('No authenticated user found');
         }
       } catch (error: any) {
         console.error("Error sending initial verification email:", error);
@@ -109,25 +101,17 @@ export default function VerifyEmailPage() {
     setSuccess(false);
 
     try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: user.email
-        })
-      });
+      // Use Firebase client-side email verification
+      const { sendEmailVerification } = await import('firebase/auth');
+      const { auth } = await import('../../firebase/auth');
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
         setLastResendTime(now);
         setSuccess(true);
         console.log("Verification email resent successfully");
       } else {
-        throw new Error(result.error || 'Failed to resend verification email');
+        throw new Error('No authenticated user found');
       }
     } catch (error: any) {
       console.error("Error resending verification email:", error);
