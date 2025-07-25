@@ -76,12 +76,47 @@ ContentDisplay (Decision Layer)
 - Line numbers and navigation
 - Diff viewing
 - Search result highlighting
+- Empty content state handling
 
 **Key Features**:
 - No borders (clean viewing)
 - Responsive design
 - Focus on readability
 - Link navigation (no editing)
+- Proper empty content display ("No content available")
+
+## Empty Content Handling
+
+### Content States
+The system properly handles various content states:
+
+**Null Content**: Pages with `content: null` in the database
+- Converted to empty array `[]` in PageView component
+- Displays "No content available" message in viewer
+
+**Empty Array**: Pages with `content: []`
+- Displays "No content available" message in viewer
+- Allows editing to add content
+
+**Empty String**: Pages with `content: ""`
+- Parsed and handled as empty content
+- Displays appropriate empty state
+
+### Implementation Details
+```tsx
+// ContentViewer.tsx - Empty content detection
+{(!parsedContents || (Array.isArray(parsedContents) && parsedContents.length === 0)) && !isSearch && (
+  <div className="text-muted-foreground">
+    <span className="text-sm">No content available</span>
+  </div>
+)}
+```
+
+**Key Points**:
+- Checks both null/undefined content and empty arrays
+- Provides consistent empty state messaging
+- Maintains proper styling and accessibility
+- Prevents blank page display issues
 
 ## Styling Architecture
 
