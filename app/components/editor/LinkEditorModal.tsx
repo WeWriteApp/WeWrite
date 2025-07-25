@@ -37,6 +37,7 @@ export default function LinkEditorModal({
   const [customText, setCustomText] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const externalUrlInputRef = useRef<HTMLInputElement>(null);
 
   // Determine if we're editing an existing link
   const isEditing = !!editingLink;
@@ -77,6 +78,44 @@ export default function LinkEditorModal({
       }
     }
   }, [isOpen, editingLink]);
+
+  // Focus the external URL input when external tab is selected
+  useEffect(() => {
+    if (isOpen && activeTab === 'external') {
+      // Small delay to ensure the tab content is rendered
+      const timer = setTimeout(() => {
+        if (externalUrlInputRef.current) {
+          externalUrlInputRef.current.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, activeTab]);
+
+  // Handle tab change with proper focus management
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+
+    // Reset selections when switching tabs
+    setSelectedPage(null);
+    setExternalUrl('');
+    setDisplayText('');
+
+    // Focus appropriate input when tab changes
+    if (newTab === 'external') {
+      setTimeout(() => {
+        if (externalUrlInputRef.current) {
+          externalUrlInputRef.current.focus();
+        }
+      }, 100);
+    } else if (newTab === 'pages') {
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 100);
+    }
+  };
 
   // Handle page selection from search results
   const handlePageSelect = (page: any) => {
@@ -138,14 +177,7 @@ export default function LinkEditorModal({
     onClose();
   };
 
-  // Handle tab change
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    // Reset selections when switching tabs
-    setSelectedPage(null);
-    setExternalUrl('');
-    setDisplayText('');
-  };
+
 
   return (
     <Modal
@@ -223,9 +255,14 @@ export default function LinkEditorModal({
             <div className="space-y-2">
               <Label htmlFor="external-url">URL</Label>
               <Input
+                ref={externalUrlInputRef}
                 id="external-url"
                 value={externalUrl}
                 onChange={(e) => setExternalUrl(e.target.value)}
+                onPaste={(e) => {
+                  // Ensure paste events are handled properly in the modal
+                  e.stopPropagation();
+                }}
                 placeholder="https://example.com"
                 autoFocus={activeTab === 'external'}
               />
@@ -237,6 +274,10 @@ export default function LinkEditorModal({
                 id="external-display-text"
                 value={displayText}
                 onChange={(e) => setDisplayText(e.target.value)}
+                onPaste={(e) => {
+                  // Ensure paste events are handled properly in the modal
+                  e.stopPropagation();
+                }}
                 placeholder="Link text"
               />
             </div>

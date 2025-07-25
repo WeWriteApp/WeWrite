@@ -174,18 +174,28 @@ export async function getPlatformFeeAnalytics(
     snapshot.forEach(doc => {
       const payout = doc.data();
       const completedAt = payout.completedAt;
-      const amount = payout.amount || 0;
+      const payoutAmount = payout.amount || 0;
 
-      if (completedAt && amount > 0) {
+      if (completedAt && payoutAmount > 0) {
         const date = completedAt instanceof Timestamp ? completedAt.toDate() : new Date(completedAt);
-        
+
         // Round to appropriate interval
         const intervalDate = roundToInterval(date, timeConfig.granularity);
         const dateKey = timeConfig.formatKey(intervalDate);
-        
-        // Calculate 7% platform fee
-        const platformFee = amount * 0.07;
-        
+
+        // Calculate platform fee correctly:
+        // The payout amount is the net amount after platform fee (7%) and Stripe fees
+        // To find the gross amount: gross = net / (1 - platform_fee_rate - stripe_fee_rate)
+        const estimatedStripeFeeRate = 0.005; // 0.5% estimate for standard payouts
+        const platformFeeRate = 0.07; // 7%
+        const totalFeeRate = platformFeeRate + estimatedStripeFeeRate;
+
+        // Calculate gross amount from net payout
+        const grossAmount = payoutAmount / (1 - totalFeeRate);
+
+        // Platform fee is 7% of gross amount
+        const platformFee = grossAmount * platformFeeRate;
+
         const current = dataMap.get(dateKey);
         if (current) {
           dataMap.set(dateKey, {

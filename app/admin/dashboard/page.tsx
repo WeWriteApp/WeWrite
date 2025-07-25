@@ -28,11 +28,20 @@ import { PWAInstallsAnalyticsWidget } from "../../components/admin/PWAInstallsAn
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
 import { DesktopOptimizedDashboard } from "../../components/admin/DesktopOptimizedDashboard";
+import {
+  UnfundedLoggedOutTokensWidget,
+  UnfundedLoggedInTokensWidget
+} from "../../components/admin/UnfundedTokensWidget";
+import {
+  FundedTokensWidget,
+  SubscriptionRevenueWidget as TotalSubscriptionRevenueWidget,
+  WriterPayoutsWidget
+} from "../../components/admin/FundedTokensWidget";
 
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
 import { SubscriptionsOverTimeWidget } from "../../components/admin/SubscriptionsOverTimeWidget";
-import { SubscriptionRevenueWidget } from "../../components/admin/SubscriptionRevenueWidget";
+
 import { TokenAllocationWidget } from "../../components/admin/TokenAllocationWidget";
 
 import { DashboardErrorBoundary, WidgetErrorBoundary } from "../../components/admin/DashboardErrorBoundary";
@@ -108,6 +117,13 @@ const initialWidgets = [
   { id: 'subscriptions-over-time', component: SubscriptionsOverTimeWidget },
   { id: 'subscription-revenue', component: SubscriptionRevenueWidget },
   { id: 'token-allocation', component: TokenAllocationWidget },
+
+  // Payment Analytics Widgets
+  { id: 'unfunded-logged-out-tokens', component: UnfundedLoggedOutTokensWidget },
+  { id: 'unfunded-logged-in-tokens', component: UnfundedLoggedInTokensWidget },
+  { id: 'funded-tokens', component: FundedTokensWidget },
+  { id: 'total-subscription-revenue', component: TotalSubscriptionRevenueWidget },
+  { id: 'total-writer-payouts', component: WriterPayoutsWidget },
 ];
 
 export default function AdminDashboardPage() {

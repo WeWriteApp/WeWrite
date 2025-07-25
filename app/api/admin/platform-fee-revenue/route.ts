@@ -38,14 +38,27 @@ export async function GET(request: NextRequest) {
       const payout = doc.data();
       const completedAt = payout.completedAt?.toDate() || new Date();
       const monthKey = `${completedAt.getFullYear()}-${String(completedAt.getMonth() + 1).padStart(2, '0')}`;
-      
-      // Calculate platform fee (7% of payout amount)
-      const platformFee = (payout.amount || 0) * 0.07;
-      
+
+      const payoutAmount = payout.amount || 0;
+
+      // Calculate platform fee correctly:
+      // The payout amount is the net amount after platform fee (7%) and Stripe fees
+      // To find the gross amount: gross = net / (1 - platform_fee_rate - stripe_fee_rate)
+      // For simplicity, we'll estimate Stripe fees at ~0.5% for standard payouts
+      const estimatedStripeFeeRate = 0.005; // 0.5%
+      const platformFeeRate = 0.07; // 7%
+      const totalFeeRate = platformFeeRate + estimatedStripeFeeRate;
+
+      // Calculate gross amount from net payout
+      const grossAmount = payoutAmount / (1 - totalFeeRate);
+
+      // Platform fee is 7% of gross amount
+      const platformFee = grossAmount * platformFeeRate;
+
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { revenue: 0, payouts: 0 };
       }
-      
+
       monthlyData[monthKey].revenue += platformFee;
       monthlyData[monthKey].payouts += 1;
       totalPlatformRevenue += platformFee;
