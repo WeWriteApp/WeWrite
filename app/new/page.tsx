@@ -18,6 +18,7 @@ import { useDateFormat } from '../contexts/DateFormatContext';
 import PageHeader from "../components/pages/PageHeader";
 import PageFooter from "../components/pages/PageFooter";
 import ContentDisplay from "../components/content/ContentDisplay";
+import StickySaveHeader from "../components/layout/StickySaveHeader";
 
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
@@ -128,6 +129,7 @@ function NewPageContent() {
   // State for tracking changes and saving (mimics EditPage)
   const [editorContent, setEditorContent] = useState<EditorNode[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [hasContentChanged, setHasContentChanged] = useState<boolean>(false);
   const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
@@ -978,6 +980,7 @@ function NewPageContent() {
           setHasContentChanged(false);
           setHasTitleChanged(false);
           setHasUnsavedChanges(false);
+          setSaveSuccess(true);
 
           console.log('🔵 DEBUG: Setting isSaving to false...');
           setIsSaving(false);
@@ -1035,6 +1038,18 @@ function NewPageContent() {
       return false;
     }
   };
+
+  // Handle cancel/revert - for new pages, this means clearing all content
+  const handleCancel = useCallback(() => {
+    setTitle("");
+    setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
+    setEditorContent([]);
+    setLocation(null);
+    setHasContentChanged(false);
+    setHasTitleChanged(false);
+    setHasUnsavedChanges(false);
+    setSaveSuccess(false);
+  }, []);
 
   // Memoized save function for unsaved changes hook
   const saveChanges = useCallback(async (): Promise<void> => {
@@ -1129,6 +1144,16 @@ function NewPageContent() {
         <Head>
           <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
         </Head>
+
+        {/* Sticky Save Header - slides down from top when there are unsaved changes */}
+        <StickySaveHeader
+          hasUnsavedChanges={hasUnsavedChanges}
+          onSave={() => handleSave(editorState, 'button')}
+          onCancel={handleCancel}
+          isSaving={isSaving}
+          isAnimatingOut={saveSuccess && !hasUnsavedChanges}
+        />
+
         <PageHeader
           title={title}
           username={username}
