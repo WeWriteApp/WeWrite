@@ -7,18 +7,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
-
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminDb = admin.firestore();
 import { serverTimestamp } from 'firebase-admin/firestore';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin
+    const admin = getFirebaseAdmin();
+    const adminDb = admin.firestore();
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {

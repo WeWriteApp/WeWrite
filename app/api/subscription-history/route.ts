@@ -10,12 +10,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getCollectionName } from '../../utils/environmentConfig';
-import { initAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import Stripe from 'stripe';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const db = admin.firestore();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 });
@@ -42,7 +39,7 @@ interface SubscriptionHistoryEvent {
   source: 'stripe' | 'system' | 'user';
 }
 
-async function getSubscriptionHistory(userId: string): Promise<SubscriptionHistoryEvent[]> {
+async function getSubscriptionHistory(userId: string, db: any): Promise<SubscriptionHistoryEvent[]> {
   const events: SubscriptionHistoryEvent[] = [];
 
   try {
@@ -252,6 +249,10 @@ export async function GET(request: NextRequest) {
   try {
     console.log('[SUBSCRIPTION HISTORY API] Starting request');
 
+    // Initialize Firebase Admin
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
     // Get authenticated user ID
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -272,7 +273,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const history = await getSubscriptionHistory(targetUserId);
+    const history = await getSubscriptionHistory(targetUserId, db);
 
     console.log(`[SUBSCRIPTION HISTORY API] Successfully fetched ${history.length} events for user ${targetUserId}`);
 

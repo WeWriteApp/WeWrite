@@ -24,6 +24,7 @@ import { useDateFormat } from "../../contexts/DateFormatContext";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
 import { RotateCcw } from "lucide-react";
+import { EmbeddedTokenAllocation } from "../payments/EmbeddedTokenAllocation";
 
 
 /**
@@ -321,8 +322,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       className={cn(
         "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
         "flex flex-col",
-        // Mobile-first padding with better spacing
-        "p-5 md:p-4",
+        // Reduced padding for better screen real estate
+        "p-3 md:p-3",
         // Ensure proper spacing between cards (handled by grid gap)
         "md:mb-0"
       )}
@@ -466,6 +467,19 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 )}
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Token allocation UI */}
+        {activity.userId && activity.pageId && (
+          <div className="pt-3 border-t border-border/20 mt-3">
+            <EmbeddedTokenAllocation
+              pageId={activity.pageId}
+              authorId={activity.userId}
+              pageTitle={currentPageName}
+              source="HomePage"
+              className="w-full"
+            />
           </div>
         )}
       </div>

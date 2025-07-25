@@ -172,14 +172,18 @@ export class PendingTokenAllocationService {
       const currentMonth = getCurrentMonth();
       const allocationId = `${userId}_page_${pageId}_${currentMonth}`;
 
+      console.log(`🎯 [PENDING_ALLOCATION] Looking for allocation: ${allocationId}`);
+
       const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS)).doc(allocationId);
       const allocationDoc = await allocationRef.get();
 
       if (allocationDoc.exists) {
         const allocation = allocationDoc.data() as PendingTokenAllocation;
+        console.log(`🎯 [PENDING_ALLOCATION] Found allocation: ${allocation.tokens} tokens`);
         return allocation.tokens;
       }
 
+      console.log(`🎯 [PENDING_ALLOCATION] No allocation found for ${allocationId}`);
       return 0;
     } catch (error) {
       console.error('Error getting current page allocation:', error);

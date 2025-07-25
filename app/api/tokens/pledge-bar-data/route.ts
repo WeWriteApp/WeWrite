@@ -32,12 +32,14 @@ export async function GET(request: NextRequest) {
       PendingTokenAllocationService.getCurrentPageAllocation(userId, pageId)
     ]);
 
+    console.log(`🎯 [PLEDGE_BAR_DATA] pageId=${pageId}, userId=${userId}, currentAllocation=${currentAllocation}`);
+
     // Calculate basic token info
     const totalTokens = balance?.totalTokens || 0;
     const allocatedTokens = balance?.allocatedTokens || 0;
     const availableTokens = totalTokens - allocatedTokens;
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: {
         tokenBalance: {
@@ -49,7 +51,17 @@ export async function GET(request: NextRequest) {
         currentPageAllocation: currentAllocation,
         hasSubscription: !!balance && totalTokens > 0
       }
+    };
+
+    console.log(`🎯 [PLEDGE_BAR_DATA] Response for pageId=${pageId}, userId=${userId}:`, {
+      totalTokens,
+      allocatedTokens,
+      availableTokens,
+      currentPageAllocation: currentAllocation,
+      hasSubscription: !!balance && totalTokens > 0
     });
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Error getting pledge bar data:', error);

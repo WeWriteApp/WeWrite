@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../layout/Header";
 // Removed useOptimizedHome - now using UnifiedRecentActivity
-import { Activity, Search } from "lucide-react";
+import { Activity } from "lucide-react";
 import SimpleRecentEdits from "./SimpleRecentEdits";
-
-import { Input } from "../ui/input";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
 import EmptyState from "../ui/EmptyState";
@@ -23,12 +21,6 @@ const Home: React.FC = () => {
   console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!user });
   const router = useRouter();
   // Removed recentEditsFilterState - now handled by UnifiedRecentActivity component
-
-  // Handle search functionality - navigate to search page
-  const handleSearchFocus = () => {
-    // Navigate to search page when user clicks on the search input
-    router.push('/search');
-  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -58,25 +50,9 @@ const Home: React.FC = () => {
       <Header />
       {/* Main content area with proper sidebar spacing */}
       <main className="transition-all duration-300 ease-in-out">
-          <div className="container mx-auto px-4 py-6 space-y-8">
+          <div className="container mx-auto px-4 py-4 space-y-6">
             {/* Email Verification Alert */}
             <EmailVerificationAlert className="max-w-2xl mx-auto" />
-
-            {/* Search Section */}
-            <div className="max-w-2xl mx-auto">
-              <div className="relative cursor-pointer" onClick={handleSearchFocus}>
-                <Input
-                  type="text"
-                  placeholder="Search for pages, users..."
-                  className="w-full pl-10 pr-4 rounded-2xl cursor-pointer"
-                  readOnly
-                  onClick={handleSearchFocus}
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Search className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </div>
-            </div>
 
             {/* Daily Notes Section */}
             <DailyNotesSection />

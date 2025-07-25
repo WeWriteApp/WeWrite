@@ -13,6 +13,7 @@ interface TokenBalanceContextType {
   tokenBalance: TokenBalance | null;
   isLoading: boolean;
   refreshTokenBalance: () => Promise<void>;
+  updateOptimisticBalance: (change: number) => void;
   lastUpdated: Date | null;
 }
 
@@ -129,10 +130,23 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
     await fetchTokenBalance();
   }, [fetchTokenBalance]);
 
+  // Update balance optimistically for immediate UI feedback
+  const updateOptimisticBalance = useCallback((change: number) => {
+    setTokenBalance(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        allocatedTokens: prev.allocatedTokens + change,
+        availableTokens: prev.availableTokens - change
+      };
+    });
+  }, []);
+
   const value: TokenBalanceContextType = {
     tokenBalance,
     isLoading,
     refreshTokenBalance,
+    updateOptimisticBalance,
     lastUpdated
   };
 

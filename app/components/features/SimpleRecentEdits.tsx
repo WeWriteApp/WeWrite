@@ -58,7 +58,7 @@ export default function SimpleRecentEdits() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({
-    includeOwn: true, // TEMPORARILY show own edits by default for debugging
+    includeOwn: false, // Hide my edits by default
     followingOnly: false
   });
   const [isFollowingAnyone, setIsFollowingAnyone] = useState<boolean | null>(null);
@@ -167,13 +167,13 @@ export default function SimpleRecentEdits() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Recent Edits</h2>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+            <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function SimpleRecentEdits() {
 
   if (error) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Recent Edits</h2>
         </div>
@@ -194,7 +194,7 @@ export default function SimpleRecentEdits() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Static Section Header */}
       <SectionTitle
         icon={Activity}
@@ -284,7 +284,7 @@ export default function SimpleRecentEdits() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {edits.map((edit) => {
             const activityCardData = {
               pageId: edit.id,

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { PendingTokenAllocationService } from '../../../services/pendingTokenAllocationService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getCollectionName } from "../../../utils/environmentConfig";
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { recipientUserId, resourceType, resourceId, tokens } = body;
+    const { recipientUserId, resourceType, resourceId, tokens, source } = body;
 
     // Validate input
     if (!recipientUserId || !resourceType || !resourceId || !tokens) {
@@ -138,10 +139,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get updated summary
-    const updatedSummary = await PendingTokenAllocationService.getUserAllocationSummary(userId);
+    // Get updated summary, current allocation, and balance
+    const [updatedSummary, currentAllocation, balance] = await Promise.all([
+      PendingTokenAllocationService.getUserAllocationSummary(userId),
+      PendingTokenAllocationService.getCurrentPageAllocation(userId, resourceId),
+      ServerTokenService.getUserTokenBalance(userId)
+    ]);
 
-    console.log(`Pending tokens allocated: ${tokens} from ${userId} to ${recipientUserId} for ${resourceType}:${resourceId}`);
+    // Log allocation with source tracking
+    console.log(`Pending tokens allocated: ${tokens} from ${userId} to ${recipientUserId} for ${resourceType}:${resourceId} (source: ${source || 'unknown'})`);
+
+    // Track allocation source for analytics
+    if (source) {
+      console.log(`[ANALYTICS] TokenAllocation: source=${source}, tokens=${tokens}, resourceType=${resourceType}, userId=${userId}`);
+    }
 
     return NextResponse.json({
       success: true,
@@ -152,7 +163,13 @@ export async function POST(request: NextRequest) {
         resourceType,
         resourceId
       },
-      summary: updatedSummary
+      summary: updatedSummary,
+      currentAllocation: currentAllocation,
+      balance: {
+        totalTokens: balance?.totalTokens || 0,
+        allocatedTokens: balance?.allocatedTokens || 0,
+        availableTokens: (balance?.totalTokens || 0) - (balance?.allocatedTokens || 0)
+      }
     });
 
   } catch (error) {

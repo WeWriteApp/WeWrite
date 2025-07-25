@@ -192,6 +192,7 @@ export class ServerTokenService {
 
   /**
    * Calculate actual allocated tokens by summing current active allocations
+   * Includes both finalized allocations and pending allocations for current month
    */
   static async calculateActualAllocatedTokens(userId: string): Promise<number> {
     if (!db) {
@@ -200,19 +201,42 @@ export class ServerTokenService {
 
     try {
       const currentMonth = getCurrentMonth();
+
+      // Get finalized allocations from TOKEN_ALLOCATIONS
       const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
-      const query = allocationsRef
+      const finalizedQuery = allocationsRef
         .where('userId', '==', userId)
         .where('month', '==', currentMonth)
         .where('status', '==', 'active');
 
-      const querySnapshot = await query.get();
+      // Get pending allocations from PENDING_TOKEN_ALLOCATIONS
+      const pendingAllocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS));
+      const pendingQuery = pendingAllocationsRef
+        .where('userId', '==', userId)
+        .where('month', '==', currentMonth)
+        .where('status', '==', 'pending');
+
+      // Execute both queries in parallel
+      const [finalizedSnapshot, pendingSnapshot] = await Promise.all([
+        finalizedQuery.get(),
+        pendingQuery.get()
+      ]);
 
       let totalAllocated = 0;
-      querySnapshot.forEach(doc => {
+
+      // Sum finalized allocations
+      finalizedSnapshot.forEach(doc => {
         const allocation = doc.data();
         totalAllocated += allocation.tokens || 0;
       });
+
+      // Sum pending allocations
+      pendingSnapshot.forEach(doc => {
+        const allocation = doc.data();
+        totalAllocated += allocation.tokens || 0;
+      });
+
+      console.log(`🎯 [ALLOCATED_TOKENS] User ${userId}: ${finalizedSnapshot.size} finalized + ${pendingSnapshot.size} pending = ${totalAllocated} total tokens`);
 
       return totalAllocated;
     } catch (error) {
