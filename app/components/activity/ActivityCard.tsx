@@ -470,8 +470,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           </div>
         )}
 
-        {/* Token allocation UI */}
-        {activity.userId && activity.pageId && (
+        {/* Token allocation UI - only show for other users' pages */}
+        {activity.userId && activity.pageId && user?.uid !== activity.userId && (
           <div className="pt-3 border-t border-border/20 mt-3">
             <EmbeddedTokenAllocation
               pageId={activity.pageId}
