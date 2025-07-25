@@ -36,10 +36,14 @@ const Collapsible = ({ open: controlledOpen, onOpenChange, children }: Collapsib
   );
 };
 
+interface CollapsibleTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  asChild?: boolean;
+}
+
 const CollapsibleTrigger = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, onClick, ...props }, ref) => {
+  CollapsibleTriggerProps
+>(({ className, onClick, asChild = false, children, ...props }, ref) => {
   const context = React.useContext(CollapsibleContext);
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -47,13 +51,31 @@ const CollapsibleTrigger = React.forwardRef<
     onClick?.(e);
   };
 
+  // If asChild is true, clone the child and add our click handler
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      onClick: (e: any) => {
+        handleClick(e);
+        // Call original onClick if it exists
+        if (children.props.onClick) {
+          children.props.onClick(e);
+        }
+      },
+      ref
+    });
+  }
+
+  // Otherwise render as a button (but remove asChild from DOM props)
+  const { asChild: _, ...domProps } = props;
   return (
     <button
       ref={ref}
       className={className}
       onClick={handleClick}
-      {...props}
-    />
+      {...domProps}
+    >
+      {children}
+    </button>
   );
 });
 CollapsibleTrigger.displayName = "CollapsibleTrigger";

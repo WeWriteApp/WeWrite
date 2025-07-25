@@ -26,7 +26,13 @@ import {
 } from 'date-fns';
 import { db } from '../firebase/config';
 import { getCollectionName, COLLECTIONS } from '../utils/environmentConfig';
-import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
+// Temporarily disable caching for server-side usage
+// import { getCacheItem, setCacheItem } from '../utils/cacheUtils';
+
+// Server-side cache key generation (avoiding client-side generateCacheKey)
+function createCacheKey(prefix: string, identifier: string): string {
+  return `wewrite_${prefix}_${identifier}`;
+}
 
 export interface PlatformFeeDataPoint {
   date: string;
@@ -131,14 +137,14 @@ export async function getPlatformFeeAnalytics(
 ): Promise<PlatformFeeDataPoint[]> {
   try {
     // Generate cache key including granularity
-    const cacheKey = generateCacheKey('platform-fees', dateRange) + (granularity ? `-g${granularity}` : '');
+    const cacheKey = createCacheKey('platform-fees', `${dateRange.startDate.toISOString()}_${dateRange.endDate.toISOString()}`) + (granularity ? `-g${granularity}` : '');
 
-    // Check cache first (30 minute TTL for platform fee data)
-    const cachedData = getCacheItem<PlatformFeeDataPoint[]>(cacheKey);
-    if (cachedData) {
-      console.log('📦 [Platform Fee Analytics] Returning cached data:', cachedData.length, 'points');
-      return cachedData;
-    }
+    // Temporarily disable caching for server-side usage
+    // const cachedData = getCacheItem<PlatformFeeDataPoint[]>(cacheKey);
+    // if (cachedData) {
+    //   console.log('📦 [Platform Fee Analytics] Returning cached data:', cachedData.length, 'points');
+    //   return cachedData;
+    // }
 
     const { startDate, endDate } = dateRange;
     const timeConfig = getOptimalGranularity(dateRange, granularity);
@@ -222,8 +228,8 @@ export async function getPlatformFeeAnalytics(
       };
     }).sort((a, b) => a.date.localeCompare(b.date));
 
-    // Cache the result (30 minute TTL)
-    setCacheItem(cacheKey, result, 30 * 60 * 1000);
+    // Temporarily disable caching for server-side usage
+    // setCacheItem(cacheKey, result, 30 * 60 * 1000);
     
     console.log('📊 [Platform Fee Analytics] Returning result:', {
       dataPoints: result.length,
@@ -244,11 +250,12 @@ export async function getPlatformFeeAnalytics(
  */
 export async function getPlatformFeeStats(dateRange: DateRange): Promise<PlatformFeeStats> {
   try {
-    const cacheKey = generateCacheKey('platform-fee-stats', dateRange);
-    const cachedStats = getCacheItem<PlatformFeeStats>(cacheKey);
-    if (cachedStats) {
-      return cachedStats;
-    }
+    const cacheKey = createCacheKey('platform-fee-stats', `${dateRange.startDate.toISOString()}_${dateRange.endDate.toISOString()}`);
+    // Temporarily disable caching for server-side usage
+    // const cachedStats = getCacheItem<PlatformFeeStats>(cacheKey);
+    // if (cachedStats) {
+    //   return cachedStats;
+    // }
 
     // Get all-time data for total revenue
     const allTimeData = await getPlatformFeeAnalytics({
@@ -289,8 +296,8 @@ export async function getPlatformFeeStats(dateRange: DateRange): Promise<Platfor
       totalPayouts
     };
 
-    // Cache stats for 15 minutes
-    setCacheItem(cacheKey, stats, 15 * 60 * 1000);
+    // Temporarily disable caching for server-side usage
+    // setCacheItem(cacheKey, stats, 15 * 60 * 1000);
     return stats;
 
   } catch (error) {

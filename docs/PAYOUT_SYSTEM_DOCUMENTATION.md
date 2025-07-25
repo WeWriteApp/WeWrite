@@ -452,6 +452,27 @@ const retryConfig = {
 - **Webhooks**: Consider webhook queuing for high volume
 - **Monitoring**: External monitoring service recommended
 
+## Testing Infrastructure
+
+WeWrite provides comprehensive testing tools for validating payout functionality:
+
+### Testing Guides
+- **[Payout Testing Infrastructure](./PAYOUT_TESTING_INFRASTRUCTURE.md)**: Complete overview of testing components and capabilities
+- **[Admin Payout Testing Guide](./ADMIN_PAYOUT_TESTING_GUIDE.md)**: Step-by-step instructions for using admin testing tools
+
+### Quick Testing Access
+- **Admin Dashboard**: `/admin/dashboard` → Testing Tools section
+- **PayoutFlowValidator**: Primary interface for fee calculation and flow testing
+- **Connected Account Setup**: `/settings/earnings?tab=payouts`
+
+### Key Testing Features
+- Real-time fee calculation validation
+- Platform fee transparency verification (7% WeWrite fee)
+- Connected account setup flow testing
+- Stripe test mode integration
+- Mathematical accuracy validation
+- Error scenario testing
+
 ## Troubleshooting
 
 ### Common Issues

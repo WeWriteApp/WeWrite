@@ -12,7 +12,7 @@ import { PillLink } from '../utils/PillLink';
 const parseContent = (content: any): any[] | null => {
   if (!content) return null;
 
-  // If it's already an array, return it
+  // If it's already an array, return it (including empty arrays)
   if (Array.isArray(content)) {
     return content;
   }
@@ -147,13 +147,13 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
           }`}
           data-mode={lineMode}
         >
-          {!parsedContents && !isSearch && (
+          {(!parsedContents || (Array.isArray(parsedContents) && parsedContents.length === 0)) && !isSearch && (
             <div className="text-muted-foreground">
               <span className="text-sm">No content available</span>
             </div>
           )}
 
-          {parsedContents && (
+          {parsedContents && parsedContents.length > 0 && (
             <ViewerContent
               key={`${renderKey}-${lineMode}`}
               contents={parsedContents}
@@ -180,7 +180,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
         }`}
         data-mode={lineMode}
       >
-        {!parsedContents && !isSearch && (
+        {(!parsedContents || (Array.isArray(parsedContents) && parsedContents.length === 0)) && !isSearch && (
           <div className="text-muted-foreground">
             <div className="viewer-paragraph">
               {showLineNumbers && <span className="paragraph-number">1</span>}
@@ -189,7 +189,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
           </div>
         )}
 
-        {parsedContents && (
+        {parsedContents && parsedContents.length > 0 && (
           <ViewerContent
             key={`${renderKey}-${lineMode}`}
             contents={parsedContents}
