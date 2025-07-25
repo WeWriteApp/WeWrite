@@ -19,6 +19,13 @@ This guide documents old patterns and legacy code that must be identified and re
 - **IMPROVED**: Now shows only actual changes, not entire line replacements
 - **ENHANCED**: Word-level diffing with proper longest common subsequence
 
+### Accent Color Switching Fix (COMPLETED 2025-01-25)
+**CRITICAL FIX**: Fixed accent color switching stuck on blue in appearance settings:
+- **FIXED**: Function name mismatch between context and component
+- **FIXED**: Incomplete CSS variable updates missing HSL and RGB values
+- **IMPROVED**: Complete theme synchronization with all CSS variables
+- **ENHANCED**: Clean UI with visual feedback for selected colors
+
 ### Payment Feature Flags (COMPLETED 2025-01-24)
 All payment feature flags have been **completely removed**. Payments are now always enabled throughout the application.
 
@@ -136,6 +143,39 @@ import { calculateDiff } from '../utils/diffService';
 // Intelligent word-level diff with LCS
 const diffResult = await calculateDiff(currentContent, previousContent);
 // Shows only actual changes, not entire line replacements
+```
+
+### Old Accent Color System ❌ **NEW - CRITICAL**
+
+**REMOVE BROKEN ACCENT COLOR LOGIC** - The incomplete accent color system has been fixed:
+
+#### Code Patterns to Remove
+```typescript
+// REMOVE THESE PATTERNS - CAUSES BROKEN COLOR SWITCHING
+const { accentColor, changeAccentColor } = useAccentColor(); // changeAccentColor doesn't exist
+onClick={() => changeAccentColor(option.value)} // Wrong function name
+
+// REMOVE INCOMPLETE CSS UPDATES
+useEffect(() => {
+  document.documentElement.style.setProperty('--accent-color', colorValue);
+  // Missing HSL and RGB variables - causes theme inconsistency
+}, [accentColor]);
+```
+
+#### ✅ Replace With Complete System
+```typescript
+// USE THESE PATTERNS - COMPLETE ACCENT COLOR SYSTEM
+const { accentColor, setAccentColor } = useAccentColor(); // Correct function
+onClick={() => setAccentColor(option.value)} // Correct usage
+
+// USE COMPLETE CSS VARIABLE UPDATES
+useEffect(() => {
+  document.documentElement.style.setProperty('--accent-color', colorValue);
+  document.documentElement.style.setProperty('--accent-h', hslValues.h.toString());
+  document.documentElement.style.setProperty('--accent-s', `${hslValues.s}%`);
+  document.documentElement.style.setProperty('--accent-l', `${hslValues.l}%`);
+  document.documentElement.style.setProperty('--accent-color-rgb', `${r}, ${g}, ${b}`);
+}, [accentColor]);
 ```
 
 ### Old Activity System ❌

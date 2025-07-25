@@ -31,8 +31,8 @@ This document provides a quick overview of major changes made to WeWrite in Janu
 - **[CONTENT_DISPLAY_REFACTORING_SUMMARY.md](./CONTENT_DISPLAY_REFACTORING_SUMMARY.md)** - Detailed summary
 
 ### ✅ Diff Algorithm Enhancement (Jan 25, 2025)
-**Impact**: Critical UX improvement  
-**Status**: ✅ COMPLETED  
+**Impact**: Critical UX improvement
+**Status**: ✅ COMPLETED
 **UX Impact**: Recent Edits now shows intelligent diffs
 
 #### What Changed
@@ -44,6 +44,23 @@ This document provides a quick overview of major changes made to WeWrite in Janu
 - **File**: `app/api/diff/route.ts` - Completely rewritten diff algorithm
 - **Algorithm**: Word-level diffing using Longest Common Subsequence (LCS)
 - **Result**: "do" → "go" now shows only the changed word, not entire sentences
+
+### ✅ Accent Color Switching Fix (Jan 25, 2025)
+**Impact**: Critical UX fix
+**Status**: ✅ COMPLETED
+**UX Impact**: Appearance settings accent colors now work properly
+
+#### What Changed
+- **Fixed Stuck Colors**: Accent color switching was permanently stuck on blue
+- **Function Mismatch**: Fixed `changeAccentColor` vs `setAccentColor` mismatch
+- **CSS Variables**: Added complete HSL and RGB variable updates
+- **UI Improvement**: Clean grid layout with visual feedback
+
+#### Technical Details
+- **Files**: `app/contexts/AccentColorContext.tsx`, `app/components/utils/AccentColorSwitcher.tsx`
+- **Root Cause**: Missing CSS variable updates and function name mismatch
+- **Solution**: Complete CSS variable synchronization and proper function calls
+- **Result**: All 6 accent colors now work immediately when clicked
 
 ## 🚨 Critical Patterns to Remove
 
@@ -89,8 +106,34 @@ if (oldMiddle && newMiddle) {
 }
 ```
 
-### ✅ Use This Instead
+### ❌ Old Accent Color Patterns
 ```typescript
+// ❌ REMOVE: Incorrect function calls and incomplete CSS updates
+const { accentColor, changeAccentColor } = useAccentColor(); // changeAccentColor doesn't exist
+onClick={() => changeAccentColor(option.value)} // Wrong function
+
+// ❌ REMOVE: Incomplete CSS variable updates
+useEffect(() => {
+  document.documentElement.style.setProperty('--accent-color', colorValue);
+  // Missing HSL and RGB variables causes theme inconsistency
+}, [accentColor]);
+```
+
+### ✅ Use These Instead
+```typescript
+// ✅ USE: Correct function calls and complete CSS updates
+const { accentColor, setAccentColor } = useAccentColor(); // Correct function
+onClick={() => setAccentColor(option.value)} // Correct usage
+
+// ✅ USE: Complete CSS variable updates
+useEffect(() => {
+  document.documentElement.style.setProperty('--accent-color', colorValue);
+  document.documentElement.style.setProperty('--accent-h', hslValues.h.toString());
+  document.documentElement.style.setProperty('--accent-s', `${hslValues.s}%`);
+  document.documentElement.style.setProperty('--accent-l', `${hslValues.l}%`);
+  document.documentElement.style.setProperty('--accent-color-rgb', `${r}, ${g}, ${b}`);
+}, [accentColor]);
+
 // ✅ USE: Intelligent diff service
 import { calculateDiff } from '../utils/diffService';
 const diffResult = await calculateDiff(currentContent, previousContent);
@@ -115,6 +158,18 @@ grep -r "shouldUseEditor" app/ --include="*.tsx"
 # Find old diff algorithm
 grep -r "oldMiddle.*newMiddle" app/api/ --include="*.ts"
 grep -r "prefixLength.*suffixLength" app/api/ --include="*.ts"
+```
+
+### Find Old Accent Color Patterns
+```bash
+# Find incorrect function calls
+grep -r "changeAccentColor" app/ --include="*.tsx" --include="*.ts"
+
+# Find incomplete CSS variable updates
+grep -r "setProperty.*accent-color.*[^-]$" app/ --include="*.tsx" --include="*.ts"
+
+# Find missing HSL/RGB variable updates
+grep -A5 -B5 "accent-color.*setProperty" app/ | grep -v "accent-h\|accent-s\|accent-l"
 ```
 
 ## 📚 Updated Documentation

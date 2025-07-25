@@ -28,6 +28,7 @@ import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 
 export default function RootLayout({
@@ -79,6 +80,7 @@ export default function RootLayout({
             </ThemeProvider>
           </ErrorBoundary>
         </NextJSErrorBoundary>
+        <SpeedInsights />
       </body>
     </html>
   )
