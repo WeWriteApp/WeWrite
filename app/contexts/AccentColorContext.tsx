@@ -12,6 +12,16 @@ const COLORS = {
   sky: '#0EA5E9',
 } as const;
 
+// HSL values for CSS variables
+const COLOR_HSL = {
+  blue: { h: 217, s: 91, l: 60 },
+  red: { h: 356, s: 75, l: 59 },
+  green: { h: 142, s: 43, l: 56 },
+  purple: { h: 262, s: 83, l: 58 },
+  amber: { h: 43, s: 96, l: 56 },
+  sky: { h: 199, s: 89, l: 48 },
+} as const;
+
 type ColorKey = keyof typeof COLORS;
 
 interface AccentColorContextType {
@@ -42,8 +52,22 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
   // Save color and update CSS
   useEffect(() => {
     localStorage.setItem('accent-color', accentColor);
-    document.documentElement.style.setProperty('--accent-color', getAccentColorValue());
-  }, [accentColor]);
+    const colorValue = getAccentColorValue();
+    const hslValues = COLOR_HSL[accentColor];
+
+    // Update CSS variables
+    document.documentElement.style.setProperty('--accent-color', colorValue);
+    document.documentElement.style.setProperty('--accent-h', hslValues.h.toString());
+    document.documentElement.style.setProperty('--accent-s', `${hslValues.s}%`);
+    document.documentElement.style.setProperty('--accent-l', `${hslValues.l}%`);
+
+    // Convert hex to RGB for --accent-color-rgb
+    const hex = colorValue.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    document.documentElement.style.setProperty('--accent-color-rgb', `${r}, ${g}, ${b}`);
+  }, [accentColor, getAccentColorValue]);
 
   return (
     <AccentColorContext.Provider value={{ accentColor, setAccentColor, getAccentColorValue }}>

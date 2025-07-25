@@ -1,67 +1,46 @@
 "use client";
 
 import * as React from "react";
-import { Palette, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
-import { Button } from "../ui/button";
-import { useTheme } from "next-themes";
 
 interface AccentColorSwitcherProps {
   compact?: boolean;
 }
 
 export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProps) {
-  const { accentColor, changeAccentColor } = useAccentColor();
-  const { resolvedTheme } = useTheme();
+  const { accentColor, setAccentColor } = useAccentColor();
 
-  // Define a limited set of colors for the sidebar switcher
+  // Define color options for the appearance settings
   const colorOptions = [
-    { value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE], label: "Blue" },
-    { value: ACCENT_COLORS.PURPLE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.PURPLE], label: "Purple" },
-    { value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED], label: "Red" },
-    { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN], label: "Green" },
-    {
-      value: ACCENT_COLORS.HIGH_CONTRAST,
-      // Show the current high contrast color (black in light mode, white in dark mode)
-      color: resolvedTheme === 'dark' ? '#FFFFFF' : '#000000',
-      label: "High Contrast"
-    }
+    { value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES.blue, label: "Blue" },
+    { value: ACCENT_COLORS.PURPLE, color: ACCENT_COLOR_VALUES.purple, label: "Purple" },
+    { value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES.red, label: "Red" },
+    { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES.green, label: "Green" },
+    { value: ACCENT_COLORS.AMBER, color: ACCENT_COLOR_VALUES.amber, label: "Amber" },
+    { value: ACCENT_COLORS.SKY, color: ACCENT_COLOR_VALUES.sky, label: "Sky" }
   ];
 
   return (
-    <div className="mb-6">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
-      <div className="space-y-1">
-        {colorOptions.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => changeAccentColor(option.value)}
-            className={cn(
-              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
-              "hover:bg-muted",
-              accentColor === option.value && "bg-muted"
-            )}
-          >
-            <div className="flex items-center">
-              {/* Color indicator */}
-              <div
-                className="w-4 h-4 rounded-full mr-2"
-                style={{ backgroundColor: option.color }}
-              />
-
-              {/* Text */}
-              {!compact && (
-                <span className="text-sm">{option.label}</span>
-              )}
-            </div>
-
-            {accentColor === option.value && (
-              <Check className="h-4 w-4 text-primary" />
-            )}
-          </button>
-        ))}
-      </div>
+    <div className="grid grid-cols-6 gap-3">
+      {colorOptions.map((option) => (
+        <button
+          key={option.value}
+          onClick={() => setAccentColor(option.value)}
+          className={cn(
+            "relative w-12 h-12 rounded-lg transition-all duration-200 hover:scale-105",
+            "border-2 border-transparent",
+            accentColor === option.value && "border-foreground ring-2 ring-offset-2 ring-offset-background ring-foreground"
+          )}
+          style={{ backgroundColor: option.color }}
+          title={option.label}
+        >
+          {accentColor === option.value && (
+            <Check className="h-5 w-5 text-white absolute inset-0 m-auto" />
+          )}
+        </button>
+      ))}
     </div>
   );
 }
