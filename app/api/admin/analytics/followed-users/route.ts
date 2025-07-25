@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../auth/[...nextauth]/route';
-import { initServerAdmin } from '../../../../firebase/serverAdmin';
-import { createApiResponse } from '../../../../utils/apiResponse';
+import { checkAdminPermissions } from '../../../admin-auth-helper';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../../utils/environmentConfig';
 
 export async function GET(request: NextRequest) {
   try {
     // Check authentication and admin access
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
       return NextResponse.json(
-        createApiResponse(null, 'Authentication required', false),
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    if (session.user.email !== 'jamiegray2234@gmail.com') {
-      return NextResponse.json(
-        createApiResponse(null, 'Admin access required', false),
-        { status: 403 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.error?.includes('Unauthorized') ? 401 : 403 }
       );
     }
 
@@ -30,12 +21,13 @@ export async function GET(request: NextRequest) {
 
     if (!startDate || !endDate) {
       return NextResponse.json(
-        createApiResponse(null, 'Start date and end date are required', false),
+        { success: false, error: 'Start date and end date are required' },
         { status: 400 }
       );
     }
 
-    const { db } = initServerAdmin();
+    const admin = getFirebaseAdmin();
+    const adminDb = admin.firestore();
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -53,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Query follows collection for user follows in the date range
-    const followsQuery = db.collection('follows')
+    const followsQuery = adminDb.collection(getCollectionName('follows'))
       .where('followedAt', '>=', start)
       .where('followedAt', '<=', end)
       .orderBy('followedAt', 'asc');
@@ -98,23 +90,22 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(
-      createApiResponse({
-        data: cumulativeData,
-        summary: {
-          totalFollows: followsSnapshot.size,
-          totalUniqueFollowers: new Set(followsSnapshot.docs.map(doc => doc.data().followerId)).size,
-          totalUniqueFollowed: new Set(followsSnapshot.docs.map(doc => doc.data().followedId)).size,
-          dateRange: { startDate, endDate },
-          granularity
-        }
-      }, 'Followed users analytics fetched successfully')
-    );
+    return NextResponse.json({
+      success: true,
+      data: cumulativeData,
+      summary: {
+        totalFollows: followsSnapshot.size,
+        totalUniqueFollowers: new Set(followsSnapshot.docs.map(doc => doc.data().followerId)).size,
+        totalUniqueFollowed: new Set(followsSnapshot.docs.map(doc => doc.data().followedId)).size,
+        dateRange: { startDate, endDate },
+        granularity
+      }
+    });
 
   } catch (error) {
     console.error('Error fetching followed users analytics:', error);
     return NextResponse.json(
-      createApiResponse(null, 'Failed to fetch followed users analytics', false),
+      { success: false, error: 'Failed to fetch followed users analytics' },
       { status: 500 }
     );
   }

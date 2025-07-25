@@ -1,41 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]/route';
-import { initServerAdmin } from '../../firebase/serverAdmin';
-import { createApiResponse } from '../../utils/apiResponse';
+import { getUserIdFromRequest } from '../auth-helper';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the current user session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        createApiResponse(null, 'Authentication required', false),
-        { status: 401 }
-      );
-    }
-
-    const currentUserId = session.user.id;
+    // Get the current user ID
+    const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
       return NextResponse.json(
-        createApiResponse(null, 'User ID not found', false),
+        { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const { db } = initServerAdmin();
+    const admin = getFirebaseAdmin();
+    const adminDb = admin.firestore();
 
     // Get users who are not the current user and have recent activity
-    const usersQuery = db.collection('users')
+    const usersQuery = adminDb.collection(getCollectionName('users'))
       .where('id', '!=', currentUserId)
       .limit(20);
 
     const usersSnapshot = await usersQuery.get();
-    
+
     if (usersSnapshot.empty) {
-      return NextResponse.json(
-        createApiResponse({ suggestions: [] }, 'No user suggestions found')
-      );
+      return NextResponse.json({
+        success: true,
+        data: { suggestions: [] }
+      });
     }
 
     const suggestions = [];
@@ -47,7 +40,7 @@ export async function GET(request: NextRequest) {
       if (!userData.username) continue;
 
       // Get recent pages by this user
-      const pagesQuery = db.collection('pages')
+      const pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userData.id)
         .where('isPublic', '==', true)
         .orderBy('lastModified', 'desc')
@@ -90,14 +83,15 @@ export async function GET(request: NextRequest) {
       return bLatest.getTime() - aLatest.getTime();
     });
 
-    return NextResponse.json(
-      createApiResponse({ suggestions }, 'User suggestions fetched successfully')
-    );
+    return NextResponse.json({
+      success: true,
+      data: { suggestions }
+    });
 
   } catch (error) {
     console.error('Error fetching user suggestions:', error);
     return NextResponse.json(
-      createApiResponse(null, 'Failed to fetch user suggestions', false),
+      { success: false, error: 'Failed to fetch user suggestions' },
       { status: 500 }
     );
   }

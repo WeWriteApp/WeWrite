@@ -400,6 +400,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         console.error('Error updating visitor heartbeat:', error);
       }
     }, VisitorTrackingService.HEARTBEAT_INTERVAL);
+    */
   }
 
   /**
