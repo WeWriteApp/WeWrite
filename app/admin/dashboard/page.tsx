@@ -41,7 +41,7 @@ import {
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
 import { SubscriptionsOverTimeWidget } from "../../components/admin/SubscriptionsOverTimeWidget";
-
+import { SubscriptionRevenueWidget } from "../../components/admin/SubscriptionRevenueWidget";
 import { TokenAllocationWidget } from "../../components/admin/TokenAllocationWidget";
 
 import { DashboardErrorBoundary, WidgetErrorBoundary } from "../../components/admin/DashboardErrorBoundary";

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { createApiResponse, createErrorResponse } from '../../../utils/apiUtils';
+import { createApiResponse, createErrorResponse } from '../../auth-helper';
 
 interface TokenAnalyticsData {
   unfundedLoggedOut: {
@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [Token Analytics] Fetching token analytics data...', dateRange);
 
-    const db = getAdminFirestore();
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
     const analytics = await getTokenAnalytics(db, dateRange);
 
     return createApiResponse({
