@@ -66,6 +66,21 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Ref for the accent color section (current page token display)
   const accentSectionRef = useRef<HTMLDivElement>(null);
 
+  // State for springy click animation
+  const [isPlusSpringAnimating, setIsPlusSpringAnimating] = useState(false);
+  const [isMinusSpringAnimating, setIsMinusSpringAnimating] = useState(false);
+
+  // Function to trigger spring animation
+  const triggerPlusSpringAnimation = () => {
+    setIsPlusSpringAnimating(true);
+    setTimeout(() => setIsPlusSpringAnimating(false), 200); // Animation duration
+  };
+
+  const triggerMinusSpringAnimation = () => {
+    setIsMinusSpringAnimating(true);
+    setTimeout(() => setIsMinusSpringAnimating(false), 200); // Animation duration
+  };
+
   // Ref for the plus button (for pulsing effect)
   const plusButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -383,7 +398,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                   const allocationsData = retryData;
 
                   if (allocationsData.success) {
-                    setCurrentTokenAllocation(Math.max(0, currentTokenAllocation + change));
+                    // Don't override optimistic UI state - it's already been set
 
                     // Update allocations data for modal
                     if (allocationsData.allocations) {
@@ -396,16 +411,19 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                     }
 
                     // Update token balance with the most current data
-                    const balance = allocationsData.summary.balance;
-                    const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
+                    // Only update if this response is for the current user action
+                    if (Date.now() - actionTimestamp < 5000) { // Within 5 seconds of user action
+                      const balance = allocationsData.summary.balance;
+                      const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
 
-                    if (balance) {
-                      setTokenBalance({
-                        totalTokens: balance.totalTokens,
-                        allocatedTokens: actualAllocatedTokens,
-                        availableTokens: balance.totalTokens - actualAllocatedTokens,
-                        lastUpdated: new Date(balance.lastUpdated)
-                      });
+                      if (balance) {
+                        setTokenBalance({
+                          totalTokens: balance.totalTokens,
+                          allocatedTokens: actualAllocatedTokens,
+                          availableTokens: balance.totalTokens - actualAllocatedTokens,
+                          lastUpdated: new Date(balance.lastUpdated)
+                        });
+                      }
                     }
 
                     // Clear pending update for this page
@@ -431,7 +449,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         console.log('✅ PledgeBar: Token allocation successful', result);
 
         // Handle successful allocation
-        setCurrentTokenAllocation(Math.max(0, currentTokenAllocation + change));
+        // Don't override optimistic UI state - it's already been set
 
         // Refresh allocations data to get accurate server state
         const allocationsResponse = await fetch('/api/tokens/allocations');
@@ -449,16 +467,19 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
             })));
 
             // Update token balance with the most current data
-            const balance = allocationsData.summary.balance;
-            const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
+            // Only update if this response is for the current user action
+            if (Date.now() - actionTimestamp < 5000) { // Within 5 seconds of user action
+              const balance = allocationsData.summary.balance;
+              const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
 
-            if (balance) {
-              setTokenBalance({
-                totalTokens: balance.totalTokens,
-                allocatedTokens: actualAllocatedTokens,
-                availableTokens: balance.totalTokens - actualAllocatedTokens,
-                lastUpdated: new Date(balance.lastUpdated)
-              });
+              if (balance) {
+                setTokenBalance({
+                  totalTokens: balance.totalTokens,
+                  allocatedTokens: actualAllocatedTokens,
+                  availableTokens: balance.totalTokens - actualAllocatedTokens,
+                  lastUpdated: new Date(balance.lastUpdated)
+                });
+              }
             }
 
             // Clear pending update for this page
@@ -637,13 +658,21 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
+
+                      // Trigger spring animation
+                      triggerMinusSpringAnimation();
+
                       // Only allow minus if we have tokens to remove
                       if (currentTokenAllocation > 0) {
                         handleTokenChange(-incrementAmount);
                       }
                     }}
-                    className={`h-8 w-8 p-0 ${currentTokenAllocation <= 0 || isOutOfTokens ? 'opacity-50' : ''} ${isRefreshing ? 'opacity-75' : ''}`}
-                    disabled={isOutOfTokens}
+                    className={`h-8 w-8 p-0 transition-transform duration-200 ${
+                      isMinusSpringAnimating
+                        ? 'animate-[spring_0.2s_cubic-bezier(0.68,-0.55,0.265,1.55)]'
+                        : ''
+                    } ${currentTokenAllocation <= 0 ? 'opacity-50' : ''}`}
+                    disabled={false} // Make truly optimistic - never disable
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -709,6 +738,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
+
+                      // Trigger spring animation
+                      triggerPlusSpringAnimation();
+
                       if (isOutOfTokens) {
                         // Redirect to subscription page when out of tokens
                         router.push('/settings/subscription');
@@ -730,8 +763,12 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                         handleTokenChange(incrementAmount);
                       }
                     }}
-                    className={`h-8 w-8 p-0 ${isRefreshing ? 'opacity-75' : ''}`}
-                    disabled={isRefreshing}
+                    className={`h-8 w-8 p-0 transition-transform duration-200 ${
+                      isPlusSpringAnimating
+                        ? 'animate-[spring_0.2s_cubic-bezier(0.68,-0.55,0.265,1.55)]'
+                        : ''
+                    }`}
+                    disabled={false} // Make truly optimistic - never disable
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -812,9 +849,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         trigger={triggerEffect}
         originElement={originElement}
         onComplete={resetEffect}
-        particleCount={10}
-        duration={900}
-        maxDistance={60}
+        particleCount={12}
+        duration={1000}
+        maxDistance={80}
       />
 
       {/* Pulsing Button Effect for Logged-Out Users */}

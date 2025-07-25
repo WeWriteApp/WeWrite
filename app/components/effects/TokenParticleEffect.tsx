@@ -116,21 +116,21 @@ export function TokenParticleEffect({
     const newParticles: Particle[] = [];
     
     for (let i = 0; i < particleCount; i++) {
-      // Random angle for burst effect
-      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
-      const speed = 0.5 + Math.random() * 0.5; // 0.5 to 1.0
-      const distance = maxDistance * (0.6 + Math.random() * 0.4); // 60% to 100% of max distance
-      
+      // Random angle for burst effect with more spread
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.8;
+      const speed = 0.8 + Math.random() * 0.7; // 0.8 to 1.5 (faster)
+      const distance = maxDistance * (0.7 + Math.random() * 0.3); // 70% to 100% of max distance
+
       newParticles.push({
         id: i,
-        x: originX,
-        y: originY,
+        x: originX + (Math.random() - 0.5) * 8, // Add slight randomness to origin
+        y: originY + (Math.random() - 0.5) * 8,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 3 + Math.random() * 2, // 3-5px
+        size: 3 + Math.random() * 4, // 3-7px (larger particles)
         opacity: 1,
         life: 0,
-        maxLife: duration
+        maxLife: duration + Math.random() * 200 // Slight variation in lifetime
       });
     }
     
@@ -237,7 +237,7 @@ export function TokenParticleEffect({
             height: particle.size,
             backgroundColor: accentColorValue,
             opacity: particle.opacity,
-            boxShadow: `0 0 ${particle.size * 2}px ${accentColorValue}40`,
+            boxShadow: `0 0 ${particle.size * 3}px ${accentColorValue}60, 0 0 ${particle.size * 6}px ${accentColorValue}30`,
             transform: 'translate3d(0, 0, 0)', // Hardware acceleration
           }}
         />
