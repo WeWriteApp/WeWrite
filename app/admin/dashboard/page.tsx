@@ -37,6 +37,7 @@ import {
   SubscriptionRevenueWidget as TotalSubscriptionRevenueWidget,
   WriterPayoutsWidget
 } from "../../components/admin/FundedTokensWidget";
+import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
 
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
@@ -124,6 +125,7 @@ const initialWidgets = [
   { id: 'funded-tokens', component: FundedTokensWidget },
   { id: 'total-subscription-revenue', component: TotalSubscriptionRevenueWidget },
   { id: 'total-writer-payouts', component: WriterPayoutsWidget },
+  { id: 'platform-fee-revenue', component: PlatformFeeRevenueWidget },
 ];
 
 export default function AdminDashboardPage() {
