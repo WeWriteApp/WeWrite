@@ -489,6 +489,20 @@ function UnifiedSidebarContent({
             </>
           )}
 
+          {/* Buy Tokens button for users without active subscription */}
+          {!isEditMode && user && hasActiveSubscription === false && (
+            <div className="px-3 pb-4">
+              <Button
+                onClick={() => router.push('/settings/subscription')}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                size="sm"
+              >
+                <Coins className="h-4 w-4 mr-2" />
+                Buy Tokens
+              </Button>
+            </div>
+          )}
+
           {/* User info and logout at bottom for non-edit mode */}
           {!isEditMode && user && (
             <div className="mt-auto pt-4 border-t border-border">

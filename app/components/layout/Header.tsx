@@ -19,6 +19,7 @@ import { TokenService } from "../../services/tokenService";
 import { TokenBalance } from "../../types/database";
 import { getLoggedOutTokenBalance, getUserTokenBalance } from "../../utils/simulatedTokens";
 import { useTokenBalanceContext } from "../../contexts/TokenBalanceContext";
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 
 export default function Header() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function Header() {
   const [simulatedTokenBalance, setSimulatedTokenBalance] = React.useState<any>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { earnings } = useUserEarnings();
+  const { hasActiveSubscription } = useSubscriptionWarning();
 
 
 
@@ -66,28 +68,39 @@ export default function Header() {
       hasContextBalance: !!contextTokenBalance,
       hasSimulatedBalance: !!simulatedTokenBalance,
       finalBalance: balance,
-      user: !!user
+      user: !!user,
+      hasActiveSubscription
     });
 
-    // If no balance data, show default state for authenticated users
-    if (!balance) {
-      if (user) {
-        // Show loading state or default for authenticated users
-        return (
-          <RemainingTokensCounter
-            allocatedTokens={0}
-            totalTokens={0}
-            onClick={() => router.push('/settings/spend-tokens')}
-          />
-        );
-      }
-      return null; // Don't show for unauthenticated users
+    // Don't show anything for unauthenticated users
+    if (!user) {
+      return null;
     }
 
+    // Show "Buy Tokens" button if user has no active subscription or zero tokens
+    const shouldShowBuyTokens = hasActiveSubscription === false ||
+      (balance && balance.totalTokens === 0) ||
+      (!balance);
+
+    if (shouldShowBuyTokens) {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/settings/subscription')}
+          className="text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          <Coins className="h-4 w-4 mr-2" />
+          Buy Tokens
+        </Button>
+      );
+    }
+
+    // Show token counter for users with active subscription and tokens
     return (
       <RemainingTokensCounter
-        allocatedTokens={balance.allocatedTokens || 0}
-        totalTokens={balance.totalTokens || 0}
+        allocatedTokens={balance?.allocatedTokens || 0}
+        totalTokens={balance?.totalTokens || 0}
         onClick={() => router.push('/settings/spend-tokens')}
       />
     );

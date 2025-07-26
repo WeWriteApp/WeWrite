@@ -28,8 +28,9 @@ import Link from 'next/link';
 import SubscriptionTierSlider from '../../components/subscription/SubscriptionTierSlider';
 import { SubscriptionTierBadge } from '../../components/ui/SubscriptionTierBadge';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
-import { getEffectiveTier, SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
+import { getEffectiveTier, SUBSCRIPTION_TIERS, calculateTokensForAmount } from '../../utils/subscriptionTiers';
 import SubscriptionHistory from '../../components/subscription/SubscriptionHistory';
+import { BillingCountdown } from '../../components/ui/BillingCountdown';
 // PaymentFeatureGuard removed
 // Define the Subscription interface
 interface Subscription {
@@ -690,6 +691,13 @@ export default function SubscriptionPage() {
                       </div>
                     </div>
 
+                    {/* Monthly tokens display */}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="text-lg font-medium">
+                        {calculateTokensForAmount(currentSubscription.amount || 0)} tokens per month
+                      </span>
+                    </div>
+
                     {/* Status badges */}
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
@@ -726,15 +734,11 @@ export default function SubscriptionPage() {
                       )}
                     </div>
 
-                    {/* Billing info */}
-                    <p className="text-sm text-muted-foreground">
-                      {(currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd) && !currentSubscription.cancelAtPeriodEnd && (
-                        <>Next billing: {new Date(currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd).toLocaleDateString()}</>
-                      )}
-                      {currentSubscription.cancelAtPeriodEnd && (currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd) && (
-                        <>Subscription ends: {new Date(currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd).toLocaleDateString()}</>
-                      )}
-                    </p>
+                    {/* Billing countdown */}
+                    <BillingCountdown
+                      billingDate={currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd}
+                      cancelAtPeriodEnd={currentSubscription.cancelAtPeriodEnd}
+                    />
                   </div>
 
                   {/* Action buttons - mobile optimized */}
