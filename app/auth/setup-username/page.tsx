@@ -154,7 +154,8 @@ function SetupUsernameContent() {
       const result = await addUsername(userId, username);
       
       if (result.success) {
-        console.log("Username added successfully, redirecting to email verification...");
+        // SECURITY: Don't log sensitive user actions
+        console.log("Username added successfully, redirecting to email verification");
 
         // Track user creation event (this completes the user registration process)
         trackAuthEvent('USER_CREATED', {

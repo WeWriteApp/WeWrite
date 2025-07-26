@@ -26,7 +26,8 @@ export default function ResetPasswordPage() {
 
     try {
       await sendPasswordResetEmail(auth, email);
-      console.log("Password reset email sent successfully to:", email);
+      // SECURITY: Don't log email addresses
+      console.log("Password reset email sent successfully");
       setSuccess(true);
     } catch (error: any) {
       console.error("Password reset error:", error);
