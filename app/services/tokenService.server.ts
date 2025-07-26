@@ -10,18 +10,19 @@ import { getCurrentMonth, calculateTokensForAmount } from '../utils/subscription
 import type { TokenBalance } from '../types/database';
 import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 
-// Initialize Firebase Admin
-let admin;
-let db;
-try {
-  admin = getFirebaseAdmin();
-  if (!admin) {
-    throw new Error('Firebase Admin not available');
+// Lazy initialization function for Firebase Admin
+function getFirebaseAdminAndDb() {
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      throw new Error('Firebase Admin not available');
+    }
+    const db = admin.firestore();
+    return { admin, db };
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in tokenService.server:', error);
+    throw error;
   }
-  db = admin.firestore();
-} catch (error) {
-  console.error('Error initializing Firebase Admin in tokenService.server:', error);
-  db = null;
 }
 
 export class ServerTokenService {
@@ -32,11 +33,9 @@ export class ServerTokenService {
     userId: string,
     subscriptionAmount: number
   ): Promise<void> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
+
       const tokens = calculateTokensForAmount(subscriptionAmount);
       const currentMonth = getCurrentMonth();
 
@@ -78,11 +77,8 @@ export class ServerTokenService {
    * Get user's current token balance (server-side)
    */
   static async getUserTokenBalance(userId: string): Promise<TokenBalance | null> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       // CRITICAL FIX: Use the same subscription source as the sync logic
       const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
       const subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
@@ -166,11 +162,8 @@ export class ServerTokenService {
    * Get current page allocation for a user (fast lookup)
    */
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       const allocationRef = db
         .collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS))
@@ -195,11 +188,8 @@ export class ServerTokenService {
    * Includes both finalized allocations and pending allocations for current month
    */
   static async calculateActualAllocatedTokens(userId: string): Promise<number> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
 
       // Get finalized allocations from TOKEN_ALLOCATIONS
@@ -287,11 +277,8 @@ export class ServerTokenService {
    * Allocate tokens to a page (server-side)
    */
   static async allocateTokensToPage(userId: string, pageId: string, tokenChange: number): Promise<void> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       console.log(`[TOKEN ALLOCATION] Starting allocation for user ${userId}, page ${pageId}, change ${tokenChange}`);
 

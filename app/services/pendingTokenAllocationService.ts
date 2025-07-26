@@ -8,18 +8,19 @@
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
 
-// Initialize Firebase Admin
-let admin;
-let db;
-try {
-  admin = getFirebaseAdmin();
-  if (!admin) {
-    throw new Error('Firebase Admin not available');
+// Lazy initialization function for Firebase Admin
+function getFirebaseAdminAndDb() {
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      throw new Error('Firebase Admin not available');
+    }
+    const db = admin.firestore();
+    return { admin, db };
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in pendingTokenAllocationService:', error);
+    throw error;
   }
-  db = admin.firestore();
-} catch (error) {
-  console.error('Error initializing Firebase Admin in pendingTokenAllocationService:', error);
-  db = null;
 }
 import {
   getCurrentMonth,
@@ -67,21 +68,23 @@ export class PendingTokenAllocationService {
     tokens: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
+
       const currentMonth = getCurrentMonth();
       const { hasExpired } = getTimeUntilAllocationDeadline();
-      
+
       if (hasExpired) {
-        return { 
-          success: false, 
-          error: 'Allocation deadline has passed for this month. Allocations will be processed and new month will begin soon.' 
+        return {
+          success: false,
+          error: 'Allocation deadline has passed for this month. Allocations will be processed and new month will begin soon.'
         };
       }
 
       // Validate token amount
       if (tokens < TOKEN_ECONOMY.MIN_ALLOCATION_TOKENS) {
-        return { 
-          success: false, 
-          error: `Minimum allocation is ${TOKEN_ECONOMY.MIN_ALLOCATION_TOKENS} token` 
+        return {
+          success: false,
+          error: `Minimum allocation is ${TOKEN_ECONOMY.MIN_ALLOCATION_TOKENS} token`
         };
       }
 
