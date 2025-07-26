@@ -2,7 +2,15 @@
 
 ## Overview
 
-WeWrite's activity system has been completely refactored from a complex multi-collection approach to a simple, reliable system based on recent pages with diff data stored directly on page documents.
+WeWrite's activity system has been completely refactored from a complex multi-collection approach to a simple, reliable system based on the unified version system with embedded token allocation controls.
+
+## 🚀 Latest Updates (July 2025)
+
+### Recent Edits System Overhaul
+- **✅ Fixed Data Gaps**: Increased fetch limits from 60 to 400 pages to eliminate massive timeline gaps
+- **✅ Smart Token Controls**: Added conditional token allocation bars (hidden on user's own pages)
+- **✅ Include Own Edits**: Changed default to show user's own recent edits for complete activity feed
+- **✅ Unified Version System**: All recent edits now pull from the consolidated version system
 
 ## Architecture
 
@@ -33,6 +41,47 @@ Activity Page → Query recent pages → Show pages with diff data
 - Simpler queries and faster responses
 - Automatic consistency (diff data lives with page)
 - Easier to maintain and debug
+
+## Recent Edits API Architecture (2025)
+
+### Critical Performance Fixes
+
+The recent edits system underwent major performance and data integrity improvements:
+
+#### 1. Increased Fetch Limits
+```typescript
+// OLD: Insufficient data causing gaps
+.limit(limit * 3); // Only 60 pages total
+
+// NEW: Adequate data for continuous timeline
+.limit(limit * 20); // 400 pages for general recent edits
+.limit(limit * 10); // 200 pages for user-specific edits
+```
+
+**Problem Solved**: The API was only fetching 60 pages before applying heavy filtering (visibility, ownership, deleted status), leaving massive 4-month gaps in the timeline.
+
+#### 2. Smart Token Allocation Controls
+```typescript
+// Only show token allocation for other users' pages
+{activity.userId && activity.pageId && user?.uid !== activity.userId && (
+  <EmbeddedTokenAllocation
+    pageId={activity.pageId}
+    authorId={activity.userId}
+    pageTitle={currentPageName}
+    source="HomePage"
+  />
+)}
+```
+
+**Benefit**: Users no longer see confusing token allocation controls on their own pages where allocation isn't possible.
+
+#### 3. Include Own Edits by Default
+```typescript
+// NEW: Show complete activity feed including user's own edits
+includeOwn: true, // Users want to see all recent activity including their own
+```
+
+**Rationale**: Most recent activity comes from the logged-in user, so excluding their own edits created artificially sparse feeds.
 
 ## Implementation Details
 

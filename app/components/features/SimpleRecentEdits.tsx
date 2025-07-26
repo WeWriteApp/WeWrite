@@ -63,18 +63,24 @@ export default function SimpleRecentEdits() {
   });
   const [isFollowingAnyone, setIsFollowingAnyone] = useState<boolean | null>(null);
   const [followCardDismissed, setFollowCardDismissed] = useState(false);
+  const [batchNumber, setBatchNumber] = useState(1); // Track batch number for progressive loading
 
   const fetchRecentEdits = useCallback(async (cursor?: string, append = false) => {
     try {
       if (!append) {
         setLoading(true);
         setError(null);
+        setBatchNumber(1); // Reset batch number for fresh loads
       } else {
         setLoadingMore(true);
+        setBatchNumber(prev => prev + 1); // Increment batch number
       }
 
+      // Progressive batch sizing: Start small for fast initial load, increase for subsequent batches
+      const currentBatchSize = append ? Math.min(20 + (batchNumber * 5), 50) : 15;
+
       const params = new URLSearchParams({
-        limit: '50',
+        limit: currentBatchSize.toString(),
         includeOwn: filters.includeOwn.toString(),
         followingOnly: filters.followingOnly.toString()
       });
@@ -114,7 +120,7 @@ export default function SimpleRecentEdits() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [user?.uid, filters]);
+  }, [user?.uid, filters, batchNumber]);
 
   // Load more items when scrolling near bottom
   const loadMore = useCallback(() => {

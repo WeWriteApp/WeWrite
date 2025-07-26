@@ -87,12 +87,12 @@ export async function GET(request: NextRequest) {
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc')
-        .limit(limit * 10); // Increased multiplier to account for heavy filtering
+        .limit(limit * 5); // Moderate multiplier for user-specific queries
     } else {
-      // For general recent edits, fetch much more data to account for filtering
+      // Progressive batch loading: Start with reasonable fetch size, let client request more
       pagesQuery = db.collection(getCollectionName('pages'))
         .orderBy('lastModified', 'desc')
-        .limit(limit * 20); // Dramatically increased to ensure continuous data after filtering
+        .limit(limit * 8); // Balanced: enough data after filtering, but fast initial load
     }
 
     // Add cursor for pagination

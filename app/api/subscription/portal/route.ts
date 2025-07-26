@@ -8,14 +8,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminDb = admin.firestore();
-
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin inside function to avoid build-time issues
+    const admin = initAdmin();
+    const adminDb = admin.firestore();
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
