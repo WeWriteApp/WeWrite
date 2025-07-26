@@ -348,10 +348,9 @@ export const getCostSavingsBreakdown = () => {
       optimizedEstimate: "$50-110/month",
       savings: "$100-200/month",
       annualSavings: "$1,200-2,400/year"
-    }
-  },
+    },
 
-  consolidationSummary: {
+    consolidationSummary: {
     systemsConsolidated: [
       {
         name: "Recent Activity Systems",
@@ -385,5 +384,6 @@ export const getCostSavingsBreakdown = () => {
       "Improved performance through unified caching",
       "Better error handling and monitoring"
     ]
-  }
-};;
+    }
+  };
+};

@@ -2,12 +2,12 @@
 
 /**
  * Production Hydration Fix Utilities
- * 
+ *
  * This module provides utilities specifically designed to fix hydration issues
  * that only occur in production environments (Vercel preview/production).
  */
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 /**
  * Detect if we're running in a production environment

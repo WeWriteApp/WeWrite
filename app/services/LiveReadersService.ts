@@ -121,6 +121,7 @@ class LiveReadersService {
     } catch (error) {
       console.error('Error tracking reader:', error);
     }
+    */
   }
 
   /**

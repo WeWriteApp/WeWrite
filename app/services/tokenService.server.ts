@@ -239,11 +239,8 @@ export class ServerTokenService {
    * Get current page allocation for a user (server-side)
    */
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
       const query = allocationsRef
@@ -424,11 +421,8 @@ export class ServerTokenService {
    * Get user's token allocations (server-side)
    */
   static async getUserTokenAllocations(userId: string): Promise<any[]> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
       const query = allocationsRef
@@ -457,11 +451,8 @@ export class ServerTokenService {
    * Check if user has an active subscription (server-side)
    */
   static async hasActiveSubscription(userId: string): Promise<boolean> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
       const subscriptionDoc = await subscriptionRef.get();
 
@@ -487,11 +478,8 @@ export class ServerTokenService {
     tokenDifference: number,
     month: string
   ): Promise<void> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const usdValue = tokenDifference / 10; // $1 = 10 tokens
       const earningsId = `${recipientUserId}_${month}`;
 
@@ -582,11 +570,8 @@ export class ServerTokenService {
    * Update writer token balance based on current earnings (server-side)
    */
   static async updateWriterTokenBalance(userId: string): Promise<void> {
-    if (!db) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       // Get all earnings for this writer
       const earningsQuery = db.collection(getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS))
         .where('userId', '==', userId);
@@ -663,10 +648,7 @@ export class ServerTokenService {
     }>;
   }> {
     try {
-      if (!db) {
-        throw new Error('Firebase Admin not initialized');
-      }
-
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
 
       // Query token allocations collection for allocations to this user

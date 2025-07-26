@@ -88,6 +88,17 @@ jest.mock('./app/utils/stripeConfig', () => ({
   getStripeWebhookSecret: jest.fn(() => 'whsec_test_mock_webhook_secret'),
 }));
 
+// Mock global fetch for API testing
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+    headers: new Map(),
+  })
+);
+
 // Global test utilities
 global.testUtils = {
   // Generate test correlation ID

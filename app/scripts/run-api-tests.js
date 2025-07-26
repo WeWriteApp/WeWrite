@@ -93,7 +93,7 @@ class APITestRunner {
     
     // Check if Jest is available
     try {
-      execSync('npx jest --version', { stdio: 'pipe' });
+      execSync('pnpm dlx jest --version', { stdio: 'pipe' });
       console.log('✅ Jest is available');
     } catch (error) {
       throw new Error('Jest is not installed or not available');
@@ -124,7 +124,7 @@ class APITestRunner {
   async runPublicEndpointTests() {
     console.log('🌐 Running public endpoint tests...\n');
     
-    const testCommand = `npx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Public API" --verbose`;
+    const testCommand = `pnpm dlx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Public API" --verbose`;
     
     try {
       const output = execSync(testCommand, { 
@@ -143,7 +143,7 @@ class APITestRunner {
   async runAuthenticatedEndpointTests() {
     console.log('🔐 Running authenticated endpoint tests...\n');
     
-    const testCommand = `npx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Authenticated API" --verbose`;
+    const testCommand = `pnpm dlx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Authenticated API" --verbose`;
     
     try {
       const output = execSync(testCommand, { 
@@ -162,7 +162,7 @@ class APITestRunner {
   async runAdminEndpointTests() {
     console.log('👑 Running admin endpoint tests...\n');
     
-    const testCommand = `npx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Admin API" --verbose`;
+    const testCommand = `pnpm dlx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Admin API" --verbose`;
     
     try {
       const output = execSync(testCommand, { 
@@ -181,7 +181,7 @@ class APITestRunner {
   async runSecurityTests() {
     console.log('🛡️  Running security tests...\n');
     
-    const testCommand = `npx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Security" --verbose`;
+    const testCommand = `pnpm dlx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Security" --verbose`;
     
     try {
       const output = execSync(testCommand, { 
@@ -200,7 +200,7 @@ class APITestRunner {
   async runPerformanceTests() {
     console.log('⚡ Running performance tests...\n');
     
-    const testCommand = `npx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Performance" --verbose`;
+    const testCommand = `pnpm dlx jest app/tests/api-endpoint-testing.test.js --testNamePattern="Performance" --verbose`;
     
     try {
       const output = execSync(testCommand, { 
@@ -219,7 +219,7 @@ class APITestRunner {
   async runLiveAPITests() {
     console.log('🚀 Running live API tests...\n');
     
-    const testCommand = `npx jest app/tests/integration/live-route-testing.test.js --testNamePattern="API" --verbose`;
+    const testCommand = `pnpm dlx jest app/tests/integration/live-route-testing.test.js --testNamePattern="API" --verbose`;
     
     try {
       const output = execSync(testCommand, { 
@@ -240,8 +240,8 @@ class APITestRunner {
     console.log('🧪 Running comprehensive API test suite...\n');
     
     const testCommands = [
-      'npx jest app/tests/api-endpoint-testing.test.js --verbose',
-      'npx jest app/tests/route-validation.test.js --testNamePattern="API Route" --verbose'
+      'pnpm dlx jest app/tests/api-endpoint-testing.test.js --verbose',
+      'pnpm dlx jest app/tests/route-validation.test.js --testNamePattern="API Route" --verbose'
     ];
     
     for (const command of testCommands) {

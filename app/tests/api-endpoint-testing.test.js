@@ -14,6 +14,9 @@
 import { describe, test, expect, beforeAll, afterAll, jest } from '@jest/globals';
 import fetch from 'node-fetch';
 
+// Mock node-fetch
+jest.mock('node-fetch');
+
 // Mock Firebase Admin for testing
 jest.mock('../firebase/admin', () => ({
   initAdmin: jest.fn(() => ({})),
@@ -317,7 +320,7 @@ const testGenerator = new APIEndpointTestGenerator();
 describe('Advanced API Endpoint Testing', () => {
   // Mock fetch for controlled testing
   beforeAll(() => {
-    global.fetch = jest.fn();
+    // node-fetch is already mocked at module level
   });
 
   afterAll(() => {
@@ -326,7 +329,7 @@ describe('Advanced API Endpoint Testing', () => {
 
   describe('Public API Endpoints', () => {
     test('should handle random pages endpoint', async () => {
-      global.fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: () => Promise.resolve({
@@ -340,7 +343,7 @@ describe('Advanced API Endpoint Testing', () => {
     });
 
     test('should handle search endpoint with parameters', async () => {
-      global.fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: () => Promise.resolve({
@@ -356,7 +359,7 @@ describe('Advanced API Endpoint Testing', () => {
     });
 
     test('should handle trending pages endpoint', async () => {
-      global.fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: () => Promise.resolve({

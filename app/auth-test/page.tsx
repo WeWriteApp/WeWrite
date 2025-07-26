@@ -142,7 +142,7 @@ export default function AuthTestPage() {
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-gray-500" />
                   <span className="font-medium">Email:</span>
-                  <span>{user.email}</span>
+                  <span>[REDACTED FOR SECURITY]</span>
                   {user.emailVerified && (
                     <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                       Verified

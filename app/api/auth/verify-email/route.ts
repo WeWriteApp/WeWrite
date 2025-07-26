@@ -181,7 +181,6 @@ export async function GET(request: NextRequest) {
 
     return createApiResponse({
       emailVerified: userRecord.emailVerified,
-      email: userRecord.email,
       uid: userRecord.uid
     });
 

@@ -44,27 +44,31 @@ jobs:
     name: Comprehensive Route Testing
     runs-on: ubuntu-latest
     needs: quick-route-tests
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: pnpm install --frozen-lockfile
+
     - name: Run comprehensive route tests
-      run: npm run test:routes:full
-      
+      run: pnpm run test:routes:full
+
     - name: Run API endpoint tests
-      run: npm run test:api
-      
+      run: pnpm run test:api
+
     - name: Run page route tests
-      run: npm run test:pages
+      run: pnpm run test:pages
       
     - name: Upload comprehensive test results
       uses: actions/upload-artifact@v4
@@ -77,24 +81,28 @@ jobs:
     name: Integration Testing
     runs-on: ubuntu-latest
     needs: quick-route-tests
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: pnpm install --frozen-lockfile
+
     - name: Run user flow tests
-      run: npm run test:flows
-      
+      run: pnpm run test:flows
+
     - name: Run integration tests
-      run: npm run test:integration
+      run: pnpm run test:integration
       
     - name: Upload integration test results
       uses: actions/upload-artifact@v4
@@ -107,24 +115,28 @@ jobs:
     name: Security Testing
     runs-on: ubuntu-latest
     needs: quick-route-tests
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: pnpm install --frozen-lockfile
+
     - name: Run API security tests
-      run: npm run test:api:security
-      
+      run: pnpm run test:api:security
+
     - name: Run route security validation
-      run: npm run test:routes -- --testNamePattern="Security"
+      run: pnpm run test:routes -- --testNamePattern="Security"
       
     - name: Upload security test results
       uses: actions/upload-artifact@v4
@@ -138,36 +150,40 @@ jobs:
     runs-on: ubuntu-latest
     needs: comprehensive-route-tests
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: pnpm install --frozen-lockfile
+
     - name: Build application
-      run: npm run build
-      
+      run: pnpm run build
+
     - name: Start test server
       run: |
-        npm start &
+        pnpm start &
         sleep 30
-        
+
     - name: Wait for server to be ready
       run: |
         timeout 60 bash -c 'until curl -f http://localhost:3000/api/random-pages; do sleep 2; done'
-        
+
     - name: Run live API tests
-      run: npm run test:api:live
-      
+      run: pnpm run test:api:live
+
     - name: Run live integration tests
-      run: npm run test:flows:live
+      run: pnpm run test:flows:live
       
     - name: Upload live test results
       uses: actions/upload-artifact@v4
@@ -180,24 +196,28 @@ jobs:
     name: Performance Testing
     runs-on: ubuntu-latest
     needs: comprehensive-route-tests
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: pnpm install --frozen-lockfile
+
     - name: Run performance tests
-      run: npm run test:api:performance
-      
+      run: pnpm run test:api:performance
+
     - name: Run flow performance tests
-      run: npm run test:flows:performance
+      run: pnpm run test:flows:performance
       
     - name: Upload performance test results
       uses: actions/upload-artifact@v4
@@ -224,11 +244,15 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+
     - name: Install dependencies
-      run: npm ci
-    
+      run: pnpm install --frozen-lockfile
+
     - name: Generate consolidated report
       run: node app/scripts/generate-test-report.js
       

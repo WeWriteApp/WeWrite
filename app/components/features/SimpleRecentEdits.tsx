@@ -57,10 +57,29 @@ export default function SimpleRecentEdits() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Filters>({
-    includeOwn: true, // Show my edits by default - users want to see all recent activity including their own
-    followingOnly: false
+
+  // Initialize filters with localStorage persistence
+  const [filters, setFilters] = useState<Filters>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedFilters = localStorage.getItem('recentEdits_filters');
+        if (savedFilters) {
+          const parsed = JSON.parse(savedFilters);
+          return {
+            includeOwn: parsed.includeOwn !== undefined ? parsed.includeOwn : false, // Default to hiding own edits
+            followingOnly: parsed.followingOnly !== undefined ? parsed.followingOnly : false
+          };
+        }
+      } catch (error) {
+        console.warn('Error loading recent edits filters from localStorage:', error);
+      }
+    }
+    return {
+      includeOwn: false, // Default to hiding own edits (hide my edits enabled)
+      followingOnly: false
+    };
   });
+
   const [isFollowingAnyone, setIsFollowingAnyone] = useState<boolean | null>(null);
   const [followCardDismissed, setFollowCardDismissed] = useState(false);
   const [batchNumber, setBatchNumber] = useState(1); // Track batch number for progressive loading
@@ -166,6 +185,17 @@ export default function SimpleRecentEdits() {
 
     return () => clearInterval(interval);
   }, [loading, loadingMore, fetchRecentEdits]);
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('recentEdits_filters', JSON.stringify(filters));
+      } catch (error) {
+        console.warn('Error saving recent edits filters to localStorage:', error);
+      }
+    }
+  }, [filters]);
 
   const updateFilter = (key: keyof Filters, value: boolean) => {
     setFilters(prev => ({ ...prev, [key]: value }));

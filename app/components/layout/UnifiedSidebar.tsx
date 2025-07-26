@@ -499,7 +499,7 @@ function UnifiedSidebarContent({
                     {sanitizeUsername(user.username, 'Loading...', 'User')}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {user.email}
+                    {user.emailVerified ? 'Email verified' : 'Email not verified'}
                   </div>
                 </div>
               )}
