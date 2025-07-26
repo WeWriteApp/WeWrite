@@ -42,6 +42,19 @@ Activity Page → Query recent pages → Show pages with diff data
 - Automatic consistency (diff data lives with page)
 - Easier to maintain and debug
 
+### 2025 Performance Optimizations ✅
+```
+Progressive Loading: 15 → 25 → 30 → 50 items per batch
+Smart Fetch Limits: 160 pages (8x multiplier) for balanced performance
+Conditional Token UI: Only show allocation controls where functional
+```
+
+**Performance Benefits:**
+- **Fast Initial Paint**: 15 items load immediately
+- **Continuous Timeline**: No 4-month gaps in recent activity
+- **Optimal Batching**: Increasing batch sizes for smooth infinite scroll
+- **Smart UX**: Token allocation only appears for other users' pages
+
 ## Recent Edits API Architecture (2025)
 
 ### Critical Performance Fixes

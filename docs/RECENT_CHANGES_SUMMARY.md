@@ -1,10 +1,38 @@
-# Recent Changes Summary - January 2025
+# Recent Changes Summary - 2025
 
 ## 🎯 Quick Reference for Developers
 
-This document provides a quick overview of major changes made to WeWrite in January 2025. Use this as a starting point to understand recent architectural improvements and what patterns to avoid.
+This document provides a quick overview of major changes made to WeWrite in 2025. Use this as a starting point to understand recent architectural improvements and what patterns to avoid.
 
 ## 🆕 Major Changes Completed
+
+### 🚀 Recent Edits System Overhaul (July 26, 2025)
+**Impact**: Critical performance and data integrity improvements
+**Status**: ✅ COMPLETED
+**UX Impact**: Much faster loading, complete activity feeds, smart token controls
+
+#### What Changed
+- **✅ Fixed Data Gaps**: Eliminated massive 4-month gaps in recent edits timeline by increasing fetch limits
+- **✅ Progressive Loading**: Implemented fast initial load (15 items) with increasing batch sizes (25→30→50)
+- **✅ Smart Token Controls**: Hidden allocation bars on user's own pages where allocation isn't possible
+- **✅ Include Own Edits**: Changed default to show user's own recent activity for complete feeds
+- **✅ Balanced Performance**: Optimized from 400 pages to 160 pages fetch for faster performance while maintaining data continuity
+
+#### Key Files
+- **UPDATED**: `app/api/recent-edits/route.ts` - Reduced fetch multiplier from 20x to 8x for balanced performance
+- **UPDATED**: `app/components/features/SimpleRecentEdits.tsx` - Added progressive batch loading and includeOwn default
+- **UPDATED**: `app/components/activity/ActivityCard.tsx` - Added conditional token allocation display
+- **UPDATED**: `app/api/subscription/portal/route.ts` - Fixed Firebase admin initialization for build compatibility
+
+#### Technical Benefits
+- **Fast Initial Load**: 15 items load immediately for better perceived performance
+- **Continuous Data**: No more 4-month gaps in activity timeline
+- **Smart UX**: Token allocation only appears where it's actually functional
+- **Build Stability**: Resolved Firebase initialization issues during build process
+
+#### Documentation
+- **[SIMPLIFIED_ACTIVITY_SYSTEM.md](./SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Updated with recent edits improvements
+- **[VERSION_SYSTEM.md](./VERSION_SYSTEM.md)** - Unified version system documentation
 
 ### 🚨 Emergency Firebase Cost Optimization (Jan 25, 2025)
 **Impact**: Critical cost reduction
