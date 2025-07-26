@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { db } from '../../../firebase/config';
+import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 import {
   doc,
   getDoc,
@@ -22,13 +23,7 @@ import { PayoutMonitoringService } from '../../../services/payoutMonitoringServi
 import { FinancialUtils } from '../../../types/financial';
 import { adminRateLimiter } from '../../../utils/rateLimiter';
 
-// Admin user check (implement proper admin verification)
-async function isAdmin(userId: string): Promise<boolean> {
-  // TODO: Implement proper admin check
-  // For now, return true for any authenticated user
-  // In production, check against admin user list or roles
-  return true;
-}
+// SECURITY: Removed vulnerable admin check - now using centralized security module
 
 /**
  * GET /api/admin/payouts
@@ -36,17 +31,14 @@ async function isAdmin(userId: string): Promise<boolean> {
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!(await isAdmin(userId))) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // SECURITY: Use centralized admin verification with audit logging
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
 
     // Apply admin rate limiting
-    const rateLimitResult = await adminRateLimiter.checkLimit(userId);
+    const rateLimitResult = await adminRateLimiter.checkLimit(adminAuth.userId!);
     if (!rateLimitResult.allowed) {
       return NextResponse.json({
         error: 'Rate limit exceeded',

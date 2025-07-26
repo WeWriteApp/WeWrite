@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { secureLogger, maskEmail } from '../../../utils/secureLogging';
 
 /**
  * Login API Endpoint
@@ -55,8 +56,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as LoginRequest;
     const { emailOrUsername, password } = body;
 
-    console.log('[Auth] Login attempt for:', emailOrUsername);
-    console.log('[Auth] Password provided:', password ? 'YES' : 'NO');
+    // SECURITY: Use secure logging to prevent email exposure
+    secureLogger.info('[Auth] Login attempt', {
+      emailOrUsername: emailOrUsername.includes('@') ? maskEmail(emailOrUsername) : emailOrUsername,
+      hasPassword: password ? 'YES' : 'NO'
+    });
 
     // Validate required fields
     if (!emailOrUsername || !password) {
@@ -105,7 +109,11 @@ export async function POST(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
 
-      console.log('[Auth] Dev auth login successful for:', account.email);
+      // SECURITY: Use secure logging to prevent email exposure
+      secureLogger.info('[Auth] Dev auth login successful', {
+        email: maskEmail(account.email),
+        username: account.username
+      });
 
       return createSuccessResponse({
         uid: account.uid,
@@ -178,7 +186,11 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7 // 7 days
     });
 
-    console.log('[Auth] Login successful for:', userRecord.email);
+    // SECURITY: Use secure logging to prevent email exposure
+    secureLogger.info('[Auth] Login successful', {
+      email: maskEmail(userRecord.email!),
+      username: userData?.username
+    });
 
     return createSuccessResponse({
       uid: userRecord.uid,
