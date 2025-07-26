@@ -93,14 +93,10 @@ export class PendingTokenAllocationService {
       const remainingTokens = summary.totalAvailable - summary.totalAllocated;
       
       if (tokens > remainingTokens) {
-        return { 
-          success: false, 
-          error: `Insufficient tokens. You have ${remainingTokens} tokens available.` 
+        return {
+          success: false,
+          error: `Insufficient tokens. You have ${remainingTokens} tokens available.`
         };
-      }
-
-      if (!db) {
-        throw new Error('Firebase Admin not initialized');
       }
 
       // Create or update allocation
@@ -142,18 +138,20 @@ export class PendingTokenAllocationService {
     resourceId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       const { hasExpired } = getTimeUntilAllocationDeadline();
-      
+
       if (hasExpired) {
-        return { 
-          success: false, 
-          error: 'Allocation deadline has passed. Cannot modify allocations.' 
+        return {
+          success: false,
+          error: 'Allocation deadline has passed. Cannot modify allocations.'
         };
       }
 
       const allocationId = `${userId}_${resourceType}_${resourceId}_${currentMonth}`;
-      await deleteDoc(doc(db, getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS), allocationId));
+      const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS)).doc(allocationId);
+      await allocationRef.delete();
 
       return { success: true };
 
@@ -168,9 +166,7 @@ export class PendingTokenAllocationService {
    */
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
     try {
-      if (!db) {
-        throw new Error('Firebase Admin not initialized');
-      }
+      const { admin, db } = getFirebaseAdminAndDb();
 
       const currentMonth = getCurrentMonth();
       const allocationId = `${userId}_page_${pageId}_${currentMonth}`;
@@ -199,9 +195,7 @@ export class PendingTokenAllocationService {
    */
   static async getUserAllocationSummary(userId: string): Promise<TokenAllocationSummary> {
     try {
-      if (!db) {
-        throw new Error('Firebase Admin not initialized');
-      }
+      const { admin, db } = getFirebaseAdminAndDb();
 
       const currentMonth = getCurrentMonth();
 
@@ -261,9 +255,7 @@ export class PendingTokenAllocationService {
     };
   }> {
     try {
-      if (!db) {
-        throw new Error('Firebase Admin not initialized');
-      }
+      const { admin, db } = getFirebaseAdminAndDb();
 
       const currentMonth = getCurrentMonth();
 
@@ -312,17 +304,16 @@ export class PendingTokenAllocationService {
     error?: string;
   }> {
     try {
+      const { admin, db } = getFirebaseAdminAndDb();
       console.log(`Finalizing pending allocations for month: ${month}`);
 
-      // Get all pending allocations for the month
-      const allocationsQuery = query(
-        collection(db, getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS)),
-        where('month', '==', month),
-        where('status', '==', 'pending')
-      );
+      // Get all pending allocations for the month using admin SDK
+      const allocationsQuery = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS))
+        .where('month', '==', month)
+        .where('status', '==', 'pending');
 
-      const allocationsSnapshot = await getDocs(allocationsQuery);
-      const batch = writeBatch(db);
+      const allocationsSnapshot = await allocationsQuery.get();
+      const batch = db.batch();
       
       let processedCount = 0;
       let totalTokens = 0;
@@ -369,29 +360,37 @@ export class PendingTokenAllocationService {
    * Create writer earnings record from finalized allocation
    */
   private static async createWriterEarningsFromAllocation(allocation: PendingTokenAllocation): Promise<void> {
-    // This will integrate with the existing TokenEarningsService
-    // For now, we'll create a simple earnings record
-const earningsRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS), earningsId);
+    try {
+      const { admin, db } = getFirebaseAdminAndDb();
 
-    const usdValue = allocation.tokens / TOKEN_ECONOMY.TOKENS_PER_DOLLAR;
+      // This will integrate with the existing TokenEarningsService
+      // For now, we'll create a simple earnings record
+      const earningsId = `${allocation.recipientUserId}_${allocation.month}`;
+      const earningsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)).doc(earningsId);
 
-    await setDoc(earningsRef, {
-      id: earningsId,
-      userId: allocation.recipientUserId,
-      month: allocation.month,
-      totalTokensReceived: allocation.tokens,
-      totalUsdValue: usdValue,
-      status: 'pending',
-      allocations: [{
-        fromUserId: allocation.userId,
-        resourceType: allocation.resourceType,
-        resourceId: allocation.resourceId,
-        tokens: allocation.tokens,
-        usdValue,
-        allocatedAt: allocation.finalizedAt
-      }],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+      const usdValue = allocation.tokens / TOKEN_ECONOMY.TOKENS_PER_DOLLAR;
+
+      await earningsRef.set({
+        id: earningsId,
+        userId: allocation.recipientUserId,
+        month: allocation.month,
+        totalTokensReceived: allocation.tokens,
+        totalUsdValue: usdValue,
+        status: 'pending',
+        allocations: [{
+          fromUserId: allocation.userId,
+          resourceType: allocation.resourceType,
+          resourceId: allocation.resourceId,
+          tokens: allocation.tokens,
+          usdValue,
+          allocatedAt: allocation.finalizedAt
+        }],
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error creating writer earnings from allocation:', error);
+      throw error;
+    }
   }
 }
