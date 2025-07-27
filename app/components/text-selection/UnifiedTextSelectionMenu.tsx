@@ -10,6 +10,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle} from "../ui/dialog";
+import LinkEditorModal from '../editor/LinkEditorModal';
+import { createPortal } from 'react-dom';
 
 interface UnifiedTextSelectionMenuProps {
   selectedText: string;
@@ -125,6 +127,15 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   username
 }) => {
   const [showModal, setShowModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+
+  // Debug effect to track modal state changes
+  useEffect(() => {
+    console.log('🔗 TEXT_SELECTION: showLinkModal changed to:', showLinkModal);
+    if (showLinkModal) {
+      console.log('🔗 TEXT_SELECTION: Modal is now open, selectedText:', selectedText);
+    }
+  }, [showLinkModal, selectedText]);
   const menuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
@@ -163,25 +174,45 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      console.log('🔗 TEXT_SELECTION: Click outside handler triggered', {
+        showLinkModal,
+        target: event.target,
+        targetClass: (event.target as Element)?.className
+      });
+      // Don't close if link modal is open
+      if (showLinkModal) {
+        console.log('🔗 TEXT_SELECTION: Link modal is open, not closing menu');
+        return;
+      }
+
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        console.log('🔗 TEXT_SELECTION: Closing menu due to click outside');
         onClose();
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        // If link modal is open, close it instead of the menu
+        if (showLinkModal) {
+          setShowLinkModal(false);
+        } else {
+          onClose();
+        }
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    // Temporarily disable click outside when link modal might be opening
+    if (!showLinkModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
     document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [onClose]);
+  }, [onClose, showLinkModal]);
 
   // Check overflow on mount and when content changes
   useEffect(() => {
@@ -231,8 +262,53 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     setShowModal(true);
   };
 
+  const handleOpenLinkModal = (e: React.MouseEvent) => {
+    console.log('🔗 TEXT_SELECTION: handleOpenLinkModal called');
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+    console.log('🔗 TEXT_SELECTION: Event prevented, current showLinkModal:', showLinkModal);
+    console.log('🔗 TEXT_SELECTION: Setting showLinkModal to true...');
+    setShowLinkModal(true);
+    console.log('🔗 TEXT_SELECTION: setShowLinkModal(true) called');
+  };
+
   const handleModalClose = () => {
     setShowModal(false);
+    onClose();
+  };
+
+  const handleLinkModalClose = () => {
+    console.log('🔗 TEXT_SELECTION: handleLinkModalClose called');
+    console.log('🔗 TEXT_SELECTION: Setting showLinkModal to false...');
+    setShowLinkModal(false);
+    console.log('🔗 TEXT_SELECTION: setShowLinkModal(false) called');
+    // Don't close the text selection menu, just the link modal
+  };
+
+  const handleInsertLink = (linkData: any) => {
+    // For now, we'll just copy the link to clipboard
+    // In a full implementation, this would integrate with the editor
+    const linkText = linkData.text || linkData.pageTitle || selectedText;
+    const linkUrl = linkData.url || (linkData.type === 'external' ? linkData.url : `/${linkData.pageId}`);
+
+    // Create markdown-style link
+    const markdownLink = `[${linkText}](${linkUrl})`;
+
+    navigator.clipboard.writeText(markdownLink).then(() => {
+      toast({
+        title: "Link copied to clipboard",
+        description: `Link with text "${linkText}" has been copied as markdown.`,
+      });
+    }).catch(() => {
+      toast({
+        title: "Failed to copy link",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    });
+
+    setShowLinkModal(false);
     onClose();
   };
 
@@ -246,7 +322,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     <>
       <div
         ref={menuRef}
-        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden"
+        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden text-selection-menu"
         style={menuStyle}
       >
         <div className="relative flex items-center">
@@ -284,6 +360,16 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
                 Copy
               </Button>
             )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenLinkModal}
+              className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
+            >
+              <Link className="h-3 w-3" />
+              Link
+            </Button>
 
             {enableShare && (
               <Button
@@ -328,6 +414,17 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
         isOpen={showModal}
         onClose={handleModalClose}
       />
+
+      {showLinkModal && typeof document !== 'undefined' && createPortal(
+        <LinkEditorModal
+          isOpen={showLinkModal}
+          onClose={handleLinkModalClose}
+          onInsertLink={handleInsertLink}
+          editingLink={null}
+          selectedText={selectedText}
+        />,
+        document.body
+      )}
     </>
   );
 };

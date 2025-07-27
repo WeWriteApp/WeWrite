@@ -23,6 +23,9 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     isVisible: false,
     selectionRange: null});
 
+  // Track if any modal is currently open to prevent clearing selection
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleSelectionChange = useCallback(() => {
     const selection = window.getSelection();
 
@@ -191,10 +194,36 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     
     // Add event listener for clicks to clear selection
     const handleClick = (event: MouseEvent) => {
+      // Check if any modal is open by looking for dialog elements
+      const hasOpenModal = document.querySelector('[role="dialog"][data-state="open"]') ||
+                          document.querySelector('[data-radix-dialog-content]') ||
+                          document.querySelector('.text-selection-menu');
+
+      console.log('🔗 USE_TEXT_SELECTION: Click event detected', {
+        target: event.target,
+        targetClass: (event.target as Element)?.className,
+        targetTagName: (event.target as Element)?.tagName,
+        hasOpenModal: !!hasOpenModal
+      });
+
+      // Don't clear selection if any modal is open
+      if (hasOpenModal) {
+        console.log('🔗 USE_TEXT_SELECTION: Modal is open, preserving selection');
+        return;
+      }
+
+      console.log('🔗 USE_TEXT_SELECTION: No modal open, checking selection in 10ms...');
       // Small delay to allow selection to be processed first
       setTimeout(() => {
         const selection = window.getSelection();
-        if (!selection || selection.toString().trim().length === 0) {
+        const hasSelection = selection && selection.toString().trim().length > 0;
+        console.log('🔗 USE_TEXT_SELECTION: Selection check result:', {
+          hasSelection,
+          selectionText: selection?.toString()
+        });
+
+        if (!hasSelection) {
+          console.log('🔗 USE_TEXT_SELECTION: No selection found, hiding text selection menu');
           setSelectionState(prev => ({ ...prev, isVisible: false }));
         }
       }, 10);
