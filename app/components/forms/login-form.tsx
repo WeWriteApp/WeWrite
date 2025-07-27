@@ -9,6 +9,7 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import { getEnvironmentType } from '../../utils/environmentConfig';
 
 export function LoginForm() {
   const [emailOrUsername, setEmailOrUsername] = useState('');
@@ -124,10 +125,13 @@ export function LoginForm() {
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground text-center space-y-1">
-        <p>Test accounts for development:</p>
-        <p>jamie@wewrite.app • test@wewrite.app</p>
-      </div>
+      {/* Only show test account info in development */}
+      {getEnvironmentType() === 'development' && (
+        <div className="text-xs text-muted-foreground text-center space-y-1">
+          <p>Test accounts for development:</p>
+          <p>jamie@wewrite.app • test@wewrite.app</p>
+        </div>
+      )}
     </div>
   );
 }
