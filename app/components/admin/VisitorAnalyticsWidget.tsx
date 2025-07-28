@@ -45,27 +45,32 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const total = payload.find((p: any) => p.dataKey === 'total')?.value || 0;
-      const authenticated = payload.find((p: any) => p.dataKey === 'authenticated')?.value || 0;
-      const anonymous = payload.find((p: any) => p.dataKey === 'anonymous')?.value || 0;
-      
-      return (
-        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          <div className="space-y-1">
-            <p className="text-sm text-primary">
-              <span className="font-medium">Total:</span> {total} visitor{total !== 1 ? 's' : ''}
-            </p>
-            <p className="text-sm text-green-600">
-              <span className="font-medium">Authenticated:</span> {authenticated}
-            </p>
-            <p className="text-sm text-blue-600">
-              <span className="font-medium">Anonymous:</span> {anonymous}
-            </p>
+    if (active && payload && Array.isArray(payload) && payload.length) {
+      try {
+        const total = payload.find((p: any) => p && p.dataKey === 'total')?.value || 0;
+        const authenticated = payload.find((p: any) => p && p.dataKey === 'authenticated')?.value || 0;
+        const anonymous = payload.find((p: any) => p && p.dataKey === 'anonymous')?.value || 0;
+
+        return (
+          <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+            <p className="font-medium mb-2">{label}</p>
+            <div className="space-y-1">
+              <p className="text-sm text-primary">
+                <span className="font-medium">Total:</span> {total} visitor{total !== 1 ? 's' : ''}
+              </p>
+              <p className="text-sm text-green-600">
+                <span className="font-medium">Authenticated:</span> {authenticated}
+              </p>
+              <p className="text-sm text-blue-600">
+                <span className="font-medium">Anonymous:</span> {anonymous}
+              </p>
+            </div>
           </div>
-        </div>
-      );
+        );
+      } catch (error) {
+        console.error('Error in Visitor tooltip:', error);
+        return null;
+      }
     }
     return null;
   };

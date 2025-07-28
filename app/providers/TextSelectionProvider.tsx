@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useTextSelection } from '../hooks/useTextSelection';
 import UnifiedTextSelectionMenu from '../components/text-selection/UnifiedTextSelectionMenu';
 
@@ -64,6 +64,16 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
     clearSelection,
     copyToClipboard,
     createShareableLink};
+
+  // Debug logging for visibility changes
+  useEffect(() => {
+    console.log('🔗 TEXT_SELECTION_PROVIDER: Visibility state changed:', {
+      isVisible,
+      hasPosition: !!position,
+      hasSelectedText: !!selectedText,
+      selectedText: selectedText?.substring(0, 50) + (selectedText?.length > 50 ? '...' : '')
+    });
+  }, [isVisible, position, selectedText]);
 
   return (
     <TextSelectionContext.Provider value={contextValue}>

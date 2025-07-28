@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
-import { Heart, DollarSign, Coins } from "lucide-react";
+import { Heart, DollarSign } from "lucide-react";
 import { RemainingTokensCounter } from "../ui/RemainingTokensCounter";
 import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
@@ -50,7 +50,7 @@ export default function Header() {
         onClick={() => router.push('/settings/earnings')}
         title={`${totalTokensEarned} tokens earned`}
       >
-        <Coins className="h-4 w-4 text-green-600" />
+        <DollarSign className="h-4 w-4 text-green-600" />
         <span className="text-sm font-medium text-foreground">
           {totalTokensEarned}
         </span>
@@ -90,7 +90,7 @@ export default function Header() {
           onClick={() => router.push('/settings/subscription')}
           className="text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
         >
-          <Coins className="h-4 w-4 mr-2" />
+          <DollarSign className="h-4 w-4 mr-2" />
           Buy Tokens
         </Button>
       );

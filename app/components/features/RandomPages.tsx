@@ -86,8 +86,14 @@ const RandomPages = React.memo(function RandomPages({
       }
       setError(null);
 
-      // Use higher limit for dense mode to show more results
-      const effectiveLimit = denseMode ? Math.max(limit * 2, 20) : limit;
+      // Use higher limit for shuffling and dense mode to show more results
+      let effectiveLimit = limit;
+      if (denseMode) {
+        effectiveLimit = Math.max(limit * 2, 20);
+      } else if (isShuffling) {
+        // When shuffling, show 50% more results to give users more variety
+        effectiveLimit = Math.max(Math.floor(limit * 1.5), limit + 5);
+      }
 
       const params = new URLSearchParams({
         limit: effectiveLimit.toString()});
@@ -100,6 +106,11 @@ const RandomPages = React.memo(function RandomPages({
       // Add "Not mine" filter preference
       if (excludeOwn) {
         params.append('excludeOwnPages', 'true');
+      }
+
+      // Add shuffle flag to help API provide more variety
+      if (isShuffling) {
+        params.append('shuffle', 'true');
       }
 
       const response = await fetch(`/api/random-pages?${params}`);

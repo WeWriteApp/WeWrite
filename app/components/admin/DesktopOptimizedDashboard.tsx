@@ -4,6 +4,34 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, BarChart, Bar, ComposedChart, AreaChart, Area } from 'recharts';
 import { TrendingUp, TrendingDown, Users, FileText, Share2, Edit3, DollarSign, Smartphone, Eye } from 'lucide-react';
 
+// Safe tooltip component that handles malformed data
+const SafeTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || !Array.isArray(payload) || payload.length === 0) {
+    return null;
+  }
+
+  try {
+    return (
+      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-medium mb-2">{label || 'Data'}</p>
+        <div className="space-y-1">
+          {payload.map((entry: any, index: number) => {
+            if (!entry || typeof entry.value === 'undefined') return null;
+            return (
+              <p key={index} className="text-sm">
+                <span className="font-medium">{entry.name || entry.dataKey}:</span> {entry.value}
+              </p>
+            );
+          })}
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('Error in SafeTooltip:', error);
+    return null;
+  }
+};
+
 import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -160,7 +188,7 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip />
+            <Tooltip content={<SafeTooltip />} />
             <Line 
               type="monotone" 
               dataKey="count" 
@@ -200,8 +228,8 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip />
-            <Bar 
+            <Tooltip content={<SafeTooltip />} />
+            <Bar
               dataKey="totalPages" 
               fill="#10b981" 
               radius={[2, 2, 0, 0]}
@@ -238,7 +266,7 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip />
+            <Tooltip content={<SafeTooltip />} />
             <Bar dataKey="charactersAdded" stackId="changes" fill="#10b981" />
             <Bar dataKey="charactersDeleted" stackId="changes" fill="#ef4444" />
             <Line type="monotone" dataKey="netChange" stroke="#f59e0b" strokeWidth={2} />
@@ -274,8 +302,8 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip />
-            <Area 
+            <Tooltip content={<SafeTooltip />} />
+            <Area
               type="monotone" 
               dataKey="successful" 
               stackId="1"
@@ -323,8 +351,8 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip />
-            <Line 
+            <Tooltip content={<SafeTooltip />} />
+            <Line
               type="monotone" 
               dataKey="value" 
               stroke="#06b6d4" 
@@ -363,8 +391,8 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip />
-            <Area 
+            <Tooltip content={<SafeTooltip />} />
+            <Area
               type="monotone" 
               dataKey="total" 
               stroke="#84cc16" 

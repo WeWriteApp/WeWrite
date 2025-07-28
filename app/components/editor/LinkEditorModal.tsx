@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -11,6 +10,7 @@ import { Link, ExternalLink, Users, FileText } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
 interface LinkEditorModalProps {
   isOpen: boolean;
@@ -21,14 +21,22 @@ interface LinkEditorModalProps {
     type: 'page' | 'user' | 'external' | 'compound';
     data: any;
   } | null;
+  selectedText?: string;
 }
 
 export default function LinkEditorModal({
   isOpen,
   onClose,
   onInsertLink,
-  editingLink = null
+  editingLink = null,
+  selectedText = ''
 }: LinkEditorModalProps) {
+  console.log('🔗 LINK_MODAL: Component rendered with props:', {
+    isOpen,
+    selectedText,
+    hasOnClose: !!onClose,
+    hasOnInsertLink: !!onInsertLink
+  });
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('pages');
   const [externalUrl, setExternalUrl] = useState('');
@@ -46,7 +54,9 @@ export default function LinkEditorModal({
 
   // Reset state when modal opens/closes
   useEffect(() => {
+    console.log('🔗 LINK_MODAL: useEffect triggered, isOpen:', isOpen);
     if (isOpen) {
+      console.log('🔗 LINK_MODAL: Modal is opening, selectedText:', selectedText);
       if (editingLink) {
         // Pre-populate fields when editing
         const { type, data } = editingLink;
@@ -71,13 +81,13 @@ export default function LinkEditorModal({
         // Reset for new link
         setActiveTab('pages');
         setExternalUrl('');
-        setDisplayText('');
+        setDisplayText(selectedText || '');
         setShowAuthor(false);
-        setCustomText(false);
+        setCustomText(!!selectedText);
         setSelectedPage(null);
       }
     }
-  }, [isOpen, editingLink]);
+  }, [isOpen, editingLink, selectedText]);
 
   // Focus the external URL input when external tab is selected
   useEffect(() => {
@@ -180,13 +190,44 @@ export default function LinkEditorModal({
 
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={modalTitle}
-      className="sm:max-w-2xl"
-    >
-      <div className="space-y-4">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      console.log('🔗 LINK_MODAL: Dialog onOpenChange called with:', open);
+      if (!open) {
+        console.log('🔗 LINK_MODAL: Dialog wants to close, calling onClose');
+        onClose();
+      }
+    }}>
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{modalTitle}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+        {/* Custom Link Text - Above tabs and persistent */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="custom-text" className="text-sm font-medium">
+              Custom link text
+            </Label>
+            <Switch
+              id="custom-text"
+              checked={customText}
+              onCheckedChange={setCustomText}
+            />
+          </div>
+
+          {customText && (
+            <div className="space-y-2">
+              <Input
+                id="display-text"
+                value={displayText}
+                onChange={(e) => setDisplayText(e.target.value)}
+                placeholder="Enter custom display text"
+                className="w-full"
+              />
+            </div>
+          )}
+        </div>
+
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="pages" className="flex items-center gap-2">
@@ -212,31 +253,6 @@ export default function LinkEditorModal({
               />
             </div>
 
-            {/* Custom Text Toggle */}
-            <div className="flex items-center justify-between">
-              <Label htmlFor="custom-text" className="text-sm font-medium">
-                Custom link text
-              </Label>
-              <Switch
-                id="custom-text"
-                checked={customText}
-                onCheckedChange={setCustomText}
-              />
-            </div>
-
-            {/* Custom Text Input */}
-            {customText && (
-              <div className="space-y-2">
-                <Label htmlFor="display-text">Display text</Label>
-                <Input
-                  id="display-text"
-                  value={displayText}
-                  onChange={(e) => setDisplayText(e.target.value)}
-                  placeholder="Enter custom display text"
-                />
-              </div>
-            )}
-
             {/* Search Results */}
             <div className="h-64">
               <FilteredSearchResults
@@ -244,7 +260,7 @@ export default function LinkEditorModal({
                 onSelect={handlePageSelect}
                 userId={user?.uid}
                 placeholder="Search for pages..."
-                autoFocus={true}
+                autoFocus={!selectedText}
                 className="h-full p-3"
                 preventRedirect={true}
               />
@@ -267,26 +283,12 @@ export default function LinkEditorModal({
                 autoFocus={activeTab === 'external'}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="external-display-text">Display text (optional)</Label>
-              <Input
-                id="external-display-text"
-                value={displayText}
-                onChange={(e) => setDisplayText(e.target.value)}
-                onPaste={(e) => {
-                  // Ensure paste events are handled properly in the modal
-                  e.stopPropagation();
-                }}
-                placeholder="Link text"
-              />
-            </div>
           </TabsContent>
         </Tabs>
 
         {/* Footer Buttons */}
-        <div className="flex justify-end gap-3 pt-4">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
@@ -296,12 +298,14 @@ export default function LinkEditorModal({
                 ? !externalUrl.trim()
                 : !selectedPage
             }
+            className="w-full sm:w-auto"
           >
             <Link className="h-4 w-4 mr-2" />
             {buttonText}
           </Button>
         </div>
-      </div>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
