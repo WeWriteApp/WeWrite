@@ -19,11 +19,8 @@ export function UserMenu() {
 
   const handleLogout = async () => {
     try {
-      // Use the auth signOut method
+      // Use the auth signOut method (it handles redirection)
       await signOut();
-
-      // Redirect to home page after sign out
-      router.push("/");
     } catch (error) {
       console.error("Error signing out:", error)
       // Fallback to home page on error

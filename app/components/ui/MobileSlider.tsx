@@ -107,7 +107,7 @@ export default function MobileSlider({
           background: hsl(var(--primary)) !important;
           cursor: pointer !important;
           border: none;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+          box-shadow: 0 2px 4px hsl(var(--foreground) / 0.15);
           transition: all 0.2s ease;
           touch-action: manipulation !important;
           pointer-events: auto !important;
@@ -120,7 +120,7 @@ export default function MobileSlider({
           background: hsl(var(--primary)) !important;
           cursor: pointer !important;
           border: none;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+          box-shadow: 0 2px 4px hsl(var(--foreground) / 0.15);
           transition: all 0.2s ease;
           touch-action: manipulation !important;
           pointer-events: auto !important;
@@ -128,12 +128,12 @@ export default function MobileSlider({
         
         .mobile-slider-input:active::-webkit-slider-thumb {
           transform: scale(1.1);
-          box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+          box-shadow: 0 3px 6px hsl(var(--foreground) / 0.2);
         }
 
         .mobile-slider-input:active::-moz-range-thumb {
           transform: scale(1.1);
-          box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+          box-shadow: 0 3px 6px hsl(var(--foreground) / 0.2);
         }
         
         .mobile-slider-input::-webkit-slider-track {

@@ -47,30 +47,35 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const successful = payload.find((p: any) => p.dataKey === 'successful')?.value || 0;
-      const aborted = payload.find((p: any) => p.dataKey === 'aborted')?.value || 0;
-      const total = successful + aborted;
-      const rate = total > 0 ? (successful / total * 100).toFixed(1) : '0';
-      
-      return (
-        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span>Successful: {successful}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded"></div>
-              <span>Aborted: {aborted}</span>
-            </div>
-            <div className="pt-1 border-t border-border">
-              <span className="font-medium">Success Rate: {rate}%</span>
+    if (active && payload && Array.isArray(payload) && payload.length) {
+      try {
+        const successful = payload.find((p: any) => p && p.dataKey === 'successful')?.value || 0;
+        const aborted = payload.find((p: any) => p && p.dataKey === 'aborted')?.value || 0;
+        const total = successful + aborted;
+        const rate = total > 0 ? (successful / total * 100).toFixed(1) : '0';
+
+        return (
+          <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+            <p className="font-medium mb-2">{label}</p>
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                <span>Successful: {successful}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded"></div>
+                <span>Aborted: {aborted}</span>
+              </div>
+              <div className="pt-1 border-t border-border">
+                <span className="font-medium">Success Rate: {rate}%</span>
+              </div>
             </div>
           </div>
-        </div>
-      );
+        );
+      } catch (error) {
+        console.error('Error in Shares tooltip:', error);
+        return null;
+      }
     }
     return null;
   };

@@ -408,3 +408,5 @@ export function PageActions({
     </div>
   );
 }
+
+export default PageActions;

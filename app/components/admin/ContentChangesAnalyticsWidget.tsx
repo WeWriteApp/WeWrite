@@ -28,28 +28,33 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const added = payload.find((p: any) => p.dataKey === 'charactersAdded')?.value || 0;
-      const deleted = payload.find((p: any) => p.dataKey === 'charactersDeleted')?.value || 0;
-      const net = payload.find((p: any) => p.dataKey === 'netChange')?.value || 0;
-      
-      return (
-        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium">{label}</p>
-          <p className="text-sm">
-            <span className="inline-block w-3 h-3 bg-green-500 rounded mr-2"></span>
-            Added: +{added.toLocaleString()} chars
-          </p>
-          <p className="text-sm">
-            <span className="inline-block w-3 h-3 bg-red-500 rounded mr-2"></span>
-            Deleted: -{deleted.toLocaleString()} chars
-          </p>
-          <p className="text-sm font-medium">
-            <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-2"></span>
-            Net: {net > 0 ? '+' : ''}{net.toLocaleString()} chars
-          </p>
-        </div>
-      );
+    if (active && payload && Array.isArray(payload) && payload.length) {
+      try {
+        const added = payload.find((p: any) => p && p.dataKey === 'charactersAdded')?.value || 0;
+        const deleted = payload.find((p: any) => p && p.dataKey === 'charactersDeleted')?.value || 0;
+        const net = payload.find((p: any) => p && p.dataKey === 'netChange')?.value || 0;
+
+        return (
+          <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+            <p className="font-medium">{label}</p>
+            <p className="text-sm">
+              <span className="inline-block w-3 h-3 bg-green-500 rounded mr-2"></span>
+              Added: +{added.toLocaleString()} chars
+            </p>
+            <p className="text-sm">
+              <span className="inline-block w-3 h-3 bg-red-500 rounded mr-2"></span>
+              Deleted: -{deleted.toLocaleString()} chars
+            </p>
+            <p className="text-sm font-medium">
+              <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-2"></span>
+              Net: {net > 0 ? '+' : ''}{net.toLocaleString()} chars
+            </p>
+          </div>
+        );
+      } catch (error) {
+        console.error('Error in ContentChanges tooltip:', error);
+        return null;
+      }
     }
     return null;
   };

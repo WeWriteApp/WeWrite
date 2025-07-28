@@ -50,6 +50,7 @@ const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
   )
 });
 import EmptyLinesAlert from "../editor/EmptyLinesAlert";
+import PageActions from "./PageActions";
 // CustomDateField and LocationField are now handled by PageFooter
 
 // Types
@@ -1472,6 +1473,13 @@ export default function PageView({
               titleError={titleError}
               hasUnsavedChanges={hasUnsavedChanges}
             />
+
+            {/* Page Actions - Reply and Add to Page buttons for other users' pages */}
+            {page && !canEdit && (
+              <div className="px-4 mb-8">
+                <PageActions page={page} />
+              </div>
+            )}
 
             {/* Page Connections and Related Pages - show for all pages */}
             {page && (

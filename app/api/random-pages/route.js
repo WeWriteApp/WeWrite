@@ -16,8 +16,9 @@ export async function GET(request) {
     const limitCount = parseInt(searchParams.get('limit') || '10', 10);
     const userId = searchParams.get('userId'); // For access control
     const excludeOwnPages = searchParams.get('excludeOwnPages') === 'true'; // "Not mine" filter
+    const isShuffling = searchParams.get('shuffle') === 'true'; // Shuffle flag for more variety
 
-    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages);
+    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages, 'Is shuffling:', isShuffling);
 
     // Import Firebase modules
     const { initAdmin } = await import('../../firebase/admin.ts');
@@ -61,8 +62,12 @@ export async function GET(request) {
       }, { headers });
     }
 
-    // PERFORMANCE OPTIMIZATION: Use smaller pool size and add server-side filtering
-    const poolSize = Math.max(limitCount * 2, 20); // Reduced pool size for better performance
+    // PERFORMANCE OPTIMIZATION: Use larger pool size when shuffling for more variety
+    let poolSize = Math.max(limitCount * 2, 20); // Base pool size
+    if (isShuffling) {
+      // When shuffling, use a much larger pool to ensure variety
+      poolSize = Math.max(limitCount * 4, 50);
+    }
 
     // Import environment config
     const { getCollectionName } = await import('../../utils/environmentConfig');

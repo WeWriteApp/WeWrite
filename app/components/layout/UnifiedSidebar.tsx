@@ -7,7 +7,7 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
-  Clock, Shuffle, LogOut, TrendingUp, Heart
+  Clock, Shuffle, LogOut, TrendingUp, Heart, DollarSign
 } from "lucide-react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
@@ -497,7 +497,7 @@ function UnifiedSidebarContent({
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                 size="sm"
               >
-                <Coins className="h-4 w-4 mr-2" />
+                <DollarSign className="h-4 w-4 mr-2" />
                 Buy Tokens
               </Button>
             </div>

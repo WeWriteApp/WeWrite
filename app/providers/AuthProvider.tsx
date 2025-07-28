@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { User, AuthContextValue, AuthState, AuthError, AuthErrorCode } from '../types/auth';
 import { getEnvironmentType } from '../utils/environmentConfig';
 import { identifyUser } from '../utils/logrocket';
+import { useRouter } from 'next/navigation';
 
 // Create context
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,6 +35,7 @@ interface AuthProviderProps {
  * - No client-side session complexity
  */
 export function AuthProvider({ children }: AuthProviderProps) {
+  const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
@@ -256,12 +258,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!response.ok) {
         console.warn('[Auth] Logout API call failed, but local state cleared');
       }
+
+      // Redirect to homepage after successful logout
+      console.log('[Auth] Redirecting to homepage after logout');
+      router.push('/');
+
     } catch (error) {
       console.error('[Auth] Sign out error:', error);
       // Still clear local state even if API fails
       setUser(null);
+      // Still redirect even if there was an error
+      router.push('/');
     }
-  }, [setLoading, clearError, setUser]);
+  }, [setLoading, clearError, setUser, router]);
 
   // Refresh user data
   const refreshUser = useCallback(async () => {

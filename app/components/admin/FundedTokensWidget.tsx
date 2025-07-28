@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Coins, DollarSign, TrendingUp } from 'lucide-react';
+import { DollarSign, TrendingUp } from 'lucide-react';
 import { useFundedTokens, useSubscriptionRevenue, useWriterPayouts } from '../../hooks/useTokenAnalytics';
 import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
@@ -38,7 +38,7 @@ export function FundedTokensWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-green-600" />
+            <DollarSign className="h-5 w-5 text-green-600" />
             Funded Token Allocations
           </CardTitle>
           <CardDescription>
@@ -64,7 +64,7 @@ export function FundedTokensWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-green-600" />
+            <DollarSign className="h-5 w-5 text-green-600" />
             Funded Token Allocations
           </CardTitle>
         </CardHeader>
@@ -82,7 +82,7 @@ export function FundedTokensWidget({
     <Card className={`wewrite-card ${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Coins className="h-5 w-5 text-green-600" />
+          <DollarSign className="h-5 w-5 text-green-600" />
           Funded Token Allocations
         </CardTitle>
         <CardDescription>

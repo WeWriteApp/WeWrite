@@ -274,10 +274,10 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
     setIsConnecting(true);
 
     try {
-      console.log('📡 [BANK CONNECT] Creating Financial Connections user...');
+      console.log('📡 [BANK CONNECT] Creating Financial Connections session...');
 
-      // Create Financial Connections user
-      const response = await fetch('/api/stripe/financial-connections/create-user', {
+      // Create Financial Connections session
+      const response = await fetch('/api/stripe/financial-connections/create-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -292,7 +292,7 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ [BANK CONNECT] Session creation failed:', errorData);
-        throw new Error(errorData.error || 'Failed to create Financial Connections user');
+        throw new Error(errorData.error || 'Failed to create Financial Connections session');
       }
 
       const { clientSecret, sessionId } = await response.json();
