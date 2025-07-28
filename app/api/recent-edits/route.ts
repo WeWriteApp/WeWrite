@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
         .limit(limit * 5); // Moderate multiplier for user-specific queries
     } else {
       // Progressive batch loading: Start with reasonable fetch size, let client request more
+      // TEMPORARILY REMOVE ORDER BY TO DEBUG COMPOUND QUERY ISSUE
       pagesQuery = db.collection(getCollectionName('pages'))
-        .orderBy('lastModified', 'desc')
         .limit(limit * 8); // Balanced: enough data after filtering, but fast initial load
     }
 
