@@ -105,13 +105,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // TEMPORARILY DISABLE VISIBILITY FILTER FOR DEBUGGING
     // Add visibility filter for non-authenticated users
-    if (!userId) {
-      console.log(`🔍 [RECENT_EDITS] No userId - adding isPublic filter`);
-      pagesQuery = pagesQuery.where('isPublic', '==', true);
-    } else {
-      console.log(`🔍 [RECENT_EDITS] Authenticated user: ${userId}`);
-    }
+    // if (!userId) {
+    //   console.log(`🔍 [RECENT_EDITS] No userId - adding isPublic filter`);
+    //   pagesQuery = pagesQuery.where('isPublic', '==', true);
+    // } else {
+    //   console.log(`🔍 [RECENT_EDITS] Authenticated user: ${userId}`);
+    // }
+    console.log(`🔍 [RECENT_EDITS] DEBUGGING: Skipping isPublic filter. UserId: ${userId}`);
 
     console.log(`🔍 [RECENT_EDITS] Executing query...`);
     const pagesSnapshot = await pagesQuery.get();
