@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
+import { StripeUrls } from '../../../utils/urlConfig';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     // Create portal session
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://getwewrite.app'}/settings/subscription`,
+      return_url: StripeUrls.subscriptionPortalReturn(),
     });
 
     console.log(`[SUBSCRIPTION PORTAL] Created portal session ${portalSession.id} for user ${userId}`);

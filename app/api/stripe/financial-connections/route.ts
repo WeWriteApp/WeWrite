@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { StripeUrls } from '../../../utils/urlConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       filters: {
         countries: ['US']
       },
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/earnings?tab=payouts&fc_success=true`
+      return_url: StripeUrls.financialConnectionsSuccess()
     });
 
     console.log(`Created Financial Connections session ${session.id} for user ${userId}`);

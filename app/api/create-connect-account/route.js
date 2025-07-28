@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../utils/environmentConfig';
+import { StripeUrls } from '../../utils/urlConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -129,8 +130,8 @@ export async function POST(request) {
     // Create an account link for onboarding
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?setup=failed`,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?setup=success`,
+      refresh_url: StripeUrls.connectOnboarding.failed(),
+      return_url: StripeUrls.connectOnboarding.success(),
       type: 'account_onboarding'});
 
     return NextResponse.json({ url: accountLink.url });

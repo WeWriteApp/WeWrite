@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getUserIdFromRequest } from '../../../auth-helper';
+import { StripeUrls } from '../../../../utils/urlConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       filters: {
         countries: ['US'],
       },
-      return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/earnings?tab=payouts&fc_success=true`,
+      return_url: StripeUrls.financialConnectionsSuccess(),
     });
 
     console.log('✅ [CREATE SESSION] Financial Connections session created:', {
