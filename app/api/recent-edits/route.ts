@@ -254,6 +254,17 @@ export async function GET(request: NextRequest) {
             const migrationTimeWindow = new Date('2025-07-28T14:56:00.000Z'); // Migration happened around this time
             const isInMigrationWindow = Math.abs(pageLastModified.getTime() - migrationTimeWindow.getTime()) < (10 * 60 * 1000); // Within 10 minutes
 
+            // Debug logging for first few pages
+            if (validEdits.length < 5) {
+              console.log(`🔍 [RECENT_EDITS] Processing ${page.title}:`, {
+                pageLastModified: pageLastModified.toISOString(),
+                versionCreatedAt: versionCreatedAt.toISOString(),
+                timeDiffHours: timeDiffHours.toFixed(1),
+                isInMigrationWindow,
+                willSkip: isInMigrationWindow && timeDiffHours > 24
+              });
+            }
+
             // Only skip if BOTH conditions are true:
             // 1. Page was modified in the migration time window
             // 2. The latest version is much older (indicating no real recent content)
@@ -342,6 +353,16 @@ export async function GET(request: NextRequest) {
       validEdits.length = 0;
     }
 
+    // Debug logging before sorting
+    console.log(`🔍 [RECENT_EDITS] Before sorting - validEdits count: ${validEdits.length}`);
+    if (validEdits.length > 0) {
+      console.log(`🔍 [RECENT_EDITS] First few edits:`, validEdits.slice(0, 3).map(edit => ({
+        title: edit.title,
+        lastModified: edit.lastModified,
+        source: edit.source
+      })));
+    }
+
     // Sort by actual edit timestamp (version createdAt, not page lastModified which was affected by migration)
     const sortedEdits = validEdits
       .sort((a, b) => {
@@ -351,6 +372,8 @@ export async function GET(request: NextRequest) {
         return bTime - aTime;
       })
       .slice(0, limit);
+
+    console.log(`🔍 [RECENT_EDITS] After sorting - sortedEdits count: ${sortedEdits.length}`);
 
     // Fetch subscription data for all unique user IDs
     const uniqueUserIds = [...new Set(sortedEdits.map(edit => edit.userId).filter(Boolean))];
