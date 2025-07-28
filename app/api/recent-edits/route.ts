@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     // This avoids the need for complex collectionGroup indexes
     let pagesQuery;
 
-    // Use the EXACT same query structure as my-pages API
+    // Use the EXACT same query structure as homepage recent edits that works
     if (filterToUser) {
       console.log(`🔍 [RECENT_EDITS] Filtering to user: ${filterToUser}`);
       console.log(`🔍 [RECENT_EDITS] Collection name: ${getCollectionName('pages')}`);
@@ -104,218 +104,108 @@ export async function GET(request: NextRequest) {
         .orderBy('lastModified', 'desc')
         .limit(limit * 5); // Moderate multiplier for user-specific queries
     } else {
-      // PROPER APPROACH: Use collectionGroup to query all versions across all pages
-      // This is the documented approach from VERSION_SYSTEM.md
-      console.log(`🔄 [RECENT_EDITS] Using collectionGroup('versions') to find truly recent activity`);
+      // SIMPLIFIED: Use the same approach as homepage recent edits that works
+      console.log(`🔄 [RECENT_EDITS] Using pages collection approach (same as working homepage)`);
 
-      // Query all versions across all pages using collectionGroup
-      // Note: collectionGroup uses the base collection name, not environment-prefixed
-      // First try without orderBy to see if collectionGroup works, then sort client-side
-      let versionsQuery = db.collectionGroup('versions')
-        .limit(limit * 20); // Get many more versions to find truly recent activity
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .where('isPublic', '==', true)
+        .where('deleted', '!=', true) // Filter out deleted pages
+        .orderBy('deleted') // Required for != queries
+        .orderBy('lastModified', 'desc')
+        .limit(limit * 3); // Get more to filter through
+    }
 
-      console.log(`🔍 [RECENT_EDITS] Attempting collectionGroup query without orderBy to avoid index requirements`);
+    const pagesSnapshot = await pagesQuery.get();
+    console.log(`📊 [RECENT_EDITS] Found ${pagesSnapshot.docs.length} pages from Firestore`);
 
-      // Skip cursor for now to simplify the query
-      // if (cursor) {
-      //   try {
-      //     const cursorDate = new Date(cursor);
-      //     versionsQuery = versionsQuery.startAfter(cursorDate);
-      //   } catch (error) {
-      //     console.warn('Invalid cursor provided:', cursor);
-      //   }
-      // }
-
-      const versionsSnapshot = await versionsQuery.get();
-      console.log(`📊 [RECENT_EDITS] Found ${versionsSnapshot.docs.length} recent versions using collectionGroup`);
-
-      if (versionsSnapshot.empty) {
-        return NextResponse.json({
-          edits: [],
-          hasMore: false,
-          nextCursor: null,
-          total: 0,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Get unique page IDs from the versions and fetch their page data
-      const pageIds = [...new Set(versionsSnapshot.docs.map(doc => {
-        // Extract pageId from the document path: pages/{pageId}/versions/{versionId}
-        const pathParts = doc.ref.path.split('/');
-        return pathParts[pathParts.length - 3]; // Get pageId from path
-      }))];
-
-      console.log(`📊 [RECENT_EDITS] Found ${pageIds.length} unique pages from recent versions`);
-
-      // Batch fetch page data
-      const pagePromises = pageIds.map(pageId =>
-        db.collection(getCollectionName('pages')).doc(pageId).get()
-      );
-      const pageSnapshots = await Promise.all(pagePromises);
-
-      // Create a map of pageId -> pageData for quick lookup
-      const pageDataMap = new Map();
-      pageSnapshots.forEach(doc => {
-        if (doc.exists && !doc.data()?.deleted) {
-          pageDataMap.set(doc.id, { id: doc.id, ...doc.data() });
-        }
-      });
-
-      console.log(`📊 [RECENT_EDITS] Found ${pageDataMap.size} valid pages after filtering deleted`);
-
-      const validEdits: any[] = [];
-      const processedPages = new Set(); // Track pages to avoid duplicates
-
-      // Sort versions by createdAt client-side (newest first)
-      const sortedVersionDocs = versionsSnapshot.docs.sort((a, b) => {
-        const aTime = a.data().createdAt?.toDate?.() || new Date(a.data().createdAt);
-        const bTime = b.data().createdAt?.toDate?.() || new Date(b.data().createdAt);
-        return bTime.getTime() - aTime.getTime();
-      });
-
-      console.log(`🔍 [RECENT_EDITS] Sorted ${sortedVersionDocs.length} versions client-side`);
-
-      // Debug: Show date range of versions
-      if (sortedVersionDocs.length > 0) {
-        const newestDate = sortedVersionDocs[0].data().createdAt?.toDate?.() || new Date(sortedVersionDocs[0].data().createdAt);
-        const oldestDate = sortedVersionDocs[sortedVersionDocs.length - 1].data().createdAt?.toDate?.() || new Date(sortedVersionDocs[sortedVersionDocs.length - 1].data().createdAt);
-        console.log(`🔍 [RECENT_EDITS] Version date range: ${newestDate.toISOString()} to ${oldestDate.toISOString()}`);
-      }
-
-      // Process versions in chronological order (newest first)
-      for (const versionDoc of sortedVersionDocs) {
-        const versionData = versionDoc.data();
-
-        // Extract pageId from document path
-        const pathParts = versionDoc.ref.path.split('/');
-        const pageId = pathParts[pathParts.length - 3];
-
-        // Debug logging for first few versions
-        if (validEdits.length < 3) {
-          const versionDate = versionData.createdAt?.toDate?.() || new Date(versionData.createdAt);
-          console.log(`🔍 [RECENT_EDITS] Processing version from ${versionDate.toISOString()} for page ${pageId}`);
-        }
-
-        // Skip if we already processed this page (we want the most recent version per page)
-        if (processedPages.has(pageId)) {
-          if (validEdits.length < 3) {
-            console.log(`🔍 [RECENT_EDITS] Skipping ${pageId} - already processed`);
-          }
-          continue;
-        }
-
-        // Get page data
-        const page = pageDataMap.get(pageId);
-        if (!page) {
-          if (validEdits.length < 3) {
-            console.log(`🔍 [RECENT_EDITS] Skipping ${pageId} - page not found or deleted`);
-          }
-          continue; // Page doesn't exist or is deleted
-        }
-
-        // Apply filters with debug logging
-        if (!userId && !page.isPublic) {
-          if (validEdits.length < 3) {
-            console.log(`🔍 [RECENT_EDITS] Skipping ${pageId} - not public and no user`);
-          }
-          continue;
-        }
-        if (userId && !page.isPublic && page.userId !== userId) {
-          if (validEdits.length < 3) {
-            console.log(`🔍 [RECENT_EDITS] Skipping ${pageId} - not public and not user's page`);
-          }
-          continue;
-        }
-        if (!includeOwn && userId && page.userId === userId && !filterToUser) {
-          if (validEdits.length < 3) {
-            console.log(`🔍 [RECENT_EDITS] Skipping ${pageId} - own page excluded`);
-          }
-          continue;
-        }
-        if (filterToUser && page.userId !== filterToUser) {
-          if (validEdits.length < 3) {
-            console.log(`🔍 [RECENT_EDITS] Skipping ${pageId} - not from target user`);
-          }
-          continue;
-        }
-
-        // Mark this page as processed
-        processedPages.add(pageId);
-
-        // Use the version's createdAt as the actual last modified time
-        const actualLastModified = versionData.createdAt?.toDate ?
-          versionData.createdAt.toDate().toISOString() :
-          (versionData.createdAt || (page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified));
-
-        validEdits.push({
-          id: page.id,
-          title: page.title || versionData.title || 'Untitled',
-          userId: page.userId || versionData.userId,
-          username: page.username || versionData.username || 'Anonymous',
-          displayName: page.displayName,
-          lastModified: actualLastModified,
-          isPublic: page.isPublic || false,
-          totalPledged: page.totalPledged || 0,
-          pledgeCount: page.pledgeCount || 0,
-          lastDiff: page.lastDiff || versionData.diff || {
-            added: 0,
-            removed: 0,
-            hasChanges: false
-          },
-          diffPreview: versionData.diffPreview || (versionData.isNewPage ? 'New page created' : 'Page edited'),
-          versionId: versionDoc.id,
-          isNewPage: versionData.isNewPage || false,
-          source: 'collectionGroup_versions'
-        });
-
-        // Stop when we have enough edits
-        if (validEdits.length >= limit) break;
-      }
-
-      // Apply following filter
-      if (followingOnly && userId) {
-        // TODO: Implement following filter when needed
-        validEdits.length = 0;
-      }
-
-      // Sort by actual version timestamp (should already be sorted, but ensure consistency)
-      const sortedEdits = validEdits
-        .sort((a, b) => {
-          const aTime = new Date(a.lastModified).getTime();
-          const bTime = new Date(b.lastModified).getTime();
-          return bTime - aTime;
-        })
-        .slice(0, limit);
-
-      console.log(`🔍 [RECENT_EDITS] CollectionGroup approach found ${sortedEdits.length} recent edits`);
-      if (sortedEdits.length > 0) {
-        console.log(`🔍 [RECENT_EDITS] Most recent edit:`, {
-          title: sortedEdits[0].title,
-          lastModified: sortedEdits[0].lastModified,
-          source: sortedEdits[0].source
-        });
-      }
-
-      // Fetch subscription data for all unique user IDs
-      const uniqueUserIds = [...new Set(sortedEdits.map(edit => edit.userId).filter(Boolean))];
-      const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
-
-      // Enhance edits with subscription data
-      const enhancedEdits = sortedEdits.map(edit => ({
-        ...edit,
-        hasActiveSubscription: batchUserData[edit.userId]?.hasActiveSubscription || false,
-        subscriptionTier: batchUserData[edit.userId]?.subscriptionTier || null
-      }));
-
+    if (pagesSnapshot.empty) {
       return NextResponse.json({
-        edits: enhancedEdits,
-        hasMore: enhancedEdits.length === limit,
-        nextCursor: enhancedEdits.length > 0 ? enhancedEdits[enhancedEdits.length - 1].lastModified : null,
-        total: enhancedEdits.length,
+        edits: [],
+        hasMore: false,
+        nextCursor: null,
+        total: 0,
         timestamp: new Date().toISOString()
       });
     }
+
+    const pages = pagesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Filter pages based on criteria (same logic as homepage)
+    const filteredPages = pages.filter(page => {
+      // Skip deleted pages (double check)
+      if (page.deleted === true) {
+        return false;
+      }
+
+      // For user-specific queries, we already filtered in the query
+      if (filterToUser) {
+        return true;
+      }
+
+      // For public queries, ensure page is public
+      if (!page.isPublic) {
+        return false;
+      }
+
+      // Include own pages if requested
+      if (includeOwn && page.userId === userId) {
+        return true;
+      }
+
+      return true;
+    });
+
+    console.log(`🔍 [RECENT_EDITS] After filtering: ${filteredPages.length} pages`);
+
+    // Convert to edits format
+    const edits = filteredPages
+      .slice(0, limit)
+      .map(page => ({
+        id: page.id,
+        title: page.title || 'Untitled',
+        userId: page.userId,
+        username: page.username,
+        displayName: page.displayName,
+        lastModified: page.lastModified,
+        isPublic: page.isPublic || false,
+        totalPledged: page.totalPledged || 0,
+        pledgeCount: page.pledgeCount || 0,
+        lastDiff: page.lastDiff,
+        diffPreview: page.diffPreview,
+        source: 'pages-collection'
+      }));
+
+    console.log(`🔍 [RECENT_EDITS] Final edits: ${edits.length}`);
+    if (edits.length > 0) {
+      console.log(`🔍 [RECENT_EDITS] Most recent edit:`, {
+        title: edits[0].title,
+        lastModified: edits[0].lastModified,
+        source: edits[0].source
+      });
+    }
+
+    // Fetch subscription data for all unique user IDs
+    const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
+    const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
+
+    // Enhance edits with subscription data
+    const enhancedEdits = edits.map(edit => ({
+      ...edit,
+      hasActiveSubscription: batchUserData[edit.userId]?.hasActiveSubscription || false,
+      subscriptionTier: batchUserData[edit.userId]?.subscriptionTier || null
+    }));
+
+    return NextResponse.json({
+      edits: enhancedEdits,
+      hasMore: enhancedEdits.length === limit,
+      nextCursor: enhancedEdits.length > 0 ? enhancedEdits[enhancedEdits.length - 1].lastModified : null,
+      total: enhancedEdits.length,
+      timestamp: new Date().toISOString()
+    });
+
 
 
 
