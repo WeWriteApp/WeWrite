@@ -41,9 +41,10 @@ export const isServerSide = (): boolean => {
 
 /**
  * Detect if we're running on Vercel
+ * Only return true if we're actually deployed on Vercel, not just with VERCEL_ENV set locally
  */
 export const isVercelDeployment = (): boolean => {
-  return !!(process.env.VERCEL || process.env.VERCEL_ENV);
+  return !!(process.env.VERCEL || process.env.VERCEL_URL);
 };
 
 /**
@@ -81,15 +82,17 @@ export const getCurrentGitBranch = (): string | null => {
 /**
  * Get the current environment type with detailed detection logic
  *
- * Environment Detection Rules:
+ * NEW Environment Detection Rules:
  * 1. VERCEL_ENV=production → production (Vercel production deployment)
  * 2. VERCEL_ENV=preview → preview (Vercel preview deployment)
- * 3. Local development (NODE_ENV=development):
- *    - main branch → production (use production collections)
- *    - dev branch → development (use DEV_ collections)
- *    - other branches → development (safe fallback)
+ * 3. Local development (any branch) → development (use DEV_ collections)
  * 4. VERCEL_ENV=development → development (Vercel dev deployment, fallback)
  * 5. Default → development (safe fallback)
+ *
+ * Key Changes:
+ * - localhost always uses DEV_ collections regardless of branch
+ * - Vercel deployments (dev/main branches) use production collections
+ * - This allows testing production data on Vercel previews before pushing to main
  */
 export const detectEnvironmentType = (): EnvironmentType => {
   // Check Vercel production/preview first (most specific)
@@ -101,23 +104,11 @@ export const detectEnvironmentType = (): EnvironmentType => {
     return 'preview';
   }
 
-  // PRIORITY: For local development, use git branch to determine environment
-  // This takes precedence over VERCEL_ENV=development which can be set locally
-  if (process.env.NODE_ENV === 'development') {
+  // NEW LOGIC: All localhost development uses DEV_ collections
+  // This ensures clean separation between local dev and production data
+  if (isLocalDevelopment()) {
     const branch = getCurrentGitBranch();
-
-    if (branch === 'main') {
-      console.log('[Environment Detection] Main branch detected → using production collections');
-      return 'production';
-    }
-
-    if (branch === 'dev') {
-      console.log('[Environment Detection] Dev branch detected → using DEV_ collections');
-      return 'development';
-    }
-
-    // For other branches, default to development for safety
-    console.log(`[Environment Detection] Branch '${branch}' detected → using DEV_ collections (safe default)`);
+    console.log(`[Environment Detection] Local development on branch '${branch}' → using DEV_ collections`);
     return 'development';
   }
 

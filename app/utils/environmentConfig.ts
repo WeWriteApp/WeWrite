@@ -6,10 +6,10 @@
  * 2. Future: Separate Firebase projects per environment
  *
  * Environment Configuration Requirements:
- * - Local development: use dev data with DEV_ prefixed collections
- * - Vercel dev deployment: use dev data with DEV_ prefixed collections
- * - Vercel preview deployment: use actual production data (base collection names)
- * - Vercel production deployment: use actual production data (base collection names)
+ * - Local development (any branch): use dev data with DEV_ prefixed collections
+ * - Vercel dev branch deployment: use production data (base collection names)
+ * - Vercel preview deployment: use production data (base collection names)
+ * - Vercel production deployment: use production data (base collection names)
  *
  * This architecture enables seamless migration to separate Firebase projects
  * by simply updating Firebase config objects without changing collection logic.
