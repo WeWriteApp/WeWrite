@@ -245,29 +245,23 @@ export async function GET(request: NextRequest) {
             const latestVersion = versionSnapshot.docs[0];
             const versionData = latestVersion.data();
 
-            // If this is still a migration version, use the page's lastModified as the source of truth
-            const isMigrationVersion = versionData.optimizationMigration || versionData.migratedFromVersion;
+            // MIGRATION DETECTION: Check if this is a fake recent edit from migration
+            const pageLastModified = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
+            const versionCreatedAt = versionData.createdAt?.toDate ? versionData.createdAt.toDate() : new Date(versionData.createdAt);
 
-            if (isMigrationVersion) {
-              // For migration versions, check if the page itself has been modified recently by a user
-              const pageLastModified = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
-              const versionCreatedAt = versionData.createdAt?.toDate ? versionData.createdAt.toDate() : new Date(versionData.createdAt);
+            // If page.lastModified is much newer than the latest version, it's likely a migration artifact
+            const timeDiffHours = (pageLastModified.getTime() - versionCreatedAt.getTime()) / (1000 * 60 * 60);
 
-              // If the page was modified after the migration version was created, it's a real user edit
-              if (pageLastModified > versionCreatedAt) {
-                // This is a real user edit after migration - include it
-              } else {
-                // This is just a migration version with no subsequent user edits
-                const daysSincePageModified = (new Date().getTime() - pageLastModified.getTime()) / (24 * 60 * 60 * 1000);
-                if (daysSincePageModified > 7) {
-                  continue; // Skip old migration-only pages
-                }
-              }
+            if (timeDiffHours > 24) {
+              // Page lastModified is more than 24 hours newer than latest version
+              // This suggests the page was touched by migration but no real content was added
+              console.log(`🚫 [RECENT_EDITS] Skipping migration artifact: ${page.title} (page modified ${timeDiffHours.toFixed(1)}h after latest version)`);
+              continue;
             }
 
-            // CRITICAL FIX: Use page.lastModified as primary timestamp, not version createdAt
-            // This ensures we show actual user edit times, not migration/system timestamps
-            const actualLastModified = page.lastModified || versionData.createdAt;
+            // CRITICAL FIX: Use version createdAt as primary timestamp, not page.lastModified
+            // The page.lastModified was artificially updated by migration, use actual version timestamp
+            const actualLastModified = versionData.createdAt || page.lastModified;
 
             validEdits.push({
               id: page.id,
@@ -286,7 +280,7 @@ export async function GET(request: NextRequest) {
                 removed: 0,
                 hasChanges: false
               },
-              diffPreview: versionData.diffPreview,
+              diffPreview: versionData.diffPreview || (versionData.isNewPage ? 'New page created' : 'Page edited'),
               versionId: latestVersion.id,
               isNewPage: versionData.isNewPage || false,
               source: 'version'
