@@ -265,13 +265,14 @@ export async function GET(request: NextRequest) {
               });
             }
 
+            // TEMPORARILY DISABLE ALL FILTERING TO DEBUG
             // Only skip if BOTH conditions are true:
             // 1. Page was modified in the migration time window
             // 2. The latest version is much older (indicating no real recent content)
-            if (isInMigrationWindow && timeDiffHours > 24) {
-              console.log(`🚫 [RECENT_EDITS] Skipping migration artifact: ${page.title} (migration window + ${timeDiffHours.toFixed(1)}h version gap)`);
-              continue;
-            }
+            // if (isInMigrationWindow && timeDiffHours > 24) {
+            //   console.log(`🚫 [RECENT_EDITS] Skipping migration artifact: ${page.title} (migration window + ${timeDiffHours.toFixed(1)}h version gap)`);
+            //   continue;
+            // }
 
             // CRITICAL FIX: Use version createdAt as primary timestamp, not page.lastModified
             // The page.lastModified was artificially updated by migration, use actual version timestamp
