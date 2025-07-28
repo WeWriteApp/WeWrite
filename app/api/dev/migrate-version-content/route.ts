@@ -28,16 +28,20 @@ export async function GET(request: NextRequest) {
     const dryRun = searchParams.get('dry-run') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
     const specificPageId = searchParams.get('pageId');
+    const useProduction = searchParams.get('production') === 'true';
 
     console.log('🔄 Starting version content migration', {
       dryRun,
       limit,
-      specificPageId
+      specificPageId,
+      useProduction
     });
 
     const admin = initAdmin();
     const db = admin.firestore();
-    const pagesCollection = getCollectionName('pages');
+
+    // Use production collections if specified, otherwise use environment-aware collections
+    const pagesCollection = useProduction ? 'pages' : getCollectionName('pages');
 
     // Build query
     let pagesQuery = db.collection(pagesCollection);
@@ -52,7 +56,7 @@ export async function GET(request: NextRequest) {
         }, { status: 404 });
       }
       
-      const result = await migratePage(db, specificPageId, pageDoc.data()!, dryRun);
+      const result = await migratePage(db, specificPageId, pageDoc.data()!, dryRun, useProduction);
       return NextResponse.json({
         success: true,
         dryRun,
@@ -66,13 +70,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Find pages with null content
-    const pagesSnapshot = await pagesQuery
-      .where('content', '==', null)
+    // Find pages with missing content (null, undefined, or empty)
+    // We need to get all pages and filter in memory since Firestore can't query for undefined
+    const allPagesSnapshot = await pagesQuery
       .limit(limit)
       .get();
 
-    console.log(`📊 Found ${pagesSnapshot.size} pages with null content`);
+    console.log(`📊 Checking ${allPagesSnapshot.size} pages for missing content`);
+
+    // Filter pages that need migration (null, undefined, or empty content)
+    const pagesToMigrate = allPagesSnapshot.docs.filter(doc => {
+      const data = doc.data();
+      return !data.content || data.content === null || data.content === '';
+    });
+
+    console.log(`📊 Found ${pagesToMigrate.length} pages needing migration`);
 
     const results: MigrationResult[] = [];
     const summary = {
@@ -82,14 +94,14 @@ export async function GET(request: NextRequest) {
       errors: 0
     };
 
-    // Process each page
-    for (const pageDoc of pagesSnapshot.docs) {
+    // Process each page that needs migration
+    for (const pageDoc of pagesToMigrate) {
       const pageData = pageDoc.data();
-      const result = await migratePage(db, pageDoc.id, pageData, dryRun);
-      
+      const result = await migratePage(db, pageDoc.id, pageData, dryRun, useProduction);
+
       results.push(result);
       summary.total++;
-      
+
       if (result.status === 'migrated') summary.migrated++;
       else if (result.status === 'skipped') summary.skipped++;
       else if (result.status === 'error') summary.errors++;
@@ -123,10 +135,11 @@ export async function GET(request: NextRequest) {
 }
 
 async function migratePage(
-  db: FirebaseFirestore.Firestore, 
-  pageId: string, 
-  pageData: any, 
-  dryRun: boolean
+  db: FirebaseFirestore.Firestore,
+  pageId: string,
+  pageData: any,
+  dryRun: boolean,
+  useProduction: boolean = false
 ): Promise<MigrationResult> {
   try {
     console.log(`📄 Processing page ${pageId}: "${pageData.title}"`);
@@ -142,13 +155,21 @@ async function migratePage(
     }
 
     // Get versions for this page
+    const pagesCollectionName = useProduction ? 'pages' : getCollectionName('pages');
+    // Versions subcollection is always just 'versions' regardless of environment
+    const versionsCollectionName = 'versions';
+
+    console.log(`🔍 Looking for versions in: ${pagesCollectionName}/${pageId}/${versionsCollectionName}`);
+
     const versionsSnapshot = await db
-      .collection(getCollectionName('pages'))
+      .collection(pagesCollectionName)
       .doc(pageId)
-      .collection('versions')
+      .collection(versionsCollectionName)
       .orderBy('createdAt', 'desc')
       .limit(1)
       .get();
+
+    console.log(`📊 Found ${versionsSnapshot.size} versions for page ${pageId}`);
 
     if (versionsSnapshot.empty) {
       return {
@@ -187,7 +208,7 @@ async function migratePage(
     }
 
     // Migrate content from version to page
-    await db.collection(getCollectionName('pages')).doc(pageId).update({
+    await db.collection(pagesCollectionName).doc(pageId).update({
       content: versionData.content,
       currentVersion: latestVersion.id,
       lastModified: new Date().toISOString(),

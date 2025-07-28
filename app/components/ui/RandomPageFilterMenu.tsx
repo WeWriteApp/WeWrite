@@ -76,33 +76,37 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
           <MoreHorizontal className={iconSize} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-72 p-2">
 
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
             handleExcludeOwnToggle();
           }}
-          className="flex items-center justify-between cursor-pointer py-3"
+          className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
         >
-          <div className="flex items-center gap-3">
-            <UserX className="h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-col">
-              <span className="font-medium">Not mine</span>
-              <span className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex-shrink-0">
+              <UserX className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="font-medium text-sm">Not mine</span>
+              <span className="text-xs text-muted-foreground leading-relaxed">
                 Exclude pages you authored
               </span>
             </div>
           </div>
-          <Switch
-            checked={excludeOwnPages}
-            onCheckedChange={(checked) => {
-              if (checked !== excludeOwnPages) {
-                handleExcludeOwnToggle();
-              }
-            }}
-            aria-label="Toggle exclude own pages"
-          />
+          <div className="flex-shrink-0 ml-3">
+            <Switch
+              checked={excludeOwnPages}
+              onCheckedChange={(checked) => {
+                if (checked !== excludeOwnPages) {
+                  handleExcludeOwnToggle();
+                }
+              }}
+              aria-label="Toggle exclude own pages"
+            />
+          </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

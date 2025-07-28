@@ -103,7 +103,7 @@ const RandomPagesHeader = () => {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuContent align="end" className="w-72 p-2">
           {/* Privacy and "Not mine" filters using reusable component */}
 
           <DropdownMenuItem
@@ -111,29 +111,33 @@ const RandomPagesHeader = () => {
               e.stopPropagation();
               handleExcludeOwnToggle();
             }}
-            className="flex items-center justify-between cursor-pointer py-3"
+            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
           >
-            <div className="flex items-center gap-3">
-              <UserX className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="font-medium">Not mine</span>
-                <span className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="flex-shrink-0">
+                <UserX className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-medium text-sm">Not mine</span>
+                <span className="text-xs text-muted-foreground leading-relaxed">
                   Exclude pages you authored
                 </span>
               </div>
             </div>
-            <Switch
-              checked={excludeOwnPages}
-              onCheckedChange={(checked) => {
-                if (checked !== excludeOwnPages) {
-                  handleExcludeOwnToggle();
-                }
-              }}
-              aria-label="Toggle exclude own pages"
-            />
+            <div className="flex-shrink-0 ml-3">
+              <Switch
+                checked={excludeOwnPages}
+                onCheckedChange={(checked) => {
+                  if (checked !== excludeOwnPages) {
+                    handleExcludeOwnToggle();
+                  }
+                }}
+                aria-label="Toggle exclude own pages"
+              />
+            </div>
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
+          <DropdownMenuSeparator className="my-2" />
 
           {/* Dense mode toggle - specific to random pages section */}
           <DropdownMenuItem
@@ -141,26 +145,30 @@ const RandomPagesHeader = () => {
               e.stopPropagation();
               handleDenseModeToggle();
             }}
-            className="flex items-center justify-between cursor-pointer py-3"
+            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
           >
-            <div className="flex items-center gap-3">
-              <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="font-medium">Dense Mode</span>
-                <span className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="flex-shrink-0">
+                <Grid3X3 className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-medium text-sm">Dense Mode</span>
+                <span className="text-xs text-muted-foreground leading-relaxed">
                   Show only page titles as pill links
                 </span>
               </div>
             </div>
-            <Switch
-              checked={denseMode}
-              onCheckedChange={(checked) => {
-                if (checked !== denseMode) {
-                  handleDenseModeToggle();
-                }
-              }}
-              aria-label="Toggle dense mode"
-            />
+            <div className="flex-shrink-0 ml-3">
+              <Switch
+                checked={denseMode}
+                onCheckedChange={(checked) => {
+                  if (checked !== denseMode) {
+                    handleDenseModeToggle();
+                  }
+                }}
+                aria-label="Toggle dense mode"
+              />
+            </div>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

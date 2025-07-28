@@ -16,6 +16,7 @@ import { UserBioSkeleton } from "../ui/page-skeleton";
 import TextView from "../editor/TextView";
 import HoverEditContent from './HoverEditContent';
 import PageFooter from "../pages/PageFooter";
+import StickySaveHeader from "../layout/StickySaveHeader";
 import type { UserBioTabProps } from "../../types/components";
 import type { EditorContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
@@ -34,6 +35,9 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const [error, setError] = useState<string | null>(null);
   const [lastEditor, setLastEditor] = useState<string | null>(null);
   const [lastEditTime, setLastEditTime] = useState<string | null>(null);
+
+  // Link insertion trigger function
+  const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
 
   // Track if content has changed
@@ -211,6 +215,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     console.log("Bio content updated:", content);
   };
 
+  // Handle link insertion request - memoized to prevent infinite loops
+  const handleInsertLinkRequest = useCallback((triggerFn) => {
+    setLinkInsertionTrigger(() => triggerFn);
+  }, []);
+
   if (isLoading && !bioContent) {
     return (
       <div className="py-8">
@@ -236,12 +245,22 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header - no standalone edit icon or duplicate buttons */}
-      <div className="flex justify-end items-center">
-        {/* Edit icon removed - now handled by hover-reveal in content area */}
-        {/* Save/Cancel buttons removed - handled by PageEditor at bottom */}
-      </div>
+    <>
+      {/* Sticky Save Header - slides down from top when there are unsaved changes */}
+      <StickySaveHeader
+        hasUnsavedChanges={hasUnsavedChanges && isProfileOwner}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        isSaving={isLoading}
+        isAnimatingOut={false}
+      />
+
+      <div className="space-y-4">
+        {/* Header - no standalone edit icon or duplicate buttons */}
+        <div className="flex justify-end items-center">
+          {/* Edit icon removed - now handled by hover-reveal in content area */}
+          {/* Save/Cancel buttons removed - handled by PageEditor at bottom */}
+        </div>
 
       {/* Content display or editor - unified container structure */}
       <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
@@ -256,6 +275,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
                   error={error || ""}
                   placeholder="Write your bio..."
                   showToolbar={false}
+                  onInsertLinkRequest={handleInsertLinkRequest}
                   // Remove onSave and onCancel - handled by bottom save bar
                 />
 
@@ -277,6 +297,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
                 }}
                 onCancel={handleCancel}
                 onDelete={null} // Bio doesn't have delete
+                onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
                 isSaving={isLoading}
                 error={error}
                 titleError={false}
@@ -306,16 +327,17 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         )}
       </div>
 
-      {/* Unsaved Changes Dialog */}
-      <UnsavedChangesDialog
-        isOpen={showUnsavedChangesDialog}
-        onClose={handleCloseDialog}
-        onStayAndSave={handleStayAndSave}
-        onLeaveWithoutSaving={handleLeaveWithoutSaving}
-        isSaving={isLoading || isHandlingNavigation}
-      />
+        {/* Unsaved Changes Dialog */}
+        <UnsavedChangesDialog
+          isOpen={showUnsavedChangesDialog}
+          onClose={handleCloseDialog}
+          onStayAndSave={handleStayAndSave}
+          onLeaveWithoutSaving={handleLeaveWithoutSaving}
+          isSaving={isLoading || isHandlingNavigation}
+        />
 
-    </div>
+      </div>
+    </>
   );
 };
 
