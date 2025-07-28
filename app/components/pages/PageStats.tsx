@@ -1,70 +1,99 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Eye, Clock, DollarSign, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, Clock, Heart, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 import { useDateFormat } from "../../contexts/DateFormatContext";
-import { usePageStats } from "../../hooks/useUnifiedStats";
+
+interface PageStatsData {
+  totalViews: number;
+  viewData: number[];
+  recentChanges: number;
+  changeData: number[];
+  supporterCount: number;
+  supporterData: number[];
+}
+
+interface PageStatsProps {
+  pageId: string;
+  customDate?: string;
+  canEdit?: boolean;
+  onCustomDateChange?: (date: string) => void;
+  showSparklines?: boolean;
+}
 
 /**
  * PageStats Component
  *
- * Displays page statistics using the unified stats service.
- * Now automatically fetches all stats data and provides real-time updates.
- *
- * @param {Object} props
- * @param {string} props.pageId - The ID of the page for navigation (required)
- * @param {string} props.customDate - Custom date for the page (YYYY-MM-DD format)
- * @param {boolean} props.canEdit - Whether the user can edit the page
- * @param {Function} props.onCustomDateChange - Callback when custom date is changed
- * @param {boolean} props.realTime - Enable real-time updates (default: false)
- * @param {boolean} props.showSparklines - Show sparkline charts (default: true)
- *
- * Legacy props (deprecated but supported for backward compatibility):
- * @param {number} props.viewCount - Will be overridden by unified stats
- * @param {Array} props.viewData - Will be overridden by unified stats
- * @param {number} props.changeCount - Will be overridden by unified stats
- * @param {Array} props.changeData - Will be overridden by unified stats
- * @param {number} props.supporterCount - Will be overridden by unified stats
- * @param {Array} props.supporterData - Will be overridden by unified stats
+ * Displays page statistics using environment-aware API calls.
+ * Shows view count, recent edits, and supporter information.
  */
 export default function PageStats({
-  // New unified approach
   pageId,
   customDate,
   canEdit = false,
   onCustomDateChange,
-  realTime = false,
   showSparklines = true,
-
-  // Legacy props (for backward compatibility)
-  viewCount: legacyViewCount = 0,
-  viewData: legacyViewData = [],
-  changeCount: legacyChangeCount = 0,
-  changeData: legacyChangeData = [],
-  supporterCount: legacySupporterCount = 0,
-  supporterData: legacySupporterData = []
-}) {
+}: PageStatsProps) {
   const router = useRouter();
   const { accentColor, customColors } = useAccentColor();
   const { formatDateString } = useDateFormat();
 
-  // Use unified stats service
-  const { stats, loading, error } = usePageStats({
-    pageId,
-    realTime,
-    autoRefresh: !realTime // Auto-refresh if not real-time
-  });
+  const [stats, setStats] = useState<PageStatsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Use unified stats if available, fallback to legacy props
-  const viewCount = stats?.totalViews ?? legacyViewCount;
-  const viewData = stats?.viewData ?? legacyViewData;
-  const changeCount = stats?.recentChanges ?? legacyChangeCount;
-  const changeData = stats?.changeData ?? legacyChangeData;
-  const supporterCount = stats?.supporterCount ?? legacySupporterCount;
-  const supporterData = stats?.supporterData ?? legacySupporterData;
+  // Fetch page statistics from API
+  useEffect(() => {
+    const fetchPageStats = async () => {
+      if (!pageId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Use environment-aware API endpoint
+        const response = await fetch(`/api/stats/page?pageId=${pageId}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch page stats: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setStats({
+            totalViews: result.data.totalViews || 0,
+            viewData: result.data.viewData || Array(24).fill(0),
+            recentChanges: result.data.recentChanges || 0,
+            changeData: result.data.changeData || Array(24).fill(0),
+            supporterCount: result.data.supporterCount || 0,
+            supporterData: result.data.supporterData || Array(24).fill(0),
+          });
+        } else {
+          throw new Error(result.error || 'Failed to load page statistics');
+        }
+      } catch (err) {
+        console.error('Error fetching page stats:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load page statistics');
+        // Set fallback data
+        setStats({
+          totalViews: 0,
+          viewData: Array(24).fill(0),
+          recentChanges: 0,
+          changeData: Array(24).fill(0),
+          supporterCount: 0,
+          supporterData: Array(24).fill(0),
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPageStats();
+  }, [pageId]);
 
   // Get the actual color value based on the selected accent color
   const getAccentColorValue = () => {
@@ -81,7 +110,7 @@ export default function PageStats({
   };
 
   // Handle loading state
-  if (loading && !stats) {
+  if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[1, 2, 3].map((i) => (
@@ -106,10 +135,12 @@ export default function PageStats({
     );
   }
 
-
+  if (!stats) {
+    return null;
+  }
 
   // Determine grid layout based on available data
-  const hasSupporters = supporterCount !== undefined && supporterData !== undefined;
+  const hasSupporters = stats.supporterCount > 0;
 
   // Calculate grid columns based on available cards
   let gridCols = "md:grid-cols-2"; // Default: views + changes
@@ -129,15 +160,15 @@ export default function PageStats({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
-              {viewData.length > 0 && (
-                <SimpleSparkline data={viewData} height={30} color={accentColorValue} />
+              {showSparklines && stats.viewData.length > 0 && (
+                <SimpleSparkline data={stats.viewData} height={30} color={accentColorValue} />
               )}
             </div>
             <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
           </div>
 
           <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
-            {viewCount.toLocaleString()}
+            {stats.totalViews.toLocaleString()}
           </div>
         </div>
       </div>
@@ -155,15 +186,15 @@ export default function PageStats({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
-              {changeData.length > 0 && (
-                <SimpleSparkline data={changeData} height={30} color={accentColorValue} />
+              {showSparklines && stats.changeData.length > 0 && (
+                <SimpleSparkline data={stats.changeData} height={30} color={accentColorValue} />
               )}
             </div>
             <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
           </div>
 
           <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
-            {changeCount}
+            {stats.recentChanges.toLocaleString()}
           </div>
         </div>
       </div>
@@ -172,22 +203,22 @@ export default function PageStats({
       {hasSupporters && (
         <div className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <Heart className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm font-medium">Supporters</span>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <div className="h-8 w-16 relative">
-                {supporterData.length > 0 && (
-                  <SimpleSparkline data={supporterData} height={30} color={accentColorValue} />
+                {showSparklines && stats.supporterData.length > 0 && (
+                  <SimpleSparkline data={stats.supporterData} height={30} color={accentColorValue} />
                 )}
               </div>
               <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
             </div>
 
             <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
-              {supporterCount}
+              {stats.supporterCount.toLocaleString()}
             </div>
           </div>
         </div>

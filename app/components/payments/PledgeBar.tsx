@@ -22,6 +22,8 @@ import { TokenParticleEffect } from '../effects/TokenParticleEffect';
 import { useTokenParticleEffect } from '../../hooks/useTokenParticleEffect';
 import { PulsingButtonEffect } from '../effects/PulsingButtonEffect';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
+import { toast } from '../ui/use-toast';
+import { getNextMonthlyProcessingDate } from '../../utils/subscriptionTiers';
 
 interface PledgeBarProps {
   pageId?: string;
@@ -58,6 +60,21 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const { incrementAmount } = useTokenIncrement();
   const { triggerEffect, originElement, triggerParticleEffect, resetEffect } = useTokenParticleEffect();
   const { showDelayedBanner, triggerDelayedBanner, resetDelayedBanner, isDelayActive } = useDelayedLoginBanner();
+
+  // Function to show token allocation notification
+  const showTokenAllocationNotification = (tokenAmount: number) => {
+    const nextProcessingDate = getNextMonthlyProcessingDate();
+    const formattedDate = nextProcessingDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric'
+    });
+
+    toast({
+      title: `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`,
+      description: `Your allocation isn't final until ${formattedDate} when monthly processing occurs. You can adjust it anytime before then.`,
+      duration: 6000, // Show for 6 seconds
+    });
+  };
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
@@ -447,6 +464,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
         const result = await response.json();
         console.log('✅ PledgeBar: Token allocation successful', result);
+
+        // Show notification for token allocation (only for positive changes)
+        if (change > 0) {
+          showTokenAllocationNotification(Math.abs(change));
+        }
 
         // Handle successful allocation
         // Don't override optimistic UI state - it's already been set

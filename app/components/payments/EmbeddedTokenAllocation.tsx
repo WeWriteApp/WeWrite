@@ -8,6 +8,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useTokenBalanceContext } from '../../contexts/TokenBalanceContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../ui/use-toast';
+import { getNextMonthlyProcessingDate } from '../../utils/subscriptionTiers';
 
 interface EmbeddedTokenAllocationProps {
   pageId: string;
@@ -32,6 +33,21 @@ export function EmbeddedTokenAllocation({
   const [currentPageAllocation, setCurrentPageAllocation] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Function to show token allocation notification
+  const showTokenAllocationNotification = (tokenAmount: number) => {
+    const nextProcessingDate = getNextMonthlyProcessingDate();
+    const formattedDate = nextProcessingDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric'
+    });
+
+    toast({
+      title: `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`,
+      description: `Your allocation isn't final until ${formattedDate} when monthly processing occurs. You can adjust it anytime before then.`,
+      duration: 6000, // Show for 6 seconds
+    });
+  };
 
   // Load current page allocation only
   useEffect(() => {
@@ -101,6 +117,11 @@ export function EmbeddedTokenAllocation({
       }
 
       const result = await response.json();
+
+      // Show notification for token allocation (only for positive changes)
+      if (change > 0) {
+        showTokenAllocationNotification(Math.abs(change));
+      }
 
       // Update current page allocation with server response
       if (result.currentAllocation !== undefined) {

@@ -19,6 +19,29 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 // Removed old stats imports - now using UnifiedStatsService via PageStats component
 import { useAuth } from '../../providers/AuthProvider';
 
+interface PageData {
+  id: string;
+  title: string;
+  userId: string;
+  [key: string]: any;
+}
+
+interface PageFooterProps {
+  page: PageData;
+  content: any;
+  isOwner: boolean;
+  isEditing: boolean;
+  setIsEditing: (editing: boolean) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete: () => void;
+  onInsertLink: () => void;
+  isSaving: boolean;
+  hasUnsavedChanges: boolean;
+  saveSuccess?: boolean;
+  canEdit: boolean;
+}
+
 /**
  * PageFooter Component
  *
@@ -69,7 +92,7 @@ export default function PageFooter({
   hasUnsavedChanges,
   saveSuccess = false,
   canEdit
-}) {
+}: PageFooterProps) {
   const { user } = useAuth();
 
   // Animation state for save card

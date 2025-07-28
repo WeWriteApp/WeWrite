@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { cn } from '../../lib/utils';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
 import { useLogRocket } from '../../providers/LogRocketProvider';
+import { toast } from '../ui/use-toast';
+import { getNextMonthlyProcessingDate } from '../../utils/subscriptionTiers';
 
 interface TokenAllocationModalProps {
   isOpen: boolean;
@@ -110,6 +112,21 @@ export function TokenAllocationModal({
     router.push('/settings/subscription');
   };
 
+  // Function to show token allocation notification
+  const showTokenAllocationNotification = (tokenAmount: number) => {
+    const nextProcessingDate = getNextMonthlyProcessingDate();
+    const formattedDate = nextProcessingDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric'
+    });
+
+    toast({
+      title: `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`,
+      description: `Your allocation isn't final until ${formattedDate} when monthly processing occurs. You can adjust it anytime before then.`,
+      duration: 6000, // Show for 6 seconds
+    });
+  };
+
   const handleTokenChange = (change: number) => {
     if (onTokenChange && !isPageOwner) {
       onTokenChange(change);
@@ -121,6 +138,11 @@ export function TokenAllocationModal({
         pageId: pageId,
         totalBalance: tokenData.totalTokens
       });
+
+      // Show notification for token allocation (only for positive changes)
+      if (change > 0) {
+        showTokenAllocationNotification(Math.abs(change));
+      }
     }
   };
 
