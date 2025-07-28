@@ -259,10 +259,32 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
               userId,
               PAYMENT_COLLECTIONS.SUBSCRIPTIONS
             );
+            const fullPath = `${parentPath}/${subCollectionName}/current`;
+
+            // Debug logging for jamie specifically
+            if (userId === 'fWNeCuussPgYgkN2LGohFRCPXiy1') {
+              console.log('🔍 DEBUG: Fetching jamie subscription:', {
+                userId,
+                parentPath,
+                subCollectionName,
+                fullPath
+              });
+            }
+
             const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
+            const subscriptionData = subDoc.exists ? subDoc.data() : null;
+
+            // Debug logging for jamie specifically
+            if (userId === 'fWNeCuussPgYgkN2LGohFRCPXiy1') {
+              console.log('🔍 DEBUG: Jamie subscription result:', {
+                exists: subDoc.exists,
+                data: subscriptionData
+              });
+            }
+
             return {
               userId,
-              subscription: subDoc.exists ? subDoc.data() : null
+              subscription: subscriptionData
             };
           } catch (error) {
             console.warn(`Error fetching subscription for user ${userId}:`, error);
