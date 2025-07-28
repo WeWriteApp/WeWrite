@@ -114,6 +114,21 @@ export async function GET(request: NextRequest) {
     const pagesSnapshot = await pagesQuery.get();
     console.log(`🔍 [RECENT_EDITS] Query returned ${pagesSnapshot.size} pages`);
 
+    // Debug: Log the first few pages to understand what we're getting
+    if (pagesSnapshot.size > 0) {
+      const firstFewPages = pagesSnapshot.docs.slice(0, 3).map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title,
+          lastModified: data.lastModified?.toDate ? data.lastModified.toDate().toISOString() : data.lastModified,
+          userId: data.userId,
+          username: data.username
+        };
+      });
+      console.log(`🔍 [RECENT_EDITS] First few pages:`, firstFewPages);
+    }
+
     if (pagesSnapshot.empty) {
       console.log(`📊 UNIFIED VERSION SYSTEM: No pages found${filterToUser ? ` for user ${filterToUser}` : ''}`);
 
@@ -185,41 +200,46 @@ export async function GET(request: NextRequest) {
       const lastModifiedDate = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
 
       // Always process pages to show all recent edits
-        // Try to get the latest NON-MIGRATION version for this page
+        // Try to get the latest version for this page, prioritizing user versions
         try {
-          // First, try to get the latest user-created version (not migration)
-          const userVersionsQuery = db.collection(getCollectionName('pages'))
+          // Get recent versions and filter client-side to avoid Firestore != query issues
+          const versionsQuery = db.collection(getCollectionName('pages'))
             .doc(page.id)
             .collection('versions')
-            .where('optimizationMigration', '!=', true)
-            .orderBy('optimizationMigration') // Required for != queries
             .orderBy('createdAt', 'desc')
-            .limit(1);
+            .limit(10); // Get more to find non-migration versions
 
-          let versionSnapshot = await userVersionsQuery.get();
+          const allVersionsSnapshot = await versionsQuery.get();
 
-          // If no user versions found, fall back to any version but prioritize user edits
-          if (versionSnapshot.empty) {
-            const allVersionsQuery = db.collection(getCollectionName('pages'))
-              .doc(page.id)
-              .collection('versions')
-              .orderBy('createdAt', 'desc')
-              .limit(5); // Get a few to find non-migration ones
+          if (allVersionsSnapshot.empty) {
+            continue; // Skip pages with no versions
+          }
 
-            const allVersionsSnapshot = await allVersionsQuery.get();
+          // Find the first non-migration version, or use the latest if none found
+          let selectedVersion = allVersionsSnapshot.docs[0]; // Default to latest
+          let foundUserVersion = false;
 
-            // Find the first non-migration version
-            const nonMigrationVersion = allVersionsSnapshot.docs.find(doc => {
-              const data = doc.data();
-              return !data.optimizationMigration && !data.migratedFromVersion;
-            });
-
-            if (nonMigrationVersion) {
-              versionSnapshot = { docs: [nonMigrationVersion], empty: false };
-            } else {
-              versionSnapshot = allVersionsSnapshot;
+          for (const versionDoc of allVersionsSnapshot.docs) {
+            const versionData = versionDoc.data();
+            if (!versionData.optimizationMigration && !versionData.migratedFromVersion) {
+              selectedVersion = versionDoc;
+              foundUserVersion = true;
+              break; // Use the first (most recent) non-migration version
             }
           }
+
+          // Debug logging for first few pages
+          if (validEdits.length < 3) {
+            console.log(`🔍 [RECENT_EDITS] Page ${page.id} (${page.title}):`, {
+              totalVersions: allVersionsSnapshot.docs.length,
+              foundUserVersion,
+              selectedVersionIsMigration: selectedVersion.data().optimizationMigration || selectedVersion.data().migratedFromVersion,
+              pageLastModified: page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified,
+              selectedVersionCreatedAt: selectedVersion.data().createdAt?.toDate ? selectedVersion.data().createdAt.toDate().toISOString() : selectedVersion.data().createdAt
+            });
+          }
+
+          const versionSnapshot = { docs: [selectedVersion], empty: false };
 
           if (!versionSnapshot.empty) {
             const latestVersion = versionSnapshot.docs[0];
