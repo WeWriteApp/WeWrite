@@ -245,23 +245,28 @@ export async function GET(request: NextRequest) {
             const latestVersion = versionSnapshot.docs[0];
             const versionData = latestVersion.data();
 
-            // MIGRATION DETECTION: Check if this is a fake recent edit from migration
+            // MIGRATION DETECTION: Only filter out pages that are clearly migration artifacts
             const pageLastModified = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
             const versionCreatedAt = versionData.createdAt?.toDate ? versionData.createdAt.toDate() : new Date(versionData.createdAt);
 
-            // If page.lastModified is much newer than the latest version, it's likely a migration artifact
+            // Check if this looks like a migration artifact (page touched recently but version is old)
             const timeDiffHours = (pageLastModified.getTime() - versionCreatedAt.getTime()) / (1000 * 60 * 60);
+            const migrationTimeWindow = new Date('2025-07-28T14:56:00.000Z'); // Migration happened around this time
+            const isInMigrationWindow = Math.abs(pageLastModified.getTime() - migrationTimeWindow.getTime()) < (10 * 60 * 1000); // Within 10 minutes
 
-            if (timeDiffHours > 24) {
-              // Page lastModified is more than 24 hours newer than latest version
-              // This suggests the page was touched by migration but no real content was added
-              console.log(`🚫 [RECENT_EDITS] Skipping migration artifact: ${page.title} (page modified ${timeDiffHours.toFixed(1)}h after latest version)`);
+            // Only skip if BOTH conditions are true:
+            // 1. Page was modified in the migration time window
+            // 2. The latest version is much older (indicating no real recent content)
+            if (isInMigrationWindow && timeDiffHours > 24) {
+              console.log(`🚫 [RECENT_EDITS] Skipping migration artifact: ${page.title} (migration window + ${timeDiffHours.toFixed(1)}h version gap)`);
               continue;
             }
 
             // CRITICAL FIX: Use version createdAt as primary timestamp, not page.lastModified
             // The page.lastModified was artificially updated by migration, use actual version timestamp
-            const actualLastModified = versionData.createdAt || page.lastModified;
+            const actualLastModified = versionData.createdAt?.toDate ?
+              versionData.createdAt.toDate().toISOString() :
+              (versionData.createdAt || (page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified));
 
             validEdits.push({
               id: page.id,
@@ -337,9 +342,14 @@ export async function GET(request: NextRequest) {
       validEdits.length = 0;
     }
 
-    // Sort by last modified date and limit
+    // Sort by actual edit timestamp (version createdAt, not page lastModified which was affected by migration)
     const sortedEdits = validEdits
-      .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
+      .sort((a, b) => {
+        // Use the actual version timestamp for sorting, not the migration-affected page timestamp
+        const aTime = new Date(a.lastModified).getTime();
+        const bTime = new Date(b.lastModified).getTime();
+        return bTime - aTime;
+      })
       .slice(0, limit);
 
     // Fetch subscription data for all unique user IDs
