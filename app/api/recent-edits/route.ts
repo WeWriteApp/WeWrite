@@ -70,6 +70,12 @@ export async function GET(request: NextRequest) {
   const { logEnvironmentConfig } = await import('../../utils/environmentConfig');
   logEnvironmentConfig();
 
+  // Debug: Log collection names being used
+  console.log('🔍 DEBUG: Collection names being used:', {
+    users: getCollectionName('users'),
+    subscriptions: getCollectionName('subscriptions')
+  });
+
     // Create cache key with version to force cache invalidation
     const cacheKey = `recent-edits-v2:${userId}:${limit}:${includeOwn}:${followingOnly}:${filterToUser}:${cursor}`;
 
