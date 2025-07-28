@@ -431,10 +431,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
             currentContent={activity.currentContent}
             previousContent={isNewPage ? null : activity.previousContent}
             textDiff={{
-              preview: activity.diffPreview, // Use stored diff preview
-              added: activity.diff?.added || 0,
-              removed: activity.diff?.removed || 0,
-              hasChanges: activity.diff?.hasChanges || false
+              preview: activity.lastDiff?.preview || activity.diffPreview, // Use lastDiff.preview first, fallback to diffPreview
+              added: activity.lastDiff?.added || activity.diff?.added || 0,
+              removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
+              hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
             }}
             isNewPage={isNewPage}
             showInlineStats={false}
