@@ -368,8 +368,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                   <UsernameBadge
                     userId={activity.userId}
                     username={activity.username || "Missing username"}
-                    tier={activity.tier}
-                    subscriptionStatus={activity.subscriptionStatus}
+                    tier={activity.subscriptionTier}
+                    subscriptionStatus={activity.hasActiveSubscription ? 'active' : 'inactive'}
                     subscriptionAmount={activity.subscriptionAmount}
                     size="sm"
                     showBadge={true}
@@ -470,8 +470,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           </div>
         )}
 
-        {/* Token allocation UI - only show for other users' pages */}
-        {activity.userId && activity.pageId && user?.uid !== activity.userId && (
+        {/* Token allocation UI - show for all users' pages when not viewing your own */}
+        {activity.userId && activity.pageId && (!user || user.uid !== activity.userId) && (
           <div className="pt-3 border-t border-border/20 mt-3">
             <EmbeddedTokenAllocation
               pageId={activity.pageId}

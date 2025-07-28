@@ -193,6 +193,16 @@ WeWrite uses Vercel for automatic deployment:
 - **Preview**: Deploys from `dev` branch for testing
 - **Environment Variables**: Configured in Vercel dashboard
 
+### Local Development Environment
+
+WeWrite uses **branch-aware environment detection** for local development:
+
+- **Main branch** (`main`): Uses **production collections** - connects to real data
+- **Dev branch** (`dev`): Uses **dev collections** (`DEV_*` prefix) - isolated test data
+- **Other branches**: Uses **dev collections** (safe default) - isolated test data
+
+This ensures you can test against production data when needed (main branch) while keeping development work safely isolated (dev branch).
+
 ### Manual Deployment
 
 ```bash

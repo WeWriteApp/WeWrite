@@ -23,6 +23,7 @@ This index provides a comprehensive overview of all WeWrite documentation, organ
 - **[CONTENT_DISPLAY_ARCHITECTURE](./CONTENT_DISPLAY_ARCHITECTURE.md)** - Unified content display system
 - **[VERSION_SYSTEM](./VERSION_SYSTEM.md)** - Unified version system for page tracking
 - **[ENVIRONMENT_ARCHITECTURE](./ENVIRONMENT_ARCHITECTURE.md)** - Multi-environment setup
+- **[BRANCH_AWARE_DEVELOPMENT](./BRANCH_AWARE_DEVELOPMENT.md)** - 🆕 Branch-based local development guide
 - **[SESSION_MANAGEMENT_ARCHITECTURE](./SESSION_MANAGEMENT_ARCHITECTURE.md)** - Session management
 
 ### Migration Guides

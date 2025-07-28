@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
         totalPledged: page.totalPledged || 0,
         pledgeCount: page.pledgeCount || 0,
         lastDiff: page.lastDiff,
-        diffPreview: page.diffPreview,
+        // Remove diffPreview since it's redundant with lastDiff.preview
         source: 'pages-collection'
       }));
 
@@ -191,12 +191,19 @@ export async function GET(request: NextRequest) {
     const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
     const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
 
-    // Enhance edits with subscription data
-    const enhancedEdits = edits.map(edit => ({
-      ...edit,
-      hasActiveSubscription: batchUserData[edit.userId]?.hasActiveSubscription || false,
-      subscriptionTier: batchUserData[edit.userId]?.subscriptionTier || null
-    }));
+    // Enhance edits with user and subscription data
+    const enhancedEdits = edits.map(edit => {
+      const userData = batchUserData[edit.userId];
+      return {
+        ...edit,
+        // Use username from user data if available, fallback to page username
+        username: userData?.username || edit.username,
+        displayName: userData?.displayName || edit.displayName,
+        hasActiveSubscription: userData?.hasActiveSubscription || false,
+        subscriptionTier: userData?.tier || null,
+        subscriptionAmount: userData?.subscriptionAmount || null
+      };
+    });
 
     return NextResponse.json({
       edits: enhancedEdits,
@@ -271,12 +278,17 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
           const userData = doc.data();
           const subscription = subscriptionMap.get(doc.id);
 
+
+
           // Use centralized tier determination logic
           const effectiveTier = getEffectiveTier(
             subscription?.amount || null,
             subscription?.tier || null,
             subscription?.status || null
           );
+
+          // Check if subscription is active
+          const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
 
           results[doc.id] = {
             uid: doc.id,
@@ -286,6 +298,7 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,
+            hasActiveSubscription: isActive,
             pageCount: userData.pageCount || 0,
             followerCount: userData.followerCount || 0,
             viewCount: userData.viewCount || 0

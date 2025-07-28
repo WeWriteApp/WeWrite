@@ -14,10 +14,11 @@ WeWrite uses a **four-environment architecture** with strict data separation to 
 
 ## 🔐 Authentication Architecture
 
-### Local Development
-- **Auth System**: Dev Auth (test accounts)
-- **Credentials**: `jamie@wewrite.app`, `test@wewrite.app` with `TestPassword123!`
-- **Data**: Isolated dev collections (`DEV_users`, `DEV_pages`, etc.)
+### Local Development (Branch-Aware)
+- **Main Branch**: Uses production collections (`users`, `pages`, etc.) with Firebase Auth
+- **Dev Branch**: Uses dev collections (`DEV_users`, `DEV_pages`, etc.) with Dev Auth
+- **Other Branches**: Uses dev collections (safe default)
+- **Dev Auth Credentials**: `jamie@wewrite.app`, `test@wewrite.app` with `TestPassword123!`
 
 ### Preview & Production
 - **Auth System**: Firebase Auth (real accounts)
@@ -35,6 +36,7 @@ WeWrite uses a **four-environment architecture** with strict data separation to 
 The system automatically detects environments using:
 - `VERCEL_ENV` (set by Vercel: `production`, `preview`, or undefined)
 - `NODE_ENV` (standard Node.js environment variable)
+- **Git Branch** (for local development): `main` → production collections, `dev` → dev collections
 
 Vercel automatically handles environment switching - no manual configuration needed!
 
@@ -44,14 +46,31 @@ Vercel automatically handles environment switching - no manual configuration nee
 
 ## 🔧 Environment Configuration
 
-### Local Development
+### Local Development (Branch-Aware)
 ```bash
-# Environment Detection
+# Main Branch - Uses Production Collections
 NODE_ENV=development
 # VERCEL_ENV is undefined (not on Vercel)
+# Git branch: main
 
-# Result: Uses dev_ prefixed collections
-# Example: subscriptions -> dev_subscriptions
+# Result: Uses production collections (no prefix)
+# Example: subscriptions -> subscriptions
+
+# Dev Branch - Uses Dev Collections
+NODE_ENV=development
+# VERCEL_ENV is undefined (not on Vercel)
+# Git branch: dev
+
+# Result: Uses DEV_ prefixed collections
+# Example: subscriptions -> DEV_subscriptions
+
+# Other Branches - Uses Dev Collections (Safe Default)
+NODE_ENV=development
+# VERCEL_ENV is undefined (not on Vercel)
+# Git branch: feature/my-feature
+
+# Result: Uses DEV_ prefixed collections
+# Example: subscriptions -> DEV_subscriptions
 ```
 
 ### Vercel Development

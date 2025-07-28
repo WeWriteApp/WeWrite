@@ -62,7 +62,8 @@ export default function DiffPreview({
 
   // Calculate diff using centralized service when content is provided
   useEffect(() => {
-    if (currentContent !== undefined && previousContent !== undefined) {
+    // Only calculate diff if we have actual content (not null or undefined)
+    if (currentContent && previousContent !== undefined) {
       setLoading(true);
       calculateDiff(currentContent, previousContent)
         .then(result => {

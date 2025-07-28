@@ -39,8 +39,8 @@ interface RecentEdit {
     removedChars?: number;
   };
   // Subscription data
-  tier?: string;
-  subscriptionStatus?: string;
+  subscriptionTier?: string;
+  hasActiveSubscription?: boolean;
   subscriptionAmount?: number;
 }
 
@@ -331,17 +331,19 @@ export default function SimpleRecentEdits() {
               timestamp: edit.lastModified,
               lastModified: edit.lastModified,
               diff: edit.lastDiff,
-              diffPreview: edit.diffPreview, // Fixed: use edit.diffPreview directly
+              diffPreview: edit.lastDiff?.preview, // Fixed: use edit.lastDiff.preview
               isNewPage: !edit.lastDiff?.hasChanges,
               isPublic: edit.isPublic,
               totalPledged: edit.totalPledged,
               pledgeCount: edit.pledgeCount,
               activityType: 'page_edit' as const,
               // Add subscription data for UsernameBadge
-              tier: edit.tier,
-              subscriptionStatus: edit.subscriptionStatus,
+              tier: edit.subscriptionTier,
+              subscriptionStatus: edit.hasActiveSubscription ? 'active' : 'inactive',
               subscriptionAmount: edit.subscriptionAmount
             };
+
+
 
             return (
               <ActivityCard

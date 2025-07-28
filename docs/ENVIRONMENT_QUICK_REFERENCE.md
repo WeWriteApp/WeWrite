@@ -4,8 +4,10 @@
 
 | Environment | URL | Data | Stripe | Collections |
 |-------------|-----|------|--------|-------------|
-| **Local** | `localhost:3000` | Dev | Test | `dev_*` |
-| **Dev Deploy** | `dev-wewrite.vercel.app` | Dev | Test | `dev_*` |
+| **Local (main branch)** | `localhost:3000` | **Prod** | **Live** | No prefix |
+| **Local (dev branch)** | `localhost:3000` | Dev | Test | `DEV_*` |
+| **Local (other branches)** | `localhost:3000` | Dev | Test | `DEV_*` |
+| **Dev Deploy** | `dev-wewrite.vercel.app` | Dev | Test | `DEV_*` |
 | **Preview** | `preview-wewrite.vercel.app` | **Prod** | **Live** | No prefix |
 | **Production** | `wewrite.app` | Prod | Live | No prefix |
 
@@ -21,8 +23,8 @@ cd app && npx tsx scripts/test-environment-config.ts
 ```
 
 ### Verify Collections
-- **Development**: Should see `dev_subscriptions`, `dev_users`, etc.
-- **Production/Preview**: Should see `subscriptions`, `users`, etc.
+- **Development (dev branch, other branches)**: Should see `DEV_subscriptions`, `DEV_users`, etc.
+- **Production (main branch, preview, production)**: Should see `subscriptions`, `users`, etc.
 
 ### Verify Stripe Keys
 - **Development**: Keys start with `sk_test_` and `pk_test_`
@@ -56,10 +58,11 @@ git push origin main
 
 ## 🛠️ Development Workflow
 
-### 1. Local Development
-- Uses `dev_` collections
-- Safe to test payments with test Stripe keys
-- No risk to production data
+### 1. Local Development (Branch-Aware)
+- **Main branch**: Uses production collections - **CAUTION: Real data!**
+- **Dev branch**: Uses `DEV_` collections - Safe for testing
+- **Other branches**: Uses `DEV_` collections - Safe for testing
+- Safe to test payments with appropriate Stripe keys based on branch
 
 ### 2. Dev Branch Testing
 - Push to `dev` branch
@@ -150,6 +153,7 @@ VERCEL_ENV=production
 
 ## 🔗 Quick Links
 
+- [Branch-Aware Development Guide](./BRANCH_AWARE_DEVELOPMENT.md) - 🆕 Detailed branch-based workflow
 - [Full Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md)
 - [Dual Deployment Setup](../scripts/setup-dual-deployment.md)
 - [Subscription System Docs](./SUBSCRIPTION_SYSTEM.md)
