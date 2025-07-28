@@ -107,12 +107,36 @@ export async function GET(request: NextRequest) {
 
     // Add visibility filter for non-authenticated users
     if (!userId) {
+      console.log(`🔍 [RECENT_EDITS] No userId - adding isPublic filter`);
       pagesQuery = pagesQuery.where('isPublic', '==', true);
+    } else {
+      console.log(`🔍 [RECENT_EDITS] Authenticated user: ${userId}`);
     }
 
     console.log(`🔍 [RECENT_EDITS] Executing query...`);
     const pagesSnapshot = await pagesQuery.get();
     console.log(`🔍 [RECENT_EDITS] Query returned ${pagesSnapshot.size} pages`);
+
+    // If no pages found, let's debug the query
+    if (pagesSnapshot.empty) {
+      console.log(`🚨 [RECENT_EDITS] No pages found! Debugging...`);
+
+      // Test a simple query to see if any pages exist at all
+      const testQuery = db.collection(getCollectionName('pages')).limit(5);
+      const testSnapshot = await testQuery.get();
+      console.log(`🔍 [RECENT_EDITS] Test query found ${testSnapshot.size} total pages`);
+
+      if (!testSnapshot.empty) {
+        const samplePage = testSnapshot.docs[0].data();
+        console.log(`🔍 [RECENT_EDITS] Sample page:`, {
+          id: testSnapshot.docs[0].id,
+          title: samplePage.title,
+          isPublic: samplePage.isPublic,
+          deleted: samplePage.deleted,
+          lastModified: samplePage.lastModified
+        });
+      }
+    }
 
     // Debug: Log the first few pages to understand what we're getting
     if (pagesSnapshot.size > 0) {
