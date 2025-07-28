@@ -185,19 +185,69 @@ export async function GET(request: NextRequest) {
       const lastModifiedDate = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
 
       // Always process pages to show all recent edits
-        // Try to get the latest version for this page
+        // Try to get the latest NON-MIGRATION version for this page
         try {
-          const versionsQuery = db.collection(getCollectionName('pages'))
+          // First, try to get the latest user-created version (not migration)
+          const userVersionsQuery = db.collection(getCollectionName('pages'))
             .doc(page.id)
             .collection('versions')
+            .where('optimizationMigration', '!=', true)
+            .orderBy('optimizationMigration') // Required for != queries
             .orderBy('createdAt', 'desc')
             .limit(1);
 
-          const versionSnapshot = await versionsQuery.get();
+          let versionSnapshot = await userVersionsQuery.get();
+
+          // If no user versions found, fall back to any version but prioritize user edits
+          if (versionSnapshot.empty) {
+            const allVersionsQuery = db.collection(getCollectionName('pages'))
+              .doc(page.id)
+              .collection('versions')
+              .orderBy('createdAt', 'desc')
+              .limit(5); // Get a few to find non-migration ones
+
+            const allVersionsSnapshot = await allVersionsQuery.get();
+
+            // Find the first non-migration version
+            const nonMigrationVersion = allVersionsSnapshot.docs.find(doc => {
+              const data = doc.data();
+              return !data.optimizationMigration && !data.migratedFromVersion;
+            });
+
+            if (nonMigrationVersion) {
+              versionSnapshot = { docs: [nonMigrationVersion], empty: false };
+            } else {
+              versionSnapshot = allVersionsSnapshot;
+            }
+          }
 
           if (!versionSnapshot.empty) {
             const latestVersion = versionSnapshot.docs[0];
             const versionData = latestVersion.data();
+
+            // If this is still a migration version, use the page's lastModified as the source of truth
+            const isMigrationVersion = versionData.optimizationMigration || versionData.migratedFromVersion;
+
+            if (isMigrationVersion) {
+              // For migration versions, check if the page itself has been modified recently by a user
+              const pageLastModified = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
+              const versionCreatedAt = versionData.createdAt?.toDate ? versionData.createdAt.toDate() : new Date(versionData.createdAt);
+
+              // If the page was modified after the migration version was created, it's a real user edit
+              if (pageLastModified > versionCreatedAt) {
+                // This is a real user edit after migration - include it
+              } else {
+                // This is just a migration version with no subsequent user edits
+                const daysSincePageModified = (new Date().getTime() - pageLastModified.getTime()) / (24 * 60 * 60 * 1000);
+                if (daysSincePageModified > 7) {
+                  continue; // Skip old migration-only pages
+                }
+              }
+            }
+
+            // CRITICAL FIX: Use page.lastModified as primary timestamp, not version createdAt
+            // This ensures we show actual user edit times, not migration/system timestamps
+            const actualLastModified = page.lastModified || versionData.createdAt;
 
             validEdits.push({
               id: page.id,
@@ -205,13 +255,13 @@ export async function GET(request: NextRequest) {
               userId: page.userId || versionData.userId,
               username: page.username || versionData.username || 'Anonymous',
               displayName: page.displayName,
-              lastModified: versionData.createdAt || page.lastModified,
+              lastModified: actualLastModified,
               isPublic: page.isPublic || false,
               totalPledged: page.totalPledged || 0,
               pledgeCount: page.pledgeCount || 0,
 
-              // Version-specific data (replaces lastDiff)
-              lastDiff: versionData.diff || {
+              // Use page's lastDiff if available (more reliable), otherwise fall back to version diff
+              lastDiff: page.lastDiff || versionData.diff || {
                 added: 0,
                 removed: 0,
                 hasChanges: false
