@@ -435,6 +435,10 @@ export async function PUT(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Page ID is required');
     }
 
+    // Log environment detection for debugging
+    const { logEnvironmentConfig } = await import('../../utils/environmentConfig');
+    logEnvironmentConfig();
+
     logger.debug('Loading page document', {
       collection: getCollectionName('pages'),
       pageId: id

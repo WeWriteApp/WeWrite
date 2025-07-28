@@ -22,6 +22,7 @@ export interface EnvironmentContext {
   isLocal: boolean;
   nodeEnv: string;
   vercelEnv?: string;
+  gitBranch?: string;
 }
 
 /**
@@ -53,39 +54,83 @@ export const isLocalDevelopment = (): boolean => {
 };
 
 /**
+ * Get the current git branch (server-side only)
+ */
+export const getCurrentGitBranch = (): string | null => {
+  // Only available server-side
+  if (isClientSide()) {
+    return null;
+  }
+
+  try {
+    // Try to get branch from Vercel environment variable first
+    if (process.env.VERCEL_GIT_COMMIT_REF) {
+      return process.env.VERCEL_GIT_COMMIT_REF;
+    }
+
+    // Fallback to checking git locally (for local development)
+    const { execSync } = require('child_process');
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    return branch;
+  } catch (error) {
+    console.warn('[Environment Detection] Could not determine git branch:', error);
+    return null;
+  }
+};
+
+/**
  * Get the current environment type with detailed detection logic
- * 
+ *
  * Environment Detection Rules:
  * 1. VERCEL_ENV=production → production (Vercel production deployment)
  * 2. VERCEL_ENV=preview → preview (Vercel preview deployment)
- * 3. VERCEL_ENV=development → development (Vercel dev deployment)
- * 4. NODE_ENV=development + no VERCEL_ENV → development (local development)
+ * 3. Local development (NODE_ENV=development):
+ *    - main branch → production (use production collections)
+ *    - dev branch → development (use DEV_ collections)
+ *    - other branches → development (safe fallback)
+ * 4. VERCEL_ENV=development → development (Vercel dev deployment, fallback)
  * 5. Default → development (safe fallback)
  */
 export const detectEnvironmentType = (): EnvironmentType => {
-  // Check Vercel environment first (most specific)
+  // Check Vercel production/preview first (most specific)
   if (process.env.VERCEL_ENV === 'production') {
     return 'production';
   }
-  
+
   if (process.env.VERCEL_ENV === 'preview') {
     return 'preview';
   }
-  
+
+  // PRIORITY: For local development, use git branch to determine environment
+  // This takes precedence over VERCEL_ENV=development which can be set locally
+  if (process.env.NODE_ENV === 'development') {
+    const branch = getCurrentGitBranch();
+
+    if (branch === 'main') {
+      console.log('[Environment Detection] Main branch detected → using production collections');
+      return 'production';
+    }
+
+    if (branch === 'dev') {
+      console.log('[Environment Detection] Dev branch detected → using DEV_ collections');
+      return 'development';
+    }
+
+    // For other branches, default to development for safety
+    console.log(`[Environment Detection] Branch '${branch}' detected → using DEV_ collections (safe default)`);
+    return 'development';
+  }
+
+  // Fallback: Vercel development deployment
   if (process.env.VERCEL_ENV === 'development') {
     return 'development';
   }
-  
-  // Check Node.js environment for local development
-  if (process.env.NODE_ENV === 'development' && !isVercelDeployment()) {
-    return 'development';
-  }
-  
+
   // Production fallback for NODE_ENV=production without VERCEL_ENV
   if (process.env.NODE_ENV === 'production' && !isVercelDeployment()) {
     return 'production';
   }
-  
+
   // Safe default to development to prevent production data contamination
   return 'development';
 };
@@ -101,7 +146,8 @@ export const getEnvironmentContext = (): EnvironmentContext => {
   const isLocal = isLocalDevelopment();
   const nodeEnv = process.env.NODE_ENV || 'development';
   const vercelEnv = process.env.VERCEL_ENV;
-  
+  const gitBranch = getCurrentGitBranch() || undefined;
+
   return {
     type,
     isClient,
@@ -109,7 +155,8 @@ export const getEnvironmentContext = (): EnvironmentContext => {
     isVercel,
     isLocal,
     nodeEnv,
-    vercelEnv
+    vercelEnv,
+    gitBranch
   };
 };
 
@@ -160,7 +207,8 @@ export const logEnvironmentDetection = (): void => {
     isVercel: context.isVercel,
     isLocal: context.isLocal,
     nodeEnv: context.nodeEnv,
-    vercelEnv: context.vercelEnv
+    vercelEnv: context.vercelEnv,
+    gitBranch: context.gitBranch
   });
   
   if (!validation.isValid) {
