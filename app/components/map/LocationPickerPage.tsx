@@ -42,7 +42,7 @@ export default function LocationPickerPage({
       console.log('🗺️ LocationPickerPage: Setting zoom level:', zoomLevel);
       setSavedZoom(zoomLevel);
     } else {
-      setSavedZoom(1); // Much more zoomed out to see the whole world
+      setSavedZoom(0.5); // Extremely zoomed out to see the entire world
     }
   }, [initialLocation]);
 

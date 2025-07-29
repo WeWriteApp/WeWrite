@@ -52,6 +52,15 @@ const MapPicker: React.FC<MapPickerProps> = ({
   const initialZoomRef = useRef(initialZoom);
   // Track if map has been initialized to prevent reinitialization
   const mapInitializedRef = useRef(false);
+  // Store current props in refs so they're always up to date
+  const readOnlyRef = useRef(readOnly);
+  const onChangeRef = useRef(onChange);
+
+  // Update refs when props change
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+    onChangeRef.current = onChange;
+  }, [readOnly, onChange]);
 
   // Initialize map
   useEffect(() => {
@@ -115,10 +124,10 @@ const MapPicker: React.FC<MapPickerProps> = ({
           centerLng = location.lng;
           zoom = initialZoomRef.current || location.zoom || 15;
         } else {
-          // Default to world view - much more zoomed out
-          centerLat = 20.0;  // Slightly north to show more populated areas
+          // Default to world view - extremely zoomed out
+          centerLat = 0.0;   // Equator for true world center
           centerLng = 0.0;   // Prime meridian for world center
-          zoom = initialZoomRef.current || 1; // Much more zoomed out (1 instead of 2)
+          zoom = initialZoomRef.current || 0.5; // Extremely zoomed out to see entire world
         }
 
         map.setView([centerLat, centerLng], zoom);
@@ -129,7 +138,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
           markerRef.current = marker;
 
           // Make marker draggable if not read-only
-          if (!readOnly && onChange) {
+          if (!readOnlyRef.current && onChangeRef.current) {
             marker.dragging.enable();
             marker.on('dragend', () => {
               const pos = marker.getLatLng();
@@ -137,7 +146,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
               while (normalizedLng > 180) normalizedLng -= 360;
               while (normalizedLng < -180) normalizedLng += 360;
 
-              onChange({
+              onChangeRef.current?.({
                 lat: pos.lat,
                 lng: normalizedLng,
                 zoom: map.getZoom()
@@ -147,8 +156,10 @@ const MapPicker: React.FC<MapPickerProps> = ({
         }
 
         // Add click handler for placing/moving marker
-        if (!readOnly && onChange) {
+        if (!readOnlyRef.current && onChangeRef.current) {
+          console.log('🗺️ MapPicker: Setting up click handler', { readOnly: readOnlyRef.current, hasOnChange: !!onChangeRef.current });
           map.on('click', (e: any) => {
+            console.log('🗺️ MapPicker: Map clicked at:', e.latlng);
             let { lat, lng } = e.latlng;
 
             // Normalize longitude to handle wrap-around
@@ -172,7 +183,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
               while (normalizedLng > 180) normalizedLng -= 360;
               while (normalizedLng < -180) normalizedLng += 360;
 
-              onChange({
+              onChangeRef.current?.({
                 lat: pos.lat,
                 lng: normalizedLng,
                 zoom: map.getZoom()
@@ -180,7 +191,8 @@ const MapPicker: React.FC<MapPickerProps> = ({
             });
 
             // Call onChange
-            onChange({
+            console.log('🗺️ MapPicker: Calling onChange with:', { lat, lng, zoom: map.getZoom() });
+            onChangeRef.current?.({
               lat,
               lng,
               zoom: map.getZoom()
@@ -231,7 +243,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
       const marker = L.marker([location.lat, location.lng]).addTo(map);
       markerRef.current = marker;
 
-      if (!readOnly && onChange) {
+      if (!readOnlyRef.current && onChangeRef.current) {
         marker.dragging.enable();
         marker.on('dragend', () => {
           const pos = marker.getLatLng();
@@ -239,7 +251,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
           while (normalizedLng > 180) normalizedLng -= 360;
           while (normalizedLng < -180) normalizedLng += 360;
 
-          onChange({
+          onChangeRef.current?.({
             lat: pos.lat,
             lng: normalizedLng,
             zoom: map.getZoom()
