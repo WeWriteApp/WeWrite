@@ -41,6 +41,14 @@ const MapPicker: React.FC<MapPickerProps> = ({
   disableZoom = false,
   allowPanning = true,
 }) => {
+  console.log('🗺️ MapPicker: Component rendered with props', {
+    hasLocation: !!location,
+    readOnly,
+    hasOnChange: !!onChange,
+    initialZoom,
+    disableZoom,
+    allowPanning
+  });
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -127,10 +135,17 @@ const MapPicker: React.FC<MapPickerProps> = ({
           // Default to world view - extremely zoomed out
           centerLat = 0.0;   // Equator for true world center
           centerLng = 0.0;   // Prime meridian for world center
-          zoom = initialZoomRef.current || 0.5; // Extremely zoomed out to see entire world
+          zoom = initialZoomRef.current || 1; // Try zoom 1 first, then we'll force it lower
         }
 
+        console.log('🗺️ MapPicker: Setting initial view', { centerLat, centerLng, zoom, hasLocation });
         map.setView([centerLat, centerLng], zoom);
+
+        // Force extremely zoomed out view if no location
+        if (!hasLocation) {
+          console.log('🗺️ MapPicker: Forcing world view with setZoom(1)');
+          map.setZoom(1);
+        }
 
         // Add marker if location exists
         if (hasLocation) {
@@ -156,10 +171,16 @@ const MapPicker: React.FC<MapPickerProps> = ({
         }
 
         // Add click handler for placing/moving marker
+        console.log('🗺️ MapPicker: About to set up click handler', {
+          readOnly: readOnlyRef.current,
+          hasOnChange: !!onChangeRef.current,
+          shouldSetupHandler: !readOnlyRef.current && !!onChangeRef.current
+        });
+
         if (!readOnlyRef.current && onChangeRef.current) {
-          console.log('🗺️ MapPicker: Setting up click handler', { readOnly: readOnlyRef.current, hasOnChange: !!onChangeRef.current });
+          console.log('🗺️ MapPicker: Setting up click handler NOW');
           map.on('click', (e: any) => {
-            console.log('🗺️ MapPicker: Map clicked at:', e.latlng);
+            console.log('🗺️ MapPicker: *** MAP CLICKED ***', e.latlng);
             let { lat, lng } = e.latlng;
 
             // Normalize longitude to handle wrap-around
@@ -207,9 +228,21 @@ const MapPicker: React.FC<MapPickerProps> = ({
           });
         }
 
+        // DEBUGGING: Add a simple test click handler that always works
+        map.on('click', (e: any) => {
+          console.log('🗺️ MapPicker: *** SIMPLE CLICK HANDLER FIRED ***', e.latlng);
+        });
+
         mapInstanceRef.current = map;
         mapInitializedRef.current = true; // Mark as initialized
         setIsLoading(false);
+
+        console.log('🗺️ MapPicker: Map initialization complete', {
+          readOnly: readOnlyRef.current,
+          hasOnChange: !!onChangeRef.current,
+          mapZoom: map.getZoom(),
+          mapCenter: map.getCenter()
+        });
 
       } catch (err: any) {
         setError('Failed to initialize map. Please try refreshing the page.');
