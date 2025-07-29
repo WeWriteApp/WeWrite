@@ -82,12 +82,12 @@ export default function LocationPickerPage({
       <div className="absolute inset-0 z-0">
         <MapPicker
           location={currentLocation}
-          onChange={isOwner ? (location) => {
+          onChange={(location) => {
             console.log('🗺️ LocationPickerPage: Location changed to:', location);
             setCurrentLocation(location);
-          } : undefined}
+          }}
           height="100vh"
-          readOnly={!isOwner}
+          readOnly={false} // TEMP: Always allow editing for testing
           showControls={false} // Hide zoom controls to prevent overlap with floating header
           initialZoom={savedZoom}
           onZoomChange={setSavedZoom}
