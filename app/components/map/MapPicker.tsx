@@ -123,9 +123,13 @@ const MapPicker: React.FC<MapPickerProps> = ({
             marker.dragging.enable();
             marker.on('dragend', () => {
               const pos = marker.getLatLng();
+              let normalizedLng = pos.lng;
+              while (normalizedLng > 180) normalizedLng -= 360;
+              while (normalizedLng < -180) normalizedLng += 360;
+
               onChange({
                 lat: pos.lat,
-                lng: pos.lng,
+                lng: normalizedLng,
                 zoom: map.getZoom()
               });
             });
@@ -135,8 +139,12 @@ const MapPicker: React.FC<MapPickerProps> = ({
         // Add click handler for placing/moving marker
         if (!readOnly && onChange) {
           map.on('click', (e: any) => {
-            const { lat, lng } = e.latlng;
-            
+            let { lat, lng } = e.latlng;
+
+            // Normalize longitude to handle wrap-around
+            while (lng > 180) lng -= 360;
+            while (lng < -180) lng += 360;
+
             // Remove existing marker
             if (markerRef.current) {
               map.removeLayer(markerRef.current);
@@ -150,9 +158,13 @@ const MapPicker: React.FC<MapPickerProps> = ({
             marker.dragging.enable();
             marker.on('dragend', () => {
               const pos = marker.getLatLng();
+              let normalizedLng = pos.lng;
+              while (normalizedLng > 180) normalizedLng -= 360;
+              while (normalizedLng < -180) normalizedLng += 360;
+
               onChange({
                 lat: pos.lat,
-                lng: pos.lng,
+                lng: normalizedLng,
                 zoom: map.getZoom()
               });
             });
@@ -211,9 +223,13 @@ const MapPicker: React.FC<MapPickerProps> = ({
         marker.dragging.enable();
         marker.on('dragend', () => {
           const pos = marker.getLatLng();
+          let normalizedLng = pos.lng;
+          while (normalizedLng > 180) normalizedLng -= 360;
+          while (normalizedLng < -180) normalizedLng += 360;
+
           onChange({
             lat: pos.lat,
-            lng: pos.lng,
+            lng: normalizedLng,
             zoom: map.getZoom()
           });
         });

@@ -87,14 +87,25 @@ export async function PATCH(
         );
       }
 
-      // Validate coordinate ranges
-      if (location.lat < -90 || location.lat > 90 ||
-          location.lng < -180 || location.lng > 180) {
+      // Validate latitude (no wrap-around needed)
+      if (location.lat < -90 || location.lat > 90) {
         return NextResponse.json(
-          { error: 'Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180' },
+          { error: 'Invalid latitude. Latitude must be between -90 and 90' },
           { status: 400 }
         );
       }
+
+      // Normalize longitude to handle wrap-around (e.g., 181° becomes -179°)
+      let normalizedLng = location.lng;
+      while (normalizedLng > 180) {
+        normalizedLng -= 360;
+      }
+      while (normalizedLng < -180) {
+        normalizedLng += 360;
+      }
+
+      // Update the location object with normalized longitude
+      location.lng = normalizedLng;
 
       // Validate zoom level if provided
       if (location.zoom !== undefined) {
