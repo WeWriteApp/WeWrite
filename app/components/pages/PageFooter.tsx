@@ -36,6 +36,7 @@ interface PageFooterProps {
   onCancel: () => void;
   onDelete: () => void;
   onInsertLink: () => void;
+  onLocationChange?: (location: any) => void;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
   saveSuccess?: boolean;
@@ -88,6 +89,7 @@ export default function PageFooter({
   onCancel,
   onDelete,
   onInsertLink,
+  onLocationChange,
   isSaving,
   hasUnsavedChanges,
   saveSuccess = false,
@@ -197,30 +199,7 @@ export default function PageFooter({
           <LocationField
             location={page.location}
             canEdit={isOwner}
-            onLocationChange={async (newLocation) => {
-              try {
-                const response = await fetch(`/api/pages/${page.id}/location`, {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ location: newLocation }),
-                });
-
-                if (!response.ok) {
-                  const errorData = await response.json();
-                  throw new Error(errorData.error || 'Failed to update location');
-                }
-
-                // Update the page object to reflect the change
-                page.location = newLocation;
-
-                console.log('Location updated successfully');
-              } catch (error) {
-                console.error('Error updating location:', error);
-                // TODO: Show user-friendly error message
-              }
-            }}
+            onLocationChange={onLocationChange}
           />
         </div>
       )}

@@ -571,7 +571,7 @@ const FilteredSearchResults = forwardRef(({
                         selectedId === page.id ? 'bg-muted' : ''
                       }`}
                     >
-                      <div className="flex items-start gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
                           <PillLink
                             href={`/${page.id}`}

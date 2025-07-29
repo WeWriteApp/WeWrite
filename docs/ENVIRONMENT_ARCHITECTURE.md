@@ -2,6 +2,42 @@
 
 This document provides a comprehensive overview of WeWrite's environment configuration, data separation strategy, and deployment architecture.
 
+## ⚠️ CRITICAL: Old Patterns That Must Be Deleted
+
+### 🚨 Dangerous Legacy Code - DELETE IMMEDIATELY
+
+The following patterns are **DEPRECATED** and **MUST BE DELETED** from the codebase:
+
+#### 1. Hardcoded Collection Names
+```typescript
+// ❌ DELETE THIS - Hardcoded collection names
+db.collection('pages')
+db.collection('DEV_pages')
+db.collection('activities') // DEPRECATED - Use versions system
+```
+
+#### 2. Old Recent-Edits Patterns
+```typescript
+// ❌ DELETE THIS - Wrong API usage
+fetch('/api/recent-edits?filterToUser=userId')
+// Should use: fetch('/api/recent-pages?userId=userId')
+```
+
+#### 3. Activities Collection References
+```typescript
+// ❌ DELETE THIS - Activities collection is deprecated
+db.collection(getCollectionName('activities'))
+await createActivity({ pageId, userId, type: 'edit' });
+```
+
+### 🔍 Cleanup Commands
+```bash
+# Find dangerous patterns and DELETE them
+grep -r "collection('pages')" app/ --include="*.ts" --include="*.tsx"
+grep -r "collection.*activities" app/ --include="*.ts" --include="*.tsx"
+grep -r "recent-edits.*filterToUser" app/ --include="*.ts" --include="*.tsx"
+```
+
 ## 🏗️ Environment Overview
 
 WeWrite uses a **four-environment architecture** with strict data separation to ensure safe development and testing:

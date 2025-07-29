@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/button';
-import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
+import MapPicker from '../map/MapPicker';
 import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -209,33 +209,95 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
         }
 
         const data = await response.json();
-        
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to fetch pages');
+
+        console.log('API Response:', data); // Debug log
+
+        // Handle different API response formats
+        let pages = [];
+        if (data.success && data.pages) {
+          pages = data.pages;
+        } else if (Array.isArray(data)) {
+          pages = data;
+        } else if (data.pages && Array.isArray(data.pages)) {
+          pages = data.pages;
+        } else {
+          console.warn('Unexpected API response format:', data);
+          pages = [];
         }
 
+        console.log('Pages array:', pages, 'Length:', pages.length); // Debug log
+        console.log('Sample pages with location field:', pages.slice(0, 5).map(p => ({
+          title: p.title,
+          location: p.location,
+          hasLocation: !!p.location
+        }))); // Debug log
+
         // Filter pages that have location data
-        const pagesWithLocation = data.pages
+        const pagesWithLocation = pages
           .filter((page: any) => {
-            // Check if page has location data (stored as string in format "lat,lng")
-            if (page.location && typeof page.location === 'string') {
-              const [lat, lng] = page.location.split(',').map(Number);
-              return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+            // Check if page has location data - handle both string and object formats
+            if (!page || !page.location) {
+              console.log('Page without location:', page?.title, 'location:', page?.location); // Debug log
+              return false;
             }
+
+            // Handle object format ({lat, lng, zoom?}) - new format
+            if (typeof page.location === 'object' && page.location.lat && page.location.lng) {
+              const lat = Number(page.location.lat);
+              const lng = Number(page.location.lng);
+              const zoom = page.location.zoom ? Number(page.location.zoom) : undefined;
+              const isValid = !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+              const isZoomValid = zoom === undefined || (!isNaN(zoom) && zoom >= 1 && zoom <= 20);
+
+              if (isValid && isZoomValid) {
+                console.log('Found page with object location:', page.title, page.location); // Debug log
+              }
+              return isValid && isZoomValid;
+            }
+
+            // Handle string format ("lat,lng") - legacy format
+            if (typeof page.location === 'string') {
+              const [lat, lng] = page.location.split(',').map(Number);
+              const isValid = !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+              if (isValid) {
+                console.log('Found page with string location:', page.title, page.location); // Debug log
+              }
+              return isValid;
+            }
+
             return false;
           })
           .map((page: any) => {
-            const [lat, lng] = page.location.split(',').map(Number);
-            return {
-              id: page.id,
-              title: page.title || 'Untitled',
-              location: { lat, lng },
-              isPublic: page.isPublic,
-              lastModified: page.lastModified,
-              username: page.username
-            };
+            try {
+              let lat, lng;
+
+              // Handle object format
+              if (typeof page.location === 'object') {
+                lat = Number(page.location.lat);
+                lng = Number(page.location.lng);
+              }
+              // Handle string format
+              else if (typeof page.location === 'string') {
+                [lat, lng] = page.location.split(',').map(Number);
+              } else {
+                throw new Error('Invalid location format');
+              }
+
+              return {
+                id: page.id,
+                title: page.title || 'Untitled',
+                location: { lat, lng },
+                isPublic: page.isPublic,
+                lastModified: page.lastModified,
+                username: page.username
+              };
+            } catch (error) {
+              console.error('Error parsing page location:', page, error);
+              return null;
+            }
           })
-          .sort((a: PageWithLocation, b: PageWithLocation) => 
+          .filter(Boolean) // Remove any null entries from parsing errors
+          .sort((a: PageWithLocation, b: PageWithLocation) =>
             new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
           );
 

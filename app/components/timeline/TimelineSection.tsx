@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, Calendar, List } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import TimelineCarousel from './TimelineCarousel';
+import TimelineCalendar from './TimelineCalendar';
 import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { useRouter } from 'next/navigation';
@@ -30,6 +31,7 @@ export default function TimelineSection({}: TimelineSectionProps) {
   const router = useRouter();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
+  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
 
   // Get the accent color value (either custom or default)
   const getAccentColorValue = () => {
@@ -126,14 +128,44 @@ export default function TimelineSection({}: TimelineSectionProps) {
           </SectionTitle>
         }
       >
-      {/* Carousel container */}
-      <div className="relative" id="timeline-carousel">
-        <TimelineCarousel accentColor={getAccentColorValue()} />
+        {/* View Mode Toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="flex items-center border border-border rounded-lg p-1 w-full max-w-sm">
+            <Button
+              variant={viewMode === 'timeline' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('timeline')}
+              className="h-8 px-3 rounded-md flex-1"
+            >
+              <List className="h-4 w-4 mr-2" />
+              Timeline
+            </Button>
+            <Button
+              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className="h-8 px-3 rounded-md flex-1"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Calendar
+            </Button>
+          </div>
+        </div>
 
-        {/* Gradient fade on edges for better visual indication of scrollability */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-      </div>
+        {/* Content based on view mode */}
+        {viewMode === 'timeline' ? (
+          <div className="relative" id="timeline-carousel">
+            <TimelineCarousel accentColor={getAccentColorValue()} />
+
+            {/* Gradient fade on edges for better visual indication of scrollability */}
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+          </div>
+        ) : (
+          <div className="max-w-4xl mx-auto">
+            <TimelineCalendar accentColor={getAccentColorValue()} />
+          </div>
+        )}
 
       </StickySection>
     </div>

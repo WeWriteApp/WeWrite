@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     // Also test the actual recent edits API
     let apiResponse = null;
     try {
-      const apiUrl = new URL('/api/recent-edits', request.url);
+      const apiUrl = new URL('/api/recent-edits/global', request.url);
       if (userId) {
         apiUrl.searchParams.set('userId', userId);
       }

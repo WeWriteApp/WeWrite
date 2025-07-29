@@ -177,6 +177,53 @@ const convertPageToActivity = (page: RecentPage) => ({
 });
 ```
 
+## ⚠️ CRITICAL: Patterns That Must Be Sanitized
+
+### 🚨 Old Patterns - DELETE ON SIGHT
+
+These patterns are **DANGEROUS** and must be **COMPLETELY DELETED**:
+
+#### 1. Activities Collection References
+```typescript
+// ❌ DELETE IMMEDIATELY - Activities collection is deprecated
+db.collection(getCollectionName('activities'))
+db.collection('DEV_activities')
+db.collection('activities')
+```
+
+#### 2. Old Recent-Edits Implementations
+```typescript
+// ❌ DELETE IMMEDIATELY - Wrong approach
+const recentEdits = await fetch('/api/recent-edits?filterToUser=...');
+// Should use: await fetch('/api/recent-pages?userId=...');
+```
+
+#### 3. Manual Activity Creation
+```typescript
+// ❌ DELETE IMMEDIATELY - Activities are auto-generated from versions
+await createActivity({ pageId, userId, type: 'edit' });
+```
+
+#### 4. Complex Activity Queries
+```typescript
+// ❌ DELETE IMMEDIATELY - Use simplified recent pages approach
+db.collection('activities').where('userId', '==', userId).orderBy('createdAt', 'desc')
+```
+
+### 🔍 Sanitization Commands
+
+Run these commands to find and **DELETE** dangerous patterns:
+```bash
+# Find activities collection references
+grep -r "collection.*activities" app/ --include="*.ts" --include="*.tsx" --include="*.js"
+
+# Find old recent-edits patterns
+grep -r "api/recent-edits.*filterToUser" app/ --include="*.ts" --include="*.tsx"
+
+# Find manual activity creation
+grep -r "createActivity\|addActivity" app/ --include="*.ts" --include="*.tsx"
+```
+
 ## Removed Components
 
 The following components were completely removed as part of the cleanup:

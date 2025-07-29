@@ -154,7 +154,7 @@ const SearchResultsDisplay = React.memo(({
           <div className="space-y-2">
             <h3 className="text-lg font-semibold mb-4">Users</h3>
             {results.users.map(user => (
-              <div key={`user-${user.id}`} className="flex items-start gap-2 min-w-0">
+              <div key={`user-${user.id}`} className="flex items-center gap-2 min-w-0">
                 <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-60px)]">
                   <PillLink href={`/user/${user.id}`} className="max-w-full truncate">
                     {user?.username}
@@ -173,7 +173,7 @@ const SearchResultsDisplay = React.memo(({
           <div className="space-y-2">
             <h3 className="text-lg font-semibold mb-4">Pages</h3>
             {results.pages.map(page => (
-              <div key={`page-${page.id}`} className="flex items-start gap-2 min-w-0">
+              <div key={`page-${page.id}`} className="flex items-center gap-2 min-w-0">
                 <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
                   <PillLink
                     href={`/${page.id}`}

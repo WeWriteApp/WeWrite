@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import SimpleRecentEdits from '../features/SimpleRecentEdits';
+import GlobalRecentEdits from '../features/GlobalRecentEdits';
 
 interface ActivitySectionProps {
   limit?: number;
@@ -18,7 +18,7 @@ const ActivitySection = React.memo(function ActivitySection({
 }: ActivitySectionProps) {
   return (
     <div style={{ minHeight: '200px' }}>
-      <SimpleRecentEdits />
+      <GlobalRecentEdits />
     </div>
   );
 });

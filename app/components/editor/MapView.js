@@ -3,7 +3,7 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 
-import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
+import MapPicker from '../map/MapPicker';
 
 /**
  * MapView Component - Feature Flagged
@@ -37,9 +37,9 @@ function MapView({ location, readOnly, onChange, height = '200px', expandable, s
     );
   }
 
-  // Render the actual OpenStreetMap implementation
+  // Render the map implementation
   return (
-    <OpenStreetMapPicker
+    <MapPicker
       location={location}
       onChange={onChange}
       height={height}

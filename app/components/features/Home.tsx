@@ -6,7 +6,7 @@ import Link from "next/link";
 import Header from "../layout/Header";
 // Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Activity } from "lucide-react";
-import SimpleRecentEdits from "./SimpleRecentEdits";
+import GlobalRecentEdits from "./GlobalRecentEdits";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
 import EmptyState from "../ui/EmptyState";
@@ -57,8 +57,8 @@ const Home: React.FC = () => {
             {/* Daily Notes Section */}
             <DailyNotesSection />
 
-            {/* Recent Edits Section - Simple implementation */}
-            <SimpleRecentEdits />
+            {/* Recent Edits Section - Global implementation */}
+            <GlobalRecentEdits />
 
 
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { unifiedStatsService } from '../../../services/UnifiedStatsService';
+// import { unifiedStatsService } from '../../../services/UnifiedStatsService'; // TEMP: Disabled due to client-side import issue
 
 /**
  * Unified Stats API
@@ -38,7 +38,25 @@ export async function GET(
           );
         }
 
-        const stats = await unifiedStatsService.getPageStats(pageId, forceRefresh);
+        // TEMP: Return basic stats until UnifiedStatsService is fixed for server-side use
+        const stats = {
+          pageId,
+          totalViews: 0,
+          viewsLast24h: 0,
+          viewData: [],
+          recentChanges: 0,
+          changeData: [],
+          editorsCount: 0,
+          liveReaders: 0,
+          totalReaders: 0,
+          supporterCount: 0,
+          totalPledgedTokens: 0,
+          supporterData: [],
+          uniqueSponsors: [],
+          lastUpdated: Date.now(),
+          cached: false
+        };
+
         const loadTime = performance.now() - startTime;
 
         return NextResponse.json({
@@ -48,7 +66,7 @@ export async function GET(
             pageId,
             loadTime: Math.round(loadTime),
             timestamp: Date.now(),
-            cached: stats.cached
+            cached: false
           }
         });
       }

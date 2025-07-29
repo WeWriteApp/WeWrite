@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { useAuth } from '../../providers/AuthProvider';
-import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
+import MapPicker from '../map/MapPicker';
 
 interface Location {
   lat: number;
   lng: number;
+  zoom?: number;
 }
 
 interface LocationFieldProps {
@@ -42,20 +43,27 @@ export default function LocationField({
 
   // Handle legacy string locations (migrate to object format)
   const normalizedLocation = React.useMemo(() => {
-    if (!location) return null;
+    console.warn('🗺️ LocationField: Processing location:', location, 'type:', typeof location);
+
+    if (!location) {
+      console.warn('🗺️ LocationField: No location provided');
+      return null;
+    }
 
     // If it's already an object with lat/lng, use it
     if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
+      console.warn('🗺️ LocationField: Valid location object:', location);
       return location as Location;
     }
 
     // If it's a string, try to parse it (legacy format)
     if (typeof location === 'string' && location.trim()) {
-      console.log('🗺️ LocationField: Found legacy string location:', location);
+      console.warn('🗺️ LocationField: Found legacy string location:', location);
       // For now, return null for string locations - user will need to re-set
       return null;
     }
 
+    console.warn('🗺️ LocationField: Invalid location format');
     return null;
   }, [location]);
 
@@ -110,49 +118,40 @@ export default function LocationField({
   return (
     <div className={`${className}`}>
       <div
-        className={`flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+        className={`rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm overflow-hidden ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
         onClick={canEdit ? handleLocationClick : undefined}
       >
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Location</span>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Location</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!normalizedLocation && (
+              <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-border">
+                {canEdit ? 'Click to set location' : 'No location set'}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {normalizedLocation ? (
-            <div className="flex items-center gap-2">
-              {/* Mini map preview */}
-              <div
-                className="relative group"
-                title={canEdit ? 'Click to edit location' : 'Click to view full map'}
-              >
-                <div className="w-12 h-8 rounded-sm overflow-hidden border border-border bg-muted/50">
-                  <OpenStreetMapPicker
-                    location={normalizedLocation}
-                    readOnly={true}
-                    showControls={false}
-                    height="32px"
-                    className="pointer-events-none"
-                    initialZoom={savedZoom}
-                  />
-                </div>
-              </div>
-
-              {/* Coordinates display */}
-              <div
-                className="text-white text-sm font-medium px-2 py-1 rounded-md"
-                style={{ backgroundColor: accentColorValue }}
-                title={canEdit ? 'Click to edit location' : 'Click to view full map'}
-              >
-                {formatCoordinates(normalizedLocation)}
-              </div>
+        {/* Map below header - only show if location exists */}
+        {normalizedLocation && (
+            <div className="h-40 md:h-48 border-t border-border/40">
+              <MapPicker
+              location={normalizedLocation}
+              readOnly={true}
+              showControls={false}
+              height="100%"
+              className="pointer-events-none"
+              disableZoom={true} // Disable zooming in collapsed state
+              allowPanning={false} // Disable panning in collapsed state
+              initialZoom={normalizedLocation.zoom || 15} // Use saved zoom level to match fullscreen view
+            />
             </div>
-          ) : (
-            <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-border">
-              {canEdit ? 'Click to set location' : 'No location set'}
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
