@@ -180,18 +180,18 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
         // Add click handler for placing/moving marker
         // Use the original props instead of refs during initialization
-        console.log('🗺️ MapPicker: About to set up click handler', {
-          readOnly,
-          hasOnChange: !!onChange,
-          readOnlyRef: readOnlyRef.current,
-          onChangeRef: !!onChangeRef.current,
-          shouldSetupHandler: !readOnly && !!onChange
-        });
+        console.log('🗺️ MapPicker: ===== CLICK HANDLER SETUP DEBUG =====');
+        console.log('🗺️ MapPicker: readOnly:', readOnly, typeof readOnly);
+        console.log('🗺️ MapPicker: onChange:', onChange, typeof onChange);
+        console.log('🗺️ MapPicker: !readOnly:', !readOnly);
+        console.log('🗺️ MapPicker: !!onChange:', !!onChange);
+        console.log('🗺️ MapPicker: condition result:', !readOnly && !!onChange);
+        console.log('🗺️ MapPicker: ===============================');
 
         if (!readOnly && onChange) {
-          console.log('🗺️ MapPicker: Setting up click handler NOW');
+          console.log('🗺️ MapPicker: ✅ SETTING UP CLICK HANDLER NOW ✅');
           map.on('click', (e: any) => {
-            console.log('🗺️ MapPicker: *** MAP CLICKED ***', e.latlng);
+            console.log('🗺️ MapPicker: *** MAP CLICKED - PIN DROPPING ***', e.latlng);
             let { lat, lng } = e.latlng;
 
             // Normalize longitude to handle wrap-around
@@ -230,6 +230,10 @@ const MapPicker: React.FC<MapPickerProps> = ({
               zoom: map.getZoom()
             });
           });
+        } else {
+          console.log('🗺️ MapPicker: ❌ NOT setting up click handler because:');
+          console.log('🗺️ MapPicker: readOnly =', readOnly, '(should be false)');
+          console.log('🗺️ MapPicker: onChange =', !!onChange, '(should be true)');
         }
 
         // Handle zoom changes
