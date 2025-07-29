@@ -48,6 +48,9 @@ const MapPicker: React.FC<MapPickerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
 
+  // Store initial zoom in a ref so it doesn't cause re-renders
+  const initialZoomRef = useRef(initialZoom);
+
   // Initialize map
   useEffect(() => {
     const initializeMap = async () => {
@@ -103,12 +106,12 @@ const MapPicker: React.FC<MapPickerProps> = ({
           // Use the location's coordinates and zoom
           centerLat = location.lat;
           centerLng = location.lng;
-          zoom = initialZoom || location.zoom || 15;
+          zoom = initialZoomRef.current || location.zoom || 15;
         } else {
           // Default to North America view
           centerLat = 45.0;
           centerLng = -100.0;
-          zoom = initialZoom || 2;
+          zoom = initialZoomRef.current || 2;
         }
 
         map.setView([centerLat, centerLng], zoom);
@@ -204,7 +207,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         markerRef.current = null;
       }
     };
-  }, [initialZoom, disableZoom, allowPanning, resolvedTheme, readOnly, onChange, onZoomChange]); // Removed 'location' to prevent map reinitialization on location changes
+  }, [disableZoom, allowPanning, resolvedTheme, readOnly, onChange, onZoomChange]); // Removed 'location' and 'initialZoom' to prevent map reinitialization
 
   // Handle location changes - only update marker, not map view
   useEffect(() => {
