@@ -115,6 +115,18 @@ function LocationPickerContent() {
 
     try {
       console.log('🗺️ LocationPicker: Making API call to save location...');
+      console.log('🗺️ LocationPicker: Location being sent:', {
+        location,
+        lat: location?.lat,
+        lng: location?.lng,
+        zoom: location?.zoom,
+        latType: typeof location?.lat,
+        lngType: typeof location?.lng,
+        latValid: location?.lat >= -90 && location?.lat <= 90,
+        lngValid: location?.lng >= -180 && location?.lng <= 180,
+        requestBody: JSON.stringify({ location })
+      });
+
       // Save location via API
       const response = await fetch(`/api/pages/${pageId}/location`, {
         method: 'PATCH',
