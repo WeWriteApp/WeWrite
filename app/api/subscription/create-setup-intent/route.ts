@@ -11,15 +11,15 @@ import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminAuth = admin.auth();
-const adminDb = admin.firestore();
-
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin
+    const admin = initAdmin();
+    const adminAuth = admin.auth();
+    const adminDb = admin.firestore();
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {

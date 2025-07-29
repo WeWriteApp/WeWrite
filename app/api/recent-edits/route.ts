@@ -156,9 +156,10 @@ export async function GET(request: NextRequest) {
         return false;
       }
 
-      // Include own pages if requested
-      if (includeOwn && page.userId === userId) {
-        return true;
+      // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
+      if (!includeOwn && page.userId === userId) {
+        console.log(`🔍 [RECENT_EDITS] Hiding own edit: ${page.title} by ${page.username}`);
+        return false;
       }
 
       return true;
@@ -252,8 +253,8 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
       const batch = userIds.slice(i, i + batchSize);
 
       try {
-        // Fetch user profiles from Firestore
-        const usersQuery = db.collection('users').where('__name__', 'in', batch);
+        // FIXED: Use environment-aware collection names
+        const usersQuery = db.collection(getCollectionName('users')).where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
         // Fetch subscription data in parallel using environment-aware paths
@@ -317,6 +318,16 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
 
           // Check if subscription is active
           const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+
+          // Debug logging for subscription data
+          if (subscription) {
+            console.log(`🔍 [RECENT_EDITS] User ${userData.username} subscription:`, {
+              status: subscription.status,
+              amount: subscription.amount,
+              tier: effectiveTier,
+              isActive
+            });
+          }
 
           results[doc.id] = {
             uid: doc.id,
