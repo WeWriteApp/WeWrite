@@ -74,9 +74,12 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
   // Initialize map
   useEffect(() => {
+    console.log('🗺️ MapPicker: ===== USEEFFECT TRIGGERED =====');
     const initializeMap = async () => {
       try {
+        console.log('🗺️ MapPicker: initializeMap function called');
         if (typeof window === 'undefined') {
+          console.log('🗺️ MapPicker: Skipping - window undefined (SSR)');
           return;
         }
 
@@ -89,7 +92,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
           return;
         }
 
-        console.log('🗺️ MapPicker: Starting map initialization');
+        console.log('🗺️ MapPicker: ✅ Starting map initialization ✅');
 
         // Dynamic import to avoid SSR issues
         const leaflet = await import('leaflet');
@@ -104,8 +107,11 @@ const MapPicker: React.FC<MapPickerProps> = ({
         });
 
         if (!mapRef.current) {
+          console.log('🗺️ MapPicker: ❌ No mapRef.current, aborting initialization');
           return;
         }
+
+        console.log('🗺️ MapPicker: mapRef.current exists, proceeding with map creation');
         // Create map instance
         const map = L.map(mapRef.current, {
           zoomControl: !disableZoom && showControls, // Only show zoom controls if both enabled AND showControls is true
@@ -244,9 +250,11 @@ const MapPicker: React.FC<MapPickerProps> = ({
         }
 
         // DEBUGGING: Add a simple test click handler that always works
+        console.log('🗺️ MapPicker: Adding simple test click handler');
         map.on('click', (e: any) => {
           console.log('🗺️ MapPicker: *** SIMPLE CLICK HANDLER FIRED ***', e.latlng);
         });
+        console.log('🗺️ MapPicker: Simple test click handler added');
 
         mapInstanceRef.current = map;
         mapInitializedRef.current = true; // Mark as initialized
@@ -260,12 +268,19 @@ const MapPicker: React.FC<MapPickerProps> = ({
         });
 
       } catch (err: any) {
+        console.error('🗺️ MapPicker: ❌ Error initializing map:', err);
         setError('Failed to initialize map. Please try refreshing the page.');
         setIsLoading(false);
       }
     };
 
-    const timer = setTimeout(initializeMap, 100);
+    console.log('🗺️ MapPicker: useEffect function body executing');
+
+    console.log('🗺️ MapPicker: About to call initializeMap() with setTimeout');
+    const timer = setTimeout(() => {
+      console.log('🗺️ MapPicker: setTimeout callback executing, calling initializeMap()');
+      initializeMap();
+    }, 100);
 
     return () => {
       clearTimeout(timer);
