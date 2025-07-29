@@ -45,6 +45,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
     hasLocation: !!location,
     readOnly,
     hasOnChange: !!onChange,
+    onChange: onChange,
     initialZoom,
     disableZoom,
     allowPanning
@@ -66,6 +67,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
   // Update refs when props change
   useEffect(() => {
+    console.log('🗺️ MapPicker: Updating refs', { readOnly, onChange: !!onChange });
     readOnlyRef.current = readOnly;
     onChangeRef.current = onChange;
   }, [readOnly, onChange]);
@@ -80,8 +82,14 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
         // Prevent reinitialization if map already exists
         if (mapInitializedRef.current || mapInstanceRef.current) {
+          console.log('🗺️ MapPicker: Skipping initialization - map already exists', {
+            initialized: mapInitializedRef.current,
+            hasInstance: !!mapInstanceRef.current
+          });
           return;
         }
+
+        console.log('🗺️ MapPicker: Starting map initialization');
 
         // Dynamic import to avoid SSR issues
         const leaflet = await import('leaflet');
@@ -171,13 +179,16 @@ const MapPicker: React.FC<MapPickerProps> = ({
         }
 
         // Add click handler for placing/moving marker
+        // Use the original props instead of refs during initialization
         console.log('🗺️ MapPicker: About to set up click handler', {
-          readOnly: readOnlyRef.current,
-          hasOnChange: !!onChangeRef.current,
-          shouldSetupHandler: !readOnlyRef.current && !!onChangeRef.current
+          readOnly,
+          hasOnChange: !!onChange,
+          readOnlyRef: readOnlyRef.current,
+          onChangeRef: !!onChangeRef.current,
+          shouldSetupHandler: !readOnly && !!onChange
         });
 
-        if (!readOnlyRef.current && onChangeRef.current) {
+        if (!readOnly && onChange) {
           console.log('🗺️ MapPicker: Setting up click handler NOW');
           map.on('click', (e: any) => {
             console.log('🗺️ MapPicker: *** MAP CLICKED ***', e.latlng);
@@ -204,7 +215,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
               while (normalizedLng > 180) normalizedLng -= 360;
               while (normalizedLng < -180) normalizedLng += 360;
 
-              onChangeRef.current?.({
+              onChange?.({
                 lat: pos.lat,
                 lng: normalizedLng,
                 zoom: map.getZoom()
@@ -213,7 +224,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
             // Call onChange
             console.log('🗺️ MapPicker: Calling onChange with:', { lat, lng, zoom: map.getZoom() });
-            onChangeRef.current?.({
+            onChange?.({
               lat,
               lng,
               zoom: map.getZoom()
