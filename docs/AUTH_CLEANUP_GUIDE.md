@@ -55,20 +55,54 @@ const userEmail = user?.email;
 
 ### 🔍 How to Find Old Auth Code
 
-#### 1. Search for Old Imports
+#### 1. Search for Old Auth Imports
 ```bash
-# Find old auth imports
-grep -r "useCurrentAccount\|useSession\|MultiAuth\|DevelopmentAuth" app/
-grep -r "from.*CurrentAccount\|from.*MultiAuth" app/
-grep -r "SessionStore\|SessionProvider" app/
+# Find old auth provider imports
+find app -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | xargs grep -l "useCurrentAccount\|useSession\|MultiAuth\|DevelopmentAuth\|SessionStore\|SessionProvider"
+
+# Find old auth import statements
+find app -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | xargs grep -l "from.*CurrentAccount\|from.*MultiAuth\|from.*SessionStore\|from.*SessionProvider"
+
+# Find old auth utility imports
+grep -r "from.*currentUser\|import.*currentUser" app/
+grep -r "from.*auth.*simple\|import.*simpleAuth" app/
 ```
 
-#### 2. Search for Old Patterns
+#### 2. Search for Old Auth Usage Patterns
 ```bash
-# Find old auth patterns
-grep -r "session\?\." app/ | grep -v "useAuth"
-grep -r "currentAccount\|switchAccount" app/
-grep -r "accounts\[\]" app/
+# Find session object usage (excluding useAuth)
+find app -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | xargs grep -l "session\?\." | grep -v "useAuth"
+
+# Find currentAccount references
+find app -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | xargs grep -l "currentAccount\|switchAccount\|accounts\[\]"
+
+# Find old auth state patterns
+grep -r "hasCurrentAccount\|currentAccountUid" app/
+grep -r "sessionData\|sessionUser" app/
+```
+
+#### 3. Search for Old Auth Files
+```bash
+# Find old auth provider files
+find app -name "*Auth*" -type f | grep -v AuthProvider.tsx
+find app -name "*Session*" -type f
+find app -name "*Account*" -type f
+
+# Find old auth utility files
+find app -name "*currentUser*" -type f
+find app -name "*session*" -type f | grep -v "route.ts"
+```
+
+#### 4. Search for Complex Auth Logic
+```bash
+# Find complex authentication checks
+grep -r "isAuthenticated.*||" app/
+grep -r "auth\.currentUser.*||" app/
+grep -r "Cookies\.get.*authenticated" app/
+
+# Find multiple auth source checking
+grep -r "firebaseAuth.*sessionUser" app/
+grep -r "authenticatedCookie.*wewriteAuth" app/
 ```
 
 #### 3. Search for Complex Auth Logic
@@ -208,6 +242,49 @@ const userEmail = user?.email;
 - [ ] Update development guides
 - [ ] Update deployment guides
 
+### 5. Search for Environment-Aware API Issues
+```bash
+# Find direct Firebase calls (should use API endpoints)
+grep -r "firebase/firestore" app/components/
+grep -r "firebase/auth" app/components/ | grep -v "app/firebase/"
+
+# Find hardcoded collection names (should use getCollectionName)
+grep -r "collection('users')" app/
+grep -r "collection('pages')" app/
+grep -r "collection('subscriptions')" app/
+
+# Find non-environment-aware API calls
+grep -r "/api/" app/ | grep -v "getEnvironmentType\|environmentConfig"
+```
+
+## Specific Files to Audit
+
+### 🎯 High Priority Files (Likely to contain old auth)
+
+1. **app/utils/currentUser.ts** - Complex multi-source auth checking
+2. **app/api/auth-helper.ts** - Legacy cookie support
+3. **app/components/auth/SessionAuthInitializer.tsx** - Duplicate functionality
+4. **app/components/auth/ApiSessionInitializer.tsx** - Duplicate functionality
+5. **app/utils/pagePermissions.ts** - May use old auth patterns
+6. **app/components/layout/Header.tsx** - Auth state display
+7. **app/page.tsx** - Auth state checking
+
+### 🔍 Files Found with Old Patterns
+```bash
+# These files were found to contain old auth patterns:
+app/utils/analytics-user-tracking.ts
+app/utils/linkModalUtils.ts
+app/components/ui/LinkSuggestionSettings.tsx
+app/components/payments/BankAccountManager.tsx
+app/components/admin/UserManagement.tsx
+app/settings/spend-tokens/page.tsx
+app/settings/subscription/checkout/page.tsx
+app/user/[id]/page.tsx
+app/components/payments/PledgeBar.tsx
+app/new/page.tsx
+app/[id]/page.tsx
+```
+
 ## Common Gotchas
 
 ### 🚨 Watch Out For These Issues
@@ -215,6 +292,18 @@ const userEmail = user?.email;
 1. **Session vs User Confusion**
    - Old: `session?.uid`
    - New: `user?.uid`
+
+2. **CurrentAccount References**
+   - Old: `currentAccount?.uid`, `hasCurrentAccount`
+   - New: `user?.uid`, `isAuthenticated`
+
+3. **Complex Auth Checking**
+   - Old: `firebaseAuth || sessionUser || authenticatedCookie`
+   - New: `isAuthenticated` from useAuth()
+
+4. **Multiple Cookie Sources**
+   - Old: Checking multiple cookie sources
+   - New: Single session cookie managed by AuthProvider
 
 2. **Loading State Handling**
    - Old: Multiple loading states

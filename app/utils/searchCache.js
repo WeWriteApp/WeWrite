@@ -12,34 +12,59 @@
 import { UNIFIED_CACHE_TTL } from './unifiedCache.js';
 
 class SearchCache {
-  constructor(maxSize = 500, ttlMs = UNIFIED_CACHE_TTL.SEARCH_DATA) { // Use unified search cache TTL
+  constructor(maxSize = 1000, ttlMs = UNIFIED_CACHE_TTL.SEARCH_DATA) { // OPTIMIZATION: Increased cache size
     this.cache = new Map();
     this.maxSize = maxSize;
     this.ttlMs = ttlMs;
     this.stats = {
       hits: 0,
       misses: 0,
-      evictions: 0
+      evictions: 0,
+      totalRequests: 0,
+      hitRate: 0
+    };
+
+    // OPTIMIZATION: Add performance tracking
+    this.performanceStats = {
+      averageHitTime: 0,
+      averageMissTime: 0,
+      totalHitTime: 0,
+      totalMissTime: 0
     };
   }
 
   /**
-   * Generate cache key from search parameters
+   * OPTIMIZATION: Enhanced cache key generation with better hashing
    */
   generateKey(userId, searchTerm, options = {}) {
-    const { titleOnly = false, maxResults = 50, filterByUserId = null } = options;
-    return `${userId || 'anon'}:${searchTerm}:${titleOnly}:${maxResults}:${filterByUserId || ''}`;
+    const { titleOnly = false, maxResults = 50, filterByUserId = null, context = 'main' } = options;
+    const keyData = {
+      userId: userId || 'anon',
+      searchTerm: searchTerm.toLowerCase().trim(), // Normalize for better cache hits
+      titleOnly,
+      maxResults,
+      filterByUserId: filterByUserId || '',
+      context
+    };
+    return JSON.stringify(keyData);
   }
 
   /**
-   * Get cached search results
+   * OPTIMIZATION: Enhanced cache retrieval with performance tracking
    */
   get(userId, searchTerm, options = {}) {
+    const startTime = Date.now();
     const key = this.generateKey(userId, searchTerm, options);
     const cached = this.cache.get(key);
 
+    this.stats.totalRequests++;
+
     if (!cached) {
       this.stats.misses++;
+      const missTime = Date.now() - startTime;
+      this.performanceStats.totalMissTime += missTime;
+      this.performanceStats.averageMissTime = this.performanceStats.totalMissTime / this.stats.misses;
+      this._updateHitRate();
       return null;
     }
 
@@ -47,6 +72,10 @@ class SearchCache {
     if (Date.now() > cached.expiresAt) {
       this.cache.delete(key);
       this.stats.misses++;
+      const missTime = Date.now() - startTime;
+      this.performanceStats.totalMissTime += missTime;
+      this.performanceStats.averageMissTime = this.performanceStats.totalMissTime / this.stats.misses;
+      this._updateHitRate();
       return null;
     }
 
@@ -55,8 +84,22 @@ class SearchCache {
     this.cache.set(key, cached);
     this.stats.hits++;
 
-    console.log(`🎯 Search cache HIT for "${searchTerm}" (${this.stats.hits}/${this.stats.hits + this.stats.misses} hit rate)`);
+    const hitTime = Date.now() - startTime;
+    this.performanceStats.totalHitTime += hitTime;
+    this.performanceStats.averageHitTime = this.performanceStats.totalHitTime / this.stats.hits;
+    this._updateHitRate();
+
+    console.log(`🎯 Search cache HIT for "${searchTerm}" (${this.stats.hitRate}% hit rate, ${hitTime}ms)`);
     return cached.data;
+  }
+
+  /**
+   * OPTIMIZATION: Update hit rate calculation
+   */
+  _updateHitRate() {
+    this.stats.hitRate = this.stats.totalRequests > 0
+      ? Math.round((this.stats.hits / this.stats.totalRequests) * 100)
+      : 0;
   }
 
   /**

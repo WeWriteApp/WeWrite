@@ -125,7 +125,7 @@ export default function Header() {
   React.useEffect(() => {
     console.log('🎯 Header: Subscription effect triggered', {
       user: !!user,
-      currentAccountUid: user?.uid
+      userId: user?.uid
     });
 
     if (!user) {

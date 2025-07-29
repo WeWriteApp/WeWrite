@@ -48,8 +48,8 @@ export default function HomePage() {
     mounted,
     isLoading,
     isAuthenticated,
-    hasCurrentAccount: !!user,
-    currentAccountUid: user?.uid,
+    hasUser: !!user,
+    userId: user?.uid,
     authRedirectPending
   });
 
@@ -58,8 +58,8 @@ export default function HomePage() {
       mounted,
       isLoading,
       isAuthenticated,
-      hasCurrentAccount: !!user,
-      currentAccountUid: user?.uid,
+      hasUser: !!user,
+      userId: user?.uid,
       authRedirectPending
     });
   }, [mounted, isLoading, isAuthenticated, user, authRedirectPending]);

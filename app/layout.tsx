@@ -9,7 +9,7 @@ import Script from 'next/script'
 import ErrorBoundary from "./components/utils/ErrorBoundary"
 import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 
-import ApiSessionInitializer from "./components/auth/ApiSessionInitializer"
+import SessionAuthInitializer from "./components/auth/SessionAuthInitializer"
 // SessionZustandBridge removed - functionality integrated into hybrid session system
 import { DataProvider } from "./providers/DataProvider"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
@@ -60,11 +60,11 @@ export default function RootLayout({
                                 <RecentPagesProvider>
                                   <TokenIncrementProvider>
                                     <TokenBalanceProvider>
-                                      <ApiSessionInitializer>
+                                      <SessionAuthInitializer>
                                     <GlobalNavigation>
                                       {children}
                                     </GlobalNavigation>
-                                      </ApiSessionInitializer>
+                                      </SessionAuthInitializer>
                                     </TokenBalanceProvider>
                                   </TokenIncrementProvider>
                                 </RecentPagesProvider>

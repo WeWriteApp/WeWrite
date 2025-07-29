@@ -78,6 +78,15 @@ export function UsernameBadge({
               setFreshUsername(newUsername);
               // Update cache
               usernameCache.set(userId, { username: newUsername, timestamp: Date.now() });
+
+              // ENHANCEMENT: Trigger page refresh if this is a significant username change
+              if (username === 'Missing username' || username === 'Anonymous') {
+                console.log('🔄 Username recovered for user:', userId, 'from', username, 'to', newUsername);
+                // Dispatch event to refresh other components
+                window.dispatchEvent(new CustomEvent('userDataUpdated', {
+                  detail: { userId, oldUsername: username, newUsername }
+                }));
+              }
             }
           }
         } catch (error) {
@@ -97,10 +106,22 @@ export function UsernameBadge({
             setFreshUsername(newUsername);
             // Update cache
             usernameCache.set(userId, { username: newUsername, timestamp: Date.now() });
+
+            console.log('✅ Fresh username fetched for user:', userId, newUsername);
+          } else {
+            console.warn('No username found in API response for user:', userId);
+            // FALLBACK: Try to generate a reasonable username
+            setFreshUsername(`user_${userId.substring(0, 8)}`);
           }
+        } else {
+          console.error('Failed to fetch username, status:', response.status);
+          // FALLBACK: Use a generated username
+          setFreshUsername(`user_${userId.substring(0, 8)}`);
         }
       } catch (error) {
         console.error('Failed to fetch fresh username:', error);
+        // FALLBACK: Use a generated username
+        setFreshUsername(`user_${userId.substring(0, 8)}`);
       } finally {
         setIsLoadingUsername(false);
       }

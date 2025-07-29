@@ -9,10 +9,13 @@ interface SessionAuthInitializerProps {
 }
 
 /**
- * SessionAuthInitializer - Token transfer component
+ * SessionAuthInitializer - Simplified token transfer component
  *
  * This component handles token transfers when users sign in.
  * The AuthProvider handles all session management.
+ *
+ * This replaces both SessionAuthInitializer and ApiSessionInitializer
+ * which were doing the same thing.
  */
 function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
   const [isClient, setIsClient] = useState(false);

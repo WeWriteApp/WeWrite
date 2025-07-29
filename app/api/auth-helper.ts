@@ -97,7 +97,7 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
 
   const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development';
 
-  // Try to get from simpleUserSession cookie (auth system)
+  // SIMPLIFIED: Only use the new auth system cookie
   const simpleSessionUserId = await trySimpleUserSessionCookie(request);
   if (simpleSessionUserId) {
     if (shouldLogAuthDebug) {
@@ -106,25 +106,7 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
     return simpleSessionUserId;
   }
 
-  // Fallback: Try legacy session cookie (Firebase session) for backward compatibility
-  const userId = await trySessionCookie(request);
-  if (userId) {
-    if (shouldLogAuthDebug) {
-      console.log('[AUTH DEBUG] Using userId from legacy session cookie:', userId);
-    }
-    return userId;
-  }
-
-  // Fallback: Try legacy userSession cookie for backward compatibility
-  const userSessionUserId = await tryUserSessionCookie(request);
-  if (userSessionUserId) {
-    if (shouldLogAuthDebug) {
-      console.log('[AUTH DEBUG] Using userId from legacy userSession cookie:', userSessionUserId);
-    }
-    return userSessionUserId;
-  }
-
-  // Try to get from Authorization header (Bearer token)
+  // Fallback: Try Authorization header (Bearer token) for API calls
   const authHeaderUserId = await tryAuthorizationHeader(request);
   if (authHeaderUserId) {
     if (shouldLogAuthDebug) {

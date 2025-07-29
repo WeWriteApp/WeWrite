@@ -11,8 +11,8 @@ import { saveSearchQuery } from "../utils/savedSearches";
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 
 // Import the new separated components
-import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
-import PerformanceMonitor from '../components/utils/PerformanceMonitor';
+import SearchResultsDisplay from '../components/search/SearchResultsDisplay.js';
+import PerformanceMonitor from '../components/utils/PerformanceMonitor.js';
 
 // TypeScript interfaces
 interface IsolatedSearchInputProps {

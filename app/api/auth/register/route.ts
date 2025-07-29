@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface RegisterRequest {
   email: string;
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if username is already taken
-    const usernameQuery = await db.collection('users')
+    const usernameQuery = await db.collection(getCollectionName('users'))
       .where('username', '==', username)
       .limit(1)
       .get();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
 // Search context types
 export const SEARCH_CONTEXTS = {
@@ -61,6 +61,7 @@ export interface UseUnifiedSearchReturn {
   isLoading: boolean;
   error: string | null;
   performSearch: (searchTerm: string, options?: SearchOptions) => Promise<void>;
+  debouncedSearch: (searchTerm: string, options?: SearchOptions) => void; // OPTIMIZATION: Debounced search
   clearSearch: () => void;
   searchStats: {
     searchTimeMs?: number;
@@ -104,9 +105,12 @@ export const useUnifiedSearch = (
   const lastSearchRef = useRef<string>('');
   const abortControllerRef = useRef<AbortController | null>(null);
   const searchCacheRef = useRef<Map<string, { results: SearchResults; timestamp: number }>>(new Map());
-  
-  // Cache TTL (5 minutes)
-  const CACHE_TTL = 5 * 60 * 1000;
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const requestCountRef = useRef<number>(0);
+
+  // OPTIMIZATION: Improved cache TTL and debounce settings
+  const CACHE_TTL = 3 * 60 * 1000; // Reduced to 3 minutes for fresher results
+  const DEBOUNCE_DELAY = 200; // Optimized for better responsiveness
 
   // Stable references
   const stableUserId = useRef<string | null>(userId);
@@ -296,8 +300,37 @@ export const useUnifiedSearch = (
     }
   }, [generateCacheKey, getCachedResults, setCachedResults, results.pages.length]);
 
+  // OPTIMIZATION: Debounced search function to prevent excessive API calls
+  const debouncedSearch = useCallback((searchTerm: string, options: SearchOptions = {}) => {
+    // Clear existing debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Cancel any ongoing search
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Set loading state immediately for better UX
+    if (searchTerm.trim()) {
+      setIsLoading(true);
+      setCurrentQuery(searchTerm.trim());
+    }
+
+    // Debounce the actual search
+    debounceTimeoutRef.current = setTimeout(() => {
+      performSearch(searchTerm, options);
+    }, DEBOUNCE_DELAY);
+  }, [performSearch, DEBOUNCE_DELAY]);
+
   // Clear search function
   const clearSearch = useCallback((): void => {
+    // Clear debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -309,10 +342,15 @@ export const useUnifiedSearch = (
   }, []);
 
   // Cleanup on unmount
-  const cleanup = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   // Memoized return value to prevent unnecessary re-renders
@@ -322,7 +360,8 @@ export const useUnifiedSearch = (
     isLoading,
     error,
     performSearch,
+    debouncedSearch, // OPTIMIZATION: Expose debounced search
     clearSearch,
     searchStats
-  }), [currentQuery, results, isLoading, error, performSearch, clearSearch, searchStats]);
+  }), [currentQuery, results, isLoading, error, performSearch, debouncedSearch, clearSearch, searchStats]);
 };
