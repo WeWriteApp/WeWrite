@@ -50,12 +50,19 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
   // Store initial zoom in a ref so it doesn't cause re-renders
   const initialZoomRef = useRef(initialZoom);
+  // Track if map has been initialized to prevent reinitialization
+  const mapInitializedRef = useRef(false);
 
   // Initialize map
   useEffect(() => {
     const initializeMap = async () => {
       try {
         if (typeof window === 'undefined') {
+          return;
+        }
+
+        // Prevent reinitialization if map already exists
+        if (mapInitializedRef.current || mapInstanceRef.current) {
           return;
         }
 
@@ -71,7 +78,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
         });
 
-        if (!mapRef.current || mapInstanceRef.current) {
+        if (!mapRef.current) {
           return;
         }
         // Create map instance
@@ -108,10 +115,10 @@ const MapPicker: React.FC<MapPickerProps> = ({
           centerLng = location.lng;
           zoom = initialZoomRef.current || location.zoom || 15;
         } else {
-          // Default to North America view
-          centerLat = 45.0;
-          centerLng = -100.0;
-          zoom = initialZoomRef.current || 2;
+          // Default to world view - much more zoomed out
+          centerLat = 20.0;  // Slightly north to show more populated areas
+          centerLng = 0.0;   // Prime meridian for world center
+          zoom = initialZoomRef.current || 1; // Much more zoomed out (1 instead of 2)
         }
 
         map.setView([centerLat, centerLng], zoom);
@@ -189,6 +196,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         }
 
         mapInstanceRef.current = map;
+        mapInitializedRef.current = true; // Mark as initialized
         setIsLoading(false);
 
       } catch (err: any) {
@@ -205,9 +213,10 @@ const MapPicker: React.FC<MapPickerProps> = ({
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         markerRef.current = null;
+        mapInitializedRef.current = false; // Reset initialization flag
       }
     };
-  }, [disableZoom, allowPanning, resolvedTheme, readOnly, onChange, onZoomChange]); // Removed 'location' and 'initialZoom' to prevent map reinitialization
+  }, []); // Empty dependency array - only initialize once, never reinitialize
 
   // Handle location changes - only update marker, not map view
   useEffect(() => {

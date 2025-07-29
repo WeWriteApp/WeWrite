@@ -42,7 +42,7 @@ export default function LocationPickerPage({
       console.log('🗺️ LocationPickerPage: Setting zoom level:', zoomLevel);
       setSavedZoom(zoomLevel);
     } else {
-      setSavedZoom(2); // Zoomed out to see continents, but not maximum zoom out
+      setSavedZoom(1); // Much more zoomed out to see the whole world
     }
   }, [initialLocation]);
 
