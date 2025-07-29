@@ -3,7 +3,7 @@ import React, { useState, useRef, useContext } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon, Network, Calendar } from "lucide-react";
+import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon, Network, Calendar, MapPin } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useAuth } from '../../providers/AuthProvider';
 import Link from "next/link";
@@ -21,6 +21,7 @@ import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch'
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 import ExternalLinksTab from './ExternalLinksTab';
 import UserGraphTab from './UserGraphTab';
+import UserMapTab from './UserMapTab';
 import TimelineSection from '../timeline/TimelineSection';
 import {
   DropdownMenu,
@@ -105,7 +106,7 @@ export default function UserProfileTabs({ profile }) {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "recent-edits", "timeline", "graph", "external-links"];
+      const basicValidTabs = ["bio", "pages", "recent-edits", "timeline", "graph", "map", "external-links"];
       if (hash && basicValidTabs.includes(hash)) {
         return hash;
       }
@@ -236,6 +237,9 @@ export default function UserProfileTabs({ profile }) {
 
     // Add graph tab for all users
     tabs.push("graph");
+
+    // Add map tab for all users
+    tabs.push("map");
 
     // Add external links tab for all users
     tabs.push("external-links");
@@ -468,6 +472,16 @@ export default function UserProfileTabs({ profile }) {
                 <span>Graph</span>
               </TabsTrigger>
 
+              {/* Map tab */}
+              <TabsTrigger
+                value="map"
+                data-value="map"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <MapPin className="h-4 w-4" />
+                <span>Map</span>
+              </TabsTrigger>
+
               {/* External Links tab */}
               <TabsTrigger
                 value="external-links"
@@ -622,6 +636,21 @@ export default function UserProfileTabs({ profile }) {
             }`}
           >
             <UserGraphTab
+              userId={profile?.uid}
+              username={profile?.username || 'this user'}
+            />
+          </TabsContent>
+
+          {/* Map tab content */}
+          <TabsContent
+            value="map"
+            className={`mt-0 transition-all duration-300 ${
+              activeTab === "map"
+                ? "block"
+                : "hidden"
+            }`}
+          >
+            <UserMapTab
               userId={profile?.uid}
               username={profile?.username || 'this user'}
             />
