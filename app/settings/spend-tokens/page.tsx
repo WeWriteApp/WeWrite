@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
-import { TokenPieChart } from '../../components/ui/TokenPieChart';
+
 
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
@@ -119,14 +119,26 @@ export default function SpendTokensPage() {
         console.log('🎯 Spend Tokens: Token balance response not ok', tokenResponse.status);
       }
 
-      // Fetch token allocations for accurate calculations
-      const allocationsResponse = await fetch('/api/tokens/allocations');
-      if (allocationsResponse.ok) {
-        const allocationsData = await allocationsResponse.json();
-        console.log('🎯 Spend Tokens: Loaded allocations data', allocationsData);
+      // FIXED: Use the same token balance API as header and composition bars for consistency
+      // This ensures we get the most up-to-date token allocation data
+      const balanceResponse = await fetch('/api/tokens/balance');
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
+        console.log('🎯 Spend Tokens: Loaded balance data (same as header)', balanceData);
+
+        // Convert balance API response to allocations format for compatibility
+        const allocationsData = {
+          success: true,
+          allocations: balanceData.allocations || [],
+          summary: {
+            totalAllocations: balanceData.allocations?.length || 0,
+            totalTokensAllocated: balanceData.summary?.allocatedTokens || 0,
+            balance: balanceData.balance || balanceData.summary
+          }
+        };
         setAllocationData(allocationsData);
       } else {
-        console.log('🎯 Spend Tokens: Allocations response not ok', allocationsResponse.status);
+        console.log('🎯 Spend Tokens: Balance response not ok', balanceResponse.status);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -344,66 +356,7 @@ export default function SpendTokensPage() {
             );
           })()}
 
-          {/* Token Allocation Pie Chart Visualization */}
-          {(() => {
-            // Use live allocation data if available, otherwise fall back to initial data
-            const currentAllocationData = liveAllocationData || allocationData;
-            const actualAllocatedTokens = currentAllocationData?.summary?.totalTokensAllocated || 0;
-
-            // Create enhanced token balance with real-time allocation data
-            const enhancedTokenBalance = tokenBalance ? {
-              ...tokenBalance,
-              allocatedTokens: actualAllocatedTokens,
-              availableTokens: tokenBalance.totalTokens - actualAllocatedTokens
-            } : null;
-
-            // Determine which token balance to use for the pie chart
-            let pieChartTokenBalance = null;
-
-            if (!currentSubscription && simulatedTokenBalance) {
-              // For users without subscription, show simulated data
-              pieChartTokenBalance = {
-                totalTokens: 0, // No subscription = 0 tokens per month
-                allocatedTokens: simulatedTokenBalance.allocatedTokens,
-                availableTokens: 0 - simulatedTokenBalance.allocatedTokens, // Always negative
-              };
-            } else if (currentSubscription && enhancedTokenBalance) {
-              // For users with subscription
-              pieChartTokenBalance = enhancedTokenBalance;
-            } else if (enhancedTokenBalance) {
-              // Default case with token balance
-              pieChartTokenBalance = enhancedTokenBalance;
-            }
-
-            // Only show pie chart if we have token data to display
-            if (pieChartTokenBalance && (pieChartTokenBalance.totalTokens > 0 || pieChartTokenBalance.allocatedTokens > 0)) {
-              return (
-                <div className="flex justify-center mb-6">
-                  <div className="flex flex-col items-center space-y-3">
-                    <h3 className="text-lg font-semibold text-center">Token Allocation Overview</h3>
-                    <TokenPieChart
-                      allocatedTokens={pieChartTokenBalance.allocatedTokens}
-                      totalTokens={Math.max(pieChartTokenBalance.totalTokens, pieChartTokenBalance.allocatedTokens)}
-                      size={120}
-                      strokeWidth={8}
-                      className="hover:opacity-80 transition-opacity"
-                      showFraction={true}
-                    />
-                    <p className="text-sm text-muted-foreground text-center max-w-md">
-                      {pieChartTokenBalance.totalTokens === 0
-                        ? "You've allocated tokens but don't have an active subscription. Consider upgrading to fund your allocations."
-                        : pieChartTokenBalance.allocatedTokens > pieChartTokenBalance.totalTokens
-                        ? "You've allocated more tokens than your subscription provides. Consider upgrading your plan."
-                        : "Visual representation of your monthly token allocation to creators."
-                      }
-                    </p>
-                  </div>
-                </div>
-              );
-            }
-
-            return null;
-          })()}
+          {/* Removed redundant Token Allocation Pie Chart - composition chart in monthly token allocation card above provides the same information */}
 
           {/* Token Allocation Breakdown - Always show so users can see their allocations */}
           <TokenAllocationBreakdown
