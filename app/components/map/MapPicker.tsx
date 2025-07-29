@@ -363,7 +363,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
       {/* Map container */}
       <div
         ref={mapRef}
-        className="absolute inset-0"
+        className="absolute inset-0 bg-background"
         style={{ zIndex: 1 }}
       />
 

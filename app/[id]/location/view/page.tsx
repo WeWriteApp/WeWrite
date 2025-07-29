@@ -137,7 +137,7 @@ function LocationViewContent() {
           height="100%"
           readOnly={true} // Don't allow pin placement in view mode
           showControls={false} // Hide zoom controls to prevent overlap with header
-          initialZoom={location?.zoom || 15} // Use saved zoom level
+          initialZoom={location?.zoom || 10} // Use saved zoom level, fallback to moderate zoom
           allowPanning={true} // Allow panning for exploration
         />
       </div>

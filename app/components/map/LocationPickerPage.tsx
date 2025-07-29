@@ -37,8 +37,8 @@ export default function LocationPickerPage({
       console.log('🗺️ LocationPickerPage: Setting initial location:', initialLocation);
       setCurrentLocation(initialLocation);
 
-      // Use saved zoom level if available, otherwise default to 15
-      const zoomLevel = initialLocation.zoom || 15;
+      // Use saved zoom level if available, otherwise default to moderate zoom
+      const zoomLevel = initialLocation.zoom || 10;
       console.log('🗺️ LocationPickerPage: Setting zoom level:', zoomLevel);
       setSavedZoom(zoomLevel);
     } else {

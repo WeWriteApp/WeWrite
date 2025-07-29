@@ -148,7 +148,7 @@ export default function LocationField({
               className="pointer-events-none"
               disableZoom={true} // Disable zooming in collapsed state
               allowPanning={false} // Disable panning in collapsed state
-              initialZoom={normalizedLocation.zoom || 15} // Use saved zoom level to match fullscreen view
+              initialZoom={normalizedLocation.zoom || 10} // Use saved zoom level to match fullscreen view
             />
             </div>
         )}
