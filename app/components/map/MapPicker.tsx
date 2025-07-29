@@ -192,7 +192,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         markerRef.current = null;
       }
     };
-  }, [location, initialZoom, disableZoom, allowPanning, resolvedTheme, readOnly, onChange, onZoomChange]);
+  }, [initialZoom, disableZoom, allowPanning, resolvedTheme, readOnly, onChange, onZoomChange]); // Removed 'location' to prevent map reinitialization on location changes
 
   // Handle location changes - only update marker, not map view
   useEffect(() => {
