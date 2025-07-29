@@ -97,15 +97,73 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Update the page with new custom date
-    const updateData = {
-      customDate: customDate || null, // Allow clearing the custom date
-      lastModified: new Date().toISOString()
-    };
+    // Create a version record for this custom date change
+    const now = new Date().toISOString();
 
-    await pageRef.update(updateData);
+    try {
+      // Get current user data for version record
+      const userRef = db.collection(getCollectionName('users')).doc(userId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      const username = userData?.username || 'Anonymous';
 
-    console.log(`API: Successfully updated custom date for page ${id}`);
+      // Create version data for custom date change
+      const versionData = {
+        content: pageData.content || '', // Keep existing content
+        title: pageData.title || 'Untitled',
+        createdAt: now,
+        userId: userId,
+        username: username,
+        previousVersionId: pageData.currentVersion || null,
+        groupId: pageData.groupId || null,
+
+        // Special metadata for custom date changes
+        changeType: 'customDate',
+        customDateChange: {
+          from: pageData.customDate || null,
+          to: customDate
+        },
+
+        // No content diff for custom date changes
+        diff: {
+          added: 0,
+          removed: 0,
+          hasChanges: true // Always true for custom date changes
+        }
+      };
+
+      // Create the version document
+      const versionRef = await pageRef.collection('versions').add(versionData);
+      console.log(`API: Created version record for custom date change: ${versionRef.id}`);
+
+      // Update the page with new custom date and version info
+      const updateData = {
+        customDate: customDate || null, // Allow clearing the custom date
+        lastModified: now,
+        currentVersion: versionRef.id,
+        // Add lastDiff for recent edits display
+        lastDiff: {
+          added: 0,
+          removed: 0,
+          hasChanges: true,
+          preview: customDate ? `Set date to ${customDate}` : 'Removed custom date'
+        }
+      };
+
+      await pageRef.update(updateData);
+      console.log(`API: Successfully updated custom date and created version for page ${id}`);
+
+    } catch (versionError) {
+      console.error('API: Error creating version record for custom date (non-fatal):', versionError);
+
+      // Fallback: just update the custom date without version record
+      const updateData = {
+        customDate: customDate || null,
+        lastModified: now
+      };
+      await pageRef.update(updateData);
+      console.log(`API: Updated custom date without version record (fallback) for page ${id}`);
+    }
 
     // Trigger cache invalidation to refresh daily notes and other components
     try {

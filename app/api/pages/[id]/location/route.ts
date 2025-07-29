@@ -118,15 +118,73 @@ export async function PATCH(
       }
     }
 
-    // Update the page with the new location
-    const updateData: any = {
-      location: location,
-      lastModified: new Date().toISOString()
-    };
+    // Create a version record for this location change
+    const now = new Date().toISOString();
 
-    await pageRef.update(updateData);
+    try {
+      // Get current user data for version record
+      const userRef = db.collection(getCollectionName('users')).doc(currentUserId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      const username = userData?.username || 'Anonymous';
 
-    console.log('🗺️ Location API: Successfully updated location for page:', pageId);
+      // Create version data for location change
+      const versionData = {
+        content: pageData.content || '', // Keep existing content
+        title: pageData.title || 'Untitled',
+        createdAt: now,
+        userId: currentUserId,
+        username: username,
+        previousVersionId: pageData.currentVersion || null,
+        groupId: pageData.groupId || null,
+
+        // Special metadata for location changes
+        changeType: 'location',
+        locationChange: {
+          from: pageData.location || null,
+          to: location
+        },
+
+        // No content diff for location changes
+        diff: {
+          added: 0,
+          removed: 0,
+          hasChanges: true // Always true for location changes
+        }
+      };
+
+      // Create the version document
+      const versionRef = await pageRef.collection('versions').add(versionData);
+      console.log('🗺️ Location API: Created version record:', versionRef.id);
+
+      // Update the page with the new location and version info
+      const updateData: any = {
+        location: location,
+        lastModified: now,
+        currentVersion: versionRef.id,
+        // Add lastDiff for recent edits display
+        lastDiff: {
+          added: 0,
+          removed: 0,
+          hasChanges: true,
+          preview: location ? 'Added location' : 'Removed location'
+        }
+      };
+
+      await pageRef.update(updateData);
+      console.log('🗺️ Location API: Successfully updated location and created version for page:', pageId);
+
+    } catch (versionError) {
+      console.error('🗺️ Location API: Error creating version record (non-fatal):', versionError);
+
+      // Fallback: just update the location without version record
+      const updateData: any = {
+        location: location,
+        lastModified: now
+      };
+      await pageRef.update(updateData);
+      console.log('🗺️ Location API: Updated location without version record (fallback)');
+    }
 
     return NextResponse.json({
       success: true,
