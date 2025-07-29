@@ -28,6 +28,10 @@ export function TokenPieChart({
   // Check if user is completely out of tokens (same logic as pledge bar)
   const isOutOfTokens = availableTokens <= 0 && totalTokens > 0;
 
+  // ENHANCEMENT: Add warning state for high allocation (same as RemainingTokensCounter - 95% threshold)
+  const allocationPercentage = totalTokens > 0 ? (allocatedTokens / totalTokens) * 100 : 0;
+  const isNearlyFull = allocationPercentage >= 95 && totalTokens > 0;
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -69,8 +73,8 @@ export function TokenPieChart({
   const singleStrokeDasharray = circumference;
   const singleStrokeDashoffset = circumference - (singlePercentage / 100) * circumference;
 
-  // Determine colors and title text
-  const progressColor = (isOverspent || isOutOfTokens) ? 'text-orange-500' : 'text-primary';
+  // Determine colors and title text (orange for overspent, out of tokens, or nearly full)
+  const progressColor = (isOverspent || isOutOfTokens || isNearlyFull) ? 'text-orange-500' : 'text-primary';
   const titleText = isOverspent
     ? `${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens (${unfundedTokens} tokens unfunded)`
     : `${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens`;

@@ -68,8 +68,16 @@ export default function SubscriptionPage() {
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-
-
+  // ENHANCEMENT: Check for query parameter to auto-open tier selector (from "Buy more tokens" button)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('showTierSelector') === 'true') {
+      setShowInlineTierSelector(true);
+      // Clean up URL without causing a page reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   // Debug current state
   console.log('[SubscriptionPage] Component rendering...', {

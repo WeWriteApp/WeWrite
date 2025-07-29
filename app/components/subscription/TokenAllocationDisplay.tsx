@@ -41,6 +41,10 @@ export default function TokenAllocationDisplay({
   // Check for overspending (or no subscription at all)
   const isOverspent = availableTokens < 0 || hasNoSubscription;
 
+  // ENHANCEMENT: Add warning state for high allocation (same as homepage pie chart - 95% threshold)
+  const allocationPercentage = totalTokens > 0 ? (allocatedTokens / totalTokens) * 100 : 0;
+  const isNearlyFull = allocationPercentage >= 95 && totalTokens > 0 && !hasNoSubscription;
+
   // Calculate funded vs unfunded tokens
   let unfundedTokens: number;
   let fundedTokens: number;
@@ -56,7 +60,6 @@ export default function TokenAllocationDisplay({
   }
 
   // Calculate percentages for progress bar
-  let allocationPercentage: number;
   let fundedPercentage: number;
   let unfundedPercentage: number;
 
@@ -182,10 +185,10 @@ export default function TokenAllocationDisplay({
           {/* Custom progress bar with funded/unfunded split */}
           <div className="w-full h-3 bg-muted/30 rounded-full overflow-hidden">
             <div className="flex h-full gap-0.5">
-              {/* Funded tokens (solid blue with rounded caps) */}
+              {/* Funded tokens (blue normally, orange when nearly full - same as homepage pie chart) */}
               {fundedPercentage > 0 && (
                 <div
-                  className="bg-blue-600 transition-all duration-300 rounded-full"
+                  className={`${isNearlyFull ? 'bg-orange-500' : 'bg-blue-600'} transition-all duration-300 rounded-full`}
                   style={{ width: `${fundedPercentage}%` }}
                 />
               )}
@@ -205,7 +208,20 @@ export default function TokenAllocationDisplay({
           </div>
         </div>
 
-
+        {/* Buy More Tokens Button */}
+        <div className="pt-4 border-t border-border/20">
+          <Button
+            onClick={() => {
+              // Navigate to subscription page with slider opened (same as "change plan" button)
+              router.push('/settings/subscription?showTierSelector=true');
+            }}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
+            size="sm"
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Buy More Tokens
+          </Button>
+        </div>
 
       </CardContent>
     </Card>
