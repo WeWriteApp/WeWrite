@@ -48,35 +48,66 @@ export async function GET(request: NextRequest) {
     
     const searchResults: any[] = [];
     
-    // Strategy 1: Search by title prefix (most efficient in Firestore)
+    // Strategy 1: Search by title prefix with case variations (most efficient in Firestore)
     // Use simpler query to avoid composite index requirements
-    const titleQuery = db.collection(collectionName)
-      .orderBy('title')
-      .startAt(trimmedQuery)
-      .endAt(trimmedQuery + '\uf8ff')
-      .limit(limit * 2); // Get more to filter client-side
+    const searchQueries = [];
 
-    const titleSnapshot = await titleQuery.get();
+    // Create case variations for comprehensive search
+    const caseVariations = [
+      trimmedQuery,
+      trimmedQuery.toLowerCase(),
+      trimmedQuery.charAt(0).toUpperCase() + trimmedQuery.slice(1).toLowerCase(),
+      trimmedQuery.toUpperCase(),
+      trimmedQuery.split(' ').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ')
+    ];
 
-    titleSnapshot.forEach(doc => {
-      const pageData = doc.data();
+    // Remove duplicates
+    const uniqueVariations = [...new Set(caseVariations)];
 
-      // Skip deleted pages (filter client-side)
-      if (pageData.deleted === true) {
-        return;
-      }
+    // Create queries for each case variation
+    for (const variation of uniqueVariations) {
+      const titleQuery = db.collection(collectionName)
+        .orderBy('title')
+        .startAt(variation)
+        .endAt(variation + '\uf8ff')
+        .limit(Math.ceil(limit / uniqueVariations.length)); // Distribute limit across variations
+      searchQueries.push(titleQuery);
+    }
 
-      searchResults.push({
-        id: doc.id,
-        title: pageData.title,
-        username: pageData.username || 'Unknown',
-        userId: pageData.userId || '',
-        lastModified: pageData.lastModified,
-        isPublic: pageData.isPublic !== false,
-        matchType: 'title',
-        relevance: calculateTitleRelevance(pageData.title, trimmedQuery)
+    // Execute all case variation queries in parallel
+    const queryPromises = searchQueries.map(query => query.get());
+    const queryResults = await Promise.all(queryPromises);
+
+    // Process results from all queries
+    const processedIds = new Set();
+
+    for (const snapshot of queryResults) {
+      snapshot.forEach(doc => {
+        // Skip if already processed
+        if (processedIds.has(doc.id)) return;
+
+        const pageData = doc.data();
+
+        // Skip deleted pages (filter client-side)
+        if (pageData.deleted === true) {
+          return;
+        }
+
+        processedIds.add(doc.id);
+        searchResults.push({
+          id: doc.id,
+          title: pageData.title,
+          username: pageData.username || 'Unknown',
+          userId: pageData.userId || '',
+          lastModified: pageData.lastModified,
+          isPublic: pageData.isPublic !== false,
+          matchType: 'title',
+          relevance: calculateTitleRelevance(pageData.title, trimmedQuery)
+        });
       });
-    });
+    }
 
     // Strategy 2: If we need more results, do a broader search
     if (searchResults.length < limit) {
