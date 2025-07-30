@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Crosshair, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
+import { createTileLayer, getDefaultMapView, logMapError, testMapTileAccess } from '../../utils/mapConfig';
 
 // Leaflet imports - we'll import these dynamically to avoid SSR issues
 let L: any = null;
@@ -92,33 +93,23 @@ const MapPicker: React.FC<MapPickerProps> = ({
           dragging: allowPanning,
         });
 
-        // Add tile layer with theme support
+        // Add tile layer with theme support and error handling
         const isDarkMode = resolvedTheme === 'dark';
-        const tileUrl = isDarkMode
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-        L.tileLayer(tileUrl, {
-          attribution: '© OpenStreetMap contributors © CARTO',
-          maxZoom: 19,
-        }).addTo(map);
-
-        // Simple logic: use location if available, otherwise default view
-        const hasLocation = location && typeof location.lat === 'number' && typeof location.lng === 'number';
-
-        let centerLat, centerLng, zoom;
-
-        if (hasLocation) {
-          centerLat = location.lat;
-          centerLng = location.lng;
-          zoom = initialZoomRef.current || location.zoom || 15;
-        } else {
-          centerLat = 0.0;
-          centerLng = 0.0;
-          zoom = initialZoomRef.current || 1;
+        // Test tile accessibility first
+        const tilesAccessible = await testMapTileAccess(isDarkMode);
+        if (!tilesAccessible) {
+          console.warn('Map tiles may not be accessible, but proceeding anyway');
         }
 
-        map.setView([centerLat, centerLng], zoom);
+        const tileLayer = createTileLayer(L, isDarkMode);
+        tileLayer.addTo(map);
+
+        // Use centralized map view logic
+        const mapView = getDefaultMapView(location);
+        const zoom = initialZoomRef.current || mapView.zoom;
+
+        map.setView(mapView.center, zoom);
 
         // Add marker if location exists
         if (hasLocation) {
@@ -197,7 +188,12 @@ const MapPicker: React.FC<MapPickerProps> = ({
         setIsLoading(false);
 
       } catch (err: any) {
-        console.error('Error initializing map:', err);
+        logMapError('MapPicker initialization', err, {
+          hasLocation: !!location,
+          theme: resolvedTheme,
+          readOnly,
+          height
+        });
         setError('Failed to initialize map. Please try refreshing the page.');
         setIsLoading(false);
       }
