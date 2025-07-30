@@ -28,9 +28,41 @@ export async function GET(request: NextRequest) {
       // Get pending allocations where this user is the recipient
       const recipientData = await PendingTokenAllocationService.getRecipientPendingAllocations(userId);
 
+      // Enrich allocations with username data
+      const enrichedAllocations = await Promise.all(
+        recipientData.allocations.map(async (allocation) => {
+          try {
+            // Get user document to fetch username
+            const userDoc = await getDoc(doc(db, getCollectionName('users'), allocation.userId));
+            const userData = userDoc.exists() ? userDoc.data() : null;
+
+            return {
+              ...allocation,
+              fromUserId: allocation.userId,
+              fromUsername: userData?.username || userData?.displayName || allocation.userId,
+              // Map fields to match RecentAllocationsCard expectations
+              resourceTitle: allocation.resourceId, // We'll need to fetch actual titles later if needed
+              usdValue: allocation.tokens * 0.1 // Convert tokens to USD
+            };
+          } catch (error) {
+            console.error('Error enriching allocation with user data:', error);
+            return {
+              ...allocation,
+              fromUserId: allocation.userId,
+              fromUsername: allocation.userId,
+              resourceTitle: allocation.resourceId,
+              usdValue: allocation.tokens * 0.1
+            };
+          }
+        })
+      );
+
       return NextResponse.json({
         success: true,
-        data: recipientData
+        data: {
+          ...recipientData,
+          allocations: enrichedAllocations
+        }
       });
     } else {
       // Default: Get allocations where this user is the allocator
