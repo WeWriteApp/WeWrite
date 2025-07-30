@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Loader2, ExternalLink } from 'lucide-react';
+import { MapPin, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
@@ -38,154 +38,323 @@ interface MultiLocationMapProps {
 let L: any = null;
 
 /**
- * MultiLocationMap Component
+ * SimpleMap Component
  *
- * A map component that displays multiple markers for pages with locations.
- * Uses Leaflet to show all page locations on a single map.
+ * A simplified map component for testing
  */
-function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMapProps) {
+function SimpleMap({ pages }: { pages: any[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState('initializing');
   const { resolvedTheme } = useTheme();
 
-  // Initialize map once
   useEffect(() => {
-    async function initializeMap() {
+    let mounted = true;
+
+    async function initMap() {
       try {
-        if (typeof window === 'undefined') return;
+        setStatus('loading leaflet');
 
-        // Dynamically import Leaflet
-        if (!L) {
-          const leaflet = await import('leaflet');
-          L = leaflet.default;
+        // Dynamic import
+        const leaflet = await import('leaflet');
+        await import('leaflet/dist/leaflet.css');
 
-          // Import CSS
-          await import('leaflet/dist/leaflet.css');
+        if (!mounted) return;
 
-          // Fix default markers
-          delete (L.Icon.Default.prototype as any)._getIconUrl;
-          L.Icon.Default.mergeOptions({
-            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-          });
-        }
+        setStatus('creating map');
 
-        if (!mapRef.current || mapInstanceRef.current) return;
+        // Fix default markers
+        delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
+        leaflet.default.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
 
-        // Create map with default view first
-        const defaultView = getDefaultMapView();
-        const map = L.map(mapRef.current, {
-          zoomControl: true,
-          scrollWheelZoom: true,
-          doubleClickZoom: true,
-          touchZoom: true
-        }).setView(defaultView.center, defaultView.zoom);
+        if (!mapRef.current || !mounted) return;
 
-        // Add tile layer with theme support and error handling
+        const map = leaflet.default.map(mapRef.current, {
+          attributionControl: false
+        }).setView([40.7128, -74.0060], 2);
+
+        // Use centralized tile layer configuration for consistency
         const isDarkMode = resolvedTheme === 'dark';
-
-        const tileLayer = createTileLayer(L, isDarkMode);
+        const tileLayer = createTileLayer(leaflet.default, isDarkMode);
         tileLayer.addTo(map);
 
-        mapInstanceRef.current = map;
-        console.log('Map initialized successfully');
-        setIsLoading(false);
-      } catch (err) {
-        logMapError('MultiLocationMap initialization', err, {
-          pagesCount: pages.length,
-          theme: resolvedTheme
+        // Add markers
+        pages.forEach(page => {
+          if (page.location?.lat && page.location?.lng) {
+            leaflet.default.marker([page.location.lat, page.location.lng])
+              .bindPopup(page.title)
+              .addTo(map);
+          }
         });
-        setError('Failed to load map');
-        setIsLoading(false);
+
+        setStatus('ready');
+      } catch (err) {
+        console.error('Simple map error:', err);
+        setStatus(`error: ${err.message}`);
       }
     }
 
-    initializeMap();
+    initMap();
 
     return () => {
+      mounted = false;
+    };
+  }, [pages]);
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm text-muted-foreground">Status: {status}</div>
+      <div
+        ref={setMapContainer}
+        style={{ height: '200px', width: '100%' }}
+        className="border border-border rounded"
+      />
+    </div>
+  );
+}
+
+/**
+ * MultiLocationMap Component
+ *
+ * A simplified map component that displays multiple markers for pages with locations.
+ * Uses the same approach as SimpleMap but with more features.
+ */
+function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMapProps) {
+  const [mapContainer, setMapContainer] = useState<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const [status, setStatus] = useState('initializing');
+  const [error, setError] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function initMap() {
+      try {
+        if (!mapContainer || mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0) {
+          setTimeout(() => {
+            if (mounted) initMap();
+          }, 50);
+          return;
+        }
+
+        setStatus('loading leaflet');
+        console.log('🗺️ MultiLocationMap: Step 1 - Loading Leaflet...');
+
+        // Dynamic import with explicit error handling
+        let leaflet;
+        try {
+          console.log('🗺️ MultiLocationMap: About to import leaflet...');
+          leaflet = await import('leaflet');
+          console.log('🗺️ MultiLocationMap: Leaflet imported successfully:', !!leaflet);
+        } catch (importError) {
+          console.error('🗺️ MultiLocationMap: Failed to import leaflet:', importError);
+          setStatus('error: failed to load leaflet');
+          return;
+        }
+        console.log('🗺️ MultiLocationMap: Step 1.1 - Leaflet imported successfully');
+
+        await import('leaflet/dist/leaflet.css');
+        console.log('🗺️ MultiLocationMap: Step 1.2 - Leaflet CSS imported successfully');
+
+        if (!mounted) {
+          console.log('🗺️ MultiLocationMap: Component unmounted during import, aborting');
+          return;
+        }
+
+        setStatus('creating map');
+        console.log('🗺️ MultiLocationMap: Step 2 - Setting up Leaflet icons...');
+
+        // Fix default markers
+        delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
+        leaflet.default.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+        console.log('🗺️ MultiLocationMap: Step 2.1 - Icons configured successfully');
+
+        // Double-check the map container is still available and properly attached
+        if (!mapContainer) {
+          console.error('🗺️ MultiLocationMap: ERROR - Map container became unavailable');
+          setStatus('error: container lost');
+          return;
+        }
+
+        // Verify the DOM element is actually in the document
+        if (!document.contains(mapContainer)) {
+          console.error('🗺️ MultiLocationMap: ERROR - Map container not in document');
+          setStatus('error: container not in DOM');
+          return;
+        }
+
+        if (!mounted) {
+          console.log('🗺️ MultiLocationMap: Component unmounted before map creation, aborting');
+          return;
+        }
+
+        console.log('🗺️ MultiLocationMap: Step 3 - Creating map instance...');
+        console.log('🗺️ MultiLocationMap: Map container dimensions:', {
+          width: mapContainer.offsetWidth,
+          height: mapContainer.offsetHeight,
+          clientWidth: mapContainer.clientWidth,
+          clientHeight: mapContainer.clientHeight
+        });
+
+        // Create map with provided center and zoom
+        console.log('🗺️ MultiLocationMap: Creating map with center:', [center.lat, center.lng], 'zoom:', zoom);
+        const map = leaflet.default.map(mapContainer, {
+          attributionControl: false // Remove attribution control
+        }).setView([center.lat, center.lng], zoom);
+
+        // Add tile layer using centralized configuration for consistency
+        const isDarkMode = resolvedTheme === 'dark';
+        const tileLayer = createTileLayer(leaflet.default, isDarkMode);
+        tileLayer.addTo(map);
+
+        // Style zoom controls for dark theme compatibility
+        setTimeout(() => {
+          const zoomControls = mapContainer.querySelectorAll('.leaflet-control-zoom a');
+          zoomControls.forEach(control => {
+            if (isDarkMode) {
+              control.style.backgroundColor = 'hsl(var(--background))';
+              control.style.color = 'hsl(var(--foreground))';
+              control.style.borderColor = 'hsl(var(--border))';
+            }
+          });
+        }, 100);
+
+        // Add markers for pages
+        pages.forEach((page, index) => {
+          if (page.location?.lat && page.location?.lng) {
+            const marker = leaflet.default.marker([page.location.lat, page.location.lng])
+              .bindPopup(`
+                <div style="font-family: system-ui, -apple-system, sans-serif;">
+                  <div style="font-weight: 600; margin-bottom: 4px; color: ${isDarkMode ? '#fff' : '#000'};">
+                    ${page.title}
+                  </div>
+                  <div style="font-size: 12px; color: ${isDarkMode ? '#ccc' : '#666'}; margin-bottom: 8px;">
+                    ${page.location.lat.toFixed(4)}, ${page.location.lng.toFixed(4)}
+                  </div>
+                  <div style="font-size: 11px; color: ${isDarkMode ? '#999' : '#888'};">
+                    Click marker to view page
+                  </div>
+                </div>
+              `)
+              .on('click', () => {
+                onPageClick(page);
+              })
+              .addTo(map);
+          }
+        });
+
+        // Fit map to show all markers if there are multiple
+        if (pages.length > 1) {
+          const validPages = pages.filter(p => p.location?.lat && p.location?.lng);
+          if (validPages.length > 0) {
+            const group = new leaflet.default.featureGroup(
+              validPages.map(page =>
+                leaflet.default.marker([page.location!.lat, page.location!.lng])
+              )
+            );
+            map.fitBounds(group.getBounds().pad(0.1));
+          }
+        }
+
+        mapInstanceRef.current = map;
+        setStatus('ready');
+      } catch (err) {
+        console.error('🗺️ MultiLocationMap: === INITIALIZATION FAILED ===');
+        console.error('🗺️ MultiLocationMap: Error details:', {
+          message: err?.message || 'Unknown error',
+          stack: err?.stack,
+          name: err?.name,
+          cause: err?.cause,
+          mapContainerExists: !!mapContainer,
+          mapContainerInDOM: mapContainer ? document.contains(mapContainer) : false
+        });
+        console.error('🗺️ MultiLocationMap: Full error object:', err);
+        setStatus(`error: ${err?.message || 'Unknown error'}`);
+        // Don't set error state to avoid breaking the component completely
+        console.log('🗺️ MultiLocationMap: Component will continue to function despite map initialization failure');
+      }
+    }
+
+    console.log('🗺️ MultiLocationMap: useEffect triggered');
+    console.log('🗺️ MultiLocationMap: Checking prerequisites:', {
+      hasPages: pages.length > 0,
+      hasMapContainer: !!mapContainer
+    });
+
+    // Only initialize if we have pages and a map container
+    if (pages.length > 0 && mapContainer) {
+      console.log('🗺️ MultiLocationMap: Prerequisites met, calling initMap()');
+      // Add a small delay to ensure DOM is fully rendered after tab switch
+      setTimeout(() => {
+        if (mounted) {
+          initMap();
+        }
+      }, 100);
+    } else {
+      console.log('🗺️ MultiLocationMap: Prerequisites not met:', {
+        hasPages: pages.length > 0,
+        hasMapContainer: !!mapContainer
+      });
+    }
+
+    return () => {
+      console.log('🗺️ MultiLocationMap: Cleanup function called');
+      mounted = false;
       if (mapInstanceRef.current) {
+        console.log('🗺️ MultiLocationMap: Removing existing map instance');
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-  }, [resolvedTheme]); // Only depend on theme, not center/zoom
+  }, [pages, center.lat, center.lng, zoom, resolvedTheme, onPageClick, mapContainer]);
 
-  // Update map view when pages load
-  useEffect(() => {
-    if (!mapInstanceRef.current || pages.length === 0) return;
+  // Always render the map container, but show loading overlay when needed
+  const isLoading = status === 'initializing' || status === 'loading leaflet' || status === 'creating map';
 
-    // Update map view to fit all pages
-    mapInstanceRef.current.setView([center.lat, center.lng], zoom);
-  }, [center.lat, center.lng, zoom, pages.length]);
-
-  // Add markers for all pages
-  useEffect(() => {
-    if (!mapInstanceRef.current || !L || pages.length === 0) return;
-
-    // Clear existing markers
-    markersRef.current.forEach(marker => {
-      mapInstanceRef.current.removeLayer(marker);
-    });
-    markersRef.current = [];
-
-    // Add markers for each page
-    pages.forEach(page => {
-      const marker = L.marker([page.location.lat, page.location.lng])
-        .addTo(mapInstanceRef.current)
-        .bindPopup(`
-          <div style="font-family: system-ui, -apple-system, sans-serif;">
-            <div style="font-weight: 600; margin-bottom: 4px; color: ${resolvedTheme === 'dark' ? '#fff' : '#000'};">
-              ${page.title}
-            </div>
-            <div style="font-size: 12px; color: ${resolvedTheme === 'dark' ? '#ccc' : '#666'}; margin-bottom: 8px;">
-              ${page.location.lat.toFixed(4)}, ${page.location.lng.toFixed(4)}
-            </div>
-            <div style="font-size: 11px; color: ${resolvedTheme === 'dark' ? '#999' : '#888'};">
-              Click marker to view page
-            </div>
+  if (error || status.startsWith('error:')) {
+    return (
+      <div className="w-full h-96 flex items-center justify-center bg-muted/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div className="text-center p-6">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <div className="text-red-600 dark:text-red-400 font-medium mb-2">Failed to load map</div>
+          <div className="text-sm text-red-500 dark:text-red-500 mb-4">{error || status}</div>
+          <div className="text-xs text-muted-foreground">
+            {pages.length} pages with locations available
           </div>
-        `)
-        .on('click', () => {
-          onPageClick(page);
-        });
-
-      markersRef.current.push(marker);
-    });
-
-    // Fit map to show all markers if there are multiple
-    if (pages.length > 1) {
-      const group = new L.featureGroup(markersRef.current);
-      mapInstanceRef.current.fitBounds(group.getBounds().pad(0.1));
-    }
-  }, [pages, onPageClick, resolvedTheme]);
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-96 flex items-center justify-center bg-muted/20">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading map...</span>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="w-full h-96 flex items-center justify-center bg-muted/20">
-        <div className="text-center">
-          <div className="text-red-500 mb-2">Failed to load map</div>
-          <div className="text-sm text-muted-foreground">{error}</div>
+  return (
+    <div className="relative">
+      <div
+        ref={setMapContainer}
+        className="w-full"
+        style={{
+          height: '384px',
+          minHeight: '384px',
+          width: '100%'
+        }}
+      />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-lg">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading map... ({status})</span>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  return <div ref={mapRef} className="w-full h-96" />;
+      )}
+    </div>
+  );
 }
 
 /**
@@ -195,18 +364,12 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
  * Displays markers for each page and allows clicking to navigate to the page.
  */
 export default function UserMapTab({ userId, username }: UserMapTabProps) {
-  console.log('🗺️ UserMapTab component rendered with:', {
-    userId: userId,
-    userIdType: typeof userId,
-    userIdLength: userId?.length,
-    username: username,
-    usernameType: typeof username
-  });
 
   const [pages, setPages] = useState<PageWithLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPage, setSelectedPage] = useState<PageWithLocation | null>(null);
+
   const router = useRouter();
 
   // Fetch pages with location data for this user
@@ -230,44 +393,79 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
 
         const data = await response.json();
 
-        console.log('🗺️ API Response:', {
+        console.log('🗺️ UserMapTab: === API RESPONSE RECEIVED ===');
+        console.log('🗺️ UserMapTab: Response details:', {
           status: response.status,
           ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries()),
+          url: response.url
+        });
+        console.log('🗺️ UserMapTab: Response data:', {
           data: data,
           dataType: typeof data,
-          dataKeys: data ? Object.keys(data) : 'null'
-        }); // Debug log
+          dataKeys: data ? Object.keys(data) : 'null',
+          dataStringified: JSON.stringify(data, null, 2)
+        });
 
         // Handle API response - the new endpoint only returns pages with valid location data
         let pages = [];
         if (data.success && data.pages) {
           pages = data.pages;
+          console.log('🗺️ UserMapTab: Successfully extracted pages from API response');
         } else {
-          console.warn('🗺️ Unexpected API response format:', data);
+          console.warn('🗺️ UserMapTab: === UNEXPECTED API RESPONSE FORMAT ===');
+          console.warn('🗺️ UserMapTab: Expected format: { success: true, pages: [...] }');
+          console.warn('🗺️ UserMapTab: Actual format:', data);
           pages = [];
         }
 
-        console.log('🗺️ Pages with location from optimized endpoint:', {
+        console.log('🗺️ UserMapTab: === PROCESSING PAGES ===');
+        console.log('🗺️ UserMapTab: Raw pages from API:', {
           totalPages: pages.length,
-          samplePages: pages.slice(0, 3).map(p => ({
+          allPages: pages.map((p, i) => ({
+            index: i,
             id: p.id,
             title: p.title,
             location: p.location,
+            locationValid: !!(p.location?.lat && p.location?.lng),
             username: p.username
           }))
         });
 
         // Convert to PageWithLocation format (no filtering needed since endpoint pre-filters)
-        const pagesWithLocation = pages.map((page: any) => ({
-          id: page.id,
-          title: page.title,
-          location: page.location, // Already validated by the API
-          isPublic: true, // All pages are accessible since we're querying by userId
-          lastModified: page.lastModified,
-          username: page.username
-        }));
+        const pagesWithLocation = pages.map((page: any, index: number) => {
+          console.log(`🗺️ UserMapTab: Processing page ${index + 1}:`, {
+            id: page.id,
+            title: page.title,
+            location: page.location,
+            hasValidLocation: !!(page.location?.lat && page.location?.lng)
+          });
 
+          return {
+            id: page.id,
+            title: page.title,
+            location: page.location, // Already validated by the API
+            isPublic: true, // All pages are accessible since we're querying by userId
+            lastModified: page.lastModified,
+            username: page.username
+          };
+        });
+
+        console.log('🗺️ UserMapTab: === FINAL PAGES TO SET ===');
+        console.log('🗺️ UserMapTab: About to setPages with:', {
+          pagesWithLocationCount: pagesWithLocation.length,
+          allPagesWithLocation: pagesWithLocation.map((p, i) => ({
+            index: i,
+            id: p.id,
+            title: p.title,
+            location: p.location,
+            locationValid: !!(p.location?.lat && p.location?.lng)
+          }))
+        });
+
+        console.log('🗺️ UserMapTab: === CALLING setPages ===');
         setPages(pagesWithLocation);
+        console.log('🗺️ UserMapTab: setPages called successfully, React should re-render component');
       } catch (err) {
         console.error('🗺️ Error fetching pages with location:', {
           error: err,
@@ -288,12 +486,25 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
 
   // Calculate center point for map view
   const mapCenter = React.useMemo(() => {
+    console.log('🗺️ UserMapTab: === CALCULATING MAP CENTER ===');
+    console.log('🗺️ UserMapTab: Current pages state:', {
+      pagesLength: pages.length,
+      pages: pages.map(p => ({
+        title: p.title,
+        location: p.location
+      }))
+    });
+
     if (pages.length === 0) {
+      console.log('🗺️ UserMapTab: No pages, using default view');
       const defaultView = getDefaultMapView();
-      return { lat: defaultView.center[0], lng: defaultView.center[1] };
+      const center = { lat: defaultView.center[0], lng: defaultView.center[1] };
+      console.log('🗺️ UserMapTab: Default center:', center);
+      return center;
     }
-    
+
     if (pages.length === 1) {
+      console.log('🗺️ UserMapTab: Single page, using its location as center');
       return pages[0].location;
     }
 
@@ -328,7 +539,18 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
     return 10;
   }, [pages]);
 
+  console.log('🗺️ CRITICAL: UserMapTab render state:', {
+    loading,
+    error,
+    pagesLength: pages.length,
+    username,
+    mapCenter,
+    mapZoom,
+    samplePages: pages.slice(0, 2).map(p => ({ id: p.id, title: p.title, location: p.location }))
+  });
+
   if (loading) {
+    console.log('🗺️ CRITICAL: Showing loading state');
     return (
       <div className="flex items-center justify-center py-12">
         <div className="flex items-center gap-3 text-muted-foreground">
@@ -340,6 +562,7 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
   }
 
   if (error) {
+    console.log('🗺️ CRITICAL: Showing error state:', error);
     return (
       <div className="text-center py-12">
         <div className="text-red-500 mb-2">Error loading map data</div>
@@ -349,6 +572,7 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
   }
 
   if (pages.length === 0) {
+    console.log('🗺️ CRITICAL: Showing no pages state');
     return (
       <div className="text-center py-12">
         <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -363,11 +587,24 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
     );
   }
 
+  console.log('🗺️ CRITICAL: About to render MultiLocationMap with pages:', pages.length);
+  console.log('🗺️ CRITICAL: Map center:', mapCenter);
+  console.log('🗺️ CRITICAL: Map zoom:', mapZoom);
+
   return (
     <div className="space-y-6">
+
+
       {/* Map View */}
       <div className="relative">
-        <div className="h-96 rounded-lg overflow-hidden border border-border">
+        <div
+          className="rounded-lg overflow-hidden border border-border"
+          style={{
+            height: '384px',
+            minHeight: '384px',
+            width: '100%'
+          }}
+        >
           <MultiLocationMap
             pages={pages}
             center={mapCenter}

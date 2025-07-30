@@ -40,6 +40,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
   disableZoom = false,
   allowPanning = true,
 }) => {
+
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -65,6 +66,19 @@ const MapPicker: React.FC<MapPickerProps> = ({
           return;
         }
 
+        // Check if the map container exists and is visible
+        if (!mapRef.current) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Check if the container is actually visible (has dimensions)
+        const containerRect = mapRef.current.getBoundingClientRect();
+        if (containerRect.width === 0 || containerRect.height === 0) {
+          setIsLoading(false);
+          return;
+        }
+
         // Dynamic import to avoid SSR issues
         const leaflet = await import('leaflet');
         L = leaflet.default;
@@ -76,10 +90,6 @@ const MapPicker: React.FC<MapPickerProps> = ({
           iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
         });
-
-        if (!mapRef.current) {
-          return;
-        }
 
         // Create map instance
         const map = L.map(mapRef.current, {
@@ -106,7 +116,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         map.setView(mapView.center, zoom);
 
         // Add marker if location exists
-        if (hasLocation) {
+        if (location) {
           const marker = L.marker([location.lat, location.lng]).addTo(map);
           markerRef.current = marker;
 
@@ -182,11 +192,25 @@ const MapPicker: React.FC<MapPickerProps> = ({
         setIsLoading(false);
 
       } catch (err: any) {
+        console.error('🗺️ MapPicker: Raw initialization error:', err);
+        console.error('🗺️ MapPicker: Error type:', typeof err);
+        console.error('🗺️ MapPicker: Error constructor:', err?.constructor?.name);
+        console.error('🗺️ MapPicker: Error message:', err?.message);
+        console.error('🗺️ MapPicker: Error stack:', err?.stack);
+
         logMapError('MapPicker initialization', err, {
           hasLocation: !!location,
           theme: resolvedTheme,
           readOnly,
-          height
+          height,
+          containerExists: !!mapRef.current,
+          containerDimensions: mapRef.current ? {
+            width: mapRef.current.getBoundingClientRect().width,
+            height: mapRef.current.getBoundingClientRect().height
+          } : null,
+          errorType: typeof err,
+          errorConstructor: err?.constructor?.name,
+          errorMessage: err?.message
         });
         setError('Failed to initialize map. Please try refreshing the page.');
         setIsLoading(false);
@@ -255,68 +279,91 @@ const MapPicker: React.FC<MapPickerProps> = ({
     }
   };
 
-  if (error) {
+  try {
+    if (error) {
+      return (
+        <div className={`relative ${className}`} style={{ height }}>
+          <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center">
+            <div className="text-center space-y-2 p-4">
+              <MapPin className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`relative ${className} ${!readOnly ? 'cursor-crosshair' : ''}`}
+        style={{ height }}
+      >
+        {/* Map container */}
+        <div
+          ref={mapRef}
+          className="absolute inset-0 bg-background"
+          style={{ zIndex: 1 }}
+        />
+
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center" style={{ zIndex: 2 }}>
+            <div className="text-center space-y-2">
+              <div className="h-8 w-8 mx-auto animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Loading map...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Controls */}
+        {showControls && !readOnly && (
+          <div className="absolute top-3 right-3 flex flex-col gap-2">
+            {location && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleCenterOnLocation}
+                className="h-8 w-8 p-0"
+              >
+                <Crosshair className="h-4 w-4" />
+              </Button>
+            )}
+            {location && onChange && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleClearLocation}
+                className="h-8 w-8 p-0"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  } catch (renderError: any) {
+    console.error('🗺️ MapPicker: Render error:', renderError);
+    logMapError('MapPicker render', renderError, {
+      hasLocation: !!location,
+      location,
+      height,
+      readOnly,
+      showControls,
+      className
+    });
+
     return (
       <div className={`relative ${className}`} style={{ height }}>
         <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center">
           <div className="text-center space-y-2 p-4">
             <MapPin className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{error}</p>
+            <p className="text-sm text-muted-foreground">Map render error</p>
           </div>
         </div>
       </div>
     );
   }
-
-  return (
-    <div
-      className={`relative ${className} ${!readOnly ? 'cursor-crosshair' : ''}`}
-      style={{ height }}
-    >
-      {/* Map container */}
-      <div
-        ref={mapRef}
-        className="absolute inset-0 bg-background"
-        style={{ zIndex: 1 }}
-      />
-
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center" style={{ zIndex: 2 }}>
-          <div className="text-center space-y-2">
-            <div className="h-8 w-8 mx-auto animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Loading map...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Controls */}
-      {showControls && !readOnly && (
-        <div className="absolute top-3 right-3 flex flex-col gap-2">
-          {location && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleCenterOnLocation}
-              className="h-8 w-8 p-0"
-            >
-              <Crosshair className="h-4 w-4" />
-            </Button>
-          )}
-          {location && onChange && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleClearLocation}
-              className="h-8 w-8 p-0"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
 };
 
 export default MapPicker;

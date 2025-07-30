@@ -17,8 +17,8 @@ export function getMapTileConfig(isDarkMode: boolean = false): MapTileConfig {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   
   if (mapboxToken && mapboxToken !== 'your-mapbox-token') {
-    // Use Mapbox tiles (more reliable for production)
-    const styleId = isDarkMode ? 'dark-v11' : 'streets-v12';
+    // Use Mapbox minimal black and white styles for consistency
+    const styleId = isDarkMode ? 'dark-v11' : 'light-v11';
     return {
       url: `https://api.mapbox.com/styles/v1/mapbox/${styleId}/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
       attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
@@ -27,20 +27,20 @@ export function getMapTileConfig(isDarkMode: boolean = false): MapTileConfig {
     };
   }
 
-  // Fallback to OpenStreetMap-based tiles
+  // Use consistent black and white map styles
   if (isDarkMode) {
-    // Use CartoDB dark tiles for dark mode
+    // Use CartoDB dark matter for dark mode - very dark black and white
     return {
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       maxZoom: 19,
       errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
     };
   } else {
-    // Use OpenStreetMap tiles for light mode with fallback
+    // Use CartoDB light matter for light mode - very light black and white
     return {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       maxZoom: 19,
       errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
     };
