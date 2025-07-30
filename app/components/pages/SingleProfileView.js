@@ -15,7 +15,7 @@ import { Button } from "../ui/button";
 import { UserFollowButton } from "../utils/UserFollowButton";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
-import UserPledgeBar from '../payments/UserPledgeBar';
+import PledgeBar from '../payments/PledgeBar';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -127,10 +127,11 @@ const SingleProfileView = ({ profile }) => {
         <UserProfileTabs profile={profile} />
 
         {/* User Pledge Bar - floating and persistent across tabs */}
-        <UserPledgeBar
-          userId={profile.uid}
+        <PledgeBar
+          authorId={profile.uid}
           username={profile.username || profile.displayName || 'User'}
           visible={true}
+          isUserAllocation={true}
         />
       </div>
     </ProfilePagesProvider>

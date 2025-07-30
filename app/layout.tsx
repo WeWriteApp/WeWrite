@@ -21,6 +21,7 @@ import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 import { TokenBalanceProvider } from "./contexts/TokenBalanceContext"
+import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
@@ -82,12 +83,13 @@ export default function RootLayout({
                                 <RecentPagesProvider>
                                   <TokenIncrementProvider>
                                     <TokenBalanceProvider>
-                                      <SessionAuthInitializer>
-                                        <PWAAnalyticsInitializer />
-                                        <GlobalNavigation>
-                                          {children}
-                                        </GlobalNavigation>
-                                      </SessionAuthInitializer>
+                                      <NavigationOrderProvider>
+                                        <SessionAuthInitializer>
+                                          <GlobalNavigation>
+                                            {children}
+                                          </GlobalNavigation>
+                                        </SessionAuthInitializer>
+                                      </NavigationOrderProvider>
                                     </TokenBalanceProvider>
                                   </TokenIncrementProvider>
                                 </RecentPagesProvider>

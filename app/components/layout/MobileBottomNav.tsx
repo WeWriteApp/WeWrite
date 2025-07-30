@@ -3,11 +3,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, Home, User, Plus, Bell } from 'lucide-react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
 import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
+import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
+import DraggableNavButton from './DraggableNavButton';
 import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
 import { trackPWAStatus } from '../../utils/pwaAnalytics';
 import NotificationBadge from '../utils/NotificationBadge';
@@ -47,86 +52,17 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
   return 'max(env(safe-area-inset-bottom), 12px)';
 };
 
-// Special New Page Button Component with accent-colored dot design
-const NewPageButton = ({
-  id,
-  onClick,
-  onHover,
-  isActive,
-  isPressed,
-  isNavigating
-}: {
-  id: string;
-  onClick: () => void;
-  onHover?: () => void;
-  isActive: boolean;
-  isPressed: boolean;
-  isNavigating: boolean;
-}) => {
-  return (
-    <Button
-      variant="ghost"
-      size="lg"
-      onClick={onClick}
-      onMouseEnter={onHover}
-      onTouchStart={onHover}
-      className={cn(
-        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-1 relative group",
-        "transition-all duration-75 ease-out",
-        "flex-shrink-0 min-w-0",
-        "touch-manipulation select-none",
-        // Enhanced visual feedback for primary action
-        isPressed && "scale-95",
-        "hover:bg-primary/5 active:bg-primary/10",
-        // No background color changes - let the dot be the focus
-        "text-slate-600 hover:text-slate-900 dark:text-muted-foreground dark:hover:text-foreground"
-      )}
-      aria-label="Create New Page"
-      aria-pressed={isActive}
-      disabled={isNavigating && !isPressed}
-    >
-      {/* Large accent-colored circle with plus icon and text inside */}
-      <div className={cn(
-        "relative w-16 h-16 rounded-full flex flex-col items-center justify-center",
-        "bg-primary text-primary-foreground shadow-lg",
-        "transition-all duration-75 ease-out",
-        // Enhanced feedback states
-        isPressed && "scale-95 shadow-md",
-        "hover:shadow-xl hover:scale-105",
-        // Subtle glow effect
-        "ring-2 ring-primary/20 hover:ring-primary/30",
-        // Allow slight overflow above toolbar
-        "-mt-2"
-      )}>
-        {/* Plus icon */}
-        <Plus className={cn(
-          "h-5 w-5 flex-shrink-0 transition-transform duration-75 mb-0.5",
-          isPressed && "scale-110"
-        )} />
 
-        {/* Text inside circle */}
-        <span className={cn(
-          "text-xs font-semibold leading-none transition-colors duration-75",
-          "text-primary-foreground"
-        )}>
-          New
-        </span>
-
-        {/* Loading indicator */}
-        {isNavigating && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse" />
-          </div>
-        )}
-      </div>
-    </Button>
-  );
-};
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const editorContext = useEditorContext();
+  const { mobileOrder, reorderMobileItem } = useNavigationOrder();
+
+  // Detect if we're on a touch device for drag backend selection
+  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
+  const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
 
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -304,6 +240,53 @@ export default function MobileBottomNav() {
     };
   }, [lastScrollY]);
 
+  // Navigation button configurations
+  const navigationButtons = {
+    home: {
+      id: 'home',
+      icon: Home,
+      onClick: handleHomeClick,
+      onHover: () => handleButtonHover('/'),
+      isActive: isHomeActive,
+      ariaLabel: 'Home',
+      label: 'Home',
+    },
+    notifications: {
+      id: 'notifications',
+      icon: Bell,
+      onClick: handleNotificationsClick,
+      onHover: () => handleButtonHover('/notifications'),
+      isActive: isNotificationsActive,
+      ariaLabel: 'Notifications',
+      label: 'Alerts',
+      children: (
+        <NotificationBadge
+          className="absolute -top-1 -right-1"
+          data-component="mobile-notification-badge"
+          data-testid="mobile-notification-badge"
+        />
+      ),
+    },
+    profile: {
+      id: 'profile',
+      icon: User,
+      onClick: handleProfileClick,
+      onHover: () => user?.uid && handleButtonHover(`/user/${user.uid}`),
+      isActive: isProfileActive,
+      ariaLabel: 'Profile',
+      label: 'Profile',
+    },
+    new: {
+      id: 'new',
+      icon: Plus,
+      onClick: handleNewPageClick,
+      onHover: () => handleButtonHover('/new?source=mobile-nav'),
+      isActive: isNewPageActive,
+      ariaLabel: 'Create New Page',
+      label: 'New',
+    },
+  };
+
   // Don't render if no user
   if (!user) {
     return null;
@@ -440,7 +423,7 @@ export default function MobileBottomNav() {
   };
 
   return (
-    <>
+    <DndProvider backend={dndBackend}>
       {/* Bottom Navigation with enhanced responsiveness */}
       <div
         className={cn(
@@ -461,7 +444,7 @@ export default function MobileBottomNav() {
         )}
 
         <div className="flex items-center justify-around px-2 py-3 gap-1">
-          {/* Menu Button */}
+          {/* Menu Button - Fixed position, not draggable */}
           <NavButton
             id="menu"
             icon={Menu}
@@ -480,62 +463,28 @@ export default function MobileBottomNav() {
             )}
           </NavButton>
 
-          {/* Home Button */}
-          <NavButton
-            id="home"
-            icon={Home}
-            onClick={handleHomeClick}
-            onHover={() => handleButtonHover('/')}
-            isActive={isHomeActive}
-            ariaLabel="Home"
-            label="Home"
-          />
+          {/* Draggable Navigation Buttons */}
+          {mobileOrder.map((buttonId, index) => {
+            const buttonConfig = navigationButtons[buttonId];
+            if (!buttonConfig) return null;
 
-          {/* New Page Button - MOVED TO MIDDLE as primary action */}
-          <NewPageButton
-            id="new"
-            onClick={handleNewPageClick}
-            onHover={() => handleButtonHover('/new?source=mobile-nav')}
-            isActive={isNewPageActive}
-            isPressed={isButtonPressed('new')}
-            isNavigating={isNavigatingTo(pathname)}
-          />
-
-          {/* Notifications Button */}
-          <NavButton
-            id="notifications"
-            icon={Bell}
-            onClick={handleNotificationsClick}
-            onHover={() => handleButtonHover('/notifications')}
-            isActive={isNotificationsActive}
-            ariaLabel="Notifications"
-            label="Alerts"
-          >
-            <NotificationBadge
-              className="absolute -top-1 -right-1"
-              data-component="mobile-notification-badge"
-              data-testid="mobile-notification-badge"
-            />
-          </NavButton>
-
-          {/* Profile Button - MOVED TO END */}
-          <NavButton
-            id="profile"
-            icon={User}
-            onClick={handleProfileClick}
-            onHover={() => user?.uid && handleButtonHover(`/user/${user.uid}`)}
-            isActive={isProfileActive}
-            ariaLabel="Profile"
-            label="Profile"
-          />
+            return (
+              <DraggableNavButton
+                key={buttonId}
+                index={index}
+                moveItem={reorderMobileItem}
+                {...buttonConfig}
+              />
+            );
+          })}
         </div>
       </div>
 
       {/* Mobile Overflow Sidebar */}
-      <MobileOverflowSidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
+      <MobileOverflowSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-    </>
+    </DndProvider>
   );
 }
