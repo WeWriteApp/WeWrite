@@ -69,10 +69,18 @@ export const getCurrentGitBranch = (): string | null => {
       return process.env.VERCEL_GIT_COMMIT_REF;
     }
 
-    // Fallback to checking git locally (for local development)
-    const { execSync } = require('child_process');
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-    return branch;
+    // Fallback to checking git locally (for local development, server-side only)
+    if (typeof window === 'undefined') {
+      try {
+        const { execSync } = require('child_process');
+        const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+        return branch;
+      } catch (gitError) {
+        console.warn('[Environment Detection] Git command failed:', gitError);
+        return null;
+      }
+    }
+    return null;
   } catch (error) {
     console.warn('[Environment Detection] Could not determine git branch:', error);
     return null;

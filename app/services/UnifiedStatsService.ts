@@ -520,7 +520,7 @@ class UnifiedStatsService {
   }> {
     try {
       // Fetch recent edits for this specific page using the same API as homepage/user profile
-      const response = await fetch(`/api/recent-edits?pageId=${pageId}&limit=50&includeOwn=true&followingOnly=false`);
+      const response = await fetch(`/api/recent-edits/global?limit=50&includeOwn=true&followingOnly=false`);
 
       if (!response.ok) {
         throw new Error(`Recent edits API failed: ${response.status}`);

@@ -109,6 +109,8 @@ export async function GET(request, { params }) {
       groupId: pageData.groupId || null,
       // Include custom date for daily notes
       customDate: pageData.customDate || null,
+      // Include location data
+      location: pageData.location || null,
       // Include deleted status for owner context
       deleted: pageData.deleted || false
     };

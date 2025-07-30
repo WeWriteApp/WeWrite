@@ -68,20 +68,17 @@ export default function UserRecentEdits({
         setLoadingMore(true);
       }
 
-      // Fetch recent edits filtered to this specific user
+      // Fetch recent edits for this specific user using the new clear API
       const params = new URLSearchParams({
-        userId: userId, // Pass userId for authentication context
+        userId: userId,
         limit: limit.toString(),
-        includeOwn: 'true', // Always include this user's edits
-        followingOnly: 'false',
-        filterToUser: userId, // NEW: Filter to show only this user's edits
       });
 
       if (cursor) {
         params.set('cursor', cursor);
       }
 
-      const response = await fetch(`/api/recent-edits?${params}`);
+      const response = await fetch(`/api/recent-edits/user?${params}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch user edits: ${response.status}`);
@@ -93,14 +90,37 @@ export default function UserRecentEdits({
         throw new Error(data.error);
       }
 
+      // Transform pages to edits format
+      const pages = data.pages || [];
+      const editsData = pages.map((page: any) => ({
+        id: page.id,
+        title: page.title || 'Untitled',
+        userId: page.userId,
+        username: page.username || 'Unknown',
+        displayName: page.displayName,
+        lastModified: page.lastModified,
+        isPublic: page.isPublic || false,
+        totalPledged: page.totalPledged,
+        pledgeCount: page.pledgeCount,
+        // Diff data
+        lastDiff: page.lastDiff,
+        diffPreview: page.diffPreview,
+        // Subscription data - map from API response field names
+        tier: page.subscriptionTier,
+        subscriptionStatus: page.subscriptionStatus,
+        subscriptionAmount: page.subscriptionAmount,
+        hasActiveSubscription: page.hasActiveSubscription
+      }));
+
       if (append) {
-        setEdits(prev => [...prev, ...(data.edits || [])]);
+        setEdits(prev => [...prev, ...editsData]);
       } else {
-        setEdits(data.edits || []);
+        setEdits(editsData);
       }
 
-      setHasMore(data.hasMore || false);
-      setNextCursor(data.nextCursor || null);
+      // For now, disable pagination since recent-pages doesn't support it
+      setHasMore(false);
+      setNextCursor(null);
     } catch (err) {
       console.error('Error fetching user edits:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch user edits');
@@ -183,7 +203,7 @@ export default function UserRecentEdits({
               userId: edit.userId,
               username: edit.username,
               displayName: edit.displayName,
-              timestamp: edit.lastModified,
+              timestamp: new Date(edit.lastModified), // Convert to Date object
               lastModified: edit.lastModified,
               diff: edit.lastDiff,
               diffPreview: edit.diffPreview, // Fixed: use edit.diffPreview directly
@@ -192,10 +212,11 @@ export default function UserRecentEdits({
               totalPledged: edit.totalPledged,
               pledgeCount: edit.pledgeCount,
               activityType: 'page_edit' as const,
-              // Add subscription data for UsernameBadge
-              tier: edit.tier,
+              // Add subscription data for UsernameBadge - use correct field names that ActivityCard expects
+              subscriptionTier: edit.tier,
               subscriptionStatus: edit.subscriptionStatus,
-              subscriptionAmount: edit.subscriptionAmount
+              subscriptionAmount: edit.subscriptionAmount,
+              hasActiveSubscription: edit.hasActiveSubscription
             };
 
             return (

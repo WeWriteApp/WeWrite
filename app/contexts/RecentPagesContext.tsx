@@ -74,7 +74,7 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
       try {
         console.log('🔍 [RECENT_PAGES_CONTEXT] Fetching recent pages for user:', user.uid);
 
-        const response = await fetch(`/api/recent-pages?userId=${user.uid}&limit=${MAX_RECENT_PAGES}`);
+        const response = await fetch(`/api/recent-edits/user?userId=${user.uid}&limit=${MAX_RECENT_PAGES}`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch recent pages: ${response.status}`);

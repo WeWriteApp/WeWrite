@@ -22,7 +22,7 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
     const fetchEdits = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/recent-edits?limit=${limit}&includeOwn=true`);
+        const response = await fetch(`/api/recent-edits/global?limit=${limit}&includeOwn=true`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setActivities(data.edits || []);

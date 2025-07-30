@@ -2230,6 +2230,15 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   }
 }
 
+/* Leaflet map theme-aware styling */
+.leaflet-container {
+  background-color: hsl(var(--background)) !important;
+}
+
+.dark .leaflet-container {
+  background-color: hsl(var(--background)) !important;
+}
+
 /* Enable text selection on mobile devices while disabling native context menu */
 @media (pointer: coarse) {
   /* Disable native touch callout menu but keep text selection enabled for content */

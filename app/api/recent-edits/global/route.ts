@@ -1,49 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../utils/environmentConfig';
-import { getEffectiveTier } from '../../utils/subscriptionTiers';
-import { getUserIdFromRequest } from '../auth-helper';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getEffectiveTier } from '../../../utils/subscriptionTiers';
+import { getUserIdFromRequest } from '../../auth-helper';
 
-// Initialize Firebase Admin SDK with unique app name for recent edits
-let recentEditsApp;
+// Initialize Firebase Admin SDK with unique app name for global recent edits
+let globalRecentEditsApp;
 try {
   // Try to get existing app first
-  recentEditsApp = getApps().find(app => app.name === 'recent-edits-app');
+  globalRecentEditsApp = getApps().find(app => app.name === 'global-recent-edits-app');
 
-  if (!recentEditsApp) {
+  if (!globalRecentEditsApp) {
     // Parse the service account JSON from environment (it's base64 encoded)
     const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
     const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
     const serviceAccount = JSON.parse(decodedJson);
-    console.log('[Recent Edits Admin SDK] Initializing with project:', serviceAccount.project_id);
-    console.log('[Recent Edits Admin SDK] Client email:', serviceAccount.client_email);
+    console.log('[Global Recent Edits Admin SDK] Initializing with project:', serviceAccount.project_id);
+    console.log('[Global Recent Edits Admin SDK] Client email:', serviceAccount.client_email);
 
-    recentEditsApp = initializeApp({
+    globalRecentEditsApp = initializeApp({
       credential: cert({
         projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
         clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})}, 'recent-edits-app');
-    console.log('[Recent Edits Admin SDK] Initialized successfully');
+        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})}, 'global-recent-edits-app');
+    console.log('[Global Recent Edits Admin SDK] Initialized successfully');
   } else {
-    console.log('[Recent Edits Admin SDK] Using existing app');
+    console.log('[Global Recent Edits Admin SDK] Using existing app');
   }
 } catch (error) {
-  console.error('[Recent Edits Admin SDK] Initialization failed:', error);
+  console.error('[Global Recent Edits Admin SDK] Initialization failed:', error);
   throw error;
 }
 
-const adminDb = getFirestore(recentEditsApp);
-
-// Simple in-memory cache for recent edits to reduce Firebase costs
-const recentEditsCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache for debugging
+const adminDb = getFirestore(globalRecentEditsApp);
 
 /**
- * UNIFIED VERSION SYSTEM: Recent Edits API
+ * GLOBAL RECENT EDITS API
  *
- * This API now uses the unified version system instead of activities.
- * It queries versions from pages/{pageId}/versions subcollections to get recent edits.
+ * This API provides global recent edits for the homepage.
+ * It queries pages collection directly by lastModified using the simplified activity system.
+ * 
+ * This is the CLEAR, RENAMED version of the old /api/recent-edits endpoint.
  */
 
 export async function GET(request: NextRequest) {
@@ -61,68 +59,48 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 20); // REDUCED LIMIT FOR COST OPTIMIZATION
     const includeOwn = searchParams.get('includeOwn') === 'true';
     const followingOnly = searchParams.get('followingOnly') === 'true';
-    const filterToUser = searchParams.get('filterToUser');
     const cursor = searchParams.get('cursor');
 
-    console.log(`🔍 [RECENT_EDITS] User ID: ${userId} (from ${searchParams.get('userId') ? 'query params' : 'auth'}), includeOwn: ${includeOwn}`);
+    console.log(`🌍 [GLOBAL_RECENT_EDITS] User ID: ${userId} (from ${searchParams.get('userId') ? 'query params' : 'auth'}), includeOwn: ${includeOwn}`);
 
-  // Log environment detection for debugging
-  const { logEnvironmentConfig } = await import('../../utils/environmentConfig');
-  logEnvironmentConfig();
+    // Log environment detection for debugging
+    const { logEnvironmentConfig } = await import('../../../utils/environmentConfig');
+    logEnvironmentConfig();
 
-  // Debug: Log collection names being used
-  console.log('🔍 DEBUG: Collection names being used:', {
-    users: getCollectionName('users'),
-    subscriptions: getCollectionName('subscriptions')
-  });
+    // Debug: Log collection names being used
+    console.log('🔍 DEBUG: Collection names being used:', {
+      users: getCollectionName('users'),
+      subscriptions: getCollectionName('subscriptions')
+    });
 
-    // Create cache key with version to force cache invalidation
-    const cacheKey = `recent-edits-v2:${userId}:${limit}:${includeOwn}:${followingOnly}:${filterToUser}:${cursor}`;
-
-    // TEMPORARILY DISABLE CACHE FOR DEBUGGING
-    console.log('🔍 [RECENT_EDITS] Cache disabled for debugging');
-    // const cached = recentEditsCache.get(cacheKey);
-    // if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    //   console.log('🚀 COST OPTIMIZATION: Returning cached recent edits');
-    //   return NextResponse.json(cached.data);
-    // }
+    console.log('🔍 [GLOBAL_RECENT_EDITS] Cache disabled for debugging');
 
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;
 
-    console.log('🔄 UNIFIED VERSION SYSTEM: Fetching recent edits from pages with versions');
+    console.log('🔄 GLOBAL RECENT EDITS: Fetching recent edits from pages collection (simplified activity system)');
 
-    // UNIFIED VERSION SYSTEM: First get recently modified pages, then get their latest versions
-    // This avoids the need for complex collectionGroup indexes
+    // SIMPLIFIED: Use the same approach as homepage recent edits that works
+    console.log(`🔄 [GLOBAL_RECENT_EDITS] Using pages collection approach (same as working homepage)`);
+
     let pagesQuery;
 
-    // Use the EXACT same query structure as homepage recent edits that works
-    if (filterToUser) {
-      console.log(`🔍 [RECENT_EDITS] Filtering to user: ${filterToUser}`);
-      console.log(`🔍 [RECENT_EDITS] Collection name: ${getCollectionName('pages')}`);
-      console.log(`🔍 [RECENT_EDITS] Limit: ${limit * 3}`);
-
-      // EXACT same query as my-pages API that works
+    if (userId) {
+      // For logged-in users, get all recent pages and filter deleted ones in code
+      // This avoids the composite index requirement
       pagesQuery = db.collection(getCollectionName('pages'))
-        .where('userId', '==', filterToUser)
-        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
-        .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc')
-        .limit(limit * 5); // Moderate multiplier for user-specific queries
+        .limit(limit * 3); // Get more to account for filtering deleted pages
     } else {
-      // SIMPLIFIED: Use the same approach as homepage recent edits that works
-      console.log(`🔄 [RECENT_EDITS] Using pages collection approach (same as working homepage)`);
-
+      // For anonymous users, only public pages (legacy behavior until isPublic is fully removed)
       pagesQuery = db.collection(getCollectionName('pages'))
         .where('isPublic', '==', true)
-        .where('deleted', '!=', true) // Filter out deleted pages
-        .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc')
-        .limit(limit * 3); // Get more to filter through
+        .limit(limit * 2); // Get more to account for filtering deleted pages
     }
 
     const pagesSnapshot = await pagesQuery.get();
-    console.log(`📊 [RECENT_EDITS] Found ${pagesSnapshot.docs.length} pages from Firestore`);
+    console.log(`📊 [GLOBAL_RECENT_EDITS] Found ${pagesSnapshot.docs.length} pages from Firestore`);
 
     if (pagesSnapshot.empty) {
       return NextResponse.json({
@@ -146,26 +124,29 @@ export async function GET(request: NextRequest) {
         return false;
       }
 
-      // For user-specific queries, we already filtered in the query
-      if (filterToUser) {
-        return true;
-      }
-
-      // For public queries, ensure page is public
-      if (!page.isPublic) {
-        return false;
+      // Filter by visibility (same logic as home API)
+      if (!userId) {
+        // For anonymous users, only show public pages
+        if (!page.isPublic) {
+          return false;
+        }
+      } else {
+        // For logged-in users, show public pages OR their own pages
+        if (!page.isPublic && page.userId !== userId) {
+          return false;
+        }
       }
 
       // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
       if (!includeOwn && page.userId === userId) {
-        console.log(`🔍 [RECENT_EDITS] Hiding own edit: ${page.title} by ${page.username}`);
+        console.log(`🔍 [GLOBAL_RECENT_EDITS] Hiding own edit: ${page.title} by ${page.username}`);
         return false;
       }
 
       return true;
     });
 
-    console.log(`🔍 [RECENT_EDITS] After filtering: ${filteredPages.length} pages`);
+    console.log(`🔍 [GLOBAL_RECENT_EDITS] After filtering: ${filteredPages.length} pages`);
 
     // Convert to edits format
     const edits = filteredPages
@@ -177,17 +158,15 @@ export async function GET(request: NextRequest) {
         username: page.username,
         displayName: page.displayName,
         lastModified: page.lastModified,
-        isPublic: page.isPublic || false,
         totalPledged: page.totalPledged || 0,
         pledgeCount: page.pledgeCount || 0,
         lastDiff: page.lastDiff,
-        // Remove diffPreview since it's redundant with lastDiff.preview
         source: 'pages-collection'
       }));
 
-    console.log(`🔍 [RECENT_EDITS] Final edits: ${edits.length}`);
+    console.log(`🔍 [GLOBAL_RECENT_EDITS] Final edits: ${edits.length}`);
     if (edits.length > 0) {
-      console.log(`🔍 [RECENT_EDITS] Most recent edit:`, {
+      console.log(`🔍 [GLOBAL_RECENT_EDITS] Most recent edit:`, {
         title: edits[0].title,
         lastModified: edits[0].lastModified,
         source: edits[0].source
@@ -220,16 +199,11 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-
-
-
-
-
   } catch (error) {
-    console.error('Error fetching recent edits:', error);
+    console.error('Error fetching global recent edits:', error);
     return NextResponse.json(
       {
-        error: 'Failed to fetch recent edits',
+        error: 'Failed to fetch global recent edits',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
@@ -266,28 +240,9 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
               userId,
               PAYMENT_COLLECTIONS.SUBSCRIPTIONS
             );
-            const fullPath = `${parentPath}/${subCollectionName}/current`;
-
-            // Debug logging for jamie specifically
-            if (userId === 'fWNeCuussPgYgkN2LGohFRCPXiy1') {
-              console.log('🔍 DEBUG: Fetching jamie subscription:', {
-                userId,
-                parentPath,
-                subCollectionName,
-                fullPath
-              });
-            }
 
             const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
             const subscriptionData = subDoc.exists ? subDoc.data() : null;
-
-            // Debug logging for jamie specifically
-            if (userId === 'fWNeCuussPgYgkN2LGohFRCPXiy1') {
-              console.log('🔍 DEBUG: Jamie subscription result:', {
-                exists: subDoc.exists,
-                data: subscriptionData
-              });
-            }
 
             return {
               userId,
@@ -307,8 +262,6 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
           const userData = doc.data();
           const subscription = subscriptionMap.get(doc.id);
 
-
-
           // Use centralized tier determination logic
           const effectiveTier = getEffectiveTier(
             subscription?.amount || null,
@@ -318,16 +271,6 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
 
           // Check if subscription is active
           const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
-
-          // Debug logging for subscription data
-          if (subscription) {
-            console.log(`🔍 [RECENT_EDITS] User ${userData.username} subscription:`, {
-              status: subscription.status,
-              amount: subscription.amount,
-              tier: effectiveTier,
-              isActive
-            });
-          }
 
           results[doc.id] = {
             uid: doc.id,

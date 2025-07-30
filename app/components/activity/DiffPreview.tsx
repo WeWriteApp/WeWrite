@@ -92,6 +92,20 @@ export default function DiffPreview({
     );
   }
 
+  // Handle special change types (location, custom date)
+  if (typeof preview === 'string') {
+    // Check if it's a special change type preview
+    if (preview.includes('location') || preview.includes('date')) {
+      return (
+        <div className={`text-xs h-full flex items-center ${className}`}>
+          <span className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded text-xs font-medium">
+            {preview}
+          </span>
+        </div>
+      );
+    }
+  }
+
   // If no diff data, show fallback message (but avoid redundancy for new pages)
   if (!preview) {
     return (
@@ -183,6 +197,14 @@ export function DiffStats({
   const TooltipTrigger = showTooltips ? require('../ui/tooltip').TooltipTrigger : null;
 
   const renderStats = () => {
+    // For special change types (location, custom date), show a different indicator
+    if (added === 0 && removed === 0 && !isNewPage) {
+      // This might be a special change type (location, custom date)
+      return (
+        <span className="text-blue-600 dark:text-blue-400">●</span>
+      );
+    }
+
     if (added > 0 && removed > 0) {
       // Show both additions and deletions in git-style format
       return (

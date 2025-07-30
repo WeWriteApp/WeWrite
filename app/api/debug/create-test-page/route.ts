@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     // Test the recent edits API to see if our page shows up
     let recentEditsTest = null;
     try {
-      const recentEditsUrl = new URL('/api/recent-edits', request.url);
+      const recentEditsUrl = new URL('/api/recent-edits/global', request.url);
       recentEditsUrl.searchParams.set('limit', '10');
       
       const response = await fetch(recentEditsUrl.toString());

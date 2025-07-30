@@ -3,11 +3,12 @@
 import React from 'react';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import { Button } from '../ui/button';
-import OpenStreetMapPicker from './OpenStreetMapPicker';
+import MapPicker from './MapPicker';
 
 interface Location {
   lat: number;
   lng: number;
+  zoom?: number;
 }
 
 interface FullScreenMapViewProps {
@@ -73,12 +74,13 @@ export default function FullScreenMapView({
 
       {/* Full-screen map */}
       <div className="flex-1 relative">
-        <OpenStreetMapPicker
+        <MapPicker
           location={location}
           readOnly={true}
           showControls={false}
           height="100%"
           className="absolute inset-0"
+          initialZoom={location?.zoom} // Use the saved zoom level to prevent layout shift
         />
       </div>
 

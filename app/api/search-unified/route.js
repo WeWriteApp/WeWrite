@@ -173,90 +173,103 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       const targetUserId = filterByUserId || userId;
 
       if (isEmptySearch) {
-        // OPTIMIZATION: For empty search, use optimized recent pages query
+        // DEV SIMPLE: For empty search, just get all user pages (no index needed)
         const recentPagesQuery = query(
           collection(db, getCollectionName('pages')),
           where('userId', '==', targetUserId),
-          where('deleted', '!=', true),
-          orderBy('deleted'),
-          orderBy('lastModified', 'desc'),
           limit(Math.min(finalMaxResults, 50))
         );
         queryPromises.push(getDocs(recentPagesQuery));
       } else {
-        // OPTIMIZATION: Use title prefix search with proper indexing
+        // DEV SIMPLE: Use title-only search (no composite index needed)
         const titlePrefixQuery = query(
           collection(db, getCollectionName('pages')),
-          where('userId', '==', targetUserId),
-          where('deleted', '!=', true),
           where('title', '>=', searchTerm),
           where('title', '<=', searchTerm + '\uf8ff'),
-          orderBy('deleted'),
-          orderBy('title'),
           limit(Math.min(finalMaxResults, 100))
         );
         queryPromises.push(getDocs(titlePrefixQuery));
 
-        // OPTIMIZATION: Add case-insensitive search if needed
+        // DEV SIMPLE: Add case variations for better matching
+        const searchTermCapitalized = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
+        const searchTermUpper = searchTerm.toUpperCase();
+
+        // Search for lowercase version if original isn't lowercase
         if (searchTerm !== searchTermLower) {
           const titleLowerQuery = query(
             collection(db, getCollectionName('pages')),
-            where('userId', '==', targetUserId),
-            where('deleted', '!=', true),
             where('title', '>=', searchTermLower),
             where('title', '<=', searchTermLower + '\uf8ff'),
-            orderBy('deleted'),
-            orderBy('title'),
             limit(Math.min(finalMaxResults, 50))
           );
           queryPromises.push(getDocs(titleLowerQuery));
         }
+
+        // Search for capitalized version if original isn't capitalized
+        if (searchTerm !== searchTermCapitalized) {
+          const titleCapitalizedQuery = query(
+            collection(db, getCollectionName('pages')),
+            where('title', '>=', searchTermCapitalized),
+            where('title', '<=', searchTermCapitalized + '\uf8ff'),
+            limit(Math.min(finalMaxResults, 50))
+          );
+          queryPromises.push(getDocs(titleCapitalizedQuery));
+        }
       }
     }
         
-    // STEP 2: OPTIMIZED public pages search (if not filtering by specific user)
+    // STEP 2: SIMPLIFIED all pages search (if not filtering by specific user)
+    // Since all pages are now public, no need to filter by isPublic
     if (!filterByUserId && !isEmptySearch) {
       if (searchTerm && searchTerm.length >= 2) {
-        // OPTIMIZATION: Use title prefix search for public pages
-        const publicTitleQuery = query(
+        // SIMPLIFIED: Use simple title search for all pages (no isPublic filter needed)
+        const allPagesTitleQuery = query(
           collection(db, getCollectionName('pages')),
-          where('isPublic', '==', true),
-          where('deleted', '!=', true),
           where('title', '>=', searchTerm),
           where('title', '<=', searchTerm + '\uf8ff'),
-          orderBy('deleted'),
-          orderBy('title'),
           limit(Math.min(finalMaxResults, 100))
         );
-        queryPromises.push(getDocs(publicTitleQuery));
+        queryPromises.push(getDocs(allPagesTitleQuery));
 
-        // OPTIMIZATION: Add case-insensitive search for public pages
+        // SIMPLIFIED: Add case variations for all pages
+        const searchTermCapitalized = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
+
+        // Search for lowercase version if original isn't lowercase
         if (searchTerm !== searchTermLower) {
-          const publicTitleLowerQuery = query(
+          const allPagesTitleLowerQuery = query(
             collection(db, getCollectionName('pages')),
-            where('isPublic', '==', true),
-            where('deleted', '!=', true),
             where('title', '>=', searchTermLower),
             where('title', '<=', searchTermLower + '\uf8ff'),
-            orderBy('deleted'),
-            orderBy('title'),
             limit(Math.min(finalMaxResults, 50))
           );
-          queryPromises.push(getDocs(publicTitleLowerQuery));
+          queryPromises.push(getDocs(allPagesTitleLowerQuery));
+        }
+
+        // Search for capitalized version if original isn't capitalized
+        if (searchTerm !== searchTermCapitalized) {
+          const allPagesTitleCapitalizedQuery = query(
+            collection(db, getCollectionName('pages')),
+            where('title', '>=', searchTermCapitalized),
+            where('title', '<=', searchTermCapitalized + '\uf8ff'),
+            limit(Math.min(finalMaxResults, 50))
+          );
+          queryPromises.push(getDocs(allPagesTitleCapitalizedQuery));
         }
       }
     }
 
     // OPTIMIZATION: Execute all queries in parallel with better error handling
-    console.log(`⚡ Executing ${queryPromises.length} parallel queries`);
+    console.log(`⚡ [SEARCH DEBUG] Executing ${queryPromises.length} parallel queries for searchTerm: "${searchTerm}", userId: ${userId}`);
 
     try {
       const queryResults = await Promise.allSettled(queryPromises);
 
+      console.log(`⚡ [SEARCH DEBUG] Query results: ${queryResults.length} queries completed`);
+
       // OPTIMIZATION: Process results efficiently with error handling
       for (const result of queryResults) {
         if (result.status === 'rejected') {
-          console.warn('Query failed:', result.reason);
+          console.warn('⚡ [SEARCH DEBUG] Query failed:', result.reason);
           continue;
         }
 
@@ -305,7 +318,6 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
               isEditable: data.userId === userId,
               userId: data.userId,
               username: data.username || null,
-              isPublic: data.isPublic,
               lastModified: data.lastModified,
               createdAt: data.createdAt,
               matchScore,

@@ -18,6 +18,7 @@ interface PageData {
   userId: string;
   username?: string;
   groupId?: string;
+  location?: any; // Location data with lat/lng coordinates
   lastModified?: string;
   createdAt?: string;
   deleted?: boolean;
@@ -118,7 +119,9 @@ export async function GET(request: NextRequest) {
           createdAt: data.createdAt,
           deleted: data.deleted || false,
           deletedAt: data.deletedAt,
-          customDate: data.customDate || null // Include customDate for Timeline functionality
+          customDate: data.customDate || null, // Include customDate for Timeline functionality
+          location: data.location || null, // Include location for Map functionality
+          isPublic: data.isPublic || false // Include isPublic for Map functionality
         });
       });
 
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, groupId, customDate } = body;
+    const { title, content, location, groupId, customDate } = body;
 
 
 
@@ -248,6 +251,7 @@ export async function POST(request: NextRequest) {
       userId: currentUserId,
       username,
       groupId: groupId || null,
+      location: location || null,
       lastModified: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       deleted: false,

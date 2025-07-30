@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, X, MapPin } from 'lucide-react';
 import { Button } from '../ui/button';
-import OpenStreetMapPicker from './OpenStreetMapPicker';
+import MapPicker from './MapPicker';
 
 interface Location {
   lat: number;
   lng: number;
+  zoom?: number;
 }
 
 interface LocationPickerPageProps {
@@ -16,13 +17,15 @@ interface LocationPickerPageProps {
   onSave: (location: Location | null) => void;
   onCancel: () => void;
   pageTitle?: string;
+  isOwner?: boolean;
 }
 
 export default function LocationPickerPage({
   initialLocation,
   onSave,
   onCancel,
-  pageTitle = "Set Location"
+  pageTitle = "Set Location",
+  isOwner = false
 }: LocationPickerPageProps) {
   const router = useRouter();
   const [currentLocation, setCurrentLocation] = useState<Location | null>(initialLocation || null);
@@ -31,14 +34,30 @@ export default function LocationPickerPage({
   // Set initial zoom based on whether we have a location
   useEffect(() => {
     if (initialLocation) {
-      setSavedZoom(15); // Default zoom for existing locations
+      console.log('🗺️ LocationPickerPage: Setting initial location:', initialLocation);
+      setCurrentLocation(initialLocation);
+
+      // Use saved zoom level if available, otherwise default to moderate zoom
+      const zoomLevel = initialLocation.zoom || 10;
+      console.log('🗺️ LocationPickerPage: Setting zoom level:', zoomLevel);
+      setSavedZoom(zoomLevel);
     } else {
-      setSavedZoom(0); // Maximum zoom out to see entire world
+      setSavedZoom(0.5); // Extremely zoomed out to see the entire world
     }
   }, [initialLocation]);
 
   const handleSave = () => {
-    onSave(currentLocation);
+    console.log('🗺️ LocationPickerPage: handleSave called with:', currentLocation);
+    console.log('🗺️ LocationPickerPage: savedZoom:', savedZoom);
+
+    // Include zoom level in the saved location
+    const locationWithZoom = currentLocation ? {
+      ...currentLocation,
+      zoom: savedZoom
+    } : null;
+
+    console.log('🗺️ LocationPickerPage: saving location with zoom:', locationWithZoom);
+    onSave(locationWithZoom);
   };
 
   const handleClear = () => {
@@ -58,17 +77,21 @@ export default function LocationPickerPage({
   };
 
   return (
-    <div className="fixed inset-0 bg-background">
+    <div className="fixed inset-0 bg-background z-[9999]">
       {/* Full-screen Map Background */}
       <div className="absolute inset-0 z-0">
-        <OpenStreetMapPicker
+        <MapPicker
           location={currentLocation}
-          onChange={setCurrentLocation}
+          onChange={(location) => {
+            console.log('🗺️ LocationPickerPage: Location changed to:', location);
+            setCurrentLocation(location);
+          }}
           height="100vh"
-          readOnly={false}
-          showControls={true}
+          readOnly={false} // TEMP: Always allow editing for testing
+          showControls={false} // Hide zoom controls to prevent overlap with floating header
           initialZoom={savedZoom}
           onZoomChange={setSavedZoom}
+          allowPanning={true} // Always allow panning for exploration
         />
       </div>
 
@@ -87,7 +110,7 @@ export default function LocationPickerPage({
             <div className="flex-1 text-center">
               <h1 className="text-lg font-semibold text-foreground">{pageTitle}</h1>
               <p className="text-sm text-muted-foreground">
-                Tap to add pin, pinch to zoom
+                {isOwner ? 'Tap to add pin, pinch to zoom' : 'Page location'}
               </p>
             </div>
             <div className="w-10"></div> {/* Spacer to center the text */}
@@ -95,35 +118,37 @@ export default function LocationPickerPage({
         </div>
       </div>
 
-      {/* Floating Bottom Buttons */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
-        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border border-border shadow-lg">
-          <div className="p-4">
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              {currentLocation && (
-                <Button
-                  variant="outline"
-                  onClick={handleClear}
-                  className="flex-1 hover:bg-muted border-border text-destructive hover:text-destructive"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              )}
+      {/* Floating Bottom Buttons - Only show for owners */}
+      {isOwner && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
+          <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border border-border shadow-lg">
+            <div className="p-4">
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                {currentLocation && (
+                  <Button
+                    variant="outline"
+                    onClick={handleClear}
+                    className="flex-1 hover:bg-muted border-border text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
 
-              <Button
-                onClick={handleSave}
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={!currentLocation}
-              >
-                <Check className="h-4 w-4 mr-1" />
-                Save Location
-              </Button>
+                <Button
+                  onClick={handleSave}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={!currentLocation}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Save Location
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -177,12 +177,55 @@ const recentVersions = await db.collectionGroup('versions')
 ```
 
 
+## ⚠️ CRITICAL: Old Patterns That Must Be Deleted
+
+### 🚨 Dangerous Legacy Code - DELETE IMMEDIATELY
+
+The following patterns are **DEPRECATED** and **MUST BE DELETED** from the codebase:
+
+#### 1. Direct Activities Collection Access
+```typescript
+// ❌ DELETE THIS - Old activities collection approach
+db.collection('activities').add(...)
+db.collection('DEV_activities').where(...)
+```
+
+#### 2. Old Recent-Edits API Patterns
+```typescript
+// ❌ DELETE THIS - Old recent-edits implementation
+db.collection('pages').where('deleted', '!=', true).orderBy('lastModified', 'desc')
+// Should use: db.collectionGroup('versions').orderBy('createdAt', 'desc')
+```
+
+#### 3. Manual Activity Creation
+```typescript
+// ❌ DELETE THIS - Manual activity creation
+const activityData = { pageId, userId, type: 'edit', ... };
+await db.collection('activities').add(activityData);
+```
+
+#### 4. Old API Endpoints
+- ❌ `/api/activity` - Should be deleted
+- ❌ `/api/recent-edits` using pages collection - Should use versions
+- ❌ Any endpoint querying activities collection directly
+
+### 🔍 How to Identify Legacy Code
+
+Search for these patterns and **DELETE THEM**:
+```bash
+# Find dangerous legacy patterns
+grep -r "collection('activities')" app/
+grep -r "collection('DEV_activities')" app/
+grep -r "getCollectionName('activities')" app/
+grep -r "recent-edits.*pages.*lastModified" app/
+```
+
 ## ✅ Migration Complete!
 
 The unified version system has been successfully implemented:
 
 - ✅ **Version Creation**: All page saves now create versions
-- ✅ **API Migration**: Recent edits APIs use versions instead of activities  
+- ✅ **API Migration**: Recent edits APIs use versions instead of activities
 - ✅ **Data Migration**: Existing activities migrated to version format
 - ✅ **Legacy Cleanup**: Activities collection references removed
 - ✅ **Documentation**: Updated to reflect new system

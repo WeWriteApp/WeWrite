@@ -4,11 +4,12 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import OpenStreetMapPicker from '../../../components/map/OpenStreetMapPicker';
+import MapPicker from '../../../components/map/MapPicker';
 
 interface Location {
   lat: number;
   lng: number;
+  zoom?: number;
 }
 
 function LocationViewContent() {
@@ -16,12 +17,21 @@ function LocationViewContent() {
   const searchParams = useSearchParams();
   const [location, setLocation] = useState<Location | null>(null);
   const [returnPath, setReturnPath] = useState<string>('/');
+  const [pageTitle, setPageTitle] = useState<string>('');
+  const [pageId, setPageId] = useState<string>('');
+  const [titleLoading, setTitleLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Get return path
     const returnParam = searchParams.get('return');
     if (returnParam) {
-      setReturnPath(decodeURIComponent(returnParam));
+      const decodedPath = decodeURIComponent(returnParam);
+      setReturnPath(decodedPath);
+
+      // Extract page ID from return path
+      const pathParts = decodedPath.split('/');
+      const id = pathParts[pathParts.length - 1];
+      setPageId(id);
     }
 
     // Get location data
@@ -35,6 +45,30 @@ function LocationViewContent() {
       }
     }
   }, [searchParams]);
+
+  // Fetch page data to get title
+  useEffect(() => {
+    async function fetchPageData() {
+      if (!pageId) {
+        setTitleLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/pages/${pageId}`);
+        if (response.ok) {
+          const pageData = await response.json();
+          setPageTitle(pageData.title || 'Untitled');
+        }
+      } catch (error) {
+        console.error('Error fetching page data:', error);
+      } finally {
+        setTitleLoading(false);
+      }
+    }
+
+    fetchPageData();
+  }, [pageId]);
 
   const handleBack = () => {
     // Go to previous page - users can reach home via WeWrite logo
@@ -55,6 +89,8 @@ function LocationViewContent() {
     return `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
   };
 
+  // Remove loading state - show map immediately
+
   if (!location) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -69,7 +105,7 @@ function LocationViewContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="flex items-center justify-between p-4">
@@ -83,9 +119,11 @@ function LocationViewContent() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Location View</h1>
+              <h1 className="text-lg font-semibold text-foreground">
+                {titleLoading ? 'Page Location' : (pageTitle || 'Page Location')}
+              </h1>
               <p className="text-sm text-muted-foreground">
-                {formatCoordinates(location)}
+                Page location
               </p>
             </div>
           </div>
@@ -94,24 +132,17 @@ function LocationViewContent() {
 
       {/* Map Container */}
       <div className="flex-1 relative">
-        <OpenStreetMapPicker
+        <MapPicker
           location={location}
           height="100%"
-          readOnly={true}
-          showControls={false}
-          initialZoom={15}
+          readOnly={true} // Don't allow pin placement in view mode
+          showControls={false} // Hide zoom controls to prevent overlap with header
+          initialZoom={location?.zoom || 10} // Use saved zoom level, fallback to moderate zoom
+          allowPanning={true} // Allow panning for exploration
         />
       </div>
 
-      {/* Footer with location info */}
-      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border p-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4" />
-          <span>
-            {formatCoordinates(location)}
-          </span>
-        </div>
-      </div>
+      {/* Footer with location info - removed coordinates display */}
     </div>
   );
 }
