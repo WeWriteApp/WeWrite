@@ -19,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
           '/api/',
           '/auth/',
           '/dashboard/',
-          '/settings/subscription/',
+          '/settings/buy-tokens/',
           '/new',
           '/create',
           '/scripts/',

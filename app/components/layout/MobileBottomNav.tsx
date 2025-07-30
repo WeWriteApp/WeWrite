@@ -9,6 +9,7 @@ import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
 import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
+import { trackPWAStatus } from '../../utils/pwaAnalytics';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
@@ -37,13 +38,13 @@ const isIOSDevice = (): boolean => {
 const getPWABottomSpacing = (isPWAMode: boolean): string => {
   if (!isPWAMode) return '0';
 
-  // For iOS PWA, use safe-area-inset-bottom to handle home indicator
+  // For iOS PWA, use safe-area-inset-bottom to handle home indicator + extra padding
   if (isIOSDevice()) {
-    return 'max(env(safe-area-inset-bottom), 8px)';
+    return 'max(env(safe-area-inset-bottom), 16px)';
   }
 
-  // For Android PWA, use smaller spacing
-  return 'env(safe-area-inset-bottom, 4px)';
+  // For Android PWA, use safe-area-inset-bottom + extra padding
+  return 'max(env(safe-area-inset-bottom), 12px)';
 };
 
 // Special New Page Button Component with accent-colored dot design
@@ -219,16 +220,47 @@ export default function MobileBottomNav() {
     return segments.length === 1 && !staticRoutes.includes(`/${segments[0]}`);
   }, [pathname]);
 
-  // Check PWA mode on mount and window resize
+  // Check PWA mode on mount and window resize, track analytics
   useEffect(() => {
     const checkPWAMode = () => {
-      setIsPWAMode(isPWA());
+      const currentPWAMode = isPWA();
+      const previousPWAMode = isPWAMode;
+
+      setIsPWAMode(currentPWAMode);
+
+      // Track PWA status changes for analytics
+      if (currentPWAMode !== previousPWAMode) {
+        console.log('📱 PWA mode changed:', { from: previousPWAMode, to: currentPWAMode });
+        trackPWAStatus();
+      }
     };
 
     checkPWAMode();
+
+    // Listen for display mode changes
+    const mediaQueries = [
+      '(display-mode: standalone)',
+      '(display-mode: fullscreen)',
+      '(display-mode: minimal-ui)',
+      '(display-mode: window-controls-overlay)'
+    ];
+
+    const listeners: (() => void)[] = [];
+
+    mediaQueries.forEach(query => {
+      const mediaQuery = window.matchMedia(query);
+      const listener = () => setTimeout(checkPWAMode, 100);
+      mediaQuery.addEventListener('change', listener);
+      listeners.push(() => mediaQuery.removeEventListener('change', listener));
+    });
+
     window.addEventListener('resize', checkPWAMode);
-    return () => window.removeEventListener('resize', checkPWAMode);
-  }, []);
+
+    return () => {
+      window.removeEventListener('resize', checkPWAMode);
+      listeners.forEach(cleanup => cleanup());
+    };
+  }, [isPWAMode]);
 
   // Scroll detection for auto-hide functionality
   useEffect(() => {

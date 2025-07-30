@@ -50,10 +50,10 @@ export default function SettingsIndexPage() {
 
   const settingsSections: SettingsSection[] = [
     {
-      id: 'subscription',
-      title: 'Subscription',
+      id: 'buy-tokens',
+      title: 'Buy Tokens',
       icon: ShoppingCart,
-      href: '/settings/subscription',
+      href: '/settings/buy-tokens',
       requiresPayments: true,
       requiresTokenSystem: true
     },
@@ -196,7 +196,7 @@ export default function SettingsIndexPage() {
             // Show warning for subscription-related sections if there are subscription issues
             // But don't show warning dots when we have status icons or when loading
             // Only show warnings for truly problematic states, not for active subscriptions
-            const showWarning = (section.id === 'subscription' || section.id === 'buy-tokens') &&
+            const showWarning = section.id === 'buy-tokens' &&
               shouldShowSubscriptionWarning &&
               hasActiveSubscription !== null && // Don't show while loading
               hasActiveSubscription === false; // Only show when explicitly false (not active)
@@ -205,7 +205,7 @@ export default function SettingsIndexPage() {
               <div key={section.id} className="relative">
                 <button
                   onClick={() => handleSectionClick(section.href)}
-                  className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors select-none"
                 >
                   <div className="flex items-center">
                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 mr-3">
@@ -215,7 +215,7 @@ export default function SettingsIndexPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Status icons for specific sections - show success and warnings */}
-                    {section.id === 'subscription' && hasActiveSubscription !== null && (
+                    {section.id === 'buy-tokens' && hasActiveSubscription !== null && (
                       hasActiveSubscription === true ? (
                         <StatusIcon status="success" size="sm" position="static" />
                       ) : (

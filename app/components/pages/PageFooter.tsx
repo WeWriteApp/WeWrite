@@ -126,11 +126,11 @@ export default function PageFooter({
     <div className="mt-10 border-t-only pt-6 pb-6 px-4">
       {/* Insert Link button - shown when editing */}
       {canEdit && isEditing && onInsertLink && (
-        <div className="mb-4 flex justify-center w-full">
+        <div className="mb-4 w-full">
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="w-full gap-2 justify-center"
             onClick={onInsertLink}
             disabled={isSaving}
           >

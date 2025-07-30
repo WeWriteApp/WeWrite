@@ -48,7 +48,7 @@ interface SubscriptionHistoryProps {
   className?: string;
 }
 
-export default function SubscriptionHistory({ className = '' }: SubscriptionHistoryProps) {
+export default function TokenPurchaseHistory({ className = '' }: SubscriptionHistoryProps) {
   const [history, setHistory] = useState<SubscriptionHistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

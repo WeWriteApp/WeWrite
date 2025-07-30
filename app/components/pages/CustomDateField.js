@@ -219,9 +219,9 @@ export default function CustomDateField({
   // Always render the field, but show different UI based on whether there's a custom date
 
   return (
-    <div className={`${className}`}>
+    <div className={`w-full ${className}`}>
       <div
-        className={`flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+        className={`w-full flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
         onClick={handleDateClick}
       >
         <div className="flex items-center gap-2">

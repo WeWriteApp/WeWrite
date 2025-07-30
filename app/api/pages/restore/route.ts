@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
       if (pageData.content) {
         // Import the backlinks update function
-        const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
+        const { updateBacklinksIndex } = await import('../../../firebase/database/backlinks');
 
         await updateBacklinksIndex(
           pageId,

@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
 
     // Handle permission errors gracefully - return empty data instead of failing
     if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
-      console.log('[TokenEarningsService] Permission denied for token earnings, returning empty data (expected for non-writers)');
+      // Permission denied for non-writers - this is expected
       return NextResponse.json({
         success: true,
         data: {

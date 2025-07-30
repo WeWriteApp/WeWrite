@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const query: PageQuery = {
-      userId: searchParams.get('userId') || undefined,
+      userId: searchParams.get('userId') || currentUserId, // Default to current user if no userId specified
       includeDeleted: searchParams.get('includeDeleted') === 'true',
       limit: parseInt(searchParams.get('limit') || '20'),
       startAfter: searchParams.get('startAfter') || undefined,
@@ -55,14 +55,7 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
-    console.log('🗺️ API /pages - Debug info:', {
-      currentUserId: currentUserId,
-      requestedUserId: query.userId,
-      userIdMatch: currentUserId === query.userId,
-      limit: query.limit
-    });
-
-    console.log('🗺️ API /pages - Debug info:', {
+    console.log('🗺️ API /pages - Query info:', {
       currentUserId: currentUserId,
       requestedUserId: query.userId,
       userIdMatch: currentUserId === query.userId,

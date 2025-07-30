@@ -34,7 +34,7 @@ const getTierInfo = (amount: number) => {
   return { tier: 'custom', tokens: amount * TOKEN_ECONOMY.TOKENS_PER_DOLLAR, description: `$${amount}/month subscription` };
 };
 
-export default function SubscriptionTierSlider({
+export default function TokenPurchaseTierSlider({
   selectedAmount,
   onAmountSelect,
   currentSubscription,

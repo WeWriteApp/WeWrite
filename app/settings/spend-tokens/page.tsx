@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
-import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
-import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
+import TokenAllocationDisplay from '../../components/token-purchase/TokenAllocationDisplay';
+import TokenAllocationBreakdown from '../../components/token-purchase/TokenAllocationBreakdown';
 
 
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
@@ -372,20 +372,20 @@ export default function SpendTokensPage() {
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 <h3 className="font-medium text-amber-800 dark:text-amber-200">
-                  Subscription Ending Soon
+                  Token Purchase Ending Soon
                 </h3>
               </div>
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                Your subscription ends on {new Date(currentSubscription.billingCycleEnd || '').toLocaleDateString()}.
+                Your token purchase ends on {new Date(currentSubscription.billingCycleEnd || '').toLocaleDateString()}.
                 You can still allocate tokens until then.
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push('/settings/subscription')}
+                onClick={() => router.push('/settings/buy-tokens')}
                 className="mt-3 border-theme-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/20"
               >
-                Reactivate Subscription
+                Reactivate Token Purchase
               </Button>
             </div>
           )}
@@ -393,16 +393,16 @@ export default function SpendTokensPage() {
           {!currentSubscription && (
             <div className="text-center py-8">
               <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Active Subscription</h3>
+              <h3 className="text-lg font-medium mb-2">No Token Purchase</h3>
               <p className="text-muted-foreground mb-4">
-                Start a subscription to get monthly tokens and support creators.
+                Purchase tokens to get monthly tokens and support creators.
               </p>
               <Button
-                onClick={() => router.push('/settings/subscription')}
+                onClick={() => router.push('/settings/buy-tokens')}
                 className="inline-flex items-center gap-2"
               >
                 <CreditCard className="h-4 w-4" />
-                Get Subscription
+                Buy Tokens
               </Button>
             </div>
           )}

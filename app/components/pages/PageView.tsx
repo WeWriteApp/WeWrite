@@ -478,6 +478,13 @@ export default function PageView({
       viewRecorded.current = true;
       recordPageView(pageId, user?.uid);
 
+      // Add to localStorage recent pages tracking
+      import('../../utils/recentSearches').then(({ addRecentlyViewedPageId }) => {
+        addRecentlyViewedPageId(pageId);
+      }).catch(error => {
+        console.error('Error adding page to recent pages:', error);
+      });
+
       // Add to recent pages if user is logged in
       if (user && page) {
         // Get the correct username - prefer page.username, fallback to fetching from user profile

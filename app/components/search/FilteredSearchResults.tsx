@@ -48,7 +48,8 @@ const FilteredSearchResults = forwardRef(({
   preventRedirect = false,
   className = "",
   autoFocus = false,
-  onFocus = null}, ref) => {
+  onFocus = null,
+  linkedPageIds = []}, ref) => {
   const { user } = useAuth();
   const router = useRouter();
   const { formatDate: formatDateString } = useDateFormat();
@@ -481,9 +482,9 @@ const FilteredSearchResults = forwardRef(({
   if (!user) return null;
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full min-w-0 ${className}`}>
       {/* Search Input */}
-      <div className="relative flex-shrink-0 mb-3">
+      <div className="relative flex-shrink-0 mb-3 min-w-0">
         {isLinkEditor ? (
           <ClearableInput
             ref={ref || searchInputRef}
@@ -563,40 +564,48 @@ const FilteredSearchResults = forwardRef(({
                    (activeFilter === 'recent' ? 'Recently Viewed' : 'My Pages')}
                 </h3>
                 <div className="space-y-1">
-                  {pages.map((page) => (
-                    <button
-                      key={page.id}
-                      onClick={() => handleSelect(page)}
-                      className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                        selectedId === page.id ? 'bg-muted' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
-                          <PillLink
-                            href={`/${page.id}`}
-                            isPublic={page.isPublic}
-                            isOwned={page.userId === user?.uid}
-                            clickable={false}
-                          >
-                            {page.title && isExactDateFormat(page.title)
-                              ? formatDateString(page.title)
-                              : page.title}
-                          </PillLink>
+                  {pages.map((page) => {
+                    const isAlreadyLinked = Array.isArray(linkedPageIds) && linkedPageIds.includes(page.id);
+                    return (
+                      <button
+                        key={page.id}
+                        onClick={() => handleSelect(page)}
+                        className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
+                          selectedId === page.id ? 'bg-muted' : ''
+                        } ${isAlreadyLinked ? 'opacity-50' : ''}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
+                            <PillLink
+                              href={`/${page.id}`}
+                              isPublic={page.isPublic}
+                              isOwned={page.userId === user?.uid}
+                              clickable={false}
+                            >
+                              {page.title && isExactDateFormat(page.title)
+                                ? formatDateString(page.title)
+                                : page.title}
+                            </PillLink>
+                          </div>
+                          {page.username && (
+                            <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                              by {page.username}
+                              {isAlreadyLinked && (
+                                <span className="ml-1 text-xs text-muted-foreground/70">
+                                  • already linked
+                                </span>
+                              )}
+                            </span>
+                          )}
                         </div>
-                        {page.username && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                            by {page.username}
-                          </span>
+                        {isLinkEditor && page.category && (
+                          <div className="text-xs text-muted-foreground mt-1 px-2">
+                            {page.category}
+                          </div>
                         )}
-                      </div>
-                      {isLinkEditor && page.category && (
-                        <div className="text-xs text-muted-foreground mt-1 px-2">
-                          {page.category}
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

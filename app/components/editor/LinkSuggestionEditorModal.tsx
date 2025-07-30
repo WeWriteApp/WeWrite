@@ -180,6 +180,7 @@ export default function LinkSuggestionEditorModal({
               autoFocus={true}
               className="h-full p-3"
               preventRedirect={true}
+              linkedPageIds={[]}
             />
           </div>
         </div>

@@ -157,8 +157,8 @@ export function ConfirmationStep({
               Don't worry - your subscription is active and you can access all features.
               Our team will resolve any setup issues automatically.
             </p>
-            <Button onClick={() => router.push('/settings/subscription')}>
-              Go to Subscription Dashboard
+            <Button onClick={() => router.push('/settings/buy-tokens')}>
+              Go to Token Purchase Dashboard
             </Button>
           </CardContent>
         </Card>
@@ -282,12 +282,12 @@ export function ConfirmationStep({
         <Button
           variant="outline"
           size="lg"
-          onClick={() => handleNavigation('/settings/subscription')}
+          onClick={() => handleNavigation('/settings/buy-tokens')}
           disabled={isRedirecting}
           className="flex items-center gap-2"
         >
           <Settings className="w-4 h-4" />
-          Manage Subscription
+          Manage Token Purchase
         </Button>
       </div>
 

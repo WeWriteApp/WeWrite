@@ -1202,8 +1202,6 @@ function NewPageContent() {
                     content={editorState}
                     isEditable={true}
                     onChange={handleContentChange}
-                    location={location}
-                    setLocation={setLocation}
                     isSaving={isSaving}
                     error={error || ""}
                     isNewPage={true}
@@ -1211,51 +1209,7 @@ function NewPageContent() {
                     showToolbar={false}
                     onInsertLinkRequest={handleInsertLinkRequest}
                     // Remove onSave and onCancel - handled by bottom save bar
-                  />
-
-                  {/* Custom Date Field */}
-                  <div className="mt-6">
-                    <CustomDateField
-                      customDate={intendedCustomDate}
-                      canEdit={true}
-                      onCustomDateChange={handleCustomDateChange}
-                    />
-                  </div>
-
-                  {/* Location Field */}
-                  <div className="mt-6">
-                    <LocationField
-                      location={location}
-                      canEdit={true}
-                      onLocationChange={setLocation}
-                    />
-                  </div>
-
-                  {/* Page Footer with bottom save bar */}
-                  <PageFooter
-                    page={null} // New page doesn't have existing page data
-                    content={editorState}
-                    linkedPageIds={[]} // New page doesn't have linked pages yet
-                    isEditing={true} // Always editing for new pages
-                    canEdit={true} // User can always edit their new page
-                    isOwner={true} // User owns their new page
-                    title={title}
-                    location={location}
-                    onTitleChange={handleTitleChange}
-                    onLocationChange={setLocation}
-                    onSave={async () => {
-                      const success = await handleSave(editorState, 'button');
-                      if (success) {
-                        // Navigation will be handled by handleSave
-                      }
-                    }}
-                    onCancel={handleBackWithCheck}
-                    onDelete={null} // No delete for new pages
-                    onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
-                    isSaving={isSaving}
-                    error={error}
-                    titleError={titleError}
-                    hasUnsavedChanges={hasUnsavedChanges}
+                    // Remove location props - handled outside ContentDisplay
                   />
 
                   {/* Unsaved Changes Dialog */}
@@ -1268,12 +1222,61 @@ function NewPageContent() {
                     title="Unsaved Changes"
                     description="You have unsaved changes. Do you want to save them before leaving?"
                   />
-
-
-              </PageProvider>
+                </PageProvider>
               </div>
             ) : null}
             </div> {/* Close content container */}
+
+            {/* Custom Date Field - moved outside content container */}
+            {isEditing && (
+              <div className="px-4 mt-6">
+                <CustomDateField
+                  customDate={intendedCustomDate}
+                  canEdit={true}
+                  onCustomDateChange={handleCustomDateChange}
+                />
+              </div>
+            )}
+
+            {/* Location Field - moved outside content container */}
+            {isEditing && (
+              <div className="px-4 mt-6">
+                <LocationField
+                  location={location}
+                  canEdit={true}
+                  onLocationChange={setLocation}
+                />
+              </div>
+            )}
+
+            {/* Page Footer with bottom save bar - moved outside content container */}
+            {isEditing && (
+              <PageFooter
+                page={null} // New page doesn't have existing page data
+                content={editorState}
+                linkedPageIds={[]} // New page doesn't have linked pages yet
+                isEditing={true} // Always editing for new pages
+                canEdit={true} // User can always edit their new page
+                isOwner={true} // User owns their new page
+                title={title}
+                location={location}
+                onTitleChange={handleTitleChange}
+                onLocationChange={setLocation}
+                onSave={async () => {
+                  const success = await handleSave(editorState, 'button');
+                  if (success) {
+                    // Navigation will be handled by handleSave
+                  }
+                }}
+                onCancel={handleBackWithCheck}
+                onDelete={null} // No delete for new pages
+                onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
+                isSaving={isSaving}
+                error={error}
+                titleError={titleError}
+                hasUnsavedChanges={hasUnsavedChanges}
+              />
+            )}
           </div> {/* Close full-width header area */}
         </div>
         {!isEditing && (

@@ -17,7 +17,7 @@ import {
 import { Switch } from '../ui/switch';
 import ActivityCard from '../activity/ActivityCard';
 import { useAuth } from '../../providers/AuthProvider';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { useInfiniteScrollWithLoadMore } from '../../hooks/useInfiniteScroll';
 import { SectionTitle } from '../ui/section-title';
 import { FollowUsersCard } from '../activity/FollowUsersCard';
 import { getUserFollowing } from '../../firebase/follows';
@@ -184,7 +184,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
   }, [fetchEdits]);
 
   // Infinite scroll
-  const { loadingMore, loadMore } = useInfiniteScroll({
+  const { loadingMore, loadMore, targetRef } = useInfiniteScrollWithLoadMore({
     hasMore,
     onLoadMore: () => fetchEdits(true, nextCursor || undefined),
   });
@@ -341,22 +341,35 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
             );
           })}
           
-          {hasMore && (
+          {/* Infinite scroll loading indicator */}
+          {loadingMore && (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {/* Infinite scroll target */}
+          <div ref={targetRef} className="h-4" />
+
+          {/* Manual load more button as fallback */}
+          {hasMore && !loadingMore && (
             <div className="flex justify-center pt-4">
               <Button
                 onClick={loadMore}
-                disabled={loadingMore}
                 variant="outline"
               >
-                {loadingMore ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  'Load More'
-                )}
+                Load More
               </Button>
+            </div>
+          )}
+
+          {/* End of list indicator */}
+          {!hasMore && !loadingMore && edits.length > 0 && (
+            <div className="flex justify-center py-6">
+              <div className="text-center text-muted-foreground">
+                <div className="w-12 h-px bg-border mx-auto mb-2"></div>
+                <p className="text-sm">You've reached the end</p>
+              </div>
             </div>
           )}
         </div>

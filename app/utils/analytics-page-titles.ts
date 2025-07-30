@@ -50,7 +50,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/activity': 'Activity Feed',
   '/search': 'Search Page',
   '/leaderboard': 'Leaderboard',
-  '/settings/subscription': 'Subscription Page',
+  '/settings/buy-tokens': 'Buy Tokens Page',
 
   // Auth pages
   '/auth/login': 'Login Page',
@@ -61,7 +61,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
 
   // Settings pages
   '/settings': 'Settings',
-  '/settings/subscription': 'Subscription Settings',
+  '/settings/buy-tokens': 'Token Purchase Settings',
   '/settings/payment': 'Payment Settings',
   '/settings/notifications': 'Notification Settings',
   '/settings/security': 'Security Settings',

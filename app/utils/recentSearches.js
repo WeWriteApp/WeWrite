@@ -101,13 +101,54 @@ export const clearRecentSearches = (userId = null) => {
 };
 
 /**
+ * Maximum number of recently viewed pages to store
+ */
+const MAX_RECENT_PAGES = 20;
+
+/**
+ * Add a page ID to the recently viewed pages list
+ *
+ * @param {string} pageId - The page ID to add
+ */
+export const addRecentlyViewedPageId = (pageId) => {
+  if (!pageId || typeof window === 'undefined') return;
+
+  try {
+    // Get existing recently viewed pages
+    const existingPagesStr = localStorage.getItem('recentlyVisitedPages');
+    let recentPages = existingPagesStr ? JSON.parse(existingPagesStr) : [];
+
+    // Ensure it's an array
+    if (!Array.isArray(recentPages)) {
+      recentPages = [];
+    }
+
+    // Remove this page if it already exists (to avoid duplicates and move to front)
+    recentPages = recentPages.filter(id => id !== pageId);
+
+    // Add the new page ID to the beginning
+    recentPages.unshift(pageId);
+
+    // Keep only the most recent pages
+    recentPages = recentPages.slice(0, MAX_RECENT_PAGES);
+
+    // Save back to localStorage
+    localStorage.setItem('recentlyVisitedPages', JSON.stringify(recentPages));
+
+    console.log('Added page to recently viewed:', pageId);
+  } catch (error) {
+    console.error("Error adding recently viewed page:", error);
+  }
+};
+
+/**
  * Get recently viewed pages from localStorage
- * 
+ *
  * @returns {Array} - Array of page IDs
  */
 export const getRecentlyViewedPageIds = () => {
   if (typeof window === 'undefined') return [];
-  
+
   try {
     const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
     return recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];

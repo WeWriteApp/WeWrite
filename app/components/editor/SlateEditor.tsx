@@ -706,12 +706,24 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
   // Insert link at current selection
   const insertLink = useCallback((linkData: any) => {
-    console.log('insertLink called with:', linkData);
+    console.log('🔗 insertLink called with:', linkData);
+    console.log('🔗 Current selection:', editor.selection);
+
     const { selection } = editor;
-    const isCollapsed = selection && Range.isCollapsed(selection);
+
+    if (!selection) {
+      console.warn('🔗 No selection available for link insertion');
+      return;
+    }
+
+    const isCollapsed = Range.isCollapsed(selection);
+    console.log('🔗 Selection is collapsed:', isCollapsed);
+
+    // Store the current selection to restore it if needed
+    const currentSelection = { ...selection };
 
     if (isCollapsed) {
-      // Insert new link
+      // Insert new link at cursor position without modifying surrounding content
       const link: LinkElement = {
         type: 'link',
         url: linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
@@ -720,18 +732,24 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         isExternal: linkData.type === 'external',
         isPublic: true,
         isOwned: false,
-        isNew: linkData.isNew, // Add isNew flag to the link element
+        isNew: linkData.isNew,
         children: [{ text: linkData.text || linkData.pageTitle || 'Link' }]
       };
 
-      // Ensure proper spacing before inserting
-      if (selection) {
-        ensureSpacing(selection.anchor);
-      }
+      console.log('🔗 Inserting link at collapsed selection:', link);
 
-      Transforms.insertNodes(editor, link);
+      // Insert the link directly without spacing modifications that could disrupt content
+      Transforms.insertNodes(editor, link, { at: currentSelection });
+
+      // Move cursor to after the inserted link
+      const afterLinkPoint = Editor.after(editor, currentSelection.anchor);
+      if (afterLinkPoint) {
+        Transforms.select(editor, afterLinkPoint);
+      }
     } else {
       // Wrap selected text in link
+      console.log('🔗 Wrapping selected text in link');
+
       Transforms.wrapNodes(
         editor,
         {
@@ -742,15 +760,16 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           isExternal: linkData.type === 'external',
           isPublic: true,
           isOwned: false,
-          isNew: linkData.isNew, // Add isNew flag to the link element
+          isNew: linkData.isNew,
           children: []
         },
-        { split: true }
+        { split: true, at: currentSelection }
       );
     }
 
+    console.log('🔗 Link insertion completed');
     setShowLinkModal(false);
-  }, [editor, ensureSpacing]);
+  }, [editor]);
 
   // Handle link creation from suggestion modal
   const handleSuggestionLinkInsert = useCallback((linkData: any) => {
@@ -797,6 +816,25 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       console.error('🔴 SLATE_EDITOR: Error inserting link from suggestion:', error);
     }
   }, [editor, insertLink]);
+
+  // Extract linked page IDs from current content
+  const getLinkedPageIds = useCallback(() => {
+    const linkedPageIds = new Set<string>();
+
+    const extractLinksFromNode = (node: any) => {
+      if (SlateElement.isElement(node)) {
+        if (node.type === 'link' && node.pageId) {
+          linkedPageIds.add(node.pageId);
+        }
+        if (node.children) {
+          node.children.forEach(extractLinksFromNode);
+        }
+      }
+    };
+
+    value.forEach(extractLinksFromNode);
+    return Array.from(linkedPageIds);
+  }, [value]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
@@ -1082,6 +1120,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             insertLink(linkData);
           }}
           editingLink={null}
+          linkedPageIds={getLinkedPageIds()}
         />
       )}
       {/* Link Suggestion Editor Modal */}

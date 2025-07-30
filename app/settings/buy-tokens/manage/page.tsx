@@ -35,7 +35,7 @@ interface TokenBalance {
   monthlyAllocation: number;
 }
 
-export default function SubscriptionManagePage() {
+export default function TokenPurchaseManagePage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -229,20 +229,20 @@ export default function SubscriptionManagePage() {
     return (
       <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
         <div className="mb-8">
-          <Link href="/settings/subscription" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+          <Link href="/settings/buy-tokens" className="inline-flex items-center text-blue-500 hover:text-blue-600">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Subscription
           </Link>
         </div>
 
         <div className="text-center py-12">
-          <h1 className="text-2xl font-bold mb-4">No Active Subscription</h1>
+          <h1 className="text-2xl font-bold mb-4">No Active Token Purchase</h1>
           <p className="text-muted-foreground mb-6">
-            You need an active subscription to manage token allocations.
+            You need an active token purchase to manage token allocations.
           </p>
           <Button asChild>
-            <Link href="/settings/subscription">
-              Start Subscription
+            <Link href="/settings/buy-tokens">
+              Buy Tokens
             </Link>
           </Button>
         </div>
@@ -255,16 +255,16 @@ export default function SubscriptionManagePage() {
   return (
     <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
       <div className="mb-8">
-        <Link href="/settings/subscription" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+        <Link href="/settings/buy-tokens" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Subscription
+          Back to Token Purchase
         </Link>
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Manage Subscription</h1>
+        <h1 className="text-3xl font-bold mb-2">Manage Token Purchase</h1>
         <p className="text-muted-foreground">
-          Manage your token allocations and subscription settings.
+          Manage your token allocations and purchase settings.
         </p>
       </div>
 
@@ -274,7 +274,7 @@ export default function SubscriptionManagePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Subscription Overview
+              Token Purchase Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -383,8 +383,8 @@ export default function SubscriptionManagePage() {
                         variant="outline"
                         onClick={() => {
                           if ((tokenBalance?.availableTokens || 0) <= 0) {
-                            // Redirect to main subscription page to upgrade
-                            router.push('/settings/subscription');
+                            // Redirect to main token purchase page to upgrade
+                            router.push('/settings/buy-tokens');
                           } else {
                             handleTokenAllocationChange(allocation.id, incrementAmount);
                           }

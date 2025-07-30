@@ -19,20 +19,45 @@ const STORAGE_KEYS = {
 
 /**
  * Check if the app is running in standalone mode (PWA)
+ * Enhanced detection with multiple methods and analytics tracking
  */
 export const isPWA = (): boolean => {
   if (typeof window === 'undefined') return false;
 
-  // Check for standalone mode (iOS and Android PWA)
+  // Method 1: Check for standalone display mode (most reliable)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
 
-  // Check for iOS "Add to Home Screen" mode
-  const isIOSPWA =
-    window.navigator.standalone ||
-    // @ts-ignore: This property exists on iOS Safari
-    (window.navigator.standalone === true);
+  // Method 2: Check for iOS "Add to Home Screen" mode
+  const isIOSPWA = !!(window.navigator as any).standalone;
 
-  return isStandalone || isIOSPWA;
+  // Method 3: Check for fullscreen display mode (some Android PWAs)
+  const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+
+  // Method 4: Check for minimal-ui display mode (some PWAs)
+  const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+
+  // Method 5: Check for window-controls-overlay (newer PWAs)
+  const isWindowControlsOverlay = window.matchMedia('(display-mode: window-controls-overlay)').matches;
+
+  const isPWAMode = isStandalone || isIOSPWA || isFullscreen || isMinimalUI || isWindowControlsOverlay;
+
+  // Track PWA usage for analytics (only once per session)
+  if (isPWAMode && !sessionStorage.getItem('pwa_tracked')) {
+    sessionStorage.setItem('pwa_tracked', 'true');
+    try {
+      const analyticsService = getAnalyticsService();
+      analyticsService.trackEvent({
+        category: EVENT_CATEGORIES.PWA,
+        action: 'session_start',
+        label: 'pwa_mode',
+        value: 1
+      });
+    } catch (error) {
+      console.debug('PWA analytics tracking failed:', error);
+    }
+  }
+
+  return isPWAMode;
 };
 
 /**
