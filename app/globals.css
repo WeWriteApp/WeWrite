@@ -2233,10 +2233,30 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
 /* Leaflet map theme-aware styling */
 .leaflet-container {
   background-color: hsl(var(--background)) !important;
+  /* Ensure maps don't override sidebar z-index */
+  z-index: 1 !important;
 }
 
 .dark .leaflet-container {
   background-color: hsl(var(--background)) !important;
+}
+
+/* Ensure all leaflet elements stay below sidebar */
+.leaflet-pane,
+.leaflet-map-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane {
+  z-index: auto !important;
+}
+
+/* Ensure leaflet controls don't override sidebar */
+.leaflet-control-container,
+.leaflet-control {
+  z-index: 50 !important;
 }
 
 /* Enable text selection on mobile devices while disabling native context menu */

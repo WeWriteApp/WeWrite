@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
 import { ChevronLeft, Trophy, Loader, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { PillLink } from '../components/utils/PillLink';
+import PillLink from '../components/utils/PillLink';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { SupporterIcon } from "../components/payments/SupporterIcon";

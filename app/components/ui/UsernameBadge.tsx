@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SubscriptionTierBadge } from './SubscriptionTierBadge';
-import { PillLink } from '../utils/PillLink';
+import PillLink from '../utils/PillLink';
 // Simple tooltips using title attribute
 import { SubscriptionTiersModal } from '../modals/SubscriptionTiersModal';
 import { cn } from '../../lib/utils';

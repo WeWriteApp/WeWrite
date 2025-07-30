@@ -304,7 +304,7 @@ function UnifiedSidebarContent({
     /* Desktop Sidebar - Hidden on mobile */
     <div
       className={cn(
-        "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[100] flex-col",
+        "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[200] flex-col",
         "sidebar-smooth-transition",
         showContent ? "w-64" : "w-16",
         isHovering && !isExpanded ? "sidebar-hover-overlay" : ""

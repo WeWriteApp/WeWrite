@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, Loader2, Globe, Link, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { PillLink } from './PillLink';
+import PillLink from './PillLink';
 import ExternalLinkPreviewModal from '../ui/ExternalLinkPreviewModal';
 
 interface ExternalLinkData {

@@ -43,27 +43,27 @@ export default function LocationField({
 
   // Handle legacy string locations (migrate to object format)
   const normalizedLocation = React.useMemo(() => {
-    console.warn('🗺️ LocationField: Processing location:', location, 'type:', typeof location);
+    console.log('🗺️ LocationField: Processing location:', location, 'type:', typeof location);
 
     if (!location) {
-      console.warn('🗺️ LocationField: No location provided');
+      console.log('🗺️ LocationField: No location provided');
       return null;
     }
 
     // If it's already an object with lat/lng, use it
     if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
-      console.warn('🗺️ LocationField: Valid location object:', location);
+      console.log('🗺️ LocationField: Valid location object:', location);
       return location as Location;
     }
 
     // If it's a string, try to parse it (legacy format)
     if (typeof location === 'string' && location.trim()) {
-      console.warn('🗺️ LocationField: Found legacy string location:', location);
+      console.log('🗺️ LocationField: Found legacy string location:', location);
       // For now, return null for string locations - user will need to re-set
       return null;
     }
 
-    console.warn('🗺️ LocationField: Invalid location format');
+    console.log('🗺️ LocationField: Invalid location format');
     return null;
   }, [location]);
 
@@ -141,15 +141,15 @@ export default function LocationField({
         {normalizedLocation && (
             <div className="h-40 md:h-48 border-t border-border/40">
               <MapPicker
-              location={normalizedLocation}
-              readOnly={true}
-              showControls={false}
-              height="100%"
-              className="pointer-events-none"
-              disableZoom={true} // Disable zooming in collapsed state
-              allowPanning={false} // Disable panning in collapsed state
-              initialZoom={normalizedLocation.zoom || 10} // Use saved zoom level to match fullscreen view
-            />
+                location={normalizedLocation}
+                readOnly={true}
+                showControls={false}
+                height="100%"
+                className="pointer-events-none"
+                disableZoom={true} // Disable zooming in collapsed state
+                allowPanning={false} // Disable panning in collapsed state
+                initialZoom={normalizedLocation.zoom || 10} // Use saved zoom level to match fullscreen view
+              />
             </div>
         )}
       </div>

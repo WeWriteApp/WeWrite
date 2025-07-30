@@ -107,12 +107,17 @@ export default function UserProfileTabs({ profile }) {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
       const basicValidTabs = ["bio", "pages", "recent-edits", "timeline", "graph", "map", "external-links"];
+      console.log('🗺️ UserProfileTabs: Initializing with hash:', hash, 'valid:', basicValidTabs.includes(hash));
       if (hash && basicValidTabs.includes(hash)) {
+        console.log('🗺️ UserProfileTabs: Setting initial activeTab to:', hash);
         return hash;
       }
     }
+    console.log('🗺️ UserProfileTabs: Setting initial activeTab to default: bio');
     return "bio"; // Default tab
   });
+
+  console.log('🗺️ UserProfileTabs: Current activeTab state:', activeTab);
   const [direction, setDirection] = useState(0); // -1 for right, 1 for left
   const { user } = useAuth();
   const isCurrentUser = user && profile && user.uid === profile.uid;
@@ -321,6 +326,8 @@ export default function UserProfileTabs({ profile }) {
 
   // Handle tab changes with enhanced slide animation
   const handleTabChange = (newTab) => {
+    console.log('🗺️ UserProfileTabs: handleTabChange called with:', newTab, 'current:', activeTab);
+
     // Track tab switching
     if (newTab !== activeTab) {
       trackInteractionEvent(events.TAB_CHANGED, {
@@ -335,9 +342,11 @@ export default function UserProfileTabs({ profile }) {
     // Update URL hash
     if (typeof window !== 'undefined') {
       window.location.hash = newTab;
+      console.log('🗺️ UserProfileTabs: Updated URL hash to:', newTab);
     }
 
     // Set active tab immediately
+    console.log('🗺️ UserProfileTabs: Setting activeTab to:', newTab);
     setActiveTab(newTab);
     scrollTabIntoView(newTab);
   };
@@ -477,6 +486,11 @@ export default function UserProfileTabs({ profile }) {
                 value="map"
                 data-value="map"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+                onClick={() => {
+                  console.log('🗺️ UserProfileTabs: Map tab clicked! Current activeTab:', activeTab);
+                  setActiveTab('map');
+                  console.log('🗺️ UserProfileTabs: Map tab setActiveTab called with "map"');
+                }}
               >
                 <MapPin className="h-4 w-4" />
                 <span>Map</span>
@@ -644,16 +658,18 @@ export default function UserProfileTabs({ profile }) {
           {/* Map tab content */}
           <TabsContent
             value="map"
-            className={`mt-0 transition-all duration-300 ${
-              activeTab === "map"
-                ? "block"
-                : "hidden"
-            }`}
+            className="mt-0 transition-all duration-300"
           >
-            <UserMapTab
-              userId={profile?.uid}
-              username={profile?.username || 'this user'}
-            />
+            {console.log('🗺️ UserProfileTabs: Map TabsContent ALWAYS renders, activeTab:', activeTab, 'condition result:', activeTab === "map")}
+            {activeTab === "map" && (
+              <>
+                {console.log('🗺️ UserProfileTabs: Map TabsContent CONDITIONAL rendering, activeTab:', activeTab, 'profile?.uid:', profile?.uid)}
+                <UserMapTab
+                  userId={profile?.uid}
+                  username={profile?.username || 'this user'}
+                />
+              </>
+            )}
           </TabsContent>
 
           {/* External Links tab content */}

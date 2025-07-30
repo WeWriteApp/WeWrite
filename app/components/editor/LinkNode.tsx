@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { validateLink, getLinkDisplayText } from '../../utils/linkValidator';
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";

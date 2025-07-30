@@ -11,7 +11,7 @@ import { Separator } from "../../components/ui/separator";
 import Header from '../layout/Header';
 import { PagePreviewCard } from './PagePreviewCard';
 import { useTheme } from "next-themes";
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getPageById } from '../../utils/apiClient';

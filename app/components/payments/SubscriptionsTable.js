@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 // Using API endpoints instead of direct Firebase calls
-import {PillLink} from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 
 import { useAuth } from "../../providers/AuthProvider";
 const SubscriptionsTable = () => {
