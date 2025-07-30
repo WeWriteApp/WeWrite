@@ -46,6 +46,85 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
   return 'env(safe-area-inset-bottom, 4px)';
 };
 
+// Special New Page Button Component with accent-colored dot design
+const NewPageButton = ({
+  id,
+  onClick,
+  onHover,
+  isActive,
+  isPressed,
+  isNavigating
+}: {
+  id: string;
+  onClick: () => void;
+  onHover?: () => void;
+  isActive: boolean;
+  isPressed: boolean;
+  isNavigating: boolean;
+}) => {
+  return (
+    <Button
+      variant="ghost"
+      size="lg"
+      onClick={onClick}
+      onMouseEnter={onHover}
+      onTouchStart={onHover}
+      className={cn(
+        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-2 relative gap-1 group",
+        "transition-all duration-75 ease-out",
+        "flex-shrink-0 min-w-0",
+        "touch-manipulation select-none",
+        // Enhanced visual feedback for primary action
+        isPressed && "scale-95",
+        "hover:bg-primary/5 active:bg-primary/10",
+        // No background color changes - let the dot be the focus
+        "text-slate-600 hover:text-slate-900 dark:text-muted-foreground dark:hover:text-foreground"
+      )}
+      aria-label="Create New Page"
+      aria-pressed={isActive}
+      disabled={isNavigating && !isPressed}
+    >
+      {/* Accent-colored dot with plus icon */}
+      <div className={cn(
+        "relative w-12 h-12 rounded-full flex items-center justify-center",
+        "bg-primary text-primary-foreground shadow-lg",
+        "transition-all duration-75 ease-out",
+        // Enhanced feedback states
+        isPressed && "scale-95 shadow-md",
+        "hover:shadow-xl hover:scale-105",
+        // Subtle glow effect
+        "ring-2 ring-primary/20 hover:ring-primary/30"
+      )}>
+        <Plus className={cn(
+          "h-6 w-6 flex-shrink-0 transition-transform duration-75",
+          isPressed && "scale-110"
+        )} />
+
+        {/* Loading indicator */}
+        {isNavigating && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse" />
+          </div>
+        )}
+      </div>
+
+      {/* Text label */}
+      <span className={cn(
+        "text-xs font-medium leading-none transition-colors duration-75",
+        "text-center max-w-full truncate",
+        isActive
+          ? "text-primary"
+          : [
+              "text-slate-500 group-hover:text-slate-700",
+              "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
+            ]
+      )}>
+        New
+      </span>
+    </Button>
+  );
+};
+
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -383,15 +462,14 @@ export default function MobileBottomNav() {
             label="Home"
           />
 
-          {/* Profile Button */}
-          <NavButton
-            id="profile"
-            icon={User}
-            onClick={handleProfileClick}
-            onHover={() => user?.uid && handleButtonHover(`/user/${user.uid}`)}
-            isActive={isProfileActive}
-            ariaLabel="Profile"
-            label="Profile"
+          {/* New Page Button - MOVED TO MIDDLE as primary action */}
+          <NewPageButton
+            id="new"
+            onClick={handleNewPageClick}
+            onHover={() => handleButtonHover('/new?source=mobile-nav')}
+            isActive={isNewPageActive}
+            isPressed={isButtonPressed('new')}
+            isNavigating={isNavigatingTo(pathname)}
           />
 
           {/* Notifications Button */}
@@ -411,15 +489,15 @@ export default function MobileBottomNav() {
             />
           </NavButton>
 
-          {/* New Page Button */}
+          {/* Profile Button - MOVED TO END */}
           <NavButton
-            id="new"
-            icon={Plus}
-            onClick={handleNewPageClick}
-            onHover={() => handleButtonHover('/new?source=mobile-nav')}
-            isActive={isNewPageActive}
-            ariaLabel="New Page"
-            label="New"
+            id="profile"
+            icon={User}
+            onClick={handleProfileClick}
+            onHover={() => user?.uid && handleButtonHover(`/user/${user.uid}`)}
+            isActive={isProfileActive}
+            ariaLabel="Profile"
+            label="Profile"
           />
         </div>
       </div>
