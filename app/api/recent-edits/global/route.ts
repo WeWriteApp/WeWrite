@@ -89,14 +89,28 @@ export async function GET(request: NextRequest) {
       // For logged-in users, get all recent pages and filter deleted ones in code
       // This avoids the composite index requirement
       pagesQuery = db.collection(getCollectionName('pages'))
-        .orderBy('lastModified', 'desc')
-        .limit(limit * 3); // Get more to account for filtering deleted pages
+        .orderBy('lastModified', 'desc');
+
+      // Add cursor support for pagination
+      if (cursor) {
+        console.log(`🔄 [GLOBAL_RECENT_EDITS] Using cursor: ${cursor}`);
+        pagesQuery = pagesQuery.startAfter(cursor);
+      }
+
+      pagesQuery = pagesQuery.limit(limit * 3); // Get more to account for filtering deleted pages
     } else {
       // For anonymous users, only public pages (legacy behavior until isPublic is fully removed)
       pagesQuery = db.collection(getCollectionName('pages'))
         .where('isPublic', '==', true)
-        .orderBy('lastModified', 'desc')
-        .limit(limit * 2); // Get more to account for filtering deleted pages
+        .orderBy('lastModified', 'desc');
+
+      // Add cursor support for pagination
+      if (cursor) {
+        console.log(`🔄 [GLOBAL_RECENT_EDITS] Using cursor: ${cursor}`);
+        pagesQuery = pagesQuery.startAfter(cursor);
+      }
+
+      pagesQuery = pagesQuery.limit(limit * 2); // Get more to account for filtering deleted pages
     }
 
     const pagesSnapshot = await pagesQuery.get();
@@ -191,10 +205,19 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Determine if there are more pages available
+    // We have more if we got the full limit of filtered results, suggesting there might be more
+    const hasMorePages = enhancedEdits.length === limit && filteredPages.length >= limit;
+    const nextCursor = hasMorePages && enhancedEdits.length > 0
+      ? enhancedEdits[enhancedEdits.length - 1].lastModified
+      : null;
+
+    console.log(`🔄 [GLOBAL_RECENT_EDITS] Pagination info: hasMore=${hasMorePages}, nextCursor=${nextCursor}`);
+
     return NextResponse.json({
       edits: enhancedEdits,
-      hasMore: enhancedEdits.length === limit,
-      nextCursor: enhancedEdits.length > 0 ? enhancedEdits[enhancedEdits.length - 1].lastModified : null,
+      hasMore: hasMorePages,
+      nextCursor: nextCursor,
       total: enhancedEdits.length,
       timestamp: new Date().toISOString()
     });

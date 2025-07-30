@@ -81,7 +81,9 @@ export async function GET(request: NextRequest) {
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field values
+        // Since we're ordering by 'deleted' then 'lastModified', we need both values
+        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
       }
 
       if (queryLimit !== null) {
@@ -100,7 +102,9 @@ export async function GET(request: NextRequest) {
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field values
+        // Since we're ordering by 'deleted' then 'createdAt', we need both values
+        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
       }
 
       if (queryLimit !== null) {
@@ -118,7 +122,9 @@ export async function GET(request: NextRequest) {
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field values
+        // Since we're ordering by 'deleted' then 'title', we need both values
+        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
       }
 
       if (queryLimit !== null) {
@@ -136,7 +142,9 @@ export async function GET(request: NextRequest) {
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field values
+        // Since we're ordering by 'deleted' then 'lastModified', we need both values
+        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
       }
 
       if (queryLimit !== null) {
