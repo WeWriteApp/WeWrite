@@ -55,11 +55,27 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
+    console.log('🗺️ API /pages - Debug info:', {
+      currentUserId: currentUserId,
+      requestedUserId: query.userId,
+      userIdMatch: currentUserId === query.userId,
+      limit: query.limit
+    });
+
+    console.log('🗺️ API /pages - Debug info:', {
+      currentUserId: currentUserId,
+      requestedUserId: query.userId,
+      userIdMatch: currentUserId === query.userId,
+      limit: query.limit
+    });
+
     // Create cache key based on query parameters
     const cacheKey = `pages_${currentUserId}_${JSON.stringify(query)}`;
+    console.log('🗺️ API /pages - Cache key:', cacheKey);
 
     // Use cached data if available
     const cachedResult = await cacheHelpers.getApiData(cacheKey, async () => {
+      console.log('🗺️ API /pages - Cache miss, executing fresh query');
       const admin = getFirebaseAdmin();
       const db = admin.firestore();
 
@@ -83,6 +99,8 @@ export async function GET(request: NextRequest) {
       // Execute query
       const snapshot = await firestoreQuery.get();
 
+      console.log('🗺️ API /pages - Firestore query returned:', snapshot.size, 'documents');
+
       const pages: PageData[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -93,6 +111,12 @@ export async function GET(request: NextRequest) {
           data.userId === currentUserId;
 
         if (!canAccess) {
+          console.log('🗺️ API /pages - Skipping page due to access control:', {
+            pageId: doc.id,
+            pageUserId: data.userId,
+            currentUserId: currentUserId,
+            pageTitle: data.title
+          });
           return; // Skip pages user can't access
         }
 
@@ -125,12 +149,46 @@ export async function GET(request: NextRequest) {
         });
       });
 
+      console.log('🗺️ API /pages - After filtering:', {
+        totalPagesFound: pages.length,
+        pagesWithLocation: pages.filter(p => p.location).length,
+        samplePages: pages.slice(0, 3).map(p => ({
+          id: p.id,
+          title: p.title,
+          hasLocation: !!p.location,
+          location: p.location
+        }))
+      });
+
+      console.log('🗺️ API /pages - After filtering:', {
+        totalPagesFound: pages.length,
+        pagesWithLocation: pages.filter(p => p.location).length,
+        samplePages: pages.slice(0, 3).map(p => ({
+          id: p.id,
+          title: p.title,
+          hasLocation: !!p.location,
+          location: p.location
+        }))
+      });
+
       // Trim results to requested limit (since we fetched extra for filtering)
       const limitedPages = pages.slice(0, query.limit);
 
       // Check if there are more pages (if we got more results than the limit, there are more)
       const hasMore = pages.length > query.limit;
       const lastPageId = limitedPages.length > 0 ? limitedPages[limitedPages.length - 1].id : null;
+
+      console.log('🗺️ API /pages - Final results:', {
+        totalPagesFound: pages.length,
+        limitedPagesCount: limitedPages.length,
+        pagesWithLocation: pages.filter(p => p.location).length,
+        samplePages: pages.slice(0, 3).map(p => ({
+          id: p.id,
+          title: p.title,
+          hasLocation: !!p.location,
+          userId: p.userId
+        }))
+      });
 
       return {
         pages: limitedPages,

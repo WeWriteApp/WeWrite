@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/button';
-import MapPicker from '../map/MapPicker';
 import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -188,6 +187,14 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
  * Displays markers for each page and allows clicking to navigate to the page.
  */
 export default function UserMapTab({ userId, username }: UserMapTabProps) {
+  console.log('🗺️ UserMapTab component rendered with:', {
+    userId: userId,
+    userIdType: typeof userId,
+    userIdLength: userId?.length,
+    username: username,
+    usernameType: typeof username
+  });
+
   const [pages, setPages] = useState<PageWithLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,13 +203,18 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
 
   // Fetch pages with location data for this user
   useEffect(() => {
+    console.log('🗺️ UserMapTab useEffect triggered for userId:', userId);
+
     async function fetchPagesWithLocation() {
       try {
+        console.log('🗺️ UserMapTab: Starting to fetch pages for user:', userId);
         setLoading(true);
         setError(null);
 
-        // Fetch all pages for this user
-        const response = await fetch(`/api/pages?userId=${encodeURIComponent(userId)}&limit=1000`);
+        // Fetch pages with location data for this user using optimized endpoint
+        const apiUrl = `/api/map-pages?userId=${encodeURIComponent(userId)}`;
+        console.log('🗺️ Making API call to optimized map endpoint:', apiUrl);
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch pages: ${response.status}`);
@@ -210,100 +222,51 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
 
         const data = await response.json();
 
-        console.log('API Response:', data); // Debug log
+        console.log('🗺️ API Response:', {
+          status: response.status,
+          ok: response.ok,
+          data: data,
+          dataType: typeof data,
+          dataKeys: data ? Object.keys(data) : 'null'
+        }); // Debug log
 
-        // Handle different API response formats
+        // Handle API response - the new endpoint only returns pages with valid location data
         let pages = [];
         if (data.success && data.pages) {
           pages = data.pages;
-        } else if (Array.isArray(data)) {
-          pages = data;
-        } else if (data.pages && Array.isArray(data.pages)) {
-          pages = data.pages;
         } else {
-          console.warn('Unexpected API response format:', data);
+          console.warn('🗺️ Unexpected API response format:', data);
           pages = [];
         }
 
-        console.log('Pages array:', pages, 'Length:', pages.length); // Debug log
-        console.log('Sample pages with location field:', pages.slice(0, 5).map(p => ({
-          title: p.title,
-          location: p.location,
-          hasLocation: !!p.location
-        }))); // Debug log
+        console.log('🗺️ Pages with location from optimized endpoint:', {
+          totalPages: pages.length,
+          samplePages: pages.slice(0, 3).map(p => ({
+            id: p.id,
+            title: p.title,
+            location: p.location,
+            username: p.username
+          }))
+        });
 
-        // Filter pages that have location data
-        const pagesWithLocation = pages
-          .filter((page: any) => {
-            // Check if page has location data - handle both string and object formats
-            if (!page || !page.location) {
-              console.log('Page without location:', page?.title, 'location:', page?.location); // Debug log
-              return false;
-            }
-
-            // Handle object format ({lat, lng, zoom?}) - new format
-            if (typeof page.location === 'object' && page.location.lat && page.location.lng) {
-              const lat = Number(page.location.lat);
-              const lng = Number(page.location.lng);
-              const zoom = page.location.zoom ? Number(page.location.zoom) : undefined;
-              const isValid = !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-              const isZoomValid = zoom === undefined || (!isNaN(zoom) && zoom >= 1 && zoom <= 20);
-
-              if (isValid && isZoomValid) {
-                console.log('Found page with object location:', page.title, page.location); // Debug log
-              }
-              return isValid && isZoomValid;
-            }
-
-            // Handle string format ("lat,lng") - legacy format
-            if (typeof page.location === 'string') {
-              const [lat, lng] = page.location.split(',').map(Number);
-              const isValid = !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-              if (isValid) {
-                console.log('Found page with string location:', page.title, page.location); // Debug log
-              }
-              return isValid;
-            }
-
-            return false;
-          })
-          .map((page: any) => {
-            try {
-              let lat, lng;
-
-              // Handle object format
-              if (typeof page.location === 'object') {
-                lat = Number(page.location.lat);
-                lng = Number(page.location.lng);
-              }
-              // Handle string format
-              else if (typeof page.location === 'string') {
-                [lat, lng] = page.location.split(',').map(Number);
-              } else {
-                throw new Error('Invalid location format');
-              }
-
-              return {
-                id: page.id,
-                title: page.title || 'Untitled',
-                location: { lat, lng },
-                isPublic: page.isPublic,
-                lastModified: page.lastModified,
-                username: page.username
-              };
-            } catch (error) {
-              console.error('Error parsing page location:', page, error);
-              return null;
-            }
-          })
-          .filter(Boolean) // Remove any null entries from parsing errors
-          .sort((a: PageWithLocation, b: PageWithLocation) =>
-            new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
-          );
+        // Convert to PageWithLocation format (no filtering needed since endpoint pre-filters)
+        const pagesWithLocation = pages.map((page: any) => ({
+          id: page.id,
+          title: page.title,
+          location: page.location, // Already validated by the API
+          isPublic: true, // All pages are accessible since we're querying by userId
+          lastModified: page.lastModified,
+          username: page.username
+        }));
 
         setPages(pagesWithLocation);
       } catch (err) {
-        console.error('Error fetching pages with location:', err);
+        console.error('🗺️ Error fetching pages with location:', {
+          error: err,
+          message: err instanceof Error ? err.message : 'Unknown error',
+          stack: err instanceof Error ? err.stack : undefined,
+          userId: userId
+        });
         setError(err instanceof Error ? err.message : 'Failed to load pages');
       } finally {
         setLoading(false);

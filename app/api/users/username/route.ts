@@ -5,7 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface UsernameCheckResult {
   available: boolean;
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check availability (excluding current user)
-    const usersQuery = await db.collection('users')
+    const usersQuery = await db.collection(getCollectionName('users'))
       .where('username', '==', username)
       .limit(1)
       .get();
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current user data
-    const userRef = db.collection('users').doc(currentUserId);
+    const userRef = db.collection(getCollectionName('users')).doc(currentUserId);
     const userDoc = await userRef.get();
     
     let oldUsername = null;
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     // Record username history if this is a change
     if (oldUsername && oldUsername !== username) {
-      await db.collection('usernameHistory').add({
+      await db.collection(getCollectionName('usernameHistory')).add({
         userId: currentUserId,
         oldUsername,
         newUsername: username,
