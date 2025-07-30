@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest) {
       const userRecord = await auth.getUserByEmail(email);
       
       // Update last password change time in Firestore
-      await db.collection('users').doc(userRecord.uid).update({
+      await db.collection(getCollectionName('users')).doc(userRecord.uid).update({
         lastPasswordChange: new Date().toISOString(),
         lastModified: new Date().toISOString()
       });

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 
 export async function GET(request, { params }) {
+  const startTime = Date.now();
+
   try {
     // Await params for Next.js 15 compatibility
     const { id } = await params;
@@ -13,17 +15,17 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Only log page fetching when debugging
-    if (process.env.PAGE_DEBUG === 'true') {
-      console.log(`API: Fetching page details for ID: ${id}`);
-    }
-
     // Get the current user ID for access control
     const userId = await getUserIdFromRequest(request);
 
-    // Import Firebase Admin modules (server-side)
-    const { getFirebaseAdmin } = await import('../../../firebase/admin');
-    const { getCollectionName } = await import('../../../utils/environmentConfig');
+    // OPTIMIZATION: Import modules in parallel
+    const [
+      { getFirebaseAdmin },
+      { getCollectionName }
+    ] = await Promise.all([
+      import('../../../firebase/admin'),
+      import('../../../utils/environmentConfig')
+    ]);
 
     // Get Firebase Admin instance
     let admin;
@@ -46,29 +48,30 @@ export async function GET(request, { params }) {
     }
     const db = admin.firestore();
 
-    // Get the page document from Firestore using Admin SDK
+    // OPTIMIZATION: Parallel data fetching
     const pageRef = db.collection(getCollectionName('pages')).doc(id);
-    const pageDoc = await pageRef.get();
 
-    if (!pageDoc.exists) {
+    // Start both queries in parallel
+    const [pageDoc, rtdbPromise] = await Promise.allSettled([
+      pageRef.get(),
+      // Pre-start RTDB connection for user data (we'll use it conditionally)
+      admin.database()
+    ]);
+
+    if (pageDoc.status === 'rejected' || !pageDoc.value.exists) {
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
       );
     }
 
-    const pageData = pageDoc.data();
+    const pageData = pageDoc.value.data();
 
     // CRITICAL: Check if page is soft-deleted
-    // Only page owners can access their own deleted pages through the "Recently Deleted Pages" section
     if (pageData.deleted === true) {
-      // Allow page owners to access their deleted pages only in specific contexts
       if (userId && pageData.userId === userId) {
-        // For now, we'll allow access for owners but this should ideally be restricted
-        // to specific contexts like the "Recently Deleted Pages" interface
         console.log(`Owner access granted to deleted page ${id} for user ${userId}`);
       } else {
-        // For all other users, deleted pages are not accessible
         return NextResponse.json(
           { error: 'Page not found' },
           { status: 404 }
@@ -76,11 +79,13 @@ export async function GET(request, { params }) {
       }
     }
 
-    // Get author information from Realtime Database using Admin SDK
-    let authorUsername = null;
-    if (pageData.userId) {
+    // OPTIMIZATION: Get author information in parallel with response preparation
+    let authorUsername = pageData.username || null; // Use cached username first
+
+    // Only fetch from RTDB if we don't have a username and RTDB is available
+    if (!authorUsername && pageData.userId && rtdbPromise.status === 'fulfilled') {
       try {
-        const rtdb = admin.database();
+        const rtdb = rtdbPromise.value;
         const userRef = rtdb.ref(`users/${pageData.userId}`);
         const userSnapshot = await userRef.once('value');
 
@@ -90,8 +95,7 @@ export async function GET(request, { params }) {
         }
       } catch (userError) {
         console.error(`Error fetching user data for ${pageData.userId}:`, userError);
-        // Use the username from page data as fallback
-        authorUsername = pageData.username || null;
+        // Keep the fallback username from pageData
       }
     }
 
@@ -115,17 +119,26 @@ export async function GET(request, { params }) {
       deleted: pageData.deleted || false
     };
 
-    // Only log successful page fetches when debugging
-    if (process.env.PAGE_DEBUG === 'true') {
-      console.log(`API: Successfully fetched page details for ${id}:`, {
-        title: response.title,
-        authorUsername: response.authorUsername,
-        userId: response.userId,
-        deleted: response.deleted
-      });
+    // Performance logging
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+
+    if (duration > 1000) {
+      console.warn(`Slow page API response for ${id}: ${duration}ms`);
     }
 
-    return NextResponse.json(response);
+    // OPTIMIZATION: Add performance and caching headers
+    const headers = {
+      'Content-Type': 'application/json',
+      // Cache for 30 seconds for public pages, no cache for private pages
+      'Cache-Control': pageData.isPublic ? 'public, max-age=30, s-maxage=60' : 'private, no-cache',
+      // Add performance timing header
+      'X-Response-Time': `${duration}ms`,
+      // Add ETag for better caching
+      'ETag': `"${id}-${pageData.lastModified || pageData.createdAt}"`,
+    };
+
+    return NextResponse.json(response, { headers });
 
   } catch (error) {
     console.error('Error fetching page details:', error);

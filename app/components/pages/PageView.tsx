@@ -40,7 +40,7 @@ import StickySaveHeader from "../layout/StickySaveHeader";
 // Duplicate title checking imports
 import { TitleValidationInput } from "../forms/TitleValidationInput";
 
-// Content Display Components - Unified system
+// Content Display Components - Unified system with preloading
 const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
   ssr: false,
   loading: () => (
@@ -49,6 +49,11 @@ const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
     </div>
   )
 });
+
+// OPTIMIZATION: Preload ContentDisplay component
+if (typeof window !== 'undefined') {
+  import("../content/ContentDisplay");
+}
 import EmptyLinesAlert from "../editor/EmptyLinesAlert";
 import PageActions from "./PageActions";
 // CustomDateField and LocationField are now handled by PageFooter
@@ -299,7 +304,7 @@ export default function PageView({
     }
   }, [params, unwrappedParams]);
 
-  // Page loading effect
+  // Page loading effect - OPTIMIZED for faster loading
   useEffect(() => {
     if (!pageId) {
       pageLogger.debug('No pageId provided');
@@ -321,15 +326,17 @@ export default function PageView({
       pageLogger.debug('Loading diff data', { versionId });
       loadDiffData();
     } else {
-      pageLogger.debug('Setting up page loading with API fallback', { pageId });
+      pageLogger.debug('Setting up page loading with optimized API approach', { pageId });
 
-      // In development, use API fallback immediately due to Firestore connectivity issues
-      if (process.env.NODE_ENV === 'development') {
-        pageLogger.debug('Development mode detected, using API fallback immediately', { pageId });
-        tryApiFallback();
-        return;
-      }
+      // OPTIMIZATION: Always use API fallback first for faster loading
+      // Real-time listeners are disabled for cost optimization anyway
+      pageLogger.debug('Using optimized API approach for faster loading', { pageId });
+      tryApiFallback();
+    }
 
+    // DISABLED: Firebase listener approach (was causing slow loads)
+    // Real-time listeners are disabled in the database layer for cost optimization
+    /*
       // Try Firebase listener first, with aggressive fallback to API
       let hasReceivedData = false;
 
@@ -455,6 +462,7 @@ export default function PageView({
         }
       }, 3000); // 3 second timeout
     }
+    */
 
     return () => {
       if (unsubscribeRef.current) {
@@ -469,6 +477,13 @@ export default function PageView({
     if (!viewRecorded.current && !isLoading && page && pageId) {
       viewRecorded.current = true;
       recordPageView(pageId, user?.uid);
+
+      // Add to localStorage recent pages tracking
+      import('../../utils/recentSearches').then(({ addRecentlyViewedPageId }) => {
+        addRecentlyViewedPageId(pageId);
+      }).catch(error => {
+        console.error('Error adding page to recent pages:', error);
+      });
 
       // Add to recent pages if user is logged in
       if (user && page) {

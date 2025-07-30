@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
 
       case 'users':
         {
-          const usersSnapshot = await adminDb.collection('users')
+          const usersSnapshot = await adminDb.collection(getCollectionName('users'))
             .limit(limit)
             .get();
           
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
 
       case 'pages':
         {
-          const pagesSnapshot = await adminDb.collection('pages')
+          const pagesSnapshot = await adminDb.collection(getCollectionName('pages'))
             .orderBy('createdAt', 'desc')
             .limit(limit)
             .get();
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
 
       case 'subscriptions':
         {
-          const subscriptionsSnapshot = await adminDb.collection('subscriptions')
+          const subscriptionsSnapshot = await adminDb.collection(getCollectionName('subscriptions'))
             .limit(limit)
             .get();
           

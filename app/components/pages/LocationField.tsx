@@ -116,9 +116,9 @@ export default function LocationField({
   };
 
   return (
-    <div className={`${className}`}>
+    <div className={`w-full ${className}`}>
       <div
-        className={`rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm overflow-hidden ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+        className={`w-full rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm overflow-hidden ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
         onClick={canEdit ? handleLocationClick : undefined}
       >
         {/* Header */}

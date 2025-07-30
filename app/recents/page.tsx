@@ -2,22 +2,24 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { useOptimizedHome } from '../hooks/useOptimizedHome';
 
 import Header from '../components/layout/Header';
 import RandomPagesTable from '../components/pages/RandomPagesTable';
 import EmptyState from '../components/ui/EmptyState';
+import { getRecentlyViewedPageIds } from '../utils/recentSearches';
+import { Clock } from 'lucide-react';
 
 /**
  * Recently Viewed Page Component
  *
  * Displays a comprehensive list of recently viewed pages for authenticated users.
- * Uses the same implementation as the homepage's recently viewed section.
+ * Uses localStorage to track actually visited pages (not just recently modified).
  */
 export default function RecentsPage() {
   const { user } = useAuth();
-  const { data, loading, error } = useOptimizedHome();
-  const [pagesWithSubscriptions, setPagesWithSubscriptions] = useState([]);
+  const [recentPages, setRecentPages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -27,38 +29,74 @@ export default function RecentsPage() {
     }
   }, [user]);
 
-  // Process pages with subscription data from the home API
+  // Fetch recently viewed pages from localStorage and get their details
   useEffect(() => {
-    const recentPages = data?.recentlyVisitedPages || [];
-    const batchUserData = data?.batchUserData || {};
+    if (!user) return;
 
-    if (recentPages.length === 0) {
-      setPagesWithSubscriptions([]);
-      return;
-    }
+    const fetchRecentPages = async () => {
+      setLoading(true);
+      setError(null);
 
-    // Add subscription data to pages using the batched data from the API
-    const pagesWithSubs = recentPages.map(page => {
-      if (!page.userId) return page;
+      try {
+        // Get recent page IDs from localStorage
+        const pageIds = getRecentlyViewedPageIds();
 
-      const userData = batchUserData[page.userId];
-      return {
-        ...page,
-        tier: userData?.tier,
-        subscriptionStatus: userData?.subscriptionStatus,
-        subscriptionAmount: userData?.subscriptionAmount,
-        username: userData?.username || page.username
-      };
-    });
+        if (!pageIds.length) {
+          setRecentPages([]);
+          setLoading(false);
+          return;
+        }
 
-    setPagesWithSubscriptions(pagesWithSubs);
-  }, [data?.recentlyVisitedPages, data?.batchUserData]);
+        // Fetch page details for each ID
+        const pagesPromises = pageIds.map(async (id) => {
+          try {
+            const response = await fetch(`/api/pages/${id}`);
+            if (!response.ok) {
+              console.warn(`Failed to fetch page ${id}:`, response.status);
+              return null;
+            }
+
+            const page = await response.json();
+            return {
+              id,
+              title: page.title || 'Untitled',
+              isPublic: page.isPublic,
+              userId: page.userId,
+              username: page.username,
+              lastModified: page.lastModified,
+              createdAt: page.createdAt,
+              totalPledged: page.totalPledged || 0,
+              pledgeCount: page.pledgeCount || 0
+            };
+          } catch (error) {
+            console.error(`Error fetching page ${id}:`, error);
+            return null;
+          }
+        });
+
+        const pagesResults = await Promise.all(pagesPromises);
+
+        // Filter out null results and pages the user can't access
+        const validPages = pagesResults.filter(page =>
+          page !== null && (page.isPublic || page.userId === user.uid)
+        );
+
+        setRecentPages(validPages);
+      } catch (error) {
+        console.error("Error fetching recently viewed pages:", error);
+        setError("Failed to load recently viewed pages");
+        setRecentPages([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentPages();
+  }, [user]);
 
   if (!user) {
     return null; // Will redirect to login
   }
-
-  const allRecentPages = pagesWithSubscriptions.length > 0 ? pagesWithSubscriptions : (data?.recentlyVisitedPages || []);
 
   return (
     <>
@@ -84,9 +122,9 @@ export default function RecentsPage() {
           ) : error ? (
             // Error state
             <div className="border border-destructive/20 rounded-lg p-4 text-center text-destructive">
-              Failed to load recently viewed pages
+              {error}
             </div>
-          ) : allRecentPages.length === 0 ? (
+          ) : recentPages.length === 0 ? (
             // Empty state
             <EmptyState
               icon={Clock}
@@ -98,12 +136,12 @@ export default function RecentsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">
-                  {allRecentPages.length} page{allRecentPages.length !== 1 ? 's' : ''} found
+                  {recentPages.length} page{recentPages.length !== 1 ? 's' : ''} found
                 </p>
               </div>
 
               <RandomPagesTable
-                pages={allRecentPages}
+                pages={recentPages}
                 loading={false}
                 denseMode={false}
               />

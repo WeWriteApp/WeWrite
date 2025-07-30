@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
       let subscriptionsSnapshot;
       try {
         // Try the optimized query first (requires index on createdAt)
-        const subscriptionsQuery = db.collection('subscriptions')
+        const subscriptionsQuery = db.collection(getCollectionName('subscriptions'))
           .where('createdAt', '>=', Timestamp.fromDate(dateRange.startDate))
           .where('createdAt', '<=', Timestamp.fromDate(dateRange.endDate))
           .orderBy('createdAt', 'asc');
@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
         console.warn('[Payment Analytics] Subscriptions index not available, using fallback query:', indexError instanceof Error ? indexError.message : 'Unknown error');
 
         // Fallback: Get all subscriptions and filter in memory
-        const allSubscriptions = await db.collection('subscriptions').get();
+        const allSubscriptions = await db.collection(getCollectionName('subscriptions')).get();
 
         // Filter by date range in memory
         const filteredDocs = allSubscriptions.docs.filter(doc => {

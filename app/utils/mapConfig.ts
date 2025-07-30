@@ -48,15 +48,29 @@ export function getMapTileConfig(isDarkMode: boolean = false): MapTileConfig {
 }
 
 /**
- * Create a tile layer with error handling and fallback
+ * Create a tile layer with error handling and mobile optimizations
  */
 export function createTileLayer(L: any, isDarkMode: boolean = false) {
   const config = getMapTileConfig(isDarkMode);
+
+  // Detect mobile Safari
+  const isMobileSafari = typeof navigator !== 'undefined' &&
+    /Safari/.test(navigator.userAgent) &&
+    /Mobile/.test(navigator.userAgent) &&
+    !/Chrome/.test(navigator.userAgent);
 
   const tileLayer = L.tileLayer(config.url, {
     attribution: config.attribution,
     maxZoom: config.maxZoom,
     errorTileUrl: config.errorTileUrl,
+    // Mobile Safari optimizations
+    crossOrigin: isMobileSafari ? 'anonymous' : null,
+    // Reduce concurrent tile requests on mobile
+    maxNativeZoom: isMobileSafari ? 18 : config.maxZoom,
+    // Better caching on mobile
+    updateWhenIdle: isMobileSafari,
+    updateWhenZooming: !isMobileSafari,
+    keepBuffer: isMobileSafari ? 2 : 1,
   });
 
   // Add basic error handling
@@ -94,42 +108,106 @@ export function getDefaultMapView(location?: { lat: number; lng: number; zoom?: 
   };
 }
 
-/**
- * Enhanced error logging for map issues
- */
-export function logMapError(context: string, error: any, additionalInfo?: any) {
-  console.error(`Map Error [${context}]:`, {
-    error: error.message || error,
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-    userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'server',
-    url: typeof window !== 'undefined' ? window.location.href : 'server',
-    additionalInfo
-  });
-}
+
 
 /**
- * Check if map tiles are accessible
+ * Check if map tiles are accessible and log detailed diagnostics
  */
 export async function testMapTileAccess(isDarkMode: boolean = false): Promise<boolean> {
   if (typeof window === 'undefined') return true; // Skip on server
-  
-  const config = getMapTileConfig(isDarkMode);
-  const testUrl = config.url
-    .replace('{s}', 'a')
-    .replace('{z}', '1')
-    .replace('{x}', '0')
-    .replace('{y}', '0')
-    .replace('{r}', '');
 
-  try {
-    const response = await fetch(testUrl, { 
-      method: 'HEAD',
-      mode: 'no-cors' // Avoid CORS issues for testing
-    });
-    return true; // If we get here, the request didn't fail immediately
-  } catch (error) {
-    console.warn('Map tile accessibility test failed:', error);
-    return false;
+  const config = getMapTileConfig(isDarkMode);
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  console.log('🗺️ Map Diagnostics:', {
+    isDarkMode,
+    hasMapboxToken: !!mapboxToken,
+    mapboxTokenPrefix: mapboxToken ? mapboxToken.substring(0, 10) + '...' : 'none',
+    tileUrl: config.url,
+    attribution: config.attribution
+  });
+
+  // Test both Mapbox and fallback URLs
+  const testUrls = [];
+
+  // If we have Mapbox token, test Mapbox first
+  if (mapboxToken && mapboxToken !== 'your-mapbox-token') {
+    const styleId = isDarkMode ? 'dark-v11' : 'light-v11';
+    const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/${styleId}/tiles/1/0/0?access_token=${mapboxToken}`;
+    testUrls.push({ name: 'Mapbox', url: mapboxUrl });
+  }
+
+  // Test CartoDB fallback
+  const cartoUrl = isDarkMode
+    ? 'https://a.basemaps.cartocdn.com/dark_nolabels/1/0/0.png'
+    : 'https://a.basemaps.cartocdn.com/light_nolabels/1/0/0.png';
+  testUrls.push({ name: 'CartoDB', url: cartoUrl });
+
+  for (const { name, url } of testUrls) {
+    try {
+      console.log(`🧪 Testing ${name} tiles:`, url);
+
+      const response = await fetch(url, {
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+
+      console.log(`✅ ${name} tiles accessible`);
+      return true;
+    } catch (error) {
+      console.warn(`❌ ${name} tile test failed:`, {
+        url,
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  }
+
+  console.error('🚨 All map tile services failed');
+  return false;
+}
+
+/**
+ * Enhanced error logging for map issues with mobile detection
+ */
+export function logMapError(context: string, error: any, additionalInfo?: any) {
+  const isMobileSafari = typeof navigator !== 'undefined' &&
+    /Safari/.test(navigator.userAgent) &&
+    /Mobile/.test(navigator.userAgent) &&
+    !/Chrome/.test(navigator.userAgent);
+
+  const errorDetails = {
+    context,
+    timestamp: new Date().toISOString(),
+    error: {
+      message: error?.message || 'Unknown error',
+      name: error?.name,
+      stack: error?.stack
+    },
+    environment: {
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
+      url: typeof window !== 'undefined' ? window.location.href : 'server',
+      mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? 'present' : 'missing',
+      isMobileSafari,
+      isMobile: typeof window !== 'undefined' && window.innerWidth <= 768,
+      viewport: typeof window !== 'undefined' ? {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      } : null,
+      connection: typeof navigator !== 'undefined' && (navigator as any).connection ? {
+        effectiveType: (navigator as any).connection.effectiveType,
+        downlink: (navigator as any).connection.downlink
+      } : null
+    },
+    additionalInfo
+  };
+
+  console.error('🗺️ Map Error:', errorDetails);
+
+  // In production, you might want to send this to your logging service
+  if (process.env.NODE_ENV === 'production') {
+    // Example: Send to LogRocket, Sentry, or your logging service
+    // logToService('map-error', errorDetails);
   }
 }

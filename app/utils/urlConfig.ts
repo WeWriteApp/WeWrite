@@ -60,7 +60,7 @@ export const StripeUrls = {
   /**
    * Subscription portal return URL
    */
-  subscriptionPortalReturn: () => getFullUrl('/settings/subscription'),
+  subscriptionPortalReturn: () => getFullUrl('/settings/buy-tokens'),
 
   /**
    * Connect account onboarding URLs
@@ -76,9 +76,9 @@ export const StripeUrls = {
   subscriptionCheckout: {
     success: (subscriptionId?: string) => {
       const params = subscriptionId ? `?success=true&subscription_id=${subscriptionId}` : '?success=true';
-      return getFullUrl(`/settings/subscription${params}`);
+      return getFullUrl(`/settings/buy-tokens${params}`);
     },
-    cancel: () => getFullUrl('/settings/subscription?cancelled=true'),
+    cancel: () => getFullUrl('/settings/buy-tokens?cancelled=true'),
   },
 };
 

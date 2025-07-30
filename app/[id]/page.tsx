@@ -9,7 +9,7 @@ import { rtdb } from "../firebase/config";
 // Import the client-only wrapper
 import ClientOnlyPageWrapper from '../components/pages/ClientOnlyPageWrapper';
 
-// Direct import of PageView - removed unnecessary SafePageView wrapper
+// Optimized PageView with preloading
 const PageView = dynamic(() => import('../components/pages/PageView'), {
   ssr: false,
   loading: () => (
@@ -21,6 +21,11 @@ const PageView = dynamic(() => import('../components/pages/PageView'), {
     </div>
   )
 });
+
+// Preload PageView component to reduce loading time
+if (typeof window !== 'undefined') {
+  import('../components/pages/PageView');
+}
 
 // Error boundary component for PageView - simplified error handling
 class PageViewErrorBoundary extends React.Component<
@@ -76,6 +81,7 @@ import UnifiedLoader from '../components/ui/unified-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../providers/AuthProvider';
+import { startPageLoadTracking, recordPageError, finishPageLoadTracking } from '../utils/pageLoadPerformance';
 
 export default function ContentPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
@@ -102,10 +108,20 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
 
         console.log('🔍 ContentPage: Extracted ID:', extractedId);
         setId(extractedId);
+
+        // OPTIMIZATION: Start performance tracking
+        if (extractedId) {
+          startPageLoadTracking(extractedId);
+        }
       } catch (error) {
         console.error('Error processing params:', error);
         setContentType('error');
         setIsLoading(false);
+
+        // Record error in performance tracking
+        if (extractedId) {
+          recordPageError(extractedId);
+        }
       }
     }
 
@@ -135,29 +151,65 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
           return;
         }
 
-        // Try to load as a page first
-        const pageResult = await getPageById(cleanId, currentAccountUid);
-        if (pageResult.pageData || (pageResult.error && pageResult.error !== "Page not found")) {
-          setContentType('page');
-          setIsLoading(false);
-          return;
-        }
-
-        // Check if it's a user ID and redirect
+        // OPTIMIZATION: Use faster API route instead of direct Firebase calls
         try {
-          const userRef = ref(rtdb, `users/${cleanId}`);
-          const userSnapshot = await get(userRef);
-          if (userSnapshot.exists()) {
-            router.replace(`/user/${cleanId}`);
+          const response = await fetch(`/api/pages/${cleanId}${currentAccountUid ? `?userId=${currentAccountUid}` : ''}`, {
+            method: 'GET',
+            headers: {
+              'Cache-Control': 'max-age=30', // Cache for 30 seconds
+            }
+          });
+
+          if (response.ok) {
+            setContentType('page');
+            setIsLoading(false);
+            return;
+          } else if (response.status === 404) {
+            // Check if it's a user ID and redirect
+            try {
+              const userCheckResponse = await fetch(`/api/users/${cleanId}/check`, {
+                method: 'HEAD', // Use HEAD for faster response
+              });
+              if (userCheckResponse.ok) {
+                router.replace(`/user/${cleanId}`);
+                return;
+              }
+            } catch (userError) {
+              console.error("Error checking user ID:", userError);
+            }
+
+            setContentType('not-found');
+            setIsLoading(false);
+            return;
+          } else {
+            throw new Error(`API returned ${response.status}`);
+          }
+        } catch (apiError) {
+          console.warn("Fast API check failed, falling back to Firebase:", apiError);
+
+          // Fallback to original logic
+          const pageResult = await getPageById(cleanId, currentAccountUid);
+          if (pageResult.pageData || (pageResult.error && pageResult.error !== "Page not found")) {
+            setContentType('page');
+            setIsLoading(false);
             return;
           }
-        } catch (error) {
-          console.error("Error checking user ID:", error);
-        }
 
-        // Not found
-        setContentType('not-found');
-        setIsLoading(false);
+          // Check if it's a user ID and redirect
+          try {
+            const userRef = ref(rtdb, `users/${cleanId}`);
+            const userSnapshot = await get(userRef);
+            if (userSnapshot.exists()) {
+              router.replace(`/user/${cleanId}`);
+              return;
+            }
+          } catch (error) {
+            console.error("Error checking user ID:", error);
+          }
+
+          setContentType('not-found');
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error("Error determining content type:", error);
         setContentType('error');

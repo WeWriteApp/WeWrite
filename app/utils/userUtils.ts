@@ -75,25 +75,10 @@ export const getUsernameById = async (userId: string): Promise<string> => {
 /**
  * Gets the current authenticated user's username
  * @returns The current user's username or "Missing username" if not logged in
+ * @deprecated Use the auth provider context instead
  */
 export const getCurrentUsername = async (): Promise<string> => {
-  // Import the utility here to ensure it's only used on the client
-  const { getCurrentUser } = require('./currentUser');
-
-  // Get the current user from our centralized utility
-  const currentUser = getCurrentUser();
-
-  // If we have a current user with a username, return it
-  if (currentUser && currentUser.username) {
-    return currentUser.username;
-  }
-
-  // If we have a current user with a uid but no username, fetch it
-  if (currentUser && currentUser.uid) {
-    return getUsernameById(currentUser.uid);
-  }
-
-  // Fallback to Firebase Auth
+  // Fallback to Firebase Auth since currentUser utility was removed
   const firebaseUser = auth.currentUser;
   if (firebaseUser) {
     return getUsernameById(firebaseUser.uid);

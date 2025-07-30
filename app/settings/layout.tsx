@@ -126,10 +126,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   const settingsSections: SettingsSection[] = [
     {
-      id: 'subscription',
-      title: 'Subscription',
+      id: 'buy-tokens',
+      title: 'Buy Tokens',
       icon: ShoppingCart,
-      href: '/settings/subscription',
+      href: '/settings/buy-tokens',
       requiresPayments: true
     },
     {
@@ -205,7 +205,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold">Settings</h1>
+            <h1 className="text-lg font-semibold select-none flex-1 text-center mr-12">Settings</h1>
           </div>
         </div>
       )}
@@ -215,7 +215,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
         <div className="hidden lg:block lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-border lg:bg-background lg:z-10">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-center px-6 py-4 border-b border-border">
-              <h1 className="text-xl font-semibold">Settings</h1>
+              <h1 className="text-xl font-semibold select-none">Settings</h1>
             </div>
 
             <nav className="flex-1 px-3 py-4">
@@ -225,9 +225,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
 
-                  // Show warning dots only for truly problematic states, not for active subscriptions
+                  // Show warning dots only for truly problematic states, not for active token purchases
                   // Don't show warning dots when we have status icons or when loading
-                  const showWarning = section.id === 'subscription' &&
+                  const showWarning = section.id === 'buy-tokens' &&
                     hasActiveSubscription !== null && // Don't show while loading
                     (
                       // Show warning for completely inactive subscriptions
@@ -255,7 +255,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                       <button
                         onClick={() => handleSectionClick(section.href)}
                         className={cn(
-                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none",
                           isActive
                             ? "bg-primary/10 text-primary border border-primary/20"
                             : "text-foreground hover:bg-muted"
@@ -268,7 +268,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         <span className="flex-1 text-left">{section.title}</span>
 
                         {/* Status icons for specific sections - show success and warnings */}
-                        {section.id === 'subscription' && hasActiveSubscription !== null && (
+                        {section.id === 'buy-tokens' && hasActiveSubscription !== null && (
                           hasActiveSubscription === true ? (
                             <StatusIcon status="success" size="sm" position="static" />
                           ) : (

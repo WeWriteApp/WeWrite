@@ -489,11 +489,11 @@ function UnifiedSidebarContent({
             </>
           )}
 
-          {/* Buy Tokens button for users without active subscription */}
+          {/* Buy Tokens button for users without active token purchase */}
           {!isEditMode && user && hasActiveSubscription === false && (
             <div className="px-3 pb-4">
               <Button
-                onClick={() => router.push('/settings/subscription')}
+                onClick={() => router.push('/settings/buy-tokens')}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                 size="sm"
               >

@@ -56,19 +56,8 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
     let username = data.username;
     if (!username && data.userId) {
       try {
-        // First try to get from currentUser utility if we're on the client
-        if (typeof window !== 'undefined') {
-          try {
-            const { getCurrentUser } = require('../../utils/currentUser');
-            const currentUser = getCurrentUser();
-            if (currentUser && currentUser.username) {
-              username = currentUser.username;
-              console.log('Using username from currentUser utility:', username);
-            }
-          } catch (e) {
-            console.error('Error getting username from currentUser:', e);
-          }
-        }
+        // Note: Username should be provided by the caller from the auth context
+        // This fallback is for backward compatibility only
 
         // If still no username, fetch from Firestore
         if (!username) {
@@ -267,13 +256,32 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           return { pageData: null, error: "Invalid page ID" };
         }
 
+        // OPTIMIZATION: Check cache first
+        const { pageCache } = await import('../../utils/pageCache');
+        const cachedData = pageCache.get(pageId, userId);
+        if (cachedData) {
+          console.log(`getPageById: Using cached data for ${pageId}`);
+          return cachedData;
+        }
 
 
-      // Use API route for client-side requests to avoid Firebase connectivity issues
+
+      // OPTIMIZATION: Use API route for client-side requests for better performance
       if (typeof window !== 'undefined') {
         try {
-          console.log(`getPageById: Using API route for client-side request: ${pageId}`);
-          const response = await fetch(`/api/pages/${pageId}${userId ? `?userId=${userId}` : ''}`);
+          console.log(`getPageById: Using optimized API route for client-side request: ${pageId}`);
+
+          // Add performance timing
+          const startTime = Date.now();
+
+          const response = await fetch(`/api/pages/${pageId}${userId ? `?userId=${userId}` : ''}`, {
+            headers: {
+              'Cache-Control': 'max-age=30', // Request caching
+            }
+          });
+
+          const endTime = Date.now();
+          console.log(`API request took ${endTime - startTime}ms`);
 
           if (response.ok) {
             const pageData = await response.json();
@@ -285,7 +293,9 @@ export const getPageById = async (pageId: string, userId: string | null = null):
               links: [] // API doesn't return links yet
             };
 
-
+            // OPTIMIZATION: Cache the result
+            const etag = response.headers.get('ETag');
+            pageCache.set(pageId, result, userId, etag || undefined);
 
             console.log("getPageById: Successfully used API route for client-side request");
             return result;

@@ -9,6 +9,7 @@ import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
 import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
+import { trackPWAStatus } from '../../utils/pwaAnalytics';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
@@ -37,13 +38,89 @@ const isIOSDevice = (): boolean => {
 const getPWABottomSpacing = (isPWAMode: boolean): string => {
   if (!isPWAMode) return '0';
 
-  // For iOS PWA, use safe-area-inset-bottom to handle home indicator
+  // For iOS PWA, use safe-area-inset-bottom to handle home indicator + extra padding
   if (isIOSDevice()) {
-    return 'max(env(safe-area-inset-bottom), 8px)';
+    return 'max(env(safe-area-inset-bottom), 16px)';
   }
 
-  // For Android PWA, use smaller spacing
-  return 'env(safe-area-inset-bottom, 4px)';
+  // For Android PWA, use safe-area-inset-bottom + extra padding
+  return 'max(env(safe-area-inset-bottom), 12px)';
+};
+
+// Special New Page Button Component with accent-colored dot design
+const NewPageButton = ({
+  id,
+  onClick,
+  onHover,
+  isActive,
+  isPressed,
+  isNavigating
+}: {
+  id: string;
+  onClick: () => void;
+  onHover?: () => void;
+  isActive: boolean;
+  isPressed: boolean;
+  isNavigating: boolean;
+}) => {
+  return (
+    <Button
+      variant="ghost"
+      size="lg"
+      onClick={onClick}
+      onMouseEnter={onHover}
+      onTouchStart={onHover}
+      className={cn(
+        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-1 relative group",
+        "transition-all duration-75 ease-out",
+        "flex-shrink-0 min-w-0",
+        "touch-manipulation select-none",
+        // Enhanced visual feedback for primary action
+        isPressed && "scale-95",
+        "hover:bg-primary/5 active:bg-primary/10",
+        // No background color changes - let the dot be the focus
+        "text-slate-600 hover:text-slate-900 dark:text-muted-foreground dark:hover:text-foreground"
+      )}
+      aria-label="Create New Page"
+      aria-pressed={isActive}
+      disabled={isNavigating && !isPressed}
+    >
+      {/* Large accent-colored circle with plus icon and text inside */}
+      <div className={cn(
+        "relative w-16 h-16 rounded-full flex flex-col items-center justify-center",
+        "bg-primary text-primary-foreground shadow-lg",
+        "transition-all duration-75 ease-out",
+        // Enhanced feedback states
+        isPressed && "scale-95 shadow-md",
+        "hover:shadow-xl hover:scale-105",
+        // Subtle glow effect
+        "ring-2 ring-primary/20 hover:ring-primary/30",
+        // Allow slight overflow above toolbar
+        "-mt-2"
+      )}>
+        {/* Plus icon */}
+        <Plus className={cn(
+          "h-5 w-5 flex-shrink-0 transition-transform duration-75 mb-0.5",
+          isPressed && "scale-110"
+        )} />
+
+        {/* Text inside circle */}
+        <span className={cn(
+          "text-xs font-semibold leading-none transition-colors duration-75",
+          "text-primary-foreground"
+        )}>
+          New
+        </span>
+
+        {/* Loading indicator */}
+        {isNavigating && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse" />
+          </div>
+        )}
+      </div>
+    </Button>
+  );
 };
 
 export default function MobileBottomNav() {
@@ -143,16 +220,47 @@ export default function MobileBottomNav() {
     return segments.length === 1 && !staticRoutes.includes(`/${segments[0]}`);
   }, [pathname]);
 
-  // Check PWA mode on mount and window resize
+  // Check PWA mode on mount and window resize, track analytics
   useEffect(() => {
     const checkPWAMode = () => {
-      setIsPWAMode(isPWA());
+      const currentPWAMode = isPWA();
+      const previousPWAMode = isPWAMode;
+
+      setIsPWAMode(currentPWAMode);
+
+      // Track PWA status changes for analytics
+      if (currentPWAMode !== previousPWAMode) {
+        console.log('📱 PWA mode changed:', { from: previousPWAMode, to: currentPWAMode });
+        trackPWAStatus();
+      }
     };
 
     checkPWAMode();
+
+    // Listen for display mode changes
+    const mediaQueries = [
+      '(display-mode: standalone)',
+      '(display-mode: fullscreen)',
+      '(display-mode: minimal-ui)',
+      '(display-mode: window-controls-overlay)'
+    ];
+
+    const listeners: (() => void)[] = [];
+
+    mediaQueries.forEach(query => {
+      const mediaQuery = window.matchMedia(query);
+      const listener = () => setTimeout(checkPWAMode, 100);
+      mediaQuery.addEventListener('change', listener);
+      listeners.push(() => mediaQuery.removeEventListener('change', listener));
+    });
+
     window.addEventListener('resize', checkPWAMode);
-    return () => window.removeEventListener('resize', checkPWAMode);
-  }, []);
+
+    return () => {
+      window.removeEventListener('resize', checkPWAMode);
+      listeners.forEach(cleanup => cleanup());
+    };
+  }, [isPWAMode]);
 
   // Scroll detection for auto-hide functionality
   useEffect(() => {
@@ -383,15 +491,14 @@ export default function MobileBottomNav() {
             label="Home"
           />
 
-          {/* Profile Button */}
-          <NavButton
-            id="profile"
-            icon={User}
-            onClick={handleProfileClick}
-            onHover={() => user?.uid && handleButtonHover(`/user/${user.uid}`)}
-            isActive={isProfileActive}
-            ariaLabel="Profile"
-            label="Profile"
+          {/* New Page Button - MOVED TO MIDDLE as primary action */}
+          <NewPageButton
+            id="new"
+            onClick={handleNewPageClick}
+            onHover={() => handleButtonHover('/new?source=mobile-nav')}
+            isActive={isNewPageActive}
+            isPressed={isButtonPressed('new')}
+            isNavigating={isNavigatingTo(pathname)}
           />
 
           {/* Notifications Button */}
@@ -411,15 +518,15 @@ export default function MobileBottomNav() {
             />
           </NavButton>
 
-          {/* New Page Button */}
+          {/* Profile Button - MOVED TO END */}
           <NavButton
-            id="new"
-            icon={Plus}
-            onClick={handleNewPageClick}
-            onHover={() => handleButtonHover('/new?source=mobile-nav')}
-            isActive={isNewPageActive}
-            ariaLabel="New Page"
-            label="New"
+            id="profile"
+            icon={User}
+            onClick={handleProfileClick}
+            onHover={() => user?.uid && handleButtonHover(`/user/${user.uid}`)}
+            isActive={isProfileActive}
+            ariaLabel="Profile"
+            label="Profile"
           />
         </div>
       </div>

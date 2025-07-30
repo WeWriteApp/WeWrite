@@ -7,7 +7,7 @@ export function getFirebaseAdmin(): typeof admin | null {
   try {
     // Use the initAdmin function from admin.ts to ensure consistency
     const adminInstance = initAdmin();
-    console.log('[Firebase Admin] Using shared Firebase Admin instance from admin.ts');
+    // Firebase Admin instance retrieved successfully
     return adminInstance;
   } catch (error) {
     console.error('[Firebase Admin] Failed to get shared Firebase Admin instance:', error);

@@ -30,11 +30,19 @@ import { LogRocketProvider } from "./providers/LogRocketProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
+import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
   title: 'WeWrite',
   description: 'A platform for writers to share and monetize their content',
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 }
 
 export default function RootLayout({
@@ -43,6 +51,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* OPTIMIZATION: Resource hints for better performance */}
+        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="//www.googletagmanager.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preload critical API routes */}
+        <link rel="prefetch" href="/api/pages" />
+      </head>
       <body suppressHydrationWarning>
         {/* Early Firebase error suppression - must run before any other scripts */}
         <Script
@@ -67,9 +83,10 @@ export default function RootLayout({
                                   <TokenIncrementProvider>
                                     <TokenBalanceProvider>
                                       <SessionAuthInitializer>
-                                    <GlobalNavigation>
-                                      {children}
-                                    </GlobalNavigation>
+                                        <PWAAnalyticsInitializer />
+                                        <GlobalNavigation>
+                                          {children}
+                                        </GlobalNavigation>
                                       </SessionAuthInitializer>
                                     </TokenBalanceProvider>
                                   </TokenIncrementProvider>

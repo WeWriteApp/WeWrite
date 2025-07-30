@@ -22,6 +22,7 @@ interface LinkEditorModalProps {
     data: any;
   } | null;
   selectedText?: string;
+  linkedPageIds?: string[];
 }
 
 export default function LinkEditorModal({
@@ -29,7 +30,8 @@ export default function LinkEditorModal({
   onClose,
   onInsertLink,
   editingLink = null,
-  selectedText = ''
+  selectedText = '',
+  linkedPageIds = []
 }: LinkEditorModalProps) {
   console.log('🔗 LINK_MODAL: Component rendered with props:', {
     isOpen,
@@ -197,7 +199,7 @@ export default function LinkEditorModal({
         onClose();
       }
     }}>
-      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{modalTitle}</DialogTitle>
         </DialogHeader>
@@ -230,13 +232,13 @@ export default function LinkEditorModal({
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="pages" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              WeWrite Pages
+            <TabsTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">WeWrite </span>Pages
             </TabsTrigger>
-            <TabsTrigger value="external" className="flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" />
-              External Link
+            <TabsTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+              External<span className="hidden sm:inline"> Link</span>
             </TabsTrigger>
           </TabsList>
 
@@ -254,15 +256,16 @@ export default function LinkEditorModal({
             </div>
 
             {/* Search Results */}
-            <div className="h-64">
+            <div className="h-48 sm:h-64">
               <FilteredSearchResults
                 ref={searchInputRef}
                 onSelect={handlePageSelect}
                 userId={user?.uid}
                 placeholder="Search for pages..."
                 autoFocus={!selectedText}
-                className="h-full p-3"
+                className="h-full p-2 sm:p-3"
                 preventRedirect={true}
+                linkedPageIds={linkedPageIds}
               />
             </div>
           </TabsContent>

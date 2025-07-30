@@ -18,6 +18,7 @@ import FollowingList from './FollowingList';
 import UserBioTab from './UserBioTab';
 
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
+import { useInfiniteScrollWithLoadMore } from '../../hooks/useInfiniteScroll';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 import ExternalLinksTab from './ExternalLinksTab';
 import UserGraphTab from './UserGraphTab';
@@ -151,12 +152,21 @@ export default function UserProfileTabs({ profile }) {
     pages,
     loading: isLoading,
     error: pagesError,
-    fetchWithSort
+    fetchWithSort,
+    hasMore,
+    loadingMore,
+    loadMore
   } = useSimplePages(profile?.uid, user?.uid, true, sortBy, sortDirection);
 
   // 🚨 CRITICAL FIX: No local sorting needed - pages come pre-sorted from database
   // The API now handles sorting at the database level for the entire dataset
   const sortedPages = pages;
+
+  // Infinite scroll for pages tab
+  const { targetRef: pagesScrollTarget } = useInfiniteScrollWithLoadMore({
+    hasMore: hasMore || false,
+    onLoadMore: loadMore || (() => {}),
+  });
 
   // Helper function to get descriptive sort labels
   const getSortLabel = (sortType, direction) => {
@@ -623,7 +633,38 @@ export default function UserProfileTabs({ profile }) {
                     {loadingError}
                   </div>
                 )}
-                {/* 🚨 URGENT FIX: Load more temporarily disabled - simple API shows all pages at once */}
+
+                {/* Infinite scroll loading indicator */}
+                {loadingMore && (
+                  <div className="flex justify-center py-4">
+                    <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Infinite scroll target */}
+                <div ref={pagesScrollTarget} className="h-4" />
+
+                {/* Manual load more button as fallback */}
+                {hasMore && !loadingMore && loadMore && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={loadMore}
+                      variant="outline"
+                    >
+                      Load More Pages
+                    </Button>
+                  </div>
+                )}
+
+                {/* End of list indicator */}
+                {!hasMore && !loadingMore && sortedPages.length > 0 && (
+                  <div className="flex justify-center py-6">
+                    <div className="text-center text-muted-foreground">
+                      <div className="w-12 h-px bg-border mx-auto mb-2"></div>
+                      <p className="text-sm">You've reached the end</p>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </TabsContent>

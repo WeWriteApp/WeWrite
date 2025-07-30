@@ -238,6 +238,16 @@ export default function UserRecentEdits({
 
           {/* Infinite scroll target */}
           <div ref={targetRef} className="h-4" />
+
+          {/* End of list indicator */}
+          {!hasMore && !loadingMore && edits.length > 0 && (
+            <div className="flex justify-center py-6">
+              <div className="text-center text-muted-foreground">
+                <div className="w-12 h-px bg-border mx-auto mb-2"></div>
+                <p className="text-sm">You've reached the end</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

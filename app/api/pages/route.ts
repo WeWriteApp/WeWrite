@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const query: PageQuery = {
-      userId: searchParams.get('userId') || undefined,
+      userId: searchParams.get('userId') || currentUserId, // Default to current user if no userId specified
       includeDeleted: searchParams.get('includeDeleted') === 'true',
       limit: parseInt(searchParams.get('limit') || '20'),
       startAfter: searchParams.get('startAfter') || undefined,
@@ -55,14 +55,7 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
-    console.log('🗺️ API /pages - Debug info:', {
-      currentUserId: currentUserId,
-      requestedUserId: query.userId,
-      userIdMatch: currentUserId === query.userId,
-      limit: query.limit
-    });
-
-    console.log('🗺️ API /pages - Debug info:', {
+    console.log('🗺️ API /pages - Query info:', {
       currentUserId: currentUserId,
       requestedUserId: query.userId,
       userIdMatch: currentUserId === query.userId,
@@ -929,6 +922,42 @@ export async function DELETE(request: NextRequest) {
         deletedAt: new Date().toISOString(),
         lastModified: new Date().toISOString()
       });
+
+      // Clean up backlinks when page is deleted
+      try {
+        console.log(`🗑️ Cleaning up backlinks for deleted page ${pageId}`);
+
+        // Remove backlinks FROM this page (outgoing links)
+        const outgoingBacklinksQuery = db.collection(getCollectionName('backlinks'))
+          .where('sourcePageId', '==', pageId);
+        const outgoingSnapshot = await outgoingBacklinksQuery.get();
+
+        // Remove backlinks TO this page (incoming links)
+        const incomingBacklinksQuery = db.collection(getCollectionName('backlinks'))
+          .where('targetPageId', '==', pageId);
+        const incomingSnapshot = await incomingBacklinksQuery.get();
+
+        // Batch delete all backlinks
+        const batch = db.batch();
+        outgoingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        incomingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+
+        console.log(`✅ Cleaned up ${outgoingSnapshot.size + incomingSnapshot.size} backlinks for deleted page ${pageId}`);
+      } catch (backlinkError) {
+        console.error('Error cleaning up backlinks for deleted page:', backlinkError);
+        // Don't fail the deletion if backlink cleanup fails
+      }
+
+      // Clear graph cache for this page to ensure deleted pages don't appear in graphs
+      try {
+        // Note: This is server-side, so we can't directly access the client-side cache
+        // The cache will be cleared when the client makes new requests and gets updated data
+        console.log(`🗑️ Page ${pageId} deleted - graph cache will be refreshed on next request`);
+      } catch (cacheError) {
+        console.error('Error clearing cache for deleted page:', cacheError);
+      }
 
       return createApiResponse({
         id: pageId,

@@ -29,6 +29,7 @@ try {
  * - sortDirection: Sort direction (desc, asc) - default: desc
  * - searchTerm: Optional search term to filter results
  * - limit: Maximum number of results (default: 100)
+ * - cursor: Pagination cursor for loading more results
  */
 export async function GET(request: NextRequest) {
   try {
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     const sortDirection = searchParams.get('sortDirection') || 'desc';
     const searchTerm = searchParams.get('searchTerm') || '';
     const limitParam = searchParams.get('limit');
+    const cursor = searchParams.get('cursor'); // Pagination cursor
     const limitCount = limitParam ? parseInt(limitParam) : 100;
     const noLimit = limitParam === null; // If no limit param provided, get ALL pages
 
@@ -56,6 +58,17 @@ export async function GET(request: NextRequest) {
     let actualSortField; // Track what field we're actually using
     let queryLimit = noLimit ? null : Math.max(limitCount * 2, 200); // No limit for daily notes
 
+    // Parse cursor for pagination
+    let startAfterDoc = null;
+    if (cursor && !noLimit) { // Only use cursor when we have limits (not for daily notes)
+      try {
+        // Cursor is the timestamp/value to start after
+        startAfterDoc = cursor;
+      } catch (error) {
+        console.warn('[my-pages API] Invalid cursor, ignoring:', error);
+      }
+    }
+
     if (sortBy === 'lastModified' || sortBy === 'recently-edited') {
       // CRITICAL FIX: Use proper lastModified index with deleted filter
       // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
@@ -65,6 +78,11 @@ export async function GET(request: NextRequest) {
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc'); // Always use desc to avoid index issues
+
+      // Add cursor support for pagination
+      if (startAfterDoc) {
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+      }
 
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
@@ -80,6 +98,11 @@ export async function GET(request: NextRequest) {
         .orderBy('deleted') // Required for != queries
         .orderBy('createdAt', 'desc'); // Always use desc to avoid index issues
 
+      // Add cursor support for pagination
+      if (startAfterDoc) {
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+      }
+
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
@@ -93,6 +116,11 @@ export async function GET(request: NextRequest) {
         .orderBy('deleted') // Required for != queries
         .orderBy('title', titleDirection); // Use the requested direction
 
+      // Add cursor support for pagination
+      if (startAfterDoc) {
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+      }
+
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
@@ -105,6 +133,11 @@ export async function GET(request: NextRequest) {
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc'); // Always use desc to avoid index issues
+
+      // Add cursor support for pagination
+      if (startAfterDoc) {
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
+      }
 
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
@@ -208,9 +241,29 @@ export async function GET(request: NextRequest) {
       console.log(`[my-pages API] Daily notes: returning ${limitedPages.length} total pages, ${pagesWithCustomDate} with custom dates`);
     }
 
+    // Calculate pagination info
+    const hasMore = !noLimit && pages.length > limitCount;
+    let nextCursor = null;
+
+    if (hasMore && limitedPages.length > 0) {
+      const lastPage = limitedPages[limitedPages.length - 1];
+      // Use the sort field value as cursor
+      if (sortBy === 'lastModified' || sortBy === 'recently-edited') {
+        nextCursor = lastPage.lastModified;
+      } else if (sortBy === 'createdAt' || sortBy === 'recently-created') {
+        nextCursor = lastPage.createdAt;
+      } else if (sortBy === 'title' || sortBy === 'alphabetical') {
+        nextCursor = lastPage.title;
+      } else {
+        nextCursor = lastPage.lastModified; // fallback
+      }
+    }
+
     return NextResponse.json({
       pages: limitedPages,
       totalFound: pagesSnapshot.docs.length,
+      hasMore,
+      nextCursor,
       sortBy,
       sortDirection,
       searchTerm

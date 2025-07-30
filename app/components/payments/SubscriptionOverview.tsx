@@ -185,7 +185,7 @@ export function SubscriptionOverview() {
             <div className="flex items-center justify-between p-4 border-theme-strong rounded-lg">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium">Monthly Subscription</h4>
+                  <h4 className="font-medium">Monthly Token Purchase</h4>
                   {getStatusBadge(subscription)}
                 </div>
                 <p className="text-2xl font-bold">{formatCurrency(subscription.amount)}</p>
@@ -326,7 +326,7 @@ export function SubscriptionOverview() {
           <Button variant="outline" className="w-full" asChild>
             <Link href="/settings/subscription">
               <Settings className="h-4 w-4 mr-2" />
-              Manage Subscription
+              Manage Token Purchase
             </Link>
           </Button>
         )}

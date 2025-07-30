@@ -90,21 +90,41 @@ export async function GET(request: NextRequest) {
       // Get all backlinks (no isPublic filter since private pages no longer exist)
       const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
         .where('targetPageId', '==', pageId)
-        .limit(limit)
+        .limit(limit * 2) // Get more to account for filtering
         .get();
-      
-      incoming = backlinksSnapshot.docs.map(doc => {
+
+      // Filter out backlinks from deleted pages
+      const validIncoming = [];
+      for (const doc of backlinksSnapshot.docs) {
         const data = doc.data();
-        return {
-          id: data.sourcePageId,
-          title: data.sourcePageTitle,
-          username: data.sourceUsername,
-          lastModified: data.lastModified,
-          linkText: data.linkText
-        };
-      });
-      
-      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${incoming.length} incoming connections using index`);
+
+        try {
+          // Check if the source page still exists and isn't deleted
+          const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
+
+          if (sourcePageDoc.exists) {
+            const sourcePageData = sourcePageDoc.data();
+            if (!sourcePageData.deleted) {
+              validIncoming.push({
+                id: data.sourcePageId,
+                title: data.sourcePageTitle,
+                username: data.sourceUsername,
+                lastModified: data.lastModified,
+                linkText: data.linkText
+              });
+            }
+          }
+        } catch (pageCheckError) {
+          console.warn(`Failed to check source page ${data.sourcePageId}:`, pageCheckError);
+        }
+
+        // Stop if we have enough valid results
+        if (validIncoming.length >= limit) break;
+      }
+
+      incoming = validIncoming;
+
+      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${incoming.length} incoming connections using index (filtered from ${backlinksSnapshot.size} total)`);
     } catch (error) {
       console.log('🔗 [PAGE_CONNECTIONS_API] Backlinks index not available, using fallback');
       // Fallback method would go here if needed
@@ -215,22 +235,36 @@ export async function GET(request: NextRequest) {
             .limit(3) // Limit per first-level page
             .get();
 
-          secondHopSnapshot.docs.forEach(doc => {
+          // Filter second-hop connections to exclude deleted pages
+          for (const doc of secondHopSnapshot.docs) {
             const data = doc.data();
             // Exclude if it's the original page or already in first-level connections
             if (data.sourcePageId !== pageId &&
                 !incoming.some(p => p.id === data.sourcePageId) &&
                 !outgoing.some(p => p.id === data.sourcePageId) &&
                 !secondHopConnections.some(p => p.id === data.sourcePageId)) {
-              secondHopConnections.push({
-                id: data.sourcePageId,
-                title: data.sourcePageTitle,
-                username: data.sourceUsername,
-                lastModified: data.lastModified,
-                linkText: data.linkText
-              });
+
+              try {
+                // Check if the source page still exists and isn't deleted
+                const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
+
+                if (sourcePageDoc.exists) {
+                  const sourcePageData = sourcePageDoc.data();
+                  if (!sourcePageData.deleted) {
+                    secondHopConnections.push({
+                      id: data.sourcePageId,
+                      title: data.sourcePageTitle,
+                      username: data.sourceUsername,
+                      lastModified: data.lastModified,
+                      linkText: data.linkText
+                    });
+                  }
+                }
+              } catch (pageCheckError) {
+                console.warn(`Failed to check second-hop source page ${data.sourcePageId}:`, pageCheckError);
+              }
             }
-          });
+          }
         } catch (error) {
           console.warn(`Failed to fetch second-hop for ${firstLevelPage.id}:`, error);
         }
@@ -252,7 +286,8 @@ export async function GET(request: NextRequest) {
               .limit(2) // Limit per second-level page
               .get();
 
-            thirdHopSnapshot.docs.forEach(doc => {
+            // Filter third-hop connections to exclude deleted pages
+            for (const doc of thirdHopSnapshot.docs) {
               const data = doc.data();
               // Exclude if already in previous levels
               if (data.sourcePageId !== pageId &&
@@ -260,15 +295,28 @@ export async function GET(request: NextRequest) {
                   !outgoing.some(p => p.id === data.sourcePageId) &&
                   !secondHopConnections.some(p => p.id === data.sourcePageId) &&
                   !thirdHopConnections.some(p => p.id === data.sourcePageId)) {
-                thirdHopConnections.push({
-                  id: data.sourcePageId,
-                  title: data.sourcePageTitle,
-                  username: data.sourceUsername,
-                  lastModified: data.lastModified,
-                  linkText: data.linkText
-                });
+
+                try {
+                  // Check if the source page still exists and isn't deleted
+                  const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
+
+                  if (sourcePageDoc.exists) {
+                    const sourcePageData = sourcePageDoc.data();
+                    if (!sourcePageData.deleted) {
+                      thirdHopConnections.push({
+                        id: data.sourcePageId,
+                        title: data.sourcePageTitle,
+                        username: data.sourceUsername,
+                        lastModified: data.lastModified,
+                        linkText: data.linkText
+                      });
+                    }
+                  }
+                } catch (pageCheckError) {
+                  console.warn(`Failed to check third-hop source page ${data.sourcePageId}:`, pageCheckError);
+                }
               }
-            });
+            }
           } catch (error) {
             console.warn(`Failed to fetch third-hop for ${secondLevelPage.id}:`, error);
           }

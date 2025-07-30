@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get active creators count
-    const creatorsSnapshot = await adminDb.collection('users')
+    const creatorsSnapshot = await adminDb.collection(getCollectionName('users'))
       .where('isCreator', '==', true)
       .where('lastActiveAt', '>=', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)) // Active in last 30 days
       .get();
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     const activeCreators = creatorsSnapshot.size;
 
     // Get last month's active creators for growth calculation
-    const lastMonthCreatorsSnapshot = await adminDb.collection('users')
+    const lastMonthCreatorsSnapshot = await adminDb.collection(getCollectionName('users'))
       .where('isCreator', '==', true)
       .where('lastActiveAt', '>=', lastMonth)
       .where('lastActiveAt', '<', thisMonth)

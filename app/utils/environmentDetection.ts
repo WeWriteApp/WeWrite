@@ -116,7 +116,7 @@ export const detectEnvironmentType = (): EnvironmentType => {
   // This ensures clean separation between local dev and production data
   if (isLocalDevelopment()) {
     const branch = getCurrentGitBranch();
-    console.log(`[Environment Detection] Local development on branch '${branch}' → using DEV_ collections`);
+    // Local development detected - using DEV_ collections
     return 'development';
   }
 
@@ -199,22 +199,22 @@ export const logEnvironmentDetection = (): void => {
   const context = getEnvironmentContext();
   const validation = validateEnvironmentDetection();
   
-  console.log('[Environment Detection] Context:', {
-    type: context.type,
-    isClient: context.isClient,
-    isServer: context.isServer,
-    isVercel: context.isVercel,
-    isLocal: context.isLocal,
-    nodeEnv: context.nodeEnv,
-    vercelEnv: context.vercelEnv,
-    gitBranch: context.gitBranch
-  });
-  
+  // Only log environment detection on errors or when explicitly debugging
   if (!validation.isValid) {
     console.error('[Environment Detection] Validation failed:', validation.warnings);
   } else if (validation.warnings.length > 0) {
     console.warn('[Environment Detection] Warnings:', validation.warnings);
-  } else {
+  } else if (process.env.ENV_DEBUG === 'true') {
+    console.log('[Environment Detection] Context:', {
+      type: context.type,
+      isClient: context.isClient,
+      isServer: context.isServer,
+      isVercel: context.isVercel,
+      isLocal: context.isLocal,
+      nodeEnv: context.nodeEnv,
+      vercelEnv: context.vercelEnv,
+      gitBranch: context.gitBranch
+    });
     console.log('[Environment Detection] ✅ All checks passed');
   }
 };

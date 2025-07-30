@@ -5,6 +5,7 @@ import { MapPin, Crosshair, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
 import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
+import { logMobileMapDiagnostics, testMobileMapTileLoading } from '../../utils/mobileMapDiagnostics';
 
 // Leaflet imports - we'll import these dynamically to avoid SSR issues
 let L: any = null;
@@ -75,6 +76,23 @@ const MapPicker: React.FC<MapPickerProps> = ({
         // Check if the container is actually visible (has dimensions)
         const containerRect = mapRef.current.getBoundingClientRect();
         if (containerRect.width === 0 || containerRect.height === 0) {
+          // On mobile Safari, container might not have dimensions immediately
+          // Wait a bit and try again
+          if (typeof navigator !== 'undefined' && /Safari/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent)) {
+            console.log('🍎 Mobile Safari detected, waiting for container dimensions...');
+            setTimeout(() => {
+              const retryRect = mapRef.current?.getBoundingClientRect();
+              if (retryRect && (retryRect.width === 0 || retryRect.height === 0)) {
+                console.warn('🍎 Mobile Safari: Container still has no dimensions after retry');
+                setError('Map container sizing issue on mobile. Please try refreshing.');
+                setIsLoading(false);
+                return;
+              }
+              // Retry initialization
+              initializeMap();
+            }, 500);
+            return;
+          }
           setIsLoading(false);
           return;
         }
@@ -91,7 +109,13 @@ const MapPicker: React.FC<MapPickerProps> = ({
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
         });
 
-        // Create map instance
+        // Detect mobile Safari for specific configurations
+        const isMobileSafari = typeof navigator !== 'undefined' &&
+          /Safari/.test(navigator.userAgent) &&
+          /Mobile/.test(navigator.userAgent) &&
+          !/Chrome/.test(navigator.userAgent);
+
+        // Create map instance with mobile Safari optimizations
         const map = L.map(mapRef.current, {
           zoomControl: !disableZoom && showControls,
           attributionControl: false,
@@ -101,12 +125,67 @@ const MapPicker: React.FC<MapPickerProps> = ({
           boxZoom: !disableZoom,
           keyboard: !disableZoom,
           dragging: allowPanning,
+          // Mobile Safari specific optimizations
+          tap: isMobileSafari,
+          tapTolerance: isMobileSafari ? 20 : 15,
+          zoomSnap: isMobileSafari ? 0.5 : 1,
+          zoomDelta: isMobileSafari ? 0.5 : 1,
+          wheelPxPerZoomLevel: isMobileSafari ? 120 : 60,
+          // Prevent zoom conflicts with Safari's native zoom
+          bounceAtZoomLimits: !isMobileSafari,
         });
 
-        // Add tile layer with theme support and error handling
+        console.log('🗺️ Map initialized with mobile Safari optimizations:', {
+          isMobileSafari,
+          containerDimensions: {
+            width: containerRect.width,
+            height: containerRect.height
+          }
+        });
+
+        // Run mobile diagnostics if on mobile Safari
+        if (isMobileSafari) {
+          logMobileMapDiagnostics();
+
+          // Test tile loading capability
+          testMobileMapTileLoading().then(canLoadTiles => {
+            if (!canLoadTiles) {
+              console.error('🍎 Mobile Safari: Tile loading test failed');
+              setError('Map tiles cannot be loaded on this device. Please check your network connection.');
+            }
+          });
+        }
+
+        // Add tile layer with theme support and mobile-specific error handling
         const isDarkMode = resolvedTheme === 'dark';
 
         const tileLayer = createTileLayer(L, isDarkMode);
+
+        // Mobile Safari specific tile loading optimizations
+        if (isMobileSafari) {
+          tileLayer.options.updateWhenIdle = true;
+          tileLayer.options.keepBuffer = 2;
+          tileLayer.options.updateWhenZooming = false;
+        }
+
+        // Enhanced error handling for mobile
+        let tileErrorCount = 0;
+        tileLayer.on('tileerror', function(error: any) {
+          tileErrorCount++;
+          console.warn('🗺️ Mobile tile error:', {
+            url: error.tile?.src,
+            coords: error.coords,
+            error: error.error,
+            isMobileSafari,
+            totalErrors: tileErrorCount
+          });
+
+          // If too many tile errors on mobile, show user-friendly message
+          if (isMobileSafari && tileErrorCount > 5) {
+            setError('Map tiles are having trouble loading on mobile. Please check your connection and try refreshing.');
+          }
+        });
+
         tileLayer.addTo(map);
 
         // Use centralized map view logic
@@ -217,9 +296,17 @@ const MapPicker: React.FC<MapPickerProps> = ({
       }
     };
 
+    // Mobile Safari needs more time for proper rendering
+    const isMobileSafari = typeof navigator !== 'undefined' &&
+      /Safari/.test(navigator.userAgent) &&
+      /Mobile/.test(navigator.userAgent) &&
+      !/Chrome/.test(navigator.userAgent);
+
+    const delay = isMobileSafari ? 300 : 100;
+
     const timer = setTimeout(() => {
       initializeMap();
-    }, 100);
+    }, delay);
 
     return () => {
       clearTimeout(timer);
@@ -298,11 +385,18 @@ const MapPicker: React.FC<MapPickerProps> = ({
         className={`relative ${className} ${!readOnly ? 'cursor-crosshair' : ''}`}
         style={{ height }}
       >
-        {/* Map container */}
+        {/* Map container with mobile Safari optimizations */}
         <div
           ref={mapRef}
           className="absolute inset-0 bg-background"
-          style={{ zIndex: 1 }}
+          style={{
+            zIndex: 1,
+            // Prevent mobile Safari zoom conflicts
+            touchAction: 'pan-x pan-y',
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none'
+          }}
         />
 
         {/* Loading overlay */}

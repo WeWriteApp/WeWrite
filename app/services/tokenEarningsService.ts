@@ -62,7 +62,7 @@ export class TokenEarningsService {
     } catch (error: any) {
       // Handle permission errors gracefully (expected for non-writers)
       if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
-        console.log('[TokenEarningsService] Permission denied for writer token balance (expected for non-writers)');
+        // Permission denied for non-writers - this is expected
         return null;
       }
       console.error('[TokenEarningsService] Error getting writer token balance:', error);

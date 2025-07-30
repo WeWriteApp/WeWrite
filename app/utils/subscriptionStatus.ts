@@ -265,7 +265,7 @@ export const getSubscriptionNavigationPath = (
     return '/settings/spend-tokens';
   }
 
-  return '/settings/subscription';
+  return '/settings/buy-tokens';
 };
 
 /**

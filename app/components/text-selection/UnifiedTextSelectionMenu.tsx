@@ -422,6 +422,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
           onInsertLink={handleInsertLink}
           editingLink={null}
           selectedText={selectedText}
+          linkedPageIds={[]}
         />,
         document.body
       )}

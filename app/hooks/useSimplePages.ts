@@ -21,6 +21,10 @@ interface UseSimplePagesReturn {
   error: string | null;
   refreshData: () => void;
   fetchWithSort: (sortBy: string, sortDirection: string) => void;
+  // Infinite scroll support
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  loadMore?: () => void;
 }
 
 // Cache to reduce query volumes
@@ -46,12 +50,17 @@ const useSimplePages = (
   const [currentSort, setCurrentSort] = useState({ sortBy: initialSortBy, sortDirection: initialSortDirection });
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
+  // Infinite scroll state
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+
   // Refs for debouncing and preventing duplicate calls
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchRef = useRef<string>('');
 
   // Optimized fetch function with caching and deduplication
-  const fetchPages = useCallback(async (customSortBy?: string, customSortDirection?: string, forceRefresh: boolean = false) => {
+  const fetchPages = useCallback(async (customSortBy?: string, customSortDirection?: string, forceRefresh: boolean = false, append: boolean = false, cursor?: string) => {
     if (!userId) {
       setLoading(false);
       return;
@@ -69,17 +78,21 @@ const useSimplePages = (
       return;
     }
 
-    // Check cache first to reduce query volume (unless forcing refresh)
+    // Check cache first to reduce query volume (unless forcing refresh or appending)
     const cached = pagesCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL && !forceRefresh) {
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL && !forceRefresh && !append) {
       console.log('📦 QUERY OPTIMIZATION: Using cached data for', cacheKey);
       setPages(cached.data);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
     lastFetchRef.current = cacheKey;
 
     try {
@@ -89,8 +102,12 @@ const useSimplePages = (
         userId,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
-        limit: '100'
+        limit: '20' // Smaller limit for pagination
       });
+
+      if (cursor) {
+        params.set('cursor', cursor);
+      }
 
       const response = await fetch(`/api/my-pages?${params}`);
 
@@ -106,20 +123,39 @@ const useSimplePages = (
 
       const pagesArray = data.pages || [];
 
-      // Cache the results to reduce future queries
-      pagesCache.set(cacheKey, { data: pagesArray, timestamp: Date.now() });
+      // Update pagination state
+      setHasMore(data.hasMore || false);
+      setNextCursor(data.nextCursor || null);
 
-      console.log(`✅ QUERY SUCCESS: ${pagesArray.length} pages sorted by ${effectiveSortBy} ${effectiveSortDirection}`);
+      if (append) {
+        setPages(prev => [...prev, ...pagesArray]);
+        setLoadingMore(false);
+      } else {
+        // Cache the results to reduce future queries (only for initial loads)
+        pagesCache.set(cacheKey, { data: pagesArray, timestamp: Date.now() });
+        setPages(pagesArray);
+        setLoading(false);
+      }
 
-      setPages(pagesArray);
-      setLoading(false);
+      console.log(`✅ QUERY SUCCESS: ${pagesArray.length} pages sorted by ${effectiveSortBy} ${effectiveSortDirection}${append ? ' (appended)' : ''}`);
 
     } catch (err) {
       console.error("❌ QUERY ERROR:", err);
       setError("Failed to load pages. Please try again later.");
-      setLoading(false);
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   }, [userId, currentSort.sortBy, currentSort.sortDirection, loading]);
+
+  // Load more function for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore && nextCursor) {
+      fetchPages(currentSort.sortBy, currentSort.sortDirection, false, true, nextCursor);
+    }
+  }, [loadingMore, hasMore, nextCursor, currentSort.sortBy, currentSort.sortDirection, fetchPages]);
 
   // Initial fetch when userId changes or refresh is triggered
   useEffect(() => {
@@ -258,7 +294,10 @@ const useSimplePages = (
     loading,
     error,
     refreshData,
-    fetchWithSort
+    fetchWithSort,
+    hasMore,
+    loadingMore,
+    loadMore
   };
 };
 

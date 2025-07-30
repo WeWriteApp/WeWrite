@@ -184,3 +184,6 @@ export function QuickSubscriptionCheckout({
     />
   );
 }
+
+// Alias for the new naming convention
+export const TokenPurchaseCheckoutForm = SubscriptionCheckoutForm;

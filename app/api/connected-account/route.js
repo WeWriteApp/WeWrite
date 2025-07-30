@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -25,7 +26,7 @@ export async function POST(request) {
     
     try {
       // Fetch user document to get connected account info
-      const userDocRef = db.collection('users').doc(userId);
+      const userDocRef = db.collection(getCollectionName('users')).doc(userId);
       const userDoc = await userDocRef.get();
       
       let account = null;
