@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { createTileLayer, getDefaultMapView, logMapError, testMapTileAccess } from '../../utils/mapConfig';
 
 interface Location {
   lat: number;
@@ -83,22 +84,27 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
           touchZoom: true
         }).setView([center.lat, center.lng], zoom);
 
-        // Add tile layer with theme support
-        const tileUrl = resolvedTheme === 'dark'
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        // Add tile layer with theme support and error handling
+        const isDarkMode = resolvedTheme === 'dark';
 
-        L.tileLayer(tileUrl, {
-          attribution: resolvedTheme === 'dark'
-            ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19
-        }).addTo(map);
+        // Test tile accessibility first
+        const tilesAccessible = await testMapTileAccess(isDarkMode);
+        if (!tilesAccessible) {
+          console.warn('Map tiles may not be accessible, but proceeding anyway');
+        }
+
+        const tileLayer = createTileLayer(L, isDarkMode);
+        tileLayer.addTo(map);
 
         mapInstanceRef.current = map;
         setIsLoading(false);
       } catch (err) {
-        console.error('Error initializing map:', err);
+        logMapError('MultiLocationMap initialization', err, {
+          pagesCount: pages.length,
+          center,
+          zoom,
+          theme: resolvedTheme
+        });
         setError('Failed to load map');
         setIsLoading(false);
       }
@@ -281,7 +287,8 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
   // Calculate center point for map view
   const mapCenter = React.useMemo(() => {
     if (pages.length === 0) {
-      return { lat: 40.7128, lng: -74.0060 }; // Default to NYC
+      const defaultView = getDefaultMapView();
+      return { lat: defaultView.center[0], lng: defaultView.center[1] };
     }
     
     if (pages.length === 1) {
