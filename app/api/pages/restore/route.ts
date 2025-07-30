@@ -64,6 +64,30 @@ export async function POST(request: NextRequest) {
       lastModified: new Date().toISOString()
     });
 
+    // Rebuild backlinks when page is restored
+    try {
+      console.log(`🔄 Rebuilding backlinks for restored page ${pageId}`);
+
+      if (pageData.content) {
+        // Import the backlinks update function
+        const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
+
+        await updateBacklinksIndex(
+          pageId,
+          pageData.title || 'Untitled',
+          pageData.username || 'Unknown',
+          pageData.content,
+          pageData.isPublic || false,
+          new Date().toISOString()
+        );
+
+        console.log(`✅ Rebuilt backlinks for restored page ${pageId}`);
+      }
+    } catch (backlinkError) {
+      console.error('Error rebuilding backlinks for restored page:', backlinkError);
+      // Don't fail the restoration if backlink rebuild fails
+    }
+
     return createApiResponse({
       id: pageId,
       title: pageData.title,

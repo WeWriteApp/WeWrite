@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     // Batch fetch pages
     const pagePromises = Array.from(pageIds).map(async (pageId) => {
       try {
-        const pageDoc = await db.collection('pages').doc(pageId).get();
+        const pageDoc = await db.collection(getCollectionName('pages')).doc(pageId).get();
         if (pageDoc.exists) {
           const pageData = pageDoc.data();
           if (pageData?.userId) userIds.add(pageData.userId);

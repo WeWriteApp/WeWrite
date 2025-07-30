@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the user's customer ID from Firestore
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
 
     let customerId = userData?.stripeCustomerId;
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       // Get username from Firestore
       let username = 'Unknown User';
       try {
-        const userDoc = await db.collection('users').doc(userId).get();
+        const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
         if (userDoc.exists()) {
           const userData = userDoc.data();
           username = userData?.username || userRecord.email?.split('@')[0] || 'Unknown User';
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id;
 
       // Save the customer ID to Firestore
-      await db.collection('users').doc(userId).set({
+      await db.collection(getCollectionName('users')).doc(userId).set({
         stripeCustomerId: customerId}, { merge: true });
     }
 

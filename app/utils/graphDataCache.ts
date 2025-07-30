@@ -82,6 +82,21 @@ class GraphDataCache {
   }
 
   /**
+   * Clear cache for a specific page (useful when page is deleted/restored)
+   */
+  clearPageCache(pageId: string): void {
+    const keysToDelete = [];
+    for (const key of this.cache.keys()) {
+      if (key.includes(pageId)) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach(key => this.cache.delete(key));
+    console.log(`🗑️ [CACHE] Cleared ${keysToDelete.length} cache entries for page ${pageId}`);
+  }
+
+  /**
    * Get page connections with caching
    */
   async getPageConnections(pageId: string, includeSecondHop: boolean = false): Promise<PageConnectionsData> {

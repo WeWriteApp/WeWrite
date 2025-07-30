@@ -179,9 +179,8 @@ export const pageApi = {
 };
 
 /**
- * Activity Operations - DEPRECATED
- * Activity system has been replaced with version system
- * Use firebase/activity.ts getRecentActivity() instead
+ * Activity Operations - REMOVED
+ * Activity system has been completely removed in favor of unified version system
  */
 
 /**
@@ -280,8 +279,8 @@ export async function getPageById(pageId: string, userId?: string) {
 }
 
 /**
- * DEPRECATED: Use firebase/activity.ts getRecentActivity() directly instead
- * This wrapper function is no longer needed
+ * REMOVED: Activity system has been completely removed
+ * Use unified version system instead
  */
 
 /**

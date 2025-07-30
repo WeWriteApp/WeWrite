@@ -43,6 +43,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* OPTIMIZATION: Resource hints for better performance */}
+        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="//www.googletagmanager.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preload critical API routes */}
+        <link rel="prefetch" href="/api/pages" />
+      </head>
       <body suppressHydrationWarning>
         {/* Early Firebase error suppression - must run before any other scripts */}
         <Script
