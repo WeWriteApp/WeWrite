@@ -70,7 +70,7 @@ const NewPageButton = ({
       onMouseEnter={onHover}
       onTouchStart={onHover}
       className={cn(
-        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-2 relative gap-1 group",
+        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-1 relative group",
         "transition-all duration-75 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
@@ -84,21 +84,32 @@ const NewPageButton = ({
       aria-pressed={isActive}
       disabled={isNavigating && !isPressed}
     >
-      {/* Accent-colored dot with plus icon */}
+      {/* Large accent-colored circle with plus icon and text inside */}
       <div className={cn(
-        "relative w-12 h-12 rounded-full flex items-center justify-center",
+        "relative w-16 h-16 rounded-full flex flex-col items-center justify-center",
         "bg-primary text-primary-foreground shadow-lg",
         "transition-all duration-75 ease-out",
         // Enhanced feedback states
         isPressed && "scale-95 shadow-md",
         "hover:shadow-xl hover:scale-105",
         // Subtle glow effect
-        "ring-2 ring-primary/20 hover:ring-primary/30"
+        "ring-2 ring-primary/20 hover:ring-primary/30",
+        // Allow slight overflow above toolbar
+        "-mt-2"
       )}>
+        {/* Plus icon */}
         <Plus className={cn(
-          "h-6 w-6 flex-shrink-0 transition-transform duration-75",
+          "h-5 w-5 flex-shrink-0 transition-transform duration-75 mb-0.5",
           isPressed && "scale-110"
         )} />
+
+        {/* Text inside circle */}
+        <span className={cn(
+          "text-xs font-semibold leading-none transition-colors duration-75",
+          "text-primary-foreground"
+        )}>
+          New
+        </span>
 
         {/* Loading indicator */}
         {isNavigating && (
@@ -107,20 +118,6 @@ const NewPageButton = ({
           </div>
         )}
       </div>
-
-      {/* Text label */}
-      <span className={cn(
-        "text-xs font-medium leading-none transition-colors duration-75",
-        "text-center max-w-full truncate",
-        isActive
-          ? "text-primary"
-          : [
-              "text-slate-500 group-hover:text-slate-700",
-              "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
-            ]
-      )}>
-        New
-      </span>
     </Button>
   );
 };
