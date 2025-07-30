@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Clock, FileText, Users } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { PillLink } from '../utils/PillLink';
+import PillLink from '../utils/PillLink';
 
 interface Allocation {
   id?: string;

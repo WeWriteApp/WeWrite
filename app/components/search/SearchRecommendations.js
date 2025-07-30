@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from 'react';
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 
 /**
  * SearchRecommendations Component

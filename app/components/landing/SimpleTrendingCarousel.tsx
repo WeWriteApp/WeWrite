@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { Sparkline } from '../ui/sparkline';
 import Link from 'next/link';
 import ContentCarousel from './ContentCarousel';

@@ -15,7 +15,7 @@ import {
   TableRow
 } from "../ui/table";
 import { interactiveCard, cn } from "../../lib/utils";
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { useAuth } from '../../providers/AuthProvider';
 export interface Page {
   id: string;

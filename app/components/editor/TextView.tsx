@@ -50,7 +50,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, Fragment } fr
 import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import { CONTENT_TYPES } from "../../utils/constants";
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 // Removed Tooltip imports to avoid Radix UI ref composition issues
 import { getPageById } from "../../firebase/database";
 import { LINE_MODES } from '../../contexts/LineSettingsContext';

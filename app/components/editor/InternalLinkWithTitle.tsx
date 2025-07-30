@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { getPageById } from "../../firebase/database";
 

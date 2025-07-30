@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { followsApi } from "../../utils/apiClient";
 import { getPageById } from "../../utils/apiClient";
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from "../ui/button";
 import { useAuth } from '../../providers/AuthProvider';

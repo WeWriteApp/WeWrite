@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 import { Loader2, Info } from 'lucide-react';
 import {
   Tooltip,

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
 import { db } from "../../firebase/config';
 import { getCollectionName } from '../../utils/environmentConfig';
-import { PillLink } from "../utils/PillLink";
+import PillLink from "../utils/PillLink";
 // Removed Loader import - using simple loading state
 
 /**

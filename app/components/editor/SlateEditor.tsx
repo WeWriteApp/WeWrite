@@ -20,7 +20,7 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { createEditor, Descendant, Element as SlateElement, Text, Transforms, Editor, Range, Point, Node } from 'slate';
 import { Slate, Editable, withReact, ReactEditor, useSlateStatic, RenderElementProps, RenderLeafProps } from 'slate-react';
 import { withHistory } from 'slate-history';
-import { PillLink } from '../utils/PillLink';
+import PillLink from '../utils/PillLink';
 import { Button } from '../ui/button';
 import { Link, Trash2 } from 'lucide-react';
 import LinkEditorModal from './LinkEditorModal';

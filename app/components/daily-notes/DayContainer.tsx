@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
-import { PillLink } from '../utils/PillLink';
+import PillLink from '../utils/PillLink';
 import { Plus } from 'lucide-react';
 
 interface Note {

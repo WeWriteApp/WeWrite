@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext';
 import { CONTENT_TYPES } from '../../utils/constants';
 // Content parsing utility - inline implementation
-import { PillLink } from '../utils/PillLink';
+import PillLink from '../utils/PillLink';
 
 /**
  * Simple content parser for viewer
