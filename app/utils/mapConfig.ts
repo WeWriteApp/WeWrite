@@ -48,15 +48,29 @@ export function getMapTileConfig(isDarkMode: boolean = false): MapTileConfig {
 }
 
 /**
- * Create a tile layer with error handling and fallback
+ * Create a tile layer with error handling and mobile optimizations
  */
 export function createTileLayer(L: any, isDarkMode: boolean = false) {
   const config = getMapTileConfig(isDarkMode);
+
+  // Detect mobile Safari
+  const isMobileSafari = typeof navigator !== 'undefined' &&
+    /Safari/.test(navigator.userAgent) &&
+    /Mobile/.test(navigator.userAgent) &&
+    !/Chrome/.test(navigator.userAgent);
 
   const tileLayer = L.tileLayer(config.url, {
     attribution: config.attribution,
     maxZoom: config.maxZoom,
     errorTileUrl: config.errorTileUrl,
+    // Mobile Safari optimizations
+    crossOrigin: isMobileSafari ? 'anonymous' : null,
+    // Reduce concurrent tile requests on mobile
+    maxNativeZoom: isMobileSafari ? 18 : config.maxZoom,
+    // Better caching on mobile
+    updateWhenIdle: isMobileSafari,
+    updateWhenZooming: !isMobileSafari,
+    keepBuffer: isMobileSafari ? 2 : 1,
   });
 
   // Add basic error handling
@@ -154,9 +168,14 @@ export async function testMapTileAccess(isDarkMode: boolean = false): Promise<bo
 }
 
 /**
- * Enhanced error logging for map issues
+ * Enhanced error logging for map issues with mobile detection
  */
 export function logMapError(context: string, error: any, additionalInfo?: any) {
+  const isMobileSafari = typeof navigator !== 'undefined' &&
+    /Safari/.test(navigator.userAgent) &&
+    /Mobile/.test(navigator.userAgent) &&
+    !/Chrome/.test(navigator.userAgent);
+
   const errorDetails = {
     context,
     timestamp: new Date().toISOString(),
@@ -168,7 +187,18 @@ export function logMapError(context: string, error: any, additionalInfo?: any) {
     environment: {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
       url: typeof window !== 'undefined' ? window.location.href : 'server',
-      mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? 'present' : 'missing'
+      mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? 'present' : 'missing',
+      isMobileSafari,
+      isMobile: typeof window !== 'undefined' && window.innerWidth <= 768,
+      viewport: typeof window !== 'undefined' ? {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      } : null,
+      connection: typeof navigator !== 'undefined' && (navigator as any).connection ? {
+        effectiveType: (navigator as any).connection.effectiveType,
+        downlink: (navigator as any).connection.downlink
+      } : null
     },
     additionalInfo
   };

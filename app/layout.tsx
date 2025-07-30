@@ -35,6 +35,12 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
   title: 'WeWrite',
   description: 'A platform for writers to share and monetize their content',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
 }
 
 export default function RootLayout({
