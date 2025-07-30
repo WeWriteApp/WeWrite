@@ -34,6 +34,8 @@ interface PageAllocation {
   authorUsername: string;
   tokens: number;
   month: string;
+  resourceType?: 'page' | 'user_bio' | 'user' | 'wewrite';
+  resourceId?: string;
 }
 
 interface TokenBalance {
@@ -340,16 +342,33 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
       const currentTokens = currentAllocation?.tokens || 0;
       const totalChange = finalTokens - currentTokens;
 
-      const response = await fetch('/api/tokens/page-allocation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          pageId,
-          tokenChange: totalChange
-        })
-      });
+      // Use different API endpoints based on resource type
+      let response;
+      if (currentAllocation?.resourceType === 'user') {
+        // For user donations, use the allocate-user API
+        response = await fetch('/api/tokens/allocate-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            recipientUserId: currentAllocation.authorId,
+            tokens: finalTokens
+          })
+        });
+      } else {
+        // For page allocations, use the existing page-allocation API
+        response = await fetch('/api/tokens/page-allocation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            pageId,
+            tokenChange: totalChange
+          })
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -782,13 +801,27 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <Link
-                              href={`/${allocation.pageId}`}
-                              className="font-medium text-primary hover:underline truncate"
-                            >
-                              {allocation.pageTitle}
-                            </Link>
+                            {allocation.resourceType === 'user' ? (
+                              <Link
+                                href={`/user/${allocation.authorId}`}
+                                className="font-medium text-primary hover:underline truncate"
+                              >
+                                {allocation.authorUsername}'s profile
+                              </Link>
+                            ) : (
+                              <Link
+                                href={`/${allocation.pageId}`}
+                                className="font-medium text-primary hover:underline truncate"
+                              >
+                                {allocation.pageTitle}
+                              </Link>
+                            )}
                             <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            {allocation.resourceType === 'user' && (
+                              <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">
+                                User donation
+                              </span>
+                            )}
                             {isZeroAllocation && (
                               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                                 Previously pledged
@@ -796,7 +829,11 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            by {allocation.authorUsername}
+                            {allocation.resourceType === 'user' ? (
+                              'Direct support to user'
+                            ) : (
+                              `by ${allocation.authorUsername}`
+                            )}
                           </p>
                         </div>
 
