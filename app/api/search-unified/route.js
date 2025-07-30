@@ -190,30 +190,34 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         );
         queryPromises.push(getDocs(titlePrefixQuery));
 
-        // DEV SIMPLE: Add case variations for better matching
+        // COMPREHENSIVE CASE VARIATIONS: Handle all common case patterns
         const searchTermCapitalized = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
         const searchTermUpper = searchTerm.toUpperCase();
+        const searchTermTitle = searchTerm.split(' ').map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
 
-        // Search for lowercase version if original isn't lowercase
-        if (searchTerm !== searchTermLower) {
-          const titleLowerQuery = query(
-            collection(db, getCollectionName('pages')),
-            where('title', '>=', searchTermLower),
-            where('title', '<=', searchTermLower + '\uf8ff'),
-            limit(Math.min(finalMaxResults, 50))
-          );
-          queryPromises.push(getDocs(titleLowerQuery));
-        }
+        // Create all possible case variations to search
+        const caseVariations = new Set([
+          searchTerm,
+          searchTermLower,
+          searchTermCapitalized,
+          searchTermUpper,
+          searchTermTitle
+        ]);
 
-        // Search for capitalized version if original isn't capitalized
-        if (searchTerm !== searchTermCapitalized) {
-          const titleCapitalizedQuery = query(
+        // Remove the original search term since we already queried it
+        caseVariations.delete(searchTerm);
+
+        // Search for each case variation
+        for (const variation of caseVariations) {
+          const caseVariationQuery = query(
             collection(db, getCollectionName('pages')),
-            where('title', '>=', searchTermCapitalized),
-            where('title', '<=', searchTermCapitalized + '\uf8ff'),
-            limit(Math.min(finalMaxResults, 50))
+            where('title', '>=', variation),
+            where('title', '<=', variation + '\uf8ff'),
+            limit(Math.min(finalMaxResults, 30))
           );
-          queryPromises.push(getDocs(titleCapitalizedQuery));
+          queryPromises.push(getDocs(caseVariationQuery));
         }
       }
     }
@@ -231,29 +235,34 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         );
         queryPromises.push(getDocs(allPagesTitleQuery));
 
-        // SIMPLIFIED: Add case variations for all pages
+        // COMPREHENSIVE CASE VARIATIONS: Handle all common case patterns for all pages
         const searchTermCapitalized = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
+        const searchTermUpper = searchTerm.toUpperCase();
+        const searchTermTitle = searchTerm.split(' ').map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
 
-        // Search for lowercase version if original isn't lowercase
-        if (searchTerm !== searchTermLower) {
-          const allPagesTitleLowerQuery = query(
-            collection(db, getCollectionName('pages')),
-            where('title', '>=', searchTermLower),
-            where('title', '<=', searchTermLower + '\uf8ff'),
-            limit(Math.min(finalMaxResults, 50))
-          );
-          queryPromises.push(getDocs(allPagesTitleLowerQuery));
-        }
+        // Create all possible case variations to search
+        const allPagesCaseVariations = new Set([
+          searchTerm,
+          searchTermLower,
+          searchTermCapitalized,
+          searchTermUpper,
+          searchTermTitle
+        ]);
 
-        // Search for capitalized version if original isn't capitalized
-        if (searchTerm !== searchTermCapitalized) {
-          const allPagesTitleCapitalizedQuery = query(
+        // Remove the original search term since we already queried it
+        allPagesCaseVariations.delete(searchTerm);
+
+        // Search for each case variation
+        for (const variation of allPagesCaseVariations) {
+          const allPagesCaseVariationQuery = query(
             collection(db, getCollectionName('pages')),
-            where('title', '>=', searchTermCapitalized),
-            where('title', '<=', searchTermCapitalized + '\uf8ff'),
-            limit(Math.min(finalMaxResults, 50))
+            where('title', '>=', variation),
+            where('title', '<=', variation + '\uf8ff'),
+            limit(Math.min(finalMaxResults, 30))
           );
-          queryPromises.push(getDocs(allPagesTitleCapitalizedQuery));
+          queryPromises.push(getDocs(allPagesCaseVariationQuery));
         }
       }
     }
@@ -337,6 +346,57 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
     } catch (error) {
       console.error('Error in parallel query execution:', error);
       // Continue with empty results rather than failing completely
+    }
+
+    // FALLBACK: If we have few results and a search term, do a broader client-side search
+    if (!isEmptySearch && allResults.length < Math.min(finalMaxResults / 2, 20)) {
+      console.log(`⚡ [SEARCH DEBUG] Few results found (${allResults.length}), performing broader client-side search`);
+
+      try {
+        // Get a broader set of pages for client-side filtering
+        const broadQuery = query(
+          collection(db, getCollectionName('pages')),
+          limit(200)
+        );
+
+        const broadSnapshot = await getDocs(broadQuery);
+
+        broadSnapshot.forEach(doc => {
+          if (processedIds.has(doc.id) || doc.id === currentPageId) return;
+          if (allResults.length >= finalMaxResults) return;
+
+          const data = doc.data();
+          const pageTitle = data.title || '';
+
+          // Client-side case-insensitive matching
+          if (pageTitle.toLowerCase().includes(searchTermLower)) {
+            const matchScore = calculateSearchScore(pageTitle, searchTerm, true, false);
+
+            if (matchScore > 0) {
+              processedIds.add(doc.id);
+
+              allResults.push({
+                id: doc.id,
+                title: pageTitle || 'Untitled',
+                type: 'page',
+                isOwned: data.userId === userId,
+                isEditable: data.userId === userId,
+                userId: data.userId,
+                username: data.username || null,
+                lastModified: data.lastModified,
+                createdAt: data.createdAt,
+                matchScore,
+                isContentMatch: false,
+                context
+              });
+            }
+          }
+        });
+
+        console.log(`⚡ [SEARCH DEBUG] Broader search added ${allResults.length - processedIds.size + broadSnapshot.size} more results`);
+      } catch (error) {
+        console.warn('Error in broader client-side search:', error);
+      }
     }
 
     // OPTIMIZATION: Sort results by relevance score
