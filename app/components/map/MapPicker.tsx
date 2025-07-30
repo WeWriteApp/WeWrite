@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Crosshair, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
-import { createTileLayer, getDefaultMapView, logMapError, testMapTileAccess } from '../../utils/mapConfig';
+import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
 
 // Leaflet imports - we'll import these dynamically to avoid SSR issues
 let L: any = null;
@@ -95,12 +95,6 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
         // Add tile layer with theme support and error handling
         const isDarkMode = resolvedTheme === 'dark';
-
-        // Test tile accessibility first
-        const tilesAccessible = await testMapTileAccess(isDarkMode);
-        if (!tilesAccessible) {
-          console.warn('Map tiles may not be accessible, but proceeding anyway');
-        }
 
         const tileLayer = createTileLayer(L, isDarkMode);
         tileLayer.addTo(map);

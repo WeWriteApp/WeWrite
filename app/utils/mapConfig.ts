@@ -52,30 +52,20 @@ export function getMapTileConfig(isDarkMode: boolean = false): MapTileConfig {
  */
 export function createTileLayer(L: any, isDarkMode: boolean = false) {
   const config = getMapTileConfig(isDarkMode);
-  
+
   const tileLayer = L.tileLayer(config.url, {
     attribution: config.attribution,
     maxZoom: config.maxZoom,
     errorTileUrl: config.errorTileUrl,
-    // Add retry logic for failed tiles
-    retryDelay: 1000,
-    retryLimit: 3,
   });
 
-  // Add error handling
+  // Add basic error handling
   tileLayer.on('tileerror', function(error: any) {
     console.warn('Map tile failed to load:', {
-      url: error.tile.src,
+      url: error.tile?.src,
       coords: error.coords,
       error: error.error
     });
-    
-    // Try to reload the tile after a delay
-    setTimeout(() => {
-      if (error.tile && error.tile.src) {
-        error.tile.src = error.tile.src + '?retry=' + Date.now();
-      }
-    }, 2000);
   });
 
   tileLayer.on('tileload', function() {

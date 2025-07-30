@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { createTileLayer, getDefaultMapView, logMapError, testMapTileAccess } from '../../utils/mapConfig';
+import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
 
 interface Location {
   lat: number;
@@ -51,7 +51,7 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
 
-  // Initialize map
+  // Initialize map once
   useEffect(() => {
     async function initializeMap() {
       try {
@@ -76,33 +76,27 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
 
         if (!mapRef.current || mapInstanceRef.current) return;
 
-        // Create map
+        // Create map with default view first
+        const defaultView = getDefaultMapView();
         const map = L.map(mapRef.current, {
           zoomControl: true,
           scrollWheelZoom: true,
           doubleClickZoom: true,
           touchZoom: true
-        }).setView([center.lat, center.lng], zoom);
+        }).setView(defaultView.center, defaultView.zoom);
 
         // Add tile layer with theme support and error handling
         const isDarkMode = resolvedTheme === 'dark';
-
-        // Test tile accessibility first
-        const tilesAccessible = await testMapTileAccess(isDarkMode);
-        if (!tilesAccessible) {
-          console.warn('Map tiles may not be accessible, but proceeding anyway');
-        }
 
         const tileLayer = createTileLayer(L, isDarkMode);
         tileLayer.addTo(map);
 
         mapInstanceRef.current = map;
+        console.log('Map initialized successfully');
         setIsLoading(false);
       } catch (err) {
         logMapError('MultiLocationMap initialization', err, {
           pagesCount: pages.length,
-          center,
-          zoom,
           theme: resolvedTheme
         });
         setError('Failed to load map');
@@ -118,7 +112,15 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
         mapInstanceRef.current = null;
       }
     };
-  }, [center.lat, center.lng, zoom, resolvedTheme]);
+  }, [resolvedTheme]); // Only depend on theme, not center/zoom
+
+  // Update map view when pages load
+  useEffect(() => {
+    if (!mapInstanceRef.current || pages.length === 0) return;
+
+    // Update map view to fit all pages
+    mapInstanceRef.current.setView([center.lat, center.lng], zoom);
+  }, [center.lat, center.lng, zoom, pages.length]);
 
   // Add markers for all pages
   useEffect(() => {
