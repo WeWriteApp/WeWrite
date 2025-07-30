@@ -29,7 +29,13 @@ import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import type { Metadata } from 'next'
 
+export const metadata: Metadata = {
+  metadataBase: new URL('https://www.getwewrite.app'),
+  title: 'WeWrite',
+  description: 'A platform for writers to share and monetize their content',
+}
 
 export default function RootLayout({
   children}: {
