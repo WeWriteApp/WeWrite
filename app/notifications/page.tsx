@@ -1,5 +1,8 @@
 "use client";
 
+// Force dynamic rendering to avoid SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
@@ -54,11 +57,33 @@ function NotificationsContent() {
     }
   };
 
-  // Show loading state while checking authentication
+  // Show progressive loading state while checking authentication - show page structure immediately
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader className="animate-spin h-8 w-8 text-primary"/>
+      <div className="min-h-screen bg-background">
+        <div className="container max-w-4xl mx-auto px-4 py-6">
+          {/* Navigation Header skeleton */}
+          <div className="flex items-center mb-6">
+            <div className="flex-1">
+              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-end">
+              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+            </div>
+          </div>
+
+          <div className="mb-6" />
+
+          {/* Content skeleton */}
+          <div className="mt-6 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -71,37 +96,25 @@ function NotificationsContent() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        {/* Back button - icon only on mobile, text + icon on desktop */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            console.log("Direct navigation to home");
-            window.location.href = "/";
-          }}
-          className="flex items-center gap-1 md:gap-1 md:px-3 px-2"
-          aria-label="Go back to home"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="hidden md:inline">Home</span>
-        </Button>
+      {/* Navigation Header */}
+      <NavHeader
+        backUrl="/"
+        rightContent={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllAsRead}
+            disabled={loading}
+            className="flex items-center gap-2"
+            aria-label="Mark all notifications as read"
+          >
+            <CheckCheck className="h-4 w-4" />
+            <span className="hidden md:inline">Mark all as read</span>
+          </Button>
+        }
+      />
 
-        <h1 className="text-xl md:text-2xl font-bold text-center flex-1 mx-2">Notifications</h1>
-
-        {/* Mark all as read button - icon only on mobile, text + icon on desktop */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleMarkAllAsRead}
-          disabled={loading}
-          className="flex items-center gap-1 md:gap-1 md:px-3 px-2"
-          aria-label="Mark all notifications as read"
-        >
-          <CheckCheck className="h-4 w-4" />
-          <span className="hidden md:inline">Mark all as read</span>
-        </Button>
-      </div>
+      <div className="mb-6" />
 
       <div className="mt-6">
         {loading && notifications.length === 0 ? (

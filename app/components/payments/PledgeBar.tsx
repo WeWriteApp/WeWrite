@@ -31,6 +31,9 @@ interface PledgeBarProps {
   authorId?: string;
   visible?: boolean;
   className?: string;
+  // User allocation mode
+  isUserAllocation?: boolean;
+  username?: string;
 }
 
 interface TokenBalance {
@@ -53,10 +56,35 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   authorId,
   visible = true,
   className,
+  isUserAllocation = false,
+  username,
 }, ref) => {
   const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Check if current route is a ContentPage (individual content like user pages, /id pages)
+  const isContentPage = React.useMemo(() => {
+    const navPageRoutes = [
+      '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
+      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
+    ];
+
+    // NavPages show mobile toolbar, so pledge bar needs to be above it
+    if (navPageRoutes.includes(pathname)) {
+      return false;
+    }
+
+    // ContentPages (user pages, group pages, /id pages) hide mobile toolbar
+    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+      return true;
+    }
+
+    // Individual content pages at /id/ (single segment routes that aren't NavPages)
+    const segments = pathname.split('/').filter(Boolean);
+    return segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`);
+  }, [pathname]);
   const { incrementAmount } = useTokenIncrement();
   const { triggerEffect, originElement, triggerParticleEffect, resetEffect } = useTokenParticleEffect();
   const { showDelayedBanner, triggerDelayedBanner, resetDelayedBanner, isDelayActive } = useDelayedLoginBanner();
@@ -69,8 +97,12 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       day: 'numeric'
     });
 
+    const title = isUserAllocation
+      ? `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated to ${username || 'user'}!`
+      : `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`;
+
     toast({
-      title: `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`,
+      title,
       description: `Your allocation isn't final until ${formattedDate} when monthly processing occurs. You can adjust it anytime before then.`,
       duration: 6000, // Show for 6 seconds
     });
@@ -172,19 +204,39 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       setIsLoading(true);
       try {
         if (user && user.uid && isSubscriptionEnabled) {
-          // Use fast optimized endpoint for immediate UI response
-          const pledgeBarResponse = await fetch(`/api/tokens/pledge-bar-data?pageId=${pageId}`);
+          // Use different endpoints based on allocation type
+          let pledgeBarResponse;
+          if (isUserAllocation) {
+            // For user allocations, get current allocation to user
+            pledgeBarResponse = await fetch(`/api/tokens/allocate-user?recipientUserId=${authorId}`);
+          } else {
+            // Use fast optimized endpoint for page allocations
+            pledgeBarResponse = await fetch(`/api/tokens/pledge-bar-data?pageId=${pageId}`);
+          }
 
           if (pledgeBarResponse.ok) {
             const pledgeData = await pledgeBarResponse.json();
 
-            if (pledgeData.success) {
-              // Set token balance immediately
-              setTokenBalance(pledgeData.data.tokenBalance);
-              setCurrentTokenAllocation(pledgeData.data.currentPageAllocation);
+            if (pledgeData.success || (isUserAllocation && pledgeData.recipientUserId)) {
+              if (isUserAllocation) {
+                // For user allocations, we need to get token balance separately
+                const balanceResponse = await fetch('/api/tokens/balance');
+                if (balanceResponse.ok) {
+                  const balanceData = await balanceResponse.json();
+                  setTokenBalance(balanceData);
+                }
+                setCurrentTokenAllocation(pledgeData.currentAllocation || 0);
 
-              // Set basic subscription status
-              setSubscription(pledgeData.data.hasSubscription ? { status: 'active' } : null);
+                // Set basic subscription status (we'll load full data later)
+                setSubscription({ status: 'active' }); // Assume active if they have tokens
+              } else {
+                // Set token balance immediately for page allocations
+                setTokenBalance(pledgeData.data.tokenBalance);
+                setCurrentTokenAllocation(pledgeData.data.currentPageAllocation);
+
+                // Set basic subscription status
+                setSubscription(pledgeData.data.hasSubscription ? { status: 'active' } : null);
+              }
 
               // UI is now responsive - set loading to false
               setIsLoading(false);
@@ -356,19 +408,35 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         });
 
         // Real token allocation - make API call to save to database
-        // Use pending allocations system for proper earnings tracking
-        const response = await fetch('/api/tokens/pending-allocations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            recipientUserId: authorId, // The page owner who will receive the tokens
-            resourceType: 'page',
-            resourceId: pageId,
-            tokens: Math.max(0, currentTokenAllocation + change) // New total allocation
-          })
-        });
+        // Use different API endpoints based on allocation type
+        let response;
+        if (isUserAllocation) {
+          // For user allocations, use the allocate-user API
+          response = await fetch('/api/tokens/allocate-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipientUserId: authorId,
+              tokens: Math.max(0, currentTokenAllocation + change) // New total allocation
+            })
+          });
+        } else {
+          // For page allocations, use pending allocations system for proper earnings tracking
+          response = await fetch('/api/tokens/pending-allocations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipientUserId: authorId, // The page owner who will receive the tokens
+              resourceType: 'page',
+              resourceId: pageId,
+              tokens: Math.max(0, currentTokenAllocation + change) // New total allocation
+            })
+          });
+        }
 
         console.log('[PledgeBar] API response status:', response.status);
 
@@ -647,8 +715,13 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   return createPortal(
     <div
       className={cn(
-        "fixed left-0 right-0 bottom-6 z-50 flex justify-center px-4",
+        "fixed left-0 right-0 z-[60] flex justify-center px-4",
         "transition-transform duration-300 ease-in-out",
+        // Mobile positioning:
+        // - ContentPages (no mobile toolbar): bottom-6
+        // - NavPages (with mobile toolbar): bottom-20 (80px from bottom)
+        // Desktop positioning: always bottom-6
+        isContentPage ? "bottom-6" : "bottom-20 md:bottom-6",
         isHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
       )}
     >
@@ -858,12 +931,12 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           availableTokens,
           currentPageAllocation: currentTokenAllocation,
           otherPagesTokens,
-          pageTitle: pageTitle || 'Untitled'
+          pageTitle: isUserAllocation ? `${username || 'User'}'s profile` : (pageTitle || 'Untitled')
         }}
         allocations={allocationsData}
         onTokenChange={handleTokenChange}
         isPageOwner={isPageOwner}
-        pageId={pageId}
+        pageId={isUserAllocation ? authorId : pageId}
       />
 
       {/* Particle Effect */}

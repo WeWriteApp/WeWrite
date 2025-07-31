@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (!['page', 'group', 'user_bio', 'group_about'].includes(resourceType)) {
+    if (!['page', 'group', 'user_bio', 'user', 'group_about'].includes(resourceType)) {
       return NextResponse.json({
-        error: 'Resource type must be "page", "group", "user_bio", or "group_about"'
+        error: 'Resource type must be "page", "group", "user_bio", "user", or "group_about"'
       }, { status: 400 });
     }
 

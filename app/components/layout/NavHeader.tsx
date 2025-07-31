@@ -6,9 +6,9 @@ import { Button } from "../ui/button";
 import { ChevronLeft } from "lucide-react";
 import { useEffect } from "react";
 import { useSidebarContext } from "./UnifiedSidebar";
+import { Logo } from "../ui/Logo";
 
 export interface NavHeaderProps {
-  title?: string;
   backUrl?: string;
   backLabel?: string;
   rightContent?: React.ReactNode;
@@ -18,10 +18,14 @@ export interface NavHeaderProps {
 /**
  * NavHeader Component
  *
- * A reusable header component for navigation in non-page views.
+ * Standardized header for navigation pages with:
+ * - Left: Back button
+ * - Center: WeWrite logo (clickable to home)
+ * - Right: Action buttons
+ * - Position: Below status bar on second row
+ * - No title text or icons
  */
 export default function NavHeader({
-  title,
   backUrl,
   backLabel = "Back",
   rightContent,
@@ -73,47 +77,43 @@ export default function NavHeader({
           style={{ width: `${headerSidebarWidth}px` }}
         />
 
-        {/* Header content area - matches other header content areas */}
+        {/* Header content area - standardized navigation layout */}
         <div className="flex-1 min-w-0">
-          {/* Top row with buttons on mobile, full header on desktop */}
-          <div className="flex items-center justify-between w-full">
+          <div className="flex items-center justify-between w-full h-14">
+            {/* Left: Back button */}
             <div className="flex items-center">
               {backUrl !== undefined && (
-                <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
-                  <ChevronLeft className="h-5 w-5 mr-2" />
-                  {backLabel}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBack}
+                  className="flex items-center gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden md:inline">{backLabel}</span>
                 </Button>
               )}
-              {/* Title only visible on desktop */}
-              <h1 className="text-2xl font-bold truncate hidden md:block">
-                {title}
-              </h1>
             </div>
 
-            {rightContent && (
-              <div className="flex items-center">
-                {rightContent}
+            {/* Center: WeWrite logo - clickable to go home */}
+            <div className="flex items-center justify-center">
+              <div
+                className="cursor-pointer transition-transform hover:scale-105"
+                onClick={() => router.push('/')}
+              >
+                <Logo size="md" priority={true} styled={true} clickable={true} />
               </div>
-            )}
+            </div>
+
+            {/* Right: Action buttons */}
+            <div className="flex items-center">
+              {rightContent || <div className="w-[72px]" />} {/* Spacer to center logo */}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Title row only visible on mobile - maintain same alignment */}
-      {title && (
-        <div className="flex w-full mt-4 md:hidden">
-          {/* Sidebar spacer for mobile title alignment */}
-          <div
-            className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
-            style={{ width: `${headerSidebarWidth}px` }}
-          />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold truncate">
-              {title}
-            </h1>
-          </div>
-        </div>
-      )}
+
 
       {/* Mobile overflow sidebar functionality moved to MobileBottomNav */}
     </div>

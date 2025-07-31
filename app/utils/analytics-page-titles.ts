@@ -165,7 +165,7 @@ export function getAnalyticsPageTitle(
     return `Group: ${groupId}`;
   }
 
-  // Content pages (using UUID pattern or /pages/ path)
+  // ContentPages (using UUID pattern or /pages/ path)
   const pageId = extractPageIdFromPath(pathname);
   if (pageId) {
     // Check if we're in edit mode

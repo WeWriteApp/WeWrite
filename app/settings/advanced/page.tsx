@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
 import { ChevronLeft } from 'lucide-react';
-import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import NavHeader from '../../components/layout/NavHeader';
 import PWAInstallationCard from '../../components/utils/PWAInstallationCard';
 
 export default function AdvancedPage() {
@@ -25,10 +25,9 @@ export default function AdvancedPage() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Advanced"
-        description="Advanced settings and data management"
-      />
+      <div className="lg:hidden">
+        <NavHeader backUrl="/settings" />
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 

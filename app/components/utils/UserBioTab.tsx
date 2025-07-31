@@ -215,6 +215,36 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     console.log("Bio content updated:", content);
   };
 
+  // Keyboard shortcuts for bio editing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + Enter to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (isProfileOwner && hasUnsavedChanges && !isLoading) {
+          handleSave();
+        }
+      }
+
+      // Cmd/Ctrl + S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (isProfileOwner && hasUnsavedChanges && !isLoading) {
+          handleSave();
+        }
+      }
+
+      // Escape to cancel (revert changes)
+      if (e.key === 'Escape' && isProfileOwner) {
+        e.preventDefault();
+        handleCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isProfileOwner, hasUnsavedChanges, isLoading, handleSave, handleCancel]);
+
   // Handle link insertion request - memoized to prevent infinite loops
   const handleInsertLinkRequest = useCallback((triggerFn) => {
     setLinkInsertionTrigger(() => triggerFn);

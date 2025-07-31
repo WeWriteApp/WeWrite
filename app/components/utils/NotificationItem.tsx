@@ -33,6 +33,9 @@ export default function NotificationItem({ notification }) {
 
   // Detect mobile screen size
   useEffect(() => {
+    // Guard against server-side rendering
+    if (typeof window === 'undefined') return;
+
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -44,6 +47,9 @@ export default function NotificationItem({ notification }) {
 
   // Close menu when clicking outside
   useEffect(() => {
+    // Guard against server-side rendering
+    if (typeof document === 'undefined') return;
+
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
@@ -128,7 +134,7 @@ export default function NotificationItem({ notification }) {
       });
 
       // Calculate menu position based on available space
-      if (menuRef.current) {
+      if (menuRef.current && typeof window !== 'undefined') {
         const buttonRect = menuRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const menuWidth = 180; // min-w-[180px]

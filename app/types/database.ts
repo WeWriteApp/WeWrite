@@ -128,7 +128,7 @@ export interface TokenAllocation {
   id: string;
   userId: string;
   recipientUserId: string;
-  resourceType: 'page' | 'user_bio' | 'wewrite';
+  resourceType: 'page' | 'user_bio' | 'user' | 'wewrite';
   resourceId: string;
   tokens: number;
   month: string; // YYYY-MM format
@@ -197,7 +197,7 @@ export interface WriterTokenEarnings {
     allocationId: string;
     fromUserId: string;
     fromUsername?: string;
-    resourceType: 'page' | 'user_bio';
+    resourceType: 'page' | 'user_bio' | 'user';
     resourceId: string;
     resourceTitle?: string;
     tokens: number;

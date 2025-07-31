@@ -64,16 +64,49 @@ export default function HomePage() {
     });
   }, [mounted, isLoading, isAuthenticated, user, authRedirectPending]);
 
-  // Show loading state during hydration, authentication loading, or pending redirect
+  // Show progressive loading state during hydration, authentication loading, or pending redirect
   if (!mounted || isLoading || authRedirectPending) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="fixed inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="loader loader-md"></div>
-            <p className="text-muted-foreground mt-3">
-              {authRedirectPending ? 'Signing you in...' : 'Loading WeWrite...'}
-            </p>
+        {/* Show app structure immediately */}
+        <div className="p-5 md:p-4">
+          {/* Navigation header skeleton */}
+          <div className="flex items-center mb-6">
+            <div className="flex-1">
+              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-end">
+              <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+            </div>
+          </div>
+
+          {/* Search bar skeleton */}
+          <div className="w-full mb-6">
+            <div className="h-12 w-full bg-muted rounded-lg animate-pulse" />
+          </div>
+
+          {/* Quick actions skeleton */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
+            ))}
+          </div>
+
+          {/* Content sections skeleton */}
+          <div className="space-y-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-4">
+                <div className="h-6 w-40 bg-muted rounded-md animate-pulse" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="h-16 bg-muted rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

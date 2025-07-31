@@ -18,6 +18,7 @@ import {
   Palette
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
+import NavHeader from '../components/layout/NavHeader';
 
 import { cn } from '../lib/utils';
 // Removed old optimized subscription import - using API-first approach
@@ -196,17 +197,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       {/* Mobile Header - Only show on main settings page */}
       {pathname === '/settings' && (
         <div className="lg:hidden">
-          <div className="flex items-center px-4 py-3 border-b border-border">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/')}
-              className="mr-3"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-semibold select-none flex-1 text-center mr-12">Settings</h1>
-          </div>
+          <NavHeader backUrl="/" />
         </div>
       )}
 

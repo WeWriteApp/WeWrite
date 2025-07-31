@@ -18,7 +18,7 @@ import { useConfirmation } from '../../hooks/useConfirmation';
 import AlertModal from '../../components/utils/AlertModal';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
 import { ChevronLeft, Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
-import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import NavHeader from '../../components/layout/NavHeader';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -263,10 +263,9 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Profile"
-        description="Manage your personal information"
-      />
+      <div className="lg:hidden">
+        <NavHeader backUrl="/settings" />
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 

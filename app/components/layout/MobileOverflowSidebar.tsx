@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect } from "react"
-import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart, Home, Plus, Bell, User } from "lucide-react"
 import { useRouter } from "next/navigation"
+
 // Removed direct Firebase auth imports - using user management system
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
@@ -12,6 +13,10 @@ import { logoutUser } from "../../firebase/auth"
 
 import { useAuth } from '../../providers/AuthProvider';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
+import DraggableSidebarItem from './DraggableSidebarItem';
+import CrossComponentDragItem from './CrossComponentDragItem';
+import CrossComponentMobileNavButton from './CrossComponentMobileNavButton';
 
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage } from "../../utils/randomPageNavigation"
@@ -20,10 +25,12 @@ import { StatusIcon } from '../ui/status-icon';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
+import ConfirmationModal from '../utils/ConfirmationModal';
 
 interface SidebarProps {
   isOpen: boolean
   onClose: () => void
+  onDragStart?: () => void // Callback when drag starts to collapse sidebar
   // Editor functions (optional - only provided when in edit mode)
   editorProps?: {
     isPublic?: boolean;
@@ -39,14 +46,27 @@ interface SidebarProps {
   }
 }
 
-export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarProps) {
+export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProps }: SidebarProps) {
   const router = useRouter()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
 
   const { user } = useAuth();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
+  const { sidebarOrder, reorderSidebarItem, swapBetweenMobileAndSidebar, mobileOrder } = useNavigationOrder();
+
+  // Reset to page 0 when mobile order changes to avoid being stuck on non-existent pages
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [mobileOrder.length]);
+
+
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {
@@ -101,6 +121,32 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     }
   }, [isOpen])
 
+  // Navigation items configuration - matches desktop sidebar exactly
+  // Note: 'new' removed as it's now handled by floating action button
+  const navigationItemsConfig = {
+    'home': { icon: Home, label: 'Home', href: '/' },
+    'search': { icon: Search, label: 'Search', href: '/search' },
+    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
+    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
+    'following': { icon: Heart, label: 'Following', href: '/following' },
+    'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
+    'settings': { icon: Settings, label: 'Settings', href: '/settings' },
+    // Admin Dashboard - only for admin users
+    ...(user && user.email && isUserAdmin(user.email) ? {
+      'admin': { icon: Shield, label: 'Admin', href: '/admin' }
+    } : {}),
+  };
+
+  // Handle navigation item click
+  const handleNavItemClick = (item: any) => {
+    onClose(); // Close sidebar first
+    if (item.href) {
+      router.push(item.href);
+    }
+  };
+
   // Function to navigate to a section
   const navigateToSection = (section: string) => {
     setCurrentSection(section)
@@ -111,6 +157,75 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     setCurrentSection(null)
   }
 
+  // Handle cross-component drops (sidebar to mobile)
+  const handleCrossComponentDrop = (
+    dragItem: { id: string; index: number; sourceType: 'mobile' | 'sidebar' },
+    targetIndex: number,
+    targetType: 'mobile' | 'sidebar'
+  ) => {
+    // Collapse sidebar when drag starts
+    if (onDragStart) {
+      onDragStart();
+    }
+
+    // Perform the swap
+    swapBetweenMobileAndSidebar(
+      dragItem.sourceType,
+      dragItem.index,
+      targetType,
+      targetIndex
+    );
+  };
+
+  // Logout handlers
+  const handleLogoutClick = () => {
+    setShowLogoutConfirmation(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logoutUser();
+      onClose();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirmation(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirmation(false);
+  };
+
+  // Swipe gesture handlers for pagination
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    const availableItems = sidebarOrder.filter(itemId => !mobileOrder.includes(itemId));
+    const totalPages = Math.ceil(availableItems.length / 10);
+
+    if (isLeftSwipe && currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+    if (isRightSwipe && currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   // Render the appropriate section based on currentSection
   const renderSection = () => {
     switch (currentSection) {
@@ -118,102 +233,54 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
       default:
         return (
           <div className="flex flex-col h-full">
-            {/* Main Menu Items */}
-            <div className="space-y-2 mb-6">
-              {/* Search */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/search');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Search className="h-5 w-5 mr-3" />
-                <span>Search</span>
-              </button>
+            {/* Main Menu Items - Simple Grid Layout */}
+            <div className="mb-6">
+              {(() => {
+                const availableItems = sidebarOrder
+                  .filter(itemId => !mobileOrder.includes(itemId)) // Not in mobile toolbar
+                  .filter(itemId => navigationItemsConfig[itemId]); // Item exists in config
 
-              {/* Random Pages */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/random-pages');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Shuffle className="h-5 w-5 mr-3" />
-                <span>Random Pages</span>
-              </button>
+                return (
+                  <>
+                    {/* Grid of all available items */}
+                    <div className="grid grid-cols-5 gap-1">
+                      {availableItems.map((itemId, displayIndex) => {
+                        const item = navigationItemsConfig[itemId];
+                        if (!item) return null;
 
-              {/* Trending Pages */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/trending-pages');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <TrendingUp className="h-5 w-5 mr-3" />
-                <span>Trending Pages</span>
-              </button>
+                        // CRITICAL: Use the actual sidebar index, not the filtered display index
+                        const actualSidebarIndex = sidebarOrder.indexOf(itemId);
 
-              {/* Recently viewed */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/recents');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Clock className="h-5 w-5 mr-3" />
-                <span>Recently viewed</span>
-              </button>
+                        const isSettings = item.label === 'Settings';
 
-              {/* Following */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/following');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Heart className="h-5 w-5 mr-3" />
-                <span>Following</span>
-              </button>
-
-              {/* Settings */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/settings');
-                }}
-                className="flex items-center justify-between w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <div className="flex items-center">
-                  <Settings className="h-5 w-5 mr-3" />
-                  <span>Settings</span>
-                </div>
-                {criticalSettingsStatus === 'warning' && (
-                  <StatusIcon
-                    status="warning"
-                    size="sm"
-                    position="static"
-                  />
-                )}
-              </button>
-
-              {/* Admin Dashboard - Only visible for admins */}
-              {user && user.email && isUserAdmin(user.email) && (
-                <button
-                  onClick={() => {
-                    onClose();
-                    router.push('/admin');
-                  }}
-                  className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-                >
-                  <Shield className="h-5 w-5 mr-3" />
-                  <span>Admin Dashboard</span>
-                </button>
-              )}
+                        return (
+                          <CrossComponentMobileNavButton
+                            key={itemId}
+                            id={itemId}
+                            index={actualSidebarIndex} // Use actual sidebar index for swapping
+                            icon={item.icon}
+                            onClick={() => handleNavItemClick(item)}
+                            onHover={() => {}} // No hover for overflow items
+                            isActive={false} // Overflow items are never active
+                            ariaLabel={item.label}
+                            label={item.label}
+                            sourceType="sidebar" // These are sidebar items in overflow
+                            onCrossComponentDrop={handleCrossComponentDrop}
+                            moveItem={reorderSidebarItem}
+                            isPressed={false}
+                            isNavigating={false}
+                          >
+                            {/* Settings warning indicator */}
+                            {isSettings && criticalSettingsStatus === 'warning' && (
+                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-background"></div>
+                            )}
+                          </CrossComponentMobileNavButton>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Editor Functions (only show in edit mode) */}
@@ -284,68 +351,84 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className={cn(
-          "fixed inset-0 bg-black/60 z-[999] transition-opacity duration-300 min-h-screen w-screen",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {/* Backdrop/Overlay - prevents clicks from going through to page behind, behind header */}
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+          onClick={onClose} // Click outside to close
+          aria-label="Close drawer"
+        />
+      )}
 
-      {/* Sidebar */}
+      {/* Expandable Drawer - expands upward from bottom toolbar with rounded top corners */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-r border-border z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "md:hidden fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-l border-r border-border shadow-lg transition-all duration-300 ease-in-out overflow-hidden",
+          "bottom-20 rounded-t-xl", // Always positioned above bottom nav (80px) with rounded top corners
+          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none"
         )}
+        style={{
+          transformOrigin: 'bottom', // Expand from bottom
+        }}
+        onClick={(e) => e.stopPropagation()} // Prevent clicks inside drawer from closing it
       >
-        <div className="flex flex-col h-full p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-              aria-label="Close sidebar"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+        {/* Visual connection indicator */}
+        {isOpen && (
+          <div className="absolute -bottom-1 left-4 w-8 h-2 bg-background/95 rounded-t-md border-l border-r border-t border-border" />
+        )}
 
-          {/* Main content area - flex-1 to take remaining space */}
-          <div className="flex-1 flex flex-col">
-            {renderSection()}
-          </div>
-
-          {/* User info and logout at bottom */}
+        {/* Content */}
+        <div className="flex flex-col">
+          {/* Account info at top */}
           {user && (
-            <div className="mt-auto pt-4 border-t border-border">
-              {/* User Information */}
-              <div className="mb-3 px-3 py-2">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {user.username || 'User'}
+            <div className="p-4 border-b border-border bg-background/50">
+              <div className="flex items-center justify-between">
+                <div
+                  className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 -m-2 transition-colors"
+                  onClick={handleLogoutClick}
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {sanitizeUsername(user.username, 'Loading...', 'User')}
+                    </div>
+                    <LogOut className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {user.email}
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-
-              {/* Logout Button */}
-              <Button
-                variant="ghost"
-                onClick={() => logoutUser()}
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                Log Out
-              </Button>
             </div>
           )}
+
+          {/* Grid of navigation items */}
+          <div className="p-4">
+            {renderSection()}
+          </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to log out? You'll need to sign in again to access your account."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        variant="default"
+        icon="logout"
+        isLoading={isLoggingOut}
+      />
     </>
   )
 }

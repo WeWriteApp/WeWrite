@@ -9,14 +9,39 @@ import { rtdb } from "../firebase/config";
 // Import the client-only wrapper
 import ClientOnlyPageWrapper from '../components/pages/ClientOnlyPageWrapper';
 
-// Optimized PageView with preloading
+// Optimized PageView with preloading and progressive loading
 const PageView = dynamic(() => import('../components/pages/PageView'), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center min-h-[50vh] p-4">
-      <div className="text-center">
-        <div className="loader loader-md"></div>
-        <p className="text-muted-foreground mt-3">Loading page...</p>
+    <div className="min-h-screen bg-background">
+      {/* Show page structure skeleton immediately */}
+      <div className="p-5 md:p-4">
+        {/* Header skeleton */}
+        <div className="flex items-center mb-6">
+          <div className="flex-1">
+            <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+          </div>
+          <div className="flex-1 flex justify-center">
+            <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+          </div>
+          <div className="flex-1 flex justify-end">
+            <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+          </div>
+        </div>
+
+        {/* Page content skeleton */}
+        <div className="space-y-6">
+          <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+          <div className="space-y-4">
+            {Array(5).fill(0).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
+                <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
+                <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -229,15 +254,38 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   });
 
   if (isLoading) {
-    console.log('🔍 ContentPage: Showing UnifiedLoader because isLoading is true');
+    console.log('🔍 ContentPage: Showing progressive loading skeleton because isLoading is true');
     return (
       <div className="min-h-screen bg-background">
-        <UnifiedLoader
-          isLoading={isLoading}
-          message="Loading content..."
-          fullScreen={true}
-          onRetry={() => window.location.reload()}
-        />
+        {/* Show page structure skeleton immediately */}
+        <div className="p-5 md:p-4">
+          {/* Header skeleton */}
+          <div className="flex items-center mb-6">
+            <div className="flex-1">
+              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-end">
+              <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+            </div>
+          </div>
+
+          {/* Content skeleton */}
+          <div className="space-y-6">
+            <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+            <div className="space-y-4">
+              {Array(5).fill(0).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
+                  <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
+                  <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

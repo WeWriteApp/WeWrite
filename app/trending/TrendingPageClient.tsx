@@ -123,36 +123,10 @@ export default function TrendingPageClient() {
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            try {
-              // Use router.back() with a fallback to home page
-              if (window.history.length > 1) {
-                router.back();
-              } else {
-                router.push('/');
-              }
-            } catch (error) {
-              console.error("Navigation error:", error);
-              // Fallback to home page if there's any error
-              router.push('/');
-            }
-          }}
-        >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-
-        <h1 className="text-2xl font-bold flex items-center absolute left-1/2 transform -translate-x-1/2">
-          <Flame className="mr-2 h-5 w-5" />
+      <div className="flex items-center justify-center mb-6">
+        <h1 className="text-2xl font-bold">
           Trending Pages
         </h1>
-
-        {/* Empty div to balance layout */}
-        <div className="w-[73px]" />
       </div>
 
       {loading ? (

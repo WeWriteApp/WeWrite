@@ -52,9 +52,9 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 const isExactDateFormat = isDailyNoteFormat;
 
 /**
- * PageHeader Component
+ * ContentPageHeader Component (PageHeader.tsx)
  *
- * Displays the header for individual pages, including:
+ * Displays the header for individual ContentPages, including:
  * - Page title (editable when user has permissions)
  * - Author username with subscription tier badge (via UsernameBadge component)
  * - Navigation and action buttons
@@ -760,7 +760,7 @@ export default function PageHeader({
                           <MoreHorizontal className="h-5 w-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuContent align="end" className="w-80 p-2 min-w-80">
                         {/* Menu items for existing pages */}
                         {!isNewPage && (
                           <>
@@ -772,11 +772,20 @@ export default function PageHeader({
                                 {/* Insert Link option - available for page owners */}
                                 {onInsertLink && (
                                   <DropdownMenuItem
-                                    className="gap-2"
                                     onClick={onInsertLink}
+                                    className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
                                   >
-                                    <LinkIcon className="h-4 w-4" />
-                                    <span>Insert link</span>
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <div className="flex-shrink-0">
+                                        <LinkIcon className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                      <div className="flex flex-col flex-1">
+                                        <span className="font-medium text-sm whitespace-nowrap">Insert link</span>
+                                        <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                          Add a link to another page
+                                        </span>
+                                      </div>
+                                    </div>
                                   </DropdownMenuItem>
                                 )}
                               </>
@@ -784,77 +793,113 @@ export default function PageHeader({
 
                             {/* General options - available to all users */}
                             <DropdownMenuItem
-                              className="gap-2"
                               onClick={handleShareClick}
+                              className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
                             >
-                              <Share2 className="h-4 w-4" />
-                              <span>Share</span>
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="flex-shrink-0">
+                                  <Share2 className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div className="flex flex-col flex-1">
+                                  <span className="font-medium text-sm whitespace-nowrap">Share</span>
+                                  <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                    Copy link to this page
+                                  </span>
+                                </div>
+                              </div>
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
-                              className="gap-2"
                               onClick={handleAddToPageClick}
+                              className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
                             >
-                              <Plus className="h-4 w-4" />
-                              <span>Add to Page</span>
-                                </DropdownMenuItem>
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="flex-shrink-0">
+                                  <Plus className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div className="flex flex-col flex-1">
+                                  <span className="font-medium text-sm whitespace-nowrap">Add to Page</span>
+                                  <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                    Add this page to another page of yours, perhaps a category page
+                                  </span>
+                                </div>
+                              </div>
+                            </DropdownMenuItem>
 
                                 {/* Reply option - only visible when not in edit mode */}
                                 <DropdownMenuItem
-                                  className="gap-2"
                                   onClick={handleReplyClick}
+                                  className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
                                 >
-                                  <MessageSquare className="h-4 w-4" />
-                                  <span>Reply</span>
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex-shrink-0">
+                                      <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="flex flex-col flex-1">
+                                      <span className="font-medium text-sm whitespace-nowrap">Reply</span>
+                                      <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                        Create a response to this page
+                                      </span>
+                                    </div>
+                                  </div>
                                 </DropdownMenuItem>
 
-                                {/* Only show separator and paragraph mode for read-only pages */}
+                                {/* Only show separator and dense mode for read-only pages */}
                                 {!canEdit && (
                                   <>
-                                    <DropdownMenuSeparator />
+                                    <DropdownMenuSeparator className="my-2" />
 
-                                    {/* Paragraph Mode submenu - only visible when user can't edit (read-only mode) */}
-                                    <DropdownMenuSub>
-                                      <DropdownMenuSubTrigger className="gap-2">
-                                        {lineMode === LINE_MODES.DENSE ? (
-                                          <AlignJustify className="h-4 w-4" />
-                                        ) : (
-                                          <AlignLeft className="h-4 w-4" />
-                                        )}
-                                        <span>Paragraph Mode</span>
-                                      </DropdownMenuSubTrigger>
-                                      <DropdownMenuPortal>
-                                        <DropdownMenuSubContent>
-                                          <DropdownMenuItem
-                                            className={`gap-2 ${lineMode === LINE_MODES.NORMAL ? 'bg-accent/50' : ''}`}
-                                            onClick={() => setLineMode(LINE_MODES.NORMAL)}
-                                          >
-                                            <AlignLeft className="h-4 w-4" />
-                                            <span>Normal</span>
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            className={`gap-2 ${lineMode === LINE_MODES.DENSE ? 'bg-accent/50' : ''}`}
-                                            onClick={() => setLineMode(LINE_MODES.DENSE)}
-                                          >
-                                            <AlignJustify className="h-4 w-4" />
-                                            <span>Dense</span>
-                                          </DropdownMenuItem>
-                                        </DropdownMenuSubContent>
-                                      </DropdownMenuPortal>
-                                    </DropdownMenuSub>
+                                    {/* Dense Mode toggle - only visible when user can't edit (read-only mode) */}
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLineMode(lineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE);
+                                      }}
+                                      className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
+                                    >
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className="flex-shrink-0">
+                                          <AlignJustify className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                        <div className="flex flex-col flex-1">
+                                          <span className="font-medium text-sm whitespace-nowrap">Dense Mode</span>
+                                          <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                            Show only page titles as pill links
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="flex-shrink-0 ml-3">
+                                        <Switch
+                                          checked={lineMode === LINE_MODES.DENSE}
+                                          onCheckedChange={(checked) => {
+                                            setLineMode(checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
+                                          }}
+                                          aria-label="Toggle dense mode"
+                                        />
+                                      </div>
+                                    </DropdownMenuItem>
                                   </>
                                 )}
 
                                 {/* Delete button - moved to bottom for edit mode */}
                                 {canEdit && onDelete && (
                                   <>
-                                    <DropdownMenuSeparator />
+                                    <DropdownMenuSeparator className="my-2" />
                                     <DropdownMenuItem
-                                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                                       onClick={onDelete}
+                                      className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-destructive/10 focus:bg-destructive/10 text-left text-destructive hover:text-destructive"
                                     >
-                                      <Trash2 className="h-4 w-4" />
-                                      <span>Delete page</span>
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className="flex-shrink-0">
+                                          <Trash2 className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex flex-col flex-1">
+                                          <span className="font-medium text-sm whitespace-nowrap">Delete page</span>
+                                          <span className="text-xs text-destructive/70 leading-relaxed whitespace-nowrap">
+                                            Permanently remove this page
+                                          </span>
+                                        </div>
+                                      </div>
                                     </DropdownMenuItem>
                                   </>
                                 )}

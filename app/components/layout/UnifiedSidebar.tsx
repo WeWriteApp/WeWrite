@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import {
@@ -11,6 +13,8 @@ import {
 } from "lucide-react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
+import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
+import DraggableSidebarItem from './DraggableSidebarItem';
 
 import MapEditor from "../editor/MapEditor";
 
@@ -166,6 +170,7 @@ function UnifiedSidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
+  const { sidebarOrder, reorderSidebarItem, setSidebarOrder, resetSidebarOrder } = useNavigationOrder();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -253,22 +258,48 @@ function UnifiedSidebarContent({
   // Determine if sidebar should show content (expanded or hovering)
   const showContent = isExpanded || isHovering;
 
-  // Navigation items
-  // Build navigation items based on account state
-  const navItems = [
-    { icon: Home, label: 'Home', href: '/' },
-    { icon: Search, label: 'Search', href: '/search' },
-    { icon: Shuffle, label: 'Random Pages', href: '/random-pages' },
-    { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
-    { icon: Clock, label: 'Recently viewed', href: '/recents' },
-    { icon: Heart, label: 'Following', href: '/following' },
-    { icon: Plus, label: 'New Page', href: '/new' },
-    { icon: Bell, label: 'Notifications', href: '/notifications' },
-    { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
-    { icon: Settings, label: 'Settings', href: '/settings' },
+  // Navigation items configuration
+  const navigationItemsConfig = {
+    'home': { icon: Home, label: 'Home', href: '/' },
+    'search': { icon: Search, label: 'Search', href: '/search' },
+    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
+    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
+    'following': { icon: Heart, label: 'Following', href: '/following' },
+    'new': { icon: Plus, label: 'New Page', href: '/new' },
+    'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
+    'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
-    ...(isUserAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
+    ...(isUserAdmin ? { 'admin': { icon: Shield, label: 'Admin', href: '/admin' } } : {}),
+  };
+
+  // Build ordered navigation items - ensure ALL items are shown
+  // First, get all available items from config
+  const allAvailableItems = Object.keys(navigationItemsConfig);
+
+  // Create a complete sidebar order that includes all items
+  const completeSidebarOrder = [
+    ...sidebarOrder.filter(itemId => navigationItemsConfig[itemId]), // Keep existing order for known items
+    ...allAvailableItems.filter(itemId => !sidebarOrder.includes(itemId)) // Add any missing items at the end
   ];
+
+  // Custom reorder function that works with the complete order
+  const reorderCompleteItems = (dragIndex: number, hoverIndex: number) => {
+    const newOrder = [...completeSidebarOrder];
+    const draggedItem = newOrder[dragIndex];
+    newOrder.splice(dragIndex, 1);
+    newOrder.splice(hoverIndex, 0, draggedItem);
+
+    // Update the context with the new complete order
+    // Filter out any items that shouldn't be in the sidebar context
+    const newSidebarOrder = newOrder.filter(itemId => navigationItemsConfig[itemId]);
+    setSidebarOrder(newSidebarOrder);
+  };
+
+  const navItems = completeSidebarOrder
+    .map(itemId => navigationItemsConfig[itemId])
+    .filter(Boolean); // Remove any undefined items
 
   // Check if navigation item is active
   const isNavItemActive = (item: any) => {
@@ -301,23 +332,24 @@ function UnifiedSidebarContent({
 
   // Render the sidebar
   const sidebarContent = (
-    /* Desktop Sidebar - Hidden on mobile */
-    <div
-      className={cn(
-        "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[200] flex-col",
-        "sidebar-smooth-transition",
-        showContent ? "w-64" : "w-16",
-        isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
-      )}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-    >
+    <DndProvider backend={HTML5Backend}>
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div
+        className={cn(
+          "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[200] flex-col",
+          "sidebar-smooth-transition overflow-hidden", // Prevent any overflow
+          showContent ? "w-64" : "w-16",
+          isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
+        )}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
         <div className={cn(
           "flex flex-col h-full",
           showContent ? "p-4" : "py-4 px-1"
         )}>
-          {/* Header with toggle button */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Header with toggle button - Fixed at top */}
+          <div className="flex items-center justify-between mb-6 flex-shrink-0">
             {showContent && (
               <h3 className="text-lg font-semibold text-foreground transition-opacity duration-300">
                 {isEditMode ? "Editor" : "WeWrite"}
@@ -338,68 +370,67 @@ function UnifiedSidebarContent({
             </Button>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="flex flex-col gap-2 mb-6">
-            {navItems.map((item, index) => {
-              const Icon = item.icon;
-              const isRandomPage = item.label === 'Random Pages';
+          {/* Scrollable content area */}
+          <div className={cn(
+            "flex-1 overflow-y-auto overflow-x-hidden",
+            "scrollbar-hide" // Hide scrollbars completely
+          )}>
+            {/* Navigation Items */}
+            <nav className="flex flex-col gap-2 mb-6">
+            {completeSidebarOrder.map((itemId, index) => {
+              const item = navigationItemsConfig[itemId];
+              if (!item) return null;
+
               const isActive = isNavItemActive(item);
               const isSettings = item.label === 'Settings';
 
-              const buttonContent = (
-                <Button
-                  variant="ghost"
+              return (
+                <DraggableSidebarItem
+                  key={itemId}
+                  id={itemId}
+                  icon={item.icon}
+                  label={item.label}
+                  href={item.href}
                   onClick={() => handleNavItemClick(item)}
-                  className={cn(
-                    "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
-                    "text-foreground hover:bg-primary/10 hover:text-primary",
-                    "sidebar-nav-button",
-                    showContent && "sidebar-nav-button-expanded",
-                    // Active state styling
-                    isActive && "bg-primary/10 text-primary"
-                  )}
-                  title={showContent ? "" : item.label}
+                  isActive={isActive}
+                  index={index}
+                  moveItem={reorderCompleteItems}
+                  showContent={showContent}
+                  isCompact={false}
                 >
-                    {/* Icon container - maintains position during transitions */}
-                    <div className={cn(
-                      "sidebar-icon-container relative inline-block",
-                      showContent && "mr-3"
-                    )}>
-                      <Icon className="h-5 w-5 flex-shrink-0" />
-                      {isSettings && criticalSettingsStatus === 'warning' && !showContent && (
-                        // Small warning dot when collapsed
+                  {/* Settings warning indicator */}
+                  {isSettings && criticalSettingsStatus === 'warning' && (
+                    <>
+                      {!showContent && (
                         <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
                       )}
-                    </div>
-
-                    {/* Text label - slides in from the right */}
-                    <div className={cn(
-                      "sidebar-text-container flex-1 flex items-center justify-between",
-                      showContent ? "opacity-100 max-w-none" : "opacity-0 max-w-0"
-                    )}>
-                      <span className="font-medium whitespace-nowrap text-left">
-                        {item.label}
-                      </span>
-                      {isSettings && criticalSettingsStatus === 'warning' && showContent && (
+                      {showContent && (
                         <StatusIcon
                           status="warning"
                           size="sm"
                           position="static"
                         />
                       )}
-                    </div>
-                  </Button>
-              );
-
-              return (
-                <div key={item.href || index}>
-                  {buttonContent}
-                </div>
+                    </>
+                  )}
+                </DraggableSidebarItem>
               );
             })}
           </nav>
 
-
+          {/* Reset to Default Button - only show when expanded */}
+          {showContent && (
+            <div className="mt-auto mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetSidebarOrder}
+                className="w-full text-xs text-muted-foreground hover:text-foreground"
+              >
+                Reset to default
+              </Button>
+            </div>
+          )}
 
           {/* Editor Functions (only show in edit mode) */}
           {isEditMode && (
@@ -488,10 +519,11 @@ function UnifiedSidebarContent({
               </div>
             </>
           )}
+          </div>
 
-          {/* Buy Tokens button for users without active token purchase */}
+          {/* Fixed bottom section - Buy Tokens button for users without active token purchase */}
           {!isEditMode && user && hasActiveSubscription === false && (
-            <div className="px-3 pb-4">
+            <div className="px-3 pb-4 flex-shrink-0">
               <Button
                 onClick={() => router.push('/settings/buy-tokens')}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
@@ -503,9 +535,9 @@ function UnifiedSidebarContent({
             </div>
           )}
 
-          {/* User info and logout at bottom for non-edit mode */}
+          {/* Fixed bottom section - User info and logout at bottom for non-edit mode */}
           {!isEditMode && user && (
-            <div className="mt-auto pt-4 border-t border-border">
+            <div className="mt-auto pt-4 border-t border-border flex-shrink-0">
               {/* User Information - only show when expanded */}
               {showContent && (
                 <div className="mb-3 px-3 py-2">
@@ -547,7 +579,8 @@ function UnifiedSidebarContent({
             </div>
           )}
         </div>
-    </div>
+      </div>
+    </DndProvider>
   );
 
   // Use portal to render sidebar at document root level

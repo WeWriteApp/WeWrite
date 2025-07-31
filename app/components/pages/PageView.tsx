@@ -1281,17 +1281,40 @@ export default function PageView({
     }
   }, [page, pageId, router]);
 
-  // Loading state - maintain layout structure to prevent shifts
+  // Progressive loading state - show page structure immediately
   if (isLoading) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <UnifiedLoader
-            isLoading={isLoading}
-            message="Loading page..."
-            fullScreen={false}
-            onRetry={() => window.location.reload()}
-          />
+        <div className="min-h-screen">
+          {/* Show page structure skeleton immediately */}
+          <div className="p-5 md:p-4">
+            {/* Header skeleton */}
+            <div className="flex items-center mb-6">
+              <div className="flex-1">
+                <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+              </div>
+              <div className="flex-1 flex justify-end">
+                <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+              </div>
+            </div>
+
+            {/* Page content skeleton */}
+            <div className="space-y-6">
+              <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+              <div className="space-y-4">
+                {Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
+                    <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
+                    <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </PublicLayout>
     );

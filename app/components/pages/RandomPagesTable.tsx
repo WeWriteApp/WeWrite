@@ -119,11 +119,12 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
 
   return (
     <div>
-      {/* Desktop Table Layout */}
-      <div
-        className={cn("hidden md:block relative", wewriteCard('default', 'p-0'))}
-        style={{ minHeight }}
-      >
+      {/* Desktop Table Layout - only show when NOT in dense mode */}
+      {!denseMode && (
+        <div
+          className={cn("hidden md:block relative", wewriteCard('default', 'p-0'))}
+          style={{ minHeight }}
+        >
         {/* Loading overlay */}
         {loading && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -185,12 +186,14 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
           ))}
         </div>
       </div>
+      )}
 
-      {/* Mobile Card Layout */}
-      <div
-        className="md:hidden space-y-6 relative"
-        style={{ minHeight }}
-      >
+      {/* Mobile Card Layout - only show when NOT in dense mode */}
+      {!denseMode && (
+        <div
+          className="md:hidden space-y-6 relative"
+          style={{ minHeight }}
+        >
         {/* Loading overlay for mobile */}
         {loading && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
@@ -240,6 +243,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

@@ -31,11 +31,16 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
     }
 
     try {
-      const following = await isFollowingUser(user.uid, userId);
-      if (userId === targetUserId) {
-        setIsFollowing(following);
+      const response = await followsApi.getFollowedUsers(user.uid);
+      if (response.success && response.data?.following) {
+        const followingIds = response.data.following.map((u: any) => u.id);
+        const following = followingIds.includes(userId);
+        if (userId === targetUserId) {
+          setIsFollowing(following);
+        }
+        return following;
       }
-      return following;
+      return false;
     } catch (error) {
       console.error('Error checking follow status:', error);
       return false;
@@ -50,8 +55,13 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
     }
 
     try {
-      const following = await getUserFollowing(user.uid);
-      setFollowingList(following);
+      const response = await followsApi.getFollowedUsers(user.uid);
+      if (response.success && response.data?.following) {
+        const followingIds = response.data.following.map((u: any) => u.id);
+        setFollowingList(followingIds);
+      } else {
+        setFollowingList([]);
+      }
     } catch (error) {
       console.error('Error fetching following list:', error);
       setFollowingList([]);
@@ -66,14 +76,18 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
 
     try {
       setIsLoading(true);
-      await followUser(user.uid, userId);
-      
-      if (userId === targetUserId) {
-        setIsFollowing(true);
+      const response = await followsApi.followUser(userId);
+
+      if (response.success) {
+        if (userId === targetUserId) {
+          setIsFollowing(true);
+        }
+
+        // Refresh the following list
+        await refreshFollowing();
+      } else {
+        throw new Error(response.error || 'Failed to follow user');
       }
-      
-      // Refresh the following list
-      await refreshFollowing();
     } catch (error) {
       console.error('Error following user:', error);
       throw error;
@@ -90,14 +104,18 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
 
     try {
       setIsLoading(true);
-      await unfollowUser(user.uid, userId);
-      
-      if (userId === targetUserId) {
-        setIsFollowing(false);
+      const response = await followsApi.unfollowUser(userId);
+
+      if (response.success) {
+        if (userId === targetUserId) {
+          setIsFollowing(false);
+        }
+
+        // Refresh the following list
+        await refreshFollowing();
+      } else {
+        throw new Error(response.error || 'Failed to unfollow user');
       }
-      
-      // Refresh the following list
-      await refreshFollowing();
     } catch (error) {
       console.error('Error unfollowing user:', error);
       throw error;

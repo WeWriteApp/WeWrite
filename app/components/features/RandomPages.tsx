@@ -74,6 +74,21 @@ const RandomPages = React.memo(function RandomPages({
 
       if (!isShuffling && (now - lastFetch) < 2000) {
         console.log('RandomPages: Throttling API call, too recent');
+        // If we're throttling on initial load, still need to set loading to false
+        // Check if we have cached data to show
+        const cachedData = localStorage.getItem(`randomPages_cache_${user?.uid || 'anonymous'}`);
+        if (cachedData && randomPages.length === 0) {
+          try {
+            const parsed = JSON.parse(cachedData);
+            if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+              setRandomPages(parsed);
+              console.log('RandomPages: Using cached data while throttled');
+            }
+          } catch (e) {
+            console.error('Error parsing cached random pages:', e);
+          }
+        }
+        setLoading(false);
         return;
       }
 
@@ -127,6 +142,11 @@ const RandomPages = React.memo(function RandomPages({
 
       setRandomPages(data.randomPages || []);
       console.log(`RandomPages: Fetched ${data.randomPages?.length || 0} random pages`);
+
+      // Cache the fetched data for throttling scenarios
+      if (data.randomPages && data.randomPages.length > 0) {
+        localStorage.setItem(`randomPages_cache_${user?.uid || 'anonymous'}`, JSON.stringify(data.randomPages));
+      }
 
     } catch (err) {
       console.error('Error fetching random pages:', err);
@@ -200,8 +220,8 @@ const RandomPages = React.memo(function RandomPages({
   // Removed automatic re-fetch to prevent excessive API calls
   // Users can manually shuffle to get more results in dense mode
 
-  // Show loading skeleton on initial load
-  if (loading && !shuffling) {
+  // Show loading skeleton on initial load - but keep it brief for progressive loading
+  if (loading && !shuffling && randomPages.length === 0) {
     return <RandomPagesSkeleton limit={limit} />;
   }
 

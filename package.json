@@ -167,6 +167,7 @@
     "react-data-table-component": "^7.6.2",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
+    "react-dnd-touch-backend": "^16.0.1",
     "react-dom": "^19.1.1",
     "react-ga4": "^2.1.0",
     "react-grid-layout": "^1.5.1",
