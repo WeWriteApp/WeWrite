@@ -4,9 +4,7 @@ import * as React from "react"
 import { useState, useEffect, useRef } from "react"
 import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart, Home, Plus, Bell, User } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { DndProvider } from 'react-dnd';
-import { TouchBackend } from 'react-dnd-touch-backend';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+
 // Removed direct Firebase auth imports - using user management system
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
@@ -68,9 +66,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
     setCurrentPage(0);
   }, [mobileOrder.length]);
 
-  // Detect if we're on a touch device for drag backend selection
-  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
-  const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
+
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {
@@ -126,6 +122,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
   }, [isOpen])
 
   // Navigation items configuration - matches desktop sidebar exactly
+  // Note: 'new' removed as it's now handled by floating action button
   const navigationItemsConfig = {
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
@@ -133,13 +130,12 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
     'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
     'recents': { icon: Clock, label: 'Recently viewed', href: '/recents' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
-    'new': { icon: Plus, label: 'New Page', href: '/new' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
     'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
     ...(user && user.email && isUserAdmin(user.email) ? {
-      'admin': { icon: Shield, label: 'Admin Dashboard', href: '/admin' }
+      'admin': { icon: Shield, label: 'Admin Dash', href: '/admin' }
     } : {}),
   };
 
@@ -237,53 +233,23 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
       default:
         return (
           <div className="flex flex-col h-full">
-            {/* Main Menu Items - Paginated Grid Layout */}
+            {/* Main Menu Items - Simple Grid Layout */}
             <div className="mb-6">
               {(() => {
                 const availableItems = sidebarOrder
                   .filter(itemId => !mobileOrder.includes(itemId)) // Not in mobile toolbar
                   .filter(itemId => navigationItemsConfig[itemId]); // Item exists in config
-                const itemsPerPage = 10; // 2 rows of 5 items
-                const totalPages = Math.ceil(availableItems.length / itemsPerPage);
-                const startIndex = currentPage * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const currentPageItems = availableItems.slice(startIndex, endIndex);
 
                 return (
                   <>
-                    {/* Page indicator */}
-                    {totalPages > 1 && (
-                      <div className="flex justify-center items-center gap-2 mb-4">
-                        <button
-                          onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-                          disabled={currentPage === 0}
-                          className="w-8 h-8 rounded-full bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        >
-                          ←
-                        </button>
-                        <span className="text-sm text-muted-foreground">
-                          {currentPage + 1} of {totalPages}
-                        </span>
-                        <button
-                          onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-                          disabled={currentPage === totalPages - 1}
-                          className="w-8 h-8 rounded-full bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        >
-                          →
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Grid of items for current page */}
-                    <div
-                      className="grid grid-cols-5 gap-1"
-                      onTouchStart={handleTouchStart}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                    >
-                      {currentPageItems.map((itemId, index) => {
+                    {/* Grid of all available items */}
+                    <div className="grid grid-cols-5 gap-1">
+                      {availableItems.map((itemId, displayIndex) => {
                         const item = navigationItemsConfig[itemId];
                         if (!item) return null;
+
+                        // CRITICAL: Use the actual sidebar index, not the filtered display index
+                        const actualSidebarIndex = sidebarOrder.indexOf(itemId);
 
                         const isSettings = item.label === 'Settings';
 
@@ -291,7 +257,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
                           <CrossComponentMobileNavButton
                             key={itemId}
                             id={itemId}
-                            index={index}
+                            index={actualSidebarIndex} // Use actual sidebar index for swapping
                             icon={item.icon}
                             onClick={() => handleNavItemClick(item)}
                             onHover={() => {}} // No hover for overflow items
@@ -384,18 +350,27 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
   };
 
   return (
-    <DndProvider backend={dndBackend}>
-      {/* Expandable Drawer - expands upward from bottom toolbar (no overlay) */}
+    <>
+      {/* Backdrop/Overlay - prevents clicks from going through to page behind, behind header */}
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+          onClick={onClose} // Click outside to close
+          aria-label="Close drawer"
+        />
+      )}
+
+      {/* Expandable Drawer - expands upward from bottom toolbar with rounded top corners */}
       <div
         className={cn(
-          "md:hidden fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg transition-all duration-300 ease-in-out overflow-hidden",
-          "bottom-20", // Always positioned above bottom nav (80px)
+          "md:hidden fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-l border-r border-border shadow-lg transition-all duration-300 ease-in-out overflow-hidden",
+          "bottom-20 rounded-t-xl", // Always positioned above bottom nav (80px) with rounded top corners
           isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none"
         )}
         style={{
-          height: isOpen ? 'calc(100vh - 120px)' : '0px', // Smooth height animation
           transformOrigin: 'bottom', // Expand from bottom
         }}
+        onClick={(e) => e.stopPropagation()} // Prevent clicks inside drawer from closing it
       >
         {/* Visual connection indicator */}
         {isOpen && (
@@ -403,10 +378,10 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
         )}
 
         {/* Content */}
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col">
           {/* Account info at top */}
           {user && (
-            <div className="flex-shrink-0 p-4 border-b border-border bg-background/50">
+            <div className="p-4 border-b border-border bg-background/50">
               <div className="flex items-center justify-between">
                 <div
                   className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 -m-2 transition-colors"
@@ -434,8 +409,8 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
             </div>
           )}
 
-          {/* Scrollable grid of navigation items */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+          {/* Grid of navigation items */}
+          <div className="p-4">
             {renderSection()}
           </div>
         </div>
@@ -454,7 +429,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
         icon="logout"
         isLoading={isLoggingOut}
       />
-    </DndProvider>
+    </>
   )
 }
 

@@ -11,8 +11,10 @@ import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
+import { addRecentSearch } from "../utils/recentSearches";
 import NavHeader from '../components/layout/NavHeader';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
+import RecentSearches from '../components/search/RecentSearches';
 
 // Import the new separated components
 import SearchResultsDisplay from '../components/search/SearchResultsDisplay.js';
@@ -253,6 +255,11 @@ const SearchPage = React.memo(() => {
   const handleSearch = useCallback((searchTerm) => {
     performSearch(searchTerm);
 
+    // Save to recent searches if it's a valid search term
+    if (searchTerm && searchTerm.trim()) {
+      addRecentSearch(searchTerm.trim(), userId);
+    }
+
     // Update URL to reflect the search query
     const url = new URL(window.location);
     if (searchTerm && searchTerm.trim()) {
@@ -261,7 +268,7 @@ const SearchPage = React.memo(() => {
       url.searchParams.delete('q');
     }
     window.history.replaceState({}, '', url);
-  }, [performSearch]);
+  }, [performSearch, userId]);
 
   // Stable clear function
   const handleClear = useCallback(() => {
@@ -406,6 +413,14 @@ const SearchPage = React.memo(() => {
         autoFocus={true}
         placeholder="Search for pages, users..."
       />
+
+      {/* Recent Searches - only show when no active search */}
+      {!currentQuery && (
+        <RecentSearches
+          onSelect={handleSearch}
+          userId={userId}
+        />
+      )}
 
       {/* Search Results Display Component */}
       <SearchResultsDisplay

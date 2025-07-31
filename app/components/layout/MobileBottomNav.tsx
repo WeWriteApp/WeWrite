@@ -1,17 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
-import { Menu, Home, User, Plus, Bell, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield } from 'lucide-react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
-import { MobileOverflowSidebar } from './MobileOverflowSidebar';
+// Removed MobileOverflowSidebar import - now integrated into this component
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
+import { logoutUser } from '../../firebase/auth';
+
+import { ConfirmationModal } from '../utils/ConfirmationModal';
 
 import CrossComponentMobileNavButton from './CrossComponentMobileNavButton';
 import { isPWA } from '../../utils/pwa-detection';
@@ -55,36 +58,31 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
 
 
 
+/**
+ * MobileBottomNav Component
+ *
+ * A unified mobile navigation component that can expand and collapse to show additional navigation options.
+ * Features:
+ * - Fixed bottom toolbar with 5 draggable navigation buttons + "More" button
+ * - Expandable drawer that shows overflow navigation items
+ * - Drag and drop reordering between toolbar and overflow sections
+ * - Proper z-index management to appear above all content including headers
+ * - Click-outside-to-collapse functionality
+ * - Smooth expand/collapse animations
+ */
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const editorContext = useEditorContext();
-  const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar } = useNavigationOrder();
+  const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar, sidebarOrder, reorderSidebarItem, clearCache } = useNavigationOrder();
 
   // Detect if we're on a touch device for drag backend selection
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
   const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
 
-  // Ensure mobileOrder is always exactly 5 items
-  const safeMobileOrder = (() => {
-    const defaultOrder = ['home', 'search', 'notifications', 'profile', 'new'];
-
-    if (!Array.isArray(mobileOrder) || mobileOrder.length === 0) {
-      return defaultOrder;
-    }
-
-    // Always ensure exactly 5 items
-    if (mobileOrder.length === 5) {
-      return mobileOrder;
-    } else if (mobileOrder.length < 5) {
-      // If less than 5, fill with items from default order that aren't already included
-      const missing = defaultOrder.filter(item => !mobileOrder.includes(item));
-      return [...mobileOrder, ...missing].slice(0, 5);
-    } else {
-      // If more than 5, take only the first 5
-      return mobileOrder.slice(0, 5);
-    }
-  })();
+  // Trust the context - it should always provide exactly 4 items (More button is separate)
+  const safeMobileOrder = mobileOrder.length === 4 ? mobileOrder : ['home', 'search', 'notifications', 'profile'];
 
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -117,11 +115,16 @@ export default function MobileBottomNav() {
   const criticalSettingsStatus = getMostCriticalSettingsStatus();
 
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Navigation state management
+  const [isExpanded, setIsExpanded] = useState(false); // Renamed from sidebarOpen for clarity
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Logout confirmation state
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Enhanced navigation with optimistic feedback
   const {
@@ -138,22 +141,22 @@ export default function MobileBottomNav() {
   // Check if we're in edit mode by checking if editor context has editor functions
   const isEditMode = !!(editorContext?.onSave || editorContext?.onCancel);
 
-  // Check if current route is a content page at /id/ (should hide mobile nav)
+  // Check if current route is a ContentPage (should hide mobile nav)
   const isContentPageRoute = useCallback(() => {
-    const staticRoutes = [
+    const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
     ];
 
-    // Always show on static routes
-    if (staticRoutes.includes(pathname)) {
+    // Always show on NavPage routes
+    if (navPageRoutes.includes(pathname)) {
       return false;
     }
 
-    // Always show on user and group pages
+    // Hide on user and group pages (these are ContentPages)
     if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
-      return false;
+      return true;
     }
 
     // Hide on admin routes (including admin dashboard)
@@ -171,9 +174,9 @@ export default function MobileBottomNav() {
       return true;
     }
 
-    // Hide only on content pages at /id/ (single segment routes that aren't static)
+    // Hide only on ContentPages at /id/ (single segment routes that aren't NavPages)
     const segments = pathname.split('/').filter(Boolean);
-    return segments.length === 1 && !staticRoutes.includes(`/${segments[0]}`);
+    return segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`);
   }, [pathname]);
 
   // Check PWA mode on mount and window resize, track analytics
@@ -260,35 +263,72 @@ export default function MobileBottomNav() {
     };
   }, [lastScrollY]);
 
+  // Ensure scroll is never prevented when toolbar is collapsed
+  useEffect(() => {
+    if (!isExpanded) {
+      // Make sure body scroll is enabled when toolbar is collapsed
+      if (document.body.style.overflow === 'hidden') {
+        // Only reset if it was set by us, not by other components like modals
+        const hasActiveModal = document.querySelector('[data-modal-open="true"]');
+        const hasSlideUpActive = document.body.classList.contains('slide-up-active');
+
+        if (!hasActiveModal && !hasSlideUpActive) {
+          document.body.style.overflow = '';
+        }
+      }
+    }
+  }, [isExpanded]);
+
   // Enhanced button click handlers with immediate feedback
-  const handleMenuClick = () => {
-    setSidebarOpen(!sidebarOpen); // Toggle instead of always opening
+  const handleMoreClick = () => {
+    setIsExpanded(!isExpanded); // Toggle expanded state
   };
 
   const handleHomeClick = () => {
+    setIsExpanded(false); // Close expanded state
     handleButtonPress('home', '/');
   };
 
   const handleProfileClick = () => {
+    setIsExpanded(false); // Close expanded state
     if (user?.uid) {
       handleButtonPress('profile', `/user/${user.uid}`);
     }
   };
 
-  const handleNewPageClick = () => {
-    handleButtonPress('new', '/new?source=mobile-nav');
+
+
+
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logoutUser();
+      setIsExpanded(false); // Close expanded section
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirmation(false);
+    }
   };
 
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirmation(false);
+  };
+
+
+
   const handleNotificationsClick = () => {
+    setIsExpanded(false); // Close expanded state
     handleButtonPress('notifications', '/notifications');
   };
 
   // Determine active states for navigation buttons
   const isHomeActive = pathname === '/';
   const isProfileActive = pathname === `/user/${user?.uid}`;
-  const isNewPageActive = pathname === '/new';
   const isNotificationsActive = pathname === '/notifications';
-  const isMenuActive = sidebarOpen;
+  const isMoreActive = isExpanded;
 
   // Hide mobile nav on editor pages
   const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
@@ -300,6 +340,14 @@ export default function MobileBottomNav() {
     targetIndex: number,
     targetType: 'mobile' | 'sidebar'
   ) => {
+    console.log('🔄 Cross-component drop:', {
+      dragItem,
+      targetIndex,
+      targetType,
+      mobileOrder,
+      sidebarOrder
+    });
+
     // Perform the swap
     swapBetweenMobileAndSidebar(
       dragItem.sourceType,
@@ -311,7 +359,30 @@ export default function MobileBottomNav() {
 
 
 
-  // Navigation button configurations
+  // Navigation items configuration for expanded section (matches desktop sidebar)
+  // Note: 'new' removed as it's now handled by floating action button
+  const expandedNavigationItems = {
+    'home': { icon: Home, label: 'Home', href: '/' },
+    'search': { icon: Search, label: 'Search', href: '/search' },
+    'random-pages': { icon: Shuffle, label: 'Random Pages', href: '/random-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
+    'recents': { icon: Clock, label: 'Recently viewed', href: '/recents' },
+    'following': { icon: Heart, label: 'Following', href: '/following' },
+    'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
+    'settings': { icon: Settings, label: 'Settings', href: '/settings' },
+    'admin': { icon: Settings, label: 'Admin Dashboard', href: '/admin' }, // Only shows for admin users
+  };
+
+  // Debug: Log the filtering logic
+  console.log('🔍 Mobile Navigation Debug:', {
+    mobileOrder,
+    sidebarOrder,
+    filteredItems: sidebarOrder.filter(itemId => !mobileOrder.includes(itemId)),
+    expandedItemKeys: Object.keys(expandedNavigationItems)
+  });
+
+  // Navigation button configurations for bottom toolbar - MUST include ALL possible mobile items
   const navigationButtons = {
     home: {
       id: 'home',
@@ -321,6 +392,18 @@ export default function MobileBottomNav() {
       isActive: isHomeActive,
       ariaLabel: 'Home',
       label: 'Home',
+    },
+    search: {
+      id: 'search',
+      icon: Search,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/search');
+      },
+      onHover: () => handleButtonHover('/search'),
+      isActive: pathname === '/search',
+      ariaLabel: 'Search',
+      label: 'Search',
     },
     notifications: {
       id: 'notifications',
@@ -347,14 +430,78 @@ export default function MobileBottomNav() {
       ariaLabel: 'Profile',
       label: 'Profile',
     },
-    new: {
-      id: 'new',
-      icon: Plus,
-      onClick: handleNewPageClick,
-      onHover: () => handleButtonHover('/new?source=mobile-nav'),
-      isActive: isNewPageActive,
-      ariaLabel: 'Create New Page',
-      label: 'New',
+
+    'random-pages': {
+      id: 'random-pages',
+      icon: Shuffle,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/random-pages');
+      },
+      onHover: () => handleButtonHover('/random-pages'),
+      isActive: pathname === '/random-pages',
+      ariaLabel: 'Random Pages',
+      label: 'Random',
+    },
+    'trending-pages': {
+      id: 'trending-pages',
+      icon: TrendingUp,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/trending-pages');
+      },
+      onHover: () => handleButtonHover('/trending-pages'),
+      isActive: pathname === '/trending-pages',
+      ariaLabel: 'Trending Pages',
+      label: 'Trending',
+    },
+    recents: {
+      id: 'recents',
+      icon: Clock,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/recents');
+      },
+      onHover: () => handleButtonHover('/recents'),
+      isActive: pathname === '/recents',
+      ariaLabel: 'Recent Pages',
+      label: 'Recent',
+    },
+    following: {
+      id: 'following',
+      icon: Heart,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/following');
+      },
+      onHover: () => handleButtonHover('/following'),
+      isActive: pathname === '/following',
+      ariaLabel: 'Following',
+      label: 'Following',
+    },
+    settings: {
+      id: 'settings',
+      icon: Settings,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/settings');
+      },
+      onHover: () => handleButtonHover('/settings'),
+      isActive: pathname === '/settings',
+      ariaLabel: 'Settings',
+      label: 'Settings',
+    },
+    admin: {
+      id: 'admin',
+      icon: Shield,
+      onClick: () => {
+        setIsExpanded(false); // Close expanded state
+        router.push('/admin');
+      },
+      onHover: () => handleButtonHover('/admin'),
+      isActive: pathname === '/admin',
+      ariaLabel: 'Admin Dashboard',
+      label: 'Admin Dash',
     },
   };
 
@@ -363,7 +510,7 @@ export default function MobileBottomNav() {
     return null;
   }
 
-  // Don't render on content page routes at /id/ (mobile only)
+  // Don't render on ContentPage routes (mobile only)
   if (isContentPageRoute()) {
     return null;
   }
@@ -435,10 +582,12 @@ export default function MobileBottomNav() {
           {children}
         </div>
 
-        {/* Text label */}
+        {/* Text label - allow 2 lines with smaller text */}
         <span className={cn(
-          "text-xs font-medium leading-none transition-colors duration-75",
-          "text-center max-w-full truncate",
+          "text-[10px] font-medium leading-tight transition-colors duration-75",
+          "text-center max-w-full px-1",
+          "line-clamp-2 break-words", // Allow 2 lines with word breaking
+          "h-6 flex items-center justify-center", // Fixed height for consistent layout
           isActive
             ? "text-primary"
             : [
@@ -461,18 +610,44 @@ export default function MobileBottomNav() {
 
   return (
     <DndProvider backend={dndBackend}>
-      {/* Bottom Navigation with enhanced responsiveness */}
+      {/* Backdrop - only shows when expanded, positioned behind the expanded toolbar */}
+      {isExpanded && (
+        <div
+          className="md:hidden fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+          onClick={(e) => {
+            // Only close if clicking directly on backdrop, not during drag operations
+            if (e.target === e.currentTarget) {
+              setIsExpanded(false);
+            }
+          }}
+          onMouseDown={(e) => {
+            // Prevent backdrop from interfering with drag operations
+            if (e.target !== e.currentTarget) {
+              e.stopPropagation();
+            }
+          }}
+          style={{
+            pointerEvents: isExpanded ? 'auto' : 'none', // Only enable pointer events when actually expanded
+            // Allow scrolling when expanded but prevent zoom
+            touchAction: 'pan-y'
+          }}
+          aria-label="Close navigation"
+        />
+      )}
+
+      {/* Single bottom navigation component that expands upward */}
       <div
         className={cn(
-          "md:hidden fixed left-0 right-0 bottom-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
-          "transition-transform duration-300 ease-in-out",
-          // Auto-hide functionality and hide on editor pages
+          "md:hidden fixed left-0 right-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
+          "transition-all duration-300 ease-in-out",
           (isVisible && !shouldHideNav) ? "translate-y-0" : "translate-y-full",
-          // Enhanced touch targets for mobile
-          "touch-manipulation"
+          "touch-manipulation",
+          // Add top borders and rounded corners when expanded
+          isExpanded ? "border-l border-r rounded-t-xl" : ""
         )}
         style={{
-          paddingBottom: `calc(${getPWABottomSpacing(isPWAMode)} + 8px)`}} // Add extra 8px padding
+          bottom: getPWABottomSpacing(isPWAMode)
+        }}
       >
         {/* Navigation progress indicator */}
         {isNavigating && (
@@ -480,15 +655,122 @@ export default function MobileBottomNav() {
                style={{ width: `${getNavigationProgress() * 100}%` }} />
         )}
 
-        <div className="flex items-center justify-around px-2 py-3 gap-1">
-          {/* Menu Button - Fixed position, not draggable */}
+
+
+        {/* Expanded content with smooth animation */}
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-300 ease-in-out",
+            isExpanded ? "max-h-[60vh] opacity-100" : "max-h-0 opacity-0"
+          )}
+        >
+          {isExpanded && (
+            <div className="overflow-y-auto max-h-[60vh]">
+              {/* Account info at top */}
+              {user && (
+                <div className="p-4 border-b border-border bg-background/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {user.username || 'User'}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {user.email || 'No email'}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowLogoutConfirmation(true)}
+                      className="text-xs bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20 dark:bg-destructive/10 dark:border-destructive/30 dark:text-destructive dark:hover:bg-destructive/20"
+                    >
+                      Log out
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Grid of navigation items */}
+              <div className="p-4">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-medium text-foreground">
+                      Overflow menu items
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        clearCache();
+                        window.location.reload();
+                      }}
+                      className="text-xs h-6 px-2"
+                    >
+                      Default
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Drag items into bottom toolbar if you want easier access
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2">
+                  {sidebarOrder
+                    .filter(itemId => !mobileOrder.includes(itemId))
+                    .map((itemId) => {
+                      const item = expandedNavigationItems[itemId];
+                      if (!item) return null;
+
+                      const actualSidebarIndex = sidebarOrder.indexOf(itemId);
+
+                      return (
+                        <CrossComponentMobileNavButton
+                          key={itemId}
+                          id={itemId}
+                          index={actualSidebarIndex}
+                          icon={item.icon}
+                          onClick={() => {
+                            setIsExpanded(false); // Close expanded state
+                            router.push(item.href);
+                          }}
+                          onHover={() => {}}
+                          isActive={pathname === item.href}
+                          ariaLabel={item.label}
+                          label={item.label}
+                          sourceType="sidebar"
+                          onCrossComponentDrop={handleCrossComponentDrop}
+                          moveItem={reorderSidebarItem}
+                          isPressed={false}
+                          isNavigating={false}
+                        >
+                          {itemId === 'settings' && criticalSettingsStatus === 'warning' && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-background"></div>
+                          )}
+                        </CrossComponentMobileNavButton>
+                      );
+                    })}
+
+                  {sidebarOrder.filter(itemId => !mobileOrder.includes(itemId)).length === 0 && (
+                    <div className="col-span-5 text-center text-muted-foreground py-8">
+                      All navigation items are in your toolbar
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom toolbar - always present with consistent padding */}
+        <div className="flex items-center justify-around px-2 py-4 gap-1">
+          {/* More Button - Fixed position, not draggable */}
           <NavButton
-            id="menu"
-            icon={sidebarOpen ? X : Menu}
-            onClick={handleMenuClick}
-            isActive={isMenuActive}
-            ariaLabel={sidebarOpen ? "Close Menu" : "Open Menu"}
-            label="Menu"
+            id="more"
+            icon={isExpanded ? X : Menu}
+            onClick={handleMoreClick}
+            isActive={isMoreActive}
+            ariaLabel={isExpanded ? "Close More" : "Open More"}
+            label="More"
           >
             {criticalSettingsStatus === 'warning' && (
               <WarningDot
@@ -500,7 +782,7 @@ export default function MobileBottomNav() {
             )}
           </NavButton>
 
-          {/* Draggable Navigation Buttons - Always exactly 5 items */}
+          {/* Draggable Navigation Buttons - Always exactly 4 items (More button is separate) */}
           {safeMobileOrder.map((buttonId, index) => {
             const buttonConfig = navigationButtons[buttonId];
             if (!buttonConfig) {
@@ -531,11 +813,18 @@ export default function MobileBottomNav() {
         </div>
       </div>
 
-      {/* Mobile Overflow Sidebar */}
-      <MobileOverflowSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onDragStart={() => setSidebarOpen(false)} // Collapse sidebar when drag starts
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to log out? You'll need to sign in again to access your account."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        variant="default"
+        icon="logout"
+        isLoading={isLoggingOut}
       />
     </DndProvider>
   );

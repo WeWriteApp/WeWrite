@@ -113,21 +113,7 @@ export default function NavHeader({
         </div>
       </div>
 
-      {/* Title row only visible on mobile - maintain same alignment */}
-      {title && (
-        <div className="flex w-full mt-4 md:hidden">
-          {/* Sidebar spacer for mobile title alignment */}
-          <div
-            className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
-            style={{ width: `${headerSidebarWidth}px` }}
-          />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold truncate">
-              {title}
-            </h1>
-          </div>
-        </div>
-      )}
+
 
       {/* Mobile overflow sidebar functionality moved to MobileBottomNav */}
     </div>

@@ -480,4 +480,83 @@ export class AdminAnalyticsService {
       throw error;
     }
   }
+
+  /**
+   * Get page views analytics within date range
+   */
+  static async getPageViewsAnalytics(dateRange: DateRange): Promise<any[]> {
+    console.log('🔍 [Admin Analytics] Getting page views analytics...');
+
+    try {
+      const db = getAdminFirestore();
+      const pageViewsRef = db.collection(getCollectionName('pageViews'));
+
+      // Get all page view documents within the date range
+      const snapshot = await pageViewsRef.limit(5000).get();
+
+      if (snapshot.empty) {
+        console.log('📊 [Admin Analytics] No page views found');
+        return [];
+      }
+
+      // Group page views by date
+      const dailyViews = new Map<string, { totalViews: number; uniqueViews: number; pageIds: Set<string> }>();
+
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const docId = doc.id;
+
+        // Extract date from document ID (format: pageId_YYYY-MM-DD)
+        const datePart = docId.split('_').pop();
+        if (!datePart || !datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return; // Skip invalid document IDs
+        }
+
+        const docDate = new Date(datePart);
+
+        // Check if date is within range
+        if (docDate >= dateRange.startDate && docDate <= dateRange.endDate) {
+          const dateStr = datePart;
+
+          if (!dailyViews.has(dateStr)) {
+            dailyViews.set(dateStr, {
+              totalViews: 0,
+              uniqueViews: 0,
+              pageIds: new Set()
+            });
+          }
+
+          const dayData = dailyViews.get(dateStr)!;
+          dayData.totalViews += data.totalViews || 0;
+
+          // Extract pageId from document ID
+          const pageId = docId.substring(0, docId.lastIndexOf('_'));
+          if (pageId) {
+            dayData.pageIds.add(pageId);
+          }
+        }
+      });
+
+      // Convert to array and calculate unique views
+      const result = Array.from(dailyViews.entries()).map(([date, data]) => ({
+        date,
+        totalViews: data.totalViews,
+        uniqueViews: data.pageIds.size, // Number of unique pages that got views
+        label: new Date(date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        })
+      }));
+
+      // Sort by date
+      result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      console.log(`📊 [Admin Analytics] Found ${result.length} days of page view data`);
+      return result;
+
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching page views analytics:', error);
+      throw error;
+    }
+  }
 }

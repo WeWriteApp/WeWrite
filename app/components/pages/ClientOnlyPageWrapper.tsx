@@ -1,22 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import UnifiedLoader from '../ui/unified-loader';
+import { ProgressivePageLoader } from '../ui/progressive-loader';
 
 interface ClientOnlyPageWrapperProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  skeletonType?: 'page' | 'list' | 'table' | 'custom';
+  customSkeleton?: React.ReactNode;
 }
 
 /**
  * ClientOnlyPageWrapper - Ensures components only render on client-side
- * 
+ *
  * This wrapper prevents hydration mismatches by only rendering children
  * after the component has mounted on the client side.
+ *
+ * Now uses progressive loading to show page structure immediately
+ * instead of a loading spinner.
  */
-export function ClientOnlyPageWrapper({ 
-  children, 
-  fallback 
+export function ClientOnlyPageWrapper({
+  children,
+  fallback,
+  skeletonType = 'page',
+  customSkeleton
 }: ClientOnlyPageWrapperProps) {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -26,11 +33,13 @@ export function ClientOnlyPageWrapper({
 
   if (!isMounted) {
     return fallback || (
-      <UnifiedLoader
+      <ProgressivePageLoader
         isLoading={true}
-        message="Loading page..."
-        fullScreen={false}
-      />
+        skeletonType={skeletonType}
+        customSkeleton={customSkeleton}
+      >
+        {children}
+      </ProgressivePageLoader>
     );
   }
 

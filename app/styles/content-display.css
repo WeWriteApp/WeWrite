@@ -197,11 +197,20 @@
 
 /**
  * Dense Paragraph
- * 
+ *
  * Inline paragraph styling for dense mode.
  */
 .wewrite-viewer-paragraph.dense {
   @apply inline-block mr-4;
+}
+
+/**
+ * Dense Mode Paragraph Number Spacing
+ *
+ * Add proper spacing between line number and text in dense mode.
+ */
+.wewrite-viewer-paragraph.dense .paragraph-number {
+  @apply mr-3;
 }
 
 /**

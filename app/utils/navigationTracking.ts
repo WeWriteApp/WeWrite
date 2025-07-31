@@ -141,14 +141,14 @@ export function getCurrentPageId(): string | null {
     if (pageIdMatch && pageIdMatch[1]) {
       const pageId = pageIdMatch[1];
       
-      // Filter out non-page routes
-      const nonPageRoutes = [
-        'search', 'account', 'user', 'group', 'auth', 'api', 
+      // Filter out NavPage routes (these are not ContentPages)
+      const navPageRoutes = [
+        'search', 'account', 'user', 'group', 'auth', 'api',
         'admin', 'subscription', 'settings', 'help', 'about',
         'privacy', 'terms', 'contact', 'roadmap', 'trending'
       ];
-      
-      if (!nonPageRoutes.includes(pageId)) {
+
+      if (!navPageRoutes.includes(pageId)) {
         return pageId;
       }
     }

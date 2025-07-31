@@ -32,14 +32,39 @@ export default function TrendingPagesPage() {
     window.dispatchEvent(refreshEvent);
   };
 
-  // Show loading state during hydration
+  // Show progressive loading state during hydration - show page structure immediately
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading trending pages...</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <Header />
+
+        {/* Show page structure immediately */}
+        <main className="transition-all duration-300 ease-in-out">
+          <div className="container mx-auto px-4 py-6">
+            {/* Page Header skeleton */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+                  <div className="h-8 w-48 bg-muted rounded-md animate-pulse" />
+                </div>
+                <div className="h-8 w-20 bg-muted rounded-2xl animate-pulse" />
+              </div>
+              <div className="h-6 w-96 bg-muted rounded-md animate-pulse" />
+            </div>
+
+            {/* Content skeleton */}
+            <div className="min-h-[600px]">
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <MobileBottomNav />
       </div>
     );
   }

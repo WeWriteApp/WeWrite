@@ -224,8 +224,51 @@ export default function TrendingPages({ limit = 5 }) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex justify-center items-center py-8">
-          <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+        {/* Show structure immediately while loading */}
+        <div className="flex items-center gap-2 mb-4">
+          <Flame className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Trending Pages</h2>
+        </div>
+
+        {/* Desktop skeleton */}
+        <div className="hidden md:block border border-theme-strong rounded-xl overflow-hidden shadow-sm">
+          <div className="border-b border-theme-strong">
+            <div className="flex">
+              <div className="py-2 px-4 flex-1"><div className="h-4 w-12 bg-muted rounded animate-pulse" /></div>
+              <div className="py-2 px-4 flex-1"><div className="h-4 w-16 bg-muted rounded animate-pulse" /></div>
+              <div className="py-2 px-4 w-32"><div className="h-4 w-20 bg-muted rounded animate-pulse ml-auto" /></div>
+              <div className="py-2 px-4 w-32"><div className="h-4 w-24 bg-muted rounded animate-pulse ml-auto" /></div>
+            </div>
+          </div>
+          {[...Array(limit)].map((_, i) => (
+            <div key={i} className="border-b border-theme-strong">
+              <div className="flex">
+                <div className="py-3 px-4 flex-1"><div className="h-6 w-32 bg-muted rounded animate-pulse" /></div>
+                <div className="py-3 px-4 flex-1"><div className="h-5 w-24 bg-muted rounded animate-pulse" /></div>
+                <div className="py-3 px-4 w-32"><div className="h-5 w-16 bg-muted rounded animate-pulse ml-auto" /></div>
+                <div className="py-3 px-4 w-32"><div className="h-8 w-24 bg-muted rounded animate-pulse ml-auto" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile skeleton */}
+        <div className="md:hidden space-y-6">
+          {[...Array(limit)].map((_, i) => (
+            <div key={i} className="bg-card border border-theme-strong rounded-xl p-5">
+              <div className="mb-3">
+                <div className="h-6 w-40 bg-muted rounded animate-pulse mb-1" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="h-6 w-16 bg-muted rounded animate-pulse mb-1" />
+                  <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                </div>
+                <div className="w-28 h-14 bg-muted rounded-md animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

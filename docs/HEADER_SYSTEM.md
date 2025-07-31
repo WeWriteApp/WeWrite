@@ -25,7 +25,7 @@ WeWrite uses a standardized two-header system to provide consistent navigation a
 
 ### 2. ContentPageHeader - Content Pages
 **Purpose**: For individual pages, posts, articles with content
-**File**: `app/components/pages/PageHeader.tsx` (to be renamed to ContentPageHeader.tsx in future)
+**File**: `app/components/pages/ContentPageHeader.tsx`
 
 **Design Specifications**:
 - **Collapsible/expandable** behavior
@@ -42,15 +42,17 @@ WeWrite uses a standardized two-header system to provide consistent navigation a
 
 ### When to Use NavHeader
 - ✅ Timeline page (`/timeline`)
-- ✅ Search page (`/search`) 
+- ✅ Search page (`/search`)
 - ✅ Settings pages (`/settings/*`)
 - ✅ Notifications page (`/notifications`)
 - ✅ Admin pages (`/admin/*`)
-- ✅ Profile pages (`/user/*`)
+- ✅ Home page (`/`)
 - ✅ Any navigation or utility page
 
 ### When to Use ContentPageHeader
-- ✅ Individual page views (`/pages/[id]`)
+- ✅ Individual ContentPages (`/[id]`)
+- ✅ User profile pages (`/user/*`)
+- ✅ Group pages (`/group/*`)
 - ✅ New page creation (`/new`)
 - ✅ Page editing interfaces
 - ✅ Any page with user-generated content

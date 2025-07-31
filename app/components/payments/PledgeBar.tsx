@@ -62,6 +62,29 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Check if current route is a ContentPage (individual content like user pages, /id pages)
+  const isContentPage = React.useMemo(() => {
+    const navPageRoutes = [
+      '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
+      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
+    ];
+
+    // NavPages show mobile toolbar, so pledge bar needs to be above it
+    if (navPageRoutes.includes(pathname)) {
+      return false;
+    }
+
+    // ContentPages (user pages, group pages, /id pages) hide mobile toolbar
+    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+      return true;
+    }
+
+    // Individual content pages at /id/ (single segment routes that aren't NavPages)
+    const segments = pathname.split('/').filter(Boolean);
+    return segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`);
+  }, [pathname]);
   const { incrementAmount } = useTokenIncrement();
   const { triggerEffect, originElement, triggerParticleEffect, resetEffect } = useTokenParticleEffect();
   const { showDelayedBanner, triggerDelayedBanner, resetDelayedBanner, isDelayActive } = useDelayedLoginBanner();
@@ -694,9 +717,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       className={cn(
         "fixed left-0 right-0 z-[60] flex justify-center px-4",
         "transition-transform duration-300 ease-in-out",
-        // Mobile positioning: above mobile toolbar (bottom-20 = 80px from bottom)
-        // Desktop positioning: standard bottom-6
-        "bottom-20 md:bottom-6",
+        // Mobile positioning:
+        // - ContentPages (no mobile toolbar): bottom-6
+        // - NavPages (with mobile toolbar): bottom-20 (80px from bottom)
+        // Desktop positioning: always bottom-6
+        isContentPage ? "bottom-6" : "bottom-20 md:bottom-6",
         isHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
       )}
     >

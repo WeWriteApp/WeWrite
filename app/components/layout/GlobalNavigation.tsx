@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { SidebarProvider } from './UnifiedSidebar';
 import MobileBottomNav from './MobileBottomNav';
+import MobileFloatingActionButton from './MobileFloatingActionButton';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 
@@ -30,6 +31,8 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
       </SidebarLayout>
       {/* Mobile bottom navigation - handles its own visibility logic */}
       <MobileBottomNav />
+      {/* Mobile floating action button - shows on NavPages where mobile toolbar is visible */}
+      <MobileFloatingActionButton />
       {/* Username enforcement modal - shows when user needs to set username */}
       <UsernameEnforcementModal />
     </SidebarProvider>

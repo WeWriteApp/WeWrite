@@ -36,13 +36,45 @@ export default function FollowingPage() {
     }
   }, [mounted, isAuthenticated, router]);
 
-  // Show loading state during hydration
+  // Show progressive loading state during hydration
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading following...</p>
+      <div className="min-h-screen bg-background">
+        {/* Show page structure immediately */}
+        <div className="p-5 md:p-4">
+          {/* Navigation header skeleton */}
+          <div className="flex items-center mb-6">
+            <div className="flex-1">
+              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-end">
+              <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+            </div>
+          </div>
+
+          {/* Page header skeleton */}
+          <div className="text-center mb-8">
+            <div className="h-10 w-48 bg-muted rounded-md mx-auto mb-4 animate-pulse" />
+            <div className="h-6 w-96 bg-muted rounded-md mx-auto animate-pulse" />
+          </div>
+
+          {/* Following list skeleton */}
+          <div className="space-y-4">
+            {Array(5).fill(0).map((_, i) => (
+              <div key={i} className="p-4 border border-border rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded-md w-3/4 animate-pulse" />
+                    <div className="h-3 bg-muted rounded-md w-1/2 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

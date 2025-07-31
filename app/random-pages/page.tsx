@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator
 } from '../components/ui/dropdown-menu';
 import MobileBottomNav from '../components/layout/MobileBottomNav';
+import { RandomPagesSkeleton } from '../components/ui/skeleton-loaders';
 
 /**
  * Random Pages Full Page Experience
@@ -97,13 +98,44 @@ export default function RandomPagesPage() {
     window.dispatchEvent(shuffleEvent);
   };
 
-  // Show loading state during hydration
+  // Show progressive loading state during hydration - show page structure immediately
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="loader loader-md"></div>
-          <p className="text-muted-foreground mt-3">Loading random pages...</p>
+      <div className="min-h-screen bg-background">
+        {/* Show page structure immediately */}
+        <div className="p-5 md:p-4">
+          {/* Navigation header skeleton */}
+          <div className="flex items-center mb-6">
+            <div className="flex-1">
+              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+            </div>
+            <div className="flex-1 flex justify-end">
+              <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+            </div>
+          </div>
+
+          {/* Page header skeleton */}
+          <div className="text-center mb-8">
+            <div className="h-10 w-48 bg-muted rounded-md mx-auto mb-4 animate-pulse" />
+            <div className="h-6 w-96 bg-muted rounded-md mx-auto animate-pulse" />
+          </div>
+
+          {/* Controls skeleton */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="h-8 w-20 bg-muted rounded-2xl animate-pulse" />
+              <div className="h-8 w-24 bg-muted rounded-2xl animate-pulse" />
+            </div>
+            <div className="h-8 w-20 bg-muted rounded-2xl animate-pulse" />
+          </div>
+
+          {/* Content skeleton */}
+          <div className="min-h-[600px]">
+            <RandomPagesSkeleton limit={20} />
+          </div>
         </div>
       </div>
     );
@@ -123,21 +155,21 @@ export default function RandomPagesPage() {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72 p-2">
+        <DropdownMenuContent align="end" className="w-80 p-2 min-w-80" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
               handleExcludeOwnToggle();
             }}
-            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
+            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-1">
               <div className="flex-shrink-0">
                 <UserX className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="font-medium text-sm">Not mine</span>
-                <span className="text-xs text-muted-foreground leading-relaxed">
+              <div className="flex flex-col flex-1">
+                <span className="font-medium text-sm whitespace-nowrap">Not mine</span>
+                <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
                   Exclude pages you authored
                 </span>
               </div>
@@ -162,15 +194,15 @@ export default function RandomPagesPage() {
               e.stopPropagation();
               handleDenseModeToggle();
             }}
-            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
+            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-1">
               <div className="flex-shrink-0">
                 <Grid3X3 className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="font-medium text-sm">Dense Mode</span>
-                <span className="text-xs text-muted-foreground leading-relaxed">
+              <div className="flex flex-col flex-1">
+                <span className="font-medium text-sm whitespace-nowrap">Dense Mode</span>
+                <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
                   Show only page titles as pill links
                 </span>
               </div>
@@ -203,7 +235,6 @@ export default function RandomPagesPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <Shuffle className="h-8 w-8 text-primary" />
                 <h1 className="text-3xl font-bold">Random Pages</h1>
               </div>
 

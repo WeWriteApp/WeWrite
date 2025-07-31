@@ -170,7 +170,7 @@ function UnifiedSidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
-  const { sidebarOrder, reorderSidebarItem } = useNavigationOrder();
+  const { sidebarOrder, reorderSidebarItem, setSidebarOrder, resetSidebarOrder } = useNavigationOrder();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -274,8 +274,30 @@ function UnifiedSidebarContent({
     ...(isUserAdmin ? { 'admin': { icon: Shield, label: 'Admin Dashboard', href: '/admin' } } : {}),
   };
 
-  // Build ordered navigation items based on sidebar order
-  const navItems = sidebarOrder
+  // Build ordered navigation items - ensure ALL items are shown
+  // First, get all available items from config
+  const allAvailableItems = Object.keys(navigationItemsConfig);
+
+  // Create a complete sidebar order that includes all items
+  const completeSidebarOrder = [
+    ...sidebarOrder.filter(itemId => navigationItemsConfig[itemId]), // Keep existing order for known items
+    ...allAvailableItems.filter(itemId => !sidebarOrder.includes(itemId)) // Add any missing items at the end
+  ];
+
+  // Custom reorder function that works with the complete order
+  const reorderCompleteItems = (dragIndex: number, hoverIndex: number) => {
+    const newOrder = [...completeSidebarOrder];
+    const draggedItem = newOrder[dragIndex];
+    newOrder.splice(dragIndex, 1);
+    newOrder.splice(hoverIndex, 0, draggedItem);
+
+    // Update the context with the new complete order
+    // Filter out any items that shouldn't be in the sidebar context
+    const newSidebarOrder = newOrder.filter(itemId => navigationItemsConfig[itemId]);
+    setSidebarOrder(newSidebarOrder);
+  };
+
+  const navItems = completeSidebarOrder
     .map(itemId => navigationItemsConfig[itemId])
     .filter(Boolean); // Remove any undefined items
 
@@ -315,7 +337,7 @@ function UnifiedSidebarContent({
       <div
         className={cn(
           "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[200] flex-col",
-          "sidebar-smooth-transition",
+          "sidebar-smooth-transition overflow-hidden", // Prevent any overflow
           showContent ? "w-64" : "w-16",
           isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
         )}
@@ -349,10 +371,13 @@ function UnifiedSidebarContent({
           </div>
 
           {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className={cn(
+            "flex-1 overflow-y-auto overflow-x-hidden",
+            "scrollbar-hide" // Hide scrollbars completely
+          )}>
             {/* Navigation Items */}
             <nav className="flex flex-col gap-2 mb-6">
-            {sidebarOrder.map((itemId, index) => {
+            {completeSidebarOrder.map((itemId, index) => {
               const item = navigationItemsConfig[itemId];
               if (!item) return null;
 
@@ -369,7 +394,7 @@ function UnifiedSidebarContent({
                   onClick={() => handleNavItemClick(item)}
                   isActive={isActive}
                   index={index}
-                  moveItem={reorderSidebarItem}
+                  moveItem={reorderCompleteItems}
                   showContent={showContent}
                   isCompact={false}
                 >
@@ -393,7 +418,19 @@ function UnifiedSidebarContent({
             })}
           </nav>
 
-
+          {/* Reset to Default Button - only show when expanded */}
+          {showContent && (
+            <div className="mt-auto mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetSidebarOrder}
+                className="w-full text-xs text-muted-foreground hover:text-foreground"
+              >
+                Reset to default
+              </Button>
+            </div>
+          )}
 
           {/* Editor Functions (only show in edit mode) */}
           {isEditMode && (

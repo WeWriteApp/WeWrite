@@ -169,10 +169,12 @@ export default function CrossComponentMobileNavButton({
         {children}
       </div>
 
-      {/* Text label */}
+      {/* Text label - allow 2 lines with smaller text */}
       <span className={cn(
-        "text-xs font-medium leading-none transition-colors duration-75",
-        "text-center max-w-full truncate",
+        "text-[10px] font-medium leading-tight transition-colors duration-75",
+        "text-center max-w-full px-1",
+        "line-clamp-2 break-words", // Allow 2 lines with word breaking
+        "h-6 flex items-center justify-center", // Fixed height for consistent layout
         isActive
           ? "text-primary"
           : [

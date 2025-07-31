@@ -22,6 +22,10 @@
   @apply inline-block mr-4;
 }
 
+.viewer-paragraph.dense-paragraph .paragraph-number {
+  @apply mr-3;
+}
+
 .viewer-paragraph.normal-paragraph {
   @apply block;
 }

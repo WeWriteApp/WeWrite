@@ -1,21 +1,26 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Default navigation item orders - Always exactly 5 items for mobile toolbar
-const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications', 'profile', 'new'];
-const DEFAULT_SIDEBAR_ORDER = [
+// ALL AVAILABLE NAVIGATION ITEMS - each item exists in exactly ONE place
+// Note: 'new' removed as it's now handled by floating action button
+const ALL_NAVIGATION_ITEMS = [
   'home',
   'search',
+  'notifications',
+  'profile',
   'random-pages',
   'trending-pages',
   'recents',
   'following',
-  'new',
-  'notifications',
-  'profile',
   'settings',
-  'admin' // Will only show for admin users
+  'admin'
 ];
+
+// Default mobile toolbar - exactly 4 items (More button is separate)
+const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications', 'profile'];
+
+// Default sidebar order - all remaining items not in mobile
+const DEFAULT_SIDEBAR_ORDER = ALL_NAVIGATION_ITEMS.filter(item => !DEFAULT_MOBILE_ORDER.includes(item));
 
 interface NavigationOrderContextType {
   // Mobile toolbar order
@@ -62,16 +67,35 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
         try {
           const parsed = JSON.parse(savedMobileOrder);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Check if stored data is compatible with 5-item requirement
-            if (parsed.length < 4) {
-              console.log('🧹 Stored mobile order too short, clearing cache and using defaults');
+            // Migration: Remove 'new' item if it exists (now handled by floating action button)
+            const migratedMobile = parsed.filter(item => item !== 'new');
+
+            // If we removed 'new', we need to add a replacement item to maintain 4 items
+            if (migratedMobile.length < 4 && parsed.includes('new')) {
+              // Add 'random-pages' as replacement if not already present
+              if (!migratedMobile.includes('random-pages')) {
+                migratedMobile.push('random-pages');
+              } else if (!migratedMobile.includes('recents')) {
+                migratedMobile.push('recents');
+              } else if (!migratedMobile.includes('following')) {
+                migratedMobile.push('following');
+              }
+            }
+
+            // Check if stored data is compatible with 4-item requirement
+            if (migratedMobile.length !== 4) {
+              console.log('🧹 Stored mobile order wrong length after migration, clearing cache and using defaults');
               localStorage.removeItem('wewrite-mobile-nav-order');
               localStorage.removeItem('wewrite-sidebar-nav-order');
               setMobileOrder(DEFAULT_MOBILE_ORDER);
               setSidebarOrder(DEFAULT_SIDEBAR_ORDER);
               return; // Skip loading sidebar order since we're resetting
             } else {
-              setMobileOrder(parsed);
+              setMobileOrder(migratedMobile);
+              // Save the migrated order back to localStorage
+              if (parsed.includes('new')) {
+                localStorage.setItem('wewrite-mobile-nav-order', JSON.stringify(migratedMobile));
+              }
             }
           } else {
             // Invalid stored data, clear cache
@@ -96,7 +120,14 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
         try {
           const parsed = JSON.parse(savedSidebarOrder);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setSidebarOrder(parsed);
+            // Migration: Remove 'new' item if it exists (now handled by floating action button)
+            const migratedSidebar = parsed.filter(item => item !== 'new');
+            setSidebarOrder(migratedSidebar);
+
+            // Save the migrated order back to localStorage if we removed 'new'
+            if (parsed.includes('new')) {
+              localStorage.setItem('wewrite-sidebar-nav-order', JSON.stringify(migratedSidebar));
+            }
           }
         } catch (error) {
           console.warn('Failed to parse saved sidebar nav order:', error);
@@ -119,30 +150,30 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
     }
   }, [sidebarOrder]);
 
-  // Reorder mobile items - ensures exactly 5 items
+  // Reorder mobile items - ensures exactly 4 items
   const reorderMobileItem = (dragIndex: number, hoverIndex: number) => {
     const newOrder = [...mobileOrder];
     const draggedItem = newOrder[dragIndex];
     newOrder.splice(dragIndex, 1);
     newOrder.splice(hoverIndex, 0, draggedItem);
 
-    // Ensure exactly 5 items
-    const ensureFiveMobileItems = (mobile: string[]) => {
-      const defaultOrder = ['home', 'search', 'notifications', 'profile', 'new'];
+    // Ensure exactly 4 items
+    const ensureFourMobileItems = (mobile: string[]) => {
+      const defaultOrder = ['home', 'search', 'notifications', 'profile'];
 
-      if (mobile.length === 5) {
+      if (mobile.length === 4) {
         return mobile;
-      } else if (mobile.length < 5) {
+      } else if (mobile.length < 4) {
         // Fill with items from default order that aren't already included
         const missing = defaultOrder.filter(item => !mobile.includes(item));
-        return [...mobile, ...missing].slice(0, 5);
+        return [...mobile, ...missing].slice(0, 4);
       } else {
-        // Take only the first 5
-        return mobile.slice(0, 5);
+        // Take only the first 4
+        return mobile.slice(0, 4);
       }
     };
 
-    setMobileOrder(ensureFiveMobileItems(newOrder));
+    setMobileOrder(ensureFourMobileItems(newOrder));
   };
 
   // Reorder sidebar items
@@ -154,56 +185,41 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
     setSidebarOrder(newOrder);
   };
 
-  // Swap item between mobile and sidebar (REPLACE mode)
+  // Simple swap between mobile and sidebar
   const swapBetweenMobileAndSidebar = (
     sourceType: 'mobile' | 'sidebar',
     sourceIndex: number,
     targetType: 'mobile' | 'sidebar',
     targetIndex: number
   ) => {
-    if (sourceType === targetType) return; // No cross-swap needed
+    if (sourceType === targetType) return;
 
-    const sourceMobile = [...mobileOrder];
-    const sourceSidebar = [...sidebarOrder];
+    // Get current arrays
+    const currentMobile = [...mobileOrder];
+    const currentSidebar = [...sidebarOrder];
 
+    // Get the two items to swap
+    const draggedItem = sourceType === 'mobile' ? currentMobile[sourceIndex] : currentSidebar[sourceIndex];
+    const targetItem = targetType === 'mobile' ? currentMobile[targetIndex] : currentSidebar[targetIndex];
+
+    // Perform the swap
     if (sourceType === 'mobile' && targetType === 'sidebar') {
-      // Moving from mobile to sidebar
-      const mobileItem = sourceMobile[sourceIndex];
-      const sidebarItem = sourceSidebar[targetIndex];
-
-      // Check for duplicates before swapping
-      if (sourceMobile.includes(sidebarItem) && sidebarItem !== mobileItem) {
-        console.warn('Sidebar item already exists in mobile, skipping swap');
-        return;
-      }
-
-      // Replace mobile item with sidebar item
-      sourceMobile[sourceIndex] = sidebarItem;
-      // Replace sidebar item with mobile item
-      sourceSidebar[targetIndex] = mobileItem;
+      currentMobile[sourceIndex] = targetItem;
+      currentSidebar[targetIndex] = draggedItem;
     } else if (sourceType === 'sidebar' && targetType === 'mobile') {
-      // Moving from sidebar to mobile
-      const sidebarItem = sourceSidebar[sourceIndex];
-      const mobileItem = sourceMobile[targetIndex];
-
-      // Check for duplicates before swapping
-      if (sourceMobile.includes(sidebarItem) && sidebarItem !== mobileItem) {
-        console.warn('Sidebar item already exists in mobile, skipping swap');
-        return;
-      }
-
-      // Replace sidebar item with mobile item
-      sourceSidebar[sourceIndex] = mobileItem;
-      // Replace mobile item with sidebar item
-      sourceMobile[targetIndex] = sidebarItem;
+      currentSidebar[sourceIndex] = targetItem;
+      currentMobile[targetIndex] = draggedItem;
     }
 
-    // Remove any duplicates that might have been created
-    const uniqueMobile = [...new Set(sourceMobile)];
-    const uniqueSidebar = [...new Set(sourceSidebar)];
+    // Validate: mobile must have exactly 4 items
+    if (currentMobile.length !== 4) {
+      console.error('❌ Mobile would not have 4 items');
+      return;
+    }
 
-    setMobileOrder(uniqueMobile);
-    setSidebarOrder(uniqueSidebar);
+    // Apply the changes
+    setMobileOrder(currentMobile);
+    setSidebarOrder(currentSidebar);
   };
 
 
@@ -225,9 +241,13 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
 
   // Clear all navigation cache and reset to defaults
   const clearCache = () => {
-    console.log('🧹 Clearing navigation cache and resetting to defaults');
-    setMobileOrder(DEFAULT_MOBILE_ORDER);
-    setSidebarOrder(DEFAULT_SIDEBAR_ORDER);
+    // Reset to clean defaults
+    const cleanMobile = [...DEFAULT_MOBILE_ORDER];
+    const cleanSidebar = ALL_NAVIGATION_ITEMS.filter(item => !cleanMobile.includes(item));
+
+    setMobileOrder(cleanMobile);
+    setSidebarOrder(cleanSidebar);
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wewrite-mobile-nav-order');
       localStorage.removeItem('wewrite-sidebar-nav-order');

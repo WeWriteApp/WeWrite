@@ -86,12 +86,19 @@ export function UnifiedLoader({
     return (
       <div className={cn(
         "flex flex-col items-center justify-center p-6 text-center",
-        fullScreen ? "fixed inset-0 bg-background/80 backdrop-blur-sm z-50" : "min-h-[50vh] w-full py-8",
+        fullScreen ? "fixed bg-background/80 backdrop-blur-sm z-50" : "min-h-[50vh] w-full py-8",
         className
       )}
       style={{
         position: fullScreen ? 'fixed' : 'relative',
-        ...(fullScreen ? {} : {
+        ...(fullScreen ? {
+          // Use viewport centering for timeout state too
+          left: '50vw',
+          top: '50vh',
+          transform: 'translate(-50%, -50%)',
+          width: 'auto',
+          height: 'auto'
+        } : {
           minHeight: '50vh',
           display: 'flex',
           alignItems: 'center',
@@ -143,9 +150,19 @@ export function UnifiedLoader({
         transition: { duration: 0.2 }
       } : {})}
       style={{
-        // Prevent layout shifts by maintaining consistent positioning
+        // For fullScreen loaders, use viewport centering that ignores layout shifts
+        // This ensures the loader is always perfectly centered regardless of sidebar/layout
         position: fullScreen ? 'fixed' : 'relative',
-        ...(fullScreen ? {} : {
+        ...(fullScreen ? {
+          // Use viewport units for true centering
+          left: '50vw',
+          top: '50vh',
+          transform: 'translate(-50%, -50%)',
+          width: 'auto',
+          height: 'auto',
+          // Remove inset-0 positioning conflicts
+          inset: 'unset'
+        } : {
           minHeight: '50vh',
           display: 'flex',
           alignItems: 'center',
@@ -153,7 +170,7 @@ export function UnifiedLoader({
         })
       }}
     >
-      <div className="flex flex-col items-center gap-3 text-center px-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+      <div className="flex flex-col items-center gap-3 text-center px-4">
         {/* Simple spinner */}
         <div className="loader loader-md"></div>
 

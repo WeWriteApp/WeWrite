@@ -99,9 +99,6 @@ const DayContainer = React.memo(function DayContainer({
           <div className="text-lg font-semibold text-foreground">
             {dayName} {monthDay}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {notes.length} {notes.length === 1 ? 'page' : 'pages'}
-          </div>
         </div>
 
         {/* Notes Pills Container - takes up available space */}

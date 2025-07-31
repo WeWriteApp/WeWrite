@@ -111,7 +111,7 @@ export function UserFollowButton({
         disabled={isLoading}
         variant={isFollowing ? "secondary" : variant}
         size={size}
-        className={`gap-2 transition-all duration-200 ${className}`}
+        className={`gap-2 transition-all duration-200 px-4 py-2 min-w-[100px] ${className}`}
       >
         <AnimatePresence mode="wait">
           {animateCheck ? (

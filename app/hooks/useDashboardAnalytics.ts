@@ -975,3 +975,58 @@ export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: numb
 
   return { data, loading, error };
 }
+
+// Hook for page views analytics
+export function usePageViewsMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: granularity?.toString() || '50',
+        type: 'pageViews'
+      }), {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch page views metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch page views metrics');
+      }
+
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
+    } catch (err) {
+      console.error('Error fetching page views metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch page views data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}

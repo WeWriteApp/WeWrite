@@ -25,6 +25,7 @@ import { SharesAnalyticsWidget } from "../../components/admin/SharesAnalyticsWid
 
 import { ContentChangesAnalyticsWidget } from "../../components/admin/ContentChangesAnalyticsWidget";
 import { PWAInstallsAnalyticsWidget } from "../../components/admin/PWAInstallsAnalyticsWidget";
+import { PageViewsAnalyticsWidget } from "../../components/admin/PageViewsAnalyticsWidget";
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
 import { DesktopOptimizedDashboard } from "../../components/admin/DesktopOptimizedDashboard";
@@ -109,6 +110,7 @@ const initialWidgets = [
   { id: 'live-visitors', component: LiveVisitorsWidget },
   { id: 'new-accounts', component: NewAccountsWidget },
   { id: 'new-pages', component: NewPagesWidget },
+  { id: 'page-views-analytics', component: PageViewsAnalyticsWidget },
   { id: 'visitor-analytics', component: VisitorAnalyticsWidget },
   { id: 'shares-analytics', component: SharesAnalyticsWidget },
 

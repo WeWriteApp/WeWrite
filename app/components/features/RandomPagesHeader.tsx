@@ -177,7 +177,6 @@ const RandomPagesHeader = () => {
 
   return (
     <SectionTitle
-      icon={Shuffle}
       title="Random Pages"
       rightContent={
         <div className="flex items-center gap-2 flex-shrink-0">

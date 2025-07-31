@@ -1,9 +1,9 @@
 "use client";
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, GripVertical } from 'lucide-react';
 
 interface DraggableSidebarItemProps {
   id: string;
@@ -41,6 +41,7 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
   isCompact = false,
 }) => {
   const ref = useRef<HTMLButtonElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Defensive programming - ensure all required props are present
   if (!id || !Icon || !label) {
@@ -77,6 +78,27 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         // Determine mouse position
         const clientOffset = monitor.getClientOffset();
         if (!clientOffset) return;
+
+        // Auto-scroll functionality when dragging near edges
+        const scrollContainer = ref.current.closest('.overflow-y-auto');
+        if (scrollContainer) {
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const scrollThreshold = 60; // pixels from edge to start scrolling
+          const scrollSpeed = 8; // pixels per scroll step
+
+          // Check if near top edge
+          if (clientOffset.y - containerRect.top < scrollThreshold) {
+            requestAnimationFrame(() => {
+              scrollContainer.scrollTop = Math.max(0, scrollContainer.scrollTop - scrollSpeed);
+            });
+          }
+          // Check if near bottom edge
+          else if (containerRect.bottom - clientOffset.y < scrollThreshold) {
+            requestAnimationFrame(() => {
+              scrollContainer.scrollTop += scrollSpeed;
+            });
+          }
+        }
 
         // Get pixels to the top
         const hoverClientY = clientOffset.y - hoverBoundingRect.top;
@@ -158,8 +180,8 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         // Desktop sidebar styling
         !isCompact && [
           "h-12 px-3",
-          showContent ? "justify-start" : "justify-center px-0",
-          isActive && "bg-primary/10 text-primary border-r-2 border-primary",
+          showContent ? "justify-start text-left" : "justify-center px-0", // Added text-left
+          isActive && "bg-primary/10 text-primary", // Removed right border
           "hover:bg-primary/5",
         ],
         // Mobile sidebar styling
@@ -168,13 +190,18 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
           "hover:bg-neutral-alpha-2 dark:hover:bg-muted",
           isActive && "bg-primary/10 text-primary",
         ],
-        // Dragging state
-        isDragging && "scale-105 shadow-lg z-10",
+        // Dragging state - better visual feedback
+        isDragging && [
+          "scale-105 shadow-xl z-50 bg-background border border-border",
+          "transform rotate-2 opacity-90"
+        ],
         // Drag handle cursor when enabled
         isDragEnabled && "cursor-move"
       )}
       style={{ opacity }}
       data-handler-id={handlerId}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Icon */}
       <Icon className={cn(
@@ -188,7 +215,7 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
       {/* Label - only show when content should be visible */}
       {(isCompact || showContent) && (
         <span className={cn(
-          "transition-colors duration-200 truncate",
+          "transition-colors duration-200 truncate flex-1",
           isActive && "text-primary",
           isCompact ? "text-sm" : "text-sm font-medium"
         )}>
@@ -196,21 +223,15 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         </span>
       )}
 
+      {/* Drag handle - show on right side when expanded and hovered */}
+      {!isCompact && showContent && isHovered && isDragEnabled && (
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 ml-2 flex-shrink-0" />
+      )}
+
       {/* Children (like notification badges or status icons) */}
       {children}
 
-      {/* Drag indicator */}
-      {isDragEnabled && (
-        <div className={cn(
-          "absolute left-0 top-1/2 transform -translate-y-1/2",
-          "w-1 h-6 bg-muted-foreground/20 rounded-full",
-          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
-          isDragging && "opacity-100",
-          isCompact && "left-2",
-          !isCompact && showContent && "left-1",
-          !isCompact && !showContent && "left-1/2 -translate-x-1/2 top-2 w-6 h-1"
-        )} />
-      )}
+
     </Button>
   );
 };
