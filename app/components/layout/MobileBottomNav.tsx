@@ -644,7 +644,7 @@ export default function MobileBottomNav() {
           "md:hidden fixed left-0 right-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-all duration-300 ease-in-out",
           (isVisible && !shouldHideNav) ? "translate-y-0" : "translate-y-full",
-touch-manipulation
+          "touch-manipulation"
         )}
         style={{
           bottom: getPWABottomSpacing(isPWAMode)
