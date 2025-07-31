@@ -1,9 +1,13 @@
 "use client";
 
+// Force dynamic rendering to avoid SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Calendar, List, ArrowLeft, Clock } from 'lucide-react';
+import { Calendar, List, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import NavHeader from '../components/layout/NavHeader';
 import { useAuth } from '../providers/AuthProvider';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import DailyNotesCarousel from '../components/daily-notes/DailyNotesCarousel';
@@ -41,7 +45,7 @@ function TimelineContent() {
 
   // Scroll to specific date if provided (prioritize over today)
   useEffect(() => {
-    if (focusDate) {
+    if (focusDate && typeof document !== 'undefined') {
       // Wait for component to mount and then scroll
       const timer = setTimeout(() => {
         // Try to find the date card and scroll to it
@@ -84,13 +88,17 @@ function TimelineContent() {
   // Function to scroll to today's card
   const scrollToToday = () => {
     console.log('📅 Timeline Page: scrollToToday called');
+
+    // Guard against server-side rendering
+    if (typeof window === 'undefined') return;
+
     // Use the globally exposed function from TimelineCarousel
     if ((window as any).timelineScrollToToday) {
       (window as any).timelineScrollToToday();
     } else if ((window as any).dailyNotesScrollToToday) {
       // For daily notes mode
       (window as any).dailyNotesScrollToToday();
-    } else {
+    } else if (typeof document !== 'undefined') {
       // Fallback: try to find today's card manually
       const today = new Date().toISOString().split('T')[0];
       const todayElement = document.querySelector(`[data-date="${today}"]`);
@@ -127,46 +135,22 @@ function TimelineContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - Mobile Optimized */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            {/* Mobile-optimized back button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="rounded-2xl p-2 md:px-3"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden md:inline ml-2">Back</span>
-            </Button>
-
-            <div className="flex-1">
-              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-                {type === 'daily-notes' ? (
-                  <Calendar className="h-5 w-5 md:h-6 md:w-6" />
-                ) : (
-                  <List className="h-5 w-5 md:h-6 md:w-6" />
-                )}
-                {getTitle()}
-              </h1>
-              <p className="text-xs md:text-sm text-muted-foreground hidden md:block">{getDescription()}</p>
-            </div>
-
-            {/* Today Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToToday}
-              className="rounded-2xl"
-            >
-              <Clock className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Today</span>
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Navigation Header */}
+      <NavHeader
+        backUrl="/"
+        rightContent={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={scrollToToday}
+            className="rounded-2xl relative"
+            aria-label="Scroll to today"
+          >
+            <Clock className="h-4 w-4" />
+            <span className="hidden md:inline ml-2">Today</span>
+          </Button>
+        }
+      />
 
       {/* Content */}
       <div className="container mx-auto px-4 py-6 md:py-8">

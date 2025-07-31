@@ -70,9 +70,12 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
           variant="outline"
           size="sm"
           onClick={scrollToToday}
-          className="rounded-2xl"
+          className="rounded-2xl relative"
+          aria-label="Scroll to today's notes"
         >
-          Today
+          <Calendar className="h-4 w-4" />
+          {/* Today indicator dot */}
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
         </Button>
       </SectionTitle>
 

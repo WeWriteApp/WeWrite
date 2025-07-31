@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ChevronLeft, DollarSign, Wallet } from 'lucide-react';
-import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import NavHeader from '../../components/layout/NavHeader';
 import WriterTokenDashboard from '../../components/payments/WriterTokenDashboard';
 // WriterEarningsFeatureGuard removed - all features are now always enabled
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
@@ -20,10 +20,9 @@ export default function EarningsPage() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Earnings"
-        description="Track your earnings and manage payouts"
-      />
+      <div className="lg:hidden">
+        <NavHeader backUrl="/settings" />
+      </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 

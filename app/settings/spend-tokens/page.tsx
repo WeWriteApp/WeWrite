@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import NavHeader from '../../components/layout/NavHeader';
 import TokenAllocationDisplay from '../../components/token-purchase/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/token-purchase/TokenAllocationBreakdown';
 
@@ -274,10 +274,9 @@ export default function SpendTokensPage() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Spend Tokens"
-        description="Allocate your monthly tokens to support creators"
-      />
+      <div className="lg:hidden">
+        <NavHeader backUrl="/settings" />
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 

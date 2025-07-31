@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, Home, User, Plus, Bell } from 'lucide-react';
+import { Menu, Home, User, Plus, Bell, X } from 'lucide-react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
@@ -12,8 +12,9 @@ import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
-import DraggableNavButton from './DraggableNavButton';
-import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
+
+import CrossComponentMobileNavButton from './CrossComponentMobileNavButton';
+import { isPWA } from '../../utils/pwa-detection';
 import { trackPWAStatus } from '../../utils/pwaAnalytics';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
@@ -58,16 +59,32 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const editorContext = useEditorContext();
-  const { mobileOrder, reorderMobileItem } = useNavigationOrder();
+  const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar } = useNavigationOrder();
 
   // Detect if we're on a touch device for drag backend selection
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
   const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
 
-  // Ensure mobileOrder is always an array
-  const safeMobileOrder = Array.isArray(mobileOrder) && mobileOrder.length > 0
-    ? mobileOrder
-    : ['home', 'notifications', 'profile', 'new'];
+  // Ensure mobileOrder is always exactly 5 items
+  const safeMobileOrder = (() => {
+    const defaultOrder = ['home', 'search', 'notifications', 'profile', 'new'];
+
+    if (!Array.isArray(mobileOrder) || mobileOrder.length === 0) {
+      return defaultOrder;
+    }
+
+    // Always ensure exactly 5 items
+    if (mobileOrder.length === 5) {
+      return mobileOrder;
+    } else if (mobileOrder.length < 5) {
+      // If less than 5, fill with items from default order that aren't already included
+      const missing = defaultOrder.filter(item => !mobileOrder.includes(item));
+      return [...mobileOrder, ...missing].slice(0, 5);
+    } else {
+      // If more than 5, take only the first 5
+      return mobileOrder.slice(0, 5);
+    }
+  })();
 
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -104,13 +121,11 @@ export default function MobileBottomNav() {
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Enhanced navigation with optimistic feedback
   const {
     isNavigating,
-    targetRoute,
-    buttonPressed,
     handleButtonPress,
     handleButtonHover,
     isButtonPressed,
@@ -120,8 +135,8 @@ export default function MobileBottomNav() {
     maxNavigationTime: 3000,
     enableHapticFeedback: true});
 
-  // Check if we're in edit mode
-  const isEditMode = editorContext?.isEditMode || false;
+  // Check if we're in edit mode by checking if editor context has editor functions
+  const isEditMode = !!(editorContext?.onSave || editorContext?.onCancel);
 
   // Check if current route is a content page at /id/ (should hide mobile nav)
   const isContentPageRoute = useCallback(() => {
@@ -247,7 +262,7 @@ export default function MobileBottomNav() {
 
   // Enhanced button click handlers with immediate feedback
   const handleMenuClick = () => {
-    setSidebarOpen(true);
+    setSidebarOpen(!sidebarOpen); // Toggle instead of always opening
   };
 
   const handleHomeClick = () => {
@@ -278,6 +293,23 @@ export default function MobileBottomNav() {
   // Hide mobile nav on editor pages
   const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
   const shouldHideNav = isEditorPage;
+
+  // Handle cross-component drops (sidebar to mobile) - SWAP mode only
+  const handleCrossComponentDrop = (
+    dragItem: { id: string; index: number; sourceType: 'mobile' | 'sidebar' },
+    targetIndex: number,
+    targetType: 'mobile' | 'sidebar'
+  ) => {
+    // Perform the swap
+    swapBetweenMobileAndSidebar(
+      dragItem.sourceType,
+      dragItem.index,
+      targetType,
+      targetIndex
+    );
+  };
+
+
 
   // Navigation button configurations
   const navigationButtons = {
@@ -440,7 +472,7 @@ export default function MobileBottomNav() {
           "touch-manipulation"
         )}
         style={{
-          paddingBottom: getPWABottomSpacing(isPWAMode)}}
+          paddingBottom: `calc(${getPWABottomSpacing(isPWAMode)} + 8px)`}} // Add extra 8px padding
       >
         {/* Navigation progress indicator */}
         {isNavigating && (
@@ -452,10 +484,10 @@ export default function MobileBottomNav() {
           {/* Menu Button - Fixed position, not draggable */}
           <NavButton
             id="menu"
-            icon={Menu}
+            icon={sidebarOpen ? X : Menu}
             onClick={handleMenuClick}
             isActive={isMenuActive}
-            ariaLabel="Menu"
+            ariaLabel={sidebarOpen ? "Close Menu" : "Open Menu"}
             label="Menu"
           >
             {criticalSettingsStatus === 'warning' && (
@@ -468,7 +500,7 @@ export default function MobileBottomNav() {
             )}
           </NavButton>
 
-          {/* Draggable Navigation Buttons */}
+          {/* Draggable Navigation Buttons - Always exactly 5 items */}
           {safeMobileOrder.map((buttonId, index) => {
             const buttonConfig = navigationButtons[buttonId];
             if (!buttonConfig) {
@@ -477,12 +509,23 @@ export default function MobileBottomNav() {
             }
 
             return (
-              <DraggableNavButton
+              <CrossComponentMobileNavButton
                 key={buttonId}
+                id={buttonId}
                 index={index}
+                icon={buttonConfig.icon}
+                onClick={buttonConfig.onClick}
+                onHover={buttonConfig.onHover}
+                isActive={buttonConfig.isActive}
+                ariaLabel={buttonConfig.ariaLabel}
+                label={buttonConfig.label}
+                onCrossComponentDrop={handleCrossComponentDrop}
                 moveItem={reorderMobileItem}
-                {...buttonConfig}
-              />
+                isPressed={isButtonPressed(buttonConfig.id)}
+                isNavigating={isNavigatingTo(pathname)}
+              >
+                {buttonConfig.children}
+              </CrossComponentMobileNavButton>
             );
           })}
         </div>
@@ -492,6 +535,7 @@ export default function MobileBottomNav() {
       <MobileOverflowSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onDragStart={() => setSidebarOpen(false)} // Collapse sidebar when drag starts
       />
     </DndProvider>
   );

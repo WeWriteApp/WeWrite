@@ -1,5 +1,8 @@
 "use client";
 
+// Force dynamic rendering to avoid SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { Button } from '../components/ui/button';
@@ -8,6 +11,7 @@ import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
+import NavHeader from '../components/layout/NavHeader';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 
 // Import the new separated components
@@ -285,18 +289,23 @@ const SearchPage = React.memo(() => {
   const handleSubmit = useCallback((searchTerm) => {
     performSearch(searchTerm);
 
-    // Update URL to reflect the search query
-    const url = new URL(window.location);
-    if (searchTerm && searchTerm.trim()) {
-      url.searchParams.set('q', searchTerm.trim());
-    } else {
-      url.searchParams.delete('q');
+    // Update URL to reflect the search query (client-side only)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location);
+      if (searchTerm && searchTerm.trim()) {
+        url.searchParams.set('q', searchTerm.trim());
+      } else {
+        url.searchParams.delete('q');
+      }
+      window.history.replaceState({}, '', url);
     }
-    window.history.replaceState({}, '', url);
   }, [performSearch]);
 
   // Stable helper function to copy to clipboard with toast notification
   const copyToClipboard = useCallback((textToCopy) => {
+    // Guard against server-side rendering
+    if (typeof window === 'undefined' || !navigator.clipboard) return;
+
     navigator.clipboard.writeText(textToCopy)
       .then(() => {
         console.log("Link copied to clipboard");
@@ -312,6 +321,9 @@ const SearchPage = React.memo(() => {
 
   // Stable share search URL function - no dependencies to prevent re-renders
   const shareSearchUrl = useCallback(() => {
+    // Guard against server-side rendering
+    if (typeof window === 'undefined') return;
+
     const url = new URL(window.location);
     // Get current query from URL instead of state to avoid dependency
     const searchTerm = url.searchParams.get('q') || '';
@@ -363,29 +375,11 @@ const SearchPage = React.memo(() => {
         }}
       />
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="flex items-center gap-2"
-            aria-label="Go home"
-          >
-            <Link href="/">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                <path d="m15 18-6-6 6-6"/>
-              </svg>
-              <span className="hidden sm:inline">Home</span>
-            </Link>
-          </Button>
-        </div>
-        <div className="flex-1 flex justify-center">
-          <h1 className="text-2xl font-bold">Search</h1>
-        </div>
-        <div className="flex items-center">
-          {/* Only show share button when there's a search query */}
-          {currentQuery && currentQuery.trim() && (
+      {/* Navigation Header */}
+      <NavHeader
+        backUrl="/"
+        rightContent={
+          currentQuery && currentQuery.trim() && (
             <Button
               variant="outline"
               size="sm"
@@ -396,9 +390,11 @@ const SearchPage = React.memo(() => {
               <Share2 className="h-4 w-4" />
               <span className="hidden sm:inline">Share</span>
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
+
+      <div className="mb-6" />
 
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput

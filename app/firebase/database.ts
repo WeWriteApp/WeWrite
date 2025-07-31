@@ -315,10 +315,9 @@ export const appendPageReference = async (
     };
 
     // Append the reference header and source content to the target content
-    // No separator line and no bold formatting
+    // Single newline only - no extra spacing
     const newContent = [
       ...currentContent,
-      { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
       referenceHeader,
       ...sourceContent
     ];

@@ -326,8 +326,8 @@ function UnifiedSidebarContent({
           "flex flex-col h-full",
           showContent ? "p-4" : "py-4 px-1"
         )}>
-          {/* Header with toggle button */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Header with toggle button - Fixed at top */}
+          <div className="flex items-center justify-between mb-6 flex-shrink-0">
             {showContent && (
               <h3 className="text-lg font-semibold text-foreground transition-opacity duration-300">
                 {isEditMode ? "Editor" : "WeWrite"}
@@ -348,8 +348,10 @@ function UnifiedSidebarContent({
             </Button>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="flex flex-col gap-2 mb-6">
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            {/* Navigation Items */}
+            <nav className="flex flex-col gap-2 mb-6">
             {sidebarOrder.map((itemId, index) => {
               const item = navigationItemsConfig[itemId];
               if (!item) return null;
@@ -480,10 +482,11 @@ function UnifiedSidebarContent({
               </div>
             </>
           )}
+          </div>
 
-          {/* Buy Tokens button for users without active token purchase */}
+          {/* Fixed bottom section - Buy Tokens button for users without active token purchase */}
           {!isEditMode && user && hasActiveSubscription === false && (
-            <div className="px-3 pb-4">
+            <div className="px-3 pb-4 flex-shrink-0">
               <Button
                 onClick={() => router.push('/settings/buy-tokens')}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
@@ -495,9 +498,9 @@ function UnifiedSidebarContent({
             </div>
           )}
 
-          {/* User info and logout at bottom for non-edit mode */}
+          {/* Fixed bottom section - User info and logout at bottom for non-edit mode */}
           {!isEditMode && user && (
-            <div className="mt-auto pt-4 border-t border-border">
+            <div className="mt-auto pt-4 border-t border-border flex-shrink-0">
               {/* User Information - only show when expanded */}
               {showContent && (
                 <div className="mb-3 px-3 py-2">

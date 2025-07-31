@@ -8,7 +8,7 @@ import { ChevronLeft, Sun, Moon, Laptop, Check } from 'lucide-react';
 import AccentColorSwitcher from '../../components/utils/AccentColorSwitcher';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import { cn } from "../../lib/utils";
-import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import NavHeader from '../../components/layout/NavHeader';
 
 export default function AppearancePage() {
   const { user } = useAuth();
@@ -43,10 +43,9 @@ export default function AppearancePage() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Appearance"
-        description="Customize the look and feel of WeWrite"
-      />
+      <div className="lg:hidden">
+        <NavHeader backUrl="/settings" />
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 

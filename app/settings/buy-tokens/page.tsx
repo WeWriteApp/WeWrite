@@ -27,7 +27,7 @@ import {
 import Link from 'next/link';
 import TokenPurchaseTierSlider from '../../components/token-purchase/TokenPurchaseTierSlider';
 import { SubscriptionTierBadge } from '../../components/ui/SubscriptionTierBadge';
-import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import NavHeader from '../../components/layout/NavHeader';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, calculateTokensForAmount } from '../../utils/subscriptionTiers';
 import TokenPurchaseHistory from '../../components/token-purchase/TokenPurchaseHistory';
 import { BillingCountdown } from '../../components/ui/BillingCountdown';
@@ -608,10 +608,9 @@ export default function BuyTokensPage() {
   if (subscriptionError) {
     return (
       <div>
-        <SettingsPageHeader
-          title="Subscription"
-          description="Manage your WeWrite subscription and get monthly tokens to support creators."
-        />
+        <div className="lg:hidden">
+          <NavHeader backUrl="/settings" />
+        </div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
           <Card>
             <CardHeader>
@@ -647,10 +646,9 @@ export default function BuyTokensPage() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Buy Tokens"
-        description="Purchase monthly tokens to support creators on WeWrite."
-      />
+      <div className="lg:hidden">
+        <NavHeader backUrl="/settings" />
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 

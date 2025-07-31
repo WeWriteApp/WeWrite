@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect } from "react"
-import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart, Home, Plus, Bell, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { DndProvider } from 'react-dnd';
 import { TouchBackend } from 'react-dnd-touch-backend';
@@ -17,6 +17,8 @@ import { useAuth } from '../../providers/AuthProvider';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
 import DraggableSidebarItem from './DraggableSidebarItem';
+import CrossComponentDragItem from './CrossComponentDragItem';
+import CrossComponentMobileNavButton from './CrossComponentMobileNavButton';
 
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage } from "../../utils/randomPageNavigation"
@@ -25,10 +27,12 @@ import { StatusIcon } from '../ui/status-icon';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
+import ConfirmationModal from '../utils/ConfirmationModal';
 
 interface SidebarProps {
   isOpen: boolean
   onClose: () => void
+  onDragStart?: () => void // Callback when drag starts to collapse sidebar
   // Editor functions (optional - only provided when in edit mode)
   editorProps?: {
     isPublic?: boolean;
@@ -44,15 +48,25 @@ interface SidebarProps {
   }
 }
 
-export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarProps) {
+export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProps }: SidebarProps) {
   const router = useRouter()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
 
   const { user } = useAuth();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
-  const { sidebarOrder, reorderSidebarItem } = useNavigationOrder();
+  const { sidebarOrder, reorderSidebarItem, swapBetweenMobileAndSidebar, mobileOrder } = useNavigationOrder();
+
+  // Reset to page 0 when mobile order changes to avoid being stuck on non-existent pages
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [mobileOrder.length]);
 
   // Detect if we're on a touch device for drag backend selection
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -111,46 +125,30 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     }
   }, [isOpen])
 
-  // Mobile sidebar navigation items configuration
-  const mobileSidebarItemsConfig = {
-    'search': {
-      icon: Search,
-      label: 'Search',
-      onClick: () => { onClose(); router.push('/search'); }
-    },
-    'random-pages': {
-      icon: Shuffle,
-      label: 'Random Pages',
-      onClick: () => { onClose(); router.push('/random-pages'); }
-    },
-    'trending-pages': {
-      icon: TrendingUp,
-      label: 'Trending Pages',
-      onClick: () => { onClose(); router.push('/trending-pages'); }
-    },
-    'recents': {
-      icon: Clock,
-      label: 'Recently viewed',
-      onClick: () => { onClose(); router.push('/recents'); }
-    },
-    'following': {
-      icon: Heart,
-      label: 'Following',
-      onClick: () => { onClose(); router.push('/following'); }
-    },
-    'settings': {
-      icon: Settings,
-      label: 'Settings',
-      onClick: () => { onClose(); router.push('/settings'); }
-    },
+  // Navigation items configuration - matches desktop sidebar exactly
+  const navigationItemsConfig = {
+    'home': { icon: Home, label: 'Home', href: '/' },
+    'search': { icon: Search, label: 'Search', href: '/search' },
+    'random-pages': { icon: Shuffle, label: 'Random Pages', href: '/random-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
+    'recents': { icon: Clock, label: 'Recently viewed', href: '/recents' },
+    'following': { icon: Heart, label: 'Following', href: '/following' },
+    'new': { icon: Plus, label: 'New Page', href: '/new' },
+    'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
+    'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
     ...(user && user.email && isUserAdmin(user.email) ? {
-      'admin': {
-        icon: Shield,
-        label: 'Admin Dashboard',
-        onClick: () => { onClose(); router.push('/admin'); }
-      }
+      'admin': { icon: Shield, label: 'Admin Dashboard', href: '/admin' }
     } : {}),
+  };
+
+  // Handle navigation item click
+  const handleNavItemClick = (item: any) => {
+    onClose(); // Close sidebar first
+    if (item.href) {
+      router.push(item.href);
+    }
   };
 
   // Function to navigate to a section
@@ -163,6 +161,75 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     setCurrentSection(null)
   }
 
+  // Handle cross-component drops (sidebar to mobile)
+  const handleCrossComponentDrop = (
+    dragItem: { id: string; index: number; sourceType: 'mobile' | 'sidebar' },
+    targetIndex: number,
+    targetType: 'mobile' | 'sidebar'
+  ) => {
+    // Collapse sidebar when drag starts
+    if (onDragStart) {
+      onDragStart();
+    }
+
+    // Perform the swap
+    swapBetweenMobileAndSidebar(
+      dragItem.sourceType,
+      dragItem.index,
+      targetType,
+      targetIndex
+    );
+  };
+
+  // Logout handlers
+  const handleLogoutClick = () => {
+    setShowLogoutConfirmation(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logoutUser();
+      onClose();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirmation(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirmation(false);
+  };
+
+  // Swipe gesture handlers for pagination
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    const availableItems = sidebarOrder.filter(itemId => !mobileOrder.includes(itemId));
+    const totalPages = Math.ceil(availableItems.length / 10);
+
+    if (isLeftSwipe && currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+    if (isRightSwipe && currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   // Render the appropriate section based on currentSection
   const renderSection = () => {
     switch (currentSection) {
@@ -170,36 +237,83 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
       default:
         return (
           <div className="flex flex-col h-full">
-            {/* Main Menu Items */}
-            <div className="space-y-2 mb-6">
-              {sidebarOrder.map((itemId, index) => {
-                const item = mobileSidebarItemsConfig[itemId];
-                if (!item) return null;
-
-                const isSettings = item.label === 'Settings';
+            {/* Main Menu Items - Paginated Grid Layout */}
+            <div className="mb-6">
+              {(() => {
+                const availableItems = sidebarOrder
+                  .filter(itemId => !mobileOrder.includes(itemId)) // Not in mobile toolbar
+                  .filter(itemId => navigationItemsConfig[itemId]); // Item exists in config
+                const itemsPerPage = 10; // 2 rows of 5 items
+                const totalPages = Math.ceil(availableItems.length / itemsPerPage);
+                const startIndex = currentPage * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const currentPageItems = availableItems.slice(startIndex, endIndex);
 
                 return (
-                  <DraggableSidebarItem
-                    key={itemId}
-                    id={itemId}
-                    icon={item.icon}
-                    label={item.label}
-                    onClick={item.onClick}
-                    index={index}
-                    moveItem={reorderSidebarItem}
-                    isCompact={true}
-                  >
-                    {/* Settings warning indicator */}
-                    {isSettings && criticalSettingsStatus === 'warning' && (
-                      <StatusIcon
-                        status="warning"
-                        size="sm"
-                        position="static"
-                      />
+                  <>
+                    {/* Page indicator */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mb-4">
+                        <button
+                          onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                          disabled={currentPage === 0}
+                          className="w-8 h-8 rounded-full bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        >
+                          ←
+                        </button>
+                        <span className="text-sm text-muted-foreground">
+                          {currentPage + 1} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+                          disabled={currentPage === totalPages - 1}
+                          className="w-8 h-8 rounded-full bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        >
+                          →
+                        </button>
+                      </div>
                     )}
-                  </DraggableSidebarItem>
+
+                    {/* Grid of items for current page */}
+                    <div
+                      className="grid grid-cols-5 gap-1"
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                    >
+                      {currentPageItems.map((itemId, index) => {
+                        const item = navigationItemsConfig[itemId];
+                        if (!item) return null;
+
+                        const isSettings = item.label === 'Settings';
+
+                        return (
+                          <CrossComponentMobileNavButton
+                            key={itemId}
+                            id={itemId}
+                            index={index}
+                            icon={item.icon}
+                            onClick={() => handleNavItemClick(item)}
+                            onHover={() => {}} // No hover for overflow items
+                            isActive={false} // Overflow items are never active
+                            ariaLabel={item.label}
+                            label={item.label}
+                            onCrossComponentDrop={handleCrossComponentDrop}
+                            moveItem={reorderSidebarItem}
+                            isPressed={false}
+                            isNavigating={false}
+                          >
+                            {/* Settings warning indicator */}
+                            {isSettings && criticalSettingsStatus === 'warning' && (
+                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-background"></div>
+                            )}
+                          </CrossComponentMobileNavButton>
+                        );
+                      })}
+                    </div>
+                  </>
                 );
-              })}
+              })()}
             </div>
 
             {/* Editor Functions (only show in edit mode) */}
@@ -271,67 +385,75 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   return (
     <DndProvider backend={dndBackend}>
       {/* Backdrop */}
-      <div
-        className={cn(
-          "fixed inset-0 bg-black/60 z-[999] transition-opacity duration-300 min-h-screen w-screen",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-[998] transition-opacity duration-300 ease-in-out"
+          onClick={onClose}
+        />
+      )}
 
-      {/* Sidebar */}
+      {/* Bottom Drawer - expands upward from bottom toolbar */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-r border-border z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "md:hidden fixed left-0 right-0 z-[999] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg transition-all duration-300 ease-in-out",
+          isOpen ? "bottom-20" : "-bottom-full" // bottom-20 = 80px (height of mobile nav)
         )}
+        style={{
+          maxHeight: 'calc(100vh - 120px)', // Leave space for status bar and bottom nav
+        }}
       >
-        <div className="flex flex-col h-full p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-              aria-label="Close sidebar"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Main content area - flex-1 to take remaining space */}
-          <div className="flex-1 flex flex-col">
-            {renderSection()}
-          </div>
-
-          {/* User info and logout at bottom */}
+        {/* Content */}
+        <div className="flex flex-col h-full max-h-[70vh] overflow-hidden">
+          {/* Account info at top */}
           {user && (
-            <div className="mt-auto pt-4 border-t border-border">
-              {/* User Information */}
-              <div className="mb-3 px-3 py-2">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {user.username || 'User'}
+            <div className="flex-shrink-0 p-4 border-b border-border bg-background/50">
+              <div className="flex items-center justify-between">
+                <div
+                  className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 -m-2 transition-colors"
+                  onClick={handleLogoutClick}
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {sanitizeUsername(user.username, 'Loading...', 'User')}
+                    </div>
+                    <LogOut className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {user.email}
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-
-              {/* Logout Button */}
-              <Button
-                variant="ghost"
-                onClick={() => logoutUser()}
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                Log Out
-              </Button>
             </div>
           )}
+
+          {/* Scrollable grid of navigation items */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+            {renderSection()}
+          </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to log out? You'll need to sign in again to access your account."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        variant="default"
+        icon="logout"
+        isLoading={isLoggingOut}
+      />
     </DndProvider>
   )
 }
