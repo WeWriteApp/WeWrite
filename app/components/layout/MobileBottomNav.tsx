@@ -374,7 +374,7 @@ export default function MobileBottomNav() {
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
     'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
     'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
@@ -455,7 +455,7 @@ export default function MobileBottomNav() {
       },
       onHover: () => handleButtonHover('/trending-pages'),
       isActive: pathname === '/trending-pages',
-      ariaLabel: 'Trending Pages',
+      ariaLabel: 'Trending',
       label: 'Trending',
     },
     recents: {

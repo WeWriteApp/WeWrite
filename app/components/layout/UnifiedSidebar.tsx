@@ -263,7 +263,7 @@ function UnifiedSidebarContent({
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
     'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
     'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'new': { icon: Plus, label: 'New Page', href: '/new' },

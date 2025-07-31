@@ -127,7 +127,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
     'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
     'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
