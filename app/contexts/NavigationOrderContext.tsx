@@ -129,7 +129,18 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
 export function useNavigationOrder() {
   const context = useContext(NavigationOrderContext);
   if (context === undefined) {
-    throw new Error('useNavigationOrder must be used within a NavigationOrderProvider');
+    // Return default values instead of throwing error to prevent crashes
+    console.warn('useNavigationOrder called outside of NavigationOrderProvider, using defaults');
+    return {
+      mobileOrder: DEFAULT_MOBILE_ORDER,
+      setMobileOrder: () => {},
+      reorderMobileItem: () => {},
+      sidebarOrder: DEFAULT_SIDEBAR_ORDER,
+      setSidebarOrder: () => {},
+      reorderSidebarItem: () => {},
+      resetMobileOrder: () => {},
+      resetSidebarOrder: () => {},
+    };
   }
   return context;
 }

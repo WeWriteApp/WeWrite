@@ -40,6 +40,12 @@ const DraggableNavButton: React.FC<DraggableNavButtonProps> = ({
 }) => {
   const ref = useRef<HTMLButtonElement>(null);
 
+  // Defensive programming - ensure all required props are present
+  if (!id || !Icon || !onClick || !ariaLabel || !label) {
+    console.warn('DraggableNavButton: Missing required props', { id, Icon, onClick, ariaLabel, label });
+    return null;
+  }
+
   const [{ handlerId }, drop] = useDrop({
     accept: 'nav-button',
     collect(monitor) {
@@ -48,72 +54,95 @@ const DraggableNavButton: React.FC<DraggableNavButtonProps> = ({
       };
     },
     hover(item: DragItem, monitor) {
-      if (!ref.current) {
-        return;
+      try {
+        if (!ref.current) {
+          return;
+        }
+        const dragIndex = item.index;
+        const hoverIndex = index;
+
+        // Don't replace items with themselves
+        if (dragIndex === hoverIndex) {
+          return;
+        }
+
+        // Determine rectangle on screen
+        const hoverBoundingRect = ref.current?.getBoundingClientRect();
+
+        // Get horizontal middle
+        const hoverMiddleX = (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
+
+        // Determine mouse position
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+
+        // Get pixels to the left
+        const hoverClientX = clientOffset.x - hoverBoundingRect.left;
+
+        // Only perform the move when the mouse has crossed half of the items width
+        // When dragging left, only move when the cursor is below 50%
+        // When dragging right, only move when the cursor is above 50%
+
+        // Dragging left
+        if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) {
+          return;
+        }
+
+        // Dragging right
+        if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) {
+          return;
+        }
+
+        // Time to actually perform the action
+        if (typeof moveItem === 'function') {
+          moveItem(dragIndex, hoverIndex);
+        }
+
+        // Note: we're mutating the monitor item here!
+        // Generally it's better to avoid mutations,
+        // but it's good here for the sake of performance
+        // to avoid expensive index searches.
+        item.index = hoverIndex;
+      } catch (error) {
+        console.warn('Error in drag hover handler:', error);
       }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      // Don't replace items with themselves
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-
-      // Determine rectangle on screen
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-
-      // Get horizontal middle
-      const hoverMiddleX = (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
-
-      // Determine mouse position
-      const clientOffset = monitor.getClientOffset();
-
-      // Get pixels to the left
-      const hoverClientX = clientOffset!.x - hoverBoundingRect.left;
-
-      // Only perform the move when the mouse has crossed half of the items width
-      // When dragging left, only move when the cursor is below 50%
-      // When dragging right, only move when the cursor is above 50%
-
-      // Dragging left
-      if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) {
-        return;
-      }
-
-      // Dragging right
-      if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) {
-        return;
-      }
-
-      // Time to actually perform the action
-      moveItem(dragIndex, hoverIndex);
-
-      // Note: we're mutating the monitor item here!
-      // Generally it's better to avoid mutations,
-      // but it's good here for the sake of performance
-      // to avoid expensive index searches.
-      item.index = hoverIndex;
     },
   });
 
   const [{ isDragging }, drag] = useDrag({
     type: 'nav-button',
     item: () => {
-      return { id, index };
+      try {
+        return { id, index };
+      } catch (error) {
+        console.warn('Error creating drag item:', error);
+        return { id: 'unknown', index: 0 };
+      }
     },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
+    collect: (monitor) => {
+      try {
+        return {
+          isDragging: monitor.isDragging(),
+        };
+      } catch (error) {
+        console.warn('Error collecting drag state:', error);
+        return { isDragging: false };
+      }
+    },
     canDrag: isDragEnabled,
   });
 
   const opacity = isDragging ? 0.4 : 1;
 
-  // Combine drag and drop refs
-  if (isDragEnabled) {
-    drag(drop(ref));
-  } else {
-    drop(ref);
+  // Combine drag and drop refs with error handling
+  try {
+    if (isDragEnabled) {
+      drag(drop(ref));
+    } else {
+      drop(ref);
+    }
+  } catch (error) {
+    console.warn('Error setting up drag and drop refs:', error);
   }
 
   return (

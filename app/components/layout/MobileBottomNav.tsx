@@ -64,6 +64,11 @@ export default function MobileBottomNav() {
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
   const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
 
+  // Ensure mobileOrder is always an array
+  const safeMobileOrder = Array.isArray(mobileOrder) && mobileOrder.length > 0
+    ? mobileOrder
+    : ['home', 'notifications', 'profile', 'new'];
+
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
@@ -464,9 +469,12 @@ export default function MobileBottomNav() {
           </NavButton>
 
           {/* Draggable Navigation Buttons */}
-          {mobileOrder.map((buttonId, index) => {
+          {safeMobileOrder.map((buttonId, index) => {
             const buttonConfig = navigationButtons[buttonId];
-            if (!buttonConfig) return null;
+            if (!buttonConfig) {
+              console.warn(`Navigation button config not found for: ${buttonId}`);
+              return null;
+            }
 
             return (
               <DraggableNavButton
