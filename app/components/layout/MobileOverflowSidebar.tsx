@@ -4,6 +4,9 @@ import * as React from "react"
 import { useState, useEffect } from "react"
 import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { DndProvider } from 'react-dnd';
+import { TouchBackend } from 'react-dnd-touch-backend';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 // Removed direct Firebase auth imports - using user management system
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
@@ -12,6 +15,8 @@ import { logoutUser } from "../../firebase/auth"
 
 import { useAuth } from '../../providers/AuthProvider';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
+import DraggableSidebarItem from './DraggableSidebarItem';
 
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage } from "../../utils/randomPageNavigation"
@@ -47,6 +52,11 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
+  const { sidebarOrder, reorderSidebarItem } = useNavigationOrder();
+
+  // Detect if we're on a touch device for drag backend selection
+  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
+  const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {
@@ -101,6 +111,48 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     }
   }, [isOpen])
 
+  // Mobile sidebar navigation items configuration
+  const mobileSidebarItemsConfig = {
+    'search': {
+      icon: Search,
+      label: 'Search',
+      onClick: () => { onClose(); router.push('/search'); }
+    },
+    'random-pages': {
+      icon: Shuffle,
+      label: 'Random Pages',
+      onClick: () => { onClose(); router.push('/random-pages'); }
+    },
+    'trending-pages': {
+      icon: TrendingUp,
+      label: 'Trending Pages',
+      onClick: () => { onClose(); router.push('/trending-pages'); }
+    },
+    'recents': {
+      icon: Clock,
+      label: 'Recently viewed',
+      onClick: () => { onClose(); router.push('/recents'); }
+    },
+    'following': {
+      icon: Heart,
+      label: 'Following',
+      onClick: () => { onClose(); router.push('/following'); }
+    },
+    'settings': {
+      icon: Settings,
+      label: 'Settings',
+      onClick: () => { onClose(); router.push('/settings'); }
+    },
+    // Admin Dashboard - only for admin users
+    ...(user && user.email && isUserAdmin(user.email) ? {
+      'admin': {
+        icon: Shield,
+        label: 'Admin Dashboard',
+        onClick: () => { onClose(); router.push('/admin'); }
+      }
+    } : {}),
+  };
+
   // Function to navigate to a section
   const navigateToSection = (section: string) => {
     setCurrentSection(section)
@@ -120,100 +172,34 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
           <div className="flex flex-col h-full">
             {/* Main Menu Items */}
             <div className="space-y-2 mb-6">
-              {/* Search */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/search');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Search className="h-5 w-5 mr-3" />
-                <span>Search</span>
-              </button>
+              {sidebarOrder.map((itemId, index) => {
+                const item = mobileSidebarItemsConfig[itemId];
+                if (!item) return null;
 
-              {/* Random Pages */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/random-pages');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Shuffle className="h-5 w-5 mr-3" />
-                <span>Random Pages</span>
-              </button>
+                const isSettings = item.label === 'Settings';
 
-              {/* Trending Pages */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/trending-pages');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <TrendingUp className="h-5 w-5 mr-3" />
-                <span>Trending Pages</span>
-              </button>
-
-              {/* Recently viewed */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/recents');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Clock className="h-5 w-5 mr-3" />
-                <span>Recently viewed</span>
-              </button>
-
-              {/* Following */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/following');
-                }}
-                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <Heart className="h-5 w-5 mr-3" />
-                <span>Following</span>
-              </button>
-
-              {/* Settings */}
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push('/settings');
-                }}
-                className="flex items-center justify-between w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-              >
-                <div className="flex items-center">
-                  <Settings className="h-5 w-5 mr-3" />
-                  <span>Settings</span>
-                </div>
-                {criticalSettingsStatus === 'warning' && (
-                  <StatusIcon
-                    status="warning"
-                    size="sm"
-                    position="static"
-                  />
-                )}
-              </button>
-
-              {/* Admin Dashboard - Only visible for admins */}
-              {user && user.email && isUserAdmin(user.email) && (
-                <button
-                  onClick={() => {
-                    onClose();
-                    router.push('/admin');
-                  }}
-                  className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
-                >
-                  <Shield className="h-5 w-5 mr-3" />
-                  <span>Admin Dashboard</span>
-                </button>
-              )}
+                return (
+                  <DraggableSidebarItem
+                    key={itemId}
+                    id={itemId}
+                    icon={item.icon}
+                    label={item.label}
+                    onClick={item.onClick}
+                    index={index}
+                    moveItem={reorderSidebarItem}
+                    isCompact={true}
+                  >
+                    {/* Settings warning indicator */}
+                    {isSettings && criticalSettingsStatus === 'warning' && (
+                      <StatusIcon
+                        status="warning"
+                        size="sm"
+                        position="static"
+                      />
+                    )}
+                  </DraggableSidebarItem>
+                );
+              })}
             </div>
 
             {/* Editor Functions (only show in edit mode) */}
@@ -283,7 +269,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   };
 
   return (
-    <>
+    <DndProvider backend={dndBackend}>
       {/* Backdrop */}
       <div
         className={cn(
@@ -346,7 +332,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
           )}
         </div>
       </div>
-    </>
+    </DndProvider>
   )
 }
 

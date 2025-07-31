@@ -3,7 +3,18 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 // Default navigation item orders
 const DEFAULT_MOBILE_ORDER = ['home', 'notifications', 'profile', 'new'];
-const DEFAULT_SIDEBAR_ORDER = ['home', 'notifications', 'profile', 'settings', 'new'];
+const DEFAULT_SIDEBAR_ORDER = [
+  'home',
+  'search',
+  'random-pages',
+  'trending-pages',
+  'recents',
+  'following',
+  'new',
+  'notifications',
+  'profile',
+  'settings'
+];
 
 interface NavigationOrderContextType {
   // Mobile toolbar order
