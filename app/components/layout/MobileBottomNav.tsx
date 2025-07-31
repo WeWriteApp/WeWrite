@@ -155,8 +155,13 @@ export default function MobileBottomNav() {
     }
 
     // Hide on user and group pages (these are ContentPages)
+    // EXCEPT when viewing your own profile page
     if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
-      return true;
+      // Show mobile toolbar on your own profile page (since no pledge bar)
+      if (user?.uid && pathname === `/user/${user.uid}`) {
+        return false; // Show mobile nav on own profile
+      }
+      return true; // Hide on other user profiles
     }
 
     // Hide on admin routes (including admin dashboard)
@@ -282,6 +287,10 @@ export default function MobileBottomNav() {
   // Enhanced button click handlers with immediate feedback
   const handleMoreClick = () => {
     setIsExpanded(!isExpanded); // Toggle expanded state
+    // Clear any pressed button states when opening more menu
+    if (!isExpanded) {
+      setPressedButtons(new Set());
+    }
   };
 
   const handleHomeClick = () => {
@@ -554,9 +563,9 @@ export default function MobileBottomNav() {
           isPressed && "scale-95 bg-primary/20",
           // Base states with enhanced contrast
           "hover:bg-primary/10 active:bg-primary/20",
-          // Active state styling
+          // Active state styling - use accent colors consistently
           isActive
-            ? "bg-primary/10 text-primary"
+            ? "bg-accent text-accent-foreground"
             : [
                 "text-slate-600 hover:text-slate-900",
                 "dark:text-muted-foreground dark:hover:text-foreground"
@@ -583,7 +592,7 @@ export default function MobileBottomNav() {
           "line-clamp-2 break-words", // Allow 2 lines with word breaking
           "h-6 flex items-center justify-center", // Fixed height for consistent layout
           isActive
-            ? "text-primary"
+            ? "text-accent-foreground"
             : [
                 "text-slate-500 group-hover:text-slate-700",
                 "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
@@ -635,9 +644,7 @@ export default function MobileBottomNav() {
           "md:hidden fixed left-0 right-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-all duration-300 ease-in-out",
           (isVisible && !shouldHideNav) ? "translate-y-0" : "translate-y-full",
-          "touch-manipulation",
-          // Add top borders and rounded corners when expanded
-          isExpanded ? "border-l border-r rounded-t-xl" : ""
+touch-manipulation
         )}
         style={{
           bottom: getPWABottomSpacing(isPWAMode)

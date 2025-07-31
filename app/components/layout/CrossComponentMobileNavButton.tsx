@@ -140,9 +140,9 @@ export default function CrossComponentMobileNavButton({
         isPressed && "scale-95 bg-primary/20",
         // Base states with enhanced contrast
         "hover:bg-primary/10 active:bg-primary/20",
-        // Active state styling
+        // Active state styling - use accent colors consistently
         isActive
-          ? "bg-primary/10 text-primary"
+          ? "bg-accent text-accent-foreground"
           : [
               "text-slate-600 hover:text-slate-900",
               "dark:text-muted-foreground dark:hover:text-foreground"
@@ -176,7 +176,7 @@ export default function CrossComponentMobileNavButton({
         "line-clamp-2 break-words", // Allow 2 lines with word breaking
         "h-6 flex items-center justify-center", // Fixed height for consistent layout
         isActive
-          ? "text-primary"
+          ? "text-accent-foreground"
           : [
               "text-slate-500 group-hover:text-slate-700",
               "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
