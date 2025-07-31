@@ -245,6 +245,40 @@ export default function MobileBottomNav() {
     };
   }, [lastScrollY]);
 
+  // Enhanced button click handlers with immediate feedback
+  const handleMenuClick = () => {
+    setSidebarOpen(true);
+  };
+
+  const handleHomeClick = () => {
+    handleButtonPress('home', '/');
+  };
+
+  const handleProfileClick = () => {
+    if (user?.uid) {
+      handleButtonPress('profile', `/user/${user.uid}`);
+    }
+  };
+
+  const handleNewPageClick = () => {
+    handleButtonPress('new', '/new?source=mobile-nav');
+  };
+
+  const handleNotificationsClick = () => {
+    handleButtonPress('notifications', '/notifications');
+  };
+
+  // Determine active states for navigation buttons
+  const isHomeActive = pathname === '/';
+  const isProfileActive = pathname === `/user/${user?.uid}`;
+  const isNewPageActive = pathname === '/new';
+  const isNotificationsActive = pathname === '/notifications';
+  const isMenuActive = sidebarOpen;
+
+  // Hide mobile nav on editor pages
+  const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
+  const shouldHideNav = isEditorPage;
+
   // Navigation button configurations
   const navigationButtons = {
     home: {
@@ -306,40 +340,6 @@ export default function MobileBottomNav() {
   if (isEditMode) {
     return null;
   }
-
-  // Enhanced button click handlers with immediate feedback
-  const handleMenuClick = () => {
-    setSidebarOpen(true);
-  };
-
-  const handleHomeClick = () => {
-    handleButtonPress('home', '/');
-  };
-
-  const handleProfileClick = () => {
-    if (user?.uid) {
-      handleButtonPress('profile', `/user/${user.uid}`);
-    }
-  };
-
-  const handleNewPageClick = () => {
-    handleButtonPress('new', '/new?source=mobile-nav');
-  };
-
-  const handleNotificationsClick = () => {
-    handleButtonPress('notifications', '/notifications');
-  };
-
-  // Determine active states for navigation buttons
-  const isHomeActive = pathname === '/';
-  const isProfileActive = pathname === `/user/${user?.uid}`;
-  const isNewPageActive = pathname === '/new';
-  const isNotificationsActive = pathname === '/notifications';
-  const isMenuActive = sidebarOpen;
-
-  // Hide mobile nav on editor pages
-  const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
-  const shouldHideNav = isEditorPage;
 
   // Enhanced button component with instant feedback
   const NavButton = ({
