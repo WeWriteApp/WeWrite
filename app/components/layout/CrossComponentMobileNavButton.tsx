@@ -26,6 +26,7 @@ interface CrossComponentMobileNavButtonProps {
   ariaLabel: string;
   label: string;
   children?: React.ReactNode;
+  sourceType?: 'mobile' | 'sidebar'; // Allow specifying source type
   onCrossComponentDrop?: (
     dragItem: DragItem,
     targetIndex: number,
@@ -46,6 +47,7 @@ export default function CrossComponentMobileNavButton({
   ariaLabel,
   label,
   children,
+  sourceType = 'mobile', // Default to mobile for backward compatibility
   onCrossComponentDrop,
   moveItem,
   isPressed = false,
@@ -59,35 +61,36 @@ export default function CrossComponentMobileNavButton({
     item: () => ({
       id,
       index,
-      sourceType: 'mobile' as const
+      sourceType: sourceType
     }),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
   });
 
-  // Drop functionality - accept drops from sidebar
+  // Drop functionality - accept drops from other components
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: DRAG_TYPES.CROSS_COMPONENT_ITEM,
     drop: (draggedItem: DragItem) => {
       if (!ref.current) return;
-      
-      // Handle cross-component drops (sidebar to mobile)
-      if (draggedItem.sourceType === 'sidebar' && onCrossComponentDrop) {
-        onCrossComponentDrop(draggedItem, index, 'mobile');
+
+      // Handle cross-component drops (sidebar to mobile, mobile to sidebar)
+      if (draggedItem.sourceType !== sourceType && onCrossComponentDrop) {
+        const targetType = sourceType === 'mobile' ? 'mobile' : 'sidebar';
+        onCrossComponentDrop(draggedItem, index, targetType);
         return;
       }
-      
-      // Handle same-component reordering (mobile to mobile)
-      if (draggedItem.sourceType === 'mobile' && moveItem) {
+
+      // Handle same-component reordering
+      if (draggedItem.sourceType === sourceType && moveItem) {
         if (draggedItem.index !== index) {
           moveItem(draggedItem.index, index);
         }
       }
     },
     canDrop: (draggedItem: DragItem) => {
-      // Accept drops from sidebar or same-component reordering
-      return draggedItem.sourceType === 'sidebar' || draggedItem.sourceType === 'mobile';
+      // Accept drops from different components or same-component reordering
+      return draggedItem.sourceType !== sourceType || draggedItem.sourceType === sourceType;
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),

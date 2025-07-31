@@ -298,6 +298,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
                             isActive={false} // Overflow items are never active
                             ariaLabel={item.label}
                             label={item.label}
+                            sourceType="sidebar" // These are sidebar items in overflow
                             onCrossComponentDrop={handleCrossComponentDrop}
                             moveItem={reorderSidebarItem}
                             isPressed={false}
@@ -384,26 +385,25 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
 
   return (
     <DndProvider backend={dndBackend}>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/50 z-[998] transition-opacity duration-300 ease-in-out"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Bottom Drawer - expands upward from bottom toolbar */}
+      {/* Expandable Drawer - expands upward from bottom toolbar (no overlay) */}
       <div
         className={cn(
-          "md:hidden fixed left-0 right-0 z-[999] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg transition-all duration-300 ease-in-out",
-          isOpen ? "bottom-20" : "-bottom-full" // bottom-20 = 80px (height of mobile nav)
+          "md:hidden fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg transition-all duration-300 ease-in-out overflow-hidden",
+          "bottom-20", // Always positioned above bottom nav (80px)
+          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none"
         )}
         style={{
-          maxHeight: 'calc(100vh - 120px)', // Leave space for status bar and bottom nav
+          height: isOpen ? 'calc(100vh - 120px)' : '0px', // Smooth height animation
+          transformOrigin: 'bottom', // Expand from bottom
         }}
       >
+        {/* Visual connection indicator */}
+        {isOpen && (
+          <div className="absolute -bottom-1 left-4 w-8 h-2 bg-background/95 rounded-t-md border-l border-r border-t border-border" />
+        )}
+
         {/* Content */}
-        <div className="flex flex-col h-full max-h-[70vh] overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Account info at top */}
           {user && (
             <div className="flex-shrink-0 p-4 border-b border-border bg-background/50">
