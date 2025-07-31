@@ -364,23 +364,17 @@ export default function MobileBottomNav() {
   const expandedNavigationItems = {
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
-    'random-pages': { icon: Shuffle, label: 'Random Pages', href: '/random-pages' },
+    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
     'trending-pages': { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
-    'recents': { icon: Clock, label: 'Recently viewed', href: '/recents' },
+    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
     'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
-    'admin': { icon: Settings, label: 'Admin Dashboard', href: '/admin' }, // Only shows for admin users
+    'admin': { icon: Shield, label: 'Admin', href: '/admin' }, // Only shows for admin users
   };
 
-  // Debug: Log the filtering logic
-  console.log('🔍 Mobile Navigation Debug:', {
-    mobileOrder,
-    sidebarOrder,
-    filteredItems: sidebarOrder.filter(itemId => !mobileOrder.includes(itemId)),
-    expandedItemKeys: Object.keys(expandedNavigationItems)
-  });
+
 
   // Navigation button configurations for bottom toolbar - MUST include ALL possible mobile items
   const navigationButtons = {
@@ -464,8 +458,8 @@ export default function MobileBottomNav() {
       },
       onHover: () => handleButtonHover('/recents'),
       isActive: pathname === '/recents',
-      ariaLabel: 'Recent Pages',
-      label: 'Recent',
+      ariaLabel: 'Recently viewed',
+      label: 'Recents',
     },
     following: {
       id: 'following',
@@ -501,7 +495,7 @@ export default function MobileBottomNav() {
       onHover: () => handleButtonHover('/admin'),
       isActive: pathname === '/admin',
       ariaLabel: 'Admin Dashboard',
-      label: 'Admin Dash',
+      label: 'Admin',
     },
   };
 
