@@ -187,18 +187,22 @@ class UnifiedLogger {
     switch (level) {
       case 'debug':
         if (this.isDevelopment) {
-          consoleMethod.debug(`${prefix} 🔍 ${message}`, data || '');
+          // SECURITY FIX: Use %s format specifier to prevent format string injection
+          consoleMethod.debug(`${prefix} 🔍 %s`, message, data || '');
         }
         break;
       case 'info':
-        consoleMethod.info(`${prefix} ℹ️ ${message}`, data || '');
+        // SECURITY FIX: Use %s format specifier to prevent format string injection
+        consoleMethod.info(`${prefix} ℹ️ %s`, message, data || '');
         break;
       case 'warn':
-        consoleMethod.warn(`${prefix} ⚠️ ${message}`, data || '');
+        // SECURITY FIX: Use %s format specifier to prevent format string injection
+        consoleMethod.warn(`${prefix} ⚠️ %s`, message, data || '');
         this.sendToTerminal('warn', message, data);
         break;
       case 'error':
-        consoleMethod.error(`${prefix} ❌ ${message}`, data || '');
+        // SECURITY FIX: Use %s format specifier to prevent format string injection
+        consoleMethod.error(`${prefix} ❌ %s`, message, data || '');
         this.sendToTerminal('error', message, data);
         break;
     }

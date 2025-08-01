@@ -274,6 +274,13 @@ export default function DailyNotesCarousel({
       setNotesByDate(notesByDateMap);
     } catch (error) {
       console.error('Error checking existing notes:', error);
+
+      // Handle specific Firebase quota exhaustion error
+      if (error instanceof Error && (error.message.includes('Quota exceeded') || error.message.includes('RESOURCE_EXHAUSTED'))) {
+        console.warn('Daily notes temporarily unavailable due to high usage');
+        // Set empty notes map to show empty state instead of loading forever
+        setNotesByDate(new Map());
+      }
     }
   }, [user?.uid]);
 

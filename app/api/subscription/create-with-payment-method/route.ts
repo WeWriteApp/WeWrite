@@ -1,16 +1,19 @@
 /**
  * Create Subscription with Payment Method
- * 
+ *
  * Creates subscription after payment method setup is complete
+ * Updated to work with USD-based system instead of tokens
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { getEffectiveUsdTier, dollarsToCents } from '../../../utils/usdConstants';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionAnalyticsService } from '../../../services/subscriptionAnalyticsService';
+import { ServerUsdService } from '../../../services/usdService.server';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -161,6 +164,9 @@ export async function POST(request: NextRequest) {
       product: product.id,
       metadata: {
         tier,
+        usdAmount: amount.toString(),
+        usdCents: dollarsToCents(amount).toString(),
+        // Legacy token metadata for backward compatibility
         tokens: tokens?.toString() || (amount * 10).toString()
       }
     });
@@ -174,6 +180,9 @@ export async function POST(request: NextRequest) {
         userId,
         tier,
         tierName: tierName || tier,
+        usdAmount: amount.toString(),
+        usdCents: dollarsToCents(amount).toString(),
+        // Legacy token metadata for backward compatibility
         tokens: tokens?.toString() || (amount * 10).toString()
       },
       expand: ['latest_invoice.payment_intent']
@@ -273,22 +282,26 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to save subscription: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`);
     }
 
-    // Initialize user's token balance directly to avoid internal API call issues
+    // Initialize user's USD balance directly to avoid internal API call issues
     if (subscription.status === 'active') {
-      console.log(`[CREATE SUBSCRIPTION] Updating token allocation directly...`);
+      console.log(`[CREATE SUBSCRIPTION] Updating USD allocation directly...`);
       try {
-        // Import ServerTokenService dynamically to avoid circular dependencies
-        const { ServerTokenService } = await import('../../../services/tokenService.server');
-        await ServerTokenService.updateMonthlyTokenAllocation(userId, finalTokens);
-        console.log(`[CREATE SUBSCRIPTION] Successfully updated token allocation`);
+        // Initialize USD balance using the new USD service
+        await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
+        console.log(`[CREATE SUBSCRIPTION] Successfully updated USD allocation: $${amount}`);
 
-        // Convert unfunded tokens to funded tokens
-        console.log(`[CREATE SUBSCRIPTION] Converting unfunded tokens to funded tokens...`);
+        // Also maintain backward compatibility with token system during migration
+        console.log(`[CREATE SUBSCRIPTION] Maintaining token system compatibility...`);
         try {
+          const { ServerTokenService } = await import('../../../services/tokenService.server');
+          await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
+          console.log(`[CREATE SUBSCRIPTION] Successfully updated legacy token allocation`);
+
+          // Convert unfunded tokens to funded tokens (legacy support)
           const convertResult = await ServerTokenService.convertUnfundedTokens(userId);
           console.log(`[CREATE SUBSCRIPTION] Successfully converted ${convertResult.convertedCount} unfunded token allocations`);
-        } catch (convertError) {
-          console.warn(`[CREATE SUBSCRIPTION] Error converting unfunded tokens:`, convertError);
+        } catch (tokenError) {
+          console.warn(`[CREATE SUBSCRIPTION] Error with legacy token system:`, tokenError);
           // Don't fail subscription creation if token conversion fails
         }
       } catch (tokenError) {

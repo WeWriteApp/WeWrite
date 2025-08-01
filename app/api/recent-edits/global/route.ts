@@ -4,6 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { trackQuery } from '../../../utils/costOptimizationMonitor';
 
 // Initialize Firebase Admin SDK with unique app name for global recent edits
 let globalRecentEditsApp;
@@ -45,6 +46,17 @@ const adminDb = getFirestore(globalRecentEditsApp);
  */
 
 export async function GET(request: NextRequest) {
+  // Temporary quota bypass for development
+  if (process.env.NEXT_PUBLIC_BYPASS_FIREBASE_QUOTA === 'true') {
+    console.log('🚧 [GLOBAL_RECENT_EDITS] Using quota bypass - returning mock data');
+    return NextResponse.json({
+      edits: [],
+      hasMore: false,
+      nextCursor: null,
+      message: 'Firebase quota exceeded - using fallback'
+    });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -86,9 +98,12 @@ export async function GET(request: NextRequest) {
     let pagesQuery;
 
     if (userId) {
-      // For logged-in users, get all recent pages and filter deleted ones in code
-      // This avoids the composite index requirement
+      // For logged-in users, get recent pages (last 7 days) and filter deleted ones in code
+      // This avoids the composite index requirement while preventing excessive reads
+      const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+
       pagesQuery = db.collection(getCollectionName('pages'))
+        .where('lastModified', '>=', sevenDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
@@ -97,11 +112,14 @@ export async function GET(request: NextRequest) {
         pagesQuery = pagesQuery.startAfter(cursor);
       }
 
-      pagesQuery = pagesQuery.limit(limit * 3); // Get more to account for filtering deleted pages
+      pagesQuery = pagesQuery.limit(Math.min(limit + 5, 25)); // REDUCED: Only get a few extra for filtering
     } else {
-      // For anonymous users, only public pages (legacy behavior until isPublic is fully removed)
+      // For anonymous users, only public pages from last 7 days (legacy behavior until isPublic is fully removed)
+      const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+
       pagesQuery = db.collection(getCollectionName('pages'))
         .where('isPublic', '==', true)
+        .where('lastModified', '>=', sevenDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
@@ -110,11 +128,17 @@ export async function GET(request: NextRequest) {
         pagesQuery = pagesQuery.startAfter(cursor);
       }
 
-      pagesQuery = pagesQuery.limit(limit * 2); // Get more to account for filtering deleted pages
+      pagesQuery = pagesQuery.limit(Math.min(limit + 3, 20)); // REDUCED: Only get a few extra for filtering
     }
 
+    const queryStartTime = Date.now();
     const pagesSnapshot = await pagesQuery.get();
-    console.log(`📊 [GLOBAL_RECENT_EDITS] Found ${pagesSnapshot.docs.length} pages from Firestore`);
+    const queryTime = Date.now() - queryStartTime;
+
+    // Track query for cost optimization monitoring
+    trackQuery('global-recent-edits', pagesSnapshot.docs.length, queryTime, true);
+
+    console.log(`📊 [GLOBAL_RECENT_EDITS] Found ${pagesSnapshot.docs.length} pages from Firestore (${queryTime}ms, date-filtered)`);
 
     if (pagesSnapshot.empty) {
       return NextResponse.json({

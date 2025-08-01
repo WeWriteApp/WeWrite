@@ -26,7 +26,7 @@
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache",
-    "test": "jest",
+    "test": "jest --config=config/jest.config.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:payments": "jest app/tests/payment-system.test.ts",

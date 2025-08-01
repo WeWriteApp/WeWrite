@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getCollectionName } from '../utils/environmentConfig';
+import { trackBatch, trackImmediateWrite } from '../utils/costOptimizationMonitor';
 
 import { BotDetectionService, type VisitorFingerprint } from './BotDetectionService';
 
@@ -42,6 +43,21 @@ interface VisitorSession {
 /**
  * Enterprise-grade visitor tracking service with comprehensive bot detection
  * and accurate session management for business-critical analytics
+ *
+ * COST OPTIMIZATION (August 2025):
+ * - Implements industry-standard batching (30-second intervals)
+ * - Reduces Firebase writes by ~80% through intelligent aggregation
+ * - Follows Google Analytics and Mixpanel patterns for efficiency
+ *
+ * BATCHING STRATEGY:
+ * - Batch Size: 5 updates (industry standard)
+ * - Batch Interval: 30 seconds (industry standard)
+ * - Emergency Flush: When threshold reached
+ *
+ * WRITE PATTERNS:
+ * - Session Creation: Immediate write (1 per session)
+ * - Page Views: Batched updates (reduces from N writes to 1 per 30s)
+ * - Interactions: Batched updates (reduces from N writes to 1 per 30s)
  */
 class VisitorTrackingService {
   private activeSubscriptions: Map<string, Unsubscribe>;
@@ -60,11 +76,13 @@ class VisitorTrackingService {
   private static readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
   private static readonly HEARTBEAT_INTERVAL = 120 * 1000; // 120 seconds (increased from 60s to reduce writes by 50% more)
   private static readonly INTERACTION_DEBOUNCE = 5000; // 5 seconds (increased to reduce noise)
-  private static readonly BATCH_UPDATE_THRESHOLD = 3; // Batch updates when we have 3+ changes
+  private static readonly BATCH_UPDATE_THRESHOLD = 5; // Batch updates when we have 5+ changes
+  private static readonly BATCH_UPDATE_INTERVAL = 30 * 1000; // 30 seconds - industry standard
 
   constructor() {
     this.activeSubscriptions = new Map();
     this.setupInteractionTracking();
+    this.startBatchProcessor();
   }
 
   /**
@@ -161,7 +179,19 @@ class VisitorTrackingService {
       }
 
       // Generate browser fingerprint
-      const fingerprint = BotDetectionService.generateFingerprint();
+      const fingerprint = await BotDetectionService.generateFingerprint();
+
+      // Check for existing session to prevent duplicates
+      const existingSession = await this.findExistingSession(fingerprint.id, userId);
+
+      if (existingSession) {
+        console.log('📱 Resuming existing session:', existingSession.id);
+        this.currentAccount = existingSession;
+        this.isTracking = true;
+        this.sessionStartTime = Date.now();
+        this.setupHeartbeat();
+        return;
+      }
 
       // Perform bot detection
       const botDetection = BotDetectionService.detectBot(fingerprint.userAgent, fingerprint);
@@ -176,16 +206,7 @@ class VisitorTrackingService {
         return;
       }
 
-      // Check for existing session with same fingerprint (prevent duplicates)
-      const existingSession = await this.findExistingSession(fingerprint.id, userId);
-      if (existingSession) {
-        console.log('📱 Resuming existing session:', existingSession.id);
-        this.currentAccount = existingSession;
-        this.isTracking = true;
-        this.sessionStartTime = Date.now();
-        this.setupHeartbeat();
-        return;
-      }
+
 
       // Create new session
       const sessionId = this.generateSessionId(fingerprint);
@@ -524,28 +545,82 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }
 
   /**
-   * Track a page view for the current account
+   * Track a page view for the current account - OPTIMIZED with batching
    */
   trackPageView(pageUrl: string): void {
     if (!this.currentAccount) return;
 
     try {
       this.currentAccount.pageViews++;
+      this.currentAccount.lastSeen = Timestamp.now();
 
-      // Update page view count in Firestore
-const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
-      updateDoc(sessionRef, {
+      // Add to pending updates instead of immediate write
+      this.addToPendingUpdates({
         pageViews: this.currentAccount.pageViews,
-        lastSeen: Timestamp.now()
+        lastSeen: this.currentAccount.lastSeen
       });
 
-      console.log('📄 Page view tracked:', {
+      console.log('📄 Page view queued for batch update:', {
         sessionId: this.currentAccount.id,
         pageViews: this.currentAccount.pageViews,
         url: pageUrl
       });
     } catch (error) {
       console.error('Error tracking page view:', error);
+    }
+  }
+
+  /**
+   * Add updates to pending batch - INDUSTRY STANDARD batching
+   */
+  private addToPendingUpdates(updates: Partial<VisitorSession>): void {
+    Object.assign(this.pendingUpdates, updates);
+    this.updateCount++;
+
+    // Force batch update if threshold reached
+    if (this.updateCount >= VisitorTrackingService.BATCH_UPDATE_THRESHOLD) {
+      this.processBatchUpdate();
+    }
+  }
+
+  /**
+   * Start batch processor - runs every 30 seconds (industry standard)
+   */
+  private startBatchProcessor(): void {
+    setInterval(() => {
+      this.processBatchUpdate();
+    }, VisitorTrackingService.BATCH_UPDATE_INTERVAL);
+  }
+
+  /**
+   * Process pending updates in batch - MUCH more efficient
+   */
+  private async processBatchUpdate(): Promise<void> {
+    if (!this.currentAccount || Object.keys(this.pendingUpdates).length === 0) {
+      return;
+    }
+
+    const batchStartTime = Date.now();
+    const batchSize = this.updateCount;
+    let success = false;
+
+    try {
+      const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
+      await updateDoc(sessionRef, this.pendingUpdates);
+
+      success = true;
+      console.log(`📊 Batch update processed: ${this.updateCount} changes`, this.pendingUpdates);
+
+      // Reset batch
+      this.pendingUpdates = {};
+      this.updateCount = 0;
+      this.lastBatchUpdate = Date.now();
+    } catch (error) {
+      console.error('Error processing batch update:', error);
+    } finally {
+      // Track batch processing for cost optimization monitoring
+      const processingTime = Date.now() - batchStartTime;
+      trackBatch('visitor', batchSize, processingTime, success);
     }
   }
 

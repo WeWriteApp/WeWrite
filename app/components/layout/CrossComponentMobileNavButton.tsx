@@ -130,7 +130,7 @@ export default function CrossComponentMobileNavButton({
       onMouseEnter={handleMouseEnter}
       onTouchStart={handleTouchStart}
       className={cn(
-        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-2 relative gap-1 group",
+        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg py-2 px-1 relative gap-1 group",
         "transition-all duration-75 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
@@ -172,9 +172,8 @@ export default function CrossComponentMobileNavButton({
       {/* Text label - allow 2 lines with smaller text */}
       <span className={cn(
         "text-[10px] font-medium leading-tight transition-colors duration-75",
-        "text-center max-w-full px-1",
+        "text-center max-w-full",
         "line-clamp-2 break-words", // Allow 2 lines with word breaking
-        "h-6 flex items-center justify-center", // Fixed height for consistent layout
         isActive
           ? "text-accent-foreground"
           : [

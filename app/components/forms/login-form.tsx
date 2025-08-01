@@ -113,7 +113,7 @@ export function LoginForm() {
         >
           Forgot your password?
         </Link>
-        
+
         <div className="text-sm text-muted-foreground">
           Don't have an account?{' '}
           <Link
@@ -121,6 +121,28 @@ export function LoginForm() {
             className="text-foreground hover:underline font-medium"
           >
             Sign up
+          </Link>
+        </div>
+
+        {/* Terms and Privacy Policy Agreement */}
+        <div className="text-xs text-muted-foreground">
+          By using WeWrite you agree to our{' '}
+          <Link
+            href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/TERMS_OF_SERVICE.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link
+            href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/PRIVACY_POLICY.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Privacy Policy
           </Link>
         </div>
       </div>

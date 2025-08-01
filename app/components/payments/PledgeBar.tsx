@@ -11,12 +11,19 @@ import { cn } from "../../lib/utils";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 
 import {
+  getLoggedOutUsdBalance,
+  allocateLoggedOutUsd,
+  getLoggedOutPageAllocation,
+  // Legacy token imports for backward compatibility
   getLoggedOutTokenBalance,
   allocateLoggedOutTokens,
-  getLoggedOutPageAllocation
+  getLoggedOutPageAllocation as getLoggedOutPageAllocationTokens
 } from "../../utils/simulatedTokens";
+import { formatUsdCents, dollarsToCents, centsToDollars } from '../../utils/formatCurrency';
+import { USD_UI_TEXT } from '../../utils/usdConstants';
 import { TokenAllocationModal } from './TokenAllocationModal';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { EmbeddedCheckoutService } from '../../services/embeddedCheckoutService';
 import { TokenParticleEffect } from '../effects/TokenParticleEffect';
 import { useTokenParticleEffect } from '../../hooks/useTokenParticleEffect';
@@ -36,6 +43,14 @@ interface PledgeBarProps {
   username?: string;
 }
 
+interface UsdBalance {
+  totalUsdCents: number;
+  allocatedUsdCents: number;
+  availableUsdCents: number;
+  lastUpdated: Date;
+}
+
+// Legacy interface for backward compatibility
 interface TokenBalance {
   totalTokens: number;
   allocatedTokens: number;
@@ -86,20 +101,22 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     return segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`);
   }, [pathname]);
   const { incrementAmount } = useTokenIncrement();
+  const { usdBalance, refreshUsdBalance, updateOptimisticBalance } = useUsdBalance();
   const { triggerEffect, originElement, triggerParticleEffect, resetEffect } = useTokenParticleEffect();
   const { showDelayedBanner, triggerDelayedBanner, resetDelayedBanner, isDelayActive } = useDelayedLoginBanner();
 
-  // Function to show token allocation notification
-  const showTokenAllocationNotification = (tokenAmount: number) => {
+  // Function to show USD allocation notification
+  const showUsdAllocationNotification = (usdCents: number) => {
     const nextProcessingDate = getNextMonthlyProcessingDate();
     const formattedDate = nextProcessingDate.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric'
     });
 
+    const usdAmount = formatUsdCents(usdCents);
     const title = isUserAllocation
-      ? `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated to ${username || 'user'}!`
-      : `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`;
+      ? `${usdAmount} allocated to ${username || 'user'}!`
+      : `${usdAmount} allocated!`;
 
     toast({
       title,
@@ -154,9 +171,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Subscription feature is now always enabled
   const isSubscriptionEnabled = true;
   
-  // State
-  const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
-  const [currentTokenAllocation, setCurrentTokenAllocation] = useState(0);
+  // State - Updated to use USD
+  const [currentUsdAllocation, setCurrentUsdAllocation] = useState(0);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allocationsData, setAllocationsData] = useState<Array<{

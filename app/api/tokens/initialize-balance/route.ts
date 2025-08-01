@@ -4,10 +4,15 @@ import { db } from '../../../firebase/database/core';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getCollectionName, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { ServerUsdService } from '../../../services/usdService.server';
+import { centsToDollars, dollarsToCents } from '../../../utils/formatCurrency';
 
 /**
  * Initialize Token Balance for New Subscription
- * 
+ *
+ * DEPRECATED: This endpoint is being migrated to USD-based system
+ * Use /api/usd/initialize-balance for new implementations
+ *
  * This endpoint creates the initial token balance for a newly created subscription,
  * ensuring the user has their monthly token allocation available immediately.
  */

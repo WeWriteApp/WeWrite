@@ -167,7 +167,22 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
 
     } catch (error) {
       console.error('Error fetching global recent edits:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load recent edits');
+
+      // Handle specific Firebase quota exhaustion error
+      let errorMessage = 'Failed to load recent edits';
+      if (error instanceof Error) {
+        if (error.message.includes('Quota exceeded') || error.message.includes('RESOURCE_EXHAUSTED')) {
+          errorMessage = 'Service temporarily unavailable due to high usage. Please try again in a few minutes.';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Server error - please try again';
+        } else if (error.message.includes('permission') || error.message.includes('403')) {
+          errorMessage = 'Permission error - please refresh the page';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setError(errorMessage);
       if (!append) {
         setEdits([]);
       }

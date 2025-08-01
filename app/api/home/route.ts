@@ -167,15 +167,21 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     let pagesQuery;
 
     if (userId) {
-      // For logged-in users, get recent pages and filter deleted ones in code
-      // This avoids the composite index requirement
+      // For logged-in users, get recent pages (last 7 days) and filter deleted ones in code
+      // This avoids the composite index requirement while preventing excessive reads
+      const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+
       pagesQuery = db.collection(getCollectionName('pages'))
+        .where('lastModified', '>=', sevenDaysAgo.toISOString())
         .orderBy('lastModified', 'desc')
         .limit(limitCount * 3); // Get more to account for filtering deleted pages
     } else {
-      // For anonymous users, only public pages
+      // For anonymous users, only public pages from last 7 days
+      const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+
       pagesQuery = db.collection(getCollectionName('pages'))
         .where('isPublic', '==', true)
+        .where('lastModified', '>=', sevenDaysAgo.toISOString())
         .orderBy('lastModified', 'desc')
         .limit(limitCount * 2); // Get more to account for filtering deleted pages
     }

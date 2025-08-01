@@ -2,15 +2,13 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
-import { auth } from "../../firebase/auth";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
-import { AuthLayout } from "../../components/layout/auth-layout";
+import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 
 function CustomPasswordResetContent() {
   const [password, setPassword] = useState("");
@@ -39,21 +37,32 @@ function CustomPasswordResetContent() {
       }
 
       try {
-        // Verify the password reset code and get the user's email
-        const email = await verifyPasswordResetCode(auth, oobCode);
-        setUserEmail(email);
+        // Verify the password reset code using API endpoint
+        const response = await fetch(`/api/auth/reset-password?oobCode=${encodeURIComponent(oobCode)}`, {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to verify reset code');
+        }
+
+        const data = await response.json();
+        setUserEmail(data.email);
         setIsValidCode(true);
-        console.log("Password reset code verified for:", email);
+        console.log("Password reset code verified for:", data.email);
       } catch (error: any) {
         console.error("Error verifying password reset code:", error);
-        
+
         let errorMessage = "Invalid or expired password reset link";
-        if (error.code === 'auth/invalid-action-code') {
+        if (error.message.includes('invalid-action-code')) {
           errorMessage = "This password reset link is invalid or has already been used";
-        } else if (error.code === 'auth/expired-action-code') {
+        } else if (error.message.includes('expired-action-code')) {
           errorMessage = "This password reset link has expired. Please request a new one";
+        } else if (error.message) {
+          errorMessage = error.message;
         }
-        
+
         setError(errorMessage);
       } finally {
         setIsVerifying(false);
@@ -85,24 +94,40 @@ function CustomPasswordResetContent() {
     setError("");
 
     try {
-      // Confirm the password reset with the new password
-      await confirmPasswordReset(auth, oobCode, password);
+      // Confirm the password reset with the new password using API endpoint
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          oobCode,
+          newPassword: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reset password');
+      }
+
+      const data = await response.json();
       console.log("Password reset successful for:", userEmail);
       setSuccess(true);
     } catch (error: any) {
       console.error("Password reset error:", error);
-      
+
       let errorMessage = "Failed to reset password";
-      if (error.code === 'auth/weak-password') {
+      if (error.message.includes('weak-password')) {
         errorMessage = "Password is too weak. Please choose a stronger password";
-      } else if (error.code === 'auth/invalid-action-code') {
+      } else if (error.message.includes('invalid-action-code')) {
         errorMessage = "This password reset link is invalid or has already been used";
-      } else if (error.code === 'auth/expired-action-code') {
+      } else if (error.message.includes('expired-action-code')) {
         errorMessage = "This password reset link has expired. Please request a new one";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -112,31 +137,38 @@ function CustomPasswordResetContent() {
   // Show loading state while verifying the code
   if (isVerifying) {
     return (
-      <AuthLayout
-        title="Verifying Reset Link"
-        description="Please wait while we verify your password reset link..."
-      >
+      <ModernAuthLayout>
+        <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Verifying Reset Link</h1>
+          <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+            Please wait while we verify your password reset link...
+          </p>
+        </div>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-      </AuthLayout>
+      </ModernAuthLayout>
     );
   }
 
   // Show error if code is invalid
   if (!isValidCode) {
     return (
-      <AuthLayout
-        title="Invalid Reset Link"
-        description="This password reset link is invalid or has expired."
-      >
+      <ModernAuthLayout>
+        <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Invalid Reset Link</h1>
+          <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+            This password reset link is invalid or has expired.
+          </p>
+        </div>
+
         <div className="space-y-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          
+
           <div className="flex flex-col space-y-2">
             <Button
               onClick={() => router.push("/auth/forgot-password")}
@@ -153,17 +185,21 @@ function CustomPasswordResetContent() {
             </Button>
           </div>
         </div>
-      </AuthLayout>
+      </ModernAuthLayout>
     );
   }
 
   // Show success page
   if (success) {
     return (
-      <AuthLayout
-        title="Password Reset Successful"
-        description="Your password has been successfully reset."
-      >
+      <ModernAuthLayout>
+        <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Password Reset Successful</h1>
+          <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+            Your password has been successfully reset.
+          </p>
+        </div>
+
         <div className="space-y-4">
           <Alert className="bg-green-500/20 text-green-600 dark:text-green-200">
             <CheckCircle className="h-4 w-4" />
@@ -172,7 +208,7 @@ function CustomPasswordResetContent() {
               Your password has been successfully reset. You can now sign in with your new password.
             </AlertDescription>
           </Alert>
-          
+
           <Button
             onClick={() => router.push("/auth/login")}
             className="w-full"
@@ -180,16 +216,20 @@ function CustomPasswordResetContent() {
             Sign In Now
           </Button>
         </div>
-      </AuthLayout>
+      </ModernAuthLayout>
     );
   }
 
   // Show password reset form
   return (
-    <AuthLayout
-      title="Reset Your Password"
-      description={`Enter a new password for ${userEmail}`}
-    >
+    <ModernAuthLayout>
+      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Reset Your Password</h1>
+        <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+          Enter a new password for {userEmail}
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="password">New Password</Label>
@@ -278,21 +318,24 @@ function CustomPasswordResetContent() {
           </Button>
         </div>
       </form>
-    </AuthLayout>
+    </ModernAuthLayout>
   );
 }
 
 export default function CustomPasswordResetPage() {
   return (
     <Suspense fallback={
-      <AuthLayout
-        title="Reset Password"
-        description="Loading..."
-      >
+      <ModernAuthLayout>
+        <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Reset Password</h1>
+          <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+            Loading...
+          </p>
+        </div>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
         </div>
-      </AuthLayout>
+      </ModernAuthLayout>
     }>
       <CustomPasswordResetContent />
     </Suspense>

@@ -6,21 +6,33 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 const ALL_NAVIGATION_ITEMS = [
   'home',
   'search',
+  'new',
   'notifications',
-  'profile',
   'random-pages',
   'trending-pages',
-  'recents',
   'following',
+  'recents',
   'settings',
-  'admin'
+  'admin',
+  'profile'
 ];
 
 // Default mobile toolbar - exactly 4 items (More button is separate)
 const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications', 'profile'];
 
-// Default sidebar order - all remaining items not in mobile
-const DEFAULT_SIDEBAR_ORDER = ALL_NAVIGATION_ITEMS.filter(item => !DEFAULT_MOBILE_ORDER.includes(item));
+// Default sidebar order - specific order as requested: home, search, new, notifications, random, trending, following, recents, settings, admin
+const DEFAULT_SIDEBAR_ORDER = [
+  'home',
+  'search',
+  'new',
+  'notifications',
+  'random-pages',
+  'trending-pages',
+  'following',
+  'recents',
+  'settings',
+  'admin'
+].filter(item => !DEFAULT_MOBILE_ORDER.includes(item));
 
 interface NavigationOrderContextType {
   // Mobile toolbar order
@@ -120,14 +132,8 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
         try {
           const parsed = JSON.parse(savedSidebarOrder);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Migration: Remove 'new' item if it exists (now handled by floating action button)
-            const migratedSidebar = parsed.filter(item => item !== 'new');
-            setSidebarOrder(migratedSidebar);
-
-            // Save the migrated order back to localStorage if we removed 'new'
-            if (parsed.includes('new')) {
-              localStorage.setItem('wewrite-sidebar-nav-order', JSON.stringify(migratedSidebar));
-            }
+            // Keep 'new' item in sidebar since we want it on desktop
+            setSidebarOrder(parsed);
           }
         } catch (error) {
           console.warn('Failed to parse saved sidebar nav order:', error);

@@ -1,9 +1,27 @@
 /**
  * Simulated Token Allocation Utilities
- * 
+ *
+ * DEPRECATED: This system is being migrated to USD-based allocations
+ * Use simulatedUsd.ts for new implementations
+ *
  * Manages simulated token allocations for logged-out users and logged-in users
  * without active subscriptions. Uses localStorage for persistence.
  */
+
+import {
+  getLoggedOutUsdBalance,
+  getUserUsdBalance,
+  allocateLoggedOutUsd,
+  allocateUserUsd,
+  getLoggedOutPageAllocation,
+  getUserPageAllocation,
+  clearLoggedOutUsd,
+  clearUserUsd,
+  convertSimulatedToRealUsd,
+  type SimulatedUsdBalance,
+  type SimulatedUsdAllocation
+} from './simulatedUsd';
+import { centsToDollars, dollarsToCents, migrateTokensToUsdCents } from './formatCurrency';
 
 export interface SimulatedTokenAllocation {
   pageId: string;
@@ -365,4 +383,170 @@ export const transferLoggedOutAllocationsToUser = (userId: string): { success: b
     console.warn('Error transferring logged-out allocations:', error);
     return { success: false, transferredCount: 0 };
   }
+};
+
+// MIGRATION HELPERS - Bridge methods to USD system
+
+/**
+ * Get logged-out token balance by converting from USD
+ * @deprecated Use getLoggedOutUsdBalance directly
+ */
+export const getLoggedOutTokenBalanceFromUsd = (): SimulatedTokenBalance => {
+  const usdBalance = getLoggedOutUsdBalance();
+
+  // Convert USD cents to token equivalents
+  const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+  const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+  const availableTokens = Math.floor(centsToDollars(usdBalance.availableUsdCents) * 10);
+
+  const tokenAllocations: SimulatedTokenAllocation[] = usdBalance.allocations.map(allocation => ({
+    pageId: allocation.pageId,
+    pageTitle: allocation.pageTitle,
+    tokens: Math.floor(centsToDollars(allocation.usdCents) * 10),
+    timestamp: allocation.timestamp
+  }));
+
+  return {
+    totalTokens,
+    allocatedTokens,
+    availableTokens,
+    allocations: tokenAllocations,
+    lastUpdated: usdBalance.lastUpdated
+  };
+};
+
+/**
+ * Get user token balance by converting from USD
+ * @deprecated Use getUserUsdBalance directly
+ */
+export const getUserTokenBalanceFromUsd = (userId: string): SimulatedTokenBalance => {
+  const usdBalance = getUserUsdBalance(userId);
+
+  // Convert USD cents to token equivalents
+  const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+  const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+  const availableTokens = Math.floor(centsToDollars(usdBalance.availableUsdCents) * 10);
+
+  const tokenAllocations: SimulatedTokenAllocation[] = usdBalance.allocations.map(allocation => ({
+    pageId: allocation.pageId,
+    pageTitle: allocation.pageTitle,
+    tokens: Math.floor(centsToDollars(allocation.usdCents) * 10),
+    timestamp: allocation.timestamp
+  }));
+
+  return {
+    totalTokens,
+    allocatedTokens,
+    availableTokens,
+    allocations: tokenAllocations,
+    lastUpdated: usdBalance.lastUpdated
+  };
+};
+
+/**
+ * Allocate tokens by converting to USD and using USD system
+ * @deprecated Use allocateLoggedOutUsd directly
+ */
+export const allocateLoggedOutTokensViaUsd = (
+  pageId: string,
+  pageTitle: string,
+  tokens: number
+): { success: boolean; balance: SimulatedTokenBalance; error?: string } => {
+  // Convert tokens to USD cents
+  const usdCents = Math.floor(tokens / 10 * 100);
+
+  const result = allocateLoggedOutUsd(pageId, pageTitle, usdCents);
+
+  if (!result.success) {
+    return {
+      success: false,
+      balance: getLoggedOutTokenBalanceFromUsd(),
+      error: result.error
+    };
+  }
+
+  return {
+    success: true,
+    balance: getLoggedOutTokenBalanceFromUsd()
+  };
+};
+
+/**
+ * Allocate user tokens by converting to USD and using USD system
+ * @deprecated Use allocateUserUsd directly
+ */
+export const allocateUserTokensViaUsd = (
+  userId: string,
+  pageId: string,
+  pageTitle: string,
+  tokens: number
+): { success: boolean; balance: SimulatedTokenBalance; error?: string } => {
+  // Convert tokens to USD cents
+  const usdCents = Math.floor(tokens / 10 * 100);
+
+  const result = allocateUserUsd(userId, pageId, pageTitle, usdCents);
+
+  if (!result.success) {
+    return {
+      success: false,
+      balance: getUserTokenBalanceFromUsd(userId),
+      error: result.error
+    };
+  }
+
+  return {
+    success: true,
+    balance: getUserTokenBalanceFromUsd(userId)
+  };
+};
+
+/**
+ * Get current page allocation by converting from USD
+ * @deprecated Use getLoggedOutPageAllocation directly
+ */
+export const getLoggedOutPageAllocationFromUsd = (pageId: string): number => {
+  const usdCents = getLoggedOutPageAllocation(pageId);
+  return Math.floor(centsToDollars(usdCents) * 10);
+};
+
+/**
+ * Get current user page allocation by converting from USD
+ * @deprecated Use getUserPageAllocation directly
+ */
+export const getUserPageAllocationFromUsd = (userId: string, pageId: string): number => {
+  const usdCents = getUserPageAllocation(userId, pageId);
+  return Math.floor(centsToDollars(usdCents) * 10);
+};
+
+/**
+ * Clear logged-out tokens by clearing USD data
+ * @deprecated Use clearLoggedOutUsd directly
+ */
+export const clearLoggedOutTokensViaUsd = (): void => {
+  clearLoggedOutUsd();
+};
+
+/**
+ * Clear user tokens by clearing USD data
+ * @deprecated Use clearUserUsd directly
+ */
+export const clearUserTokensViaUsd = (userId: string): void => {
+  clearUserUsd(userId);
+};
+
+/**
+ * Convert simulated tokens to real allocations via USD system
+ * @deprecated Use convertSimulatedToRealUsd directly
+ */
+export const convertSimulatedToRealTokensViaUsd = async (
+  userId: string,
+  allocateTokensFunction: (pageId: string, tokens: number) => Promise<boolean>
+): Promise<{ success: boolean; convertedCount: number; errors: string[] }> => {
+  // Create a wrapper function that converts tokens to USD cents
+  const allocateUsdFunction = async (pageId: string, usdCents: number): Promise<boolean> => {
+    const tokens = Math.floor(centsToDollars(usdCents) * 10);
+    return allocateTokensFunction(pageId, tokens);
+  };
+
+  return convertSimulatedToRealUsd(userId, allocateUsdFunction);
 };

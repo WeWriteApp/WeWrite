@@ -155,12 +155,21 @@ export function fixFirebaseCSPViolations(): void {
   useEffect(() => {
     // Listen for CSP violations
     const handleCSPViolation = (event: SecurityPolicyViolationEvent) => {
-      if (event.violatedDirective === 'connect-src' && 
-          event.blockedURI?.includes('firebaseio.com')) {
-        console.warn('Firebase CSP violation detected:', event.blockedURI);
-        
-        // Log this for debugging
-        console.warn('This may cause Firebase Realtime Database connection issues');
+      // SECURITY FIX: Parse URL properly instead of substring check
+      if (event.violatedDirective === 'connect-src' && event.blockedURI) {
+        try {
+          const url = new URL(event.blockedURI);
+          // Check if hostname ends with firebaseio.com (proper domain validation)
+          if (url.hostname.endsWith('.firebaseio.com') || url.hostname === 'firebaseio.com') {
+            console.warn('Firebase CSP violation detected:', event.blockedURI);
+
+            // Log this for debugging
+            console.warn('This may cause Firebase Realtime Database connection issues');
+          }
+        } catch (error) {
+          // If URL parsing fails, log the error but don't process as Firebase URL
+          console.debug('Could not parse blocked URI:', event.blockedURI);
+        }
       }
     };
     

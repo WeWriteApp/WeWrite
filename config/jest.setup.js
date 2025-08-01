@@ -11,7 +11,7 @@ process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_mock_webhook_secret';
 process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_mock_key_for_testing';
 
 // Mock Firebase Admin
-jest.mock('./app/firebase/admin', () => ({
+jest.mock('../app/firebase/admin', () => ({
   initAdmin: jest.fn(() => ({
     firestore: jest.fn(() => ({
       collection: jest.fn(() => ({
@@ -51,7 +51,7 @@ jest.mock('./app/firebase/admin', () => ({
 }));
 
 // Mock Firebase Client
-jest.mock('./app/firebase/config', () => ({
+jest.mock('../app/firebase/config', () => ({
   db: {
     collection: jest.fn(() => ({
       doc: jest.fn(() => ({
@@ -83,7 +83,7 @@ jest.mock('./app/firebase/config', () => ({
 }));
 
 // Mock Stripe configuration
-jest.mock('./app/utils/stripeConfig', () => ({
+jest.mock('../app/utils/stripeConfig', () => ({
   getStripeSecretKey: jest.fn(() => 'sk_test_mock_key_for_testing'),
   getStripeWebhookSecret: jest.fn(() => 'whsec_test_mock_webhook_secret'),
 }));

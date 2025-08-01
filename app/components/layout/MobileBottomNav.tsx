@@ -287,10 +287,6 @@ export default function MobileBottomNav() {
   // Enhanced button click handlers with immediate feedback
   const handleMoreClick = () => {
     setIsExpanded(!isExpanded); // Toggle expanded state
-    // Clear any pressed button states when opening more menu
-    if (!isExpanded) {
-      setPressedButtons(new Set());
-    }
   };
 
   const handleHomeClick = () => {
@@ -334,9 +330,9 @@ export default function MobileBottomNav() {
   };
 
   // Determine active states for navigation buttons
-  const isHomeActive = pathname === '/';
-  const isProfileActive = pathname === `/user/${user?.uid}`;
-  const isNotificationsActive = pathname === '/notifications';
+  const isHomeActive = pathname === '/' && !isExpanded;
+  const isProfileActive = pathname === `/user/${user?.uid}` && !isExpanded;
+  const isNotificationsActive = pathname === '/notifications' && !isExpanded;
   const isMoreActive = isExpanded;
 
   // Hide mobile nav on editor pages
@@ -404,7 +400,7 @@ export default function MobileBottomNav() {
         router.push('/search');
       },
       onHover: () => handleButtonHover('/search'),
-      isActive: pathname === '/search',
+      isActive: pathname === '/search' && !isExpanded,
       ariaLabel: 'Search',
       label: 'Search',
     },
@@ -554,7 +550,7 @@ export default function MobileBottomNav() {
         onMouseEnter={onHover}
         onTouchStart={onHover} // Preload on touch start for mobile
         className={cn(
-          "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-2 relative gap-1 group",
+          "flex flex-col items-center justify-center h-16 flex-1 rounded-lg py-2 px-1 relative gap-1 group",
           "transition-all duration-75 ease-out", // Faster transitions for responsiveness
           "flex-shrink-0 min-w-0",
           // Enhanced touch feedback
@@ -588,9 +584,8 @@ export default function MobileBottomNav() {
         {/* Text label - allow 2 lines with smaller text */}
         <span className={cn(
           "text-[10px] font-medium leading-tight transition-colors duration-75",
-          "text-center max-w-full px-1",
+          "text-center max-w-full",
           "line-clamp-2 break-words", // Allow 2 lines with word breaking
-          "h-6 flex items-center justify-center", // Fixed height for consistent layout
           isActive
             ? "text-accent-foreground"
             : [
@@ -674,9 +669,6 @@ export default function MobileBottomNav() {
                     <div className="flex flex-col">
                       <div className="text-sm font-medium text-foreground truncate">
                         {user.username || 'User'}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {user.email || 'No email'}
                       </div>
                     </div>
                     <Button
@@ -763,7 +755,7 @@ export default function MobileBottomNav() {
         </div>
 
         {/* Bottom toolbar - always present with consistent padding */}
-        <div className="flex items-center justify-around px-2 py-4 gap-1">
+        <div className="flex items-center justify-around px-2 py-3 gap-1">
           {/* More Button - Fixed position, not draggable */}
           <NavButton
             id="more"

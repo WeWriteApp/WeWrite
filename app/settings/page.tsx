@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   ShoppingCart,
   Coins,
-  Palette
+  Palette,
+  Wallet
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 
@@ -23,7 +24,9 @@ import { WarningDot } from '../components/ui/warning-dot';
 import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
 import { useTokenBalance } from '../hooks/useTokenBalance';
+import { useUsdBalance } from '../contexts/UsdBalanceContext';
 import { TokenPieChart } from '../components/ui/TokenPieChart';
+import { UsdPieChart } from '../components/ui/UsdPieChart';
 
 
 interface SettingsSection {
@@ -41,17 +44,33 @@ export default function SettingsIndexPage() {
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
-  // Get bank setup status and token balance
+  // Get bank setup status and balances
   const bankSetupStatus = useBankSetupStatus();
   const tokenBalance = useTokenBalance();
+  const { usdBalance } = useUsdBalance();
 
   // All features are now always enabled
   const tokenSystemEnabled = true;
 
   const settingsSections: SettingsSection[] = [
     {
+      id: 'fund-account',
+      title: 'Fund Account',
+      icon: Wallet,
+      href: '/settings/fund-account',
+      requiresPayments: true
+    },
+    {
+      id: 'spend',
+      title: 'Manage Spending',
+      icon: Coins,
+      href: '/settings/spend',
+      requiresPayments: true
+    },
+    // Legacy token pages (deprecated but kept for backward compatibility)
+    {
       id: 'buy-tokens',
-      title: 'Buy Tokens',
+      title: 'Buy Tokens (Legacy)',
       icon: ShoppingCart,
       href: '/settings/buy-tokens',
       requiresPayments: true,
@@ -59,7 +78,7 @@ export default function SettingsIndexPage() {
     },
     {
       id: 'spend-tokens',
-      title: 'Spend Tokens',
+      title: 'Spend Tokens (Legacy)',
       icon: Coins,
       href: '/settings/spend-tokens',
       requiresPayments: true,
@@ -193,10 +212,10 @@ export default function SettingsIndexPage() {
           {availableSections.map((section) => {
             const IconComponent = section.icon;
 
-            // Show warning for subscription-related sections if there are subscription issues
+            // Show warning for funding-related sections if there are subscription issues
             // But don't show warning dots when we have status icons or when loading
             // Only show warnings for truly problematic states, not for active subscriptions
-            const showWarning = section.id === 'buy-tokens' &&
+            const showWarning = (section.id === 'fund-account' || section.id === 'buy-tokens') &&
               shouldShowSubscriptionWarning &&
               hasActiveSubscription !== null && // Don't show while loading
               hasActiveSubscription === false; // Only show when explicitly false (not active)
@@ -215,7 +234,7 @@ export default function SettingsIndexPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Status icons for specific sections - show success and warnings */}
-                    {section.id === 'buy-tokens' && hasActiveSubscription !== null && (
+                    {(section.id === 'fund-account' || section.id === 'buy-tokens') && hasActiveSubscription !== null && (
                       hasActiveSubscription === true ? (
                         <StatusIcon status="success" size="sm" position="static" />
                       ) : (
@@ -229,6 +248,16 @@ export default function SettingsIndexPage() {
                       ) : (
                         <StatusIcon status="warning" size="sm" position="static" />
                       )
+                    )}
+
+                    {section.id === 'spend' && usdBalance && (
+                      <UsdPieChart
+                        allocations={[]} // Would need to fetch allocations for this
+                        totalUsdCents={usdBalance.totalUsdCents}
+                        size={20}
+                        strokeWidth={2}
+                        showLabels={false}
+                      />
                     )}
 
                     {section.id === 'spend-tokens' && tokenBalance && (

@@ -12,7 +12,9 @@ import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { ServerTokenService } from '../../../services/tokenService.server';
+import { ServerUsdService } from '../../../services/usdService.server';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
 // Removed SubscriptionSynchronizationService - using simplified approach
@@ -354,9 +356,15 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       }
     }
 
-    // Ensure token allocation is up to date
+    // Ensure USD allocation is up to date (primary system)
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
+
+    console.log(`[PAYMENT SUCCEEDED] Updating USD allocation for user ${userId}: $${amount}`);
+    await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
+
+    // Also maintain backward compatibility with token system during migration
+    console.log(`[PAYMENT SUCCEEDED] Maintaining token system compatibility for user ${userId}`);
     await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance

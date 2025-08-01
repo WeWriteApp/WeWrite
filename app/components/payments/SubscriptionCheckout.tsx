@@ -7,6 +7,8 @@ import { useTheme } from '../../providers/ThemeProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
 import { SUBSCRIPTION_TIERS, getTierById, calculateTokensForAmount } from '../../utils/subscriptionTiers';
+import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier, dollarsToCents } from '../../utils/usdConstants';
+import { formatUsdCents, USD_UI_TEXT } from '../../utils/formatCurrency';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -36,18 +38,23 @@ export interface SubscriptionCheckoutProps {
 export interface SelectedPlan {
   tier: string;
   amount: number;
-  tokens: number;
+  usdCents: number;
   name: string;
   isCustom: boolean;
+  // Legacy token support for backward compatibility
+  tokens?: number;
 }
 
 /**
  * SubscriptionCheckout - PWA-compatible embedded subscription checkout
- * 
+ *
+ * Updated to use USD-based account funding instead of token subscriptions
+ *
  * Features:
  * - Multi-step checkout flow with progress indication
  * - Embedded Stripe payment elements (no external redirects)
  * - Real-time pricing calculations with tax support
+ * - USD-based account funding with direct creator payments
  * - PWA-optimized with proper error handling
  * - Integration with existing token system
  */
@@ -88,12 +95,15 @@ export function SubscriptionCheckout({
     if (initialTier && !selectedPlan && user?.uid) {
       const tier = getTierById(initialTier);
       if (tier) {
-        const plan = {
+        const amount = initialAmount || tier.amount;
+        const plan: SelectedPlan = {
           tier: tier.id,
-          amount: initialAmount || tier.amount,
-          tokens: calculateTokensForAmount(initialAmount || tier.amount),
+          amount,
+          usdCents: dollarsToCents(amount),
           name: tier.name,
-          isCustom: initialTier === 'custom' || !!initialAmount
+          isCustom: initialTier === 'custom' || !!initialAmount,
+          // Legacy token support for backward compatibility
+          tokens: calculateTokensForAmount(amount)
         };
 
         // Auto-select the plan and advance to payment step

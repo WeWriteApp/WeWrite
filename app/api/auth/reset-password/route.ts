@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface ResetPasswordRequest {
   email: string;
@@ -102,15 +103,34 @@ export async function PUT(request: NextRequest) {
     }
 
     try {
-      // Verify the password reset code and get the email
-      const email = await auth.verifyPasswordResetCode(oobCode);
-      
-      // Confirm the password reset
-      await auth.confirmPasswordReset(oobCode, newPassword);
-      
-      // Get user record
+      // Confirm the password reset using Firebase REST API
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      if (!apiKey) {
+        throw new Error('Firebase API key not configured');
+      }
+
+      const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          oobCode,
+          newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to reset password');
+      }
+
+      const data = await response.json();
+      const email = data.email;
+
+      // Get user record using Admin SDK
       const userRecord = await auth.getUserByEmail(email);
-      
+
       // Update last password change time in Firestore
       await db.collection(getCollectionName('users')).doc(userRecord.uid).update({
         lastPasswordChange: new Date().toISOString(),
@@ -125,17 +145,17 @@ export async function PUT(request: NextRequest) {
 
     } catch (resetError: any) {
       console.error('Password reset confirmation failed:', resetError);
-      
-      if (resetError.code === 'auth/invalid-action-code') {
+
+      if (resetError.message?.includes('INVALID_OOB_CODE')) {
         return createErrorResponse('BAD_REQUEST', 'Invalid or expired reset code');
-      } else if (resetError.code === 'auth/expired-action-code') {
+      } else if (resetError.message?.includes('EXPIRED_OOB_CODE')) {
         return createErrorResponse('BAD_REQUEST', 'Reset code has expired');
-      } else if (resetError.code === 'auth/weak-password') {
+      } else if (resetError.message?.includes('WEAK_PASSWORD')) {
         return createErrorResponse('BAD_REQUEST', 'Password is too weak');
-      } else if (resetError.code === 'auth/user-not-found') {
+      } else if (resetError.message?.includes('USER_NOT_FOUND')) {
         return createErrorResponse('BAD_REQUEST', 'No account found for this reset code');
       }
-      
+
       return createErrorResponse('INTERNAL_ERROR', 'Password reset failed');
     }
 
@@ -159,43 +179,57 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // Verify the password reset code and get the email
-      const email = await auth.verifyPasswordResetCode(oobCode);
-      
+      // Verify the password reset code using Firebase REST API
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      if (!apiKey) {
+        throw new Error('Firebase API key not configured');
+      }
+
+      const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          oobCode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to verify reset code');
+      }
+
+      const data = await response.json();
+
       return createApiResponse({
         valid: true,
-        email,
+        email: data.email,
         message: 'Reset code is valid'
       });
 
     } catch (verifyError: any) {
       console.error('Reset code verification failed:', verifyError);
-      
-      if (verifyError.code === 'auth/invalid-action-code') {
-        return createApiResponse({
-          valid: false,
-          error: 'Invalid reset code',
-          message: 'The reset code is invalid or malformed'
-        });
-      } else if (verifyError.code === 'auth/expired-action-code') {
+
+      if (verifyError.message?.includes('EXPIRED_OOB_CODE')) {
         return createApiResponse({
           valid: false,
           error: 'Expired reset code',
           message: 'The reset code has expired'
         });
-      } else if (verifyError.code === 'auth/user-not-found') {
+      } else if (verifyError.message?.includes('INVALID_OOB_CODE')) {
         return createApiResponse({
           valid: false,
-          error: 'User not found',
-          message: 'No account found for this reset code'
+          error: 'Invalid reset code',
+          message: 'The reset code is invalid or malformed'
+        });
+      } else {
+        return createApiResponse({
+          valid: false,
+          error: 'Verification failed',
+          message: 'Failed to verify reset code'
         });
       }
-      
-      return createApiResponse({
-        valid: false,
-        error: 'Verification failed',
-        message: 'Failed to verify reset code'
-      });
     }
 
   } catch (error: any) {

@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, X, MapPin } from 'lucide-react';
+import { ArrowLeft, Check, Trash2, MapPin } from 'lucide-react';
 import { Button } from '../ui/button';
 import MapPicker from './MapPicker';
+import { ConfirmationModal } from '../utils/ConfirmationModal';
 
 interface Location {
   lat: number;
@@ -30,6 +31,7 @@ export default function LocationPickerPage({
   const router = useRouter();
   const [currentLocation, setCurrentLocation] = useState<Location | null>(initialLocation || null);
   const [savedZoom, setSavedZoom] = useState<number>(15);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   // Set initial zoom based on whether we have a location
   useEffect(() => {
@@ -60,8 +62,14 @@ export default function LocationPickerPage({
     onSave(locationWithZoom);
   };
 
-  const handleClear = () => {
+  const handleDeleteClick = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    console.log('🗺️ LocationPickerPage: handleDeleteConfirm called - deleting location');
     setCurrentLocation(null);
+    setShowDeleteConfirmation(false);
     onSave(null);
   };
 
@@ -128,11 +136,11 @@ export default function LocationPickerPage({
                 {currentLocation && (
                   <Button
                     variant="outline"
-                    onClick={handleClear}
+                    onClick={handleDeleteClick}
                     className="flex-1 hover:bg-muted border-border text-destructive hover:text-destructive"
                   >
-                    <X className="h-4 w-4 mr-1" />
-                    Clear
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
                   </Button>
                 )}
 
@@ -149,6 +157,19 @@ export default function LocationPickerPage({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Location"
+        message="Are you sure you want to delete this location? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        icon="delete"
+      />
     </div>
   );
 }

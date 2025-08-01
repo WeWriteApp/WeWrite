@@ -65,6 +65,13 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
   const debounceTimeoutRef = useRef(null);
   const lastSearchValue = useRef('');
 
+  // Update input value when initialValue changes (for recent search selection)
+  useEffect(() => {
+    if (initialValue !== undefined && initialValue !== inputValue) {
+      setInputValue(initialValue);
+    }
+  }, [initialValue]);
+
   // Auto-focus effect
   useEffect(() => {
     if (autoFocus && searchInputRef.current) {
@@ -270,6 +277,12 @@ const SearchPage = React.memo(() => {
     window.history.replaceState({}, '', url);
   }, [performSearch, userId]);
 
+  // Handle recent search selection - this will update the input and perform search
+  const handleRecentSearchSelect = useCallback((searchTerm) => {
+    // This will trigger both the input update and the search
+    handleSearch(searchTerm);
+  }, [handleSearch]);
+
   // Stable clear function
   const handleClear = useCallback(() => {
     clearSearch();
@@ -405,7 +418,7 @@ const SearchPage = React.memo(() => {
 
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput
-        initialValue={initialQuery}
+        initialValue={currentQuery || initialQuery}
         onSearch={handleSearch}
         onClear={handleClear}
         onSave={handleSave}
@@ -417,7 +430,7 @@ const SearchPage = React.memo(() => {
       {/* Recent Searches - only show when no active search */}
       {!currentQuery && (
         <RecentSearches
-          onSelect={handleSearch}
+          onSelect={handleRecentSearchSelect}
           userId={userId}
         />
       )}

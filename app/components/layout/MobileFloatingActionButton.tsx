@@ -155,8 +155,8 @@ export default function MobileFloatingActionButton() {
         "md:hidden" // Only show on mobile
       )}
       style={{
-        // Dynamic bottom positioning based on mobile toolbar visibility
-        bottom: isMobileNavVisible ? '96px' : '24px', // 96px when toolbar visible, 24px when hidden
+        // Dynamic bottom positioning based on mobile toolbar visibility - moved up a bit
+        bottom: isMobileNavVisible ? '104px' : '32px', // 104px when toolbar visible, 32px when hidden
         transition: 'bottom 300ms ease-in-out'
       }}
       aria-label="Create new page"

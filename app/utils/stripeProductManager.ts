@@ -1,13 +1,13 @@
 /**
  * Stripe Product and Price Management Utility
- * 
+ *
  * This module provides centralized management of Stripe products and prices
- * for the WeWrite subscription system. It implements the recommended architecture
- * of using a single product with multiple prices for different tiers.
- * 
+ * for the WeWrite subscription system. Updated to use USD-based credits
+ * instead of token-based subscriptions.
+ *
  * Architecture:
- * - Single "WeWrite Subscription" product
- * - Multiple price objects for different tiers
+ * - Single "WeWrite Account Funding" product
+ * - Multiple price objects for different funding tiers
  * - Reuse existing prices when possible
  * - Create new prices only for custom amounts
  */
@@ -15,24 +15,40 @@
 import Stripe from 'stripe';
 import { getStripeSecretKey } from './stripeConfig';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from './subscriptionTiers';
+import { USD_SUBSCRIPTION_TIERS, dollarsToCents } from './usdConstants';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2025-06-30.basil'});
 
-// WeWrite main product configuration
+// WeWrite main product configuration (updated for USD system)
 export const WEWRITE_PRODUCT_CONFIG = {
+  name: 'WeWrite Account Funding',
+  description: 'Monthly funding to support WeWrite creators with direct USD payments',
+  metadata: {
+    platform: 'wewrite',
+    type: 'subscription',
+    currency: 'usd',
+    system: 'usd_based'
+  }
+} as const;
+
+// Legacy product configuration for backward compatibility
+export const LEGACY_WEWRITE_PRODUCT_CONFIG = {
   name: 'WeWrite Subscription',
   description: 'Monthly subscription to support WeWrite creators with tokens',
   metadata: {
     platform: 'wewrite',
-    type: 'subscription'}} as const;
+    type: 'subscription',
+    system: 'token_based'
+  }
+} as const;
 
 // Cache for product and price IDs
 let cachedProductId: string | null = null;
 const cachedPriceIds = new Map<string, string>();
 
 /**
- * Get or create the main WeWrite subscription product
+ * Get or create the main WeWrite USD-based product
  */
 export async function getOrCreateWeWriteProduct(): Promise<string> {
   if (cachedProductId) {
@@ -40,25 +56,40 @@ export async function getOrCreateWeWriteProduct(): Promise<string> {
   }
 
   try {
-    // Search for existing WeWrite subscription product
+    // Search for existing WeWrite USD-based product
     const products = await stripe.products.list({
       limit: 100,
-      active: true});
+      active: true
+    });
 
     const existingProduct = products.data.find(
-      product => product.name === WEWRITE_PRODUCT_CONFIG.name
+      product => product.name === WEWRITE_PRODUCT_CONFIG.name ||
+                 product.metadata?.system === 'usd_based'
     );
 
     if (existingProduct) {
-      cachedProductId = existingProduct.id;
       console.log(`Found existing WeWrite product: ${existingProduct.id}`);
+
+      // Update product description if it's still using token-based language
+      if (existingProduct.description?.includes('tokens') &&
+          !existingProduct.description?.includes('USD')) {
+        console.log('Updating product description to USD-based language...');
+        await stripe.products.update(existingProduct.id, {
+          name: WEWRITE_PRODUCT_CONFIG.name,
+          description: WEWRITE_PRODUCT_CONFIG.description,
+          metadata: WEWRITE_PRODUCT_CONFIG.metadata
+        });
+      }
+
+      cachedProductId = existingProduct.id;
       return existingProduct.id;
     }
 
-    // Create new product if none exists
+    // Create new USD-based product if none exists
+    console.log('Creating new WeWrite USD-based product...');
     const newProduct = await stripe.products.create(WEWRITE_PRODUCT_CONFIG);
     cachedProductId = newProduct.id;
-    console.log(`Created new WeWrite product: ${newProduct.id}`);
+    console.log(`Created new WeWrite USD product: ${newProduct.id}`);
     return newProduct.id;
 
   } catch (error) {
@@ -126,7 +157,7 @@ export async function getOrCreatePriceForTier(
 }
 
 /**
- * Create a new price for the WeWrite subscription product
+ * Create a new price for the WeWrite USD-based product
  */
 async function createNewPrice(
   amount: number,
@@ -136,15 +167,21 @@ async function createNewPrice(
 ): Promise<string> {
   try {
     const productId = await getOrCreateWeWriteProduct();
-    
+
     const price = await stripe.prices.create({
       product: productId,
       unit_amount: Math.round(amount * 100), // Convert to cents
       currency: 'usd',
       recurring: {
-        interval: 'month'},
+        interval: 'month'
+      },
       metadata: {
         tier: tierId,
+        usdAmount: amount.toString(),
+        usdCents: dollarsToCents(amount).toString(),
+        tierName: tierName,
+        system: 'usd_based',
+        // Legacy token metadata for backward compatibility
         tokens: tokens.toString(),
         amount: amount.toString(),
         tierName}});

@@ -262,12 +262,12 @@ function UnifiedSidebarContent({
   const navigationItemsConfig = {
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
-    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
-    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
-    'following': { icon: Heart, label: 'Following', href: '/following' },
     'new': { icon: Plus, label: 'New Page', href: '/new' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
+    'following': { icon: Heart, label: 'Following', href: '/following' },
+    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
@@ -543,9 +543,6 @@ function UnifiedSidebarContent({
                 <div className="mb-3 px-3 py-2">
                   <div className="text-sm font-medium text-foreground truncate">
                     {sanitizeUsername(user.username, 'Loading...', 'User')}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {user.emailVerified ? 'Email verified' : 'Email not verified'}
                   </div>
                 </div>
               )}

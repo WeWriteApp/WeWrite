@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    console.log(`🎯 [PLEDGE_BAR_DATA] Response for pageId=${pageId}, userId=${userId}:`, {
+    // SECURITY FIX: Use %s format specifiers to prevent format string injection
+    console.log('🎯 [PLEDGE_BAR_DATA] Response for pageId=%s, userId=%s:', pageId, userId, {
       totalTokens,
       allocatedTokens,
       availableTokens,

@@ -12,6 +12,8 @@ import { StatusIcon } from '../ui/status-icon';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { getSubscriptionStatusInfo, getSubscriptionGuidanceMessage, getSubscriptionActionText, getCancellationTooltip } from '../../utils/subscriptionStatus';
+import { formatUsdCents, dollarsToCents } from '../../utils/formatCurrency';
+import { USD_UI_TEXT } from '../../utils/usdConstants';
 
 interface Subscription {
   id: string;
@@ -135,9 +137,9 @@ export function SubscriptionOverview() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Subscription
+            Account Funding
           </CardTitle>
-          <CardDescription>Your subscription overview</CardDescription>
+          <CardDescription>Your account funding overview</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center py-8">
@@ -153,9 +155,9 @@ export function SubscriptionOverview() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          Subscription
+          Account Funding
         </CardTitle>
-        <CardDescription>Your subscription overview and management</CardDescription>
+        <CardDescription>Your account funding overview and management</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
@@ -169,13 +171,13 @@ export function SubscriptionOverview() {
         {!subscription ? (
           <div className="text-center py-6">
             <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No active subscription</h3>
+            <h3 className="text-lg font-medium mb-2">No active funding</h3>
             <p className="text-muted-foreground mb-4">
-              Start a subscription to support pages and access premium features.
+              {USD_UI_TEXT.NO_BALANCE_MESSAGE}
             </p>
-            <Button asChild>
-              <Link href="/settings/subscription">
-                Start Subscription
+            <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+              <Link href="/settings/fund-account">
+                {USD_UI_TEXT.FUND_ACCOUNT}
               </Link>
             </Button>
           </div>
@@ -185,10 +187,10 @@ export function SubscriptionOverview() {
             <div className="flex items-center justify-between p-4 border-theme-strong rounded-lg">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium">Monthly Token Purchase</h4>
+                  <h4 className="font-medium">Monthly Account Funding</h4>
                   {getStatusBadge(subscription)}
                 </div>
-                <p className="text-2xl font-bold">{formatCurrency(subscription.amount)}</p>
+                <p className="text-2xl font-bold">{formatUsdCents(dollarsToCents(subscription.amount))}</p>
                 {nextBillingDate && (
                   <p className="text-sm text-muted-foreground">
                     {subscription.cancelAtPeriodEnd && subscription.status === 'active'
@@ -309,14 +311,14 @@ export function SubscriptionOverview() {
         {/* Show reactivate button if subscription is cancelled but still active */}
         {subscription && subscription.cancelAtPeriodEnd && subscription.status === 'active' ? (
           <>
-            <Button className="flex-1" asChild>
-              <Link href="/settings/subscription/manage">
+            <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" asChild>
+              <Link href="/settings/fund-account/manage">
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Reactivate Subscription
+                Reactivate Funding
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/settings/subscription">
+              <Link href="/settings/fund-account">
                 <Settings className="h-4 w-4 mr-2" />
                 Manage
               </Link>
@@ -324,9 +326,9 @@ export function SubscriptionOverview() {
           </>
         ) : (
           <Button variant="outline" className="w-full" asChild>
-            <Link href="/settings/subscription">
+            <Link href="/settings/fund-account">
               <Settings className="h-4 w-4 mr-2" />
-              Manage Token Purchase
+              Manage Account Funding
             </Link>
           </Button>
         )}
