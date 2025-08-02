@@ -18,9 +18,9 @@ interface SessionMonitorProps {
  * is still valid. If the session has been revoked from another device, it will
  * automatically log out the user and redirect to login.
  */
-export default function SessionMonitor({ 
-  checkInterval = 5 * 60 * 1000, // 5 minutes
-  showNotifications = true 
+export default function SessionMonitor({
+  checkInterval = 15 * 60 * 1000, // CRITICAL FIX: Increased to 15 minutes to reduce server load
+  showNotifications = true
 }: SessionMonitorProps) {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -44,11 +44,24 @@ export default function SessionMonitor({
       });
       
       if (!response.ok) {
-        console.warn('Session validation request failed:', response.status);
-        return;
+        console.warn('Session validation request failed:', response.status, response.statusText);
+        // CRITICAL FIX: Don't logout on network errors, only on actual auth failures
+        if (response.status === 401) {
+          console.log('[SessionMonitor] 401 Unauthorized - session actually expired');
+          // Continue to handle as session expired
+        } else {
+          console.log('[SessionMonitor] Network/server error - not logging out user');
+          return; // Don't logout on network errors
+        }
       }
       
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('[SessionMonitor] Failed to parse session response:', parseError);
+        return; // Don't logout on parse errors
+      }
 
       console.log('[SessionMonitor] Session validation result:', result);
 

@@ -109,6 +109,15 @@ export async function POST(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
 
+      // CRITICAL FIX: Create sessionId for dev auth login too
+      const sessionId = 'dev_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      cookieStore.set('sessionId', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      });
+
       // SECURITY: Use secure logging to prevent email exposure
       secureLogger.info('[Auth] Dev auth login successful', {
         email: maskEmail(account.email),

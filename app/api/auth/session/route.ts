@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const sessionCookie = cookieStore.get('simpleUserSession');
 
     if (!sessionCookie) {
-      console.log('[Session] No session cookie found');
+      console.log('[Session] No session cookie found - available cookies:', Object.keys(cookieStore.getAll()));
       return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'No active session');
     }
 
@@ -185,11 +185,14 @@ export async function POST(request: NextRequest) {
           emailVerified: user.emailVerified
         };
 
+        // CRITICAL PWA FIX: Enhanced cookie settings for PWA compatibility
         cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: true, // Always secure for PWA
           sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7 // 7 days
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          path: '/', // Explicit path for PWA
+          domain: process.env.NODE_ENV === 'production' ? '.getwewrite.app' : undefined
         });
 
         // Update last login time
@@ -197,6 +200,9 @@ export async function POST(request: NextRequest) {
           lastLoginAt: new Date().toISOString(),
           lastActiveAt: new Date().toISOString()
         });
+
+        // CRITICAL FIX: Create session for dev auth too
+        await createUserSession(request, user.uid);
 
         console.log('[Session] Dev auth session created for:', user.email);
         return createSuccessResponse(user);
@@ -258,11 +264,14 @@ export async function POST(request: NextRequest) {
         emailVerified: user.emailVerified
       };
 
+      // CRITICAL PWA FIX: Enhanced cookie settings for PWA compatibility
       cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always secure for PWA
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/', // Explicit path for PWA
+        domain: process.env.NODE_ENV === 'production' ? '.getwewrite.app' : undefined
       });
 
       // Update last login time
@@ -270,9 +279,6 @@ export async function POST(request: NextRequest) {
         lastLoginAt: new Date().toISOString(),
         lastActiveAt: new Date().toISOString()
       });
-
-      // Create or update user session for device tracking
-      await createUserSession(request, user.uid);
 
       // Create or update user session for device tracking
       await createUserSession(request, user.uid);
@@ -328,6 +334,17 @@ async function createUserSession(request: NextRequest, userId: string) {
 
     // Store session in Firestore
     await db.collection(getCollectionName('userSessions')).doc(sessionId).set(sessionData);
+
+    // CRITICAL FIX: Set the sessionId cookie so session validation works
+    const cookieStore = await cookies();
+    cookieStore.set('sessionId', sessionId, {
+      httpOnly: true,
+      secure: true, // Always secure for PWA
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/', // Explicit path for PWA
+      domain: process.env.NODE_ENV === 'production' ? '.getwewrite.app' : undefined
+    });
 
     console.log(`Created user session ${sessionId} for user ${userId}`);
 

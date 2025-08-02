@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     // Clear all auth-related cookies
     const cookiesToClear = [
       'simpleUserSession',
+      'sessionId', // CRITICAL FIX: Also clear sessionId cookie
       'userSession',
       'devUserSession',
       'authToken',
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
     // Even if there's an error, try to clear cookies
     const cookieStore = await cookies();
     cookieStore.delete('simpleUserSession');
+    cookieStore.delete('sessionId'); // CRITICAL FIX: Also clear sessionId cookie
     cookieStore.delete('userSession');
     cookieStore.delete('devUserSession');
 
