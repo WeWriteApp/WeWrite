@@ -10,6 +10,7 @@ import ErrorBoundary from "./components/utils/ErrorBoundary"
 import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 
 import SessionAuthInitializer from "./components/auth/SessionAuthInitializer"
+import SessionMonitor from "./components/auth/SessionMonitor"
 // SessionZustandBridge removed - functionality integrated into hybrid session system
 import { DataProvider } from "./providers/DataProvider"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
@@ -22,7 +23,7 @@ import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
-import NavigationOptimizer from "./components/navigation/NavigationOptimizer"
+// import NavigationOptimizer from "./components/navigation/NavigationOptimizer" // DISABLED - causing excessive triggers
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
@@ -85,13 +86,12 @@ export default function RootLayout({
                                   <TokenIncrementProvider>
                                     <UsdBalanceProvider>
                                         <NavigationOrderProvider>
-                                          <NavigationOptimizer>
                                             <SessionAuthInitializer>
+                                              <SessionMonitor />
                                               <GlobalNavigation>
                                                 {children}
                                               </GlobalNavigation>
                                             </SessionAuthInitializer>
-                                          </NavigationOptimizer>
                                         </NavigationOrderProvider>
                                       </UsdBalanceProvider>
                                     </TokenIncrementProvider>
