@@ -20,7 +20,6 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
-import { TokenBalanceProvider } from "./contexts/TokenBalanceContext"
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 
@@ -83,8 +82,7 @@ export default function RootLayout({
                               <LineSettingsProvider>
                                 <RecentPagesProvider>
                                   <TokenIncrementProvider>
-                                    <TokenBalanceProvider>
-                                      <UsdBalanceProvider>
+                                    <UsdBalanceProvider>
                                         <NavigationOrderProvider>
                                         <SessionAuthInitializer>
                                           <GlobalNavigation>
@@ -93,8 +91,7 @@ export default function RootLayout({
                                         </SessionAuthInitializer>
                                         </NavigationOrderProvider>
                                       </UsdBalanceProvider>
-                                    </TokenBalanceProvider>
-                                  </TokenIncrementProvider>
+                                    </TokenIncrementProvider>
                                 </RecentPagesProvider>
                               </LineSettingsProvider>
                             </PillStyleProvider>

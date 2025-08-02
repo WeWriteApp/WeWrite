@@ -215,33 +215,28 @@ function UnifiedSidebarContent({
   const mapFeatureEnabled = true;
 
   // Logout confirmation modal state
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Check if account is admin
   const isUserAdmin = user?.email === 'jamiegray2234@gmail.com' || user?.email === 'jamie@wewrite.app' || user?.email === 'admin.test@wewrite.app';
 
   // Handle logout confirmation
-  const handleLogoutClick = () => {
-    setShowLogoutConfirmation(true);
-  };
+  const handleLogoutClick = async () => {
+    // CRITICAL FIX: Use system dialog instead of custom WeWrite dialog
+    const confirmed = window.confirm('Are you sure you want to log out? You\'ll need to sign in again to access your account.');
 
-  const handleLogoutConfirm = async () => {
-    setIsLoggingOut(true);
-    try {
-      console.log('🔴 SIDEBAR: Logout confirmed, calling signOut function');
-      await signOut();
-      console.log('🔴 SIDEBAR: signOut completed successfully');
-    } catch (error) {
-      console.error('🔴 SIDEBAR: Error during logout:', error);
-    } finally {
-      setIsLoggingOut(false);
-      setShowLogoutConfirmation(false);
+    if (confirmed) {
+      setIsLoggingOut(true);
+      try {
+        console.log('🔴 SIDEBAR: Logout confirmed, calling signOut function');
+        await signOut();
+        console.log('🔴 SIDEBAR: signOut completed successfully');
+      } catch (error) {
+        console.error('🔴 SIDEBAR: Error during logout:', error);
+      } finally {
+        setIsLoggingOut(false);
+      }
     }
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutConfirmation(false);
   };
 
   // Check if we're on admin dashboard (should hide sidebar)
@@ -587,19 +582,7 @@ function UnifiedSidebarContent({
     <>
       {createPortal(sidebarContent, document.body)}
 
-      {/* Logout Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showLogoutConfirmation}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-        title="Confirm Logout"
-        message="Are you sure you want to log out? You'll need to sign in again to access your account."
-        confirmText="Log Out"
-        cancelText="Cancel"
-        variant="default"
-        icon="logout"
-        isLoading={isLoggingOut}
-      />
+      {/* Logout confirmation now uses system dialog - no custom modal needed */}
     </>
   );
 }

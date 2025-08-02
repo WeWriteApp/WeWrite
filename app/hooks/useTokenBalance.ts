@@ -1,7 +1,16 @@
 'use client';
 
+/**
+ * @deprecated This hook is deprecated and will be removed in a future version.
+ * Use useUsdBalance from UsdBalanceContext instead for USD-based balance management.
+ *
+ * Legacy token balance hook - replaced by USD system.
+ */
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { centsToDollars } from '../utils/formatCurrency';
 
 interface TokenBalance {
   totalTokens: number;
@@ -11,52 +20,30 @@ interface TokenBalance {
 
 export function useTokenBalance(): TokenBalance | null {
   const { user } = useAuth();
+  const { usdBalance } = useUsdBalance();
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
 
   useEffect(() => {
-    const loadTokenBalance = async () => {
-      if (!user?.uid) {
-        setTokenBalance(null);
-        return;
-      }
+    if (!user?.uid) {
+      setTokenBalance(null);
+      return;
+    }
 
-      try {
-        // Fetch token balance from the real API (same as header)
-        const response = await fetch('/api/tokens/balance');
-        if (response.ok) {
-          const data = await response.json();
+    // Convert USD balance to token format for backward compatibility
+    if (usdBalance) {
+      const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+      const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+      const availableTokens = totalTokens - allocatedTokens;
 
-          if (data.summary) {
-            // Ensure consistent calculation of available tokens
-            const availableTokens = data.summary.totalTokens - data.summary.allocatedTokens;
-            setTokenBalance({
-              totalTokens: data.summary.totalTokens,
-              allocatedTokens: data.summary.allocatedTokens,
-              availableTokens: availableTokens
-            });
-          } else if (data.balance) {
-            // Ensure consistent calculation of available tokens
-            const availableTokens = data.balance.totalTokens - data.balance.allocatedTokens;
-            setTokenBalance({
-              totalTokens: data.balance.totalTokens,
-              allocatedTokens: data.balance.allocatedTokens,
-              availableTokens: availableTokens
-            });
-          } else {
-            setTokenBalance(null);
-          }
-        } else {
-          console.error('Failed to fetch token balance:', response.status);
-          setTokenBalance(null);
-        }
-      } catch (error) {
-        console.error('Error loading token balance:', error);
-        setTokenBalance(null);
-      }
-    };
-
-    loadTokenBalance();
-  }, [user?.uid]);
+      setTokenBalance({
+        totalTokens,
+        allocatedTokens,
+        availableTokens
+      });
+    } else {
+      setTokenBalance(null);
+    }
+  }, [user?.uid, usdBalance]);
 
   return tokenBalance;
 }

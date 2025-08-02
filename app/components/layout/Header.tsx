@@ -56,11 +56,14 @@ export default function Header() {
     // Show earnings data (even if zero)
     if (earnings) {
       const totalUsdEarned = earnings.totalEarnings; // Already in USD
+      const isZeroEarnings = totalUsdEarned === 0;
 
       return (
         <Badge
           variant="secondary"
-          className="cursor-pointer hover:bg-secondary/80 transition-colors text-green-600 border-green-200 text-sm"
+          className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
+            isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
+          }`}
           onClick={() => router.push('/settings/earnings')}
           title={`${formatUsdCents(totalUsdEarned * 100)} earned`}
         >
@@ -73,7 +76,7 @@ export default function Header() {
     return (
       <Badge
         variant="secondary"
-        className="cursor-pointer hover:bg-secondary/80 transition-colors text-green-600 border-green-200 text-sm"
+        className="cursor-pointer hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
         onClick={() => router.push('/settings/earnings')}
         title="$0.00 earned"
       >
@@ -137,26 +140,44 @@ export default function Header() {
       const overspendingAmount = isOverspending ? usdBalance.allocatedUsdCents - usdBalance.totalUsdCents : 0;
 
       if (isOverspending) {
-        // Show overspending warning
+        // Show overspending warning with separate icon and badge
         return (
-          <Badge
-            variant="destructive"
-            className="cursor-pointer hover:bg-destructive/80 transition-colors text-sm"
+          <div
+            className="flex items-center gap-1 cursor-pointer"
             onClick={() => router.push('/settings/spend')}
-            title={`Overspending by ${formatUsdCents(overspendingAmount)}`}
+            title={`Overspending by ${formatUsdCents(overspendingAmount)} - Click to adjust spending`}
           >
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            +{formatUsdCents(overspendingAmount)}
-          </Badge>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <Badge
+              variant="destructive"
+              className="hover:bg-destructive/80 transition-colors text-sm"
+            >
+              +{formatUsdCents(overspendingAmount)}
+            </Badge>
+          </div>
         );
       } else {
-        // Show remaining funds with pie chart
+        // Show remaining funds with badge on left and pie chart on right
+        const isZeroBalance = usdBalance.totalUsdCents === 0;
+
         return (
-          <RemainingUsdCounter
-            allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
-            totalUsdCents={usdBalance.totalUsdCents || 0}
-            onClick={() => router.push('/settings/spend')}
-          />
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
+                isZeroBalance ? 'text-muted-foreground' : ''
+              }`}
+              onClick={() => router.push('/settings/spend')}
+              title={`${formatUsdCents(usdBalance.totalUsdCents)} total funds`}
+            >
+              {formatUsdCents(usdBalance.totalUsdCents)}
+            </Badge>
+            <RemainingUsdCounter
+              allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
+              totalUsdCents={usdBalance.totalUsdCents || 0}
+              onClick={() => router.push('/settings/spend')}
+            />
+          </div>
         );
       }
     }

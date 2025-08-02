@@ -123,7 +123,6 @@ export default function MobileBottomNav() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Logout confirmation state
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Enhanced navigation with optimistic feedback
@@ -306,22 +305,7 @@ export default function MobileBottomNav() {
 
 
 
-  const handleLogoutConfirm = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logoutUser();
-      setIsExpanded(false); // Close expanded section
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setIsLoggingOut(false);
-      setShowLogoutConfirmation(false);
-    }
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutConfirmation(false);
-  };
+  // Logout handlers removed - now using system dialog inline
 
 
 
@@ -675,7 +659,21 @@ export default function MobileBottomNav() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowLogoutConfirmation(true)}
+                      onClick={async () => {
+                        // CRITICAL FIX: Use system dialog instead of custom WeWrite dialog
+                        const confirmed = window.confirm('Are you sure you want to log out? You\'ll need to sign in again to access your account.');
+                        if (confirmed) {
+                          setIsLoggingOut(true);
+                          try {
+                            await logoutUser();
+                            setIsExpanded(false); // Close expanded section
+                          } catch (error) {
+                            console.error('Error during logout:', error);
+                          } finally {
+                            setIsLoggingOut(false);
+                          }
+                        }
+                      }}
                       className="text-xs bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20 dark:bg-destructive/10 dark:border-destructive/30 dark:text-destructive dark:hover:bg-destructive/20"
                     >
                       Log out
@@ -807,19 +805,7 @@ export default function MobileBottomNav() {
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showLogoutConfirmation}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-        title="Confirm Logout"
-        message="Are you sure you want to log out? You'll need to sign in again to access your account."
-        confirmText="Log Out"
-        cancelText="Cancel"
-        variant="default"
-        icon="logout"
-        isLoading={isLoggingOut}
-      />
+      {/* Logout confirmation now uses system dialog - no custom modal needed */}
     </DndProvider>
   );
 }

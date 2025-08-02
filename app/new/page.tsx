@@ -1088,7 +1088,21 @@ function NewPageContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasUnsavedChanges, handleKeyboardSave]);
 
-  // Use unsaved changes hook
+  // CRITICAL FIX: Add browser beforeunload protection for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Use unsaved changes hook (keeping for other functionality)
   const {
     showUnsavedChangesDialog,
     handleNavigation,
@@ -1109,16 +1123,16 @@ function NewPageContent() {
       }
     }
 
-    // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
-    // Track abandonment if there are unsaved changes
+    // CRITICAL FIX: Use system dialog for unsaved changes confirmation
     if (hasUnsavedChanges) {
-      // trackPageCreationFlow.abandoned({
-      //   is_reply: isReply,
-      //   is_daily_note: isDailyNote,
-      //   has_title: !!(title && title.trim()),
-      //   has_content: hasContentChanged
-      // });
-      handleNavigation(backUrl);
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to leave without saving? Your work will be lost.'
+      );
+
+      if (confirmed) {
+        router.push(backUrl);
+      }
+      // If not confirmed, stay on the page
     } else {
       router.push(backUrl);
     }
@@ -1212,16 +1226,7 @@ function NewPageContent() {
                     // Remove location props - handled outside ContentDisplay
                   />
 
-                  {/* Unsaved Changes Dialog */}
-                  <UnsavedChangesDialog
-                    isOpen={showUnsavedChangesDialog}
-                    onClose={handleCloseDialog}
-                    onStayAndSave={handleStayAndSave}
-                    onLeaveWithoutSaving={handleLeaveWithoutSaving}
-                    isSaving={isSaving || isHandlingNavigation}
-                    title="Unsaved Changes"
-                    description="You have unsaved changes. Do you want to save them before leaving?"
-                  />
+                  {/* Unsaved changes now use system dialog - no custom modal needed */}
                 </PageProvider>
               </div>
             ) : null}

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getUserSubscriptionServer } from '../../firebase/subscription-server';
+import { getDocumentOptimized, trackFirestoreRead } from '../../utils/firestoreOptimizer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,8 +22,20 @@ export async function GET(request: NextRequest) {
     const requestedUserId = url.searchParams.get('userId');
     const targetUserId = requestedUserId || authenticatedUserId;
 
-    // Get the user's subscription from Firestore using server-side function
-    const subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
+    // Get the user's subscription with optimized caching (1 hour cache for subscriptions)
+    let subscription = await getDocumentOptimized(
+      `users/${targetUserId}/subscriptions`,
+      'current',
+      'subscriptions'
+    );
+
+    // Track read operation for monitoring
+    trackFirestoreRead(1);
+
+    // Fallback to original method if cache miss or no data
+    if (!subscription) {
+      subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
+    }
 
     // Only log verbose subscription data when explicitly debugging
     if (process.env.SUBSCRIPTION_DEBUG === 'true') {

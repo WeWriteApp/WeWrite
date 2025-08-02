@@ -268,10 +268,11 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     // Mark this page as viewed in this session
     viewedPages.add(sessionKey);
 
-    // OPTIMIZATION: Use batcher instead of immediate database writes
-    pageViewBatcher.addView(pageId, userId);
+    // OPTIMIZATION: Use new optimized batcher with better performance
+    const { recordPageViewOptimized } = await import('../utils/pageViewBatcher');
+    recordPageViewOptimized(pageId, userId);
 
-    console.log(`Page view queued for batching: ${pageId}`);
+    console.log(`Page view queued for optimized batching: ${pageId}`);
   } catch (error) {
     console.error("Error recording page view:", error);
   }

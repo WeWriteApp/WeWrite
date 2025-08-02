@@ -97,8 +97,19 @@ export default function LocationField({
 
   const handleLocationClick = () => {
     if (canEdit) {
-      // Navigate to full-page location picker
+      // CRITICAL FIX: Don't navigate away from new pages to prevent content loss
+      // Instead, show an inline location picker modal
       const currentPath = window.location.pathname;
+
+      // Check if we're on a new page creation route
+      if (currentPath === '/new' || currentPath.startsWith('/new?')) {
+        // TODO: Implement inline location picker modal for new pages
+        // For now, show alert to prevent content loss
+        alert('Location editing for new pages will be available soon. Please save your page first to avoid losing content.');
+        return;
+      }
+
+      // For existing pages, navigate to full-page location picker
       const locationData = normalizedLocation ? encodeURIComponent(JSON.stringify(normalizedLocation)) : '';
       router.push(`${currentPath}/location?return=${encodeURIComponent(currentPath)}&data=${locationData}`);
     } else if (normalizedLocation) {
