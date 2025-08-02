@@ -25,6 +25,7 @@ import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { WarningDot } from '../ui/warning-dot';
+import { useNavigationAwareRender, useNavigationAwareEffect } from '../navigation/NavigationOptimizer';
 
 /**
  * MobileBottomNav Component
@@ -87,6 +88,9 @@ export default function MobileBottomNav() {
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
+
+  // Navigation optimization - mobile nav is high priority
+  const { shouldRender, isRapidNavigating } = useNavigationAwareRender('MobileBottomNav', 'high');
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {

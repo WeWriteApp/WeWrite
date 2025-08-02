@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { useSmartDataFetching } from './useSmartDataFetching';
 
 interface HomeData {
   recentlyVisitedPages: any[];
@@ -11,54 +12,71 @@ interface HomeData {
 }
 
 /**
- * Simple home data hook - no bullshit
+ * Optimized home data hook with smart caching and rapid navigation support
  */
 export function useOptimizedHome() {
   const { user } = useAuth();
-  const [data, setData] = useState<HomeData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user?.uid) {
-      setLoading(false);
-      return;
-    }
+  // Use smart data fetching with caching and rapid navigation optimization
+  const {
+    data,
+    loading,
+    error,
+    isFromCache,
+    refetch
+  } = useSmartDataFetching<HomeData>(
+    'home-data',
+    async () => {
+      console.log('[useOptimizedHome] Fetching fresh data for user:', user?.uid);
 
-    const fetchHomeData = async () => {
-      try {
-        console.log('[useOptimizedHome] Fetching data for user:', user.uid);
+      const response = await fetch(`/api/home?userId=${user?.uid}`, {
+        headers: {
+          'Cache-Control': 'max-age=60', // Browser cache for 1 minute
+        },
+      });
 
-        const response = await fetch(`/api/home?userId=${user.uid}`);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        console.log('[useOptimizedHome] Data received:', {
-          recentlyVisitedPages: data.recentlyVisitedPages?.length || 0,
-          trendingPages: data.trendingPages?.length || 0,
-          hasBatchUserData: !!data.batchUserData
-        });
-
-        setData(data);
-        setError(null);
-      } catch (err) {
-        console.error('[useOptimizedHome] Error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
 
-    fetchHomeData();
-  }, [user?.uid]);
+      const data = await response.json();
 
-  return { data, loading, error };
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      console.log('[useOptimizedHome] Fresh data received:', {
+        recentlyVisitedPages: data.recentlyVisitedPages?.length || 0,
+        trendingPages: data.trendingPages?.length || 0,
+        hasBatchUserData: !!data.batchUserData,
+        fromCache: false
+      });
+
+      return data;
+    },
+    {
+      enableCache: true,
+      backgroundRefresh: true,
+      cacheTTL: 3 * 60 * 1000, // 3 minutes cache
+      enabled: !!user?.uid,
+    }
+  );
+
+  // Log cache hits for monitoring
+  if (data && isFromCache) {
+    console.log('[useOptimizedHome] Using cached data:', {
+      recentlyVisitedPages: data.recentlyVisitedPages?.length || 0,
+      trendingPages: data.trendingPages?.length || 0,
+      hasBatchUserData: !!data.batchUserData,
+      fromCache: true
+    });
+  }
+
+  return {
+    data,
+    loading,
+    error: error || null,
+    isFromCache,
+    refetch
+  };
 }

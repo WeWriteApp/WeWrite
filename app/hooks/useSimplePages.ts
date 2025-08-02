@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { registerUserPagesInvalidation } from "../utils/globalCacheInvalidation";
+import { useSmartDataFetching } from './useSmartDataFetching';
 
 // Types
 interface PageData {

@@ -15,6 +15,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
 import DraggableSidebarItem from './DraggableSidebarItem';
+import { useNavigationAwareRender, useNavigationAwareEffect } from '../navigation/NavigationOptimizer';
 
 import MapEditor from "../editor/MapEditor";
 

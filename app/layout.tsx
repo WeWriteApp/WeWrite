@@ -22,6 +22,7 @@ import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
+import NavigationOptimizer from "./components/navigation/NavigationOptimizer"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
@@ -84,11 +85,13 @@ export default function RootLayout({
                                   <TokenIncrementProvider>
                                     <UsdBalanceProvider>
                                         <NavigationOrderProvider>
-                                        <SessionAuthInitializer>
-                                          <GlobalNavigation>
-                                            {children}
-                                          </GlobalNavigation>
-                                        </SessionAuthInitializer>
+                                          <NavigationOptimizer>
+                                            <SessionAuthInitializer>
+                                              <GlobalNavigation>
+                                                {children}
+                                              </GlobalNavigation>
+                                            </SessionAuthInitializer>
+                                          </NavigationOptimizer>
                                         </NavigationOrderProvider>
                                       </UsdBalanceProvider>
                                     </TokenIncrementProvider>
