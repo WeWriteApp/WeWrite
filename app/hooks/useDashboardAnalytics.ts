@@ -606,6 +606,75 @@ export function usePWAInstallsMetrics(dateRange: DateRange, granularity?: number
   return { data, loading, error, refetch: fetchData };
 }
 
+export function usePWANotificationsMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: granularity?.toString() || '50',
+        type: 'pwaNotifications'
+      }), {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PWA notifications metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch PWA notifications metrics');
+      }
+
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
+      const rawData = Array.isArray(responseData) ? responseData : [];
+
+      // Transform simple count data to PWA notifications format expected by widget
+      const transformedData = rawData.map(item => ({
+        ...item,
+        // Map simple count to PWA notifications format
+        value: item.count || 0,
+        notifications: item.count || 0,
+        // Keep original fields for backward compatibility
+        count: item.count || 0
+      }));
+
+      setData(transformedData);
+    } catch (err) {
+      console.error('Error fetching PWA notifications metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch PWA notifications data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
 /**
  * Hook for fetching visitor analytics metrics
  */

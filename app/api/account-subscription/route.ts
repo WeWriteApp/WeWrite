@@ -38,20 +38,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get the user's subscription with optimized caching (1 hour cache for subscriptions)
-    let subscription = await getDocumentOptimized(
-      `users/${targetUserId}/subscriptions`,
-      'current',
-      'subscriptions'
-    );
+    // EMERGENCY FIX: Use admin SDK directly to avoid permission issues
+    // Get the user's subscription using server-side method
+    let subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
 
     // Track read operation for monitoring
     trackFirestoreRead(1);
-
-    // Fallback to original method if cache miss or no data
-    if (!subscription) {
-      subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
-    }
 
     // Only log verbose subscription data when explicitly debugging
     if (process.env.SUBSCRIPTION_DEBUG === 'true') {

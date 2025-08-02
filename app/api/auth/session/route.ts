@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
  */
 async function createUserSession(request: NextRequest, userId: string) {
   try {
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     const userAgent = request.headers.get('user-agent') || '';

@@ -25,6 +25,7 @@ import { SharesAnalyticsWidget } from "../../components/admin/SharesAnalyticsWid
 
 import { ContentChangesAnalyticsWidget } from "../../components/admin/ContentChangesAnalyticsWidget";
 import { PWAInstallsAnalyticsWidget } from "../../components/admin/PWAInstallsAnalyticsWidget";
+import { PWANotificationsAnalyticsWidget } from "../../components/admin/PWANotificationsAnalyticsWidget";
 import { PageViewsAnalyticsWidget } from "../../components/admin/PageViewsAnalyticsWidget";
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
@@ -116,6 +117,7 @@ const initialWidgets = [
 
   { id: 'content-changes-analytics', component: ContentChangesAnalyticsWidget },
   { id: 'pwa-installs-analytics', component: PWAInstallsAnalyticsWidget },
+  { id: 'pwa-notifications-analytics', component: PWANotificationsAnalyticsWidget },
   { id: 'subscription-conversion-funnel', component: SubscriptionConversionFunnelWidget },
   { id: 'subscriptions-over-time', component: SubscriptionsOverTimeWidget },
   { id: 'subscription-revenue', component: SubscriptionRevenueWidget },
