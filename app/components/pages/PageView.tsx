@@ -440,20 +440,15 @@ export default function PageView({
           }
 
           setIsLoading(false);
+        } catch (error) {
+          console.error('Error in optimized page loading:', error);
+          setError('Failed to load page');
+          setIsLoading(false);
         }
-      }, user?.uid || null);
+      };
 
-      unsubscribeRef.current = unsubscribe;
-
-      // Set up fallback timeout in case Firebase listener doesn't respond
-      fallbackTimeout = setTimeout(() => {
-        if (!hasReceivedData) {
-          pageLogger.debug('Firebase listener timeout, trying API fallback', { pageId });
-          tryApiFallback();
-        }
-      }, 3000); // 3 second timeout
-    }
-    */
+      // Load the page data
+      loadOptimizedPageData();
 
     return () => {
       if (unsubscribeRef.current) {

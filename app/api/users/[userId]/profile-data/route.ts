@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
-import { getUserIdFromRequest } from '../../auth-helper';
-import { trackFirebaseRead } from '../../../utils/costMonitor';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
+import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentConfig';
+import { getUserIdFromRequest } from '../../../auth-helper';
+import { trackFirebaseRead } from '../../../../utils/costMonitor';
 
 /**
  * Optimized User Data API
@@ -12,10 +12,10 @@ import { trackFirebaseRead } from '../../../utils/costMonitor';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
-    const userId = params.id;
+    const userId = params.userId;
 
     // Get authenticated user (optional)
     let currentUserId: string | null = null;
@@ -105,10 +105,10 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
-    const userId = params.id;
+    const userId = params.userId;
     
     // Require authentication for updates
     const currentUserId = await getUserIdFromRequest(request);

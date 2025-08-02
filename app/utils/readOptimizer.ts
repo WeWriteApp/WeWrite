@@ -317,11 +317,11 @@ export async function getOptimizedPageData(pageId: string, userId?: string) {
  */
 export async function getOptimizedUserData(userId: string) {
   const cacheKey = `user:${userId}`;
-  
+
   return readOptimizer.optimizedFetch(
     cacheKey,
     async () => {
-      const response = await fetch(`/api/users/${userId}`);
+      const response = await fetch(`/api/users/${userId}/profile-data`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

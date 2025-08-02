@@ -116,114 +116,18 @@ export const subscribeToPagePledgeStats = (
   pageId: string,
   callback: (stats: PagePledgeStats) => void
 ): Unsubscribe => {
-  try {
-    // Try to subscribe to global pledges collection first
-    try {
-      const pledgesQuery = query(
-        collection(db, getCollectionName('pledges')),
-        where('pageId', '==', pageId),
-        where('status', 'in', ['active', 'completed'])
-      );
+  // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+  console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled');
 
-      // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-    console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled');
-
-    // Return mock data and no-op unsubscribe
-    setTimeout(() => callback({ totalPledges: 0, totalAmount: 0, pledges: [] }), 100);
-    return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION
-    return onSnapshot(pledgesQuery, (querySnapshot) => {
-        const uniqueSponsors = new Set<string>();
-        let totalPledgedTokens = 0;
-
-        querySnapshot.forEach(doc => {
-          const pledgeData = doc.data() as PledgeData;
-
-          // Add to unique sponsors set
-          if (pledgeData.userId) {
-            uniqueSponsors.add(pledgeData.userId);
-          }
-
-          // Add to total pledged tokens
-          totalPledgedTokens += pledgeData.amount || 0;
-        });
-
-        const stats: PagePledgeStats = {
-          sponsorCount: uniqueSponsors.size,
-          totalPledgedTokens,
-          uniqueSponsors: Array.from(uniqueSponsors)
-        };
-
-        callback(stats);
-      }, (error) => {
-        console.error('Error in page pledge stats subscription:', error);
-        // Call callback with empty stats on error
-        callback({
-          sponsorCount: 0,
-          totalPledgedTokens: 0,
-          uniqueSponsors: []
-        });
-      });
-    } catch (globalError) {
-      console.log('Global pledges collection not available for subscription');
-    }
-
-    // Fallback: Subscribe to token allocations for real-time updates
-    const allocationsQuery = query(
-      collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)),
-      where('resourceId', '==', pageId),
-      where('resourceType', '==', 'page'),
-      where('status', '==', 'active'),
-      where('tokens', '>', 0)
-    );
-
-    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-    console.warn('🚨 COST OPTIMIZATION: Allocations stats real-time listener disabled');
-
-    // Return mock data and no-op unsubscribe
-    setTimeout(() => callback({ totalAllocations: 0, totalAmount: 0, allocations: [] }), 100);
-    return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION
-    return onSnapshot(allocationsQuery, (querySnapshot) => {
-      const uniqueSponsors = new Set<string>();
-      let totalPledgedTokens = 0;
-
-      querySnapshot.forEach(doc => {
-        const allocationData = doc.data();
-
-        // Add to unique sponsors set
-        if (allocationData.userId) {
-          uniqueSponsors.add(allocationData.userId);
-        }
-
-        // Add to total pledged tokens
-        totalPledgedTokens += allocationData.tokens || 0;
-      });
-
-      const stats: PagePledgeStats = {
-        sponsorCount: uniqueSponsors.size,
-        totalPledgedTokens,
-        uniqueSponsors: Array.from(uniqueSponsors)
-      };
-
-      callback(stats);
-    }, (error) => {
-      console.error('Error in token allocations subscription:', error);
-      // Call callback with empty stats on error
-      callback({
-        sponsorCount: 0,
-        totalPledgedTokens: 0,
-        uniqueSponsors: []
-      });
-    });
-  } catch (error) {
-    console.error('Error setting up page pledge stats subscription:', error);
-    // Return a no-op unsubscribe function
-    return () => {};
-  }
+  // Return mock data and no-op unsubscribe
+  setTimeout(() => callback({
+    sponsorCount: 0,
+    totalPledgedTokens: 0,
+    uniqueSponsors: []
+  }), 100);
+  return () => {};
 };
+
 
 /**
  * Get historical supporter data for sparkline (last 24 hours)
