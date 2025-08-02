@@ -377,45 +377,47 @@ function UnifiedSidebarContent({
           )}>
             {/* Navigation Items */}
             <nav className="flex flex-col gap-2 mb-6">
-            {completeSidebarOrder.map((itemId, index) => {
-              const item = navigationItemsConfig[itemId];
-              if (!item) return null;
+            {completeSidebarOrder
+              .filter((itemId, index, array) => array.indexOf(itemId) === index) // Remove duplicates
+              .map((itemId, index) => {
+                const item = navigationItemsConfig[itemId];
+                if (!item) return null;
 
-              const isActive = isNavItemActive(item);
-              const isSettings = item.label === 'Settings';
+                const isActive = isNavItemActive(item);
+                const isSettings = item.label === 'Settings';
 
-              return (
-                <DraggableSidebarItem
-                  key={itemId}
-                  id={itemId}
-                  icon={item.icon}
-                  label={item.label}
-                  href={item.href}
-                  onClick={() => handleNavItemClick(item)}
-                  isActive={isActive}
-                  index={index}
-                  moveItem={reorderCompleteItems}
-                  showContent={showContent}
-                  isCompact={false}
-                >
-                  {/* Settings warning indicator */}
-                  {isSettings && criticalSettingsStatus === 'warning' && (
-                    <>
-                      {!showContent && (
-                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
-                      )}
-                      {showContent && (
-                        <StatusIcon
-                          status="warning"
-                          size="sm"
-                          position="static"
-                        />
-                      )}
-                    </>
-                  )}
-                </DraggableSidebarItem>
-              );
-            })}
+                return (
+                  <DraggableSidebarItem
+                    key={`desktop-sidebar-${itemId}-${index}`} // Add index to ensure uniqueness
+                    id={itemId}
+                    icon={item.icon}
+                    label={item.label}
+                    href={item.href}
+                    onClick={() => handleNavItemClick(item)}
+                    isActive={isActive}
+                    index={index}
+                    moveItem={reorderCompleteItems}
+                    showContent={showContent}
+                    isCompact={false}
+                  >
+                    {/* Settings warning indicator */}
+                    {isSettings && criticalSettingsStatus === 'warning' && (
+                      <>
+                        {!showContent && (
+                          <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
+                        )}
+                        {showContent && (
+                          <StatusIcon
+                            status="warning"
+                            size="sm"
+                            position="static"
+                          />
+                        )}
+                      </>
+                    )}
+                  </DraggableSidebarItem>
+                );
+              })}
           </nav>
 
           {/* Reset to Default Button - only show when expanded */}
@@ -521,16 +523,16 @@ function UnifiedSidebarContent({
           )}
           </div>
 
-          {/* Fixed bottom section - Buy Tokens button for users without active token purchase */}
+          {/* Fixed bottom section - Fund Account button for users without active subscription */}
           {!isEditMode && user && hasActiveSubscription === false && (
             <div className="px-3 pb-4 flex-shrink-0">
               <Button
-                onClick={() => router.push('/settings/buy-tokens')}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                onClick={() => router.push('/settings/fund-account')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
                 size="sm"
               >
                 <DollarSign className="h-4 w-4 mr-2" />
-                Buy Tokens
+                Fund Account
               </Button>
             </div>
           )}

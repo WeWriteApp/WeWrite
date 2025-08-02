@@ -33,6 +33,12 @@ This index provides a comprehensive overview of all WeWrite documentation, organ
 
 ## 💰 Payment & Subscription System
 
+### USD System (Current)
+- **[USD_SYSTEM_OVERVIEW](./USD_SYSTEM_OVERVIEW.md)** - ✅ Complete USD system overview and status
+- **[USD_MIGRATION_GUIDE](./USD_MIGRATION_GUIDE.md)** - ✅ USD migration process and completion
+- **[DEPRECATED_COMPONENTS](./DEPRECATED_COMPONENTS.md)** - ⚠️ Legacy token components (deprecated)
+- **[DEPRECATED_API_ENDPOINTS](./DEPRECATED_API_ENDPOINTS.md)** - ⚠️ Legacy token APIs (deprecated)
+
 ### Core Payment Documentation
 - **[SUBSCRIPTION_SYSTEM](./SUBSCRIPTION_SYSTEM.md)** - Complete subscription architecture
 - **[PAYOUT_SYSTEM_DOCUMENTATION](./PAYOUT_SYSTEM_DOCUMENTATION.md)** - Writer compensation system

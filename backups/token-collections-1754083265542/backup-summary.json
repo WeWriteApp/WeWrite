@@ -1,0 +1,187 @@
+{
+  "timestamp": "2025-08-01T21:21:05.543Z",
+  "collections": {
+    "DEV_tokenBalances": {
+      "documentCount": 5,
+      "sampleDoc": {
+        "id": "dev_admin_user",
+        "data": {
+          "userId": "dev_admin_user",
+          "allocatedTokens": 0,
+          "lastAllocationDate": "2025-07",
+          "createdAt": {
+            "_seconds": 1753321833,
+            "_nanoseconds": 575000000
+          },
+          "totalTokens": 200,
+          "availableTokens": 200,
+          "monthlyAllocation": 200,
+          "updatedAt": {
+            "_seconds": 1753321894,
+            "_nanoseconds": 538000000
+          }
+        }
+      }
+    },
+    "DEV_tokenAllocations": {
+      "documentCount": 3,
+      "sampleDoc": {
+        "id": "dev_test_user_1_m68gTtvJeNpiGz0vngr2_2025-07",
+        "data": {
+          "recipientUserId": "dev_test_user_2",
+          "resourceId": "m68gTtvJeNpiGz0vngr2",
+          "month": "2025-07",
+          "id": "dev_test_user_1_m68gTtvJeNpiGz0vngr2_2025-07",
+          "resourceType": "page",
+          "status": "active",
+          "createdAt": {
+            "_seconds": 1752443031,
+            "_nanoseconds": 280000000
+          },
+          "tokens": 4,
+          "updatedAt": {
+            "_seconds": 1752443031,
+            "_nanoseconds": 280000000
+          },
+          "userId": "kJ8xQz2mN5fR7vB3wC9dE1gH6i4L"
+        }
+      }
+    },
+    "DEV_pendingTokenAllocations": {
+      "documentCount": 8,
+      "sampleDoc": {
+        "id": "dev_admin_user_page_7Pwjp0haRYuqI9sGnD6w_2025-07",
+        "data": {
+          "id": "dev_admin_user_page_7Pwjp0haRYuqI9sGnD6w_2025-07",
+          "userId": "dev_admin_user",
+          "recipientUserId": "kJ8xQz2mN5fR7vB3wC9dE1gH6i4L",
+          "resourceType": "page",
+          "resourceId": "7Pwjp0haRYuqI9sGnD6w",
+          "tokens": 69,
+          "month": "2025-07",
+          "status": "pending",
+          "createdAt": {
+            "_seconds": 1753477474,
+            "_nanoseconds": 853000000
+          },
+          "updatedAt": {
+            "_seconds": 1753485793,
+            "_nanoseconds": 74000000
+          }
+        }
+      }
+    },
+    "DEV_writerTokenBalances": {
+      "documentCount": 0,
+      "sampleDoc": null
+    },
+    "DEV_writerTokenEarnings": {
+      "documentCount": 0,
+      "sampleDoc": null
+    },
+    "DEV_tokenPayouts": {
+      "documentCount": 0,
+      "sampleDoc": null
+    },
+    "tokenBalances": {
+      "documentCount": 3,
+      "sampleDoc": {
+        "id": "I5IoRbISVuOjSEkyhaE4nZkcMQ42",
+        "data": {
+          "userId": "I5IoRbISVuOjSEkyhaE4nZkcMQ42",
+          "allocatedTokens": 0,
+          "lastAllocationDate": "2025-07",
+          "createdAt": {
+            "_seconds": 1753540825,
+            "_nanoseconds": 990000000
+          },
+          "totalTokens": 200,
+          "availableTokens": 200,
+          "monthlyAllocation": 200,
+          "updatedAt": {
+            "_seconds": 1753540832,
+            "_nanoseconds": 921000000
+          }
+        }
+      }
+    },
+    "tokenAllocations": {
+      "documentCount": 43,
+      "sampleDoc": {
+        "id": "fWNeCuussPgYgkN2LGohFRCPXiy1_07mvNzPra49C3LvYNZk3_2025-06",
+        "data": {
+          "recipientUserId": "",
+          "resourceId": "07mvNzPra49C3LvYNZk3",
+          "month": "2025-06",
+          "id": "fWNeCuussPgYgkN2LGohFRCPXiy1_07mvNzPra49C3LvYNZk3_2025-06",
+          "userId": "fWNeCuussPgYgkN2LGohFRCPXiy1",
+          "resourceType": "page",
+          "status": "active",
+          "createdAt": {
+            "_seconds": 1750978846,
+            "_nanoseconds": 539000000
+          },
+          "tokens": 3,
+          "updatedAt": {
+            "_seconds": 1750978846,
+            "_nanoseconds": 539000000
+          }
+        }
+      }
+    },
+    "pendingTokenAllocations": {
+      "documentCount": 23,
+      "sampleDoc": {
+        "id": "I5IoRbISVuOjSEkyhaE4nZkcMQ42_page_19I5mHQCKBk5x9ynK7We_2025-08",
+        "data": {
+          "id": "I5IoRbISVuOjSEkyhaE4nZkcMQ42_page_19I5mHQCKBk5x9ynK7We_2025-08",
+          "userId": "I5IoRbISVuOjSEkyhaE4nZkcMQ42",
+          "recipientUserId": "fWNeCuussPgYgkN2LGohFRCPXiy1",
+          "resourceType": "page",
+          "resourceId": "19I5mHQCKBk5x9ynK7We",
+          "tokens": 29,
+          "month": "2025-08",
+          "status": "pending",
+          "createdAt": {
+            "_seconds": 1754010623,
+            "_nanoseconds": 600000000
+          },
+          "updatedAt": {
+            "_seconds": 1754010629,
+            "_nanoseconds": 318000000
+          }
+        }
+      }
+    },
+    "writerTokenBalances": {
+      "documentCount": 6,
+      "sampleDoc": {
+        "id": "5QQ6PucNHJZ4AAjLfaZXqztSP6j2",
+        "data": {
+          "pendingUsdValue": 0,
+          "paidOutUsdValue": 0,
+          "totalUsdEarned": 0,
+          "availableUsdValue": 0,
+          "totalTokensEarned": 0,
+          "pendingTokens": 0,
+          "paidOutTokens": 0,
+          "userId": "5QQ6PucNHJZ4AAjLfaZXqztSP6j2",
+          "availableTokens": 0,
+          "updatedAt": {
+            "_seconds": 1752714668,
+            "_nanoseconds": 679000000
+          }
+        }
+      }
+    },
+    "writerTokenEarnings": {
+      "documentCount": 0,
+      "sampleDoc": null
+    },
+    "tokenPayouts": {
+      "documentCount": 0,
+      "sampleDoc": null
+    }
+  },
+  "totalDocuments": 91
+}

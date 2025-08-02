@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdPledgeBar or UsdAllocationModal instead for USD-based allocations.
+ *
+ * Legacy embedded token allocation - replaced by USD system.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -166,7 +173,7 @@ export function EmbeddedTokenAllocation({
   const handleOutOfTokens = (event: React.MouseEvent) => {
     event.stopPropagation();
     event.preventDefault();
-    router.push('/settings/spend-tokens');
+    router.push('/settings/spend');
   };
 
   if (!user) {

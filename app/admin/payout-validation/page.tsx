@@ -19,7 +19,7 @@ import {
 import { FeeConfigurationService } from '../../services/feeConfigurationService';
 
 interface PayoutValidation {
-  tokensEarned: number;
+  usdCentsEarned: number;
   grossAmount: number;
   platformFee: number;
   stripeConnectFee: number;
@@ -32,7 +32,7 @@ interface PayoutValidation {
 }
 
 export default function PayoutValidationPage() {
-  const [tokensEarned, setTokensEarned] = useState<number>(1000);
+  const [usdCentsEarned, setUsdCentsEarned] = useState<number>(1000);
   const [payoutMethod, setPayoutMethod] = useState<'standard' | 'instant'>('standard');
   const [validation, setValidation] = useState<PayoutValidation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,8 +54,8 @@ export default function PayoutValidationPage() {
   const validatePayout = async () => {
     setIsLoading(true);
     try {
-      // Convert tokens to USD (10 tokens = $1)
-      const grossAmount = tokensEarned / 10;
+      // Convert USD cents to USD dollars (100 cents = $1)
+      const grossAmount = usdCentsEarned / 100;
       
       // Calculate fees using the centralized service
       const feeCalculation = await FeeConfigurationService.calculatePayoutFees(grossAmount, payoutMethod);
@@ -80,7 +80,7 @@ export default function PayoutValidationPage() {
       }
       
       const validation: PayoutValidation = {
-        tokensEarned,
+        usdCentsEarned,
         grossAmount,
         platformFee: feeCalculation.platformFee,
         stripeConnectFee: feeCalculation.stripeConnectFee,
@@ -96,7 +96,7 @@ export default function PayoutValidationPage() {
     } catch (error) {
       console.error('Error validating payout:', error);
       setValidation({
-        tokensEarned,
+        usdCentsEarned,
         grossAmount: 0,
         platformFee: 0,
         stripeConnectFee: 0,
@@ -135,7 +135,7 @@ export default function PayoutValidationPage() {
             Payout Validation Tool
           </h1>
           <p className="text-muted-foreground">
-            Validate token-to-payout calculations and fee structures
+            Validate USD-to-payout calculations and fee structures
           </p>
         </div>
       </div>
@@ -179,24 +179,24 @@ export default function PayoutValidationPage() {
         <CardHeader>
           <CardTitle>Payout Calculation</CardTitle>
           <CardDescription>
-            Enter token amount to validate payout calculation
+            Enter USD cents amount to validate payout calculation
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="tokens">Tokens Earned</Label>
+              <Label htmlFor="usdCents">USD Cents Earned</Label>
               <Input
-                id="tokens"
+                id="usdCents"
                 type="number"
                 min="0"
                 step="1"
-                value={tokensEarned}
-                onChange={(e) => setTokensEarned(parseInt(e.target.value) || 0)}
+                value={usdCentsEarned}
+                onChange={(e) => setUsdCentsEarned(parseInt(e.target.value) || 0)}
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                10 tokens = $1 USD
+                100 cents = $1 USD
               </p>
             </div>
             <div>
@@ -280,7 +280,7 @@ export default function PayoutValidationPage() {
                     </div>
                     <div className="text-sm text-green-600">Gross Amount</div>
                     <div className="text-xs text-muted-foreground">
-                      {validation.tokensEarned} tokens
+                      {validation.usdCentsEarned} USD cents
                     </div>
                   </div>
                   <div className="text-center p-4 bg-red-50 rounded-lg">

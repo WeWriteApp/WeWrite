@@ -163,13 +163,15 @@ const SingleProfileView = ({ profile }) => {
 
         <UserProfileTabs profile={profile} />
 
-        {/* User Pledge Bar - floating and persistent across tabs */}
-        <PledgeBar
-          authorId={profile.uid}
-          username={profile.username || profile.displayName || 'User'}
-          visible={true}
-          isUserAllocation={true}
-        />
+        {/* User Pledge Bar - floating and persistent across tabs - only show on other people's pages */}
+        {!isCurrentUser && (
+          <PledgeBar
+            authorId={profile.uid}
+            username={profile.username || profile.displayName || 'User'}
+            visible={true}
+            isUserAllocation={true}
+          />
+        )}
       </div>
     </ProfilePagesProvider>
   );

@@ -17,12 +17,43 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 
+// Load environment variables
+require('dotenv').config({ path: '.env.local' });
+
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-  const serviceAccount = require('../serviceAccountKey.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  try {
+    // Use environment variables like the main app
+    if (process.env.GOOGLE_CLOUD_KEY_JSON || process.env.LOGGING_CLOUD_KEY_JSON) {
+      let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON || process.env.LOGGING_CLOUD_KEY_JSON;
+      console.log('Using service account from environment variable');
+      console.log('JSON string length:', jsonString?.length);
+      console.log('JSON string preview:', jsonString?.substring(0, 50) + '...');
+
+      // Check if the string is base64 encoded
+      if (jsonString.match(/^[A-Za-z0-9+/]+=*$/)) {
+        console.log('Decoding base64 encoded service account');
+        jsonString = Buffer.from(jsonString, 'base64').toString('utf8');
+      }
+
+      const serviceAccount = JSON.parse(jsonString);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PID
+      });
+    } else {
+      // Fallback to default credentials for local development
+      console.log('Using default credentials for local development');
+      console.log('Project ID:', process.env.NEXT_PUBLIC_FIREBASE_PID);
+      admin.initializeApp({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PID
+      });
+    }
+    console.log('Firebase Admin initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Firebase Admin:', error);
+    process.exit(1);
+  }
 }
 
 const db = admin.firestore();
@@ -254,8 +285,8 @@ async function migrateWriterTokenBalances(dryRun = false, specificUserId = null)
         pendingUsdCents: tokensToUsdCents(tokenData.pendingTokens || 0),
         availableUsdCents: tokensToUsdCents(tokenData.availableTokens || 0),
         paidOutUsdCents: tokensToUsdCents(tokenData.paidOutTokens || 0),
-        lastProcessedMonth: tokenData.lastProcessedMonth,
-        createdAt: tokenData.createdAt,
+        lastProcessedMonth: tokenData.lastProcessedMonth || null,
+        createdAt: tokenData.createdAt || admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       };
 
@@ -294,6 +325,91 @@ async function migrateWriterTokenBalances(dryRun = false, specificUserId = null)
 }
 
 /**
+ * Migrate writer token earnings to USD earnings
+ */
+async function migrateWriterTokenEarnings(dryRun = false, specificUserId = null) {
+  console.log('🔄 Migrating writer token earnings to USD earnings...');
+
+  let query = db.collection('writerTokenEarnings');
+  if (specificUserId) {
+    query = query.where('userId', '==', specificUserId);
+  }
+
+  const snapshot = await query.get();
+  const results = {
+    processed: 0,
+    successful: 0,
+    failed: 0,
+    errors: []
+  };
+
+  for (const doc of snapshot.docs) {
+    try {
+      const tokenData = doc.data();
+      const userId = tokenData.userId;
+
+      // Convert allocations array
+      const convertedAllocations = (tokenData.allocations || []).map(allocation => ({
+        allocationId: allocation.allocationId,
+        fromUserId: allocation.fromUserId,
+        fromUsername: allocation.fromUsername,
+        resourceType: allocation.resourceType,
+        resourceId: allocation.resourceId,
+        resourceTitle: allocation.resourceTitle,
+        usdCents: tokensToUsdCents(allocation.tokens || 0),
+        // Remove redundant usdValue field
+      }));
+
+      // Convert writer token earnings to USD cents
+      const usdData = {
+        id: doc.id,
+        userId,
+        month: tokenData.month,
+        totalUsdCentsReceived: tokensToUsdCents(tokenData.totalTokensReceived || 0),
+        status: tokenData.status,
+        allocations: convertedAllocations,
+        processedAt: tokenData.processedAt,
+        createdAt: tokenData.createdAt,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      if (!dryRun) {
+        // Create USD earnings record
+        await db.collection('writerUsdEarnings').doc(doc.id).set(usdData);
+
+        // Log audit entry
+        await logAuditEntry({
+          type: 'writer_token_earnings_migration',
+          earningsId: doc.id,
+          userId,
+          month: tokenData.month,
+          originalData: tokenData,
+          convertedData: usdData,
+          conversionRate: MIGRATION_CONFIG.TOKENS_PER_DOLLAR,
+          status: 'completed'
+        });
+      }
+
+      results.successful++;
+      console.log(`✅ Migrated earnings ${doc.id}: ${tokenData.totalTokensReceived || 0} tokens → $${(usdData.totalUsdCentsReceived / 100).toFixed(2)} for ${tokenData.month}`);
+
+    } catch (error) {
+      results.failed++;
+      results.errors.push({
+        earningsId: doc.id,
+        error: error.message
+      });
+      console.error(`❌ Failed to migrate earnings ${doc.id}:`, error.message);
+    }
+
+    results.processed++;
+  }
+
+  console.log(`📊 Writer Token Earnings Migration Results:`, results);
+  return results;
+}
+
+/**
  * Verify migration accuracy
  */
 async function verifyMigration(specificUserId = null) {
@@ -302,7 +418,8 @@ async function verifyMigration(specificUserId = null) {
   const verificationResults = {
     tokenBalances: { consistent: 0, inconsistent: 0, missing: 0 },
     tokenAllocations: { consistent: 0, inconsistent: 0, missing: 0 },
-    writerBalances: { consistent: 0, inconsistent: 0, missing: 0 }
+    writerBalances: { consistent: 0, inconsistent: 0, missing: 0 },
+    writerEarnings: { consistent: 0, inconsistent: 0, missing: 0 }
   };
 
   // Verify token balances
@@ -331,6 +448,35 @@ async function verifyMigration(specificUserId = null) {
     } else {
       verificationResults.tokenBalances.inconsistent++;
       console.warn(`⚠️  Inconsistent conversion for user ${tokenData.userId}: ${tokenData.totalTokens} tokens → expected ${expectedUsdCents} cents, got ${usdData.totalUsdCents} cents`);
+    }
+  }
+
+  // Verify writer earnings
+  let writerEarningsQuery = db.collection('writerTokenEarnings');
+  if (specificUserId) {
+    writerEarningsQuery = writerEarningsQuery.where('userId', '==', specificUserId);
+  }
+
+  const writerEarningsSnapshot = await writerEarningsQuery.get();
+
+  for (const doc of writerEarningsSnapshot.docs) {
+    const tokenData = doc.data();
+    const usdDoc = await db.collection('writerUsdEarnings').doc(doc.id).get();
+
+    if (!usdDoc.exists) {
+      verificationResults.writerEarnings.missing++;
+      console.warn(`⚠️  Missing USD earnings for ${doc.id}`);
+      continue;
+    }
+
+    const usdData = usdDoc.data();
+    const expectedUsdCents = tokensToUsdCents(tokenData.totalTokensReceived || 0);
+
+    if (Math.abs(usdData.totalUsdCentsReceived - expectedUsdCents) <= 1) {
+      verificationResults.writerEarnings.consistent++;
+    } else {
+      verificationResults.writerEarnings.inconsistent++;
+      console.warn(`⚠️  Inconsistent earnings conversion for ${doc.id}: ${tokenData.totalTokensReceived} tokens → expected ${expectedUsdCents} cents, got ${usdData.totalUsdCentsReceived} cents`);
     }
   }
 
@@ -366,6 +512,7 @@ async function runMigration() {
     const balanceResults = await migrateTokenBalances(dryRun, specificUserId);
     const allocationResults = await migrateTokenAllocations(dryRun, specificUserId);
     const writerBalanceResults = await migrateWriterTokenBalances(dryRun, specificUserId);
+    const earningsResults = await migrateWriterTokenEarnings(dryRun, specificUserId);
 
     // Verify migration if not dry run
     if (!dryRun) {
@@ -378,7 +525,7 @@ async function runMigration() {
     console.log('─'.repeat(50));
     console.log('✅ Migration completed successfully!');
     console.log(`⏱️  Duration: ${duration.toFixed(2)} seconds`);
-    console.log(`📊 Total processed: ${balanceResults.processed + allocationResults.processed + writerBalanceResults.processed} records`);
+    console.log(`📊 Total processed: ${balanceResults.processed + allocationResults.processed + writerBalanceResults.processed + earningsResults.processed} records`);
 
   } catch (error) {
     console.error('❌ Migration failed:', error);

@@ -255,7 +255,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
 
                         return (
                           <CrossComponentMobileNavButton
-                            key={itemId}
+                            key={`mobile-overflow-${itemId}`}
                             id={itemId}
                             index={actualSidebarIndex} // Use actual sidebar index for swapping
                             icon={item.icon}

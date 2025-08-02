@@ -12,7 +12,7 @@ import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
 import { addRecentSearch } from "../utils/recentSearches";
-import NavHeader from '../components/layout/NavHeader';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 import RecentSearches from '../components/search/RecentSearches';
 
@@ -380,7 +380,23 @@ const SearchPage = React.memo(() => {
   // All search content is now isolated in SearchPageContent component
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <NavPageLayout
+      backUrl="/"
+      rightContent={
+        currentQuery && currentQuery.trim() && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={shareSearchUrl}
+            className="flex items-center gap-2 rounded-2xl"
+            aria-label="Share search results"
+          >
+            <Share2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        )
+      }
+    >
       {/* Performance monitoring - only active in development */}
       <PerformanceMonitor
         name="SearchPage"
@@ -394,27 +410,6 @@ const SearchPage = React.memo(() => {
           hasResults: !!(results?.pages?.length || results?.users?.length)
         }}
       />
-
-      {/* Navigation Header */}
-      <NavHeader
-        backUrl="/"
-        rightContent={
-          currentQuery && currentQuery.trim() && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={shareSearchUrl}
-              className="flex items-center gap-2 rounded-2xl"
-              aria-label="Share search results"
-            >
-              <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Share</span>
-            </Button>
-          )
-        }
-      />
-
-      <div className="mb-6" />
 
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput
@@ -446,7 +441,7 @@ const SearchPage = React.memo(() => {
         error={error}
         searchStats={searchStats}
       />
-    </div>
+    </NavPageLayout>
   );
 });
 

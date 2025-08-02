@@ -7,7 +7,7 @@
 export const USD_ECONOMY = {
   // Minimum amounts
   MIN_ALLOCATION_CENTS: 10, // $0.10 minimum allocation
-  MIN_PAYOUT_CENTS: 1000,   // $10.00 minimum payout threshold
+  MIN_PAYOUT_CENTS: 2500,   // $25.00 minimum payout threshold (matches feeCalculations.ts)
   
   // Start-of-Month Processing (all on 1st of month)
   MONTHLY_PROCESSING_DAY: 1, // 1st: All monthly processing happens

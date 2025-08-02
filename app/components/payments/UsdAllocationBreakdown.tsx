@@ -5,25 +5,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
-import { 
-  User, 
-  FileText, 
-  Building2, 
-  Edit3, 
-  Trash2, 
-  ExternalLink,
+import {
+  Trash2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Plus,
+  Minus,
+  FileText,
+  Building2
 } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
+import { PillLink } from '../utils/PillLink';
+
+// Enhanced allocation with page/user details
+interface EnhancedUsdAllocation extends UsdAllocation {
+  pageTitle?: string;
+  authorUsername?: string;
+  authorId?: string;
+}
 
 interface UsdAllocationBreakdownProps {
-  allocations: UsdAllocation[];
+  allocations: EnhancedUsdAllocation[];
   totalUsdCents: number;
-  onEditAllocation?: (allocation: UsdAllocation) => void;
-  onRemoveAllocation?: (allocation: UsdAllocation) => void;
-  onViewResource?: (allocation: UsdAllocation) => void;
+  onEditAllocation?: (allocation: EnhancedUsdAllocation) => void;
+  onRemoveAllocation?: (allocation: EnhancedUsdAllocation) => void;
+  onViewResource?: (allocation: EnhancedUsdAllocation) => void;
+  onIncreaseAllocation?: (allocation: EnhancedUsdAllocation) => void;
+  onDecreaseAllocation?: (allocation: EnhancedUsdAllocation) => void;
   className?: string;
   showActions?: boolean;
   maxVisible?: number;
@@ -35,6 +44,8 @@ export function UsdAllocationBreakdown({
   onEditAllocation,
   onRemoveAllocation,
   onViewResource,
+  onIncreaseAllocation,
+  onDecreaseAllocation,
   className = '',
   showActions = true,
   maxVisible = 5
@@ -51,20 +62,6 @@ export function UsdAllocationBreakdown({
   // Determine which allocations to show
   const visibleAllocations = showAll ? sortedAllocations : sortedAllocations.slice(0, maxVisible);
   const hasMore = sortedAllocations.length > maxVisible;
-
-  // Get icon for resource type
-  const getResourceIcon = (resourceType: string) => {
-    switch (resourceType) {
-      case 'user':
-        return <User className="h-4 w-4" />;
-      case 'page':
-        return <FileText className="h-4 w-4" />;
-      case 'wewrite':
-        return <Building2 className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
 
   // Get resource type label
   const getResourceTypeLabel = (resourceType: string) => {
@@ -85,7 +82,7 @@ export function UsdAllocationBreakdown({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="text-lg">USD Allocation Breakdown</CardTitle>
+          <CardTitle className="text-lg">Breakdown</CardTitle>
           <CardDescription>
             Your monthly fund allocations to creators
           </CardDescription>
@@ -108,7 +105,7 @@ export function UsdAllocationBreakdown({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">USD Allocation Breakdown</CardTitle>
+            <CardTitle className="text-lg">Breakdown</CardTitle>
             <CardDescription>
               {allocations.length} allocation{allocations.length !== 1 ? 's' : ''} • {formatUsdCents(totalAllocatedCents)} total
             </CardDescription>
@@ -120,19 +117,6 @@ export function UsdAllocationBreakdown({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Progress bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Monthly allocation progress</span>
-            <span>{formatUsdCents(totalAllocatedCents)} of {formatUsdCents(totalUsdCents)}</span>
-          </div>
-          <Progress 
-            value={(totalAllocatedCents / totalUsdCents) * 100} 
-            className="h-2"
-            indicatorClassName="bg-green-500"
-          />
-        </div>
-
         {/* Allocation list */}
         <div className="space-y-3">
           {visibleAllocations.map((allocation) => {
@@ -141,73 +125,93 @@ export function UsdAllocationBreakdown({
             return (
               <div
                 key={allocation.id}
-                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors space-y-3"
               >
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  {/* Resource icon */}
-                  <div className="flex-shrink-0 text-muted-foreground">
-                    {getResourceIcon(allocation.resourceType)}
+                {/* Top row: Resource info and amount */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    {/* Resource info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        {allocation.resourceType === 'wewrite' ? (
+                          <p className="font-medium truncate">WeWrite Platform</p>
+                        ) : allocation.resourceType === 'user' ? (
+                          <div className="flex items-center space-x-2">
+                            <PillLink href={`/user/${allocation.authorUsername || allocation.resourceId}`}>
+                              {allocation.authorUsername || allocation.resourceId}
+                            </PillLink>
+                            <span className="text-sm text-muted-foreground">User</span>
+                          </div>
+                        ) : (
+                          <PillLink href={`/${allocation.resourceId}`}>
+                            {allocation.pageTitle || allocation.resourceId}
+                          </PillLink>
+                        )}
+
+                        {allocation.resourceType !== 'user' && (
+                          <Badge variant="outline" className="text-xs">
+                            {getResourceTypeLabel(allocation.resourceType)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  
-                  {/* Resource info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <p className="font-medium truncate">
-                        {allocation.resourceType === 'wewrite' 
-                          ? 'WeWrite Platform' 
-                          : (allocation.resourceId || 'Unknown Resource')
-                        }
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {getResourceTypeLabel(allocation.resourceType)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <span>{formatUsdCents(allocation.usdCents)}</span>
-                      <span>•</span>
-                      <span>{percentage.toFixed(1)}%</span>
-                    </div>
+
+                  {/* Amount and percentage */}
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <span className="font-medium">{formatUsdCents(allocation.usdCents)}</span>
+                    <span>•</span>
+                    <span>{percentage.toFixed(1)}%</span>
                   </div>
                 </div>
 
-                {/* Actions */}
-                {showActions && (
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    {onViewResource && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewResource(allocation)}
-                        className="h-8 w-8 p-0"
-                        title="View resource"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
-                    
-                    {onEditAllocation && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEditAllocation(allocation)}
-                        className="h-8 w-8 p-0"
-                        title="Edit allocation"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                    )}
-                    
-                    {onRemoveAllocation && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveAllocation(allocation)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        title="Remove allocation"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                {/* Middle row: Plus/Minus buttons and composition bar */}
+                <div className="flex items-center space-x-3">
+                  {/* Plus/Minus buttons */}
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      title="Decrease allocation"
+                      onClick={() => onDecreaseAllocation?.(allocation)}
+                      disabled={!onDecreaseAllocation}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      title="Increase allocation"
+                      onClick={() => onIncreaseAllocation?.(allocation)}
+                      disabled={!onIncreaseAllocation}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  {/* Composition bar */}
+                  <div className="flex-1 relative h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom row: Actions */}
+                {showActions && onRemoveAllocation && (
+                  <div className="flex items-center justify-end space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveAllocation(allocation)}
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      title="Remove allocation"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 )}
               </div>

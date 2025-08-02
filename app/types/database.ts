@@ -47,7 +47,7 @@ export interface Page {
   replyToTitle?: string;
   replyToUsername?: string;
   followerCount?: number;
-  // Token earnings (subscription-based only)
+  // USD earnings (subscription-based only)
   monthlyEarnings?: number;
   // Custom date field for daily notes and other date-based pages
   customDate?: string; // YYYY-MM-DD format
@@ -425,7 +425,7 @@ export type NotificationType =
 
 // Feature flags have been removed - all features are now always enabled
 
-// Subscription-based token system only - no direct payments or pledges
+// Subscription-based USD system only - no direct payments or pledges
 
 // API Response types
 export interface ApiResponse<T = any> {

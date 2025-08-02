@@ -1,11 +1,11 @@
 /**
  * Financial Operations Service with Enterprise-Grade Error Handling
- * 
- * This service wraps the TokenEarningsService with comprehensive error handling,
+ *
+ * This service wraps the UsdEarningsService with comprehensive error handling,
  * retry mechanisms, and proper error propagation for production-ready reliability.
  */
 
-import { TokenEarningsService } from './tokenEarningsService';
+import { UsdEarningsService } from './usdEarningsService';
 import { FinancialValidationService } from './financialValidationService';
 import {
   FinancialOperationResult,
@@ -79,9 +79,25 @@ export class FinancialOperationsService {
   ): Promise<FinancialOperationResult<{ payoutId: string }>> {
     const corrId = correlationId || FinancialUtils.generateCorrelationId();
     const config = retryConfig || DEFAULT_RETRY_CONFIG;
-    
+
     return FinancialRetry.executeWithRetry(
-      () => TokenEarningsService.requestPayout(userId, amount, corrId),
+      async () => {
+        // Convert amount to cents if provided
+        const amountCents = amount ? Math.round(amount * 100) : undefined;
+        const result = await UsdEarningsService.requestPayout(userId, amountCents);
+
+        if (result.success) {
+          return {
+            success: true,
+            data: { payoutId: result.data?.payoutId || '' }
+          };
+        } else {
+          return {
+            success: false,
+            error: result.error
+          };
+        }
+      },
       config,
       corrId,
       'PAYOUT_REQUEST'

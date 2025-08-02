@@ -7,7 +7,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, List, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import NavHeader from '../components/layout/NavHeader';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import { useAuth } from '../providers/AuthProvider';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import DailyNotesCarousel from '../components/daily-notes/DailyNotesCarousel';
@@ -134,26 +134,23 @@ function TimelineContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation Header */}
-      <NavHeader
-        backUrl="/"
-        rightContent={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={scrollToToday}
-            className="rounded-2xl relative"
-            aria-label="Scroll to today"
-          >
-            <Clock className="h-4 w-4" />
-            <span className="hidden md:inline ml-2">Today</span>
-          </Button>
-        }
-      />
-
-      {/* Content */}
-      <div className="container mx-auto px-4 py-6 md:py-8">
+    <NavPageLayout
+      backUrl="/"
+      maxWidth="full"
+      className="px-4"
+      rightContent={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={scrollToToday}
+          className="rounded-2xl relative"
+          aria-label="Scroll to today"
+        >
+          <Clock className="h-4 w-4" />
+          <span className="hidden md:inline ml-2">Today</span>
+        </Button>
+      }
+    >
         {/* View Mode Toggle - only for daily notes, in body section */}
         {type === 'daily-notes' && (
           <div className="flex justify-center mb-6">
@@ -202,8 +199,7 @@ function TimelineContent() {
             focusDate={focusDate}
           />
         )}
-      </div>
-    </div>
+    </NavPageLayout>
   );
 }
 

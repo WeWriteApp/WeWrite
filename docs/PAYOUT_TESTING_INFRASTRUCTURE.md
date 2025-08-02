@@ -2,7 +2,7 @@
 
 ## Overview
 
-WeWrite provides a comprehensive testing infrastructure for validating the complete payout flow from token earnings to bank transfers. This system enables thorough testing of connected accounts, platform fee calculations, and Stripe transfers in test mode without affecting production data.
+WeWrite provides a comprehensive testing infrastructure for validating the complete payout flow from USD earnings to bank transfers. This system enables thorough testing of connected accounts, platform fee calculations, and Stripe transfers in test mode without affecting production data.
 
 ## Core Components
 
@@ -54,7 +54,7 @@ The PayoutFlowValidator is the primary interface for testing payout functionalit
 
 **Available Tests**:
 1. **Payout Flow Validation**: Comprehensive fee and flow testing
-2. **Monthly Distribution**: Token earnings processing simulation
+2. **Monthly Distribution**: USD earnings processing simulation
 3. **System Status Checks**: Overall payout system health validation
 
 ### API Testing Endpoints
@@ -81,7 +81,7 @@ The PayoutFlowValidator is the primary interface for testing payout functionalit
 WeWrite's payout system provides complete fee transparency:
 
 **Fee Components**:
-- **Gross Earnings**: Total token value earned
+- **Gross Earnings**: Total USD value earned
 - **WeWrite Platform Fee**: 7% of gross earnings
 - **Stripe Payout Fee**: Variable based on payout method
 - **Net Payout Amount**: Final amount transferred to bank
@@ -118,7 +118,7 @@ WeWrite's payout system provides complete fee transparency:
 
 **Test Data**:
 - Mock user accounts with earnings balances
-- Simulated token allocation history
+- Simulated USD allocation history
 - Test connected account configurations
 - Sample payout transaction records
 
@@ -230,4 +230,4 @@ WeWrite's payout system provides complete fee transparency:
 
 ---
 
-*This infrastructure provides comprehensive testing capabilities for WeWrite's payout system, ensuring reliable and transparent token-to-cash transfers for content creators.*
+*This infrastructure provides comprehensive testing capabilities for WeWrite's payout system, ensuring reliable and transparent USD-to-cash transfers for content creators.*

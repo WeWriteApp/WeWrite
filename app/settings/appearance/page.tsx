@@ -8,7 +8,7 @@ import { ChevronLeft, Sun, Moon, Laptop, Check } from 'lucide-react';
 import AccentColorSwitcher from '../../components/utils/AccentColorSwitcher';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import { cn } from "../../lib/utils";
-import NavHeader from '../../components/layout/NavHeader';
+import NavPageLayout from '../../components/layout/NavPageLayout';
 
 export default function AppearancePage() {
   const { user } = useAuth();
@@ -42,12 +42,7 @@ export default function AppearancePage() {
   ];
 
   return (
-    <div>
-      <div className="lg:hidden">
-        <NavHeader backUrl="/settings" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+    <NavPageLayout backUrl="/settings">
 
         <div className="space-y-8">
           {/* Theme Selection */}
@@ -111,7 +106,6 @@ export default function AppearancePage() {
             <PillStyleToggle />
           </div>
         </div>
-      </div>
-    </div>
+    </NavPageLayout>
   );
 }

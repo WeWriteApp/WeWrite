@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
-import { NavHeader } from '../../components/layout/NavHeader';
-import { UsdAllocationDisplay } from '../../components/payments/UsdAllocationDisplay';
+import NavPageLayout from '../../components/layout/NavPageLayout';
+import UsdAllocationDisplay from '../../components/payments/UsdAllocationDisplay';
 import { UsdAllocationBreakdown } from '../../components/payments/UsdAllocationBreakdown';
 import { UsdPieChart } from '../../components/ui/UsdPieChart';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -12,12 +12,70 @@ import { Wallet, TrendingUp, Calendar, Settings } from 'lucide-react';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { UsdAllocation } from '../../types/database';
 import Link from 'next/link';
+import { getLoggedOutUsdBalance, clearLoggedOutUsd } from '../../utils/simulatedUsd';
 
 export default function SpendPage() {
   const { user } = useAuth();
   const { usdBalance, refreshUsdBalance } = useUsdBalance();
   const [allocations, setAllocations] = useState<UsdAllocation[]>([]);
+  const [countdown, setCountdown] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Convert simulated USD data to real allocations
+  const convertSimulatedUsdData = async () => {
+    if (!user?.uid) return;
+
+    try {
+      // Check for simulated USD allocations that need to be converted
+      const usdBalance = getLoggedOutUsdBalance();
+      if (usdBalance.allocations && usdBalance.allocations.length > 0) {
+        console.log('🎯 Spend: Converting simulated USD allocations to real allocations');
+
+        for (const allocation of usdBalance.allocations) {
+          try {
+            const response = await fetch('/api/usd/allocate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pageId: allocation.pageId,
+                usdCentsChange: allocation.usdCents
+              })
+            });
+
+            if (response.ok) {
+              console.log(`🎯 Spend: Converted simulated ${allocation.usdCents} cents for page ${allocation.pageTitle}`);
+            }
+          } catch (error) {
+            console.error('Error converting USD allocation:', error);
+          }
+        }
+
+        // Clear simulated USD data after conversion
+        clearLoggedOutUsd();
+        console.log('🎯 Spend: Cleared simulated USD data after conversion');
+      }
+    } catch (error) {
+      console.error('Error converting simulated data:', error);
+    }
+  };
+
+  // Load allocations function
+  const loadAllocations = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const response = await fetch('/api/usd/allocations');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🎯 Spend: API response:', data);
+        setAllocations(data.allocations || []);
+      } else {
+        console.error('🎯 Spend: API error:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching allocations:', error);
+    }
+  };
 
   // Fetch user's allocations
   useEffect(() => {
@@ -28,11 +86,11 @@ export default function SpendPage() {
       }
 
       try {
-        const response = await fetch('/api/usd/balance');
-        if (response.ok) {
-          const data = await response.json();
-          setAllocations(data.allocations || []);
-        }
+        // First convert any simulated data
+        await convertSimulatedUsdData();
+
+        // Then load current allocations
+        await loadAllocations();
       } catch (error) {
         console.error('Error fetching allocations:', error);
       } finally {
@@ -81,6 +139,95 @@ export default function SpendPage() {
     }
   };
 
+  // Handle increasing allocation (optimistic)
+  const handleIncreaseAllocation = async (allocation: UsdAllocation) => {
+    // Optimistic update - update UI immediately
+    setAllocations(prev => prev.map(a =>
+      a.id === allocation.id
+        ? { ...a, usdCents: a.usdCents + 100 }
+        : a
+    ));
+
+    // Update USD balance optimistically
+    await refreshUsdBalance();
+
+    // Fire and forget API call - don't wait for response or update UI based on it
+    try {
+      const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
+      const body = allocation.resourceType === 'user'
+        ? { recipientUserId: allocation.resourceId, usdCentsChange: 100 }
+        : { pageId: allocation.resourceId, usdCentsChange: 100 };
+
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).catch(error => {
+        console.error('Error increasing allocation (background):', error);
+      });
+    } catch (error) {
+      console.error('Error increasing allocation:', error);
+    }
+  };
+
+  // Handle decreasing allocation (optimistic)
+  const handleDecreaseAllocation = async (allocation: UsdAllocation) => {
+    // Don't allow decreasing below 0
+    if (allocation.usdCents <= 0) return;
+
+    // Optimistic update - update UI immediately
+    setAllocations(prev => prev.map(a =>
+      a.id === allocation.id
+        ? { ...a, usdCents: Math.max(0, a.usdCents - 100) }
+        : a
+    ));
+
+    // Update USD balance optimistically
+    await refreshUsdBalance();
+
+    // Fire and forget API call - don't wait for response or update UI based on it
+    try {
+      const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
+      const body = allocation.resourceType === 'user'
+        ? { recipientUserId: allocation.resourceId, usdCentsChange: -100 }
+        : { pageId: allocation.resourceId, usdCentsChange: -100 };
+
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).catch(error => {
+        console.error('Error decreasing allocation (background):', error);
+      });
+    } catch (error) {
+      console.error('Error decreasing allocation:', error);
+    }
+  };
+
+  // Update countdown every second
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const timeUntil = nextMonth.getTime() - now.getTime();
+
+      const days = Math.floor(timeUntil / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeUntil % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeUntil % (1000 * 60)) / 1000);
+
+      setCountdown(`${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`);
+    };
+
+    // Update immediately
+    updateCountdown();
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -95,10 +242,76 @@ export default function SpendPage() {
   const hasBalance = totalUsdCents > 0;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <NavHeader
-        title="Manage Spending"
-      />
+    <NavPageLayout
+      backUrl="/settings"
+      maxWidth="6xl"
+      loading={isLoading}
+      loadingFallback={
+        <div className="space-y-6">
+          {/* Loading state for allocation display */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-6 bg-muted rounded w-1/3"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-20 bg-muted rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Loading state for countdown */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Next payment
+              </CardTitle>
+              <CardDescription>
+                Loading payment information...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center space-y-4">
+                <div className="animate-pulse space-y-2">
+                  <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
+                  <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
+                </div>
+                <div className="h-4 bg-muted rounded w-64 mx-auto"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Loading state for breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Breakdown</CardTitle>
+              <CardDescription>
+                Loading your allocations...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="animate-pulse space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-3 bg-muted/30 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 bg-muted rounded w-1/3"></div>
+                      <div className="h-4 bg-muted rounded w-16"></div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex space-x-1">
+                        <div className="h-7 w-7 bg-muted rounded"></div>
+                        <div className="h-7 w-7 bg-muted rounded"></div>
+                      </div>
+                      <div className="flex-1 h-2 bg-muted rounded-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
 
       <div className="space-y-6">
         {!hasBalance ? (
@@ -124,37 +337,42 @@ export default function SpendPage() {
           </Card>
         ) : (
           <>
-            {/* Overview section */}
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Allocation display */}
-              <div className="lg:col-span-2">
-                <UsdAllocationDisplay
-                  subscriptionAmount={totalUsdCents / 100}
-                  usdBalance={usdBalance}
-                />
-              </div>
+            {/* Simplified allocation display */}
+            <UsdAllocationDisplay
+              subscriptionAmount={totalUsdCents / 100}
+              usdBalance={usdBalance}
+            />
 
-              {/* Pie chart */}
-              <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Allocation Overview</CardTitle>
-                    <CardDescription>
-                      Visual breakdown of your monthly funding
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <UsdPieChart
-                      allocations={allocations}
-                      totalUsdCents={totalUsdCents}
-                      size={200}
-                      showLabels={false}
-                      onSegmentClick={handleViewResource}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            {/* Next payment countdown */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Next payment
+                </CardTitle>
+                <CardDescription>
+                  Time remaining to adjust allocations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center space-y-4">
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-primary font-mono">
+                      {countdown}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      to make adjustments
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    Allocations will be sent to creators for the month of{' '}
+                    <span className="font-medium">
+                      {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Detailed breakdown */}
             <UsdAllocationBreakdown
@@ -163,67 +381,11 @@ export default function SpendPage() {
               onEditAllocation={handleEditAllocation}
               onRemoveAllocation={handleRemoveAllocation}
               onViewResource={handleViewResource}
+              onIncreaseAllocation={handleIncreaseAllocation}
+              onDecreaseAllocation={handleDecreaseAllocation}
             />
 
-            {/* Monthly insights */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Monthly Insights
-                </CardTitle>
-                <CardDescription>
-                  Your funding activity this month
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="text-center space-y-2">
-                    <div className="text-2xl font-bold text-primary">
-                      {allocations.length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Creators Supported
-                    </div>
-                  </div>
-                  
-                  <div className="text-center space-y-2">
-                    <div className="text-2xl font-bold text-green-600">
-                      {usdBalance ? Math.round((usdBalance.allocatedUsdCents / totalUsdCents) * 100) : 0}%
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Funds Allocated
-                    </div>
-                  </div>
-                  
-                  <div className="text-center space-y-2">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {new Date().toLocaleDateString('en-US', { day: 'numeric' })}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Days Until Distribution
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button asChild className="flex-1">
-                <Link href="/">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Discover More Creators
-                </Link>
-              </Button>
-              
-              <Button variant="outline" asChild className="flex-1">
-                <Link href="/settings/fund-account">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Manage Funding
-                </Link>
-              </Button>
-            </div>
           </>
         )}
 
@@ -253,6 +415,6 @@ export default function SpendPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </NavPageLayout>
   );
 }

@@ -12,8 +12,8 @@ import { useAuth } from '../../providers/AuthProvider';
  *
  * A floating action button for creating new pages on mobile.
  * Features:
- * - Shows only on NavPages (where mobile toolbar is visible)
- * - Hides when pledge bar is visible (ContentPages)
+ * - Shows on NavPages, settings pages, and user's own pages (where mobile toolbar is visible)
+ * - Hides on other people's pages (where pledge bar is visible)
  * - Uses accent color styling
  * - Dynamic positioning: moves up when toolbar visible, down when toolbar hidden
  * - Smooth animations and scroll-based repositioning
@@ -32,40 +32,64 @@ export default function MobileFloatingActionButton() {
   const isContentPage = React.useMemo(() => {
     const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
     ];
+
+    // Show FAB on settings pages now
+    // (Removed the settings page exclusion)
 
     // NavPages show mobile toolbar and FAB
     if (navPageRoutes.includes(pathname)) {
       return false;
     }
 
-    // ContentPages (user pages, group pages, /id pages) show pledge bar instead of FAB
-    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+    // For user pages, show FAB only on current user's own page
+    if (pathname.startsWith('/user/')) {
+      // Show FAB on your own profile page (since no pledge bar)
+      if (user?.uid && pathname === `/user/${user.uid}`) {
+        return false; // Show FAB on own profile (not a content page)
+      }
+      return true; // Hide FAB on other user profiles (is a content page)
+    }
+
+    // Hide FAB on group pages (these always show pledge bar)
+    if (pathname.startsWith('/group/')) {
       return true;
     }
 
     // Individual content pages at /id/ (single segment routes that aren't NavPages)
     const segments = pathname.split('/').filter(Boolean);
     return segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`);
-  }, [pathname]);
+  }, [pathname, user]);
 
   // Check if mobile toolbar should be visible (same logic as MobileBottomNav)
   const shouldShowMobileNav = React.useMemo(() => {
     const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
     ];
+
+    // Show on settings pages now
+    // (Removed the settings page exclusion)
 
     // Always show on NavPage routes
     if (navPageRoutes.includes(pathname)) {
       return true;
     }
 
-    // Hide on user and group pages (these are ContentPages)
-    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+    // For user pages, show mobile nav only on current user's own page
+    if (pathname.startsWith('/user/')) {
+      // Show mobile toolbar on your own profile page (since no pledge bar)
+      if (user?.uid && pathname === `/user/${user.uid}`) {
+        return true; // Show mobile nav on own profile
+      }
+      return false; // Hide on other user profiles
+    }
+
+    // Hide on group pages (these are ContentPages)
+    if (pathname.startsWith('/group/')) {
       return false;
     }
 
@@ -77,7 +101,7 @@ export default function MobileFloatingActionButton() {
     // Hide on individual content pages
     const segments = pathname.split('/').filter(Boolean);
     return !(segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`));
-  }, [pathname]);
+  }, [pathname, user]);
 
   // Track scroll to determine mobile toolbar visibility
   useEffect(() => {

@@ -1,6 +1,9 @@
 /**
  * Fast PledgeBar Data API
- * 
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/pledge-bar-data for USD-based pledge bar data.
+ *
  * Optimized endpoint specifically for PledgeBar component that returns
  * only the essential data needed for fast loading.
  */

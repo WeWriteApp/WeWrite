@@ -119,7 +119,6 @@ export async function POST(request: NextRequest) {
 
     // Update subscription in Firestore
     const tier = newTier || determineTierFromAmount(newAmount);
-    const tokens = calculateTokensForAmount(newAmount);
 
     // Safely handle timestamp conversion
     let currentPeriodEnd;
@@ -139,7 +138,6 @@ export async function POST(request: NextRequest) {
       status: updatedSubscription.status || 'active',
       amount: newAmount,
       tier,
-      tokens,
       cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end || false,
       currentPeriodEnd,
       updatedAt: FieldValue.serverTimestamp()

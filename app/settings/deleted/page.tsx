@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
 import { ChevronLeft } from 'lucide-react';
-import NavHeader from '../../components/layout/NavHeader';
+import NavPageLayout from '../../components/layout/NavPageLayout';
 import RecentlyDeletedPages from '../../components/settings/RecentlyDeletedPages';
 
 export default function RecentlyDeletedPage() {
@@ -24,16 +24,10 @@ export default function RecentlyDeletedPage() {
   }
 
   return (
-    <div>
-      <div className="lg:hidden">
-        <NavHeader backUrl="/settings" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 md:pb-8">
+    <NavPageLayout backUrl="/settings">
 
         {/* Recently Deleted Pages Component */}
         <RecentlyDeletedPages />
-      </div>
-    </div>
+    </NavPageLayout>
   );
 }

@@ -63,6 +63,11 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   // Initialize filter state from localStorage immediately
   const [includeOwn, setIncludeOwn] = useState(() => {
+    // Force true for development environment to show own edits when testing with single user
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+
     if (typeof window !== 'undefined') {
       try {
         const savedIncludeOwn = localStorage.getItem('globalRecentEdits_includeOwn');

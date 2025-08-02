@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
 import { ChevronLeft } from 'lucide-react';
-import NavHeader from '../../components/layout/NavHeader';
+import NavPageLayout from '../../components/layout/NavPageLayout';
 import PWAInstallationCard from '../../components/utils/PWAInstallationCard';
 
 export default function AdvancedPage() {
@@ -24,12 +24,7 @@ export default function AdvancedPage() {
   }
 
   return (
-    <div>
-      <div className="lg:hidden">
-        <NavHeader backUrl="/settings" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+    <NavPageLayout backUrl="/settings">
 
         {/* Advanced Settings Sections */}
         <div className="space-y-8">
@@ -38,7 +33,6 @@ export default function AdvancedPage() {
           {/* PWA Installation */}
           <PWAInstallationCard />
         </div>
-      </div>
-    </div>
+    </NavPageLayout>
   );
 }

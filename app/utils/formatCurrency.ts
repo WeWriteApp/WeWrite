@@ -90,23 +90,23 @@ export function isValidUsdCents(cents: number): boolean {
   return Number.isInteger(cents) && cents >= 0;
 }
 
-// Legacy token functions - DEPRECATED, will be removed after migration
+// Legacy token functions - DEPRECATED, migration complete
 /**
- * @deprecated Use formatUsdCents instead
+ * @deprecated Use formatUsdCents instead - token system has been replaced with USD
  */
 export function formatTokens(tokens: number): string {
   return `${tokens.toLocaleString()} token${tokens !== 1 ? 's' : ''}`;
 }
 
 /**
- * @deprecated Use centsToDollars instead - tokens are being replaced with USD cents
+ * @deprecated Use centsToDollars instead - token system has been replaced with USD cents
  */
 export function tokensToUsd(tokens: number): number {
   return tokens / 10; // $1 = 10 tokens
 }
 
 /**
- * @deprecated Use dollarsToCents instead - tokens are being replaced with USD cents
+ * @deprecated Use dollarsToCents instead - token system has been replaced with USD cents
  */
 export function usdToTokens(usd: number): number {
   return Math.floor(usd * 10); // Convert USD to tokens

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
-import { NavHeader } from '../../../components/layout/NavHeader';
+import NavPageLayout from '../../../components/layout/NavPageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
@@ -76,10 +76,7 @@ export default function FundAccountSuccessPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <NavHeader
-        title="Account Funding Active!"
-      />
+    <NavPageLayout>
 
       <div className="space-y-6">
         {/* Success message */}
@@ -223,6 +220,6 @@ export default function FundAccountSuccessPage() {
           </p>
         </div>
       </div>
-    </div>
+    </NavPageLayout>
   );
 }

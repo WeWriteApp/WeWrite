@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
@@ -17,9 +17,17 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const { signIn } = useAuth();
+
+  const { signIn, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      console.log('[LoginForm] User already authenticated, redirecting to home');
+      router.push('/');
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +36,8 @@ export function LoginForm() {
 
     try {
       await signIn(emailOrUsername, password);
-      router.push('/');
+      // Use window.location.href for reliable redirect after login
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

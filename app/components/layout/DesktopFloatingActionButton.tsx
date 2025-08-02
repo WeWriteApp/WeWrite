@@ -12,7 +12,8 @@ import { useAuth } from '../../providers/AuthProvider';
  *
  * A floating action button for creating new pages on desktop.
  * Features:
- * - Shows on all pages except ContentPages and user pages
+ * - Shows on NavPages, settings pages, and user's own pages
+ * - Hides on other people's pages (where pledge bar is shown)
  * - Fixed bottom-right positioning
  * - Uses accent color styling
  * - Smooth animations
@@ -24,8 +25,17 @@ export default function DesktopFloatingActionButton() {
 
   // Check if current route is a ContentPage or user page (should hide FAB)
   const shouldHideFAB = React.useMemo(() => {
-    // Hide on ContentPages (user pages, group pages, individual content pages)
-    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+    // For user pages, hide FAB only on other people's pages
+    if (pathname.startsWith('/user/')) {
+      // Show FAB on your own profile page (since no pledge bar)
+      if (user?.uid && pathname === `/user/${user.uid}`) {
+        return false; // Show FAB on own profile
+      }
+      return true; // Hide FAB on other user profiles
+    }
+
+    // Hide on group pages (these are ContentPages)
+    if (pathname.startsWith('/group/')) {
       return true;
     }
 
@@ -39,10 +49,8 @@ export default function DesktopFloatingActionButton() {
       return true;
     }
 
-    // Hide on subscription pages
-    if (pathname.startsWith('/settings/subscription')) {
-      return true;
-    }
+    // Show on settings pages now (including subscription pages)
+    // (Removed the settings page exclusions)
 
     // Hide on location picker pages
     if (pathname.includes('/location')) {
@@ -62,7 +70,7 @@ export default function DesktopFloatingActionButton() {
     }
 
     return false;
-  }, [pathname]);
+  }, [pathname, user]);
 
   const handleNewPageClick = () => {
     router.push('/new?source=desktop-fab');

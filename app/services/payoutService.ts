@@ -6,6 +6,7 @@
 import { db } from '../firebase/config';
 import { UnifiedFeeCalculationService } from './unifiedFeeCalculationService';
 import { FeeConfigurationService } from './feeConfigurationService';
+import { UsdEarningsService } from './usdEarningsService';
 import {
   doc,
   getDoc,
@@ -36,7 +37,8 @@ import type {
   PayoutApiResponse
 } from '../types/payout';
 import { getCurrentFeeStructure } from '../utils/feeCalculations';
-import { getCollectionName } from "../utils/environmentConfig";
+import { getCollectionName, USD_COLLECTIONS } from "../utils/environmentConfig";
+import { centsToDollars, dollarsToCents } from '../utils/formatCurrency';
 
 class PayoutService {
   private static instance: PayoutService;
@@ -396,13 +398,13 @@ class PayoutService {
     }
   }
 
-  // Get earnings breakdown for a user
+  // Get earnings breakdown for a user (USD-based)
   async getEarningsBreakdown(userId: string): Promise<EarningsBreakdown> {
     try {
-      const recipientId = `recipient_${userId}`;
-      const recipient = await this.getPayoutRecipient(userId);
-      
-      if (!recipient) {
+      // Use UsdEarningsService to get comprehensive USD earnings data
+      const usdData = await UsdEarningsService.getCompleteWriterEarnings(userId);
+
+      if (!usdData.balance) {
         return {
           totalEarnings: 0,
           platformFees: 0,
@@ -417,36 +419,37 @@ class PayoutService {
         };
       }
 
-      // Get earnings by source
-      const earningsQuery = query(
-        collection(db, 'earnings'),
-        where('recipientId', '==', recipientId),
-        orderBy('createdAt', 'desc'),
-        limit(100)
-      );
-      
-      const earningsSnapshot = await getDocs(earningsQuery);
-      const earnings = earningsSnapshot.docs.map(doc => doc.data() as Earning);
-      
-      const earningsBySource = earnings.reduce((acc, earning) => {
-        acc[earning.sourceType] = (acc[earning.sourceType] || 0) + earning.netAmount;
-        return acc;
-      }, {} as any);
+      // Convert USD cents to dollars for the breakdown
+      const totalEarnings = centsToDollars(usdData.balance.totalUsdCentsEarned);
+      const pendingAmount = centsToDollars(usdData.balance.pendingUsdCents);
+      const availableAmount = centsToDollars(usdData.balance.availableUsdCents);
+
+      // Calculate platform fees from earnings history
+      let totalPlatformFees = 0;
+      let subscriptionEarnings = 0;
+
+      usdData.earnings.forEach(earning => {
+        const earningAmount = centsToDollars(earning.totalUsdCentsReceived);
+        subscriptionEarnings += earningAmount;
+
+        // Estimate platform fees (7% of gross earnings)
+        totalPlatformFees += earningAmount * 0.07;
+      });
 
       return {
-        totalEarnings: recipient.totalEarnings,
-        platformFees: earnings.reduce((sum, e) => sum + e.platformFee, 0),
-        netEarnings: recipient.totalEarnings,
-        pendingAmount: recipient.pendingBalance,
-        availableAmount: recipient.availableBalance,
+        totalEarnings,
+        platformFees: totalPlatformFees,
+        netEarnings: totalEarnings - totalPlatformFees,
+        pendingAmount,
+        availableAmount,
         earningsBySource: {
-          pledges: earningsBySource.pledge || 0,
-          subscriptions: earningsBySource.subscription || 0,
-          bonuses: earningsBySource.bonus || 0
+          pledges: 0, // Legacy - no longer used
+          subscriptions: subscriptionEarnings, // USD earnings from subscriptions
+          bonuses: 0 // Not implemented yet
         }
       };
     } catch (error) {
-      console.error('Error getting earnings breakdown:', error);
+      console.error('Error getting USD earnings breakdown:', error);
       throw error;
     }
   }

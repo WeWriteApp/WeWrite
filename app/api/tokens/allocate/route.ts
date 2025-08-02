@@ -1,12 +1,18 @@
 /**
  * Token Allocation API
- * 
+ *
+ * DEPRECATED: This API is being migrated to USD-based system
+ * Use /api/usd/allocate for new implementations
+ *
  * Allows users to allocate their monthly tokens to creators
+ * Now delegates to USD system with token-to-USD conversion
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerTokenService } from '../../../services/tokenService.server';
+import { ServerUsdService } from '../../../services/usdService.server';
+import { migrateTokensToUsdCents } from '../../../utils/formatCurrency';
+import { MIGRATION_HELPERS } from '../../../utils/usdConstants';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 
@@ -99,13 +105,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Allocate tokens
-    const result = await ServerTokenService.allocateTokens(
+    // Convert tokens to USD cents for allocation
+    const usdCents = migrateTokensToUsdCents(tokens);
+
+    // Allocate USD (delegating to USD system)
+    const result = await ServerUsdService.allocateUsd(
       userId,
       recipientUserId,
       resourceType,
       resourceId,
-      tokens
+      usdCents
     );
 
     if (!result.success) {
@@ -114,10 +123,15 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get updated token balance
-    const updatedBalance = await ServerTokenService.getUserTokenBalance(userId);
+    // Get updated USD balance and convert back to token format for backward compatibility
+    const updatedUsdBalance = await ServerUsdService.getUserUsdBalance(userId);
+    const updatedBalance = updatedUsdBalance ? {
+      totalTokens: MIGRATION_HELPERS.usdCentsToTokens(updatedUsdBalance.totalUsdCents),
+      allocatedTokens: MIGRATION_HELPERS.usdCentsToTokens(updatedUsdBalance.allocatedUsdCents),
+      availableTokens: MIGRATION_HELPERS.usdCentsToTokens(updatedUsdBalance.availableUsdCents || 0)
+    } : null;
 
-    console.log(`Tokens allocated: ${tokens} from ${userId} to ${recipientUserId} for ${resourceType}:${resourceId}`);
+    console.log(`Tokens allocated (via USD): ${tokens} tokens (${usdCents} cents) from ${userId} to ${recipientUserId} for ${resourceType}:${resourceId}`);
 
     return NextResponse.json({
       success: true,

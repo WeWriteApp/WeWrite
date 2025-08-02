@@ -23,6 +23,16 @@ export interface FeeBreakdown {
   currency: string;
 }
 
+export interface FeeBreakdownCents {
+  grossEarningsCents: number;
+  wewritePlatformFeeCents: number;
+  stripeProcessingFeeCents: number;
+  stripePayoutFeeCents: number;
+  taxWithholdingCents: number;
+  netPayoutAmountCents: number;
+  currency: string;
+}
+
 export interface PayoutFees {
   stripeConnectFee: number; // 0.25% for Express accounts
   stripePayoutFee: number; // Varies by payout method
@@ -115,7 +125,7 @@ export function calculateFeeBreakdown(
   
   // Stripe processing fee (already deducted from gross earnings in most cases)
   // This is for transparency display only
-  const stripeProcessingFee = 0; // Already deducted from token allocations
+  const stripeProcessingFee = 0; // Already deducted from USD allocations
   
   // Stripe payout fee
   let stripePayoutFee = 0;
@@ -172,7 +182,7 @@ export async function calculateFeeBreakdownAsync(
 
   // Stripe processing fee (already deducted from gross earnings in most cases)
   // This is for transparency display only
-  const stripeProcessingFee = 0; // Already deducted from token allocations
+  const stripeProcessingFee = 0; // Already deducted from USD allocations
 
   // Stripe payout fee
   let stripePayoutFee = 0;
@@ -272,10 +282,120 @@ export async function calculateMinimumGrossEarningsAsync(
 }
 
 // Import centralized currency formatting
-import { formatCurrency } from './formatCurrency';
+import { formatCurrency, formatUsdCents, centsToDollars, dollarsToCents } from './formatCurrency';
 
 // Re-export for backward compatibility
-export { formatCurrency };
+export { formatCurrency, formatUsdCents, centsToDollars, dollarsToCents };
+
+/**
+ * USD CENTS FEE CALCULATION FUNCTIONS
+ * These functions work with USD cents for precision in the USD system
+ */
+
+/**
+ * Calculate comprehensive fee breakdown for a payout in USD cents
+ * @param grossEarningsCents - Gross earnings in USD cents
+ * @param currency - Currency code (default: 'USD')
+ * @param payoutMethod - Payout method ('standard' or 'instant')
+ * @returns Fee breakdown in USD cents
+ */
+export function calculateFeeBreakdownCents(
+  grossEarningsCents: number,
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): FeeBreakdownCents {
+  // Convert to dollars for calculation
+  const grossEarnings = centsToDollars(grossEarningsCents);
+
+  // Calculate fees in dollars
+  const breakdown = calculateFeeBreakdown(grossEarnings, currency, payoutMethod);
+
+  // Convert back to cents
+  return {
+    grossEarningsCents,
+    wewritePlatformFeeCents: dollarsToCents(breakdown.wewritePlatformFee),
+    stripeProcessingFeeCents: dollarsToCents(breakdown.stripeProcessingFee),
+    stripePayoutFeeCents: dollarsToCents(breakdown.stripePayoutFee),
+    taxWithholdingCents: dollarsToCents(breakdown.taxWithholding),
+    netPayoutAmountCents: dollarsToCents(breakdown.netPayoutAmount),
+    currency: breakdown.currency
+  };
+}
+
+/**
+ * Calculate comprehensive fee breakdown for a payout in USD cents with dynamic fee structure
+ * @param grossEarningsCents - Gross earnings in USD cents
+ * @param currency - Currency code (default: 'USD')
+ * @param payoutMethod - Payout method ('standard' or 'instant')
+ * @returns Fee breakdown in USD cents
+ */
+export async function calculateFeeBreakdownCentsAsync(
+  grossEarningsCents: number,
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): Promise<FeeBreakdownCents> {
+  // Convert to dollars for calculation
+  const grossEarnings = centsToDollars(grossEarningsCents);
+
+  // Calculate fees in dollars using async version
+  const breakdown = await calculateFeeBreakdownAsync(grossEarnings, currency, payoutMethod);
+
+  // Convert back to cents
+  return {
+    grossEarningsCents,
+    wewritePlatformFeeCents: dollarsToCents(breakdown.wewritePlatformFee),
+    stripeProcessingFeeCents: dollarsToCents(breakdown.stripeProcessingFee),
+    stripePayoutFeeCents: dollarsToCents(breakdown.stripePayoutFee),
+    taxWithholdingCents: dollarsToCents(breakdown.taxWithholding),
+    netPayoutAmountCents: dollarsToCents(breakdown.netPayoutAmount),
+    currency: breakdown.currency
+  };
+}
+
+/**
+ * Check if payout amount in USD cents meets minimum threshold after fees
+ * @param grossEarningsCents - Gross earnings in USD cents
+ * @param currency - Currency code (default: 'USD')
+ * @param payoutMethod - Payout method ('standard' or 'instant')
+ * @returns True if meets minimum threshold
+ */
+export function meetsMinimumThresholdCents(
+  grossEarningsCents: number,
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): boolean {
+  const breakdown = calculateFeeBreakdownCents(grossEarningsCents, currency, payoutMethod);
+  const minimumThresholdCents = dollarsToCents(WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold);
+  return breakdown.netPayoutAmountCents >= minimumThresholdCents;
+}
+
+/**
+ * Calculate the minimum gross earnings in USD cents needed to meet payout threshold
+ * @param currency - Currency code (default: 'USD')
+ * @param payoutMethod - Payout method ('standard' or 'instant')
+ * @returns Minimum gross earnings in USD cents
+ */
+export function calculateMinimumGrossEarningsCents(
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): number {
+  const minimumDollars = calculateMinimumGrossEarnings(currency, payoutMethod);
+  return dollarsToCents(minimumDollars);
+}
+
+/**
+ * Calculate the minimum gross earnings in USD cents needed to meet payout threshold with dynamic fee structure
+ * @param currency - Currency code (default: 'USD')
+ * @param payoutMethod - Payout method ('standard' or 'instant')
+ * @returns Minimum gross earnings in USD cents
+ */
+export async function calculateMinimumGrossEarningsCentsAsync(
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): Promise<number> {
+  const minimumDollars = await calculateMinimumGrossEarningsAsync(currency, payoutMethod);
+  return dollarsToCents(minimumDollars);
+}
 
 /**
  * Get fee explanation text for users
@@ -284,7 +404,7 @@ export function getFeeExplanation(payoutMethod: 'standard' | 'instant' = 'standa
   if (payoutMethod === 'instant') {
     return 'Instant payouts are processed within minutes but include a 1.5% fee (minimum 50¢). Standard payouts are free and take 2-5 business days.';
   }
-  
+
   return 'Standard payouts are free and typically arrive in your bank account within 2-5 business days.';
 }
 

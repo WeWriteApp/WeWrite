@@ -6,15 +6,16 @@ import { loadStripe } from '@stripe/stripe-js';
 import { useTheme } from '../../providers/ThemeProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
-import { SUBSCRIPTION_TIERS, getTierById, calculateTokensForAmount } from '../../utils/subscriptionTiers';
+// Legacy token imports removed - now using USD system only
 import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier, dollarsToCents } from '../../utils/usdConstants';
 import { formatUsdCents, USD_UI_TEXT } from '../../utils/formatCurrency';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { CheckCircle, ArrowLeft, CreditCard, Shield, Zap } from 'lucide-react';
-import { SubscriptionCheckoutForm } from './SubscriptionCheckoutForm';
 import { PricingDisplay } from './PricingDisplay';
+import { PaymentStep } from './checkout-steps/PaymentStep';
+import { ConfirmationStep } from './checkout-steps/ConfirmationStep';
 // Initialize Stripe
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
@@ -41,14 +42,12 @@ export interface SelectedPlan {
   usdCents: number;
   name: string;
   isCustom: boolean;
-  // Legacy token support for backward compatibility
-  tokens?: number;
 }
 
 /**
  * SubscriptionCheckout - PWA-compatible embedded subscription checkout
  *
- * Updated to use USD-based account funding instead of token subscriptions
+ * Updated to use USD-based account funding system
  *
  * Features:
  * - Multi-step checkout flow with progress indication
@@ -56,7 +55,6 @@ export interface SelectedPlan {
  * - Real-time pricing calculations with tax support
  * - USD-based account funding with direct creator payments
  * - PWA-optimized with proper error handling
- * - Integration with existing token system
  */
 export function SubscriptionCheckout({
   initialTier = 'tier2',
@@ -93,22 +91,18 @@ export function SubscriptionCheckout({
   // Initialize selected plan from props and auto-advance to payment step
   useEffect(() => {
     if (initialTier && !selectedPlan && user?.uid) {
-      const tier = getTierById(initialTier);
-      if (tier) {
-        const amount = initialAmount || tier.amount;
-        const plan: SelectedPlan = {
-          tier: tier.id,
-          amount,
-          usdCents: dollarsToCents(amount),
-          name: tier.name,
-          isCustom: initialTier === 'custom' || !!initialAmount,
-          // Legacy token support for backward compatibility
-          tokens: calculateTokensForAmount(amount)
-        };
+      const tier = getEffectiveUsdTier(initialAmount || 10);
+      const amount = initialAmount || 10;
+      const plan: SelectedPlan = {
+        tier: tier.id,
+        amount,
+        usdCents: dollarsToCents(amount),
+        name: tier.name,
+        isCustom: initialTier === 'custom' || !!initialAmount
+      };
 
-        // Auto-select the plan and advance to payment step
-        handlePlanSelection(plan);
-      }
+      // Auto-select the plan and advance to payment step
+      handlePlanSelection(plan);
     }
   }, [initialTier, initialAmount, selectedPlan, user?.uid]);
 
@@ -133,7 +127,6 @@ export function SubscriptionCheckout({
           tier: plan.tier,
           amount: plan.amount,
           tierName: plan.name,
-          tokens: plan.tokens,
           successUrl: successUrl || `${window.location.origin}/settings/subscription?success=true`,
           cancelUrl: cancelUrl || `${window.location.origin}/settings/subscription?cancelled=true`
         }),
@@ -275,8 +268,8 @@ export function SubscriptionCheckout({
           </h1>
           <p className="text-muted-foreground">
             {currentStep === 'confirmation'
-              ? 'Your subscription is now active'
-              : 'Support creators and get monthly tokens to allocate'
+              ? 'Your account funding is now active'
+              : 'Fund your account to support creators directly'
             }
           </p>
         </div>
@@ -297,6 +290,4 @@ export function SubscriptionCheckout({
   );
 }
 
-// Import the step components
-import { PaymentStep } from './checkout-steps/PaymentStep';
-import { ConfirmationStep } from './checkout-steps/ConfirmationStep';
+

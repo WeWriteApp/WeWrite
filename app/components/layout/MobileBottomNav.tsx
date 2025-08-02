@@ -145,9 +145,12 @@ export default function MobileBottomNav() {
   const isContentPageRoute = useCallback(() => {
     const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
     ];
+
+    // Show on settings pages now
+    // (Removed the settings page exclusion)
 
     // Always show on NavPage routes
     if (navPageRoutes.includes(pathname)) {
@@ -169,10 +172,8 @@ export default function MobileBottomNav() {
       return true;
     }
 
-    // Hide on subscription pages
-    if (pathname.startsWith('/settings/subscription')) {
-      return true;
-    }
+    // Show on settings pages now (including subscription pages)
+    // (Removed the settings page exclusions)
 
     // Hide on location picker pages
     if (pathname.includes('/location')) {
@@ -718,7 +719,7 @@ export default function MobileBottomNav() {
 
                       return (
                         <CrossComponentMobileNavButton
-                          key={itemId}
+                          key={`mobile-expanded-${itemId}`}
                           id={itemId}
                           index={actualSidebarIndex}
                           icon={item.icon}
@@ -785,7 +786,7 @@ export default function MobileBottomNav() {
 
             return (
               <CrossComponentMobileNavButton
-                key={buttonId}
+                key={`mobile-bottom-${buttonId}`}
                 id={buttonId}
                 index={index}
                 icon={buttonConfig.icon}

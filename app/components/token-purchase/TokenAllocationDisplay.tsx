@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdAllocationDisplay instead for USD-based allocation displays.
+ *
+ * Legacy token allocation display - replaced by USD system.
+ */
+
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

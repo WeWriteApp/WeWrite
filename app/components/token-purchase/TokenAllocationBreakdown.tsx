@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdAllocationBreakdown instead for USD-based allocation breakdowns.
+ *
+ * Legacy token allocation breakdown - replaced by USD system.
+ */
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

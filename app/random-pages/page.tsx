@@ -30,7 +30,13 @@ export default function RandomPagesPage() {
   const { user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
-  const [excludeOwnPages, setExcludeOwnPages] = useState(false);
+  const [excludeOwnPages, setExcludeOwnPages] = useState(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('randomPages_excludeOwnPages') === 'true';
+    }
+    return false;
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -42,10 +48,8 @@ export default function RandomPagesPage() {
         setDenseMode(true);
       }
 
-      const savedExcludeOwnPreference = localStorage.getItem('randomPages_excludeOwnPages');
-      if (savedExcludeOwnPreference === 'true') {
-        setExcludeOwnPages(true);
-      }
+      // Note: excludeOwnPages is already initialized from localStorage in useState
+      // No need to set it again here to avoid double state updates
     }
   }, []);
 

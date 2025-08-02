@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdAllocationModal instead for USD-based allocations.
+ *
+ * Legacy token allocation modal - replaced by USD system.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
@@ -166,12 +173,12 @@ export function TokenAllocationModal({
       console.log('🔍 TokenAllocationModal: Modal closed, navigating to spend-tokens');
 
       // Navigate immediately
-      await router.push('/settings/spend-tokens#from-modal');
+      await router.push('/settings/spend#from-modal');
       console.log('🔍 TokenAllocationModal: Navigation completed');
     } catch (error) {
       console.error('🔍 TokenAllocationModal: Navigation error:', error);
       // Fallback to window.location if router fails
-      window.location.href = '/settings/spend-tokens#from-modal';
+      window.location.href = '/settings/spend#from-modal';
     }
   };
 

@@ -76,9 +76,9 @@ export const StripeUrls = {
   subscriptionCheckout: {
     success: (subscriptionId?: string) => {
       const params = subscriptionId ? `?success=true&subscription_id=${subscriptionId}` : '?success=true';
-      return getFullUrl(`/settings/buy-tokens${params}`);
+      return getFullUrl(`/settings/fund-account${params}`);
     },
-    cancel: () => getFullUrl('/settings/buy-tokens?cancelled=true'),
+    cancel: () => getFullUrl('/settings/fund-account?cancelled=true'),
   },
 };
 

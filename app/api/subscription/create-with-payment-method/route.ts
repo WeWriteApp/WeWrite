@@ -8,7 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
-import { getEffectiveUsdTier, dollarsToCents } from '../../../utils/usdConstants';
+import { getEffectiveUsdTier } from '../../../utils/usdConstants';
+import { dollarsToCents } from '../../../utils/formatCurrency';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { paymentMethodId, tier, amount, tierName, tokens } = body;
+    const { paymentMethodId, tier, amount, tierName } = body;
 
     if (!paymentMethodId || !amount || !tier) {
       return NextResponse.json({
@@ -181,9 +182,7 @@ export async function POST(request: NextRequest) {
         tier,
         tierName: tierName || tier,
         usdAmount: amount.toString(),
-        usdCents: dollarsToCents(amount).toString(),
-        // Legacy token metadata for backward compatibility
-        tokens: tokens?.toString() || (amount * 10).toString()
+        usdCents: dollarsToCents(amount).toString()
       },
       expand: ['latest_invoice.payment_intent']
     });
@@ -225,7 +224,6 @@ export async function POST(request: NextRequest) {
 
     // Save subscription to Firestore
     const finalTier = tier || determineTierFromAmount(amount);
-    const finalTokens = tokens || calculateTokensForAmount(amount);
 
     const subscriptionData = {
       id: 'current',
@@ -236,7 +234,6 @@ export async function POST(request: NextRequest) {
       status: subscription.status,
       tier: finalTier,
       amount,
-      tokens: finalTokens,
       currency: 'usd',
       interval: 'month',
       cancelAtPeriodEnd: subscription.cancel_at_period_end,

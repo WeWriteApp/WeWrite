@@ -1,13 +1,12 @@
 /**
  * Unified Subscription Tier System for WeWrite
- * 
- * This module defines the standardized subscription tiers and token economy
- * for the WeWrite platform. All payment-related components should use these
- * definitions to ensure consistency.
- * 
- * Token Economy: $1 = 10 tokens
- * Monthly token distribution: users allocate tokens to creators
- * Unallocated tokens automatically go to WeWrite at month end
+ *
+ * This module defines the standardized subscription tiers for the WeWrite platform.
+ * All payment-related components should use these definitions to ensure consistency.
+ *
+ * USD-Based System: Direct monthly funding to creators
+ * Monthly distribution: users allocate USD amounts to creators
+ * Unallocated funds automatically go to WeWrite at month end
  */
 
 export interface SubscriptionTier {
@@ -15,7 +14,6 @@ export interface SubscriptionTier {
   name: string;
   description: string;
   amount: number; // USD per month
-  tokens: number; // Monthly token allocation
   stripePriceId?: string;
   features: string[];
   popular?: boolean;
@@ -27,86 +25,96 @@ export interface SubscriptionTier {
 export interface CustomTierConfig {
   minAmount: number;
   maxAmount: number;
-  tokensPerDollar: number;
 }
 
-// Standard subscription tiers - updated structure
+// Standard subscription tiers - USD-based funding (3-star system)
 export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'tier1',
-    name: '$10/month',
-    description: 'Support WeWrite creators with 100 tokens monthly',
-    amount: 10,
-    tokens: 100,
+    name: 'Supporter',
+    description: 'Support creators with monthly funding',
+    amount: 5,
+    stripePriceId: process.env.NODE_ENV === 'production'
+      ? 'price_1RoEIjI0PN4TYfxoS4aYAjAH'
+      : 'price_1RoEIjI0PN4TYfxoS4aYAjAH',
     features: [
-      '100 tokens per month',
-      'Support your favorite creators',
-      'Allocation dashboard',
-      'Monthly distribution reports'
+      '$5/month to support creators',
+      'Allocate funds to your favorite pages',
+      'Support the WeWrite community'
     ]
   },
   {
     id: 'tier2',
-    name: '$20/month',
-    description: 'Enhanced support with 200 tokens monthly',
+    name: 'Advocate',
+    description: 'Amplify your support for creators',
     amount: 20,
-    tokens: 200,
+    stripePriceId: process.env.NODE_ENV === 'production'
+      ? 'price_1RoEIjI0PN4TYfxoS4aYAjAH'
+      : 'price_1RoEIjI0PN4TYfxoS4aYAjAH',
     features: [
-      '200 tokens per month',
-      'Enhanced creator support',
-      'Allocation dashboard',
-      'Monthly distribution reports',
-      'Priority support'
+      '$20/month to support creators',
+      'Allocate funds to your favorite pages',
+      'Higher impact on creator earnings',
+      'Support the WeWrite community'
     ],
     popular: true
   },
   {
     id: 'tier3',
-    name: '$30+/month',
-    description: 'Maximum support with 300+ tokens monthly',
-    amount: 30,
-    tokens: 300,
+    name: 'Champion',
+    description: 'Maximum support for the creator economy',
+    amount: 50,
+    stripePriceId: process.env.NODE_ENV === 'production'
+      ? 'price_1RoEIjI0PN4TYfxoS4aYAjAH'
+      : 'price_1RoEIjI0PN4TYfxoS4aYAjAH',
     features: [
-      '300+ tokens per month',
-      'Maximum creator support',
-      'Advanced allocation tools',
-      'Premium analytics',
-      'Direct creator messaging',
-      'Beta feature access'
-    ],
-    isCustom: true
+      '$50/month to support creators',
+      'Allocate funds to your favorite pages',
+      'Maximum impact on creator earnings',
+      'Priority support for the WeWrite community'
+    ]
   }
 ];
 
 // Custom tier configuration
 export const CUSTOM_TIER_CONFIG: CustomTierConfig = {
   minAmount: 30, // Minimum for custom tier (starts at $30)
-  maxAmount: 1000, // Maximum monthly subscription
-  tokensPerDollar: 10 // Token conversion rate
+  maxAmount: 1000 // Maximum monthly subscription
 };
 
-// Token economy constants - Start-of-Month Processing Model
-export const TOKEN_ECONOMY = {
-  TOKENS_PER_DOLLAR: 10,
-
+// USD economy constants - Start-of-Month Processing Model
+export const USD_ECONOMY = {
   // Start-of-Month Processing (all on 1st of month)
   MONTHLY_PROCESSING_DAY: 1, // 1st: All monthly processing happens
   PROCESSING_HOUR: 9, // 9 AM UTC
   PROCESSING_MINUTE: 0,
 
   // Processing order on the 1st:
-  // 1. Finalize previous month's token allocations → send to writers
+  // 1. Finalize previous month's USD allocations → send to writers
   // 2. Process payouts for writers
-  // 3. Bill subscriptions for new month → users get new tokens immediately
-  // 4. Users can start allocating new tokens (no dead zone!)
+  // 3. Bill subscriptions for new month → users get new funds immediately
+  // 4. Users can start allocating new funds (no dead zone!)
 
   WEWRITE_PLATFORM_ALLOCATION: 'wewrite', // ID for platform allocation
-  MIN_ALLOCATION_TOKENS: 1,
+  MIN_ALLOCATION_CENTS: 100, // $1.00 minimum
   MAX_ALLOCATION_PERCENTAGE: 100,
 
   // Timing configuration
   ALLOCATION_ADJUSTMENT_CUTOFF_HOUR: 23, // 11 PM UTC on last day of month
   PROCESSING_TIMEZONE: 'UTC'
+} as const;
+
+// DEPRECATED: Legacy token economy constants for backward compatibility
+export const TOKEN_ECONOMY = {
+  TOKENS_PER_DOLLAR: 10,
+  MONTHLY_PROCESSING_DAY: USD_ECONOMY.MONTHLY_PROCESSING_DAY,
+  PROCESSING_HOUR: USD_ECONOMY.PROCESSING_HOUR,
+  PROCESSING_MINUTE: USD_ECONOMY.PROCESSING_MINUTE,
+  WEWRITE_PLATFORM_ALLOCATION: USD_ECONOMY.WEWRITE_PLATFORM_ALLOCATION,
+  MIN_ALLOCATION_TOKENS: 1,
+  MAX_ALLOCATION_PERCENTAGE: USD_ECONOMY.MAX_ALLOCATION_PERCENTAGE,
+  ALLOCATION_ADJUSTMENT_CUTOFF_HOUR: USD_ECONOMY.ALLOCATION_ADJUSTMENT_CUTOFF_HOUR,
+  PROCESSING_TIMEZONE: USD_ECONOMY.PROCESSING_TIMEZONE
 } as const;
 
 /**
@@ -156,10 +164,18 @@ export const getEffectiveTier = (
 };
 
 /**
- * Calculate tokens for custom amount
+ * Calculate USD cents for amount (for backward compatibility)
+ */
+export const calculateUsdCentsForAmount = (amount: number): number => {
+  return Math.floor(amount * 100);
+};
+
+/**
+ * Calculate tokens for custom amount (DEPRECATED - for backward compatibility only)
+ * @deprecated Use USD-based system instead
  */
 export const calculateTokensForAmount = (amount: number): number => {
-  return Math.floor(amount * TOKEN_ECONOMY.TOKENS_PER_DOLLAR);
+  return Math.floor(amount * 10); // Legacy: $1 = 10 tokens
 };
 
 /**
@@ -198,14 +214,11 @@ export const getAllTiers = (): (SubscriptionTier & { isCustom?: boolean })[] => 
  */
 export const formatTierDisplay = (tier: SubscriptionTier, customAmount?: number) => {
   const amount = tier.id === 'custom' && customAmount ? customAmount : tier.amount;
-  const tokens = tier.id === 'custom' && customAmount ? calculateTokensForAmount(customAmount) : tier.tokens;
-  
+
   return {
     ...tier,
     amount,
-    tokens,
-    displayAmount: `$${amount}/mo`,
-    displayTokens: `${tokens} tokens/mo`
+    displayAmount: `$${amount}/mo`
   };
 };
 
@@ -259,7 +272,7 @@ export const getTimeUntilAllocationDeadline = (): {
 } => {
   const now = new Date();
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
-  endOfMonth.setHours(TOKEN_ECONOMY.ALLOCATION_ADJUSTMENT_CUTOFF_HOUR, 59, 59, 999);
+  endOfMonth.setHours(USD_ECONOMY.ALLOCATION_ADJUSTMENT_CUTOFF_HOUR, 59, 59, 999);
 
   const totalMs = endOfMonth.getTime() - now.getTime();
   const hasExpired = totalMs <= 0;

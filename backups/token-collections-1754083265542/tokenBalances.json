@@ -1,0 +1,59 @@
+[
+  {
+    "id": "I5IoRbISVuOjSEkyhaE4nZkcMQ42",
+    "data": {
+      "userId": "I5IoRbISVuOjSEkyhaE4nZkcMQ42",
+      "allocatedTokens": 0,
+      "lastAllocationDate": "2025-07",
+      "createdAt": {
+        "_seconds": 1753540825,
+        "_nanoseconds": 990000000
+      },
+      "totalTokens": 200,
+      "availableTokens": 200,
+      "monthlyAllocation": 200,
+      "updatedAt": {
+        "_seconds": 1753540832,
+        "_nanoseconds": 921000000
+      }
+    }
+  },
+  {
+    "id": "fWNeCuussPgYgkN2LGohFRCPXiy1",
+    "data": {
+      "userId": "fWNeCuussPgYgkN2LGohFRCPXiy1",
+      "createdAt": {
+        "_seconds": 1750788761,
+        "_nanoseconds": 720000000
+      },
+      "lastAllocationDate": "2025-07",
+      "totalTokens": 200,
+      "monthlyAllocation": 200,
+      "allocatedTokens": 508,
+      "availableTokens": 119,
+      "updatedAt": {
+        "_seconds": 1753845844,
+        "_nanoseconds": 836000000
+      }
+    }
+  },
+  {
+    "id": "ppFlrcVOdoV1a4P2nWEGOXNbrmn1",
+    "data": {
+      "userId": "ppFlrcVOdoV1a4P2nWEGOXNbrmn1",
+      "allocatedTokens": 0,
+      "lastAllocationDate": "2025-07",
+      "createdAt": {
+        "_seconds": 1753882724,
+        "_nanoseconds": 983000000
+      },
+      "totalTokens": 200,
+      "availableTokens": 200,
+      "monthlyAllocation": 200,
+      "updatedAt": {
+        "_seconds": 1753882756,
+        "_nanoseconds": 879000000
+      }
+    }
+  }
+]

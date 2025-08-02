@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use WriterUsdDashboard instead for USD-based writer earnings.
+ *
+ * Legacy writer token dashboard - replaced by USD system.
+ */
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';

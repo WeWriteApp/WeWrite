@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use subscription history components instead for USD-based purchase history.
+ *
+ * Legacy token purchase history - replaced by USD system.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';

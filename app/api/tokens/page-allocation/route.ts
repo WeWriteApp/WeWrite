@@ -4,6 +4,10 @@ import { ServerTokenService } from '../../../services/tokenService.server';
 
 /**
  * POST /api/tokens/page-allocation
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/page-allocation for USD-based page allocations.
+ *
  * Simple token allocation for TokenAllocationBar - allocate tokens to a page
  */
 export async function POST(request: NextRequest) {
@@ -65,6 +69,10 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/tokens/page-allocation?pageId=xxx
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/page-allocation for USD-based page allocations.
+ *
  * Get current token allocation for a page
  */
 export async function GET(request: NextRequest) {

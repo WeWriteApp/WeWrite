@@ -68,7 +68,7 @@ export default function NavHeader({
   };
 
   return (
-    <div className={`flex flex-col mb-6 ${className}`}>
+    <div className={`flex flex-col pt-8 pb-6 ${className}`}>
       {/* Use the same layout approach as other headers for consistent spacing */}
       <div className="flex w-full">
         {/* Sidebar spacer - only on desktop, matches other headers */}
@@ -79,15 +79,15 @@ export default function NavHeader({
 
         {/* Header content area - standardized navigation layout */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between w-full h-14">
-            {/* Left: Back button */}
-            <div className="flex items-center">
+          <div className="grid grid-cols-3 items-center w-full h-14 px-4 sm:px-6">
+            {/* Left: Back button (mobile only) */}
+            <div className="flex items-center justify-start">
               {backUrl !== undefined && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleBack}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 lg:hidden"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   <span className="hidden md:inline">{backLabel}</span>
@@ -106,8 +106,8 @@ export default function NavHeader({
             </div>
 
             {/* Right: Action buttons */}
-            <div className="flex items-center">
-              {rightContent || <div className="w-[72px]" />} {/* Spacer to center logo */}
+            <div className="flex items-center justify-end">
+              {rightContent}
             </div>
           </div>
         </div>

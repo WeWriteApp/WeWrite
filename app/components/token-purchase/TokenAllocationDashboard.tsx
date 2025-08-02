@@ -6,6 +6,13 @@
 
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdAllocationDashboard instead for USD-based allocation dashboards.
+ *
+ * Legacy token allocation dashboard - replaced by USD system.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';

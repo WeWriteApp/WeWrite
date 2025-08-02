@@ -50,7 +50,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/activity': 'Activity Feed',
   '/search': 'Search Page',
   '/leaderboard': 'Leaderboard',
-  '/settings/buy-tokens': 'Buy Tokens Page',
+  '/settings/fund-account': 'Fund Account Page',
 
   // Auth pages
   '/auth/login': 'Login Page',

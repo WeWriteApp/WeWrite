@@ -259,18 +259,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.warn('[Auth] Logout API call failed, but local state cleared');
       }
 
-      // Redirect to homepage after successful logout
-      console.log('[Auth] Redirecting to homepage after logout');
-      router.push('/');
+      // Force refresh to ensure clean state and redirect to landing page
+      console.log('[Auth] Force refreshing page after logout');
+      window.location.href = '/';
 
     } catch (error) {
       console.error('[Auth] Sign out error:', error);
       // Still clear local state even if API fails
       setUser(null);
-      // Still redirect even if there was an error
-      router.push('/');
+      // Force refresh even if there was an error
+      window.location.href = '/';
     }
-  }, [setLoading, clearError, setUser, router]);
+  }, [setLoading, clearError, setUser]);
 
   // Refresh user data
   const refreshUser = useCallback(async () => {

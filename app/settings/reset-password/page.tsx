@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
-import NavHeader from "../../components/layout/NavHeader";
+import NavPageLayout from "../../components/layout/NavPageLayout";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
@@ -52,12 +52,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="container max-w-md mx-auto px-4 py-8 pb-32 md:pb-8">
-      <NavHeader
-        title="Reset Password"
-        backUrl="/settings"
-        backLabel="Back to Settings"
-      />
+    <NavPageLayout
+      backUrl="/settings"
+      maxWidth="md"
+    >
 
       {/* Add meta tag for password managers */}
       <head>
@@ -125,6 +123,6 @@ export default function ResetPasswordPage() {
           </form>
         )}
       </div>
-    </div>
+    </NavPageLayout>
   );
 }

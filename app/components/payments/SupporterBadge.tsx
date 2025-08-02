@@ -29,10 +29,10 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
 
   const badgeContent = {
     label: tierInfo
-      ? (tierInfo.amount > 30 ? 'Over $30/month' : `$${tierInfo.amount}/month`)
+      ? (tierInfo.amount > 50 ? 'Over $50/month' : `$${tierInfo.amount}/month`)
       : 'Subscription',
     tooltip: tierInfo
-      ? (tierInfo.amount > 30 ? 'Over $30/month - 300+ tokens' : `$${tierInfo.amount}/month - ${tierInfo.tokens} tokens`)
+      ? (tierInfo.amount > 50 ? 'Champion+ - Over $50/month' : `${tierInfo.name} - $${tierInfo.amount}/month`)
       : 'Subscription',
     bgColor: 'bg-muted',
     borderColor: 'border-theme-medium',

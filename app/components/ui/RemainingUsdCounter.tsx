@@ -33,8 +33,8 @@ export function RemainingUsdCounter({
   // Handle loading/empty state
   const isLoadingState = totalUsdCents === 0 && allocatedUsdCents === 0;
 
-  // Determine warning state - orange when 95% or more allocated
-  const isNearlyFull = allocationPercentage >= 95 && totalUsdCents > 0;
+  // Determine warning state - orange when 90% or more allocated (consistent with UsdAllocationDisplay)
+  const isNearlyFull = allocationPercentage >= 90 && totalUsdCents > 0;
   const isOutOfFunds = remainingUsdCents <= 0 && totalUsdCents > 0;
 
   // Calculate pie chart values
@@ -108,8 +108,8 @@ export function RemainingUsdCounter({
 
       {/* Center Text */}
       <div
-        className={`absolute inset-0 flex items-center justify-center text-xs font-medium ${textColor}`}
-        style={{ fontSize: `${size * 0.25}px` }}
+        className={`absolute inset-0 flex items-center justify-center text-sm font-medium ${textColor}`}
+        style={{ fontSize: `${Math.max(12, size * 0.35)}px` }}
       >
         {isLoadingState ? (
           <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>

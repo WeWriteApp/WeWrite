@@ -262,10 +262,10 @@ export const getSubscriptionNavigationPath = (
   const statusInfo = getSubscriptionStatusInfo(status, cancelAtPeriodEnd, currentPeriodEnd);
 
   if (statusInfo.showManageButton) {
-    return '/settings/spend-tokens';
+    return '/settings/spend';
   }
 
-  return '/settings/buy-tokens';
+  return '/settings/fund-account';
 };
 
 /**

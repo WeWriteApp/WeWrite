@@ -20,19 +20,20 @@ const ALL_NAVIGATION_ITEMS = [
 // Default mobile toolbar - exactly 4 items (More button is separate)
 const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications', 'profile'];
 
-// Default sidebar order - specific order as requested: home, search, new, notifications, random, trending, following, recents, settings, admin
+// Default sidebar order - matches the desired order from user screenshot
 const DEFAULT_SIDEBAR_ORDER = [
   'home',
   'search',
-  'new',
-  'notifications',
   'random-pages',
+  'new',
   'trending-pages',
   'following',
   'recents',
+  'notifications',
+  'profile',
   'settings',
   'admin'
-].filter(item => !DEFAULT_MOBILE_ORDER.includes(item));
+];
 
 interface NavigationOrderContextType {
   // Mobile toolbar order
@@ -249,7 +250,7 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
   const clearCache = () => {
     // Reset to clean defaults
     const cleanMobile = [...DEFAULT_MOBILE_ORDER];
-    const cleanSidebar = ALL_NAVIGATION_ITEMS.filter(item => !cleanMobile.includes(item));
+    const cleanSidebar = [...DEFAULT_SIDEBAR_ORDER];
 
     setMobileOrder(cleanMobile);
     setSidebarOrder(cleanSidebar);

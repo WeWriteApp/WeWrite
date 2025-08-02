@@ -3,8 +3,9 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
-import { Star, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '../ui/button';
+import Link from 'next/link';
 
 interface SubscriptionTiersModalProps {
   isOpen: boolean;
@@ -18,43 +19,35 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
       amount: 0,
       tier: "inactive",
       status: "inactive",
-      description: "Free to read and explore",
-      stars: 0,
-      color: "text-muted-foreground"
+      description: "Free to read and explore"
     },
     {
       name: "Supporter",
-      amount: 10,
+      amount: 5,
       tier: "tier1",
       status: "active",
-      description: "$10/month",
-      stars: 1,
-      color: "text-yellow-500"
+      description: "$5/month"
     },
     {
       name: "Advocate",
       amount: 20,
       tier: "tier2",
       status: "active",
-      description: "$20/month",
-      stars: 2,
-      color: "text-yellow-500"
+      description: "$20/month"
     },
     {
       name: "Champion",
-      amount: 30,
+      amount: 50,
       tier: "tier3",
       status: "active",
-      description: "$30+/month",
-      stars: 3,
-      color: "text-yellow-500"
+      description: "$50/month"
     }
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md w-[90vw] max-h-[90vh]">
-        <DialogHeader className="relative">
+      <DialogContent className="max-w-md w-[90vw] max-h-[90vh] flex flex-col">
+        <DialogHeader className="relative flex-shrink-0">
           <DialogTitle className="text-lg font-semibold pr-8">Subscription Tiers</DialogTitle>
           <Button
             variant="ghost"
@@ -66,7 +59,7 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
           </Button>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4">
           {/* Explanation */}
           <div className="p-3 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">
@@ -82,18 +75,14 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
                   key={index}
                   className="flex items-center gap-3 p-3 border border-border rounded-lg"
                 >
-                  {/* Stars */}
-                  <div className="flex-shrink-0 flex items-center gap-0.5">
-                    {tier.stars === 0 ? (
-                      <div className="h-4 w-4 rounded-full bg-muted" />
-                    ) : (
-                      Array.from({ length: tier.stars }).map((_, starIndex) => (
-                        <Star
-                          key={starIndex}
-                          className={`h-3 w-3 ${tier.color} fill-current`}
-                        />
-                      ))
-                    )}
+                  {/* Use SubscriptionTierBadge for consistent star display */}
+                  <div className="flex-shrink-0">
+                    <SubscriptionTierBadge
+                      tier={tier.tier}
+                      status={tier.status}
+                      amount={tier.amount}
+                      size="md"
+                    />
                   </div>
 
                   {/* Tier Info */}
@@ -108,12 +97,16 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
             })}
           </div>
 
-          {/* Call to Action */}
-          <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-            <p className="text-xs text-foreground">
-              <strong>Support writers</strong> by subscribing to help keep the community thriving.
-            </p>
-          </div>
+
+        </div>
+
+        {/* Set up mine button at bottom */}
+        <div className="flex-shrink-0 pt-4 border-t border-border">
+          <Link href="/settings/subscription" onClick={onClose}>
+            <Button variant="default" className="w-full">
+              Set up mine
+            </Button>
+          </Link>
         </div>
       </DialogContent>
     </Dialog>

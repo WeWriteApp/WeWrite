@@ -1,3 +1,10 @@
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdPledgeBar instead for USD-based allocation bars.
+ *
+ * Legacy token allocation bar - replaced by USD system.
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ActionModal from '../utils/ActionModal';
 import { createPortal } from 'react-dom';
