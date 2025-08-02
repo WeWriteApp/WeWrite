@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { CheckCircle, AlertCircle, Mail, RefreshCw, Loader2, Settings, Clock } from "lucide-react";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { useAuth } from '../../providers/AuthProvider';
+import { clearDismissedStatus } from '../../services/emailVerificationNotifications';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -139,6 +140,9 @@ export default function VerifyEmailPage() {
       if (response.ok && result.success) {
         if (result.data.emailVerified) {
           console.log("Email verified successfully!");
+
+          // Clear dismissed status so user can see verification notices again if needed
+          clearDismissedStatus();
 
           // Refresh user data to get updated verification status
           await refreshUser();

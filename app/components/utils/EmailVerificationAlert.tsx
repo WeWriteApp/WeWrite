@@ -6,6 +6,10 @@ import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
+import {
+  dismissEmailVerificationNotifications,
+  hasUserDismissedNotifications
+} from '../../services/emailVerificationNotifications';
 
 interface EmailVerificationAlertProps {
   className?: string;
@@ -39,7 +43,7 @@ function EmailVerificationAlert({
   const [isAnimatingIn, setIsAnimatingIn] = useState(false);
   const [hasCheckedVerification, setHasCheckedVerification] = useState(false);
 
-  // Optimistic verification check - only show alert if actually unverified
+  // Optimistic verification check - only show alert if actually unverified and not dismissed
   useEffect(() => {
     if (!isAuthenticated || !user || isDismissed) {
       return;
@@ -51,11 +55,18 @@ function EmailVerificationAlert({
         // Wait a bit for auth state to settle
         await new Promise(resolve => setTimeout(resolve, 1000));
 
+        // Check if user has dismissed notifications
+        if (hasUserDismissedNotifications()) {
+          console.log('EmailVerificationAlert: User has dismissed notifications, not showing alert');
+          setHasCheckedVerification(true);
+          return;
+        }
+
         // Check if user is actually unverified using auth
         const isUnverified = user && !user.emailVerified;
 
         if (isUnverified) {
-          // User is actually unverified, show alert with animation
+          // User is actually unverified and hasn't dismissed, show alert with animation
           setShouldShowAlert(true);
           // Trigger animation after state update
           setTimeout(() => setIsAnimatingIn(true), 50);
@@ -64,8 +75,8 @@ function EmailVerificationAlert({
         setHasCheckedVerification(true);
       } catch (error) {
         console.warn('Error checking email verification status:', error);
-        // On error, assume unverified for safety if user exists
-        if (user) {
+        // On error, assume unverified for safety if user exists and hasn't dismissed
+        if (user && !hasUserDismissedNotifications()) {
           setShouldShowAlert(true);
           setTimeout(() => setIsAnimatingIn(true), 50);
         }
@@ -101,12 +112,15 @@ function EmailVerificationAlert({
     return null;
   }
 
-  // Handle dismissal with animation
+  // Handle dismissal with animation and persistence
   const handleDismiss = () => {
     setIsAnimatingIn(false);
     // Wait for animation to complete before hiding
     setTimeout(() => {
       setIsDismissed(true);
+      // Persist dismissal to localStorage
+      dismissEmailVerificationNotifications();
+      console.log('EmailVerificationAlert: Dismissed and persisted to localStorage');
       onDismiss?.();
     }, 300);
   };
