@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdFundingTierSlider instead for USD-based subscription tiers.
+ *
+ * Legacy token purchase tier slider - replaced by USD system.
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';

@@ -3,6 +3,10 @@ import { getUserIdFromRequest } from '../../auth-helper';
 
 /**
  * POST /api/tokens/allocate-user
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/allocate-user for USD-based user allocations.
+ *
  * Allocate tokens directly to a user (user-to-user donations)
  */
 export async function POST(request: NextRequest) {
@@ -80,6 +84,10 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/tokens/allocate-user?recipientUserId=xxx
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/allocate-user for USD-based user allocations.
+ *
  * Get current token allocation to a specific user
  */
 export async function GET(request: NextRequest) {

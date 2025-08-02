@@ -47,12 +47,15 @@ export async function GET(request: NextRequest) {
     // Use the same logic as /api/home - get recently modified pages for the user
     let pagesQuery;
 
-    // For logged-in users, get recent pages and filter deleted ones in code
-    // This avoids the composite index requirement
+    // For logged-in users, get recent pages (last 7 days) and filter deleted ones in code
+    // This avoids the composite index requirement while preventing excessive reads
+    const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+
     pagesQuery = db.collection(getCollectionName('pages'))
       .where('userId', '==', userId)
+      .where('lastModified', '>=', sevenDaysAgo.toISOString())
       .orderBy('lastModified', 'desc')
-      .limit(limitCount * 2); // Get more to account for filtering
+      .limit(Math.min(limitCount + 5, 30)); // REDUCED: Only get a few extra for filtering
 
     const snapshot = await pagesQuery.get();
     console.log(`[USER_RECENT_EDITS] Raw query returned ${snapshot.size} documents`);

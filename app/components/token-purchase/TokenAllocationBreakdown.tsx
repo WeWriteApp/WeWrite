@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdAllocationBreakdown instead for USD-based allocation breakdowns.
+ *
+ * Legacy token allocation breakdown - replaced by USD system.
+ */
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -13,7 +20,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
-import { triggerTokenBalanceRefresh } from '../../contexts/TokenBalanceContext';
+// Note: triggerTokenBalanceRefresh is deprecated - use UsdBalanceContext refresh instead
 
 // Custom Zero with diagonal line icon component
 const ZeroWithCross = ({ className }: { className?: string }) => (
@@ -469,8 +476,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
         onAllocationUpdate(updatedData);
       }
 
-      // Trigger global token balance refresh
-      triggerTokenBalanceRefresh();
+      // Note: Global balance refresh is now handled automatically by UsdBalanceContext
 
       return updatedData;
     });

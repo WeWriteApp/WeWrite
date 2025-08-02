@@ -318,7 +318,7 @@ export function PaymentStep({
           elements,
           clientSecret,
           confirmParams: {
-            return_url: successUrl || `${window.location.origin}/settings/buy-tokens?success=true`,
+            return_url: successUrl || `${window.location.origin}/settings/fund-account?success=true`,
           },
           redirect: 'if_required'
         });

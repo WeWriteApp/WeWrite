@@ -1,6 +1,9 @@
 /**
  * Fast PledgeBar Data API
- * 
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/pledge-bar-data for USD-based pledge bar data.
+ *
  * Optimized endpoint specifically for PledgeBar component that returns
  * only the essential data needed for fast loading.
  */
@@ -53,7 +56,8 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    console.log(`🎯 [PLEDGE_BAR_DATA] Response for pageId=${pageId}, userId=${userId}:`, {
+    // SECURITY FIX: Use %s format specifiers to prevent format string injection
+    console.log('🎯 [PLEDGE_BAR_DATA] Response for pageId=%s, userId=%s:', pageId, userId, {
       totalTokens,
       allocatedTokens,
       availableTokens,

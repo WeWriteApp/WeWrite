@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdPieChart instead for USD-based pie charts.
+ *
+ * Legacy token pie chart - replaced by USD system.
+ */
+
 import React from 'react';
 
 interface TokenPieChartProps {

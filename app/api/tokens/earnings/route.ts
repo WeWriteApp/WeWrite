@@ -1,5 +1,9 @@
 /**
  * API endpoint for writer token earnings
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/earnings for USD-based earnings and payouts.
+ *
  * Handles getting earnings data and requesting payouts
  */
 

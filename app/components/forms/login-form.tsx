@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
@@ -17,9 +17,17 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const { signIn } = useAuth();
+
+  const { signIn, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      console.log('[LoginForm] User already authenticated, redirecting to home');
+      router.push('/');
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +36,8 @@ export function LoginForm() {
 
     try {
       await signIn(emailOrUsername, password);
-      router.push('/');
+      // Use window.location.href for reliable redirect after login
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {
@@ -113,7 +122,7 @@ export function LoginForm() {
         >
           Forgot your password?
         </Link>
-        
+
         <div className="text-sm text-muted-foreground">
           Don't have an account?{' '}
           <Link
@@ -121,6 +130,28 @@ export function LoginForm() {
             className="text-foreground hover:underline font-medium"
           >
             Sign up
+          </Link>
+        </div>
+
+        {/* Terms and Privacy Policy Agreement */}
+        <div className="text-xs text-muted-foreground">
+          By using WeWrite you agree to our{' '}
+          <Link
+            href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/TERMS_OF_SERVICE.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link
+            href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/PRIVACY_POLICY.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Privacy Policy
           </Link>
         </div>
       </div>

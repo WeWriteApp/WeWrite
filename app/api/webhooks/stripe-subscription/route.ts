@@ -12,7 +12,9 @@ import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { ServerTokenService } from '../../../services/tokenService.server';
+import { ServerUsdService } from '../../../services/usdService.server';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
 // Removed SubscriptionSynchronizationService - using simplified approach
@@ -136,7 +138,6 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
-    const tokens = calculateTokensForAmount(amount);
 
     // Determine tier from metadata or amount
     let tier = subscription.metadata.tier || 'custom';
@@ -163,7 +164,6 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       status: subscription.status,
       tier,
       amount,
-      tokens,
       currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
@@ -195,33 +195,14 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
         createdAt: serverTimestamp()});
     }
 
-    // Update user's token allocation
+    // Update user's USD allocation (primary system)
     if (subscription.status === 'active') {
+      console.log(`[SUBSCRIPTION WEBHOOK] Updating USD allocation for user ${userId}: $${amount}`);
+      await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
+
+      // Also maintain backward compatibility with token system during migration
+      console.log(`[SUBSCRIPTION WEBHOOK] Maintaining token system compatibility for user ${userId}`);
       await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
-
-      // Convert unfunded tokens to funded tokens
-      try {
-        console.log(`[SUBSCRIPTION WEBHOOK] Converting unfunded tokens for user ${userId}`);
-        const convertResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tokens/convert-unfunded`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId
-          })
-        });
-
-        if (convertResponse.ok) {
-          const convertResult = await convertResponse.json();
-          console.log(`[SUBSCRIPTION WEBHOOK] Successfully converted ${convertResult.convertedCount} unfunded token allocations for user ${userId}`);
-        } else {
-          console.warn(`[SUBSCRIPTION WEBHOOK] Failed to convert unfunded tokens for user ${userId}: ${convertResponse.status}`);
-        }
-      } catch (convertError) {
-        console.warn(`[SUBSCRIPTION WEBHOOK] Error converting unfunded tokens for user ${userId}:`, convertError);
-        // Don't fail webhook processing if token conversion fails
-      }
     }
 
     console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
@@ -354,9 +335,15 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       }
     }
 
-    // Ensure token allocation is up to date
+    // Ensure USD allocation is up to date (primary system)
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
+
+    console.log(`[PAYMENT SUCCEEDED] Updating USD allocation for user ${userId}: $${amount}`);
+    await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
+
+    // Also maintain backward compatibility with token system during migration
+    console.log(`[PAYMENT SUCCEEDED] Maintaining token system compatibility for user ${userId}`);
     await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance

@@ -422,7 +422,7 @@ export default function AdminToolsPage() {
             <CardHeader>
               <CardTitle>Payout Validation</CardTitle>
               <CardDescription>
-                Validate token-to-payout calculations and ensure fee structures are working correctly.
+                Validate USD-to-payout calculations and ensure fee structures are working correctly.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -431,7 +431,7 @@ export default function AdminToolsPage() {
                   The Payout Validation tool helps ensure that:
                 </p>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
-                  <li>Token-to-USD conversion is accurate (10 tokens = $1)</li>
+                  <li>USD cents calculations are accurate (100 cents = $1)</li>
                   <li>WeWrite platform fee (7%) is calculated correctly</li>
                   <li>Stripe fees are properly applied</li>
                   <li>Minimum payout thresholds are enforced</li>

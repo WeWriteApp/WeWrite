@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { getAuth, type Auth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, type Firestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAnalytics, isSupported, logEvent, type Analytics } from "firebase/analytics";
 import { getDatabase, type Database } from "firebase/database";
 import { initializeErrorSuppression } from '../utils/errorSuppression';
@@ -78,6 +78,25 @@ export const app: FirebaseApp = initializeApp(newConfig);
 export const auth: Auth = getAuth(app);
 export const firestore: Firestore = getFirestore(app);
 export const rtdb: Database = getDatabase(app);
+
+// Connect to Firebase emulators if enabled
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+  const emulatorHost = process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_HOST || 'localhost';
+  const firestorePort = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT || '8080';
+  const authPort = process.env.NEXT_PUBLIC_AUTH_EMULATOR_PORT || '9099';
+
+  try {
+    // Connect Firestore to emulator
+    connectFirestoreEmulator(firestore, emulatorHost, parseInt(firestorePort));
+    console.log(`[Firebase Config] Connected Firestore to emulator at ${emulatorHost}:${firestorePort}`);
+
+    // Connect Auth to emulator
+    connectAuthEmulator(auth, `http://${emulatorHost}:${authPort}`);
+    console.log(`[Firebase Config] Connected Auth to emulator at ${emulatorHost}:${authPort}`);
+  } catch (error) {
+    console.warn('[Firebase Config] Failed to connect to emulators:', error);
+  }
+}
 
 // Legacy exports for backward compatibility
 export const db: Firestore = firestore;

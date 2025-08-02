@@ -20,7 +20,7 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
-import { TokenBalanceProvider } from "./contexts/TokenBalanceContext"
+import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
@@ -82,16 +82,16 @@ export default function RootLayout({
                               <LineSettingsProvider>
                                 <RecentPagesProvider>
                                   <TokenIncrementProvider>
-                                    <TokenBalanceProvider>
-                                      <NavigationOrderProvider>
+                                    <UsdBalanceProvider>
+                                        <NavigationOrderProvider>
                                         <SessionAuthInitializer>
                                           <GlobalNavigation>
                                             {children}
                                           </GlobalNavigation>
                                         </SessionAuthInitializer>
-                                      </NavigationOrderProvider>
-                                    </TokenBalanceProvider>
-                                  </TokenIncrementProvider>
+                                        </NavigationOrderProvider>
+                                      </UsdBalanceProvider>
+                                    </TokenIncrementProvider>
                                 </RecentPagesProvider>
                               </LineSettingsProvider>
                             </PillStyleProvider>

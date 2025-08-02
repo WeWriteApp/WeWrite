@@ -303,15 +303,24 @@ class AnalyticsService {
   /**
    * Helper method to track subscription initiated events
    */
-  public trackSubscriptionInitiated(tier: string, amount: number, tokens: number): void {
+  public trackSubscriptionInitiated(tier: string, amount: number, usdCents?: number): void {
     this.trackEvent({
       category: EVENT_CATEGORIES.FEATURE,
       action: 'subscription_initiated',
       tier,
       amount,
-      tokens,
+      usdCents,
       value: amount
     });
+  }
+
+  /**
+   * @deprecated Use trackSubscriptionInitiated with usdCents parameter instead
+   */
+  public trackSubscriptionInitiatedWithTokens(tier: string, amount: number, tokens: number): void {
+    // Convert tokens to USD cents for tracking
+    const usdCents = tokens * 10;
+    this.trackSubscriptionInitiated(tier, amount, usdCents);
   }
 
   /**

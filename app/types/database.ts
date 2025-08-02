@@ -47,7 +47,7 @@ export interface Page {
   replyToTitle?: string;
   replyToUsername?: string;
   followerCount?: number;
-  // Token earnings (subscription-based only)
+  // USD earnings (subscription-based only)
   monthlyEarnings?: number;
   // Custom date field for daily notes and other date-based pages
   customDate?: string; // YYYY-MM-DD format
@@ -112,7 +112,35 @@ export type ActivityType =
 export type SubscriptionTier = 'tier1' | 'tier2' | 'tier3' | 'custom';
 export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due' | 'pending';
 
-// Token Economy Types
+// USD Economy Types (replacing Token Economy)
+export interface UsdBalance {
+  userId: string;
+  totalUsdCents: number;        // Total USD in cents (e.g., 1000 = $10.00)
+  allocatedUsdCents: number;    // Allocated USD in cents
+  availableUsdCents: number;    // Available USD in cents
+  monthlyAllocationCents: number; // Monthly allocation in cents
+  lastAllocationDate: string;
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+export interface UsdAllocation {
+  id: string;
+  userId: string;
+  recipientUserId: string;
+  resourceType: 'page' | 'user_bio' | 'user' | 'wewrite';
+  resourceId: string;
+  usdCents: number;             // USD amount in cents
+  month: string; // YYYY-MM format
+  status: 'active' | 'cancelled';
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+// Legacy Token Types - DEPRECATED, will be removed after migration
+/**
+ * @deprecated Use UsdBalance instead
+ */
 export interface TokenBalance {
   userId: string;
   totalTokens: number;
@@ -124,6 +152,9 @@ export interface TokenBalance {
   updatedAt: string | Timestamp;
 }
 
+/**
+ * @deprecated Use UsdAllocation instead
+ */
 export interface TokenAllocation {
   id: string;
   userId: string;
@@ -167,6 +198,20 @@ export interface RevenueMetrics {
   label: string;
 }
 
+export interface UsdAllocationMetrics {
+  date: string;
+  totalSubscribers: number;
+  subscribersWithAllocations: number;
+  allocationPercentage: number;
+  averageAllocationPercentage: number;
+  totalUsdCentsAllocated: number;
+  totalUsdCentsAvailable: number;
+  label: string;
+}
+
+/**
+ * @deprecated Use UsdAllocationMetrics instead
+ */
 export interface TokenAllocationMetrics {
   date: string;
   totalSubscribers: number;
@@ -182,10 +227,47 @@ export interface PaymentAnalyticsData {
   conversionFunnel: SubscriptionConversionFunnelData[];
   subscriptionMetrics: SubscriptionMetrics[];
   revenueMetrics: RevenueMetrics[];
-  tokenAllocationMetrics: TokenAllocationMetrics[];
+  usdAllocationMetrics: UsdAllocationMetrics[];
+  // Legacy support during migration
+  tokenAllocationMetrics?: TokenAllocationMetrics[];
 }
 
-// Writer Token Earnings Types
+// Writer USD Earnings Types (replacing Token Earnings)
+export interface WriterUsdEarnings {
+  id: string;
+  userId: string; // Writer/recipient
+  month: string; // YYYY-MM format
+  totalUsdCentsReceived: number; // Total received in cents
+  status: 'pending' | 'available' | 'paid_out';
+  allocations: {
+    allocationId: string;
+    fromUserId: string;
+    fromUsername?: string;
+    resourceType: 'page' | 'user_bio' | 'user';
+    resourceId: string;
+    resourceTitle?: string;
+    usdCents: number; // USD amount in cents
+  }[];
+  processedAt?: string | Timestamp;
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+export interface WriterUsdBalance {
+  userId: string;
+  totalUsdCentsEarned: number;  // Total earned in cents
+  pendingUsdCents: number;      // Current month earnings (not yet available)
+  availableUsdCents: number;    // Previous months earnings (available for payout)
+  paidOutUsdCents: number;      // Already paid out in cents
+  lastProcessedMonth: string;
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+// Legacy Writer Token Types - DEPRECATED, will be removed after migration
+/**
+ * @deprecated Use WriterUsdEarnings instead
+ */
 export interface WriterTokenEarnings {
   id: string;
   userId: string; // Writer/recipient
@@ -208,6 +290,9 @@ export interface WriterTokenEarnings {
   updatedAt: string | Timestamp;
 }
 
+/**
+ * @deprecated Use WriterUsdBalance instead
+ */
 export interface WriterTokenBalance {
   userId: string;
   totalTokensEarned: number;
@@ -223,6 +308,36 @@ export interface WriterTokenBalance {
   updatedAt: string | Timestamp;
 }
 
+export interface UsdPayout {
+  id: string;
+  userId: string; // Writer requesting payout
+  amountCents: number; // USD amount in cents
+  currency: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  stripePayoutId?: string;
+  stripeTransferId?: string;
+  earningsIds: string[]; // References to WriterUsdEarnings
+  requestedAt: string | Timestamp;
+  processedAt?: string | Timestamp;
+  completedAt?: string | Timestamp;
+  failureReason?: string;
+  minimumThresholdMet: boolean;
+}
+
+export interface MonthlyUsdDistribution {
+  id: string;
+  month: string; // YYYY-MM format
+  totalUsdCentsDistributed: number;
+  totalUsersParticipating: number;
+  wewriteUsdCents: number; // Unallocated USD that goes to WeWrite
+  status: 'pending' | 'processing' | 'completed';
+  processedAt?: string | Timestamp;
+}
+
+// Legacy Types - DEPRECATED, will be removed after migration
+/**
+ * @deprecated Use UsdPayout instead
+ */
 export interface TokenPayout {
   id: string;
   userId: string; // Writer requesting payout
@@ -240,6 +355,9 @@ export interface TokenPayout {
   minimumThresholdMet: boolean;
 }
 
+/**
+ * @deprecated Use MonthlyUsdDistribution instead
+ */
 export interface MonthlyTokenDistribution {
   id: string;
   month: string; // YYYY-MM format
@@ -307,7 +425,7 @@ export type NotificationType =
 
 // Feature flags have been removed - all features are now always enabled
 
-// Subscription-based token system only - no direct payments or pledges
+// Subscription-based USD system only - no direct payments or pledges
 
 // API Response types
 export interface ApiResponse<T = any> {

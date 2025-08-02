@@ -123,7 +123,6 @@ export default function MobileBottomNav() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Logout confirmation state
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Enhanced navigation with optimistic feedback
@@ -145,9 +144,12 @@ export default function MobileBottomNav() {
   const isContentPageRoute = useCallback(() => {
     const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
     ];
+
+    // Show on settings pages now
+    // (Removed the settings page exclusion)
 
     // Always show on NavPage routes
     if (navPageRoutes.includes(pathname)) {
@@ -169,10 +171,8 @@ export default function MobileBottomNav() {
       return true;
     }
 
-    // Hide on subscription pages
-    if (pathname.startsWith('/settings/subscription')) {
-      return true;
-    }
+    // Show on settings pages now (including subscription pages)
+    // (Removed the settings page exclusions)
 
     // Hide on location picker pages
     if (pathname.includes('/location')) {
@@ -287,10 +287,6 @@ export default function MobileBottomNav() {
   // Enhanced button click handlers with immediate feedback
   const handleMoreClick = () => {
     setIsExpanded(!isExpanded); // Toggle expanded state
-    // Clear any pressed button states when opening more menu
-    if (!isExpanded) {
-      setPressedButtons(new Set());
-    }
   };
 
   const handleHomeClick = () => {
@@ -309,22 +305,7 @@ export default function MobileBottomNav() {
 
 
 
-  const handleLogoutConfirm = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logoutUser();
-      setIsExpanded(false); // Close expanded section
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setIsLoggingOut(false);
-      setShowLogoutConfirmation(false);
-    }
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutConfirmation(false);
-  };
+  // Logout handlers removed - now using system dialog inline
 
 
 
@@ -334,9 +315,9 @@ export default function MobileBottomNav() {
   };
 
   // Determine active states for navigation buttons
-  const isHomeActive = pathname === '/';
-  const isProfileActive = pathname === `/user/${user?.uid}`;
-  const isNotificationsActive = pathname === '/notifications';
+  const isHomeActive = pathname === '/' && !isExpanded;
+  const isProfileActive = pathname === `/user/${user?.uid}` && !isExpanded;
+  const isNotificationsActive = pathname === '/notifications' && !isExpanded;
   const isMoreActive = isExpanded;
 
   // Hide mobile nav on editor pages
@@ -404,7 +385,7 @@ export default function MobileBottomNav() {
         router.push('/search');
       },
       onHover: () => handleButtonHover('/search'),
-      isActive: pathname === '/search',
+      isActive: pathname === '/search' && !isExpanded,
       ariaLabel: 'Search',
       label: 'Search',
     },
@@ -554,7 +535,7 @@ export default function MobileBottomNav() {
         onMouseEnter={onHover}
         onTouchStart={onHover} // Preload on touch start for mobile
         className={cn(
-          "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-2 relative gap-1 group",
+          "flex flex-col items-center justify-center h-16 flex-1 rounded-lg py-2 px-1 relative gap-1 group",
           "transition-all duration-75 ease-out", // Faster transitions for responsiveness
           "flex-shrink-0 min-w-0",
           // Enhanced touch feedback
@@ -588,9 +569,8 @@ export default function MobileBottomNav() {
         {/* Text label - allow 2 lines with smaller text */}
         <span className={cn(
           "text-[10px] font-medium leading-tight transition-colors duration-75",
-          "text-center max-w-full px-1",
+          "text-center max-w-full",
           "line-clamp-2 break-words", // Allow 2 lines with word breaking
-          "h-6 flex items-center justify-center", // Fixed height for consistent layout
           isActive
             ? "text-accent-foreground"
             : [
@@ -675,14 +655,25 @@ export default function MobileBottomNav() {
                       <div className="text-sm font-medium text-foreground truncate">
                         {user.username || 'User'}
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {user.email || 'No email'}
-                      </div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowLogoutConfirmation(true)}
+                      onClick={async () => {
+                        // CRITICAL FIX: Use system dialog instead of custom WeWrite dialog
+                        const confirmed = window.confirm('Are you sure you want to log out? You\'ll need to sign in again to access your account.');
+                        if (confirmed) {
+                          setIsLoggingOut(true);
+                          try {
+                            await logoutUser();
+                            setIsExpanded(false); // Close expanded section
+                          } catch (error) {
+                            console.error('Error during logout:', error);
+                          } finally {
+                            setIsLoggingOut(false);
+                          }
+                        }
+                      }}
                       className="text-xs bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20 dark:bg-destructive/10 dark:border-destructive/30 dark:text-destructive dark:hover:bg-destructive/20"
                     >
                       Log out
@@ -726,7 +717,7 @@ export default function MobileBottomNav() {
 
                       return (
                         <CrossComponentMobileNavButton
-                          key={itemId}
+                          key={`mobile-expanded-${itemId}`}
                           id={itemId}
                           index={actualSidebarIndex}
                           icon={item.icon}
@@ -763,7 +754,7 @@ export default function MobileBottomNav() {
         </div>
 
         {/* Bottom toolbar - always present with consistent padding */}
-        <div className="flex items-center justify-around px-2 py-4 gap-1">
+        <div className="flex items-center justify-around px-2 py-3 gap-1">
           {/* More Button - Fixed position, not draggable */}
           <NavButton
             id="more"
@@ -793,7 +784,7 @@ export default function MobileBottomNav() {
 
             return (
               <CrossComponentMobileNavButton
-                key={buttonId}
+                key={`mobile-bottom-${buttonId}`}
                 id={buttonId}
                 index={index}
                 icon={buttonConfig.icon}
@@ -814,19 +805,7 @@ export default function MobileBottomNav() {
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showLogoutConfirmation}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-        title="Confirm Logout"
-        message="Are you sure you want to log out? You'll need to sign in again to access your account."
-        confirmText="Log Out"
-        cancelText="Cancel"
-        variant="default"
-        icon="logout"
-        isLoading={isLoggingOut}
-      />
+      {/* Logout confirmation now uses system dialog - no custom modal needed */}
     </DndProvider>
   );
 }

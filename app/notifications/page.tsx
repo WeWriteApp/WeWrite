@@ -7,7 +7,7 @@ import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { useNotifications } from "../providers/NotificationProvider";
-import NavHeader from '../components/layout/NavHeader';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
@@ -94,25 +94,7 @@ function NotificationsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl mx-auto px-4 py-6">
-      {/* Navigation Header */}
-      <NavHeader
-        backUrl="/"
-        rightContent={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllAsRead}
-            disabled={loading}
-            className="flex items-center gap-2"
-            aria-label="Mark all notifications as read"
-          >
-            <CheckCheck className="h-4 w-4" />
-            <span className="hidden md:inline">Mark all as read</span>
-          </Button>
-        }
-      />
+    <>
 
       <div className="mb-6" />
 
@@ -158,23 +140,46 @@ function NotificationsContent() {
           </div>
         )}
       </div>
-      </div>
-    </div>
+    </>
   );
 }
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background">
-        <div className="container max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
-          </div>
-        </div>
-      </div>
-    }>
+    <NavPageLayout
+      backUrl="/"
+      rightContent={
+        <NotificationsHeaderButton />
+      }
+    >
       <NotificationsContent />
-    </Suspense>
+    </NavPageLayout>
+  );
+}
+
+// Extract the header button to avoid loading delays
+function NotificationsHeaderButton() {
+  const { markAllAsRead, loading } = useNotifications();
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleMarkAllAsRead}
+      disabled={loading}
+      className="flex items-center gap-2"
+      aria-label="Mark all notifications as read"
+    >
+      <CheckCheck className="h-4 w-4" />
+      <span className="hidden md:inline">Mark all as read</span>
+    </Button>
   );
 }

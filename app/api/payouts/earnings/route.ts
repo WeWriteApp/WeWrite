@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { payoutService } from '../../../services/payoutService';
+import { UsdEarningsService } from '../../../services/usdEarningsService';
 import { db } from '../../../firebase/config';
 import {
   collection,
@@ -22,10 +23,11 @@ import {
 import { StripePayoutService } from '../../../services/stripePayoutService';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { FinancialUtils } from '../../../types/financial';
-import { getCollectionName } from "../../../utils/environmentConfig";
+import { getCollectionName, USD_COLLECTIONS } from "../../../utils/environmentConfig";
 import { getMinimumPayoutThreshold } from '../../../utils/feeCalculations';
 import { payoutRateLimiter } from '../../../utils/rateLimiter';
 import { FeeConfigurationService } from '../../../services/feeConfigurationService';
+import { centsToDollars } from '../../../utils/formatCurrency';
 
 // Fee calculation function using centralized fee service
 async function calculatePayoutFees(grossAmount: number, payoutMethod: 'standard' | 'instant' = 'standard') {
@@ -77,74 +79,41 @@ export async function GET(request: NextRequest) {
 
     const recipientId = `recipient_${userId}`;
 
-    // Get earnings breakdown
-    const earningsBreakdown = await payoutService.getEarningsBreakdown(userId);
+    // Get USD earnings data using UsdEarningsService
+    const completeUsdData = await UsdEarningsService.getCompleteWriterEarnings(userId);
 
     let earnings = [];
     let payouts = [];
 
     if (!type || type === 'earnings') {
-      // Get recent earnings
-      const earningsQuery = query(
-        collection(db, 'earnings'),
-        where('recipientId', '==', recipientId),
-        orderBy('createdAt', 'desc'),
-        limit(pageSize)
-      );
-
-      const earningsSnapshot = await getDocs(earningsQuery);
-      earnings = await Promise.all(
-        earningsSnapshot.docs.map(async (earningDoc) => {
-          const earning = earningDoc.data();
-          
-          // Get page/group details
-          let resourceTitle = 'Unknown';
-          try {
-            const resourceDoc = await getDoc(doc(db, earning.resourceType === 'page' ? 'pages' : 'groups', earning.resourceId));
-            if (resourceDoc.exists()) {
-              const resourceData = resourceDoc.data();
-              resourceTitle = resourceData.title || resourceData.name || 'Untitled';
-            }
-          } catch (error) {
-            console.error('Error fetching resource details:', error);
-          }
-
-          return {
-            id: earning.id,
-            amount: earning.amount,
-            netAmount: earning.netAmount,
-            platformFee: earning.platformFee,
-            sourceType: earning.sourceType,
-            resourceType: earning.resourceType,
-            resourceTitle,
-            period: earning.period,
-            status: earning.status,
-            createdAt: earning.createdAt?.toDate?.()?.toISOString() || earning.createdAt,
-            metadata: earning.metadata
-          };
-        })
-      );
+      // Convert USD earnings to the expected format
+      earnings = completeUsdData.earnings.map(earning => ({
+        id: earning.id,
+        amount: centsToDollars(earning.totalUsdCentsReceived),
+        source: 'USD Allocation',
+        date: earning.createdAt,
+        type: 'usd',
+        status: earning.status,
+        pageId: earning.allocations?.[0]?.resourceId,
+        pageTitle: 'USD Earnings',
+        month: earning.month,
+        allocations: earning.allocations
+      }));
     }
 
     if (!type || type === 'payouts') {
-      // Get recent payouts
-      const payoutsQuery = db.collection(getCollectionName('payouts'))
-        .where('recipientId', '==', recipientId)
-        .orderBy('scheduledAt', 'desc')
-        .limit(pageSize);
-
-      const payoutsSnapshot = await getDocs(payoutsQuery);
-      payouts = await Promise.all(payoutsSnapshot.docs.map(async (payoutDoc) => {
-        const payout = payoutDoc.data();
-        const feeBreakdown = await calculatePayoutFees(payout.amount);
+      // Get USD payouts using UsdEarningsService
+      const usdPayouts = await UsdEarningsService.getPayoutHistory(userId);
+      payouts = await Promise.all(usdPayouts.map(async (payout) => {
+        const feeBreakdown = await calculatePayoutFees(centsToDollars(payout.amountCents));
 
         return {
           id: payout.id,
-          amount: payout.amount,
+          amount: centsToDollars(payout.amountCents),
           currency: payout.currency,
           status: payout.status,
-          period: payout.period,
-          scheduledAt: payout.scheduledAt?.toDate?.()?.toISOString() || payout.scheduledAt,
+          period: payout.month,
+          scheduledAt: payout.requestedAt,
           processedAt: payout.processedAt?.toDate?.()?.toISOString() || payout.processedAt,
           completedAt: payout.completedAt?.toDate?.()?.toISOString() || payout.completedAt,
           failureReason: payout.failureReason,
@@ -154,10 +123,20 @@ export async function GET(request: NextRequest) {
       }));
     }
 
+    // Create USD earnings breakdown
+    const usdBreakdown = completeUsdData.balance ? {
+      totalEarnings: centsToDollars(completeUsdData.balance.totalUsdCentsEarned),
+      availableBalance: centsToDollars(completeUsdData.balance.availableUsdCents),
+      pendingBalance: centsToDollars(completeUsdData.balance.pendingUsdCents),
+      paidOutBalance: centsToDollars(completeUsdData.balance.paidOutUsdCents),
+      currency: 'usd',
+      lastProcessedMonth: completeUsdData.balance.lastProcessedMonth
+    } : null;
+
     return NextResponse.json({
       success: true,
       data: {
-        breakdown: earningsBreakdown,
+        breakdown: usdBreakdown,
         earnings,
         payouts,
         pagination: {
@@ -206,110 +185,24 @@ export async function POST(request: NextRequest) {
     const { action, period } = body;
 
     if (action === 'request_payout') {
-      // Manual payout request
-      const recipient = await payoutService.getPayoutRecipient(userId);
-      
-      if (!recipient) {
-        return NextResponse.json({
-          error: 'Payout recipient not found'
-        }, { status: 404 });
-      }
+      // Use UsdEarningsService for payout request
+      const result = await UsdEarningsService.requestPayout(userId);
 
-      // Use the higher of system minimum or user preference
-      const systemMinimum = getMinimumPayoutThreshold();
-      const userMinimum = recipient.payoutPreferences.minimumThreshold;
-      const effectiveMinimum = Math.max(systemMinimum, userMinimum);
-
-      if (recipient.availableBalance < effectiveMinimum) {
+      if (result.success) {
         return NextResponse.json({
-          error: `Minimum payout threshold is $${effectiveMinimum} (system minimum: $${systemMinimum}, your preference: $${userMinimum})`
+          success: true,
+          data: {
+            payoutId: result.data?.payoutId,
+            amountCents: result.data?.amountCents,
+            amountDollars: result.data?.amountCents ? centsToDollars(result.data.amountCents) : undefined
+          },
+          message: 'USD payout requested successfully'
+        });
+      } else {
+        return NextResponse.json({
+          error: result.error?.message || 'USD payout request failed',
+          code: result.error?.code
         }, { status: 400 });
-      }
-
-      // Create manual payout with proper tracking
-      const correlationId = FinancialUtils.generateCorrelationId();
-      const payoutId = `payout_${userId}_${Date.now()}`;
-      const currentPeriod = new Date().toISOString().slice(0, 7); // YYYY-MM
-
-      const payout = {
-        id: payoutId,
-        recipientId: `recipient_${userId}`,
-        amount: recipient.availableBalance,
-        currency: recipient.payoutPreferences.currency,
-        status: 'pending',
-        earningIds: [], // Would need to fetch relevant earnings
-        period: period || currentPeriod,
-        scheduledAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        retryCount: 0,
-        metadata: {
-          source: 'manual_request',
-          correlationId,
-          requestedBy: userId
-        }
-      };
-
-await setDoc(doc(db, getCollectionName("payouts"), payoutId), payout);
-
-      // Track the payout request
-      const trackingResult = await TransactionTrackingService.trackPayoutRequest(
-        payoutId,
-        `recipient_${userId}`,
-        recipient.availableBalance,
-        undefined,
-        correlationId
-      );
-
-      if (!trackingResult.success) {
-        console.error('Failed to track payout request:', trackingResult.error);
-        // Continue processing but log the error
-      }
-
-      // Process the payout through Stripe immediately for manual requests
-      try {
-        const stripePayoutService = StripePayoutService.getInstance();
-        const stripeResult = await stripePayoutService.processPayout(payoutId);
-
-        if (stripeResult.success) {
-          const feeBreakdown = await calculatePayoutFees(payout.amount);
-
-          return NextResponse.json({
-            success: true,
-            data: {
-              ...payout,
-              status: 'processing',
-              stripeTransferId: stripeResult.data?.id,
-              feeBreakdown
-            },
-            message: 'Payout initiated and processing through Stripe',
-            correlationId
-          });
-        } else {
-          // Payout failed, but record was created for retry
-          const feeBreakdown = await calculatePayoutFees(payout.amount);
-
-          return NextResponse.json({
-            success: false,
-            error: stripeResult.error,
-            data: {
-              ...payout,
-              feeBreakdown
-            },
-            message: 'Payout request created but Stripe processing failed. Will retry automatically.',
-            correlationId
-          }, { status: 202 }); // Accepted but not processed
-        }
-      } catch (stripeError: any) {
-        console.error('Error processing payout through Stripe:', stripeError);
-
-        return NextResponse.json({
-          success: false,
-          error: 'Failed to process payout through Stripe',
-          data: payout,
-          message: 'Payout request created but processing failed. Will retry automatically.',
-          correlationId,
-          details: stripeError.message
-        }, { status: 202 }); // Accepted but not processed
       }
     }
 

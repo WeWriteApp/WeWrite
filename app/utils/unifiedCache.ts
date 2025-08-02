@@ -177,12 +177,9 @@ export function getReactQueryConfig(queryType: string) {
     staleTime: config.ttl,
     gcTime: config.ttl * 2, // Garbage collection time is 2x stale time
     retry: (failureCount: number, error: any) => {
-      // Don't retry on 4xx errors (client errors)
-      if (error?.status >= 400 && error?.status < 500) {
-        return false;
-      }
-      // Retry up to 2 times for other errors
-      return failureCount < 2;
+      // EMERGENCY FIX: Disable all retries to prevent Firebase quota abuse
+      // When billing fails, retries create exponential Firebase read costs
+      return false;
     },
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000)
   };

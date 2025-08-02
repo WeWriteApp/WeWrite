@@ -1,6 +1,9 @@
 /**
  * Token Balance API
- * 
+ *
+ * DEPRECATED: This API is being migrated to USD-based system
+ * Use /api/usd/balance for new implementations
+ *
  * Get user's token balance and allocation information
  */
 
@@ -8,6 +11,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { TokenService } from '../../../services/tokenService';
 import { ServerTokenService } from '../../../services/tokenService.server';
+import { ServerUsdService } from '../../../services/usdService.server';
+import { centsToDollars, migrateTokensToUsdCents } from '../../../utils/formatCurrency';
 
 export async function GET(request: NextRequest) {
   try {
@@ -125,5 +130,52 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to process token balance request' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Helper function to get token balance from USD system (for migration)
+ */
+async function getTokenBalanceFromUsdSystem(userId: string) {
+  try {
+    const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
+    if (!usdBalance) {
+      return null;
+    }
+
+    // Convert USD cents to token equivalents for backward compatibility
+    const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+    const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+    const availableTokens = Math.floor(centsToDollars(usdBalance.availableUsdCents) * 10);
+
+    const allocations = await ServerUsdService.getUserUsdAllocations(userId);
+    const tokenAllocations = allocations.map(allocation => ({
+      ...allocation,
+      tokens: Math.floor(centsToDollars(allocation.usdCents) * 10),
+      usdValue: centsToDollars(allocation.usdCents)
+    }));
+
+    return {
+      balance: {
+        userId: usdBalance.userId,
+        totalTokens,
+        allocatedTokens,
+        availableTokens,
+        monthlyAllocation: Math.floor(centsToDollars(usdBalance.monthlyAllocationCents) * 10),
+        lastAllocationDate: usdBalance.lastAllocationDate,
+        createdAt: usdBalance.createdAt,
+        updatedAt: usdBalance.updatedAt
+      },
+      allocations: tokenAllocations,
+      summary: {
+        totalTokens,
+        allocatedTokens,
+        availableTokens,
+        allocationCount: allocations.length
+      }
+    };
+  } catch (error) {
+    console.error('Error getting token balance from USD system:', error);
+    return null;
   }
 }

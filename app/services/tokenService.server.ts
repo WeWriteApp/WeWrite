@@ -1,14 +1,19 @@
 /**
  * Server-side Token Service for WeWrite
- * 
+ *
+ * DEPRECATED: This service is being migrated to USD-based system
+ * Use ServerUsdService for new implementations
+ *
  * Uses Firebase Admin SDK for elevated permissions
  * This file should ONLY be imported in API routes and server components
  */
 
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCurrentMonth, calculateTokensForAmount } from '../utils/subscriptionTiers';
-import type { TokenBalance } from '../types/database';
-import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
+import { dollarsToCents, centsToDollars, migrateTokensToUsdCents } from '../utils/formatCurrency';
+import type { TokenBalance, UsdBalance } from '../types/database';
+import { getCollectionName, PAYMENT_COLLECTIONS, USD_COLLECTIONS } from '../utils/environmentConfig';
+import { ServerUsdService } from './usdService.server';
 
 // Lazy initialization function for Firebase Admin
 function getFirebaseAdminAndDb() {
@@ -691,6 +696,156 @@ export class ServerTokenService {
         totalUsdValue: 0,
         allocations: []
       };
+    }
+  }
+
+  // MIGRATION HELPERS - Bridge methods to USD system
+
+  /**
+   * Get USD balance and convert to token format for backward compatibility
+   * @deprecated Use ServerUsdService.getUserUsdBalance directly
+   */
+  static async getUserTokenBalanceFromUsd(userId: string): Promise<TokenBalance | null> {
+    try {
+      const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
+      if (!usdBalance) {
+        return null;
+      }
+
+      // Convert USD cents to token equivalents for backward compatibility
+      const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+      const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+      const availableTokens = Math.floor(centsToDollars(usdBalance.availableUsdCents) * 10);
+      const monthlyAllocation = Math.floor(centsToDollars(usdBalance.monthlyAllocationCents) * 10);
+
+      return {
+        userId: usdBalance.userId,
+        totalTokens,
+        allocatedTokens,
+        availableTokens,
+        monthlyAllocation,
+        lastAllocationDate: usdBalance.lastAllocationDate,
+        createdAt: usdBalance.createdAt,
+        updatedAt: usdBalance.updatedAt
+      };
+    } catch (error) {
+      console.error('ServerTokenService: Error getting token balance from USD:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Migrate user from token system to USD system
+   */
+  static async migrateUserToUsdSystem(userId: string): Promise<void> {
+    try {
+      console.log(`[MIGRATION] Starting migration for user ${userId} from tokens to USD`);
+
+      // Get existing token balance
+      const tokenBalance = await this.getUserTokenBalance(userId);
+      if (!tokenBalance) {
+        console.log(`[MIGRATION] No token balance found for user ${userId}, skipping migration`);
+        return;
+      }
+
+      // Convert token amounts to USD cents
+      const totalUsdCents = migrateTokensToUsdCents(tokenBalance.totalTokens);
+      const allocatedUsdCents = migrateTokensToUsdCents(tokenBalance.allocatedTokens);
+      const monthlyAllocationCents = migrateTokensToUsdCents(tokenBalance.monthlyAllocation);
+
+      // Create USD balance record
+      const { admin, db } = getFirebaseAdminAndDb();
+      const usdBalanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
+
+      await usdBalanceRef.set({
+        userId,
+        totalUsdCents,
+        allocatedUsdCents,
+        availableUsdCents: totalUsdCents - allocatedUsdCents,
+        monthlyAllocationCents,
+        lastAllocationDate: tokenBalance.lastAllocationDate,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Migrate token allocations to USD allocations
+      const tokenAllocations = await this.getUserTokenAllocations(userId);
+      const batch = db.batch();
+
+      for (const allocation of tokenAllocations) {
+        const usdCents = migrateTokensToUsdCents(allocation.tokens);
+        const usdAllocationRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS)).doc();
+
+        batch.set(usdAllocationRef, {
+          userId: allocation.userId,
+          recipientUserId: allocation.recipientUserId,
+          resourceType: allocation.resourceType,
+          resourceId: allocation.resourceId,
+          usdCents,
+          month: allocation.month,
+          status: allocation.status,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      await batch.commit();
+
+      console.log(`[MIGRATION] Successfully migrated user ${userId} from tokens to USD system`);
+      console.log(`[MIGRATION] Converted ${tokenBalance.totalTokens} tokens to ${centsToDollars(totalUsdCents)} USD`);
+
+    } catch (error) {
+      console.error(`[MIGRATION] Error migrating user ${userId} to USD system:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Audit migration by comparing token and USD balances
+   */
+  static async auditMigration(userId: string): Promise<{
+    tokenBalance: TokenBalance | null;
+    usdBalance: UsdBalance | null;
+    isConsistent: boolean;
+    differences: string[];
+  }> {
+    try {
+      const tokenBalance = await this.getUserTokenBalance(userId);
+      const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
+
+      const differences: string[] = [];
+      let isConsistent = true;
+
+      if (tokenBalance && usdBalance) {
+        // Check if converted amounts match
+        const expectedUsdCents = migrateTokensToUsdCents(tokenBalance.totalTokens);
+        if (expectedUsdCents !== usdBalance.totalUsdCents) {
+          differences.push(`Total amount mismatch: ${tokenBalance.totalTokens} tokens (${centsToDollars(expectedUsdCents)} USD) vs ${centsToDollars(usdBalance.totalUsdCents)} USD`);
+          isConsistent = false;
+        }
+
+        const expectedAllocatedUsdCents = migrateTokensToUsdCents(tokenBalance.allocatedTokens);
+        if (expectedAllocatedUsdCents !== usdBalance.allocatedUsdCents) {
+          differences.push(`Allocated amount mismatch: ${tokenBalance.allocatedTokens} tokens (${centsToDollars(expectedAllocatedUsdCents)} USD) vs ${centsToDollars(usdBalance.allocatedUsdCents)} USD`);
+          isConsistent = false;
+        }
+      } else if (tokenBalance && !usdBalance) {
+        differences.push('Token balance exists but USD balance is missing');
+        isConsistent = false;
+      } else if (!tokenBalance && usdBalance) {
+        differences.push('USD balance exists but token balance is missing');
+        isConsistent = false;
+      }
+
+      return {
+        tokenBalance,
+        usdBalance,
+        isConsistent,
+        differences
+      };
+    } catch (error) {
+      console.error('ServerTokenService: Error auditing migration:', error);
+      throw error;
     }
   }
 }

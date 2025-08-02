@@ -215,33 +215,28 @@ function UnifiedSidebarContent({
   const mapFeatureEnabled = true;
 
   // Logout confirmation modal state
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Check if account is admin
   const isUserAdmin = user?.email === 'jamiegray2234@gmail.com' || user?.email === 'jamie@wewrite.app' || user?.email === 'admin.test@wewrite.app';
 
   // Handle logout confirmation
-  const handleLogoutClick = () => {
-    setShowLogoutConfirmation(true);
-  };
+  const handleLogoutClick = async () => {
+    // CRITICAL FIX: Use system dialog instead of custom WeWrite dialog
+    const confirmed = window.confirm('Are you sure you want to log out? You\'ll need to sign in again to access your account.');
 
-  const handleLogoutConfirm = async () => {
-    setIsLoggingOut(true);
-    try {
-      console.log('🔴 SIDEBAR: Logout confirmed, calling signOut function');
-      await signOut();
-      console.log('🔴 SIDEBAR: signOut completed successfully');
-    } catch (error) {
-      console.error('🔴 SIDEBAR: Error during logout:', error);
-    } finally {
-      setIsLoggingOut(false);
-      setShowLogoutConfirmation(false);
+    if (confirmed) {
+      setIsLoggingOut(true);
+      try {
+        console.log('🔴 SIDEBAR: Logout confirmed, calling signOut function');
+        await signOut();
+        console.log('🔴 SIDEBAR: signOut completed successfully');
+      } catch (error) {
+        console.error('🔴 SIDEBAR: Error during logout:', error);
+      } finally {
+        setIsLoggingOut(false);
+      }
     }
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutConfirmation(false);
   };
 
   // Check if we're on admin dashboard (should hide sidebar)
@@ -262,12 +257,12 @@ function UnifiedSidebarContent({
   const navigationItemsConfig = {
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
-    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
-    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
-    'following': { icon: Heart, label: 'Following', href: '/following' },
     'new': { icon: Plus, label: 'New Page', href: '/new' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
+    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
+    'following': { icon: Heart, label: 'Following', href: '/following' },
+    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
@@ -377,45 +372,47 @@ function UnifiedSidebarContent({
           )}>
             {/* Navigation Items */}
             <nav className="flex flex-col gap-2 mb-6">
-            {completeSidebarOrder.map((itemId, index) => {
-              const item = navigationItemsConfig[itemId];
-              if (!item) return null;
+            {completeSidebarOrder
+              .filter((itemId, index, array) => array.indexOf(itemId) === index) // Remove duplicates
+              .map((itemId, index) => {
+                const item = navigationItemsConfig[itemId];
+                if (!item) return null;
 
-              const isActive = isNavItemActive(item);
-              const isSettings = item.label === 'Settings';
+                const isActive = isNavItemActive(item);
+                const isSettings = item.label === 'Settings';
 
-              return (
-                <DraggableSidebarItem
-                  key={itemId}
-                  id={itemId}
-                  icon={item.icon}
-                  label={item.label}
-                  href={item.href}
-                  onClick={() => handleNavItemClick(item)}
-                  isActive={isActive}
-                  index={index}
-                  moveItem={reorderCompleteItems}
-                  showContent={showContent}
-                  isCompact={false}
-                >
-                  {/* Settings warning indicator */}
-                  {isSettings && criticalSettingsStatus === 'warning' && (
-                    <>
-                      {!showContent && (
-                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
-                      )}
-                      {showContent && (
-                        <StatusIcon
-                          status="warning"
-                          size="sm"
-                          position="static"
-                        />
-                      )}
-                    </>
-                  )}
-                </DraggableSidebarItem>
-              );
-            })}
+                return (
+                  <DraggableSidebarItem
+                    key={`desktop-sidebar-${itemId}-${index}`} // Add index to ensure uniqueness
+                    id={itemId}
+                    icon={item.icon}
+                    label={item.label}
+                    href={item.href}
+                    onClick={() => handleNavItemClick(item)}
+                    isActive={isActive}
+                    index={index}
+                    moveItem={reorderCompleteItems}
+                    showContent={showContent}
+                    isCompact={false}
+                  >
+                    {/* Settings warning indicator */}
+                    {isSettings && criticalSettingsStatus === 'warning' && (
+                      <>
+                        {!showContent && (
+                          <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
+                        )}
+                        {showContent && (
+                          <StatusIcon
+                            status="warning"
+                            size="sm"
+                            position="static"
+                          />
+                        )}
+                      </>
+                    )}
+                  </DraggableSidebarItem>
+                );
+              })}
           </nav>
 
           {/* Reset to Default Button - only show when expanded */}
@@ -521,16 +518,16 @@ function UnifiedSidebarContent({
           )}
           </div>
 
-          {/* Fixed bottom section - Buy Tokens button for users without active token purchase */}
+          {/* Fixed bottom section - Fund Account button for users without active subscription */}
           {!isEditMode && user && hasActiveSubscription === false && (
             <div className="px-3 pb-4 flex-shrink-0">
               <Button
-                onClick={() => router.push('/settings/buy-tokens')}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                onClick={() => router.push('/settings/fund-account')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
                 size="sm"
               >
                 <DollarSign className="h-4 w-4 mr-2" />
-                Buy Tokens
+                Fund Account
               </Button>
             </div>
           )}
@@ -543,9 +540,6 @@ function UnifiedSidebarContent({
                 <div className="mb-3 px-3 py-2">
                   <div className="text-sm font-medium text-foreground truncate">
                     {sanitizeUsername(user.username, 'Loading...', 'User')}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {user.emailVerified ? 'Email verified' : 'Email not verified'}
                   </div>
                 </div>
               )}
@@ -588,19 +582,7 @@ function UnifiedSidebarContent({
     <>
       {createPortal(sidebarContent, document.body)}
 
-      {/* Logout Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showLogoutConfirmation}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-        title="Confirm Logout"
-        message="Are you sure you want to log out? You'll need to sign in again to access your account."
-        confirmText="Log Out"
-        cancelText="Cancel"
-        variant="default"
-        icon="logout"
-        isLoading={isLoggingOut}
-      />
+      {/* Logout confirmation now uses system dialog - no custom modal needed */}
     </>
   );
 }

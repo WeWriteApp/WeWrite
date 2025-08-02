@@ -127,8 +127,7 @@ export async function POST(request: NextRequest) {
         userId,
         tier,
         amount: amount.toString(),
-        tierName: tierName || tier,
-        tokens: tokens?.toString() || (amount * 10).toString()
+        tierName: tierName || tier
       }
     });
 

@@ -12,7 +12,7 @@ import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
 import { addRecentSearch } from "../utils/recentSearches";
-import NavHeader from '../components/layout/NavHeader';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 import RecentSearches from '../components/search/RecentSearches';
 
@@ -64,6 +64,13 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
   const lastSearchValue = useRef('');
+
+  // Update input value when initialValue changes (for recent search selection)
+  useEffect(() => {
+    if (initialValue !== undefined && initialValue !== inputValue) {
+      setInputValue(initialValue);
+    }
+  }, [initialValue]);
 
   // Auto-focus effect
   useEffect(() => {
@@ -270,6 +277,12 @@ const SearchPage = React.memo(() => {
     window.history.replaceState({}, '', url);
   }, [performSearch, userId]);
 
+  // Handle recent search selection - this will update the input and perform search
+  const handleRecentSearchSelect = useCallback((searchTerm) => {
+    // This will trigger both the input update and the search
+    handleSearch(searchTerm);
+  }, [handleSearch]);
+
   // Stable clear function
   const handleClear = useCallback(() => {
     clearSearch();
@@ -367,7 +380,23 @@ const SearchPage = React.memo(() => {
   // All search content is now isolated in SearchPageContent component
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <NavPageLayout
+      backUrl="/"
+      rightContent={
+        currentQuery && currentQuery.trim() && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={shareSearchUrl}
+            className="flex items-center gap-2 rounded-2xl"
+            aria-label="Share search results"
+          >
+            <Share2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        )
+      }
+    >
       {/* Performance monitoring - only active in development */}
       <PerformanceMonitor
         name="SearchPage"
@@ -382,30 +411,9 @@ const SearchPage = React.memo(() => {
         }}
       />
 
-      {/* Navigation Header */}
-      <NavHeader
-        backUrl="/"
-        rightContent={
-          currentQuery && currentQuery.trim() && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={shareSearchUrl}
-              className="flex items-center gap-2 rounded-2xl"
-              aria-label="Share search results"
-            >
-              <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Share</span>
-            </Button>
-          )
-        }
-      />
-
-      <div className="mb-6" />
-
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput
-        initialValue={initialQuery}
+        initialValue={currentQuery || initialQuery}
         onSearch={handleSearch}
         onClear={handleClear}
         onSave={handleSave}
@@ -417,7 +425,7 @@ const SearchPage = React.memo(() => {
       {/* Recent Searches - only show when no active search */}
       {!currentQuery && (
         <RecentSearches
-          onSelect={handleSearch}
+          onSelect={handleRecentSearchSelect}
           userId={userId}
         />
       )}
@@ -433,7 +441,7 @@ const SearchPage = React.memo(() => {
         error={error}
         searchStats={searchStats}
       />
-    </div>
+    </NavPageLayout>
   );
 });
 

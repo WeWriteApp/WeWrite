@@ -178,6 +178,8 @@ export default function CustomDateField({
 
   const handleDateClick = () => {
     if (canEdit) {
+      // CRITICAL FIX: Always use inline date picker to prevent content loss
+      // This is safe for both new and existing pages
       setShowDatePicker(true);
     }
   };

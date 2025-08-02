@@ -45,7 +45,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       type: 'user' as const // Add a type field to distinguish from pages
     }));
 
-    console.log(`Found ${formattedUsers.length} users matching "${searchTerm}"`);
+    // SECURITY FIX: Use %s format specifier to prevent format string injection
+    console.log('Found %d users matching "%s"', formattedUsers.length, searchTerm);
 
     // Apply scoring to sort results
     const sortedUsers = sortSearchResultsByScore(formattedUsers, searchTerm);

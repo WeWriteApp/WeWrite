@@ -1,11 +1,19 @@
 "use client";
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdPledgeBar or UsdAllocationModal instead for USD-based allocations.
+ *
+ * Legacy embedded token allocation - replaced by USD system.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../providers/AuthProvider';
-import { useTokenBalanceContext } from '../../contexts/TokenBalanceContext';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { formatUsdCents, centsToDollars } from '../../utils/formatCurrency';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../ui/use-toast';
 import { getNextMonthlyProcessingDate } from '../../utils/subscriptionTiers';
@@ -26,7 +34,7 @@ export function EmbeddedTokenAllocation({
   source = 'HomePage'
 }: EmbeddedTokenAllocationProps) {
   const { user } = useAuth();
-  const { tokenBalance, isLoading: tokenLoading, updateOptimisticBalance } = useTokenBalanceContext();
+  const { usdBalance, isLoading: usdLoading, updateOptimisticBalance } = useUsdBalance();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -34,8 +42,8 @@ export function EmbeddedTokenAllocation({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Function to show token allocation notification
-  const showTokenAllocationNotification = (tokenAmount: number) => {
+  // Function to show USD allocation notification
+  const showUsdAllocationNotification = (usdCents: number) => {
     const nextProcessingDate = getNextMonthlyProcessingDate();
     const formattedDate = nextProcessingDate.toLocaleDateString('en-US', {
       month: 'long',
@@ -43,7 +51,7 @@ export function EmbeddedTokenAllocation({
     });
 
     toast({
-      title: `${tokenAmount} token${tokenAmount === 1 ? '' : 's'} allocated!`,
+      title: `${formatUsdCents(usdCents)} allocated!`,
       description: `Your allocation isn't final until ${formattedDate} when monthly processing occurs. You can adjust it anytime before then.`,
       duration: 6000, // Show for 6 seconds
     });
@@ -55,11 +63,14 @@ export function EmbeddedTokenAllocation({
 
     const loadPageAllocation = async () => {
       try {
-        const response = await fetch(`/api/tokens/pledge-bar-data?pageId=${pageId}`);
+        const response = await fetch(`/api/usd/pledge-bar-data?pageId=${pageId}`);
         if (response.ok) {
           const result = await response.json();
           const data = result.data;
-          setCurrentPageAllocation(data.currentPageAllocation || 0);
+          // Convert USD cents to tokens for backward compatibility
+          const usdCents = data.currentPageAllocationCents || 0;
+          const tokens = Math.floor(centsToDollars(usdCents) * 10);
+          setCurrentPageAllocation(tokens);
         }
       } catch (error) {
         console.error('Error loading page allocation:', error);
@@ -71,7 +82,7 @@ export function EmbeddedTokenAllocation({
     loadPageAllocation();
   }, [user, pageId]);
 
-  // Handle token allocation change
+  // Handle USD allocation change
   const handleTokenChange = async (change: number, event: React.MouseEvent) => {
     // Prevent event bubbling to parent card
     event.stopPropagation();
@@ -81,15 +92,19 @@ export function EmbeddedTokenAllocation({
 
     const newAllocation = Math.max(0, currentPageAllocation + change);
 
+    // Convert tokens to USD cents for API call
+    const newAllocationCents = Math.floor((newAllocation / 10) * 100);
+    const changeCents = Math.floor((change / 10) * 100);
+
     // Optimistic updates
     const previousAllocation = currentPageAllocation;
     setCurrentPageAllocation(newAllocation);
-    updateOptimisticBalance(change);
+    updateOptimisticBalance(changeCents);
 
     // No need to set updating state - buttons stay enabled
 
     try {
-      const response = await fetch('/api/tokens/pending-allocations', {
+      const response = await fetch('/api/usd/page-allocation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +113,7 @@ export function EmbeddedTokenAllocation({
           recipientUserId: authorId,
           resourceType: 'page',
           resourceId: pageId,
-          tokens: newAllocation,
+          usdCents: newAllocationCents,
           source: source // Track where allocation came from
         })
       });
@@ -106,7 +121,7 @@ export function EmbeddedTokenAllocation({
       if (!response.ok) {
         // Rollback on error
         setCurrentPageAllocation(previousAllocation);
-        updateOptimisticBalance(-change);
+        updateOptimisticBalance(-changeCents);
         const errorData = await response.json();
         toast({
           title: "Allocation Failed",
@@ -118,14 +133,16 @@ export function EmbeddedTokenAllocation({
 
       const result = await response.json();
 
-      // Show notification for token allocation (only for positive changes)
+      // Show notification for USD allocation (only for positive changes)
       if (change > 0) {
-        showTokenAllocationNotification(Math.abs(change));
+        showUsdAllocationNotification(Math.abs(changeCents));
       }
 
       // Update current page allocation with server response
-      if (result.currentAllocation !== undefined) {
-        setCurrentPageAllocation(result.currentAllocation);
+      if (result.currentAllocationCents !== undefined) {
+        // Convert USD cents back to tokens for display
+        const tokens = Math.floor(centsToDollars(result.currentAllocationCents) * 10);
+        setCurrentPageAllocation(tokens);
       }
 
       // Log analytics event
@@ -145,7 +162,7 @@ export function EmbeddedTokenAllocation({
     } catch (error) {
       // Rollback on error
       setCurrentPageAllocation(previousAllocation);
-      updateOptimisticBalance(-change);
+      updateOptimisticBalance(-changeCents);
       console.error('Error allocating tokens:', error);
       toast({
         title: "Allocation Error",
@@ -166,7 +183,7 @@ export function EmbeddedTokenAllocation({
   const handleOutOfTokens = (event: React.MouseEvent) => {
     event.stopPropagation();
     event.preventDefault();
-    router.push('/settings/spend-tokens');
+    router.push('/settings/spend');
   };
 
   if (!user) {
@@ -188,7 +205,7 @@ export function EmbeddedTokenAllocation({
     );
   }
 
-  if (isLoading || tokenLoading || !tokenBalance) {
+  if (isLoading || usdLoading || !usdBalance) {
     return (
       <div className={cn("flex items-center gap-3", className)}>
         <div className="h-8 w-8 bg-muted animate-pulse rounded" />
@@ -198,7 +215,10 @@ export function EmbeddedTokenAllocation({
     );
   }
 
-  const { totalTokens, allocatedTokens, availableTokens } = tokenBalance;
+  // Convert USD balance to tokens for backward compatibility
+  const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+  const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+  const availableTokens = totalTokens - allocatedTokens;
 
   // Calculate token distribution exactly like PledgeBar
   const otherPagesTokens = Math.max(0, allocatedTokens - currentPageAllocation);

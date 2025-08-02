@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   ShoppingCart,
   Coins,
-  Palette
+  Palette,
+  Wallet
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 
@@ -22,8 +23,9 @@ import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscr
 import { WarningDot } from '../components/ui/warning-dot';
 import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
-import { useTokenBalance } from '../hooks/useTokenBalance';
-import { TokenPieChart } from '../components/ui/TokenPieChart';
+import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { UsdPieChart } from '../components/ui/UsdPieChart';
+import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
 
 
 interface SettingsSection {
@@ -32,39 +34,35 @@ interface SettingsSection {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   requiresPayments?: boolean;
-  requiresTokenSystem?: boolean;
 }
 
 export default function SettingsIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
-  // Get bank setup status and token balance
+  // Get bank setup status and balances
   const bankSetupStatus = useBankSetupStatus();
-  const tokenBalance = useTokenBalance();
-
-  // All features are now always enabled
-  const tokenSystemEnabled = true;
+  const { usdBalance } = useUsdBalance();
 
   const settingsSections: SettingsSection[] = [
     {
-      id: 'buy-tokens',
-      title: 'Buy Tokens',
-      icon: ShoppingCart,
-      href: '/settings/buy-tokens',
-      requiresPayments: true,
-      requiresTokenSystem: true
+      id: 'fund-account',
+      title: 'Fund Account',
+      icon: Wallet,
+      href: '/settings/fund-account',
+      requiresPayments: true
     },
     {
-      id: 'spend-tokens',
-      title: 'Spend Tokens',
+      id: 'spend',
+      title: 'Manage Spending',
       icon: Coins,
-      href: '/settings/spend-tokens',
-      requiresPayments: true,
-      requiresTokenSystem: true
+      href: '/settings/spend',
+      requiresPayments: true
     },
+
     {
       id: 'earnings',
       title: 'Get paid',
@@ -119,12 +117,20 @@ export default function SettingsIndexPage() {
             subscription.currentPeriodEnd
           );
           setHasActiveSubscription(isActive);
+
+          // Get subscription amount from price data
+          const amount = subscription.items?.data?.[0]?.price?.unit_amount
+            ? subscription.items.data[0].price.unit_amount / 100
+            : 0;
+          setSubscriptionAmount(amount);
         } else {
           setHasActiveSubscription(false);
+          setSubscriptionAmount(0);
         }
       } catch (error) {
         console.error('Error checking subscription status:', error);
         setHasActiveSubscription(false);
+        setSubscriptionAmount(0);
       }
     };
 
@@ -137,13 +143,8 @@ export default function SettingsIndexPage() {
       return;
     }
 
-    // Filter sections based on feature flags to get available sections
-    const availableSections = settingsSections.filter(section => {
-      if (section.requiresTokenSystem && !tokenSystemEnabled) {
-        return false;
-      }
-      return true;
-    });
+    // Get available sections
+    const availableSections = settingsSections;
 
     // On desktop, always redirect to first available settings page
     // Use a more robust check for desktop vs mobile
@@ -165,17 +166,12 @@ export default function SettingsIndexPage() {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [, user, router, tokenSystemEnabled]);
+  }, [user, router]);
 
 
 
-  // Filter sections based on feature flags
-  const availableSections = settingsSections.filter(section => {
-    if (section.requiresTokenSystem && !tokenSystemEnabled) {
-      return false;
-    }
-    return true;
-  });
+  // Get available sections
+  const availableSections = settingsSections;
 
   const handleSectionClick = (href: string) => {
     router.push(href);
@@ -193,10 +189,10 @@ export default function SettingsIndexPage() {
           {availableSections.map((section) => {
             const IconComponent = section.icon;
 
-            // Show warning for subscription-related sections if there are subscription issues
+            // Show warning for funding-related sections if there are subscription issues
             // But don't show warning dots when we have status icons or when loading
             // Only show warnings for truly problematic states, not for active subscriptions
-            const showWarning = section.id === 'buy-tokens' &&
+            const showWarning = section.id === 'fund-account' &&
               shouldShowSubscriptionWarning &&
               hasActiveSubscription !== null && // Don't show while loading
               hasActiveSubscription === false; // Only show when explicitly false (not active)
@@ -215,31 +211,42 @@ export default function SettingsIndexPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Status icons for specific sections - show success and warnings */}
-                    {section.id === 'buy-tokens' && hasActiveSubscription !== null && (
-                      hasActiveSubscription === true ? (
-                        <StatusIcon status="success" size="sm" position="static" />
-                      ) : (
-                        <StatusIcon status="warning" size="sm" position="static" />
-                      )
+                    {section.id === 'fund-account' && (
+                      <span className="text-sm text-muted-foreground font-medium">
+                        ${subscriptionAmount}/mo
+                      </span>
                     )}
 
                     {section.id === 'earnings' && (
                       bankSetupStatus.isSetup ? (
                         <StatusIcon status="success" size="sm" position="static" />
                       ) : (
-                        <StatusIcon status="warning" size="sm" position="static" />
+                        <span className="text-sm bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full font-medium">
+                          Set up bank
+                        </span>
                       )
                     )}
 
-                    {section.id === 'spend-tokens' && tokenBalance && (
-                      <TokenPieChart
-                        allocatedTokens={tokenBalance.allocatedTokens}
-                        totalTokens={tokenBalance.totalTokens}
-                        size={20}
-                        strokeWidth={2}
-                        showFraction={false}
-                      />
-                    )}
+                    {section.id === 'spend' && usdBalance && (() => {
+                      const allocatedCents = usdBalance.allocatedUsdCents || 0;
+                      const totalCents = usdBalance.totalUsdCents || 0;
+                      const remainingCents = totalCents - allocatedCents;
+                      const remainingDollars = Math.abs(remainingCents) / 100;
+
+                      if (remainingCents >= 0) {
+                        return (
+                          <span className="text-sm text-muted-foreground font-medium">
+                            ${remainingDollars.toFixed(0)} remaining
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span className="text-sm text-red-600 font-medium">
+                            ${remainingDollars.toFixed(0)} over
+                          </span>
+                        );
+                      }
+                    })()}
 
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>

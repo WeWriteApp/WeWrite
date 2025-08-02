@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Random Pages Filter</title>
+</head>
+<body>
+    <h1>Random Pages Filter Test</h1>
+    
+    <div>
+        <h2>Test localStorage initialization</h2>
+        <button onclick="setNotMineFilter(true)">Set "Not mine" to ON</button>
+        <button onclick="setNotMineFilter(false)">Set "Not mine" to OFF</button>
+        <button onclick="checkFilter()">Check current filter</button>
+        <button onclick="clearFilter()">Clear filter</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        function setNotMineFilter(value) {
+            localStorage.setItem('randomPages_excludeOwnPages', String(value));
+            document.getElementById('result').innerHTML = `Set excludeOwnPages to: ${value}`;
+        }
+        
+        function checkFilter() {
+            const value = localStorage.getItem('randomPages_excludeOwnPages') === 'true';
+            document.getElementById('result').innerHTML = `Current excludeOwnPages: ${value}`;
+        }
+        
+        function clearFilter() {
+            localStorage.removeItem('randomPages_excludeOwnPages');
+            document.getElementById('result').innerHTML = 'Filter cleared';
+        }
+        
+        // Test the initialization logic
+        function testInitialization() {
+            const excludeOwnPages = (() => {
+                if (typeof window !== 'undefined') {
+                    return localStorage.getItem('randomPages_excludeOwnPages') === 'true';
+                }
+                return false;
+            })();
+            
+            return excludeOwnPages;
+        }
+        
+        // Run test on page load
+        window.onload = function() {
+            const result = testInitialization();
+            document.getElementById('result').innerHTML = `Initial excludeOwnPages value: ${result}`;
+        };
+    </script>
+</body>
+</html>

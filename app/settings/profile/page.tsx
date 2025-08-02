@@ -18,7 +18,7 @@ import { useConfirmation } from '../../hooks/useConfirmation';
 import AlertModal from '../../components/utils/AlertModal';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
 import { ChevronLeft, Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
-import NavHeader from '../../components/layout/NavHeader';
+import NavPageLayout from '../../components/layout/NavPageLayout';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -262,12 +262,32 @@ export default function ProfilePage() {
   }
 
   return (
-    <div>
-      <div className="lg:hidden">
-        <NavHeader backUrl="/settings" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+    <NavPageLayout
+      backUrl="/settings"
+      loading={!user || isLoading}
+      loadingFallback={
+        <div className="w-full space-y-6">
+          <Card className="wewrite-card">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-xl font-semibold">Profile Information</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Loading your profile...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 bg-muted rounded w-1/4"></div>
+                <div className="h-10 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-1/4"></div>
+                <div className="h-10 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-1/4"></div>
+                <div className="h-10 bg-muted rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
 
         {/* Profile Section */}
         <Card className="wewrite-card">
@@ -601,8 +621,8 @@ export default function ProfilePage() {
                     // Otherwise, do a normal logout
                     logoutUser(false, hasMultipleAccounts).then((result) => {
                       if (!result.returnedToPrevious) {
-                        // If we didn't return to a previous account, redirect to home
-                        router.push('/');
+                        // Force refresh to ensure clean state
+                        window.location.href = '/';
                       }
                       // If we returned to previous account, the redirect is handled by logoutUser
                     });
@@ -636,7 +656,6 @@ export default function ProfilePage() {
           variant={confirmationState.variant}
           icon={confirmationState.icon}
         />
-      </div>
-    </div>
+    </NavPageLayout>
   );
 }

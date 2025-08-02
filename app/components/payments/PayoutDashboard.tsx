@@ -9,7 +9,7 @@ import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
-import { TokenEarningsService } from '../../services/tokenEarningsService';
+import { UsdEarningsService } from '../../services/usdEarningsService';
 import {
   calculateFeeBreakdown,
   calculateFeeBreakdownAsync,
@@ -178,13 +178,13 @@ export default function PayoutDashboard() {
       // Load bank account status
       await loadBankAccountStatus();
 
-      // Load token earnings data
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
-      if (tokenBalance) {
+      // Load USD earnings data
+      const usdBalance = await UsdEarningsService.getWriterUsdBalance(user.uid);
+      if (usdBalance) {
         const earnings = {
-          totalEarnings: tokenBalance.totalUsdEarned,
-          availableBalance: tokenBalance.availableUsdValue,
-          pendingBalance: tokenBalance.pendingUsdValue,
+          totalEarnings: usdBalance.totalUsdCentsEarned / 100, // Convert cents to dollars
+          availableBalance: usdBalance.availableUsdCents / 100, // Convert cents to dollars
+          pendingBalance: usdBalance.pendingUsdCents / 100, // Convert cents to dollars
           totalPlatformFees: 0, // Platform fees handled at subscription level
           currency: 'usd'
         };
@@ -194,28 +194,32 @@ export default function PayoutDashboard() {
         updateFeeBreakdown(earnings.availableBalance);
       }
 
-      // Load token earnings history
-      const tokenEarnings = await TokenEarningsService.getWriterTokenEarnings(user.uid);
-      setEarnings(tokenEarnings.map(earning => ({
+      // Load USD earnings history
+      const usdEarnings = await UsdEarningsService.getWriterEarningsHistory(user.uid);
+      setEarnings(usdEarnings.map(earning => ({
         id: earning.id,
-        amount: earning.totalUsdValue,
-        source: 'Token Allocation',
+        amount: earning.totalUsdCentsReceived / 100, // Convert cents to dollars
+        source: 'USD Allocation',
         date: earning.createdAt,
-        type: 'token' as any,
+        type: 'usd' as any,
         status: earning.status === 'available' ? 'completed' : 'pending' as any,
         pageId: earning.allocations?.[0]?.resourceId,
-        pageTitle: 'Token Earnings'
+        pageTitle: 'USD Earnings'
       })));
 
       // Recent transactions are now token allocations
       setRecentTransactions([]);
 
-      // Load payout history from API
-      const earningsResponse = await fetch('/api/payouts/earnings');
-      if (earningsResponse.ok) {
-        const earningsData = await earningsResponse.json();
-        setPayouts(earningsData.data.payouts || []);
-      }
+      // Load USD payout history
+      const usdPayouts = await UsdEarningsService.getPayoutHistory(user.uid);
+      setPayouts(usdPayouts.map(payout => ({
+        id: payout.id,
+        amount: payout.amountCents / 100, // Convert cents to dollars
+        status: payout.status,
+        scheduledAt: payout.requestedAt,
+        completedAt: payout.completedAt || null,
+        currency: payout.currency
+      })));
 
     } catch (error) {
       console.error('Error loading payout data:', error);
@@ -289,42 +293,43 @@ export default function PayoutDashboard() {
   };
 
   const requestPayout = async () => {
+    if (!user?.uid || !userEarnings?.availableBalance) return;
+
     try {
       setRequesting(true);
 
       // Track payout flow start
       trackPayoutFlow({
         step: 'start',
-        payoutAmount: setup?.earnings?.availableAmount
+        payoutAmount: userEarnings.availableBalance
       });
 
-      const response = await fetch('/api/payouts/earnings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'request_payout' })
-      });
+      // Use UsdEarningsService to request payout
+      const result = await UsdEarningsService.requestPayout(
+        user.uid,
+        Math.round(userEarnings.availableBalance * 100) // Convert dollars to cents
+      );
 
-      if (response.ok) {
+      if (result.success) {
         // Track successful payout
         trackPayoutFlow({
           step: 'complete',
-          payoutAmount: setup?.earnings?.availableAmount
+          payoutAmount: userEarnings.availableBalance
         });
 
         toast({
           title: "Payout Requested",
-          description: "Your payout has been scheduled for processing"});
+          description: "Your payout has been scheduled for processing"
+        });
         loadPayoutData();
       } else {
-        const error = await response.json();
-
         // Track payout error
         trackPayoutFlow({
           step: 'error',
-          errorType: error.error || 'unknown_error'
+          errorType: result.error?.code || 'unknown_error'
         });
 
-        throw new Error(error.error);
+        throw new Error(result.error?.message || 'Failed to request payout');
       }
 
     } catch (error: any) {
@@ -337,7 +342,8 @@ export default function PayoutDashboard() {
       toast({
         title: "Request Failed",
         description: error.message || "Failed to request payout",
-        variant: "destructive"});
+        variant: "destructive"
+      });
     } finally {
       setRequesting(false);
     }
@@ -401,8 +407,8 @@ export default function PayoutDashboard() {
     lastPayoutDate: payouts.length > 0 ? payouts[0].completedAt : null,
     nextPayoutDate: '2024-02-01', // Calculate based on schedule
     earningsBySource: {
-      tokens: userEarnings.totalEarnings || 0,
-      subscriptions: 0,
+      tokens: 0, // Legacy token earnings (deprecated)
+      subscriptions: userEarnings.totalEarnings || 0, // USD earnings from subscriptions
       bonuses: 0
     }
   } : setup?.earnings || {

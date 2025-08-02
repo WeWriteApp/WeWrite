@@ -219,8 +219,7 @@ function handleAuthenticationRedirects(
   request: NextRequest
 ): NextResponse | null {
   // Redirect authenticated users away from auth pages (except verify-email)
-  // TEMPORARY: Allow login and register page access for debugging and test account creation
-  if (path.startsWith("/auth/") && path !== "/auth/verify-email" && path !== "/auth/login" && path !== "/auth/register" && auth.isAuthenticated) {
+  if (path.startsWith("/auth/") && path !== "/auth/verify-email" && auth.isAuthenticated) {
     // If user is authenticated but not verified, redirect to verification
     if (!auth.isEmailVerified) {
       return NextResponse.redirect(new URL("/auth/verify-email", request.url));

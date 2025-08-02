@@ -65,9 +65,9 @@ export function SubscriptionTierBadge({
         };
       case 'tier1':
         return {
-          icon: <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />,
-          tooltip: '$10/mo - 100 tokens',
-          color: 'text-yellow-500'
+          icon: <Star size={config.icon} className="text-yellow-400/70 fill-yellow-400/70" />,
+          tooltip: 'Supporter - $5/mo',
+          color: 'text-yellow-400/70'
         };
       case 'tier2':
         return {
@@ -77,20 +77,67 @@ export function SubscriptionTierBadge({
               <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />
             </div>
           ),
-          tooltip: '$20/mo - 200 tokens',
+          tooltip: 'Advocate - $20/mo',
           color: 'text-yellow-500'
         };
       case 'tier3':
         return {
           icon: (
-            <div className={`flex ${config.gap}`}>
-              <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />
-              <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />
-              <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />
+            <div className={`flex ${config.gap} relative group cursor-pointer`}>
+              {/* Particles emitting from center */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {/* Subtle floating particles */}
+                <div className="absolute w-0.5 h-0.5 bg-yellow-300/60 rounded-full animate-ping"
+                     style={{
+                       animationDelay: '0s',
+                       animationDuration: '3s',
+                       transform: 'translate(8px, -6px)'
+                     }}></div>
+                <div className="absolute w-0.5 h-0.5 bg-yellow-300/40 rounded-full animate-pulse"
+                     style={{
+                       animationDelay: '1s',
+                       animationDuration: '4s',
+                       transform: 'translate(-6px, 4px)'
+                     }}></div>
+                <div className="absolute w-0.5 h-0.5 bg-yellow-300/50 rounded-full animate-ping"
+                     style={{
+                       animationDelay: '2s',
+                       animationDuration: '3.5s',
+                       transform: 'translate(10px, 8px)'
+                     }}></div>
+                <div className="absolute w-0.5 h-0.5 bg-yellow-300/30 rounded-full animate-pulse"
+                     style={{
+                       animationDelay: '0.5s',
+                       animationDuration: '5s',
+                       transform: 'translate(-8px, -4px)'
+                     }}></div>
+
+                {/* Burst particles on hover/click */}
+                <div className="absolute w-0.5 h-0.5 bg-yellow-200 rounded-full opacity-0 group-hover:opacity-80 group-active:opacity-100 transition-opacity duration-200 animate-ping"
+                     style={{
+                       animationDuration: '1s',
+                       transform: 'translate(12px, -10px)'
+                     }}></div>
+                <div className="absolute w-0.5 h-0.5 bg-yellow-200 rounded-full opacity-0 group-hover:opacity-60 group-active:opacity-90 transition-opacity duration-200 animate-pulse"
+                     style={{
+                       animationDuration: '0.8s',
+                       transform: 'translate(-10px, 12px)'
+                     }}></div>
+                <div className="absolute w-0.5 h-0.5 bg-yellow-200 rounded-full opacity-0 group-hover:opacity-70 group-active:opacity-100 transition-opacity duration-200 animate-ping"
+                     style={{
+                       animationDuration: '1.2s',
+                       transform: 'translate(14px, 6px)'
+                     }}></div>
+              </div>
+
+              {/* Main stars with glow effect */}
+              <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" />
+              <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.2s' }} />
+              <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.4s' }} />
             </div>
           ),
-          tooltip: 'Over $30/mo - 300+ tokens',
-          color: 'text-yellow-500'
+          tooltip: 'Champion - $50/mo',
+          color: 'text-yellow-400'
         };
       default:
         return {

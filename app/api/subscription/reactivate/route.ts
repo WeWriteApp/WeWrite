@@ -123,13 +123,11 @@ export async function POST(request: NextRequest) {
     // Update subscription in Firestore
     const amount = newAmount || (reactivatedSubscription.items.data[0].price.unit_amount / 100);
     const tier = newTier || determineTierFromAmount(amount);
-    const tokens = calculateTokensForAmount(amount);
-    
+
     const subscriptionData = {
       status: reactivatedSubscription.status,
       amount,
       tier,
-      tokens,
       cancelAtPeriodEnd: reactivatedSubscription.cancel_at_period_end,
       currentPeriodEnd: new Date(reactivatedSubscription.current_period_end * 1000),
       canceledAt: null, // Clear cancelled date
@@ -147,8 +145,8 @@ export async function POST(request: NextRequest) {
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
     await subscriptionRef.update(subscriptionData);
 
-    // Update user's token allocation
-    await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
+    // Update user's USD allocation
+    await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
 
     console.log(`[SUBSCRIPTION REACTIVATE] Successfully reactivated subscription for user ${userId}`);
 

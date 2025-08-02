@@ -19,6 +19,10 @@ interface PageAllocation {
 
 /**
  * GET /api/tokens/allocations
+ *
+ * @deprecated This API is deprecated and will be removed in a future version.
+ * Use /api/usd/allocations for USD-based allocation listings.
+ *
  * Get user's token allocations with page details
  */
 export async function GET(request: NextRequest) {

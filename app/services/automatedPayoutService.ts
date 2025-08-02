@@ -509,7 +509,7 @@ export class AutomatedPayoutService {
     correlationId: CorrelationId
   ): Promise<FinancialOperationResult<void>> {
     try {
-await updateDoc(doc(db, getCollectionName("payouts"), payout.id), {
+await updateDoc(doc(db, getCollectionName("usdPayouts"), payout.id), {
         status: 'processing',
         processingStartedAt: serverTimestamp(),
         updatedAt: serverTimestamp()

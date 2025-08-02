@@ -25,9 +25,10 @@ import { cn } from '../lib/utils';
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
-import { useTokenBalanceContext } from '../contexts/TokenBalanceContext';
-import { TokenPieChart } from '../components/ui/TokenPieChart';
 import { useUserEarnings } from '../hooks/useUserEarnings';
+import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
+import { UsdPieChart } from '../components/ui/UsdPieChart';
 
 
 interface SettingsSection {
@@ -48,13 +49,14 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const pathname = usePathname();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
 
 
 
-  // Get bank setup status, token balance, and user earnings
+  // Get bank setup status, user earnings, and USD balance
   const bankSetupStatus = useBankSetupStatus();
-  const { tokenBalance } = useTokenBalanceContext();
   const { earnings } = useUserEarnings();
+  const { usdBalance } = useUsdBalance();
 
   useEffect(() => {
     console.log('🎯 Settings Layout: Auth check', {
@@ -104,13 +106,21 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
           );
           setHasActiveSubscription(isActive);
           setSubscriptionStatusInfo(statusInfo);
+
+          // Get subscription amount from price data
+          const amount = subscription.items?.data?.[0]?.price?.unit_amount
+            ? subscription.items.data[0].price.unit_amount / 100
+            : 0;
+          setSubscriptionAmount(amount);
         } else {
           setHasActiveSubscription(false);
           setSubscriptionStatusInfo(null);
+          setSubscriptionAmount(0);
         }
       } catch (error) {
         console.error('Error checking subscription status:', error);
         setHasActiveSubscription(false);
+        setSubscriptionAmount(0);
       }
     };
 
@@ -127,17 +137,17 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   const settingsSections: SettingsSection[] = [
     {
-      id: 'buy-tokens',
-      title: 'Buy Tokens',
+      id: 'fund-account',
+      title: 'Fund Account',
       icon: ShoppingCart,
-      href: '/settings/buy-tokens',
+      href: '/settings/fund-account',
       requiresPayments: true
     },
     {
-      id: 'spend-tokens',
-      title: 'Spend Tokens',
+      id: 'spend',
+      title: 'Manage Spending',
       icon: Coins,
-      href: '/settings/spend-tokens',
+      href: '/settings/spend',
       requiresPayments: true
     },
     {
@@ -216,16 +226,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
 
-                  // Show warning dots only for truly problematic states, not for active token purchases
+                  // Show warning dots only for truly problematic states
                   // Don't show warning dots when we have status icons or when loading
-                  const showWarning = section.id === 'buy-tokens' &&
-                    hasActiveSubscription !== null && // Don't show while loading
-                    (
-                      // Show warning for completely inactive subscriptions
-                      (hasActiveSubscription === false && (!subscriptionStatusInfo || subscriptionStatusInfo.status === 'none')) ||
-                      // Show warning for problematic states (but not for active cancelling subscriptions)
-                      (subscriptionStatusInfo && ['canceled', 'past_due', 'unpaid', 'incomplete'].includes(subscriptionStatusInfo.status) && hasActiveSubscription === false)
-                    );
+                  const showWarning = false; // No longer needed for USD system
 
                   // Get warning variant based on subscription status
                   const getWarningVariant = () => {
@@ -259,37 +262,52 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         <span className="flex-1 text-left">{section.title}</span>
 
                         {/* Status icons for specific sections - show success and warnings */}
-                        {section.id === 'buy-tokens' && hasActiveSubscription !== null && (
-                          hasActiveSubscription === true ? (
-                            <StatusIcon status="success" size="sm" position="static" />
-                          ) : (
-                            <StatusIcon status="warning" size="sm" position="static" />
-                          )
+                        {section.id === 'fund-account' && (
+                          <span className="text-xs text-muted-foreground font-medium">
+                            ${subscriptionAmount}/mo
+                          </span>
                         )}
 
+
+
                         {section.id === 'earnings' && (() => {
-                          // Only show warning if user has funds but bank isn't set up
-                          if (earnings?.hasEarnings && !bankSetupStatus.isSetup) {
-                            return <StatusIcon status="warning" size="sm" position="static" />;
+                          // Show "Set up bank" if bank isn't set up
+                          if (!bankSetupStatus.isSetup) {
+                            return (
+                              <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full font-medium">
+                                Set up bank
+                              </span>
+                            );
                           }
                           // Show success if bank is set up properly
                           if (bankSetupStatus.isSetup) {
                             return <StatusIcon status="success" size="sm" position="static" />;
                           }
-                          // No icon if user has no funds to pay out
                           return null;
                         })()}
 
-                        {section.id === 'spend-tokens' && tokenBalance && (
-                          <TokenPieChart
-                            allocatedTokens={tokenBalance.allocatedTokens}
-                            totalTokens={tokenBalance.totalTokens}
-                            size={20}
-                            strokeWidth={2}
-                            className="ml-2"
-                            showFraction={false}
-                          />
-                        )}
+                        {section.id === 'spend' && usdBalance && (() => {
+                          const allocatedCents = usdBalance.allocatedUsdCents || 0;
+                          const totalCents = usdBalance.totalUsdCents || 0;
+                          const remainingCents = totalCents - allocatedCents;
+                          const remainingDollars = Math.abs(remainingCents) / 100;
+
+                          if (remainingCents >= 0) {
+                            return (
+                              <span className="text-xs text-muted-foreground font-medium">
+                                ${remainingDollars.toFixed(0)} remaining
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <span className="text-xs text-red-600 font-medium">
+                                ${remainingDollars.toFixed(0)} over
+                              </span>
+                            );
+                          }
+                        })()}
+
+
                       </button>
                       {showWarning && (
                         <WarningDot

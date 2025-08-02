@@ -266,6 +266,11 @@ export const getUserFollowing = async (userId: string): Promise<string[]> => {
 
     return [];
   } catch (error) {
+    // Handle permission denied errors gracefully - this is expected when trying to access other users' following lists
+    if (error?.code === 'permission-denied') {
+      console.log(`Permission denied accessing following list for user ${userId} - this is expected for privacy`);
+      return [];
+    }
     console.error('Error getting user following list:', error);
     return [];
   }
@@ -604,6 +609,11 @@ export const getFollowedUsers = async (userId: string): Promise<string[]> => {
 
     return [];
   } catch (error) {
+    // Handle permission denied errors gracefully - this is expected when trying to access other users' following lists
+    if (error?.code === 'permission-denied') {
+      console.log(`Permission denied accessing followed users for user ${userId} - this is expected for privacy`);
+      return [];
+    }
     console.error('Error getting followed users:', error);
     return [];
   }

@@ -43,7 +43,13 @@ const RandomPages = React.memo(function RandomPages({
   const [error, setError] = useState<string | null>(null);
 
   const [denseMode, setDenseMode] = useState(false);
-  const [excludeOwnPages, setExcludeOwnPages] = useState(false);
+  const [excludeOwnPages, setExcludeOwnPages] = useState(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('randomPages_excludeOwnPages') === 'true';
+    }
+    return false;
+  });
 
   console.log('RandomPages: Rendering with props:', { limit, priority });
 
@@ -177,9 +183,18 @@ const RandomPages = React.memo(function RandomPages({
     fetchRandomPages(true, excludeOwn);
   }, [fetchRandomPages, excludeOwnPages]);
 
-  // Initial fetch on component mount
+  // Load localStorage preferences on mount
   useEffect(() => {
-    fetchRandomPages();
+    if (typeof window !== 'undefined') {
+      const savedDenseMode = localStorage.getItem('randomPages_denseMode') === 'true';
+      setDenseMode(savedDenseMode);
+    }
+  }, []);
+
+  // Initial fetch on component mount with correct filter settings
+  useEffect(() => {
+    // Use the current excludeOwnPages state (which is initialized from localStorage)
+    fetchRandomPages(false, excludeOwnPages);
   }, [fetchRandomPages]);
 
   // Listen for shuffle events from sticky header

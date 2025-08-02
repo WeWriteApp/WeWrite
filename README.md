@@ -2,7 +2,7 @@
 
 **A social wiki where every page you write is a fundraiser.**
 
-WeWrite transforms knowledge sharing into a collaborative economy where writers earn from their contributions and readers support the content they value.
+WeWrite transforms knowledge sharing into a collaborative economy where writers earn direct USD payments from their contributions and readers support creators with transparent monthly funding.
 
 ![WeWrite Platform](https://github.com/user-attachments/assets/ce72dc43-145b-43c0-b525-967a523902ca)
 
@@ -17,7 +17,7 @@ WeWrite transforms knowledge sharing into a collaborative economy where writers 
 ## ✨ What Makes WeWrite Special
 
 - **📝 Collaborative Writing** - Create and edit pages together
-- **💰 Writer Earnings** - Get paid for your contributions
+- **💰 Direct USD Payments** - Support creators with transparent monthly funding
 - **🔗 Smart Linking** - Connect ideas across the platform
 - **🌙 Beautiful Interface** - Clean, modern design with dark mode
 - **🔒 Secure & Private** - Your data is protected and encrypted
@@ -70,10 +70,11 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **[AUTHENTICATION_ARCHITECTURE](docs/AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
 - **[USER_DATA_FETCHING_PATTERNS](docs/USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for secure user data handling
 
-### 💰 Payment & Subscription System
+### 💰 USD Payment & Creator Support System
 
+- **[USD_MIGRATION_GUIDE](docs/USD_MIGRATION_GUIDE.md)** - **NEW**: Complete USD migration guide and architecture
 - **[SUBSCRIPTION_SYSTEM](docs/SUBSCRIPTION_SYSTEM.md)** - Complete subscription architecture and implementation
-- **[PAYOUT_SYSTEM_DOCUMENTATION](docs/PAYOUT_SYSTEM_DOCUMENTATION.md)** - Writer compensation and payout system
+- **[PAYOUT_SYSTEM_DOCUMENTATION](docs/PAYOUT_SYSTEM_DOCUMENTATION.md)** - Creator compensation and payout system
 - **[PAYMENT_FLOW_TESTING_GUIDE](docs/PAYMENT_FLOW_TESTING_GUIDE.md)** - Comprehensive payment testing procedures
 - **[ENHANCED_PAYMENT_ERROR_MESSAGING](docs/ENHANCED_PAYMENT_ERROR_MESSAGING.md)** - User-friendly payment error handling
 - **[PAYMENT_FAILURE_TRACKING](docs/PAYMENT_FAILURE_TRACKING.md)** - Payment failure audit and tracking system
@@ -153,7 +154,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **🌙 Dark Mode** - System-aware theme switching
 - **📱 Responsive Design** - Mobile-first responsive interface
 - **🔗 Smart Linking** - Automatic page linking and backlinks
-- **💰 Token Economy** - Writer earnings and reader contributions
+- **💰 USD Creator Support** - Direct USD payments to creators with transparent monthly funding
 - **🔒 Security** - Comprehensive security measures and data protection
 
 ## 📁 Project Structure

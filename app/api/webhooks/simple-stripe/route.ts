@@ -101,7 +101,6 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription) {
       status: subscription.status,
       tier: determineTierFromAmount(amount),
       amount,
-      tokens: calculateTokensForAmount(amount),
       currentPeriodStart: new Date(subscription.current_period_start * 1000),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,

@@ -1,6 +1,6 @@
 /**
- * Financial operation types and error handling for WeWrite token system
- * 
+ * Financial operation types and error handling for WeWrite USD system
+ *
  * Provides structured error handling, correlation tracking, and operation results
  * for all financial operations to ensure enterprise-grade reliability.
  */
@@ -71,7 +71,21 @@ export interface FinancialOperationResult<T = any> {
 }
 
 /**
- * Token allocation operation context
+ * USD allocation operation context
+ */
+export interface UsdAllocationContext {
+  correlationId: CorrelationId;
+  userId: string;
+  recipientUserId: string;
+  usdCents: number;
+  resourceId: string;
+  resourceType: string;
+  month: string;
+  timestamp: Date;
+}
+
+/**
+ * @deprecated Use UsdAllocationContext instead
  */
 export interface TokenAllocationContext {
   correlationId: CorrelationId;
@@ -176,7 +190,14 @@ export class FinancialUtils {
   }
 
   /**
-   * Validate token amount
+   * Validate USD cents amount
+   */
+  static validateUsdCentsAmount(usdCents: number): boolean {
+    return usdCents > 0 && Number.isInteger(usdCents) && usdCents <= 10000000; // Max 100k USD worth (in cents)
+  }
+
+  /**
+   * @deprecated Use validateUsdCentsAmount instead
    */
   static validateTokenAmount(tokens: number): boolean {
     return tokens > 0 && Number.isInteger(tokens) && tokens <= 1000000; // Max 100k USD worth
@@ -190,21 +211,35 @@ export class FinancialUtils {
   }
 
   /**
-   * Convert tokens to USD (1 USD = 10 tokens)
+   * Convert USD cents to USD dollars
+   */
+  static usdCentsToDollars(usdCents: number): number {
+    return usdCents / 100;
+  }
+
+  /**
+   * Convert USD dollars to USD cents
+   */
+  static dollarsToUsdCents(dollars: number): number {
+    return Math.round(dollars * 100);
+  }
+
+  /**
+   * @deprecated Use usdCentsToDollars instead - tokens are replaced with USD cents
    */
   static tokensToUsd(tokens: number): number {
     return tokens / 10;
   }
 
   /**
-   * Convert USD to tokens (1 USD = 10 tokens)
+   * @deprecated Use dollarsToUsdCents instead - tokens are replaced with USD cents
    */
   static usdToTokens(usd: number): number {
     return Math.floor(usd * 10);
   }
 
   /**
-   * Validate token to USD conversion consistency
+   * @deprecated Use USD cents validation instead - tokens are replaced with USD cents
    */
   static validateConversion(tokens: number, usd: number): boolean {
     const expectedUsd = this.tokensToUsd(tokens);

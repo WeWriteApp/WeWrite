@@ -18,7 +18,7 @@ interface LogRocketContextType {
   getSessionURL: typeof getSessionURL;
   // Specific tracking functions for WeWrite features
   trackDragDropLink: (data: DragDropLinkData) => void;
-  trackTokenAllocation: (data: TokenAllocationData) => void;
+  trackUsdAllocation: (data: UsdAllocationData) => void;
   trackModalInteraction: (data: ModalInteractionData) => void;
   trackPayoutFlow: (data: PayoutFlowData) => void;
   trackPageCreation: (data: PageCreationData) => void;
@@ -34,6 +34,16 @@ interface DragDropLinkData {
   pageId?: string;
 }
 
+interface UsdAllocationData {
+  action: 'allocate' | 'deallocate' | 'view_balance' | 'convert';
+  amount?: number; // USD cents
+  pageId?: string;
+  totalBalance?: number; // USD cents - Will be sanitized
+}
+
+/**
+ * @deprecated Use UsdAllocationData instead
+ */
 interface TokenAllocationData {
   action: 'allocate' | 'deallocate' | 'view_balance' | 'convert';
   amount?: number;
@@ -106,18 +116,32 @@ export function LogRocketProvider({ children }: LogRocketProviderProps) {
     });
   };
 
-  const trackTokenAllocation = (data: TokenAllocationData) => {
-    // Sanitize token amounts - only track ranges, not exact amounts
+  const trackUsdAllocation = (data: UsdAllocationData) => {
+    // Sanitize USD amounts - only track ranges, not exact amounts
     const sanitizedAmount = data.amount ? getSanitizedAmountRange(data.amount) : undefined;
     const sanitizedBalance = data.totalBalance ? getSanitizedAmountRange(data.totalBalance) : undefined;
 
-    trackEvent('token_allocation', {
+    trackEvent('usd_allocation', {
       action: data.action,
       amountRange: sanitizedAmount, // e.g., "1-10", "11-50", "51-100", "100+"
       balanceRange: sanitizedBalance,
       pageId: data.pageId ? `page_${data.pageId.substring(0, 8)}` : undefined,
       timestamp: new Date().toISOString(),
     });
+  };
+
+  /**
+   * @deprecated Use trackUsdAllocation instead
+   */
+  const trackTokenAllocation = (data: TokenAllocationData) => {
+    // Convert to USD data and use USD tracking
+    const usdData: UsdAllocationData = {
+      action: data.action,
+      amount: data.amount ? data.amount * 10 : undefined, // Convert tokens to USD cents
+      pageId: data.pageId,
+      totalBalance: data.totalBalance ? data.totalBalance * 10 : undefined
+    };
+    trackUsdAllocation(usdData);
   };
 
   const trackModalInteraction = (data: ModalInteractionData) => {
@@ -188,7 +212,8 @@ export function LogRocketProvider({ children }: LogRocketProviderProps) {
     getSessionURL,
     // WeWrite-specific tracking functions
     trackDragDropLink,
-    trackTokenAllocation,
+    trackUsdAllocation,
+    trackTokenAllocation, // @deprecated - kept for backward compatibility
     trackModalInteraction,
     trackPayoutFlow,
     trackPageCreation,
@@ -215,7 +240,8 @@ export function useLogRocket(): LogRocketContextType {
       captureMessage: () => {},
       getSessionURL: () => {},
       trackDragDropLink: () => {},
-      trackTokenAllocation: () => {},
+      trackUsdAllocation: () => {},
+      trackTokenAllocation: () => {}, // @deprecated
       trackModalInteraction: () => {},
       trackPayoutFlow: () => {},
       trackPageCreation: () => {},
@@ -229,7 +255,8 @@ export function useLogRocket(): LogRocketContextType {
 // Export types for use in other components
 export type {
   DragDropLinkData,
-  TokenAllocationData,
+  UsdAllocationData,
+  TokenAllocationData, // @deprecated
   ModalInteractionData,
   PayoutFlowData,
   PageCreationData,

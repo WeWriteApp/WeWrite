@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ChevronLeft, DollarSign, Wallet } from 'lucide-react';
-import NavHeader from '../../components/layout/NavHeader';
+import NavPageLayout from '../../components/layout/NavPageLayout';
 import WriterTokenDashboard from '../../components/payments/WriterTokenDashboard';
 // WriterEarningsFeatureGuard removed - all features are now always enabled
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
@@ -19,12 +19,7 @@ export default function EarningsPage() {
   }
 
   return (
-    <div>
-      <div className="lg:hidden">
-        <NavHeader backUrl="/settings" />
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+    <NavPageLayout backUrl="/settings" maxWidth="6xl">
 
         {/* Tabbed Interface */}
             <Tabs defaultValue="earnings" className="space-y-4 sm:space-y-6" urlNavigation="hash">
@@ -47,7 +42,6 @@ export default function EarningsPage() {
                 <PayoutsManager />
               </TabsContent>
         </Tabs>
-      </div>
-    </div>
+    </NavPageLayout>
   );
 }

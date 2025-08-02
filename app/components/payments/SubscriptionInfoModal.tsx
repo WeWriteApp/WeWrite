@@ -34,7 +34,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
     {
       id: 'none',
       name: 'No Subscription',
-      description: 'No active token purchase for WeWrite',
+      description: 'No active funding for WeWrite',
       amount: '$0/mo',
       status: null,
       tier: null
@@ -42,7 +42,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
     ...SUBSCRIPTION_TIERS.map(tier => ({
       id: tier.id,
       name: tier.name,
-      description: `Buy tokens for WeWrite at $${tier.amount}/month`,
+      description: `Fund WeWrite creators at $${tier.amount}/month`,
       amount: `$${tier.amount}/mo`,
       status: 'active',
       tier: tier.id
@@ -50,7 +50,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
     {
       id: 'custom',
       name: 'Custom',
-      description: 'Buy tokens for WeWrite at $30+/month',
+      description: 'Fund WeWrite creators at $30+/month',
       amount: '$30+/mo',
       status: 'active',
       tier: 'custom'
@@ -111,8 +111,8 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
             ) : null}
             {/* Only show the CTA button if this is for the current user (no username and no userId) */}
             {(!username && !userId) && (
-              <Link href={currentTier && currentStatus === 'active' ? '/settings/buy-tokens/manage' : '/settings/buy-tokens'}>
-                <Button>{currentTier && currentStatus === 'active' ? 'Manage Token Purchase' : 'Buy Tokens Now'}</Button>
+              <Link href={currentTier && currentStatus === 'active' ? '/settings/fund-account/manage' : '/settings/fund-account'}>
+                <Button>{currentTier && currentStatus === 'active' ? 'Manage Funding' : 'Fund Account Now'}</Button>
               </Link>
             )}
           </div>

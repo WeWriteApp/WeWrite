@@ -9,7 +9,8 @@ const Logout = (): null => {
 
   useEffect(() => {
     logoutUser().then(() => {
-      router.push('/');
+      // Force refresh to ensure clean state
+      window.location.href = '/';
     });
   }, [router]);
 

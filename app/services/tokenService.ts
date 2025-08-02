@@ -1,6 +1,9 @@
 /**
  * Token Economy Service for WeWrite
- * 
+ *
+ * DEPRECATED: This service is being migrated to USD-based system
+ * Use UsdService for new implementations
+ *
  * Manages the token allocation and distribution system where:
  * - $10/month subscription = 100 tokens
  * - Users allocate tokens to content creators monthly
@@ -26,15 +29,17 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { TokenBalance, TokenAllocation, MonthlyTokenDistribution } from '../types/database';
-import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
+import { TokenBalance, TokenAllocation, MonthlyTokenDistribution, UsdBalance } from '../types/database';
+import { getCollectionName, PAYMENT_COLLECTIONS, USD_COLLECTIONS } from '../utils/environmentConfig';
 import {
   getCurrentMonth,
   getNextMonth,
   TOKEN_ECONOMY,
   calculateTokensForAmount
 } from '../utils/subscriptionTiers';
+import { dollarsToCents, centsToDollars, migrateTokensToUsdCents } from '../utils/formatCurrency';
 import { TokenEarningsService } from './tokenEarningsService';
+import { UsdService } from './usdService';
 
 export class TokenService {
   /**
@@ -569,10 +574,105 @@ export class TokenService {
       
       const distributionsSnapshot = await getDocs(distributionsQuery);
       return distributionsSnapshot.docs.map(doc => doc.data() as MonthlyTokenDistribution);
-      
+
     } catch (error) {
       console.error('Error getting distribution history:', error);
       throw error;
+    }
+  }
+
+  // MIGRATION HELPERS - Bridge methods to USD system
+
+  /**
+   * Get USD balance and convert to token format for backward compatibility
+   * @deprecated Use UsdService.getUserUsdBalance directly
+   */
+  static async getUserTokenBalanceFromUsd(userId: string): Promise<TokenBalance | null> {
+    try {
+      const usdBalance = await UsdService.getUserUsdBalance(userId);
+      if (!usdBalance) {
+        return null;
+      }
+
+      // Convert USD cents to token equivalents for backward compatibility
+      const totalTokens = Math.floor(centsToDollars(usdBalance.totalUsdCents) * 10);
+      const allocatedTokens = Math.floor(centsToDollars(usdBalance.allocatedUsdCents) * 10);
+      const availableTokens = Math.floor(centsToDollars(usdBalance.availableUsdCents) * 10);
+      const monthlyAllocation = Math.floor(centsToDollars(usdBalance.monthlyAllocationCents) * 10);
+
+      return {
+        userId: usdBalance.userId,
+        totalTokens,
+        allocatedTokens,
+        availableTokens,
+        monthlyAllocation,
+        lastAllocationDate: usdBalance.lastAllocationDate,
+        createdAt: usdBalance.createdAt,
+        updatedAt: usdBalance.updatedAt
+      };
+    } catch (error) {
+      console.error('TokenService: Error getting token balance from USD:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Allocate tokens by converting to USD and using USD service
+   * @deprecated Use UsdService.allocateUsdToPage directly
+   */
+  static async allocateTokensToPageViaUsd(userId: string, pageId: string, tokenChange: number): Promise<void> {
+    try {
+      // Convert token change to USD cents change
+      const usdCentsChange = Math.floor(tokenChange / 10 * 100);
+      await UsdService.allocateUsdToPage(userId, pageId, usdCentsChange);
+    } catch (error) {
+      console.error('TokenService: Error allocating tokens via USD service:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Allocate tokens to user by converting to USD and using USD service
+   * @deprecated Use UsdService.allocateUsdToUser directly
+   */
+  static async allocateTokensToUserViaUsd(userId: string, recipientUserId: string, tokenChange: number): Promise<void> {
+    try {
+      // Convert token change to USD cents change
+      const usdCentsChange = Math.floor(tokenChange / 10 * 100);
+      await UsdService.allocateUsdToUser(userId, recipientUserId, usdCentsChange);
+    } catch (error) {
+      console.error('TokenService: Error allocating tokens to user via USD service:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current page allocation by converting from USD
+   * @deprecated Use UsdService.getCurrentPageAllocation directly
+   */
+  static async getCurrentPageAllocationFromUsd(userId: string, pageId: string): Promise<number> {
+    try {
+      const usdCents = await UsdService.getCurrentPageAllocation(userId, pageId);
+      // Convert USD cents to token equivalent
+      return Math.floor(centsToDollars(usdCents) * 10);
+    } catch (error) {
+      console.error('TokenService: Error getting page allocation from USD:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get current user allocation by converting from USD
+   * @deprecated Use UsdService.getCurrentUserAllocation directly
+   */
+  static async getCurrentUserAllocationFromUsd(userId: string, recipientUserId: string): Promise<number> {
+    try {
+      const usdCents = await UsdService.getCurrentUserAllocation(userId, recipientUserId);
+      // Convert USD cents to token equivalent
+      return Math.floor(centsToDollars(usdCents) * 10);
+    } catch (error) {
+      console.error('TokenService: Error getting user allocation from USD:', error);
+      return 0;
     }
   }
 }

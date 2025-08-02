@@ -5,21 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
-import { Heart, DollarSign } from "lucide-react";
-import { RemainingTokensCounter } from "../ui/RemainingTokensCounter";
+import { Badge } from "../ui/badge";
+import { Heart, DollarSign, AlertTriangle, Loader2 } from "lucide-react";
+import { RemainingUsdCounter } from "../ui/RemainingUsdCounter";
 import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
 import { useAuth } from '../../providers/AuthProvider';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
 
-// Removed old optimized subscription import - using API-first approach
+// USD-based imports
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
-import { TokenService } from "../../services/tokenService";
-import { TokenBalance } from "../../types/database";
-import { getLoggedOutTokenBalance, getUserTokenBalance } from "../../utils/simulatedTokens";
-import { useTokenBalanceContext } from "../../contexts/TokenBalanceContext";
+import { useUsdBalance } from "../../contexts/UsdBalanceContext";
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { formatUsdCents } from "../../utils/formatCurrency";
 
 export default function Header() {
   const router = useRouter();
@@ -29,45 +28,69 @@ export default function Header() {
   const [headerHeight, setHeaderHeight] = React.useState(80); // Start at 80px (h-20)
 
   const [subscription, setSubscription] = React.useState(null);
-  const { tokenBalance: contextTokenBalance } = useTokenBalanceContext();
-  const [simulatedTokenBalance, setSimulatedTokenBalance] = React.useState<any>(null);
+  const { usdBalance, isLoading: usdLoading } = useUsdBalance();
   const headerRef = React.useRef<HTMLDivElement>(null);
-  const { earnings } = useUserEarnings();
+  const { earnings, loading: earningsLoading } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
-
-
 
   // Helper function to render earnings display
   const renderEarningsDisplay = () => {
-    // Show if user is authenticated and earnings data is loaded (even if zero)
-    if (!user?.uid || !earnings) return null;
+    // Don't show anything for unauthenticated users
+    if (!user?.uid) return null;
 
-    const totalTokensEarned = Math.floor(earnings.totalEarnings * 10); // Convert USD to tokens (1 USD = 10 tokens)
+    // Show loading state while earnings are being fetched
+    if (earningsLoading) {
+      return (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer hover:bg-secondary/80 transition-colors"
+          onClick={() => router.push('/settings/earnings')}
+          title="Loading earnings..."
+        >
+          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          <span className="text-xs">Loading</span>
+        </Badge>
+      );
+    }
 
+    // Show earnings data (even if zero)
+    if (earnings) {
+      const totalUsdEarned = earnings.totalEarnings; // Already in USD
+      const isZeroEarnings = totalUsdEarned === 0;
+
+      return (
+        <Badge
+          variant="secondary"
+          className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
+            isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
+          }`}
+          onClick={() => router.push('/settings/earnings')}
+          title={`${formatUsdCents(totalUsdEarned * 100)} earned`}
+        >
+          {formatUsdCents(totalUsdEarned * 100)}
+        </Badge>
+      );
+    }
+
+    // Fallback: show zero earnings if no data but not loading
     return (
-      <div
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+      <Badge
+        variant="secondary"
+        className="cursor-pointer hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
         onClick={() => router.push('/settings/earnings')}
-        title={`${totalTokensEarned} tokens earned`}
+        title="$0.00 earned"
       >
-        <DollarSign className="h-4 w-4 text-green-600" />
-        <span className="text-sm font-medium text-foreground">
-          {totalTokensEarned}
-        </span>
-      </div>
+        $0.00
+      </Badge>
     );
   };
 
-  // Helper function to render remaining tokens display
-  const renderRemainingTokensDisplay = () => {
-    // Use real token balance if available, otherwise use unfunded tokens
-    const balance = contextTokenBalance || simulatedTokenBalance;
-
+  // Helper function to render remaining USD display
+  const renderRemainingUsdDisplay = () => {
     // Debug logging
-    console.log('🎯 Header: Token balance check', {
-      hasContextBalance: !!contextTokenBalance,
-      hasSimulatedBalance: !!simulatedTokenBalance,
-      finalBalance: balance,
+    console.log('🎯 Header: USD balance check', {
+      hasUsdBalance: !!usdBalance,
+      usdLoading,
       user: !!user,
       hasActiveSubscription
     });
@@ -77,33 +100,99 @@ export default function Header() {
       return null;
     }
 
-    // Show "Buy Tokens" button if user has no active subscription or zero tokens
-    const shouldShowBuyTokens = hasActiveSubscription === false ||
-      (balance && balance.totalTokens === 0) ||
-      (!balance);
+    // Show loading state while USD balance is being fetched
+    if (usdLoading) {
+      return (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer hover:bg-secondary/80 transition-colors text-sm"
+          onClick={() => router.push('/settings/spend')}
+          title="Loading balance..."
+        >
+          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          <span>Loading</span>
+        </Badge>
+      );
+    }
 
-    if (shouldShowBuyTokens) {
+    // Show "Add Funds" button if user has no active subscription or zero USD
+    const shouldShowAddFunds = hasActiveSubscription === false ||
+      (usdBalance && usdBalance.totalUsdCents === 0) ||
+      (!usdBalance && !usdLoading);
+
+    if (shouldShowAddFunds) {
       return (
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push('/settings/subscription')}
+          onClick={() => router.push('/settings/fund-account')}
           className="text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
         >
           <DollarSign className="h-4 w-4 mr-2" />
-          Buy Tokens
+          Add Funds
         </Button>
       );
     }
 
-    // Show token counter for users with active subscription and tokens
-    return (
-      <RemainingTokensCounter
-        allocatedTokens={balance?.allocatedTokens || 0}
-        totalTokens={balance?.totalTokens || 0}
-        onClick={() => router.push('/settings/spend-tokens')}
-      />
-    );
+    // Show USD counter for users with active subscription and funds
+    if (usdBalance) {
+      const isOverspending = usdBalance.allocatedUsdCents > usdBalance.totalUsdCents;
+      const overspendingAmount = isOverspending ? usdBalance.allocatedUsdCents - usdBalance.totalUsdCents : 0;
+
+      if (isOverspending) {
+        // Show overspending warning with separate icon and badge
+        return (
+          <div
+            className="flex items-center gap-1 cursor-pointer"
+            onClick={() => router.push('/settings/spend')}
+            title={`Overspending by ${formatUsdCents(overspendingAmount)} - Click to adjust spending`}
+          >
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <Badge
+              variant="destructive"
+              className="hover:bg-destructive/80 transition-colors text-sm"
+            >
+              +{formatUsdCents(overspendingAmount)}
+            </Badge>
+          </div>
+        );
+      } else {
+        // Show remaining funds with badge on left and pie chart on right
+        const isZeroBalance = usdBalance.totalUsdCents === 0;
+
+        return (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
+                isZeroBalance ? 'text-muted-foreground' : ''
+              }`}
+              onClick={() => router.push('/settings/spend')}
+              title={`${formatUsdCents(usdBalance.totalUsdCents)} total funds`}
+            >
+              {formatUsdCents(usdBalance.totalUsdCents)}
+            </Badge>
+            <RemainingUsdCounter
+              allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
+              totalUsdCents={usdBalance.totalUsdCents || 0}
+              onClick={() => router.push('/settings/spend')}
+            />
+          </div>
+        );
+      }
+    }
+
+    // Loading state
+    if (usdLoading) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   // Calculate header positioning width - only respond to persistent expanded state, not hover
@@ -161,44 +250,6 @@ export default function Header() {
 
   // Token balance is now provided by context - no need to fetch separately
 
-  // Load unfunded token balance for users without subscriptions
-  React.useEffect(() => {
-
-    const loadUnfundedTokens = () => {
-      // Load unfunded tokens for logged-out users or users without subscriptions
-      if (!user) {
-        // Logged-out user - load from localStorage immediately
-        const balance = getLoggedOutTokenBalance();
-        console.log('🎯 Header: Loaded logged-out balance:', balance);
-        setSimulatedTokenBalance(balance);
-      } else if (!subscription) {
-        // Logged-in user without subscription - load user-specific unfunded tokens
-        const balance = getUserTokenBalance(user.uid);
-        console.log('🎯 Header: Loaded user unfunded balance:', balance);
-        setSimulatedTokenBalance(balance);
-      } else {
-        // User has subscription, clear simulated balance
-        setSimulatedTokenBalance(null);
-      }
-    };
-
-    // Initial load (immediate)
-    loadUnfundedTokens();
-
-    // Listen for localStorage changes to update in real-time
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('wewrite_simulated_tokens')) {
-        loadUnfundedTokens();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [user, subscription]);
-
   // Calculate and update header height
   React.useEffect(() => {
     const handleScroll = () => {
@@ -214,8 +265,6 @@ export default function Header() {
       const scrollRatio = Math.min(scrollY / maxScroll, 1);
       const newHeight = maxHeight - (maxHeight - minHeight) * scrollRatio;
       setHeaderHeight(newHeight);
-
-
     };
 
     // Initial update
@@ -285,10 +334,10 @@ export default function Header() {
                 </Link>
               </div>
 
-              {/* Remaining Tokens Counter (right side) */}
+              {/* Remaining USD Counter (right side) */}
               <div className="flex-1 flex justify-end">
-                {/* Show remaining tokens counter if user has any token allocations (funded or unfunded) */}
-                {renderRemainingTokensDisplay()}
+                {/* Show remaining USD counter if user has any USD balance */}
+                {renderRemainingUsdDisplay()}
               </div>
             </div>
           </div>

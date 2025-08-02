@@ -9,7 +9,7 @@ import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Check, Loader2, X, AlertCircle } from "lucide-react";
-import { AuthLayout } from "../../components/layout/auth-layout";
+import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { cn } from "../../lib/utils";
 import { debounce } from "lodash";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
@@ -188,10 +188,14 @@ function SetupUsernameContent() {
   const isFormValid = username.length >= 3 && isAvailable === true && !validationError;
 
   return (
-    <AuthLayout
-      title="Choose Your Username"
-      description={`Almost done! Choose a username for ${userEmail}`}
-    >
+    <ModernAuthLayout>
+      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Choose Your Username</h1>
+        <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+          Almost done! Choose a username for {userEmail}
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="username" className={cn(
@@ -294,21 +298,24 @@ function SetupUsernameContent() {
           </Button>
         </div>
       </form>
-    </AuthLayout>
+    </ModernAuthLayout>
   );
 }
 
 export default function SetupUsernamePage() {
   return (
     <Suspense fallback={
-      <AuthLayout
-        title="Choose Your Username"
-        description="Setting up your account..."
-      >
+      <ModernAuthLayout>
+        <div className="flex flex-col items-center gap-1 sm:gap-2 text-center mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Choose Your Username</h1>
+          <p className="text-balance text-xs sm:text-sm text-muted-foreground">
+            Setting up your account...
+          </p>
+        </div>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
         </div>
-      </AuthLayout>
+      </ModernAuthLayout>
     }>
       <SetupUsernameContent />
     </Suspense>

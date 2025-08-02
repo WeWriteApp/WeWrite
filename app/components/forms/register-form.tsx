@@ -419,6 +419,28 @@ export function RegisterForm({
       >
         Sign in with existing account
       </Button>
+
+      {/* Terms and Privacy Policy Agreement */}
+      <div className="text-xs text-muted-foreground text-center mt-4">
+        By using WeWrite you agree to our{' '}
+        <Link
+          href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/TERMS_OF_SERVICE.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground"
+        >
+          Terms of Service
+        </Link>
+        {' '}and{' '}
+        <Link
+          href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/PRIVACY_POLICY.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground"
+        >
+          Privacy Policy
+        </Link>
+      </div>
     </form>
   )
 }

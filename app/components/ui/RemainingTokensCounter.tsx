@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use RemainingUsdCounter instead for USD-based remaining funds display.
+ *
+ * Legacy remaining tokens counter - replaced by USD system.
+ */
+
 import React from 'react';
 
 interface RemainingTokensCounterProps {

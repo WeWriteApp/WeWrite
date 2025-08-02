@@ -1,0 +1,269 @@
+# WeWrite USD Migration Deployment Configuration
+# This file contains the deployment steps and configuration for the USD migration
+
+name: USD Migration Deployment
+version: "1.0.0"
+date: "2025-08-01"
+
+# Environment Configuration
+environments:
+  development:
+    database: "wewrite-dev"
+    stripe_mode: "test"
+    feature_flags:
+      usd_system_enabled: true
+      token_system_enabled: true  # Keep for backward compatibility
+      migration_mode: true
+    
+  staging:
+    database: "wewrite-staging"
+    stripe_mode: "test"
+    feature_flags:
+      usd_system_enabled: true
+      token_system_enabled: true
+      migration_mode: true
+    
+  production:
+    database: "wewrite-prod"
+    stripe_mode: "live"
+    feature_flags:
+      usd_system_enabled: true
+      token_system_enabled: false  # Disable after migration complete
+      migration_mode: false
+
+# Deployment Steps
+deployment_steps:
+  pre_deployment:
+    - name: "Backup Production Data"
+      command: "npm run backup:production"
+      timeout: "30m"
+      required: true
+      
+    - name: "Run Migration Tests"
+      command: "npm run test:usd-migration"
+      timeout: "10m"
+      required: true
+      
+    - name: "Verify Component Availability"
+      command: "node scripts/test-usd-migration.js"
+      timeout: "5m"
+      required: true
+      
+    - name: "Check Stripe Configuration"
+      command: "npm run verify:stripe-config"
+      timeout: "2m"
+      required: true
+
+  database_migration:
+    - name: "Create USD Collections"
+      script: "scripts/create-usd-collections.js"
+      timeout: "10m"
+      rollback: "scripts/drop-usd-collections.js"
+      
+    - name: "Migrate Token Data to USD"
+      script: "scripts/migrate-tokens-to-usd.js"
+      timeout: "60m"
+      rollback: "scripts/rollback-usd-migration.js"
+      dry_run_first: true
+      
+    - name: "Verify Migration Accuracy"
+      script: "scripts/migrate-tokens-to-usd.js --verify"
+      timeout: "15m"
+      required: true
+
+  backend_deployment:
+    - name: "Deploy USD API Endpoints"
+      path: "app/api/usd/"
+      health_check: "/api/usd/health"
+      timeout: "5m"
+      
+    - name: "Update Stripe Webhooks"
+      script: "scripts/update-stripe-webhooks.js"
+      timeout: "2m"
+      
+    - name: "Deploy USD Services"
+      paths:
+        - "app/services/usdService.server.ts"
+        - "app/services/usdService.ts"
+        - "app/contexts/UsdBalanceContext.tsx"
+      timeout: "3m"
+
+  frontend_deployment:
+    - name: "Deploy USD Components"
+      paths:
+        - "app/components/payments/"
+        - "app/components/ui/UsdPieChart.tsx"
+        - "app/components/ui/RemainingUsdCounter.tsx"
+      timeout: "5m"
+      
+    - name: "Deploy Settings Pages"
+      paths:
+        - "app/settings/fund-account/"
+        - "app/settings/spend/"
+      timeout: "3m"
+      
+    - name: "Update Navigation"
+      paths:
+        - "app/settings/page.tsx"
+        - "app/components/layout/"
+      timeout: "2m"
+
+  post_deployment:
+    - name: "Smoke Test Critical Flows"
+      script: "scripts/smoke-test-usd.js"
+      timeout: "10m"
+      required: true
+      
+    - name: "Monitor Error Rates"
+      duration: "30m"
+      thresholds:
+        error_rate: "< 1%"
+        response_time: "< 2s"
+        
+    - name: "Verify Payment Processing"
+      script: "scripts/test-payment-flow.js"
+      timeout: "5m"
+      required: true
+
+# Rollback Configuration
+rollback:
+  triggers:
+    - error_rate: "> 5%"
+    - payment_failures: "> 2%"
+    - user_complaints: "> 10"
+    - manual_trigger: true
+    
+  steps:
+    - name: "Disable USD Features"
+      script: "scripts/disable-usd-features.js"
+      timeout: "2m"
+      
+    - name: "Revert to Token System"
+      script: "scripts/rollback-usd-migration.js"
+      timeout: "30m"
+      
+    - name: "Restore Previous Frontend"
+      command: "git revert HEAD --no-edit"
+      timeout: "5m"
+      
+    - name: "Verify System Stability"
+      script: "scripts/verify-rollback.js"
+      timeout: "10m"
+
+# Monitoring Configuration
+monitoring:
+  metrics:
+    - name: "USD Allocation Success Rate"
+      query: "usd_allocations_success / usd_allocations_total"
+      threshold: "> 99%"
+      
+    - name: "Payment Processing Errors"
+      query: "payment_errors_total"
+      threshold: "< 1%"
+      
+    - name: "API Response Times"
+      query: "avg(api_response_time)"
+      threshold: "< 500ms"
+      
+    - name: "User Adoption Rate"
+      query: "users_using_usd / total_active_users"
+      target: "> 80%"
+
+  alerts:
+    - name: "High Error Rate"
+      condition: "error_rate > 2%"
+      severity: "critical"
+      channels: ["slack", "email", "pagerduty"]
+      
+    - name: "Payment Failures"
+      condition: "payment_failures > 1%"
+      severity: "high"
+      channels: ["slack", "email"]
+      
+    - name: "Migration Data Inconsistency"
+      condition: "data_inconsistency_detected"
+      severity: "high"
+      channels: ["slack", "email"]
+
+# Feature Flags
+feature_flags:
+  usd_pledge_bars:
+    description: "Enable USD pledge bars on pages"
+    default: true
+    environments:
+      development: true
+      staging: true
+      production: true
+      
+  usd_settings_pages:
+    description: "Enable new USD settings pages"
+    default: true
+    environments:
+      development: true
+      staging: true
+      production: true
+      
+  legacy_token_support:
+    description: "Keep legacy token system for backward compatibility"
+    default: false
+    environments:
+      development: true
+      staging: true
+      production: false  # Disable after migration complete
+
+# Environment Variables
+environment_variables:
+  required:
+    - STRIPE_SECRET_KEY
+    - STRIPE_PUBLISHABLE_KEY
+    - STRIPE_WEBHOOK_SECRET
+    - FIREBASE_PROJECT_ID
+    - FIREBASE_PRIVATE_KEY
+    
+  optional:
+    - USD_MIGRATION_MODE
+    - LEGACY_TOKEN_SUPPORT
+    - PAYMENT_DEBUG_MODE
+
+# Health Checks
+health_checks:
+  - name: "USD API Health"
+    endpoint: "/api/usd/health"
+    expected_status: 200
+    timeout: "5s"
+    
+  - name: "Stripe Connection"
+    endpoint: "/api/stripe/health"
+    expected_status: 200
+    timeout: "10s"
+    
+  - name: "Database Connection"
+    script: "scripts/check-db-connection.js"
+    timeout: "5s"
+
+# Success Criteria
+success_criteria:
+  - "All health checks passing"
+  - "Error rate < 1%"
+  - "Payment success rate > 99%"
+  - "User adoption rate > 50% within 24h"
+  - "No critical bugs reported"
+  - "All smoke tests passing"
+
+# Communication Plan
+communication:
+  pre_deployment:
+    - "Email to all users about upcoming changes"
+    - "In-app notification about new features"
+    - "Blog post explaining USD system benefits"
+    
+  during_deployment:
+    - "Status page updates"
+    - "Real-time monitoring dashboard"
+    - "Team communication via Slack"
+    
+  post_deployment:
+    - "Success announcement"
+    - "User guide for new features"
+    - "Support team briefing"
+    - "Performance metrics report"

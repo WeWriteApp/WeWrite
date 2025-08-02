@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * @deprecated This context is deprecated and will be removed in a future version.
+ * Use UsdBalanceContext instead for USD-based balance management.
+ *
+ * Legacy token balance context - replaced by USD system.
+ */
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 

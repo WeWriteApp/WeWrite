@@ -6,6 +6,13 @@
 
 'use client';
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use UsdAllocationDashboard instead for USD-based allocation dashboards.
+ *
+ * Legacy token allocation dashboard - replaced by USD system.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -53,15 +60,30 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
 
   const loadTokenData = async () => {
     try {
-      const response = await fetch('/api/tokens/balance');
+      // Use USD balance API instead of deprecated token API
+      const response = await fetch('/api/usd/balance');
       if (response.ok) {
         const data = await response.json();
-        setTokenData(data);
+        // Convert USD data to token format for backward compatibility
+        if (data.summary) {
+          const tokenData = {
+            summary: {
+              totalTokens: Math.floor((data.summary.totalUsdCents / 100) * 10),
+              allocatedTokens: Math.floor((data.summary.allocatedUsdCents / 100) * 10),
+              availableTokens: Math.floor((data.summary.availableUsdCents / 100) * 10),
+              allocationCount: data.summary.allocationCount
+            },
+            allocations: data.allocations || []
+          };
+          setTokenData(tokenData);
+        } else {
+          setTokenData(data);
+        }
       } else {
-        console.error('Failed to load token data');
+        console.error('Failed to load USD balance data');
       }
     } catch (error) {
-      console.error('Error loading token data:', error);
+      console.error('Error loading USD balance data:', error);
     } finally {
       setLoading(false);
     }

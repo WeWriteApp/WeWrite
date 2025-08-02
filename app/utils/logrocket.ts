@@ -115,8 +115,8 @@ class LogRocketService {
             // For all other inputs (page content, titles, etc.), show actual text
             return text;
           },
-          // Disable general text sanitization since WeWrite pages are public
-          textSanitizer: false,
+          // Use valid textSanitizer option - 'default' allows most text but sanitizes sensitive patterns
+          textSanitizer: 'default',
           baseHref: null
         },
         network: {

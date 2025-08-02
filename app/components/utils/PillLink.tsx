@@ -367,7 +367,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
             e.preventDefault();
             e.stopPropagation();
 
-            // Show confirmation dialog for suggestion
+            // Show confirmation dialog for suggestion (already using system dialog - good!)
             const confirmed = window.confirm(
               `Link "${formattedDisplayTitle}"?\n\nClick OK to confirm this link suggestion, or Cancel to dismiss it.`
             );

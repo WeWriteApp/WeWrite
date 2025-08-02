@@ -272,6 +272,17 @@ export const COLLECTIONS = {
   // Subscription and payment collections
   SUBSCRIPTIONS: 'subscriptions', // Note: This is a subcollection under users
   BANK_ACCOUNTS: 'bankAccounts',
+
+  // USD-based collections (new system)
+  USD_BALANCES: 'usdBalances',
+  USD_ALLOCATIONS: 'usdAllocations',
+  PENDING_USD_ALLOCATIONS: 'pendingUsdAllocations',
+  USD_EARNINGS: 'usdEarnings',
+  WRITER_USD_BALANCES: 'writerUsdBalances',
+  WRITER_USD_EARNINGS: 'writerUsdEarnings',
+  USD_PAYOUTS: 'usdPayouts',
+
+  // Legacy token collections (deprecated, will be removed after migration)
   TOKEN_BALANCES: 'tokenBalances',
   TOKEN_ALLOCATIONS: 'tokenAllocations',
   PENDING_TOKEN_ALLOCATIONS: 'pendingTokenAllocations',
@@ -279,6 +290,8 @@ export const COLLECTIONS = {
   WRITER_TOKEN_BALANCES: 'writerTokenBalances',
   WRITER_TOKEN_EARNINGS: 'writerTokenEarnings',
   TOKEN_PAYOUTS: 'tokenPayouts',
+
+  // General payment collections
   PAYOUTS: 'payouts',
   PAYOUT_REQUESTS: 'payoutRequests',
   TRANSACTIONS: 'transactions',
@@ -317,8 +330,27 @@ export const COLLECTIONS = {
 } as const;
 
 /**
- * Legacy alias for backward compatibility
- * @deprecated Use COLLECTIONS instead
+ * USD-based payment collections (new system)
+ */
+export const USD_COLLECTIONS = {
+  USERS: COLLECTIONS.USERS,
+  SUBSCRIPTIONS: COLLECTIONS.SUBSCRIPTIONS,
+  USD_BALANCES: COLLECTIONS.USD_BALANCES,
+  USD_ALLOCATIONS: COLLECTIONS.USD_ALLOCATIONS,
+  PENDING_USD_ALLOCATIONS: COLLECTIONS.PENDING_USD_ALLOCATIONS,
+  USD_EARNINGS: COLLECTIONS.USD_EARNINGS,
+  WRITER_USD_BALANCES: COLLECTIONS.WRITER_USD_BALANCES,
+  WRITER_USD_EARNINGS: COLLECTIONS.WRITER_USD_EARNINGS,
+  USD_PAYOUTS: COLLECTIONS.USD_PAYOUTS,
+  PAYOUTS: COLLECTIONS.PAYOUTS,
+  PAYOUT_REQUESTS: COLLECTIONS.PAYOUT_REQUESTS,
+  TRANSACTIONS: COLLECTIONS.TRANSACTIONS,
+  PAYMENT_RECOVERY: COLLECTIONS.PAYMENT_RECOVERY
+} as const;
+
+/**
+ * Legacy alias for backward compatibility during migration
+ * @deprecated Use USD_COLLECTIONS instead
  */
 export const PAYMENT_COLLECTIONS = {
   USERS: COLLECTIONS.USERS,

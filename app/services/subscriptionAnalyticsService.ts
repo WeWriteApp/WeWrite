@@ -231,10 +231,10 @@ export class SubscriptionAnalyticsService {
     try {
       // This would need to check if the user has any previous token allocations
       // For now, we'll implement a simple check based on the existence of token balance
-      const response = await fetch(`/api/tokens/balance?userId=${userId}`);
+      const response = await fetch(`/api/usd/balance?userId=${userId}`);
       if (response.ok) {
         const data = await response.json();
-        return data.data?.allocatedTokens === 0;
+        return data.balance?.allocatedUsdCents === 0;
       }
       return true; // Default to first allocation if we can't determine
     } catch (error) {

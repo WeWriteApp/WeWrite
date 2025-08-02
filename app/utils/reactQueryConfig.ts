@@ -47,8 +47,8 @@ export const createOptimizedQueryClient = (): QueryClient => {
       },
 
       mutations: {
-        // Retry mutations once on failure
-        retry: 1,
+        // EMERGENCY FIX: Disable mutation retries to prevent Firebase quota abuse
+        retry: 0,
         retryDelay: 1000,
       },
     },
