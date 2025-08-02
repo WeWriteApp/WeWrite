@@ -5,6 +5,7 @@ import { useAuth } from './providers/AuthProvider';
 import { ActivityFilterProvider } from './contexts/ActivityFilterContext';
 import LandingPage from './components/landing/LandingPage';
 import Home from './components/features/Home';
+// import { NavigationOptimizationDemo } from './components/examples/NavigationOptimizationDemo'; // Temporarily disabled
 
 export default function HomePage() {
   console.log('🔴 HomePage: Component rendering');

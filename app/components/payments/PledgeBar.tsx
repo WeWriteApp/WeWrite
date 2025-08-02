@@ -377,15 +377,6 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                           style={{ width: `${availablePercentage}%` }}
                         />
                       )}
-
-                      {/* Out of funds indicator - only show when no available funds */}
-                      {isOutOfFunds && availablePercentage <= 0 && (
-                        <div className="h-full flex items-center justify-center px-2">
-                          <span className="text-orange-500 font-medium text-xs whitespace-nowrap">
-                            Out of funds
-                          </span>
-                        </div>
-                      )}
                     </>
                   </div>
 

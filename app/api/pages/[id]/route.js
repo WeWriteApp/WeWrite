@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 
+// EMERGENCY COST OPTIMIZATION: Aggressive page caching
+const pageCache = new Map();
+const PAGE_CACHE_TTL = 3 * 60 * 1000; // 3 minutes cache
+
 export async function GET(request, { params }) {
   const startTime = Date.now();
 
@@ -17,6 +21,18 @@ export async function GET(request, { params }) {
 
     // Get the current user ID for access control
     const userId = await getUserIdFromRequest(request);
+
+    // EMERGENCY COST OPTIMIZATION: Check cache first
+    const cacheKey = `page:${id}:${userId || 'anon'}`;
+    const cached = pageCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < PAGE_CACHE_TTL) {
+      console.log(`🚀 EMERGENCY COST OPTIMIZATION: Returning cached page ${id}`);
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheAge: Date.now() - cached.timestamp
+      });
+    }
 
     // OPTIMIZATION: Import modules in parallel
     const [
@@ -137,6 +153,12 @@ export async function GET(request, { params }) {
       // Add ETag for better caching
       'ETag': `"${id}-${pageData.lastModified || pageData.createdAt}"`,
     };
+
+    // EMERGENCY COST OPTIMIZATION: Cache the response
+    pageCache.set(cacheKey, {
+      data: response,
+      timestamp: Date.now()
+    });
 
     return NextResponse.json(response, { headers });
 

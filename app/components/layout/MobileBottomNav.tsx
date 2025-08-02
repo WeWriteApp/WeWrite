@@ -25,7 +25,7 @@ import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { WarningDot } from '../ui/warning-dot';
-import { useNavigationAwareRender, useNavigationAwareEffect } from '../navigation/NavigationOptimizer';
+// Navigation optimization temporarily disabled
 
 /**
  * MobileBottomNav Component
@@ -89,8 +89,9 @@ export default function MobileBottomNav() {
   const { earnings } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
 
-  // Navigation optimization - mobile nav is high priority
-  const { shouldRender, isRapidNavigating } = useNavigationAwareRender('MobileBottomNav', 'high');
+  // Navigation optimization temporarily disabled
+  const shouldRender = true;
+  const isRapidNavigating = false;
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {
@@ -180,6 +181,13 @@ export default function MobileBottomNav() {
 
     // Hide on location picker pages
     if (pathname.includes('/location')) {
+      return true;
+    }
+
+    // Hide on checkout pages to maximize conversion
+    // NOTE: This is intentional UX design - checkout pages use fixed bottom subscribe buttons
+    // instead of mobile nav to reduce distractions and improve conversion rates
+    if (pathname.includes('/checkout')) {
       return true;
     }
 

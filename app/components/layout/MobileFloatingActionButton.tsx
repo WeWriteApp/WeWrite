@@ -128,6 +128,11 @@ export default function MobileFloatingActionButton() {
       return false;
     }
 
+    // Hide on checkout pages to maximize conversion
+    if (pathname.includes('/checkout')) {
+      return false;
+    }
+
     // Hide on individual content pages
     const segments = pathname.split('/').filter(Boolean);
     return !(segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`));

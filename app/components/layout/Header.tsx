@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Heart, DollarSign, AlertTriangle, Loader2 } from "lucide-react";
-import { RemainingUsdCounter } from "../ui/RemainingUsdCounter";
+import { Heart, DollarSign, Loader2 } from "lucide-react";
+import { RemainingFundsDisplay, OverspendWarningDisplay } from "../ui/RemainingUsdCounter";
 import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
@@ -85,8 +85,8 @@ export default function Header() {
     );
   };
 
-  // Helper function to render remaining USD display
-  const renderRemainingUsdDisplay = () => {
+  // Helper function to render spend/overspend display
+  const renderSpendDisplay = () => {
     // Debug logging
     console.log('🎯 Header: USD balance check', {
       hasUsdBalance: !!usdBalance,
@@ -134,50 +134,28 @@ export default function Header() {
       );
     }
 
-    // Show USD counter for users with active subscription and funds
+    // Show spend/overspend display for users with USD balance
     if (usdBalance) {
       const isOverspending = usdBalance.allocatedUsdCents > usdBalance.totalUsdCents;
       const overspendingAmount = isOverspending ? usdBalance.allocatedUsdCents - usdBalance.totalUsdCents : 0;
 
+      // Business logic: Show EITHER remaining funds with pie chart OR overspend warning with icon
       if (isOverspending) {
-        // Show overspending warning with separate icon and badge
+        // Show overspend badge with warning icon to the right
         return (
-          <div
-            className="flex items-center gap-1 cursor-pointer"
+          <OverspendWarningDisplay
+            overspendUsdCents={overspendingAmount}
             onClick={() => router.push('/settings/spend')}
-            title={`Overspending by ${formatUsdCents(overspendingAmount)} - Click to adjust spending`}
-          >
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <Badge
-              variant="destructive"
-              className="hover:bg-destructive/80 transition-colors text-sm"
-            >
-              +{formatUsdCents(overspendingAmount)}
-            </Badge>
-          </div>
+          />
         );
       } else {
-        // Show remaining funds with badge on left and pie chart on right
-        const isZeroBalance = usdBalance.totalUsdCents === 0;
-
+        // Show pie chart of remaining funds and amount left to spend
         return (
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
-                isZeroBalance ? 'text-muted-foreground' : ''
-              }`}
-              onClick={() => router.push('/settings/spend')}
-              title={`${formatUsdCents(usdBalance.totalUsdCents)} total funds`}
-            >
-              {formatUsdCents(usdBalance.totalUsdCents)}
-            </Badge>
-            <RemainingUsdCounter
-              allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
-              totalUsdCents={usdBalance.totalUsdCents || 0}
-              onClick={() => router.push('/settings/spend')}
-            />
-          </div>
+          <RemainingFundsDisplay
+            allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
+            totalUsdCents={usdBalance.totalUsdCents || 0}
+            onClick={() => router.push('/settings/spend')}
+          />
         );
       }
     }
@@ -322,9 +300,9 @@ export default function Header() {
 
             {/* Header content area - matches editor content area */}
             <div className={`flex-1 min-w-0 flex items-center h-full px-3 sm:px-4 md:px-6 header-padding-mobile transition-all duration-300 ease-in-out`}>
-              {/* Earnings Display (left side) */}
+              {/* Spend/Overspend Display (left side) */}
               <div className="flex-1 flex justify-start">
-                {renderEarningsDisplay()}
+                {renderSpendDisplay()}
               </div>
 
               {/* Logo/Title (centered) - clickable to go home */}
@@ -334,10 +312,9 @@ export default function Header() {
                 </Link>
               </div>
 
-              {/* Remaining USD Counter (right side) */}
+              {/* Earnings Display (right side) */}
               <div className="flex-1 flex justify-end">
-                {/* Show remaining USD counter if user has any USD balance */}
-                {renderRemainingUsdDisplay()}
+                {renderEarningsDisplay()}
               </div>
             </div>
           </div>

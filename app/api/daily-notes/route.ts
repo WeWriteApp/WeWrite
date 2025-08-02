@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 
+// EMERGENCY COST OPTIMIZATION: Daily notes cache
+const dailyNotesCache = new Map<string, { data: any; timestamp: number }>();
+const DAILY_NOTES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
 // UPDATED: Now uses createdAt dates instead of customDate for Daily Notes
 
 /**
@@ -28,6 +32,18 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    // EMERGENCY COST OPTIMIZATION: Check cache first
+    const cacheKey = `daily-notes:${userId}:${startDate}:${endDate}:${timezone}`;
+    const cached = dailyNotesCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < DAILY_NOTES_CACHE_TTL) {
+      console.log(`🚀 EMERGENCY COST OPTIMIZATION: Returning cached daily notes for ${userId}`);
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheAge: Date.now() - cached.timestamp
+      });
     }
 
     let admin;
@@ -185,10 +201,18 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    return NextResponse.json({
+    const responseData = {
       pages,
       totalFound: pages.length
+    };
+
+    // EMERGENCY COST OPTIMIZATION: Cache the response
+    dailyNotesCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('[daily-notes API] Error fetching daily notes:', error);

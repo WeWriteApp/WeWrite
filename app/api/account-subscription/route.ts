@@ -9,6 +9,10 @@ import { getUserIdFromRequest } from '../auth-helper';
 import { getUserSubscriptionServer } from '../../firebase/subscription-server';
 import { getDocumentOptimized, trackFirestoreRead } from '../../utils/firestoreOptimizer';
 
+// EMERGENCY COST OPTIMIZATION: Aggressive subscription caching
+const subscriptionCache = new Map<string, { data: any; timestamp: number }>();
+const SUBSCRIPTION_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
+
 export async function GET(request: NextRequest) {
   try {
     // Get authenticated user
@@ -21,6 +25,18 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const requestedUserId = url.searchParams.get('userId');
     const targetUserId = requestedUserId || authenticatedUserId;
+
+    // EMERGENCY COST OPTIMIZATION: Check cache first
+    const cacheKey = `subscription:${targetUserId}`;
+    const cached = subscriptionCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < SUBSCRIPTION_CACHE_TTL) {
+      console.log(`🚀 EMERGENCY COST OPTIMIZATION: Returning cached subscription for ${targetUserId}`);
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheAge: Date.now() - cached.timestamp
+      });
+    }
 
     // Get the user's subscription with optimized caching (1 hour cache for subscriptions)
     let subscription = await getDocumentOptimized(
@@ -81,6 +97,13 @@ export async function GET(request: NextRequest) {
         status: 'inactive',
         fullData: subscription
       };
+
+      // EMERGENCY COST OPTIMIZATION: Cache inactive response too
+      subscriptionCache.set(cacheKey, {
+        data: inactiveResponse,
+        timestamp: Date.now()
+      });
+
       return NextResponse.json(inactiveResponse);
     }
 
@@ -97,6 +120,13 @@ export async function GET(request: NextRequest) {
     if (process.env.SUBSCRIPTION_DEBUG === 'true') {
       console.log(`[ACCOUNT SUBSCRIPTION] ✅ Returning active subscription response:`, activeResponse);
     }
+
+    // EMERGENCY COST OPTIMIZATION: Cache the response
+    subscriptionCache.set(cacheKey, {
+      data: activeResponse,
+      timestamp: Date.now()
+    });
+
     return NextResponse.json(activeResponse);
   } catch (error: unknown) {
     console.error('Error fetching user subscription data:', error);

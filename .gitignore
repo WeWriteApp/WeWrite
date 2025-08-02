@@ -46,3 +46,5 @@ next-env.d.ts
 # Firebase
 *-firebase-adminsdk-*.json
 service-account-key.json
+# SSL certificates for local development
+.certs/

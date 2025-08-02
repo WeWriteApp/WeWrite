@@ -3,131 +3,225 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
-import NavPageLayout from '../../../components/layout/NavPageLayout';
-import UsdFundingTierSlider from '../../../components/payments/UsdFundingTierSlider';
-import { Card, CardContent, CardHeader } from '../../../components/ui/card';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { getStripePublishableKey } from '../../../utils/stripeConfig';
+import { useTheme } from '../../../providers/ThemeProvider';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, CreditCard } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, ChevronLeft } from 'lucide-react';
+import { Logo } from '../../../components/ui/Logo';
+
+const stripePromise = loadStripe(getStripePublishableKey() || '');
+
+function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subscriptionId: string) => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { user } = useAuth();
+  const router = useRouter(); // FIXED: Added router hook for navigation (was causing "router is not defined" error)
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isFormComplete, setIsFormComplete] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) return;
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        throw new Error(submitError.message);
+      }
+
+      const response = await fetch('/api/subscription/create-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.uid,
+          amount: amount
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create subscription');
+      }
+
+      if (data.clientSecret) {
+        const { error } = await stripe.confirmPayment({
+          elements,
+          clientSecret: data.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
+          },
+          redirect: 'if_required'
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
+
+      onSuccess(data.subscriptionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <>
+      {/* NavHeader for mobile navigation */}
+      <div className="md:hidden">
+        <div className="grid grid-cols-3 items-center p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-start">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center gap-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Back</span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center">
+            <div
+              className="cursor-pointer transition-transform hover:scale-105"
+              onClick={() => router.push('/')}
+            >
+              <Logo size="md" priority={true} styled={true} clickable={true} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end">
+          </div>
+        </div>
+      </div>
+
+      {/* Content - FIXED: Added proper spacing to prevent clipping behind fixed button */}
+      <div className="px-4 py-6 pb-24">{/* pb-24 (96px) prevents Stripe form from being hidden behind fixed subscribe button */}
+        <PaymentElement
+          onChange={(event) => {
+            setIsFormComplete(event.complete);
+            if (event.error) {
+              setError(event.error.message);
+            } else {
+              setError(null);
+            }
+          }}
+        />
+
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Fixed subscribe button - positioned to always be visible for conversion optimization */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 z-50">
+        <Button
+          onClick={handleSubmit}
+          className="w-full h-12 text-base font-medium"
+          disabled={!stripe || isProcessing || !isFormComplete}
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              Processing...
+            </>
+          ) : (
+            `Subscribe for $${amount}/month`
+          )}
+        </Button>
+      </div>
+    </>
+  );
+}
 
 export default function FundAccountCheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-  // Get initial parameters from URL
-  const initialTier = searchParams.get('tier');
-  const initialAmount = searchParams.get('amount') ? parseFloat(searchParams.get('amount')!) : 10;
+  const amount = searchParams.get('amount') ? parseFloat(searchParams.get('amount')!) : 10;
 
-  // State for selected amount
-  const [selectedAmount, setSelectedAmount] = useState(initialAmount);
-
-  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!user) {
-      router.push('/login?redirect=/settings/fund-account/checkout');
-    }
-  }, [user, router]);
+    if (!user?.uid) return;
+
+    const createSetupIntent = async () => {
+      try {
+        const response = await fetch('/api/subscription/create-setup-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            amount: amount,
+            tier: 'custom',
+            tierName: `$${amount}/month`
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.clientSecret) {
+          setClientSecret(data.clientSecret);
+        } else {
+          console.error('Setup intent error:', data.error);
+        }
+      } catch (error) {
+        console.error('Error creating setup intent:', error);
+      }
+    };
+
+    createSetupIntent();
+  }, [user?.uid, amount]);
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p>Redirecting to login...</p>
+          <p className="text-muted-foreground mb-4">Please sign in to continue</p>
+          <Button onClick={() => router.push('/auth/login')}>
+            Sign In
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!clientSecret) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Setting up payment...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <NavPageLayout
-      backUrl="/settings/fund-account"
-      backLabel="Back to Fund Account"
+    <Elements
+      stripe={stripePromise}
+      options={{
+        clientSecret,
+        appearance: {
+          theme: resolvedTheme === 'dark' ? 'night' : 'stripe'
+        }
+      }}
     >
-
-      <div className="space-y-6">
-        {/* Back button for mobile */}
-        <div className="sm:hidden">
-          <Button variant="ghost" asChild>
-            <Link href="/settings/fund-account">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Fund Account
-            </Link>
-          </Button>
-        </div>
-
-        {/* USD Funding Tier Slider */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Select Monthly Funding Amount</h2>
-            <p className="text-muted-foreground">
-              Choose how much you'd like to fund your WeWrite account each month.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <UsdFundingTierSlider
-              selectedAmount={selectedAmount}
-              onAmountSelect={setSelectedAmount}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Checkout Button */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Ready to set up your ${selectedAmount}/month funding?
-              </p>
-              <Button
-                size="lg"
-                className="w-full max-w-sm"
-                onClick={() => {
-                  // For now, redirect to success page - in production this would integrate with Stripe
-                  router.push(`/settings/fund-account/success?amount=${selectedAmount}`);
-                }}
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Set Up ${selectedAmount}/month Funding
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Help text */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-sm text-muted-foreground space-y-2">
-              <p>
-                <strong>Secure Checkout:</strong> Your payment information is processed securely by Stripe.
-                WeWrite never stores your credit card details.
-              </p>
-              <p>
-                <strong>Monthly Billing:</strong> You'll be charged on the same day each month.
-                You can cancel or modify your funding anytime.
-              </p>
-              <p>
-                <strong>USD Payments:</strong> All amounts are in USD. Your bank may convert from your local currency.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Support links */}
-        <div className="text-center text-sm text-muted-foreground">
-          <p>
-            Questions about funding?{' '}
-            <Link href="/support/funding" className="text-primary hover:underline">
-              View our funding guide
-            </Link>{' '}
-            or{' '}
-            <Link href="/support/contact" className="text-primary hover:underline">
-              contact support
-            </Link>
-            .
-          </p>
-        </div>
-      </div>
-    </NavPageLayout>
+      <CheckoutForm
+        amount={amount}
+        onSuccess={(subscriptionId) => {
+          router.push(`/settings/fund-account/success?subscription=${subscriptionId}&amount=${amount}`);
+        }}
+      />
+    </Elements>
   );
 }

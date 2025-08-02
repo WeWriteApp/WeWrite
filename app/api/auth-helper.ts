@@ -82,6 +82,35 @@ export const createErrorResponse = (
 };
 
 /**
+ * Helper function to get user email, handling development vs production users
+ * @param userId - The user ID from authentication
+ * @returns The user email or null if not found
+ */
+export async function getUserEmailFromId(userId: string): Promise<string | null> {
+  try {
+    // Handle development users
+    if (userId === 'dev_admin_user') {
+      return 'jamie@wewrite.app';
+    }
+    if (userId === 'dev_test_user_1') {
+      return 'test@local.dev';
+    }
+
+    // Production: get from Firebase Auth
+    if (!auth) {
+      console.warn('Firebase Auth not available');
+      return null;
+    }
+
+    const userRecord = await auth.getUser(userId);
+    return userRecord.email || null;
+  } catch (error) {
+    console.error('Error getting user email:', error);
+    return null;
+  }
+}
+
+/**
  * Helper function to get the user ID from a request
  * Updated for auth system using simpleUserSession cookie
  *
@@ -132,6 +161,7 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
   }
 
   try {
+    // Try parsing as JSON first (new format)
     const sessionData = JSON.parse(simpleSessionCookie);
     if (sessionData && sessionData.uid) {
       return sessionData.uid;
@@ -140,6 +170,12 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
       return null;
     }
   } catch (error: any) {
+    // If JSON parsing fails, treat as plain string (legacy format for dev)
+    if (simpleSessionCookie === 'dev_admin_user' || simpleSessionCookie === 'dev_test_user_1') {
+      console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
+      return simpleSessionCookie;
+    }
+
     console.error('[AUTH DEBUG] Error parsing simpleUserSession cookie:', error);
     return null;
   }

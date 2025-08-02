@@ -298,10 +298,6 @@ export default function UsdFundingTierSlider({
           )}
         </div>
 
-
-
-
-
         {/* Action Button */}
         <div className="pt-2">
           {selectedAmount === 0 ? (

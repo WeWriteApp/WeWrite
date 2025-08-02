@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:https": "node scripts/start-https-dev.js",
+    "dev:https:setup": "node scripts/setup-https-dev.js",
     "dev:console": "concurrently \"pnpm run console:listen\" \"pnpm run dev\" --names \"CONSOLE,DEV\" --prefix-colors \"cyan,green\"",
     "dev:only": "next dev -p 3000",
     "dev:turbo": "./scripts/start-turbo.sh",

@@ -106,16 +106,27 @@ async function logAuditEntry(entry) {
 }
 
 /**
+ * Get environment-aware collection name
+ */
+function getCollectionName(baseName) {
+  const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'dev';
+  return environment === 'production' ? baseName : `DEV_${baseName}`;
+}
+
+/**
  * Migrate token balances to USD balances
  */
 async function migrateTokenBalances(dryRun = false, specificUserId = null) {
   console.log('🔄 Migrating token balances to USD balances...');
-  
-  let query = db.collection('tokenBalances');
+
+  const collectionName = getCollectionName('tokenBalances');
+  console.log(`📍 Using collection: ${collectionName}`);
+
+  let query = db.collection(collectionName);
   if (specificUserId) {
     query = query.where('userId', '==', specificUserId);
   }
-  
+
   const snapshot = await query.get();
   const results = {
     processed: 0,
@@ -151,7 +162,7 @@ async function migrateTokenBalances(dryRun = false, specificUserId = null) {
 
       if (!dryRun) {
         // Create USD balance record
-        await db.collection('usdBalances').doc(userId).set(usdData);
+        await db.collection(getCollectionName('usdBalances')).doc(userId).set(usdData);
 
         // Log audit entry
         await logAuditEntry({
@@ -188,12 +199,15 @@ async function migrateTokenBalances(dryRun = false, specificUserId = null) {
  */
 async function migrateTokenAllocations(dryRun = false, specificUserId = null) {
   console.log('🔄 Migrating token allocations to USD allocations...');
-  
-  let query = db.collection('tokenAllocations');
+
+  const collectionName = getCollectionName('tokenAllocations');
+  console.log(`📍 Using collection: ${collectionName}`);
+
+  let query = db.collection(collectionName);
   if (specificUserId) {
     query = query.where('userId', '==', specificUserId);
   }
-  
+
   const snapshot = await query.get();
   const results = {
     processed: 0,

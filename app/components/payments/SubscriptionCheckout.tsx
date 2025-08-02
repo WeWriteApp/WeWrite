@@ -7,7 +7,7 @@ import { useTheme } from '../../providers/ThemeProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
 // Legacy token imports removed - now using USD system only
-import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier, dollarsToCents } from '../../utils/usdConstants';
+import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier, calculateUsdCentsForAmount } from '../../utils/usdConstants';
 import { formatUsdCents, USD_UI_TEXT } from '../../utils/formatCurrency';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -96,7 +96,7 @@ export function SubscriptionCheckout({
       const plan: SelectedPlan = {
         tier: tier.id,
         amount,
-        usdCents: dollarsToCents(amount),
+        usdCents: calculateUsdCentsForAmount(amount),
         name: tier.name,
         isCustom: initialTier === 'custom' || !!initialAmount
       };

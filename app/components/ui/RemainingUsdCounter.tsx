@@ -3,7 +3,7 @@
 import React from 'react';
 import { formatUsdCents, centsToDollars } from '../../utils/formatCurrency';
 
-interface RemainingUsdCounterProps {
+interface RemainingFundsDisplayProps {
   allocatedUsdCents: number;
   totalUsdCents: number;
   size?: number;
@@ -13,19 +13,20 @@ interface RemainingUsdCounterProps {
 }
 
 /**
- * RemainingUsdCounter - Shows remaining USD with pie chart visualization
+ * RemainingFundsDisplay - Shows remaining USD with pie chart visualization
  *
  * This component displays the amount of USD remaining for the user to spend
- * with a pie chart showing allocation progress. Turns orange when 95% allocated.
+ * with a pie chart showing allocation progress. Used when user is NOT overspending.
+ * Turns orange when 90% allocated.
  */
-export function RemainingUsdCounter({
+export function RemainingFundsDisplay({
   allocatedUsdCents,
   totalUsdCents,
   size = 28,
   strokeWidth = 2.5,
   className = '',
   onClick
-}: RemainingUsdCounterProps) {
+}: RemainingFundsDisplayProps) {
   // Calculate remaining USD and allocation percentage
   const remainingUsdCents = Math.max(0, totalUsdCents - allocatedUsdCents);
   const allocationPercentage = totalUsdCents > 0 ? (allocatedUsdCents / totalUsdCents) * 100 : 0;
@@ -65,30 +66,18 @@ export function RemainingUsdCounter({
 
   return (
     <div
-      className={`inline-flex items-center justify-center relative ${containerClasses} ${className}`}
+      className={`inline-flex items-center gap-2 cursor-pointer hover:bg-secondary/80 transition-colors text-sm px-2 py-1 rounded-md font-medium ${containerClasses} ${className} ${textColor}`}
       title={titleText}
       onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
-      {/* Pie Chart Background */}
-      <svg
-        width={size}
-        height={size}
-        className="transform -rotate-90"
-      >
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-muted-foreground/20"
-        />
-        
-        {/* Progress circle */}
-        {!isLoadingState && (
+      {/* Pie Chart */}
+      <div className="relative">
+        <svg
+          width={size}
+          height={size}
+          className="transform -rotate-90"
+        >
+          {/* Background circle */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -96,24 +85,111 @@ export function RemainingUsdCounter({
             fill="none"
             stroke="currentColor"
             strokeWidth={strokeWidth}
-            strokeDasharray={strokeDasharray}
-            strokeLinecap="round"
-            className={progressColor}
-            style={{
-              transition: 'stroke-dasharray 0.3s ease-in-out'
-            }}
+            className="text-muted-foreground/20"
           />
-        )}
+
+          {/* Progress circle */}
+          {!isLoadingState && (
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={strokeWidth}
+              strokeDasharray={strokeDasharray}
+              strokeLinecap="round"
+              className={progressColor}
+              style={{
+                transition: 'stroke-dasharray 0.3s ease-in-out'
+              }}
+            />
+          )}
+        </svg>
+      </div>
+
+      {/* Amount remaining text */}
+      <span>
+        {displayText}
+      </span>
+    </div>
+  );
+}
+
+interface OverspendWarningDisplayProps {
+  overspendUsdCents: number;
+  className?: string;
+  onClick?: () => void;
+}
+
+/**
+ * OverspendWarningDisplay - Shows overspend amount with warning icon
+ *
+ * This component displays the overspend amount with a warning icon to the right.
+ * Used when user is overspending their budget.
+ */
+export function OverspendWarningDisplay({
+  overspendUsdCents,
+  className = '',
+  onClick
+}: OverspendWarningDisplayProps) {
+  const titleText = `Overspending by ${formatUsdCents(overspendUsdCents)} - Click to adjust spending`;
+
+  return (
+    <div
+      className={`inline-flex items-center gap-2 cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/80 transition-colors text-sm px-2 py-1 rounded-md font-medium ${className}`}
+      onClick={onClick}
+      title={titleText}
+    >
+      {/* Overspend amount */}
+      <span>
+        +{formatUsdCents(overspendUsdCents)}
+      </span>
+
+      {/* Filled warning icon to the right */}
+      <svg
+        className="h-4 w-4"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          fillRule="evenodd"
+          d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z"
+          clipRule="evenodd"
+        />
       </svg>
-
-
     </div>
   );
 }
 
 /**
+ * Legacy RemainingUsdCounter component for backward compatibility
+ * @deprecated Use RemainingFundsDisplay instead
+ */
+export function RemainingUsdCounter({
+  allocatedUsdCents,
+  totalUsdCents,
+  size = 28,
+  strokeWidth = 2.5,
+  className = '',
+  onClick
+}: RemainingFundsDisplayProps) {
+  return (
+    <RemainingFundsDisplay
+      allocatedUsdCents={allocatedUsdCents}
+      totalUsdCents={totalUsdCents}
+      size={size}
+      strokeWidth={strokeWidth}
+      className={className}
+      onClick={onClick}
+    />
+  );
+}
+
+/**
  * Legacy TokensCounter component for backward compatibility
- * @deprecated Use RemainingUsdCounter instead
+ * @deprecated Use RemainingFundsDisplay instead
  */
 export function RemainingTokensCounter({
   allocatedTokens,
@@ -135,7 +211,7 @@ export function RemainingTokensCounter({
   const totalUsdCents = Math.floor(totalTokens / 10 * 100);
 
   return (
-    <RemainingUsdCounter
+    <RemainingFundsDisplay
       allocatedUsdCents={allocatedUsdCents}
       totalUsdCents={totalUsdCents}
       size={size}

@@ -6,6 +6,9 @@ import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackQuery } from '../../../utils/costOptimizationMonitor';
 
+// EMERGENCY COST OPTIMIZATION: Global cache for recent edits
+const globalRecentEditsCache = new Map<string, { data: any; timestamp: number }>();
+
 // Initialize Firebase Admin SDK with unique app name for global recent edits
 let globalRecentEditsApp;
 try {
@@ -85,7 +88,20 @@ export async function GET(request: NextRequest) {
       subscriptions: getCollectionName('subscriptions')
     });
 
-    console.log('🔍 [GLOBAL_RECENT_EDITS] Cache disabled for debugging');
+    // EMERGENCY COST OPTIMIZATION: Enable aggressive caching
+    const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}`;
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
+    // Check cache first
+    const cached = globalRecentEditsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      console.log('🚀 EMERGENCY COST OPTIMIZATION: Returning cached global recent edits');
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheAge: Date.now() - cached.timestamp
+      });
+    }
 
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;
@@ -238,13 +254,21 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔄 [GLOBAL_RECENT_EDITS] Pagination info: hasMore=${hasMorePages}, nextCursor=${nextCursor}`);
 
-    return NextResponse.json({
+    const responseData = {
       edits: enhancedEdits,
       hasMore: hasMorePages,
       nextCursor: nextCursor,
       total: enhancedEdits.length,
       timestamp: new Date().toISOString()
+    };
+
+    // EMERGENCY COST OPTIMIZATION: Cache the response
+    globalRecentEditsCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Error fetching global recent edits:', error);

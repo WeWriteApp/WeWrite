@@ -49,10 +49,12 @@ export default function SessionMonitor({
       }
       
       const result = await response.json();
-      
+
+      console.log('[SessionMonitor] Session validation result:', result);
+
       if (!result.valid) {
-        console.log('Session invalid:', result.reason);
-        
+        console.log('[SessionMonitor] Session invalid, triggering logout. Reason:', result.reason);
+
         // Show notification if enabled
         if (showNotifications && 'Notification' in window) {
           try {
@@ -64,9 +66,11 @@ export default function SessionMonitor({
             console.warn('Could not show notification:', error);
           }
         }
-        
+
         // Log out user and redirect
         await handleSessionRevoked();
+      } else {
+        console.log('[SessionMonitor] Session is valid, continuing...');
       }
       
     } catch (error) {

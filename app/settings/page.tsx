@@ -2,7 +2,7 @@
 
 import { useAuth } from '../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   User,
   CreditCard,
@@ -14,7 +14,8 @@ import {
   ShoppingCart,
   Coins,
   Palette,
-  Wallet
+  Wallet,
+  Loader2
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 
@@ -40,7 +41,8 @@ export default function SettingsIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
-  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState<boolean>(true);
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
   // Get bank setup status and balances
@@ -97,15 +99,42 @@ export default function SettingsIndexPage() {
   ];
 
   // Check subscription status when user is available
+  // Cache for subscription data
+  const subscriptionCacheRef = useRef<{
+    data: { hasActiveSubscription: boolean; amount: number } | null;
+    timestamp: number;
+    userId: string | null;
+  }>({ data: null, timestamp: 0, userId: null });
+
   useEffect(() => {
     if (!user) {
       setHasActiveSubscription(null);
+      setSubscriptionAmount(null);
+      setIsLoadingSubscription(false);
       return;
     }
 
     const checkSubscriptionStatus = async () => {
+      setIsLoadingSubscription(true);
+
       try {
-        // Use API-first approach instead of complex optimized subscription
+        // Check cache first (5 minute cache)
+        const now = Date.now();
+        const cacheAge = now - subscriptionCacheRef.current.timestamp;
+        const isCacheValid = cacheAge < 5 * 60 * 1000; // 5 minutes
+        const isSameUser = subscriptionCacheRef.current.userId === user.uid;
+
+        if (isCacheValid && isSameUser && subscriptionCacheRef.current.data) {
+          console.log('[Settings] Using cached subscription data');
+          const cachedData = subscriptionCacheRef.current.data;
+          setHasActiveSubscription(cachedData.hasActiveSubscription);
+          setSubscriptionAmount(cachedData.amount);
+          setIsLoadingSubscription(false);
+          return;
+        }
+
+        // Fetch fresh data
+        console.log('[Settings] Fetching fresh subscription data');
         const response = await fetch('/api/account-subscription');
         const data = response.ok ? await response.json() : null;
         const subscription = data?.hasSubscription ? data.fullData : null;
@@ -118,19 +147,50 @@ export default function SettingsIndexPage() {
           );
           setHasActiveSubscription(isActive);
 
-          // Get subscription amount from price data
-          const amount = subscription.items?.data?.[0]?.price?.unit_amount
-            ? subscription.items.data[0].price.unit_amount / 100
-            : 0;
+          // Get subscription amount - try multiple sources for compatibility
+          let amount = 0;
+
+          // First try the direct amount field (our current data structure)
+          if (subscription.amount) {
+            amount = subscription.amount;
+          }
+          // Fallback to Stripe price data format if available
+          else if (subscription.items?.data?.[0]?.price?.unit_amount) {
+            amount = subscription.items.data[0].price.unit_amount / 100;
+          }
+
+          console.log('[Settings] Subscription data:', {
+            hasSubscription: data.hasSubscription,
+            amount: amount,
+            subscriptionAmount: subscription.amount,
+            stripeAmount: subscription.items?.data?.[0]?.price?.unit_amount
+          });
+
           setSubscriptionAmount(amount);
+
+          // Cache the result
+          subscriptionCacheRef.current = {
+            data: { hasActiveSubscription: isActive, amount },
+            timestamp: now,
+            userId: user.uid
+          };
         } else {
           setHasActiveSubscription(false);
-          setSubscriptionAmount(0);
+          setSubscriptionAmount(0); // This is a real value: no subscription = $0
+
+          // Cache the result
+          subscriptionCacheRef.current = {
+            data: { hasActiveSubscription: false, amount: 0 },
+            timestamp: now,
+            userId: user.uid
+          };
         }
       } catch (error) {
         console.error('Error checking subscription status:', error);
         setHasActiveSubscription(false);
-        setSubscriptionAmount(0);
+        setSubscriptionAmount(0); // This is a real value: error state = $0
+      } finally {
+        setIsLoadingSubscription(false);
       }
     };
 
@@ -213,7 +273,11 @@ export default function SettingsIndexPage() {
                     {/* Status icons for specific sections - show success and warnings */}
                     {section.id === 'fund-account' && (
                       <span className="text-sm text-muted-foreground font-medium">
-                        ${subscriptionAmount}/mo
+                        {isLoadingSubscription ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          `$${subscriptionAmount}/mo`
+                        )}
                       </span>
                     )}
 
@@ -227,26 +291,30 @@ export default function SettingsIndexPage() {
                       )
                     )}
 
-                    {section.id === 'spend' && usdBalance && (() => {
-                      const allocatedCents = usdBalance.allocatedUsdCents || 0;
-                      const totalCents = usdBalance.totalUsdCents || 0;
-                      const remainingCents = totalCents - allocatedCents;
-                      const remainingDollars = Math.abs(remainingCents) / 100;
+                    {section.id === 'spend' && (
+                      usdBalance ? (() => {
+                        const allocatedCents = usdBalance.allocatedUsdCents || 0;
+                        const totalCents = usdBalance.totalUsdCents || 0;
+                        const remainingCents = totalCents - allocatedCents;
+                        const remainingDollars = Math.abs(remainingCents) / 100;
 
-                      if (remainingCents >= 0) {
-                        return (
-                          <span className="text-sm text-muted-foreground font-medium">
-                            ${remainingDollars.toFixed(0)} remaining
-                          </span>
-                        );
-                      } else {
-                        return (
-                          <span className="text-sm text-red-600 font-medium">
-                            ${remainingDollars.toFixed(0)} over
-                          </span>
-                        );
-                      }
-                    })()}
+                        if (remainingCents >= 0) {
+                          return (
+                            <span className="text-sm text-muted-foreground font-medium">
+                              ${remainingDollars.toFixed(0)} remaining
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span className="text-sm text-red-600 font-medium">
+                              ${remainingDollars.toFixed(0)} over
+                            </span>
+                          );
+                        }
+                      })() : (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )
+                    )}
 
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>

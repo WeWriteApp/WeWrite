@@ -11,8 +11,8 @@ import { cookies } from 'next/headers';
 // POST endpoint - Sign out user
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies();
-    
+    const cookieStore = await cookies();
+
     console.log('[Logout] Processing logout request');
 
     // Clear all auth-related cookies
@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Logout] Logout error:', error);
-    
+
     // Even if there's an error, try to clear cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.delete('simpleUserSession');
     cookieStore.delete('userSession');
     cookieStore.delete('devUserSession');
-    
+
     return NextResponse.json({
       success: true,
       message: 'Logged out (with errors)'

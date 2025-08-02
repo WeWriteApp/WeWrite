@@ -57,6 +57,11 @@ export default function DesktopFloatingActionButton() {
       return true;
     }
 
+    // Hide on checkout pages to maximize conversion
+    if (pathname.includes('/checkout')) {
+      return true;
+    }
+
     // Individual content pages at /id/ (single segment routes that aren't NavPages)
     const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',

@@ -23,7 +23,7 @@ import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
-// import NavigationOptimizer from "./components/navigation/NavigationOptimizer" // DISABLED - causing excessive triggers
+// import SimpleNavigationOptimizer from "./components/navigation/SimpleNavigationOptimizer" // Temporarily disabled
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
