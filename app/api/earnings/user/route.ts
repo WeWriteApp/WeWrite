@@ -50,22 +50,22 @@ async function getUnfundedEarningsForUser(userId: string) {
     if (noSubscriptionUsdCents > 0) sources.push('users without subscriptions');
 
     const message = sources.length > 0
-      ? `You have ${totalUnfundedTokens} unfunded tokens from ${sources.join(' and ')}. These tokens will become funded when those users sign up and subscribe.`
-      : 'No unfunded tokens found.';
+      ? `You have $${totalUnfundedUsdValue.toFixed(2)} unfunded earnings from ${sources.join(' and ')}. These will become funded when those users sign up and subscribe.`
+      : 'No unfunded earnings found.';
 
     return {
-      totalUnfundedTokens,
+      totalUnfundedUsdCents,
       totalUnfundedUsdValue,
-      loggedOutTokens,
+      loggedOutUsdCents,
       loggedOutUsdValue,
-      noSubscriptionTokens,
+      noSubscriptionUsdCents,
       noSubscriptionUsdValue,
       allocations: loggedOutAllocations.map(allocation => ({
         resourceType: 'page',
         resourceId: allocation.pageId,
         resourceTitle: allocation.pageTitle,
-        tokens: allocation.tokens,
-        usdValue: allocation.tokens * 0.1,
+        usdCents: allocation.usdCents,
+        usdValue: allocation.usdCents / 100,
         source: 'logged_out',
         timestamp: allocation.timestamp
       })),
@@ -74,14 +74,71 @@ async function getUnfundedEarningsForUser(userId: string) {
   } catch (error) {
     console.error('Error getting unfunded earnings:', error);
     return {
-      totalUnfundedTokens: 0,
+      totalUnfundedUsdCents: 0,
       totalUnfundedUsdValue: 0,
-      loggedOutTokens: 0,
+      loggedOutUsdCents: 0,
       loggedOutUsdValue: 0,
-      noSubscriptionTokens: 0,
+      noSubscriptionUsdCents: 0,
       noSubscriptionUsdValue: 0,
       allocations: [],
       message: 'Error loading unfunded earnings'
+    };
+  }
+}
+
+/**
+ * Get incoming USD allocations for a user (their earnings)
+ */
+async function getIncomingAllocationsForUser(userId: string) {
+  try {
+    const admin = await import('../../../firebase/firebaseAdmin');
+    const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
+    const { getCurrentMonth } = await import('../../../utils/usdConstants');
+    const { centsToDollars } = await import('../../../utils/formatCurrency');
+
+    const firebaseAdmin = admin.getFirebaseAdmin();
+    const db = firebaseAdmin.firestore();
+    const currentMonth = getCurrentMonth();
+
+    // Get all allocations where this user is the recipient
+    const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+    const allocationsQuery = allocationsRef
+      .where('recipientUserId', '==', userId)
+      .where('month', '==', currentMonth)
+      .where('status', '==', 'active');
+
+    const snapshot = await allocationsQuery.get();
+
+    let totalUsdCents = 0;
+    const allocations = [];
+
+    snapshot.forEach(doc => {
+      const allocation = doc.data();
+      totalUsdCents += allocation.usdCents || 0;
+
+      allocations.push({
+        id: doc.id,
+        resourceType: allocation.resourceType,
+        resourceId: allocation.resourceId,
+        usdCents: allocation.usdCents,
+        usdValue: centsToDollars(allocation.usdCents),
+        fromUserId: allocation.userId,
+        month: allocation.month,
+        createdAt: allocation.createdAt
+      });
+    });
+
+    return {
+      totalUsdCents,
+      totalUsdValue: centsToDollars(totalUsdCents),
+      allocations
+    };
+  } catch (error) {
+    console.error('Error getting incoming allocations:', error);
+    return {
+      totalUsdCents: 0,
+      totalUsdValue: 0,
+      allocations: []
     };
   }
 }
@@ -129,23 +186,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Get USD earnings data (new system)
-    const usdBalance = await ServerUsdService.getWriterUsdBalance(userId);
-    const usdAllocations = await ServerUsdService.getAllocationsToUser(userId);
+    const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
+
+    // Get incoming allocations (earnings) to this user
+    const incomingAllocations = await getIncomingAllocationsForUser(userId);
 
     // Get unfunded USD allocations
     const unfundedEarnings = await getUnfundedEarningsForUser(userId);
 
     // Calculate totals from USD system
-    const pendingBalance = usdAllocations.totalUsdValue || 0;
-    const availableBalance = usdBalance?.availableUsdValue || 0;
-    const totalEarnings = (usdBalance?.totalUsdEarned || 0) + pendingBalance;
+    const pendingBalance = incomingAllocations.totalUsdValue || 0;
+    const availableBalance = 0; // TODO: Implement available balance for payouts
+    const totalEarnings = pendingBalance;
 
     const earnings = {
       totalEarnings,
       availableBalance,
       pendingBalance,
       hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0 || unfundedEarnings.totalUnfundedUsdValue > 0,
-      pendingAllocations: usdAllocations.allocations || [],
+      pendingAllocations: incomingAllocations.allocations || [],
       unfundedEarnings
     };
 
