@@ -55,13 +55,29 @@ export async function GET(request: NextRequest) {
       const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
 
       if (useDevAuth) {
+        // Even in dev mode, we need to get fresh emailVerified status from Firebase
+        // to ensure users see updated verification status after verifying their email
+        const admin = getFirebaseAdmin();
+        const adminAuth = admin.auth();
+
+        let emailVerified = sessionData.emailVerified || false;
+
+        try {
+          // Get fresh emailVerified status from Firebase
+          const userRecord = await adminAuth.getUser(sessionData.uid);
+          emailVerified = userRecord.emailVerified;
+          console.log(`[Session] Dev auth: Fresh emailVerified status for ${sessionData.email}: ${emailVerified}`);
+        } catch (firebaseError) {
+          console.warn('[Session] Dev auth: Could not fetch fresh emailVerified status, using cached:', emailVerified);
+        }
+
         const user: User = {
           uid: sessionData.uid,
           email: sessionData.email,
           username: sessionData.username || '',
           displayName: sessionData.displayName || '',
           photoURL: sessionData.photoURL,
-          emailVerified: sessionData.emailVerified || false,
+          emailVerified: emailVerified,
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString()
         };
