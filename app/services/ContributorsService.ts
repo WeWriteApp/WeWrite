@@ -35,7 +35,15 @@ class ContributorsService {
       );
 
       // Subscribe to changes in pledges
-      const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
+      // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Contributors real-time listener disabled');
+
+    // Return mock data and no-op unsubscribe
+    setTimeout(() => callback([]), 100);
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
+    const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
         // Count unique contributors (pledgers)
         const uniqueContributors = new Set<string>();
         snapshot.forEach(doc => {
@@ -80,7 +88,15 @@ class ContributorsService {
       );
 
       return new Promise((resolve, reject) => {
-        const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
+        // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Contributors real-time listener disabled');
+
+    // Return mock data and no-op unsubscribe
+    setTimeout(() => callback([]), 100);
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
+    const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
           // Count unique contributors (pledgers)
           const uniqueContributors = new Set<string>();
           snapshot.forEach(doc => {

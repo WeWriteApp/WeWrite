@@ -98,6 +98,14 @@ export class TokenService {
     const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscription', 'current');
 
     // Listen to both balance and subscription changes
+    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Token balance real-time listener disabled');
+
+    // Return mock data and no-op unsubscribe
+    setTimeout(() => callback({ balance: 0, allocatedTokens: 0, availableTokens: 0 }), 100);
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
     const unsubscribeBalance = onSnapshot(balanceRef, async (balanceDoc) => {
       try {
         if (balanceDoc.exists()) {

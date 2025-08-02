@@ -3,9 +3,10 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-// Firebase imports removed - using Firestore instead of Realtime Database
-import { listenToPageById, getPageById } from "../../firebase/database";
+// OPTIMIZATION: Use optimized data fetching instead of real-time listeners
+import { getPageById } from "../../firebase/database";
 import { getPageVersions, getPageVersionById } from "../../services/versionService";
+import { getOptimizedPageData } from "../../utils/readOptimizer";
 import { recordPageView } from "../../firebase/pageViews";
 import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
 import { useAuth } from '../../providers/AuthProvider';
@@ -326,61 +327,51 @@ export default function PageView({
       pageLogger.debug('Loading diff data', { versionId });
       loadDiffData();
     } else {
-      pageLogger.debug('Setting up page loading with optimized API approach', { pageId });
+      pageLogger.debug('Setting up page loading with optimized data fetching', { pageId });
 
-      // OPTIMIZATION: Always use API fallback first for faster loading
-      // Real-time listeners are disabled for cost optimization anyway
-      pageLogger.debug('Using optimized API approach for faster loading', { pageId });
-      tryApiFallback();
+      // OPTIMIZATION: Use optimized data fetching with aggressive caching
+      loadOptimizedPageData();
     }
 
-    // DISABLED: Firebase listener approach (was causing slow loads)
-    // Real-time listeners are disabled in the database layer for cost optimization
-    /*
-      // Try Firebase listener first, with aggressive fallback to API
-      let hasReceivedData = false;
+    // Function to load page data using optimized caching
+    const loadOptimizedPageData = async () => {
+      try {
+        console.log('🔍 PageView: Using optimized data fetching for page:', pageId);
 
-      // Set up Firebase listener for live page
-      const unsubscribe = listenToPageById(pageId, (data) => {
+        // Use optimized page data fetching with aggressive caching
+        const data = await getOptimizedPageData(pageId, user?.uid);
+
         if (data.error) {
-          pageLogger.warn('Page load error', { error: data.error, pageId });
-        } else {
-          console.log('🔍 PageView: Firebase listener - Page data received', {
-            hasPageData: !!(data.pageData || data),
-            hasVersionData: !!data.versionData,
-            pageData: data.pageData || data,
-            content: (data.pageData || data)?.content,
-            contentType: typeof (data.pageData || data)?.content,
-            contentLength: (data.pageData || data)?.content?.length || 0
+          pageLogger.warn('Optimized page load error', { error: data.error, pageId });
+          setError(data.error);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('🔍 PageView: Optimized data received', {
+          hasPageData: !!data.pageData,
+          hasVersionData: !!data.versionData,
+          pageData: data.pageData,
+          content: data.pageData?.content,
+          contentType: typeof data.pageData?.content,
+          contentLength: data.pageData?.content?.length || 0
+        });
+
+        const pageData = data.pageData;
+        const versionData = data.versionData;
+
+        setPage(pageData);
+        if (pageData.title !== title) {
+          pageLogger.debug('Title updated from page data', {
+            oldTitle: title,
+            newTitle: pageData.title
           });
         }
 
-        if (data.error) {
-          // If Firebase listener fails, try API fallback
-          if (!hasReceivedData) {
-            pageLogger.debug('Firebase listener failed, trying API fallback', { pageId });
-            tryApiFallback();
-          } else {
-            setError(data.error);
-            setIsLoading(false);
-          }
-        } else {
-          hasReceivedData = true;
-          clearTimeout(fallbackTimeout);
-          const pageData = data.pageData || data;
-          const versionData = data.versionData;
-
-          setPage(pageData);
-          if (pageData.title !== title) {
-            pageLogger.debug('Title updated from page data', {
-              oldTitle: title,
-              newTitle: pageData.title
-            });
-          }
-          setTitle(pageData.title || '');
-          setOriginalTitle(pageData.title || '');
-          setCustomDate(pageData.customDate || null);
-          setLocation(pageData.location || null);
+        setTitle(pageData.title || '');
+        setOriginalTitle(pageData.title || '');
+        setCustomDate(pageData.customDate || null);
+        setLocation(pageData.location || null);
 
           // Parse content - try page content first, then version content
           let contentToUse = pageData.content;

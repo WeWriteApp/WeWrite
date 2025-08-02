@@ -123,6 +123,14 @@ export class FeeConfigurationService {
     return () => {};
 
     /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
+    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Fee configuration real-time listener disabled');
+
+    // Return mock data and no-op unsubscribe
+    setTimeout(() => callback(null), 100);
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
     return onSnapshot(
       doc(db, getCollectionName(this.COLLECTION_NAME), this.CONFIG_DOC_ID),
       (doc) => {

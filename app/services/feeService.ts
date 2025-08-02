@@ -45,6 +45,12 @@ class FeeService {
     /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
     const feeDocRef = doc(db, 'systemConfig', 'feeStructure');
 
+    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Fee service real-time listener disabled');
+    this.unsubscribe = () => {};
+    return;
+
+    /* DISABLED FOR COST OPTIMIZATION
     this.unsubscribe = onSnapshot(feeDocRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();

@@ -18,6 +18,7 @@ import { usePWA } from '../providers/PWAProvider';
 import Link from 'next/link';
 import { UserManagement } from '../components/admin/UserManagement';
 import { PayoutFlowValidator } from '../components/admin/PayoutFlowValidator';
+import ReadOptimizationDashboard from '../components/admin/ReadOptimizationDashboard';
 import { isAdmin } from '../utils/isAdmin';
 
 interface User {
@@ -39,7 +40,7 @@ export default function AdminPage() {
 
 
   // Valid tab values for hash navigation
-  const validTabs = ['features', 'users', 'tools'];
+  const validTabs = ['features', 'users', 'tools', 'performance'];
   const defaultTab = 'features';
 
   // User management state

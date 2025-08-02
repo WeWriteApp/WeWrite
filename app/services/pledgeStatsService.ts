@@ -125,7 +125,15 @@ export const subscribeToPagePledgeStats = (
         where('status', 'in', ['active', 'completed'])
       );
 
-      return onSnapshot(pledgesQuery, (querySnapshot) => {
+      // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled');
+
+    // Return mock data and no-op unsubscribe
+    setTimeout(() => callback({ totalPledges: 0, totalAmount: 0, pledges: [] }), 100);
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
+    return onSnapshot(pledgesQuery, (querySnapshot) => {
         const uniqueSponsors = new Set<string>();
         let totalPledgedTokens = 0;
 
@@ -170,6 +178,14 @@ export const subscribeToPagePledgeStats = (
       where('tokens', '>', 0)
     );
 
+    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
+    console.warn('🚨 COST OPTIMIZATION: Allocations stats real-time listener disabled');
+
+    // Return mock data and no-op unsubscribe
+    setTimeout(() => callback({ totalAllocations: 0, totalAmount: 0, allocations: [] }), 100);
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
     return onSnapshot(allocationsQuery, (querySnapshot) => {
       const uniqueSponsors = new Set<string>();
       let totalPledgedTokens = 0;
