@@ -15,6 +15,7 @@ import {
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocationModal } from './UsdAllocationModal';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 
 interface PledgeBarProps {
   pageId?: string;
