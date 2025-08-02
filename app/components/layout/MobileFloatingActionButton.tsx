@@ -6,6 +6,35 @@ import { Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../providers/AuthProvider';
+import { isPWA } from '../../utils/pwa-detection';
+
+// Helper function to check if device is iOS
+const isIOSDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(window.navigator.userAgent);
+};
+
+// Helper function to get appropriate bottom spacing for PWA (same as MobileBottomNav)
+const getPWABottomSpacing = (isPWAMode: boolean): string => {
+  if (!isPWAMode) return '0';
+
+  // For iOS PWA, use safe-area-inset-bottom to handle home indicator + extra padding
+  if (isIOSDevice()) {
+    return 'max(env(safe-area-inset-bottom), 16px)';
+  }
+
+  // For Android PWA, use safe-area-inset-bottom + extra padding
+  return 'max(env(safe-area-inset-bottom), 12px)';
+};
+
+// Helper function to convert CSS calc string to pixels for calculation
+const getPWABottomSpacingPixels = (isPWAMode: boolean): number => {
+  if (!isPWAMode) return 0;
+
+  // Return estimated pixel values for calculation
+  // iOS typically has ~34px safe area, Android ~12px
+  return isIOSDevice() ? 34 : 12;
+};
 
 /**
  * MobileFloatingActionButton Component
@@ -27,6 +56,7 @@ export default function MobileFloatingActionButton() {
   // Track mobile toolbar visibility state
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isPWAMode, setIsPWAMode] = useState(false);
 
   // Check if current route is a ContentPage (should hide FAB when pledge bar is visible)
   const isContentPage = React.useMemo(() => {
@@ -148,6 +178,39 @@ export default function MobileFloatingActionButton() {
     setLastScrollY(0);
   }, [pathname]);
 
+  // Check PWA mode on mount and window resize
+  useEffect(() => {
+    const checkPWAMode = () => {
+      setIsPWAMode(isPWA());
+    };
+
+    checkPWAMode();
+
+    // Listen for display mode changes
+    const mediaQueries = [
+      '(display-mode: standalone)',
+      '(display-mode: fullscreen)',
+      '(display-mode: minimal-ui)',
+      '(display-mode: window-controls-overlay)'
+    ];
+
+    const listeners: (() => void)[] = [];
+
+    mediaQueries.forEach(query => {
+      const mediaQuery = window.matchMedia(query);
+      const listener = () => setTimeout(checkPWAMode, 100);
+      mediaQuery.addEventListener('change', listener);
+      listeners.push(() => mediaQuery.removeEventListener('change', listener));
+    });
+
+    window.addEventListener('resize', checkPWAMode);
+
+    return () => {
+      window.removeEventListener('resize', checkPWAMode);
+      listeners.forEach(cleanup => cleanup());
+    };
+  }, []);
+
   const handleNewPageClick = () => {
     router.push('/new?source=mobile-fab');
   };
@@ -179,8 +242,10 @@ export default function MobileFloatingActionButton() {
         "md:hidden" // Only show on mobile
       )}
       style={{
-        // Dynamic bottom positioning based on mobile toolbar visibility - moved up a bit
-        bottom: isMobileNavVisible ? '104px' : '32px', // 104px when toolbar visible, 32px when hidden
+        // Dynamic bottom positioning based on mobile toolbar visibility and PWA padding
+        bottom: isMobileNavVisible
+          ? `calc(104px + ${getPWABottomSpacing(isPWAMode)})` // 104px + PWA padding when toolbar visible
+          : `calc(32px + ${getPWABottomSpacing(isPWAMode)})`, // 32px + PWA padding when hidden
         transition: 'bottom 300ms ease-in-out'
       }}
       aria-label="Create new page"

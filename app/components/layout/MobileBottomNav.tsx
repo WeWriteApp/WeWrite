@@ -621,13 +621,13 @@ export default function MobileBottomNav() {
       {/* Single bottom navigation component that expands upward */}
       <div
         className={cn(
-          "md:hidden fixed left-0 right-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
+          "md:hidden fixed left-0 right-0 bottom-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-all duration-300 ease-in-out",
           (isVisible && !shouldHideNav) ? "translate-y-0" : "translate-y-full",
           "touch-manipulation"
         )}
         style={{
-          bottom: getPWABottomSpacing(isPWAMode)
+          paddingBottom: getPWABottomSpacing(isPWAMode)
         }}
       >
         {/* Navigation progress indicator */}
