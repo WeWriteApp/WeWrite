@@ -44,8 +44,31 @@ export async function POST(request: NextRequest) {
     // Initialize Stripe
     const stripe = new Stripe(getStripeSecretKey());
 
-    // Get account status from Stripe
-    const account = await stripe.accounts.retrieve(stripeConnectedAccountId);
+    // Get account status from Stripe with error handling
+    let account;
+    try {
+      account = await stripe.accounts.retrieve(stripeConnectedAccountId);
+    } catch (stripeError: any) {
+      console.error('Error retrieving Stripe account:', stripeError);
+
+      // Handle specific Stripe errors
+      if (stripeError.code === 'account_invalid') {
+        // Account doesn't exist or access was revoked - clear it from user data
+        await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).update({
+          stripeConnectedAccountId: null,
+          payoutSetupComplete: false
+        });
+
+        return NextResponse.json({
+          error: 'Stripe account no longer accessible. Please set up your bank account again.',
+          needsSetup: true,
+          accountCleared: true
+        }, { status: 400 });
+      }
+
+      // Re-throw other errors
+      throw stripeError;
+    }
 
     // Get bank account details from external accounts
     let bankAccountDetails = null;

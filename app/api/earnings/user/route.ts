@@ -1,52 +1,53 @@
 /**
  * User Earnings API Endpoint
- * 
+ *
+ * UPDATED: Now uses USD-based system instead of tokens
+ *
  * Provides a unified view of user earnings including:
- * - Pending token allocations (current month)
- * - Available token balance (ready for payout)
- * - Historical earnings
+ * - Pending USD allocations (current month)
+ * - Available USD balance (ready for payout)
+ * - Historical earnings in USD
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../../utils/firebase-error-handler';
-import { PendingTokenAllocationService } from '../../../services/pendingTokenAllocationService';
-import { TokenEarningsService } from '../../../services/tokenEarningsService';
-import { ServerTokenService } from '../../../services/tokenService.server';
+import { ServerUsdService } from '../../../services/usdService.server';
 import {
-  getLoggedOutTokenBalance,
-  getUserTokenBalance
-} from '../../../utils/simulatedTokens';
+  getLoggedOutUsdBalance,
+  getUserUsdBalance
+} from '../../../utils/simulatedUsd';
 
 /**
  * Get unfunded earnings for a user from logged-out users and users without subscriptions
+ * UPDATED: Now uses USD system instead of tokens
  */
 async function getUnfundedEarningsForUser(userId: string) {
   try {
     // Get user's pages to check for allocations
     const userPages = await getUserPageIds(userId);
 
-    // Get unfunded allocations from logged-out users
-    const loggedOutBalance = getLoggedOutTokenBalance();
+    // Get unfunded allocations from logged-out users (now in USD)
+    const loggedOutBalance = getLoggedOutUsdBalance();
     const loggedOutAllocations = loggedOutBalance.allocations.filter(
       allocation => userPages.includes(allocation.pageId)
     );
 
-    // Calculate totals
-    const loggedOutTokens = loggedOutAllocations.reduce((sum, allocation) => sum + allocation.tokens, 0);
-    const loggedOutUsdValue = loggedOutTokens * 0.1; // 10 tokens = $1
+    // Calculate totals in USD cents
+    const loggedOutUsdCents = loggedOutAllocations.reduce((sum, allocation) => sum + allocation.usdCents, 0);
+    const loggedOutUsdValue = loggedOutUsdCents / 100; // Convert cents to dollars
 
     // TODO: Add logic for users without subscriptions when that data is available
-    const noSubscriptionTokens = 0;
+    const noSubscriptionUsdCents = 0;
     const noSubscriptionUsdValue = 0;
 
-    const totalUnfundedTokens = loggedOutTokens + noSubscriptionTokens;
+    const totalUnfundedUsdCents = loggedOutUsdCents + noSubscriptionUsdCents;
     const totalUnfundedUsdValue = loggedOutUsdValue + noSubscriptionUsdValue;
 
     // Create message
     const sources = [];
-    if (loggedOutTokens > 0) sources.push('logged-out users');
-    if (noSubscriptionTokens > 0) sources.push('users without subscriptions');
+    if (loggedOutUsdCents > 0) sources.push('logged-out users');
+    if (noSubscriptionUsdCents > 0) sources.push('users without subscriptions');
 
     const message = sources.length > 0
       ? `You have ${totalUnfundedTokens} unfunded tokens from ${sources.join(' and ')}. These tokens will become funded when those users sign up and subscribe.`
@@ -127,42 +128,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get pending allocations from new system
-    const pendingData = await PendingTokenAllocationService.getRecipientPendingAllocations(userId);
+    // Get USD earnings data (new system)
+    const usdBalance = await ServerUsdService.getWriterUsdBalance(userId);
+    const usdAllocations = await ServerUsdService.getAllocationsToUser(userId);
 
-    // Get pending allocations from old system (current token allocations)
-    const oldSystemAllocations = await ServerTokenService.getAllocationsToUser(userId);
-
-    // Get token balance (available for payout)
-    const tokenBalance = await TokenEarningsService.getWriterTokenBalance(userId);
-
-    // Get unfunded token allocations
+    // Get unfunded USD allocations
     const unfundedEarnings = await getUnfundedEarningsForUser(userId);
 
-    // Calculate totals from both systems
-    const newSystemPendingBalance = pendingData.totalPendingUsdValue || 0;
-    const oldSystemPendingBalance = oldSystemAllocations.totalUsdValue || 0;
-    const totalPendingBalance = newSystemPendingBalance + oldSystemPendingBalance;
-
-    const availableBalance = tokenBalance?.availableUsdValue || 0;
-    const totalEarnings = (tokenBalance?.totalUsdEarned || 0) + totalPendingBalance;
+    // Calculate totals from USD system
+    const pendingBalance = usdAllocations.totalUsdValue || 0;
+    const availableBalance = usdBalance?.availableUsdValue || 0;
+    const totalEarnings = (usdBalance?.totalUsdEarned || 0) + pendingBalance;
 
     const earnings = {
       totalEarnings,
       availableBalance,
-      pendingBalance: totalPendingBalance,
-      hasEarnings: totalEarnings > 0 || availableBalance > 0 || totalPendingBalance > 0 || unfundedEarnings.totalUnfundedTokens > 0,
-      pendingAllocations: [
-        ...(pendingData.allocations || []),
-        ...(oldSystemAllocations.allocations || [])
-      ],
-      timeUntilDeadline: pendingData.timeUntilDeadline,
+      pendingBalance,
+      hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0 || unfundedEarnings.totalUnfundedUsdValue > 0,
+      pendingAllocations: usdAllocations.allocations || [],
       unfundedEarnings
     };
 
     return NextResponse.json({
       success: true,
-      earnings
+      data: earnings
     });
 
   } catch (error) {

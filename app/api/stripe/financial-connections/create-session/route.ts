@@ -11,6 +11,16 @@ console.log('Financial Connections API loaded');
 
 export async function POST(request: NextRequest) {
   try {
+    // CRITICAL FIX: Check if Financial Connections is enabled
+    if (!process.env.STRIPE_FINANCIAL_CONNECTIONS_ENABLED) {
+      console.log('📭 [FINANCIAL CONNECTIONS] Feature disabled - registration required');
+      return NextResponse.json({
+        error: 'Financial Connections not available',
+        message: 'Bank account linking is temporarily unavailable. Please use manual payout setup.',
+        code: 'FEATURE_DISABLED'
+      }, { status: 503 });
+    }
+
     // Authenticate user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
