@@ -106,19 +106,7 @@ export function RemainingUsdCounter({
         )}
       </svg>
 
-      {/* Center Text */}
-      <div
-        className={`absolute inset-0 flex items-center justify-center text-sm font-medium ${textColor}`}
-        style={{ fontSize: `${Math.max(12, size * 0.35)}px` }}
-      >
-        {isLoadingState ? (
-          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-        ) : (
-          <span className="text-center leading-none">
-            {displayText}
-          </span>
-        )}
-      </div>
+
     </div>
   );
 }
