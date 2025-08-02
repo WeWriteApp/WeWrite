@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
       // No payment method - create setup intent for payment method collection
       const setupIntent = await stripe.setupIntents.create({
         customer: customer.id,
-        payment_method_types: ['card'],
+        // STRIPE LINK: Add Link support along with card payments
+        payment_method_types: ['card', 'link'],
         usage: 'off_session',
         metadata: {
           userId: userId,

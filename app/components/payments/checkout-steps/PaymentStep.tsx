@@ -39,13 +39,15 @@ interface PaymentStepProps {
 
 /**
  * PaymentStep - Embedded payment form using Stripe Elements
- * 
+ *
  * Features:
  * - Stripe Payment Element for secure card collection
+ * - Stripe Link integration for one-click payments
  * - Address Element for billing information
  * - Real-time validation and error handling
  * - PWA-compatible (no external redirects)
  * - Subscription setup with proper metadata
+ * - Support for existing payment methods and upgrades/downgrades
  */
 export function PaymentStep({
   selectedPlan,
@@ -543,7 +545,13 @@ export function PaymentStep({
                       <PaymentElement
                         options={{
                           layout: 'tabs',
-                          paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
+                          // STRIPE LINK: Add Link as the first payment method for easy access
+                          paymentMethodOrder: ['link', 'card', 'apple_pay', 'google_pay'],
+                          fields: {
+                            billingDetails: {
+                              email: 'auto' // Auto-populate email for Link
+                            }
+                          }
                         }}
                         onChange={handlePaymentElementChange}
                       />
@@ -556,7 +564,13 @@ export function PaymentStep({
                   <PaymentElement
                     options={{
                       layout: 'tabs',
-                      paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
+                      // STRIPE LINK: Add Link as the first payment method for easy access
+                      paymentMethodOrder: ['link', 'card', 'apple_pay', 'google_pay'],
+                      fields: {
+                        billingDetails: {
+                          email: 'auto' // Auto-populate email for Link
+                        }
+                      }
                     }}
                     onChange={handlePaymentElementChange}
                   />

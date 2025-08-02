@@ -105,6 +105,16 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
       {/* Content - FIXED: Added proper spacing to prevent clipping behind fixed button */}
       <div className="px-4 py-6 pb-24">{/* pb-24 (96px) prevents Stripe form from being hidden behind fixed subscribe button */}
         <PaymentElement
+          options={{
+            layout: 'tabs',
+            // STRIPE LINK: Add Link as the first payment method for easy access
+            paymentMethodOrder: ['link', 'card', 'apple_pay', 'google_pay'],
+            fields: {
+              billingDetails: {
+                email: 'auto' // Auto-populate email for Link
+              }
+            }
+          }}
           onChange={(event) => {
             setIsFormComplete(event.complete);
             if (event.error) {
