@@ -305,6 +305,126 @@ export default function PageView({
     }
   }, [params, unwrappedParams]);
 
+  // Version loading functions - declared before useEffect to avoid hoisting issues
+  const loadVersionData = async () => {
+    try {
+      console.log('Loading version data for pageId:', pageId, 'versionId:', versionId);
+
+      // Use the new API-based version service
+      const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const versions = result.data?.versions || result.versions || [];
+        const version = versions.find(v => v.id === versionId);
+
+        if (version) {
+          setVersionData(version);
+
+          // Parse version content
+          let versionContent = version.content;
+          if (typeof versionContent === 'string') {
+            try {
+              versionContent = JSON.parse(versionContent);
+            } catch (error) {
+              console.error("Error parsing version content:", error);
+              versionContent = [{ type: "paragraph", children: [{ text: versionContent }] }];
+            }
+          }
+
+          setEditorState(versionContent || [{ type: "paragraph", children: [{ text: "" }] }]);
+
+          setPage({
+            id: pageId,
+            title: version.title || 'Untitled',
+            userId: version.userId,
+            username: version.username,
+            createdAt: version.createdAt,
+            lastModified: version.createdAt,
+            isPublic: false,
+            deleted: false
+          });
+          setTitle(version.title || 'Untitled');
+        } else {
+          setError("Version not found");
+        }
+      } else {
+        setError("Failed to load version");
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error loading version:", error);
+      setError("Failed to load version");
+      setIsLoading(false);
+    }
+  };
+
+  const loadDiffData = async () => {
+    try {
+      console.log('Loading diff data for pageId:', pageId, 'versionId:', versionId, 'compareVersionId:', compareVersionId);
+
+      // Use the new API-based version service
+      const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const versions = result.data?.versions || result.versions || [];
+        const currentVersion = versions.find(v => v.id === versionId);
+        const compareVersion = compareVersionId ? versions.find(v => v.id === compareVersionId) : null;
+
+        if (currentVersion) {
+          setVersionData(currentVersion);
+          if (compareVersion) {
+            setCompareVersionData(compareVersion);
+          }
+
+          // Generate diff content using centralized diff service
+          const { calculateDiff } = await import('../../utils/diffService');
+          const diffResult = await calculateDiff(
+            currentVersion.content || '',
+            compareVersion?.content || ''
+          );
+
+          setDiffContent(diffResult);
+          setEditorState(diffResult);
+
+          setPage({
+            id: pageId,
+            title: `Diff: ${currentVersion.title || 'Untitled'}`,
+            userId: currentVersion.userId,
+            username: currentVersion.username,
+            createdAt: currentVersion.createdAt,
+            lastModified: currentVersion.createdAt,
+            isPublic: false,
+            deleted: false
+          });
+          setTitle(`Diff: ${currentVersion.title || 'Untitled'}`);
+        } else {
+          setError("Version not found for comparison");
+        }
+      } else {
+        setError("Failed to load versions for comparison");
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error loading diff:", error);
+      setError("Failed to load version comparison");
+      setIsLoading(false);
+    }
+  };
+
   // Page loading effect - OPTIMIZED for faster loading
   useEffect(() => {
     if (!pageId) {
@@ -318,20 +438,6 @@ export default function PageView({
 
     // Declare fallbackTimeout in the proper scope
     let fallbackTimeout: NodeJS.Timeout;
-
-    // If showing version or diff, load version data instead of live page
-    if (showVersion && versionId) {
-      pageLogger.debug('Loading version data', { versionId });
-      loadVersionData();
-    } else if (showDiff && versionId) {
-      pageLogger.debug('Loading diff data', { versionId });
-      loadDiffData();
-    } else {
-      pageLogger.debug('Setting up page loading with optimized data fetching', { pageId });
-
-      // OPTIMIZATION: Use optimized data fetching with aggressive caching
-      loadOptimizedPageData();
-    }
 
     // Function to load page data using optimized caching
     const loadOptimizedPageData = async () => {
@@ -447,8 +553,19 @@ export default function PageView({
         }
       };
 
-      // Load the page data
+    // If showing version or diff, load version data instead of live page
+    if (showVersion && versionId) {
+      pageLogger.debug('Loading version data', { versionId });
+      loadVersionData();
+    } else if (showDiff && versionId) {
+      pageLogger.debug('Loading diff data', { versionId });
+      loadDiffData();
+    } else {
+      pageLogger.debug('Setting up page loading with optimized data fetching', { pageId });
+
+      // OPTIMIZATION: Use optimized data fetching with aggressive caching
       loadOptimizedPageData();
+    }
 
     return () => {
       if (unsubscribeRef.current) {
@@ -518,133 +635,6 @@ export default function PageView({
       }
     }
   }, [isLoading, page, pageId, user?.uid, user, addRecentPage]);
-
-
-
-  // Version loading functions
-  const loadVersionData = async () => {
-    try {
-      console.log('Loading version data for pageId:', pageId, 'versionId:', versionId);
-
-      // Use the new API-based version service
-      const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const versions = result.data?.versions || result.versions || [];
-        console.log('Found versions:', versions.length);
-        const version = versions.find(v => v.id === versionId);
-
-        if (version) {
-          console.log('Found version:', version);
-          setVersionData(version);
-          setPage({
-            id: pageId,
-            title: version.title || 'Untitled',
-            userId: version.userId,
-            username: version.username,
-            createdAt: version.createdAt,
-            lastModified: version.createdAt,
-            isPublic: false, // Assume private for versions
-            deleted: false
-          });
-          setTitle(version.title || 'Untitled');
-
-          // Parse version content
-          if (version.content) {
-            try {
-              const parsedContent = typeof version.content === 'string'
-                ? JSON.parse(version.content)
-                : version.content;
-              setEditorState(parsedContent);
-            } catch (error) {
-              console.error("Error parsing version content:", error);
-              setEditorState([{ type: "paragraph", children: [{ text: "Error loading version content." }] }]);
-            }
-          } else {
-            setEditorState([{ type: "paragraph", children: [{ text: "This version has no content" }] }]);
-          }
-        } else {
-          console.error("Version not found in versions list");
-          setError("Version not found");
-        }
-      } else {
-        console.error("API response not ok:", response.status);
-        setError("Failed to load version");
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error loading version:", error);
-      setError("Failed to load version");
-      setIsLoading(false);
-    }
-  };
-
-  const loadDiffData = async () => {
-    try {
-      console.log('Loading diff data for pageId:', pageId, 'versionId:', versionId, 'compareVersionId:', compareVersionId);
-
-      // Use the new API-based version service
-      const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const versions = result.data?.versions || result.versions || [];
-        const currentVersion = versions.find(v => v.id === versionId);
-        const compareVersion = compareVersionId ? versions.find(v => v.id === compareVersionId) : null;
-
-        if (currentVersion) {
-          setVersionData(currentVersion);
-          if (compareVersion) {
-            setCompareVersionData(compareVersion);
-          }
-
-          // Generate diff content using centralized diff service
-          const { calculateDiff } = await import('../../utils/diffService');
-          const diffResult = await calculateDiff(
-            currentVersion.content || '',
-            compareVersion?.content || ''
-          );
-
-          setDiffContent(diffResult);
-          setEditorState(diffResult);
-
-          setPage({
-            id: pageId,
-            title: `Diff: ${currentVersion.title || 'Untitled'}`,
-            userId: currentVersion.userId,
-            username: currentVersion.username,
-            createdAt: currentVersion.createdAt,
-            lastModified: currentVersion.createdAt,
-            isPublic: false,
-            deleted: false
-          });
-          setTitle(`Diff: ${currentVersion.title || 'Untitled'}`);
-        } else {
-          setError("Version not found for comparison");
-        }
-      } else {
-        setError("Failed to load versions for comparison");
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error loading diff:", error);
-      setError("Failed to load version comparison");
-      setIsLoading(false);
-    }
-  };
 
   // Computed values
   const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);

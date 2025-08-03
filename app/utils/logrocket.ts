@@ -94,29 +94,13 @@ class LogRocketService {
       console.log('🚀 Initializing LogRocket with app ID:',
         `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...`);
 
-      // Initialize LogRocket with app ID and selective sanitization config
+      // Initialize LogRocket with app ID and minimal sanitization for better debugging
       LogRocket.init(process.env.NEXT_PUBLIC_LOGROCKET_APP_ID, {
         dom: {
-          // Only sanitize inputs that contain sensitive financial data
-          inputSanitizer: (text: string, element: HTMLElement) => {
-            // Check if this is a sensitive financial input using the method directly
-            const isSensitive = this.isSensitiveFinancialElement(element);
-
-            if (isSensitive) {
-              console.log('🔒 LogRocket: Redacting sensitive financial input:', {
-                elementId: element.id,
-                elementName: element.getAttribute('name'),
-                elementClass: element.className,
-                textLength: text.length
-              });
-              return '*'.repeat(text.length);
-            }
-
-            // For all other inputs (page content, titles, etc.), show actual text
-            return text;
-          },
-          // Use valid textSanitizer option - 'default' allows most text but sanitizes sensitive patterns
-          textSanitizer: 'default',
+          // Disable input sanitization for debugging - we want to see all input values
+          inputSanitizer: false,
+          // Disable text sanitization to see all text content for debugging
+          textSanitizer: false,
           baseHref: null
         },
         network: {
@@ -293,54 +277,66 @@ class LogRocketService {
   }
 
   /**
-   * Capture custom messages/logs with enhanced context
+   * Capture custom messages/logs with enhanced context and increased verbosity
    */
   captureMessage(message: string, extra: Record<string, any> = {}): void {
     if (!this.isInitialized) return;
 
     try {
-      // Enhanced logging with more context
+      // Enhanced logging with more context and stack trace
       const enhancedExtra = {
         ...extra,
         timestamp: new Date().toISOString(),
         url: typeof window !== 'undefined' ? window.location.href : 'unknown',
         userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
-        environment: process.env.NODE_ENV
+        environment: process.env.NODE_ENV,
+        stackTrace: new Error().stack,
+        windowSize: typeof window !== 'undefined' ?
+          `${window.innerWidth}x${window.innerHeight}` : 'unknown',
+        viewport: typeof window !== 'undefined' ?
+          `${window.screen.width}x${window.screen.height}` : 'unknown'
       };
 
-      const sanitizedExtra = this.sanitizeEventProperties(enhancedExtra);
-      LogRocket.captureMessage(message, sanitizedExtra);
-      console.log('📝 LogRocket message captured:', message, sanitizedExtra);
+      // Reduce sanitization for debugging - only sanitize truly sensitive data
+      const minimalSanitizedExtra = this.minimalSanitizeEventProperties(enhancedExtra);
+      LogRocket.captureMessage(message, minimalSanitizedExtra);
+      console.log('📝 LogRocket message captured with enhanced context:', message, minimalSanitizedExtra);
     } catch (error) {
       console.error('❌ Failed to capture LogRocket message:', error);
     }
   }
 
   /**
-   * Log errors to LogRocket with minimal overhead (following LogRocket performance best practices)
+   * Log errors to LogRocket with enhanced context for debugging
    */
   logError(error: Error | string, context?: Record<string, any>): void {
     if (!this.isInitialized) return;
 
     try {
-      // Minimal error data to avoid performance issues
+      // Enhanced error data for better debugging
       const errorMessage = typeof error === 'string' ? error : error.message;
+      const errorStack = typeof error === 'string' ? new Error(error).stack : error.stack;
 
-      // Use LogRocket's built-in error handling instead of custom logging
-      // This respects LogRocket's circuit breakers and performance optimizations
+      // Use LogRocket's built-in error handling
       LogRocket.captureException(typeof error === 'string' ? new Error(error) : error);
 
-      // Minimal context tracking - let LogRocket handle the heavy lifting
-      if (context) {
-        LogRocket.track('app_error', {
-          errorMessage: errorMessage.substring(0, 200), // Limit message length
-          context: context.operation || 'unknown',
-          pageId: context.pageId || null
-        });
-      }
+      // Enhanced context tracking with more details
+      const enhancedContext = {
+        errorMessage: errorMessage, // Don't truncate for debugging
+        errorStack: errorStack,
+        context: context?.operation || 'unknown',
+        pageId: context?.pageId || null,
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        timestamp: new Date().toISOString(),
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
+        ...context // Include all context for debugging
+      };
+
+      LogRocket.track('app_error_detailed', enhancedContext);
+      console.error('🚨 LogRocket: Enhanced error logged:', enhancedContext);
 
     } catch (logError) {
-      // Silently fail to prevent infinite loops
+      console.error('❌ Failed to log error to LogRocket:', logError);
     }
   }
 
@@ -416,6 +412,30 @@ class LogRocketService {
   }
 
   /**
+   * Minimal sanitization for debugging - only redact truly sensitive financial data
+   */
+  private minimalSanitizeEventProperties(properties: Record<string, any>): Record<string, any> {
+    const sanitized: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(properties)) {
+      // Only redact truly sensitive financial keys
+      if (this.isTrulySensitiveKey(key)) {
+        sanitized[key] = '[REDACTED]';
+        continue;
+      }
+
+      // Sanitize nested objects
+      if (typeof value === 'object' && value !== null) {
+        sanitized[key] = this.minimalSanitizeEventProperties(value);
+      } else {
+        sanitized[key] = value;
+      }
+    }
+
+    return sanitized;
+  }
+
+  /**
    * Check if a key contains sensitive information
    */
   private isSensitiveKey(key: string): boolean {
@@ -426,6 +446,20 @@ class LogRocketService {
     ];
 
     return sensitivePatterns.some(pattern =>
+      key.toLowerCase().includes(pattern)
+    );
+  }
+
+  /**
+   * Check if a key contains truly sensitive financial information (minimal redaction for debugging)
+   */
+  private isTrulySensitiveKey(key: string): boolean {
+    const trulySensitivePatterns = [
+      'password', 'secret', 'token', 'key', 'cvv', 'pin',
+      'ssn', 'routing', 'account_number', 'card_number'
+    ];
+
+    return trulySensitivePatterns.some(pattern =>
       key.toLowerCase().includes(pattern)
     );
   }
