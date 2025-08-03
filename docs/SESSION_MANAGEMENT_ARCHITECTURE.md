@@ -91,13 +91,15 @@ sendPasswordResetEmail(auth, email)
 
 ### 3. Session Cookie Management
 
-**Purpose**: Simple session cookies for middleware compatibility.
+**Purpose**: Simple session cookies for middleware compatibility with device tracking.
 
 **Key Features**:
 - HTTP-only session cookies
 - Automatic cookie management
 - Middleware authentication
 - Server-side session validation
+- Device tracking and management
+- Multi-device session support
 
 **Cookie Structure**:
 ```typescript
@@ -107,6 +109,45 @@ interface SessionCookie {
   username: string;
   emailVerified: boolean;
 }
+```
+
+### 4. Device Management System
+
+**Purpose**: Track and manage user sessions across multiple devices for security and convenience.
+
+**Key Features**:
+- **Device Detection**: Automatic detection of device type, browser, and OS
+- **Session Tracking**: Track active sessions across multiple devices
+- **Device List**: View all logged-in devices with details
+- **Remote Logout**: Ability to log out specific devices remotely
+- **Current Device Identification**: Clear indication of current device
+- **Security Monitoring**: Track IP addresses and last activity times
+
+**Device Information Structure**:
+```typescript
+interface DeviceInfo {
+  userAgent: string;
+  platform: string;
+  browser: string;
+  os: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet';
+  location?: string;
+}
+
+interface UserSession {
+  id: string;
+  userId: string;
+  deviceInfo: DeviceInfo;
+  createdAt: string;
+  lastActiveAt: string;
+  ipAddress: string;
+  isCurrentSession: boolean;
+}
+```
+
+**API Endpoints**:
+- `GET /api/auth/sessions` - List all active sessions for current user
+- `DELETE /api/auth/sessions/[sessionId]` - Revoke specific session/device
 ```
 
 ## Provider Hierarchy
@@ -194,6 +235,47 @@ function AdminComponent() {
 }
 ```
 
+## Device Management Usage
+
+### 1. Viewing Logged-In Devices
+
+Users can view all their active sessions through the `LoggedInDevices` component:
+
+```typescript
+import LoggedInDevices from '../components/settings/LoggedInDevices';
+
+// In settings page or security section
+<LoggedInDevices />
+```
+
+**Features**:
+- Shows device type icons (desktop, mobile, tablet)
+- Displays browser and OS information
+- Shows last activity time and IP address
+- Highlights current device with special badge
+- Provides refresh functionality
+
+### 2. Managing Device Sessions
+
+**Logging Out Other Devices**:
+```typescript
+// The LoggedInDevices component handles this automatically
+// Users can click "Log out" button next to any device
+```
+
+**Security Benefits**:
+- Users can see if unknown devices are logged in
+- Ability to remotely log out compromised devices
+- Clear visibility into account access patterns
+- Enhanced security through session monitoring
+
+### 3. Implementation Details
+
+**Session Creation**: Sessions are automatically created when users log in
+**Session Updates**: Last activity is updated on each authenticated request
+**Session Cleanup**: Expired sessions are automatically cleaned up
+**Current Session Detection**: Uses session cookies to identify current device
+
 ## Best Practices
 
 ### 1. Authentication State Management
@@ -215,6 +297,12 @@ function AdminComponent() {
 - Firebase Auth handles session persistence automatically
 - Session cookies provide middleware compatibility
 - No manual session management required
+
+### 5. Device Management Security
+- Encourage users to regularly review logged-in devices
+- Provide clear instructions for logging out unknown devices
+- Monitor for suspicious login patterns
+- Implement session timeout for inactive devices
 
 ## Migration from Complex Auth
 
@@ -249,20 +337,33 @@ Firebase Auth → SimpleAuthProvider → Components
 
 ### Authentication Flow
 1. User logs in through Firebase Auth
-2. SimpleAuthProvider manages auth state
+2. AuthProvider manages auth state
 3. Session cookies created for middleware compatibility
-4. Components access auth state via `useAuth()` hook
+4. Device information is captured and stored
+5. Session tracking begins for the new device
+6. Components access auth state via `useAuth()` hook
+
+### Device Management Flow
+1. User accesses device management in settings
+2. `LoggedInDevices` component fetches active sessions via `/api/auth/sessions`
+3. Device information is displayed with security details
+4. User can revoke specific sessions via `/api/auth/sessions/[sessionId]`
+5. Revoked sessions are immediately invalidated
+6. Current session logout redirects to login page
 
 ## Conclusion
 
-The simplified authentication system provides:
+The simplified authentication system with device management provides:
 - ✅ **Reliability** - Standard Firebase Auth implementation
 - ✅ **Maintainability** - Single authentication provider
 - ✅ **Performance** - Reduced complexity and overhead
-- ✅ **Security** - Firebase Auth security features
+- ✅ **Security** - Firebase Auth security features + device tracking
 - ✅ **Simplicity** - Easy to understand and debug
+- ✅ **Device Management** - Multi-device session tracking and control
+- ✅ **User Control** - Ability to view and manage logged-in devices
+- ✅ **Enhanced Security** - Remote device logout and session monitoring
 
-This architecture replaces the complex multi-auth system with a simple, reliable solution that meets all authentication needs while being much easier to maintain and debug.
+This architecture replaces the complex multi-auth system with a simple, reliable solution that meets all authentication needs while providing enhanced security through device management capabilities. Users can now monitor their account access across devices and maintain better control over their security.
 
 1. **Firebase Auth** triggers authentication state changes
 2. **SimpleAuthProvider** receives auth changes and updates user state
