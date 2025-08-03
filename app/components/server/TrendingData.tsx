@@ -129,7 +129,7 @@ export async function getServerTrendingData(limitCount = 10) {
     // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
     if (trendingPages.length < limitCount) {
       // Query for pages with the most total views (only pages)
-      const pagesQuery = db.collection("pages")
+      const pagesQuery = db.collection(getCollectionName("pages"))
         .where("isPublic", "==", true) // Only get pages
         .where("views", ">", 0) // Only get pages with views > 0
         .orderBy("views", "desc")
@@ -163,7 +163,7 @@ export async function getServerTrendingData(limitCount = 10) {
     const pagesWithTitles = await Promise.all(
       trendingPages.map(async (page) => {
         try {
-          const pageDoc = await db.collection("pages").doc(page.id).get();
+          const pageDoc = await db.collection(getCollectionName("pages")).doc(page.id).get();
           if (pageDoc.exists) {
             const pageData = pageDoc.data();
 
@@ -176,7 +176,7 @@ export async function getServerTrendingData(limitCount = 10) {
             let username = "Missing username";
             if (pageData.userId) {
               try {
-                const userDoc = await db.collection("users").doc(pageData.userId).get();
+                const userDoc = await db.collection(getCollectionName("users")).doc(pageData.userId).get();
                 if (userDoc.exists) {
                   const userData = userDoc.data();
                   username = userData.username || "Missing username";

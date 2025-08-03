@@ -82,6 +82,15 @@ export const userProfileApi = {
       method: 'POST',
       body: JSON.stringify({ userIds })
     });
+  },
+
+  /**
+   * Logout user
+   */
+  async logout(): Promise<ApiResponse> {
+    return apiCall('/api/auth/logout', {
+      method: 'POST'
+    });
   }
 };
 
@@ -116,6 +125,18 @@ export const pageApi = {
    */
   async getPage(pageId: string): Promise<ApiResponse> {
     return apiCall(`/api/pages/${pageId}`);
+  },
+
+  /**
+   * Find similar pages based on title keywords
+   */
+  async getSimilarPages(pageId: string, title: string, maxPages: number = 3): Promise<ApiResponse> {
+    const params = new URLSearchParams({
+      pageId,
+      title,
+      maxPages: String(maxPages)
+    });
+    return apiCall(`/api/pages/similar?${params}`);
   },
 
   /**
@@ -174,6 +195,16 @@ export const pageApi = {
   async deletePage(pageId: string, permanent: boolean = false): Promise<ApiResponse> {
     return apiCall(`/api/pages?id=${pageId}&permanent=${permanent}`, {
       method: 'DELETE'
+    });
+  },
+
+  /**
+   * Append reference from source page to target page
+   */
+  async appendReference(targetPageId: string, sourcePageData: any): Promise<ApiResponse> {
+    return apiCall(`/api/pages/${targetPageId}/append-reference`, {
+      method: 'POST',
+      body: JSON.stringify({ sourcePageData })
     });
   }
 };
@@ -263,6 +294,208 @@ export async function checkUsernameAvailability(username: string) {
 }
 
 /**
+ * Replace appendPageReference from firebase/database.ts
+ */
+export async function appendPageReference(targetPageId: string, sourcePageData: any, userId?: string) {
+  const response = await pageApi.appendReference(targetPageId, sourcePageData);
+  return response.success;
+}
+
+/**
+ * Replace getPageById from firebase/database.ts
+ */
+export async function getPageById(pageId: string) {
+  const response = await pageApi.getPage(pageId);
+  if (response.success) {
+    return { pageData: response.data };
+  }
+  return { pageData: null };
+}
+
+/**
+ * Replace setCurrentVersion from firebase/database.ts
+ */
+export async function setCurrentVersion(pageId: string, versionId: string): Promise<boolean> {
+  const response = await versionsApi.setCurrentVersion(pageId, versionId);
+  return response.success;
+}
+
+/**
+ * Visitor Tracking Operations
+ */
+export const visitorTrackingApi = {
+  /**
+   * Create or update visitor session
+   */
+  async createOrUpdateSession(sessionData: {
+    fingerprintId: string;
+    userId?: string;
+    isAuthenticated?: boolean;
+    fingerprint?: any;
+    pageId?: string;
+    sessionData?: any;
+  }): Promise<ApiResponse> {
+    return apiCall('/api/visitor-tracking/session', {
+      method: 'POST',
+      body: JSON.stringify(sessionData)
+    });
+  },
+
+  /**
+   * Get existing visitor session
+   */
+  async getSession(fingerprintId: string, userId?: string): Promise<ApiResponse> {
+    const params = new URLSearchParams({ fingerprintId });
+    if (userId) params.append('userId', userId);
+    return apiCall(`/api/visitor-tracking/session?${params}`);
+  },
+
+  /**
+   * Get visitor statistics
+   */
+  async getStats(): Promise<ApiResponse> {
+    return apiCall('/api/visitor-tracking/stats');
+  },
+
+  /**
+   * Update visitor session
+   */
+  async updateSession(sessionId: string, updates: any): Promise<ApiResponse> {
+    return apiCall('/api/visitor-tracking/stats', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, updates })
+    });
+  }
+};
+
+/**
+ * Real-time Database Operations
+ */
+export const rtdbApi = {
+  /**
+   * Read data from RTDB
+   */
+  async read(path: string): Promise<ApiResponse> {
+    return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`);
+  },
+
+  /**
+   * Write data to RTDB
+   */
+  async write(path: string, data: any, method: 'set' | 'update' | 'push' | 'remove' = 'set'): Promise<ApiResponse> {
+    return apiCall('/api/rtdb', {
+      method: 'POST',
+      body: JSON.stringify({ path, data, method })
+    });
+  },
+
+  /**
+   * Update data in RTDB
+   */
+  async update(path: string, data: any): Promise<ApiResponse> {
+    return apiCall('/api/rtdb', {
+      method: 'PUT',
+      body: JSON.stringify({ path, data })
+    });
+  },
+
+  /**
+   * Remove data from RTDB
+   */
+  async remove(path: string): Promise<ApiResponse> {
+    return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`, {
+      method: 'DELETE'
+    });
+  }
+};
+
+/**
+ * Batch Operations
+ */
+export const batchApi = {
+  /**
+   * Execute batch operations
+   */
+  async executeOperations(operations: any[], options: any = {}): Promise<ApiResponse> {
+    return apiCall('/api/batch/operations', {
+      method: 'POST',
+      body: JSON.stringify({ operations, options })
+    });
+  }
+};
+
+/**
+ * Contributors Operations
+ */
+export const contributorsApi = {
+  /**
+   * Get contributor statistics for a page
+   */
+  async getContributors(pageId: string): Promise<ApiResponse> {
+    return apiCall(`/api/contributors/${pageId}`);
+  }
+};
+
+/**
+ * Visitor Validation Operations
+ */
+export const visitorValidationApi = {
+  /**
+   * Validate visitor data
+   */
+  async validateVisitor(visitorData: any, validationType?: string): Promise<ApiResponse> {
+    return apiCall('/api/visitor-validation', {
+      method: 'POST',
+      body: JSON.stringify({ visitorData, validationType })
+    });
+  },
+
+  /**
+   * Get traffic patterns
+   */
+  async getTrafficPatterns(hours: number = 24, includeDetails: boolean = false): Promise<ApiResponse> {
+    const params = new URLSearchParams({
+      hours: String(hours),
+      includeDetails: String(includeDetails)
+    });
+    return apiCall(`/api/visitor-validation/patterns?${params}`);
+  }
+};
+
+/**
+ * Daily Notes Operations
+ */
+export const dailyNotesApi = {
+  /**
+   * Get latest daily note for a user
+   */
+  async getLatestDailyNote(userId: string): Promise<ApiResponse> {
+    return apiCall(`/api/daily-notes?action=latest&userId=${userId}`);
+  },
+
+  /**
+   * Get earliest daily note for a user
+   */
+  async getEarliestDailyNote(userId: string): Promise<ApiResponse> {
+    return apiCall(`/api/daily-notes?action=earliest&userId=${userId}`);
+  },
+
+  /**
+   * Check if daily note exists for a date
+   */
+  async checkDailyNoteExists(userId: string, date: string): Promise<ApiResponse> {
+    return apiCall(`/api/daily-notes?action=exists&userId=${userId}&date=${date}`);
+  },
+
+  /**
+   * Find daily note ID for a date
+   */
+  async findDailyNoteId(userId: string, date: string): Promise<ApiResponse> {
+    return apiCall(`/api/daily-notes?action=find&userId=${userId}&date=${date}`);
+  }
+};
+
+/**
  * Replace addUsername from firebase/auth.ts
  */
 export async function addUsername(username: string) {
@@ -270,13 +503,7 @@ export async function addUsername(username: string) {
   return response.success;
 }
 
-/**
- * Replace getPageById from firebase/database/pages.ts
- */
-export async function getPageById(pageId: string, userId?: string) {
-  const response = await pageApi.getPage(pageId);
-  return response.success ? { pageData: response.data, error: null } : { pageData: null, error: response.error };
-}
+// REMOVED: Duplicate getPageById function - using the one above
 
 /**
  * REMOVED: Activity system has been completely removed
@@ -443,46 +670,7 @@ export const analyticsApi = {
   }
 };
 
-/**
- * Real-time Database Operations
- */
-export const rtdbApi = {
-  /**
-   * Read data from RTDB
-   */
-  async read(path: string): Promise<ApiResponse> {
-    return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`);
-  },
-
-  /**
-   * Write data to RTDB
-   */
-  async write(path: string, data: any): Promise<ApiResponse> {
-    return apiCall('/api/rtdb', {
-      method: 'POST',
-      body: JSON.stringify({ path, data })
-    });
-  },
-
-  /**
-   * Update data in RTDB
-   */
-  async update(path: string, data: any): Promise<ApiResponse> {
-    return apiCall('/api/rtdb', {
-      method: 'PUT',
-      body: JSON.stringify({ path, data })
-    });
-  },
-
-  /**
-   * Delete data from RTDB
-   */
-  async delete(path: string): Promise<ApiResponse> {
-    return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`, {
-      method: 'DELETE'
-    });
-  }
-};
+// REMOVED: Duplicate rtdbApi declaration - using the one above
 
 /**
  * Versions Operations
@@ -515,6 +703,16 @@ export const versionsApi = {
     return apiCall(`/api/pages/${pageId}/versions`, {
       method: 'POST',
       body: JSON.stringify(versionData)
+    });
+  },
+
+  /**
+   * Set a specific version as the current version (restore)
+   */
+  async setCurrentVersion(pageId: string, versionId: string): Promise<ApiResponse> {
+    return apiCall(`/api/pages/${pageId}/set-current-version`, {
+      method: 'POST',
+      body: JSON.stringify({ versionId })
     });
   }
 };

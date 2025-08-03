@@ -9,8 +9,8 @@
  * Updated to ensure human-readable page titles in reports.
  */
 
-import { getPageMetadata, getCachedPageTitle } from "../firebase/database";
-import { auth } from "../firebase/auth";
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { pageApi } from './apiClient';
 
 // Cache for page titles to avoid excessive database queries
 const pageTitleCache = new Map<string, string>();
@@ -482,7 +482,9 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
 
       // Even if we have the title cached, we might need to update analytics with the group name or username
       try {
-        const metadata = await getPageMetadata(pageId);
+        console.log('📊 [ANALYTICS] Fetching page metadata via API for:', pageId);
+        const response = await pageApi.getPage(pageId);
+        const metadata = response.success ? response.data : null;
         if (metadata) {
           // Check if this is a group page
           if (metadata.groupId && metadata.groupName) {
@@ -547,7 +549,9 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
 
     // Try to get the page metadata directly
     try {
-      const metadata = await getPageMetadata(pageId);
+      console.log('📊 [ANALYTICS] Fetching page metadata via API for:', pageId);
+      const response = await pageApi.getPage(pageId);
+      const metadata = response.success ? response.data : null;
       if (metadata && metadata.title && metadata.title !== 'Untitled') {
         // We have a valid title from metadata
         pageTitleCache.set(pageId, metadata.title);
@@ -607,8 +611,10 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
       console.error('Error fetching page metadata:', metadataError);
     }
 
-    // If direct metadata fetch failed, try the cached title approach
-    const title = await getCachedPageTitle(pageId);
+    // If direct metadata fetch failed, try the API approach
+    console.log('📊 [ANALYTICS] Fallback: fetching page title via API for:', pageId);
+    const fallbackResponse = await pageApi.getPage(pageId);
+    const title = fallbackResponse.success ? fallbackResponse.data?.title : null;
 
     // Cache the title for future use
     if (title && title !== 'Untitled') {
@@ -935,7 +941,9 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
       const cachedTitle = pageTitleCache.get(pageId);
 
       // Try to get the full metadata to include group name or username
-      const metadata = await getPageMetadata(pageId);
+      console.log('📊 [ANALYTICS] Fetching metadata for cached title:', pageId);
+      const response = await pageApi.getPage(pageId);
+      const metadata = response.success ? response.data : null;
 
       // Check if this is a group page
       if (metadata?.groupId && metadata?.groupName) {
@@ -976,8 +984,10 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
       }
     }
 
-    // Fetch from database
-    const metadata = await getPageMetadata(pageId);
+    // Fetch from API
+    console.log('📊 [ANALYTICS] Fetching page metadata from API:', pageId);
+    const response = await pageApi.getPage(pageId);
+    const metadata = response.success ? response.data : null;
     if (metadata?.title) {
       // Cache for future use
       pageTitleCache.set(pageId, metadata.title);

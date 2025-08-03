@@ -31,8 +31,8 @@ import {
   DialogClose
 } from "../ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
-import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
-import { app } from "../../firebase/config";
+// REMOVED: Direct Firebase RTDB imports - now using API endpoints
+import { rtdbApi } from "../../utils/apiClient";
 
 import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";

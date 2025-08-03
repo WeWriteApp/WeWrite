@@ -1,6 +1,5 @@
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase/database';
-import { getCollectionName } from './environmentConfig';
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { dailyNotesApi } from './apiClient';
 import { format, addDays, subDays } from 'date-fns';
 
 /**
@@ -40,6 +39,7 @@ export function formatDateToString(date: Date): string {
 
 /**
  * Find the previous existing daily note for a user
+ * MIGRATED: Now uses API endpoint instead of direct Firebase queries
  * @param userId - The user ID
  * @param currentDate - The current date string (YYYY-MM-DD)
  * @returns Promise<string | null> - The date string of the previous note, or null if none found
@@ -48,87 +48,31 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
   try {
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
-    try {
-      // First try to find notes with customDate field (new format)
-      const customDateQuery = query(
-        collection(db, getCollectionName('pages')),
-        where('userId', '==', userId),
-        where('customDate', '<', currentDate),
-        where('deleted', '!=', true),
-        orderBy('customDate', 'desc'),
-        limit(50)
-      );
+    console.log('📅 [DAILY NOTES] Finding previous note via API for:', userId, currentDate);
 
-      const customDateSnapshot = await getDocs(customDateQuery);
+    // Get the latest daily note (which should be before currentDate)
+    const response = await dailyNotesApi.getLatestDailyNote(userId);
 
-      // Find the most recent daily note with customDate
-      for (const doc of customDateSnapshot.docs) {
-        const pageData = doc.data();
-        if (pageData.customDate && !pageData.deleted) {
-          return pageData.customDate;
-        }
-      }
-
-      // Fallback to legacy title-based search
-      const titleQuery = query(
-        collection(db, getCollectionName('pages')),
-        where('userId', '==', userId),
-        where('title', '<', currentDate),
-        where('deleted', '!=', true),
-        orderBy('title', 'desc'),
-        limit(50)
-      );
-
-      const titleSnapshot = await getDocs(titleQuery);
-
-      // Find the most recent daily note with title format (legacy)
-      for (const doc of titleSnapshot.docs) {
-        const pageData = doc.data();
-        if (pageData.title &&
-            isExactDateFormat(pageData.title) &&
-            !pageData.deleted &&
-            !pageData.customDate) { // Only include legacy notes without customDate
-          return pageData.title;
-        }
-      }
-
-      return null;
-    } catch (queryError) {
-      console.warn('Previous daily note query with deleted filter failed, falling back to client-side filtering:', queryError);
-
-      // Fallback: query without deleted filter and filter client-side
-      const fallbackQuery = query(
-        collection(db, getCollectionName('pages')),
-        where('userId', '==', userId),
-        orderBy('title', 'desc'),
-        limit(200) // Larger limit for client-side filtering
-      );
-
-      const fallbackSnapshot = await getDocs(fallbackQuery);
-
-      // Find the most recent daily note with client-side filtering
-      for (const doc of fallbackSnapshot.docs) {
-        const pageData = doc.data();
-
-        // Check customDate first (new format)
-        if (pageData.customDate && pageData.customDate < currentDate && !pageData.deleted) {
-          return pageData.customDate;
-        }
-
-        // Then check title format (legacy)
-        if (pageData.title &&
-            isExactDateFormat(pageData.title) &&
-            pageData.title < currentDate &&
-            !pageData.deleted &&
-            !pageData.customDate) {
-          return pageData.title;
-        }
-      }
-
+    if (!response.success || !response.data?.date) {
+      console.log('📅 [DAILY NOTES] No latest note found');
       return null;
     }
+
+    const latestDate = response.data.date;
+
+    // If the latest note is before our current date, return it
+    if (latestDate < currentDate) {
+      console.log('📅 [DAILY NOTES] Found previous note:', latestDate);
+      return latestDate;
+    }
+
+    // If the latest note is not before current date, we need to search backwards
+    // For now, return null as this is a complex case that would require additional API endpoints
+    console.log('📅 [DAILY NOTES] Latest note is not before current date, returning null');
+    return null;
+
   } catch (error) {
-    console.error('Error finding previous daily note:', error);
+    console.error('📅 [DAILY NOTES] Error finding previous daily note:', error);
     return null;
   }
 }

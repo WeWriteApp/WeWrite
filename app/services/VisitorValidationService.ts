@@ -3,9 +3,8 @@
  * Provides real-time validation against known traffic patterns and suspicious activity
  */
 
-import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { getCollectionName } from '../utils/environmentConfig';
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { visitorValidationApi } from '../utils/apiClient';
 
 interface ValidationResult {
   isValid: boolean;
@@ -41,44 +40,56 @@ export class VisitorValidationService {
 
   /**
    * Validate current visitor metrics against expected patterns
+   * MIGRATED: Now uses API endpoint instead of direct Firebase queries
    */
   static async validateCurrentMetrics(): Promise<ValidationResult> {
-    const issues: string[] = [];
-    const recommendations: string[] = [];
-    let confidence = 1.0;
-
     try {
-      // Get current active accounts
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
-      const q = query(
-        visitorsRef,
-        where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))
-      );
+      console.log('🔍 [VISITOR VALIDATION] Validating current metrics via API');
 
-      const snapshot = await getDocs(q);
-      const sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Get traffic patterns from API
+      const response = await visitorValidationApi.getTrafficPatterns(1, true); // Last 1 hour with details
+
+      if (!response.success) {
+        console.error('🔍 [VISITOR VALIDATION] Failed to get traffic patterns:', response.error);
+        return {
+          isValid: false,
+          confidence: 0.1,
+          issues: ['Failed to fetch traffic data'],
+          recommendations: ['Check API connectivity']
+        };
+      }
+
+      const { patterns, totalVisitors } = response.data;
+      const issues: string[] = [];
+      const recommendations: string[] = [];
+      let confidence = 1.0;
 
       // 1. Check for unusual visitor volume
-      const currentVisitorCount = sessions.length;
-      if (currentVisitorCount > this.VALIDATION_THRESHOLDS.MAX_VISITORS_PER_MINUTE) {
-        issues.push(`Unusually high visitor count: ${currentVisitorCount}`);
+      if (totalVisitors > this.VALIDATION_THRESHOLDS.MAX_VISITORS_PER_MINUTE) {
+        issues.push(`Unusually high visitor count: ${totalVisitors}`);
         recommendations.push('Monitor for potential DDoS or bot attack');
         confidence -= 0.3;
       }
 
       // 2. Validate bot detection accuracy
-      const botSessions = sessions.filter(s => s.isBot);
-      const botPercentage = sessions.length > 0 ? botSessions.length / sessions.length : 0;
-      
-      if (botPercentage > this.VALIDATION_THRESHOLDS.MAX_BOT_PERCENTAGE) {
-        issues.push(`High bot percentage: ${(botPercentage * 100).toFixed(1)}%`);
+      const recentPattern = patterns[patterns.length - 1]; // Most recent hour
+      if (recentPattern && recentPattern.botPercentage > this.VALIDATION_THRESHOLDS.MAX_BOT_PERCENTAGE * 100) {
+        issues.push(`High bot percentage: ${recentPattern.botPercentage.toFixed(1)}%`);
         recommendations.push('Review bot detection rules and consider stricter filtering');
         confidence -= 0.2;
       }
 
-      // 3. Check for session anomalies
-      const suspiciousSessions = sessions.filter(s => {
+      // 3. Check for traffic spikes
+      if (patterns.length > 1) {
+        const avgVisitors = patterns.reduce((sum, p) => sum + p.visitorCount, 0) / patterns.length;
+        const maxVisitors = Math.max(...patterns.map(p => p.visitorCount));
+
+        if (maxVisitors > avgVisitors * 3) {
+          issues.push(`Traffic spike detected: ${maxVisitors} vs avg ${avgVisitors.toFixed(0)}`);
+          recommendations.push('Monitor for unusual activity patterns');
+          confidence -= 0.15;
+        }
+      }
         return s.pageViews > this.VALIDATION_THRESHOLDS.MAX_PAGE_VIEWS_PER_SESSION ||
                s.sessionDuration < this.VALIDATION_THRESHOLDS.MIN_SESSION_DURATION ||
                (s.userAgent && s.userAgent.length > this.VALIDATION_THRESHOLDS.SUSPICIOUS_USER_AGENT_LENGTH);

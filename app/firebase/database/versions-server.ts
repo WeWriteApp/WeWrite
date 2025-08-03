@@ -160,9 +160,10 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     console.log("✅ VERSION SERVER: Created new version with ID:", versionRef.id, "with diff data");
 
     // Update the page document with the new current version and content
+    // CRITICAL FIX: Store content in original format (object), not as string
     const pageUpdateData = {
       currentVersion: versionRef.id,
-      content: contentString,
+      content: contentForDiff, // Use original content object, not string
       lastModified: now,
       // Store diff information for recent activity display
       lastDiff: diffResult ? {
@@ -176,7 +177,8 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     console.log('🔵 VERSION SERVER: Updating page document', {
       pageId,
       currentVersion: versionRef.id,
-      contentLength: contentString.length,
+      contentType: typeof contentForDiff,
+      contentLength: typeof contentForDiff === 'string' ? contentForDiff.length : JSON.stringify(contentForDiff).length,
       hasDiff: !!diffResult
     });
 

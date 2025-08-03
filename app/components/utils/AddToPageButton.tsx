@@ -8,7 +8,7 @@ import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch'
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 
 import { useAuth } from '../../providers/AuthProvider';
-import { appendPageReference, getPageById } from '../../firebase/database';
+import { appendPageReference, getPageById } from '../../utils/apiClient';
 import { toast } from '../ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { canUserEditPage } from '../../utils/pagePermissions';

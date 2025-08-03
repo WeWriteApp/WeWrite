@@ -72,12 +72,15 @@ class VisitorTrackingService {
   private updateCount: number = 0;
   private lastBatchUpdate: number = 0;
 
+  // Session cache to reduce repeated queries
+  private sessionCache = new Map<string, { data: VisitorSession | null; timestamp: number }>();
+
   // Session management constants - OPTIMIZED for cost reduction
   private static readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
   private static readonly HEARTBEAT_INTERVAL = 120 * 1000; // 120 seconds (increased from 60s to reduce writes by 50% more)
   private static readonly INTERACTION_DEBOUNCE = 5000; // 5 seconds (increased to reduce noise)
-  private static readonly BATCH_UPDATE_THRESHOLD = 5; // Batch updates when we have 5+ changes
-  private static readonly BATCH_UPDATE_INTERVAL = 30 * 1000; // 30 seconds - industry standard
+  private static readonly BATCH_UPDATE_THRESHOLD = 10; // Batch updates when we have 10+ changes (increased for cost optimization)
+  private static readonly BATCH_UPDATE_INTERVAL = 60 * 1000; // 60 seconds (increased for cost optimization)
 
   constructor() {
     this.activeSubscriptions = new Map();
@@ -275,6 +278,13 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
    * Find existing session for the same fingerprint/user to prevent duplicates
    */
   private async findExistingSession(fingerprintId: string, userId?: string): Promise<VisitorSession | null> {
+    // COST OPTIMIZATION: Add caching to reduce repeated queries
+    const cacheKey = `visitor-session:${userId || fingerprintId}`;
+    const cached = this.sessionCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) { // 5 minute cache
+      return cached.data;
+    }
+
     try {
       const now = new Date();
       const sessionTimeout = new Date(now.getTime() - VisitorTrackingService.SESSION_TIMEOUT);
@@ -287,24 +297,33 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
         q = query(
           visitorsRef,
           where('userId', '==', userId),
-          where('lastSeen', '>=', Timestamp.fromDate(sessionTimeout))
+          where('lastSeen', '>=', Timestamp.fromDate(sessionTimeout)),
+          limit(1) // OPTIMIZATION: Only need one result
         );
       } else {
         // For anonymous users, check by fingerprint
         q = query(
           visitorsRef,
           where('fingerprint.id', '==', fingerprintId),
-          where('lastSeen', '>=', Timestamp.fromDate(sessionTimeout))
+          where('lastSeen', '>=', Timestamp.fromDate(sessionTimeout)),
+          limit(1) // OPTIMIZATION: Only need one result
         );
       }
 
       const snapshot = await getDocs(q);
+      let result = null;
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() } as VisitorSession;
+        result = { id: doc.id, ...doc.data() } as VisitorSession;
       }
 
-      return null;
+      // Cache the result
+      this.sessionCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+      });
+
+      return result;
     } catch (error) {
       // Handle permission denied errors gracefully - this is expected for private data
       if (error?.code === 'permission-denied') {
@@ -491,6 +510,14 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))
       );
 
+      // DISABLED FOR COST OPTIMIZATION - Replace with API polling
+      console.warn('🚨 COST OPTIMIZATION: Visitor tracking real-time listener disabled. Use API polling instead.');
+
+      // Return mock data and no-op unsubscribe
+      setTimeout(() => callback({ total: 0, authenticated: 0, anonymous: 0, bots: 0, legitimateVisitors: 0 }), 100);
+      return () => {};
+
+      /* DISABLED FOR COST OPTIMIZATION
       const unsubscribe = onSnapshot(q, (snapshot) => {
         let total = 0;
         let authenticated = 0;

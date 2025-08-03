@@ -26,7 +26,7 @@ class LiveReadersService {
   private updateInterval: NodeJS.Timeout | null = null;
 
   // Enhanced cost optimization settings with smart throttling - OPTIMIZED FOR COST REDUCTION
-  private readonly BATCH_INTERVAL = 30000; // 30 seconds - doubled to reduce RTDB writes by 50%
+  private readonly BATCH_INTERVAL = 60000; // 60 seconds - increased for cost optimization
   private readonly BASE_THROTTLE_INTERVAL = 20000; // 20 seconds base minimum between updates per user
   private readonly MAX_READERS_PER_PAGE = 20; // Reduced from 30 to control costs further
   private readonly CACHE_CLEANUP_INTERVAL = 300000; // 5 minutes - less frequent cleanup to reduce overhead

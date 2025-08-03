@@ -3,8 +3,8 @@
  * These functions help optimize write operations by batching them together
  */
 
-import { writeBatch, doc } from 'firebase/firestore';
-import { db } from "../firebase/database";
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { batchApi } from './apiClient';
 import { trackQueryPerformance } from './queryMonitor';
 
 // Types

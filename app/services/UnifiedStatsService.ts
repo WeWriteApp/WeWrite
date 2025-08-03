@@ -239,15 +239,15 @@ class UnifiedStatsService {
       const editorsRef = ref(this.rtdb, `pageStats/${pageId}/editors`);
       const liveReadersRef = ref(this.rtdb, `liveReaders/${pageId}/count`);
 
-      const recentChangesUnsub = onValue(recentChangesRef, () => this.handleStatsUpdate(pageId, callback));
-      const editorsUnsub = onValue(editorsRef, () => this.handleStatsUpdate(pageId, callback));
-      const liveReadersUnsub = onValue(liveReadersRef, () => this.handleStatsUpdate(pageId, callback));
+      // DISABLED FOR COST OPTIMIZATION - Replace RTDB listeners with polling
+      console.warn('🚨 COST OPTIMIZATION: RTDB real-time listeners disabled. Use API polling instead.');
 
-      unsubscribers.push(
-        () => off(recentChangesRef, 'value', recentChangesUnsub),
-        () => off(editorsRef, 'value', editorsUnsub),
-        () => off(liveReadersRef, 'value', liveReadersUnsub)
-      );
+      // Use polling instead of real-time listeners
+      const rtdbPollInterval = setInterval(() => {
+        this.handleStatsUpdate(pageId, callback);
+      }, 45000); // Poll every 45 seconds instead of real-time
+
+      unsubscribers.push(() => clearInterval(rtdbPollInterval));
 
       // DISABLED FOR COST OPTIMIZATION - Firestore listener for pledge stats
       console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled.');
@@ -259,8 +259,15 @@ class UnifiedStatsService {
         where('status', 'in', ['active', 'completed'])
       );
 
-      const pledgesUnsub = onSnapshot(pledgesQuery, () => this.handleStatsUpdate(pageId, callback));
-      unsubscribers.push(pledgesUnsub);
+      // DISABLED FOR COST OPTIMIZATION - Replace with API polling
+      console.warn('🚨 COST OPTIMIZATION: Pledges real-time listener disabled. Use API polling instead.');
+
+      // Use polling instead of real-time listener
+      const pollInterval = setInterval(() => {
+        this.handleStatsUpdate(pageId, callback);
+      }, 30000); // Poll every 30 seconds instead of real-time
+
+      unsubscribers.push(() => clearInterval(pollInterval));
 
     } catch (error) {
       console.error('Error setting up page stats subscription:', error);

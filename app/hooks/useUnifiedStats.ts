@@ -63,7 +63,7 @@ export function usePageStats(options: UsePageStatsOptions): UsePageStatsResult {
     pageId,
     realTime = false,
     autoRefresh = false,
-    refreshInterval = 60000 // 1 minute
+    refreshInterval = 300000 // 5 minutes (increased for cost optimization)
   } = options;
 
   const [stats, setStats] = useState<UnifiedPageStats | null>(null);
@@ -166,7 +166,7 @@ export function useUserStats(options: UseUserStatsOptions): UseUserStatsResult {
     userId,
     realTime = false,
     autoRefresh = false,
-    refreshInterval = 300000 // 5 minutes (less frequent than page stats)
+    refreshInterval = 600000 // 10 minutes (increased for cost optimization)
   } = options;
 
   const [stats, setStats] = useState<UnifiedUserStats | null>(null);
@@ -269,7 +269,7 @@ export function useBatchStats(options: UseBatchStatsOptions): UseBatchStatsResul
     pageIds = [],
     userIds = [],
     autoRefresh = false,
-    refreshInterval = 120000 // 2 minutes
+    refreshInterval = 600000 // 10 minutes (increased for cost optimization)
   } = options;
 
   const [result, setResult] = useState<BatchStatsResult | null>(null);
@@ -333,7 +333,7 @@ export function usePageStatsRealTime(pageId: string) {
   return usePageStats({ pageId, realTime: true });
 }
 
-export function usePageStatsWithAutoRefresh(pageId: string, refreshInterval = 60000) {
+export function usePageStatsWithAutoRefresh(pageId: string, refreshInterval = 300000) {
   return usePageStats({ pageId, autoRefresh: true, refreshInterval });
 }
 

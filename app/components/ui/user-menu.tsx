@@ -3,7 +3,8 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, User, Settings } from "lucide-react"
-import { logoutUser } from "../../firebase/auth"
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { userProfileApi } from '../../utils/apiClient';
 import { useAuth } from '../../providers/AuthProvider';
 
 import {

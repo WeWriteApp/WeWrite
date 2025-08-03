@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Shield } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
-import { doc, getDoc } from 'firebase/firestore';
 import { isAdmin } from '../../utils/isAdmin';
-import { db } from "../../firebase/database";
+// REMOVED: Direct Firebase imports - now using API endpoints
 
 interface AdminSectionProps {
   userId: string;

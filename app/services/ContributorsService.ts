@@ -1,7 +1,6 @@
-import { db } from "../firebase/config";
-import { collection, query, where, onSnapshot, Unsubscribe } from 'firebase/firestore';
-import { updateUserContributorCount } from '../firebase/counters';
-import { getCollectionName } from "../utils/environmentConfig";
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { contributorsApi } from '../utils/apiClient';
+// REMOVED: updateUserContributorCount - contributor counting disabled for cost optimization
 
 // Types
 interface ContributorStats {
@@ -10,139 +9,155 @@ interface ContributorStats {
 }
 
 /**
- * Service for managing contributor statistics and real-time updates
+ * Service for managing contributor statistics with polling (cost optimized)
+ * MIGRATED: Replaced real-time listeners with polling to reduce Firebase reads
  */
 class ContributorsService {
-  private activeSubscriptions: Map<string, Unsubscribe>;
+  private pollingIntervals: Map<string, NodeJS.Timeout>;
+  private cache: Map<string, { data: ContributorStats; timestamp: number }>;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+  private readonly POLLING_INTERVAL = 2 * 60 * 1000; // 2 minutes polling
 
   constructor() {
-    this.activeSubscriptions = new Map();
+    this.pollingIntervals = new Map();
+    this.cache = new Map();
   }
 
   /**
-   * Subscribe to contributor count changes for a user
-   * This listens to pledge changes and updates the contributor count in real-time
+   * Start polling for contributor count changes for a page
+   * MIGRATED: Replaced real-time listener with polling for cost optimization
    */
-  subscribeToContributorCount(userId: string, callback: (count: number) => void): Unsubscribe | null {
-    if (!userId || !callback) return null;
+  async startPollingContributors(pageId: string, callback: (stats: ContributorStats) => void): Promise<() => void> {
+    if (!pageId || !callback) return () => {};
 
+    console.log('👥 [CONTRIBUTORS SERVICE] Starting polling for page:', pageId);
+
+    // Initial fetch
+    await this.fetchAndCacheContributors(pageId, callback);
+
+    // Set up polling interval
+    const intervalId = setInterval(async () => {
+      await this.fetchAndCacheContributors(pageId, callback);
+    }, this.POLLING_INTERVAL);
+
+    this.pollingIntervals.set(pageId, intervalId);
+
+    // Return cleanup function
+    return () => {
+      const interval = this.pollingIntervals.get(pageId);
+      if (interval) {
+        clearInterval(interval);
+        this.pollingIntervals.delete(pageId);
+      }
+      this.cache.delete(pageId);
+      console.log('👥 [CONTRIBUTORS SERVICE] Stopped polling for page:', pageId);
+    };
+  }
+
+  /**
+   * Fetch and cache contributor data
+   */
+  private async fetchAndCacheContributors(pageId: string, callback: (stats: ContributorStats) => void): Promise<void> {
     try {
-      // Query pledges where this user is the recipient (page author)
-      const pledgesQuery = query(
-        collection(db, getCollectionName('pledges')),
-        where('metadata.authorUserId', '==', userId),
-        where('status', 'in', ['active', 'completed'])
-      );
+      // Check cache first
+      const cached = this.cache.get(pageId);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        callback(cached.data);
+        return;
+      }
 
-      // Subscribe to changes in pledges
-      // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-    console.warn('🚨 COST OPTIMIZATION: Contributors real-time listener disabled');
+      // Fetch from API
+      const response = await contributorsApi.getContributors(pageId);
+      if (response.success && response.data) {
+        const stats: ContributorStats = {
+          count: response.data.count || 0,
+          uniqueContributors: response.data.uniqueContributors || []
+        };
 
-    // Return mock data and no-op unsubscribe
-    setTimeout(() => callback([]), 100);
-    return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION
-    const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
-        // Count unique contributors (pledgers)
-        const uniqueContributors = new Set<string>();
-        snapshot.forEach(doc => {
-          const pledgeData = doc.data();
-          if (pledgeData.userId) {
-            uniqueContributors.add(pledgeData.userId);
-          }
+        // Cache the result
+        this.cache.set(pageId, {
+          data: stats,
+          timestamp: Date.now()
         });
 
-        const count = uniqueContributors.size;
-        
-        // Update the counter in the background (don't await to avoid blocking the callback)
-        updateUserContributorCount(userId).catch(error => {
-          console.error('Error updating contributor count in background:', error);
-        });
-
-        callback(count);
-      });
-
-      // Store the subscription for cleanup
-      this.activeSubscriptions.set(`${userId}-contributors`, unsubscribe);
-
-      return unsubscribe;
+        callback(stats);
+        console.log('👥 [CONTRIBUTORS SERVICE] Updated contributors for page:', pageId, 'count:', stats.count);
+      } else {
+        console.warn('👥 [CONTRIBUTORS SERVICE] Failed to fetch contributors:', response.error);
+        // Return cached data if available, otherwise empty stats
+        if (cached) {
+          callback(cached.data);
+        } else {
+          callback({ count: 0, uniqueContributors: [] });
+        }
+      }
     } catch (error) {
-      console.error('Error subscribing to contributor count:', error);
-      return null;
+      console.error('👥 [CONTRIBUTORS SERVICE] Error fetching contributors:', error);
+      callback({ count: 0, uniqueContributors: [] });
     }
   }
-
   /**
-   * Get contributor stats for a user (one-time fetch)
+   * Get contributor stats for a page (one-time fetch)
+   * MIGRATED: Now uses API endpoint instead of direct Firebase query
    */
-  async getContributorStats(userId: string): Promise<ContributorStats> {
-    if (!userId) return { count: 0, uniqueContributors: [] };
+  async getContributorStats(pageId: string): Promise<ContributorStats> {
+    if (!pageId) return { count: 0, uniqueContributors: [] };
 
     try {
-      // Query pledges where this user is the recipient (page author)
-      const pledgesQuery = query(
-        collection(db, getCollectionName('pledges')),
-        where('metadata.authorUserId', '==', userId),
-        where('status', 'in', ['active', 'completed'])
-      );
+      // Check cache first
+      const cached = this.cache.get(pageId);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.data;
+      }
 
-      return new Promise((resolve, reject) => {
-        // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-    console.warn('🚨 COST OPTIMIZATION: Contributors real-time listener disabled');
+      // Fetch from API
+      const response = await contributorsApi.getContributors(pageId);
+      if (response.success && response.data) {
+        const stats: ContributorStats = {
+          count: response.data.count || 0,
+          uniqueContributors: response.data.uniqueContributors || []
+        };
 
-    // Return mock data and no-op unsubscribe
-    setTimeout(() => callback([]), 100);
-    return () => {};
+        // Cache the result
+        this.cache.set(pageId, {
+          data: stats,
+          timestamp: Date.now()
+        });
 
-    /* DISABLED FOR COST OPTIMIZATION
-    const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
-          // Count unique contributors (pledgers)
-          const uniqueContributors = new Set<string>();
-          snapshot.forEach(doc => {
-            const pledgeData = doc.data();
-            if (pledgeData.userId) {
-              uniqueContributors.add(pledgeData.userId);
-            }
-          });
-
-          const result = {
-            count: uniqueContributors.size,
-            uniqueContributors: Array.from(uniqueContributors)
-          };
-
-          // Unsubscribe immediately since this is a one-time fetch
-          unsubscribe();
-          resolve(result);
-        }, reject);
-      });
+        return stats;
+      } else {
+        console.warn('👥 [CONTRIBUTORS SERVICE] Failed to fetch contributors:', response.error);
+        return cached?.data || { count: 0, uniqueContributors: [] };
+      }
     } catch (error) {
-      console.error('Error getting contributor stats:', error);
+      console.error('👥 [CONTRIBUTORS SERVICE] Error getting contributor stats:', error);
       return { count: 0, uniqueContributors: [] };
     }
   }
 
   /**
-   * Unsubscribe from contributor count updates for a user
+   * Stop polling for a specific page
    */
-  unsubscribeFromContributorCount(userId: string): void {
-    const subscriptionKey = `${userId}-contributors`;
-    const unsubscribe = this.activeSubscriptions.get(subscriptionKey);
-    
-    if (unsubscribe) {
-      unsubscribe();
-      this.activeSubscriptions.delete(subscriptionKey);
+  stopPolling(pageId: string): void {
+    const interval = this.pollingIntervals.get(pageId);
+    if (interval) {
+      clearInterval(interval);
+      this.pollingIntervals.delete(pageId);
     }
+    this.cache.delete(pageId);
+    console.log('👥 [CONTRIBUTORS SERVICE] Stopped polling for page:', pageId);
   }
 
   /**
-   * Clean up all active subscriptions
+   * Clean up all polling intervals and cache
    */
   cleanup(): void {
-    this.activeSubscriptions.forEach((unsubscribe) => {
-      unsubscribe();
+    this.pollingIntervals.forEach((interval) => {
+      clearInterval(interval);
     });
-    this.activeSubscriptions.clear();
+    this.pollingIntervals.clear();
+    this.cache.clear();
+    console.log('👥 [CONTRIBUTORS SERVICE] Cleaned up all polling intervals');
   }
 }
 

@@ -5,8 +5,8 @@
  * to minimize Firebase real-time database costs and improve performance.
  */
 
-import { ref, onValue, off, type Unsubscribe } from 'firebase/database';
-import { rtdb } from '../firebase/config';
+// REMOVED: Direct Firebase RTDB imports - now using API endpoints for cost optimization
+import { rtdbApi } from './apiClient';
 
 interface ConnectionConfig {
   maxConnections: number;
@@ -98,6 +98,15 @@ class RealtimeConnectionManager {
       this.optimizeConnections();
     }
 
+    // DISABLED FOR COST OPTIMIZATION - Replace with polling
+    console.warn('🚨 COST OPTIMIZATION: RTDB real-time connection disabled. Use API polling instead.');
+
+    // Return mock connection and call callback with null data
+    setTimeout(() => callback(null), 100);
+
+    const mockUnsubscribe = () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION
     // Create new connection
     try {
       const dbRef = ref(rtdb, path);
@@ -132,6 +141,10 @@ class RealtimeConnectionManager {
       this.metrics.failedConnections++;
       throw error;
     }
+    */
+
+    // Return mock connection ID for disabled real-time connections
+    return connectionId;
   }
 
   /**

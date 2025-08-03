@@ -22,8 +22,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
-// Removed old optimized subscription import - using API-first approach
-import { getDocById } from '../../firebase/database';
+// REMOVED: Direct Firebase imports - now using API-first approach
 import { PaymentMethodSetup } from './PaymentMethodSetup';
 import { FailedPaymentRecovery } from './FailedPaymentRecovery';
 import { SubscriptionModification } from './SubscriptionModification';

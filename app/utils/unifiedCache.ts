@@ -8,35 +8,35 @@
 
 // Unified TTL Configuration - Single source of truth for all cache durations
 export const UNIFIED_CACHE_TTL = {
-  // Static data that rarely changes (8 hours)
-  STATIC_DATA: 8 * 60 * 60 * 1000,
+  // Static data that rarely changes (24 hours - increased for cost optimization)
+  STATIC_DATA: 24 * 60 * 60 * 1000,
+
+  // User data (profiles, settings) (12 hours - increased for cost optimization)
+  USER_DATA: 12 * 60 * 60 * 1000,
+
+  // Page content and metadata (8 hours - increased for cost optimization)
+  PAGE_DATA: 8 * 60 * 60 * 1000,
+
+  // Analytics and statistics (6 hours - increased for cost optimization)
+  ANALYTICS_DATA: 6 * 60 * 60 * 1000,
+
+  // Search results (4 hours - increased for cost optimization)
+  SEARCH_DATA: 4 * 60 * 60 * 1000,
   
-  // User data (profiles, settings) (6 hours)
-  USER_DATA: 6 * 60 * 60 * 1000,
-  
-  // Page content and metadata (4 hours)
-  PAGE_DATA: 4 * 60 * 60 * 1000,
-  
-  // Analytics and statistics (3 hours)
-  ANALYTICS_DATA: 3 * 60 * 60 * 1000,
-  
-  // Search results (2 hours)
-  SEARCH_DATA: 2 * 60 * 60 * 1000,
-  
-  // Session data (4 hours)
-  SESSION_DATA: 4 * 60 * 60 * 1000,
-  
-  // Real-time data (30 minutes)
-  REALTIME_DATA: 30 * 60 * 1000,
-  
-  // Live stats (2 minutes)
-  LIVE_STATS: 2 * 60 * 1000,
-  
-  // Activity feeds (1 minute)
-  ACTIVITY_DATA: 1 * 60 * 1000,
-  
-  // Default fallback (2 hours)
-  DEFAULT: 2 * 60 * 60 * 1000
+  // Session data (8 hours - increased for cost optimization)
+  SESSION_DATA: 8 * 60 * 60 * 1000,
+
+  // Real-time data (2 hours - increased for cost optimization)
+  REALTIME_DATA: 2 * 60 * 60 * 1000,
+
+  // Live stats (15 minutes - increased for cost optimization)
+  LIVE_STATS: 15 * 60 * 1000,
+
+  // Activity feeds (10 minutes - increased for cost optimization)
+  ACTIVITY_DATA: 10 * 60 * 1000,
+
+  // Default fallback (4 hours - increased for cost optimization)
+  DEFAULT: 4 * 60 * 60 * 1000
 } as const;
 
 // Cache type definitions for type safety

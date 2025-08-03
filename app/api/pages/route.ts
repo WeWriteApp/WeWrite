@@ -200,9 +200,12 @@ export async function GET(request: NextRequest) {
           limit: query.limit
         }
       };
-    });
+    }, CACHE_TTL.PAGE_DATA); // Use 4-hour cache for page data
 
-    return createApiResponse(cachedResult);
+    const response = createApiResponse(cachedResult);
+    response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15 min browser, 30 min CDN
+    response.headers.set('Vary', 'Authorization'); // Vary by user authentication
+    return response;
 
   } catch (error) {
     console.error('Error fetching pages:', error);

@@ -52,7 +52,7 @@ import { useLineSettings } from "../../contexts/LineSettingsContext";
 import { CONTENT_TYPES } from "../../utils/constants";
 import PillLink from "../utils/PillLink";
 // Removed Tooltip imports to avoid Radix UI ref composition issues
-import { getPageById } from "../../firebase/database";
+import { getPageById } from "../../utils/apiClient";
 import { LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 import { useAuth } from '../../providers/AuthProvider';

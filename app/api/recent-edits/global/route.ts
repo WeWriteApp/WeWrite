@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     // EMERGENCY COST OPTIMIZATION: Enable aggressive caching
     const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}`;
-    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+    const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache (increased for cost optimization)
 
     // Check cache first
     const cached = globalRecentEditsCache.get(cacheKey);

@@ -4,9 +4,8 @@
  * This is the AUTHORITATIVE source for user data fetching.
  * All other files should import getUsernameById from here instead of implementing their own.
  */
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
-import { auth } from "../firebase/auth";
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { userProfileApi } from './apiClient';
 import type { User } from "../types/database";
 import { getEffectiveTier } from './subscriptionTiers';
 
@@ -21,13 +20,12 @@ export const getUsernameById = async (userId: string): Promise<string> => {
   if (!userId) return "Missing username";
 
   try {
-    // Try to get user from Firestore users collection first using environment-aware collection name
-    const { getCollectionName } = await import('./environmentConfig');
-    const userDocRef = doc(db, getCollectionName("users"), userId);
-    const userDoc = await getDoc(userDocRef);
+    // Try to get user from API endpoint
+    console.log('👤 [USER UTILS] Fetching user data via API for:', userId);
+    const response = await userProfileApi.getUserProfile(userId);
 
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
+    if (response.success && response.data) {
+      const userData = response.data as User;
 
       // Check for valid username (not empty, not "Anonymous", not "Missing username")
       if (userData.username &&
@@ -40,31 +38,8 @@ export const getUsernameById = async (userId: string): Promise<string> => {
       // SECURITY: Never expose email addresses - always return "Missing username"
     }
 
-    // Try to get from RTDB as a fallback
-    try {
-      const { getDatabase, ref, get } = await import('firebase/database');
-      const { app } = await import('../firebase/config');
-      const rtdb = getDatabase(app);
-      const rtdbUserRef = ref(rtdb, `users/${userId}`);
-      const rtdbSnapshot = await get(rtdbUserRef);
-
-      if (rtdbSnapshot.exists()) {
-        const rtdbData = rtdbSnapshot.val();
-
-        // Check for valid username
-        if (rtdbData.username &&
-            rtdbData.username !== "Anonymous" &&
-            rtdbData.username !== "Missing username" &&
-            rtdbData.username.trim() !== "") {
-          return rtdbData.username.trim();
-        }
-
-        // SECURITY: Never expose email addresses - always return "Missing username"
-      }
-    } catch (rtdbError) {
-      console.error("Error fetching username from RTDB:", rtdbError);
-    }
-
+    // If no valid username found, return default
+    console.log('👤 [USER UTILS] No valid username found for user:', userId);
     return "Missing username";
   } catch (error) {
     console.error("Error fetching username by ID:", error);
@@ -78,12 +53,8 @@ export const getUsernameById = async (userId: string): Promise<string> => {
  * @deprecated Use the auth provider context instead
  */
 export const getCurrentUsername = async (): Promise<string> => {
-  // Fallback to Firebase Auth since currentUser utility was removed
-  const firebaseUser = auth.currentUser;
-  if (firebaseUser) {
-    return getUsernameById(firebaseUser.uid);
-  }
-
+  // DEPRECATED: This function should not be used - use auth provider context instead
+  console.warn('👤 [USER UTILS] getCurrentUsername is deprecated - use auth provider context instead');
   return "Missing username";
 };
 

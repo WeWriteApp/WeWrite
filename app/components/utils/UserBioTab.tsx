@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { Button } from "../ui/button";
 import { Edit, Save, X, Loader, AlertTriangle } from "lucide-react";
-import { getUserProfile } from "../../firebase/database/users";
+import { getUserProfile } from "../../utils/apiClient";
 import { toast } from "../ui/use-toast";
-import { recordBioEditActivity } from "../../firebase/bioActivity";
+// REMOVED: recordBioEditActivity - bio activity tracking disabled for cost optimization
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
@@ -142,22 +142,8 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
       const result = await response.json();
 
-      // Record the bio edit activity for the activity feed
-      if (user) {
-        try {
-          await recordBioEditActivity(
-            profile.uid,
-            user.uid,
-            editorName,
-            contentToSave,
-            originalContent
-          );
-          console.log("Bio edit activity recorded successfully");
-        } catch (activityError) {
-          console.error("Error recording bio edit activity:", activityError);
-          // Continue even if activity recording fails
-        }
-      }
+      // REMOVED: Bio edit activity recording disabled for cost optimization
+      console.log("Bio edit activity recording disabled for cost optimization");
 
       setOriginalContent(contentToSave);
       // Don't exit editing mode for owners (always-editing mode)

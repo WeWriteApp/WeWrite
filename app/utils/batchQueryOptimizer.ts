@@ -5,19 +5,9 @@
  * to minimize Firestore read costs and improve performance.
  */
 
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  documentId,
-  limit as firestoreLimit,
-  orderBy,
-  type DocumentData,
-  type QueryConstraint
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { getCollectionName } from '../utils/environmentConfig';
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { batchApi } from './apiClient';
+import { getCollectionName } from './environmentConfig';
 import { getCacheItem, setCacheItem } from '../utils/cacheUtils';
 
 interface BatchQueryOptions {

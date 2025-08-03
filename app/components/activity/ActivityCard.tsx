@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { format } from "date-fns";
-import { getPageById } from "../../firebase/database/pages";
+import { getPageById } from "../../utils/apiClient";
 import { sanitizeUsername } from "../../utils/usernameSecurity";
 import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
@@ -19,7 +19,7 @@ import DiffPreview, { DiffStats } from "./DiffPreview";
 
 import { navigateToPage } from "../../utils/pagePermissions";
 import { useRouter } from "next/navigation";
-import { setCurrentVersion } from "../../firebase/database";
+import { setCurrentVersion } from "../../utils/apiClient";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";

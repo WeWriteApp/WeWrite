@@ -5,18 +5,8 @@
  * to minimize Firebase operations and reduce costs.
  */
 
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  writeBatch,
-  doc,
-  limit,
-  orderBy,
-  Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { batchApi } from './apiClient';
 import { getCollectionName } from './environmentConfig';
 
 interface JobConfig {

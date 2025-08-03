@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { setCurrentVersion } from "../../firebase/database";
+import { setCurrentVersion } from "../../utils/apiClient";
 import { getPageVersions } from "../../services/versionService";
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";

@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { Switch } from "../ui/switch"
-import { logoutUser } from "../../firebase/auth"
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { userProfileApi } from '../../utils/apiClient';
 
 import { useAuth } from '../../providers/AuthProvider';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
@@ -185,10 +186,16 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
   const handleLogoutConfirm = async () => {
     setIsLoggingOut(true);
     try {
-      await logoutUser();
-      onClose();
+      console.log('🔐 [MOBILE SIDEBAR] Logging out via API');
+      const response = await userProfileApi.logout();
+      if (response.success) {
+        console.log('🔐 [MOBILE SIDEBAR] Logout successful');
+        onClose();
+      } else {
+        console.error('🔐 [MOBILE SIDEBAR] Logout failed:', response.error);
+      }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('🔐 [MOBILE SIDEBAR] Logout error:', error);
     } finally {
       setIsLoggingOut(false);
       setShowLogoutConfirmation(false);

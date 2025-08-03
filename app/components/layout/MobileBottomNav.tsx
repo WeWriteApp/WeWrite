@@ -12,7 +12,8 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
-import { logoutUser } from '../../firebase/auth';
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { userProfileApi } from '../../utils/apiClient';
 
 import { ConfirmationModal } from '../utils/ConfirmationModal';
 
@@ -677,10 +678,16 @@ export default function MobileBottomNav() {
                         if (confirmed) {
                           setIsLoggingOut(true);
                           try {
-                            await logoutUser();
-                            setIsExpanded(false); // Close expanded section
+                            console.log('🔐 [MOBILE NAV] Logging out via API');
+                            const response = await userProfileApi.logout();
+                            if (response.success) {
+                              console.log('🔐 [MOBILE NAV] Logout successful');
+                              setIsExpanded(false); // Close expanded section
+                            } else {
+                              console.error('🔐 [MOBILE NAV] Logout failed:', response.error);
+                            }
                           } catch (error) {
-                            console.error('Error during logout:', error);
+                            console.error('🔐 [MOBILE NAV] Error during logout:', error);
                           } finally {
                             setIsLoggingOut(false);
                           }

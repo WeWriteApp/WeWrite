@@ -6,7 +6,7 @@ import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
 // Server-side cache for home data - reduced TTL for recent edits functionality
 const homeCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-const HOME_CACHE_TTL = 2 * 60 * 1000; // 2 minutes server-side cache (reduced from 30m to show recent edits faster)
+const HOME_CACHE_TTL = 10 * 60 * 1000; // 10 minutes server-side cache (increased for cost optimization)
 
 interface HomeData {
   recentlyVisitedPages: any[]; // Renamed from recentPages for clarity
@@ -41,11 +41,14 @@ export async function GET(request: NextRequest) {
         hasUserStats: !!cached.data.userStats,
         cacheAge: Date.now() - cached.timestamp
       });
-      return NextResponse.json({
+      const cachedResponse = NextResponse.json({
         ...cached.data,
         cached: true,
         cacheAge: Date.now() - cached.timestamp
       });
+      cachedResponse.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5 min browser, 10 min CDN
+      cachedResponse.headers.set('Vary', 'Authorization'); // Vary by user authentication
+      return cachedResponse;
     }
 
     console.log('Home: Fetching fresh data');
@@ -59,13 +62,13 @@ export async function GET(request: NextRequest) {
         'getRecentlyVisitedPages', // Renamed for clarity
         { limit: 40, userId },
         () => getRecentlyVisitedPagesOptimized(40, userId), // Renamed function
-        { cacheTTL: 30 * 1000 } // 30 seconds cache for recently visited pages (reduced from 5m to show recent edits faster)
+        { cacheTTL: 5 * 60 * 1000 } // 5 minutes cache for recently visited pages (increased for cost optimization)
       ),
       userId ? executeDeduplicatedOperation(
         'getUserStats',
         { userId },
         () => getUserStatsOptimized(userId),
-        { cacheTTL: 15 * 60 * 1000 } // 15 minutes cache for user stats (increased from 5m for cost optimization)
+        { cacheTTL: 30 * 60 * 1000 } // 30 minutes cache for user stats (increased for cost optimization)
       ) : Promise.resolve(null)
     ]);
 
@@ -133,7 +136,11 @@ export async function GET(request: NextRequest) {
       hasBatchUserData: !!batchUserData && Object.keys(batchUserData).length > 0
     });
 
-    return NextResponse.json(homeData);
+    // Add cache headers for browser caching
+    const response = NextResponse.json(homeData);
+    response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5 min browser, 10 min CDN
+    response.headers.set('Vary', 'Authorization'); // Vary by user authentication
+    return response;
     
   } catch (error) {
     console.error('Error fetching home data:', error);

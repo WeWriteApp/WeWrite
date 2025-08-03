@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 // OPTIMIZATION: Use optimized data fetching instead of real-time listeners
-import { getPageById } from "../../firebase/database";
+import { getPageById } from "../../utils/apiClient";
 import { getPageVersions, getPageVersionById } from "../../services/versionService";
 import { getOptimizedPageData } from "../../utils/readOptimizer";
 import { recordPageView } from "../../firebase/pageViews";

@@ -7,6 +7,8 @@ This index provides a comprehensive overview of all WeWrite documentation, organ
 ## 🚨 CRITICAL - Start Here
 
 ### Emergency & Security (Read First)
+- **[FIREBASE_COST_OPTIMIZATION_SUMMARY](./FIREBASE_COST_OPTIMIZATION_SUMMARY.md)** - 🚨 Complete Firebase cost optimization (80-90% reduction)
+- **[ENVIRONMENT_AWARE_API_ARCHITECTURE](./ENVIRONMENT_AWARE_API_ARCHITECTURE.md)** - 🏗️ New API-first architecture guide
 - **[EMERGENCY_COST_OPTIMIZATION_SUMMARY](../EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - 🚨 Firebase cost crisis and optimization
 - **[USERNAME_SECURITY_GUIDELINES](./USERNAME_SECURITY_GUIDELINES.md)** - 🔒 Prevent email exposure vulnerabilities
 - **[LEGACY_CODE_CLEANUP_GUIDE](./LEGACY_CODE_CLEANUP_GUIDE.md)** - 🧹 Dangerous patterns to remove immediately

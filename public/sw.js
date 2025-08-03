@@ -54,12 +54,19 @@ const STATIC_RESOURCES = [
   '/images/',
 ];
 
-// API endpoints that benefit from caching
+// API endpoints that benefit from caching (expanded for cost optimization)
 const CACHEABLE_APIS = [
   '/api/trending',
   '/api/random-pages',
   '/api/search',
   '/api/recent-pages',
+  '/api/home',
+  '/api/pages',
+  '/api/recent-edits',
+  '/api/users',
+  '/api/analytics',
+  '/api/admin/firestore-optimization',
+  '/api/daily-notes',
 ];
 
 // Network-first strategies for these patterns

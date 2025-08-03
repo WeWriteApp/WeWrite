@@ -108,8 +108,8 @@ export default function FirestoreOptimizationDashboard() {
   useEffect(() => {
     fetchData();
     
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
+    // Auto-refresh every 15 minutes (increased for cost optimization)
+    const interval = setInterval(fetchData, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 

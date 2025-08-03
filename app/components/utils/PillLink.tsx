@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
 import PillLinkContextMenu from "./PillLinkContextMenu";
-import { getPageById } from "../../firebase/database/pages";
+import { getPageById } from "../../utils/apiClient";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 // Simple skeleton loader

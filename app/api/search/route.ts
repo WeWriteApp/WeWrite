@@ -513,6 +513,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.log(`Search API called with searchTerm: "${searchTerm}", userId: ${userId}, filterByUserId: ${filterByUserId}`);
     console.log(`SEARCH API USING FIXED MULTI-WORD SEARCH LOGIC`);
 
+    // Create cache key for search results
+    const cacheKey = `search:${searchTerm}:${userId || 'anonymous'}:${filterByUserId || ''}:${groupIds.join(',')}`;
+    console.log('🔍 Search API - Cache key:', cacheKey);
+
     // IMPORTANT FIX: Log more details about the search request
     console.log('Search API request details:', {
       searchTerm,
@@ -616,9 +620,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // For authenticated users, use Firestore search directly
-    try {
-      console.log(`Starting Firestore search for authenticated user ${userId}`);
+    // For authenticated users, use Firestore search directly with caching
+    const cachedResult = await cacheHelpers.getSearchResults(cacheKey, async () => {
+      console.log(`🔍 Search API - Cache miss, executing fresh search for authenticated user ${userId}`);
 
       // Search for pages in Firestore
       const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
@@ -646,7 +650,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       }
 
-      const response = {
+      return {
         pages: pages || [],
         users: users || [],
         source: "firestore_primary",
@@ -654,26 +658,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         userId: userId,
         timestamp: new Date().toISOString()
       };
+    });
 
-      console.log(`Search API returning response:`, {
-        pagesCount: response.pages.length,
-        usersCount: response.users.length,
-        source: response.source,
-        searchTerm: response.searchTerm
-      });
+    console.log(`Search API returning response:`, {
+      pagesCount: cachedResult.pages.length,
+      usersCount: cachedResult.users.length,
+      source: cachedResult.source,
+      searchTerm: cachedResult.searchTerm
+    });
 
-      return NextResponse.json(response, { status: 200 });
-    } catch (error) {
-      console.error('Error in authenticated search:', error);
-      console.error('Error stack:', error.stack);
-      return NextResponse.json({
-        pages: [],
-        users: [],
-        error: 'Search temporarily unavailable',
-        source: "authenticated_search_error",
-        errorMessage: error.message
-      }, { status: 200 }); // Return 200 to prevent breaking the UI
-    }
+    const response = NextResponse.json(cachedResult, { status: 200 });
+    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=1200'); // 10 min browser, 20 min CDN
+    response.headers.set('Vary', 'Authorization'); // Vary by user authentication
+    return response;
 
   } catch (error) {
     console.error('Unexpected error in search API:', error);
@@ -681,7 +678,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       pages: [],
       users: [],
       error: 'Search temporarily unavailable',
-      source: "unexpected_error"
+      source: "search_error",
+      errorMessage: error.message
     }, { status: 200 }); // Return 200 to prevent breaking the UI
   }
 }

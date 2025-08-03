@@ -1,5 +1,5 @@
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/database";
+// REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
+import { pageApi } from './apiClient';
 
 async function checkLinkExistence(links) {
   const promises = [];
@@ -10,12 +10,12 @@ async function checkLinkExistence(links) {
     const documentId = url.replace("/pages/", "").trim();
 
     if (isValidDocumentId(documentId)) {
-      const docRef = doc(db, "pages", documentId); // Use the documentId, not the full URL
       promises.push(
-        getDoc(docRef).then((docSnap) => {
-          results[url] = docSnap.exists(); // Use the original URL as the key
+        pageApi.getPage(documentId).then((response) => {
+          results[url] = response.success && response.data; // Use the original URL as the key
         }).catch((error) => {
-          console.error("Error getting document:", error);
+          console.error("🔍 [LINK CHECK] Error checking page existence:", error);
+          results[url] = false;
         })
       );
     } else {

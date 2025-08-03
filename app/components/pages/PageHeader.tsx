@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { Loader, ChevronLeft, ChevronRight, Share2, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ref, get } from "firebase/database";
-import { rtdb } from "../../firebase/rtdb";
+// REMOVED: Direct Firebase RTDB imports - now using API endpoints
+import { rtdbApi } from "../../utils/apiClient";
 import dynamic from 'next/dynamic';
 
 import { UsernameBadge } from "../ui/UsernameBadge";
