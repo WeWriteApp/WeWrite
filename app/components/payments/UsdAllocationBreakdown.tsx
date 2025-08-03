@@ -81,17 +81,17 @@ export function UsdAllocationBreakdown({
   if (allocations.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader>
-          <CardTitle className="text-lg">Breakdown</CardTitle>
-          <CardDescription>
+        <CardHeader className="px-3 sm:px-4 pb-2">
+          <CardTitle className="text-sm sm:text-base">Breakdown</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Your monthly fund allocations to creators
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">No allocations yet</p>
-            <p className="text-sm">
+        <CardContent className="px-3 sm:px-4 pb-3">
+          <div className="text-center py-4 sm:py-6 text-muted-foreground">
+            <FileText className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-3 opacity-50" />
+            <p className="text-sm sm:text-base font-medium mb-1">No allocations yet</p>
+            <p className="text-xs sm:text-sm px-2">
               Start supporting creators by allocating funds to their content
             </p>
           </div>
@@ -102,45 +102,45 @@ export function UsdAllocationBreakdown({
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="px-3 sm:px-4 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
           <div>
-            <CardTitle className="text-lg">Breakdown</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-sm sm:text-base">Breakdown</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               {allocations.length} allocation{allocations.length !== 1 ? 's' : ''} • {formatUsdCents(totalAllocatedCents)} total
             </CardDescription>
           </div>
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
+          <Badge variant="secondary" className="bg-green-100 text-green-800 self-start sm:self-auto text-xs">
             {((totalAllocatedCents / totalUsdCents) * 100).toFixed(1)}% allocated
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-3">
         {/* Allocation list */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {visibleAllocations.map((allocation) => {
             const percentage = totalUsdCents > 0 ? (allocation.usdCents / totalUsdCents) * 100 : 0;
-            
+
             return (
               <div
                 key={allocation.id}
-                className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors space-y-3"
+                className="p-2 sm:p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors space-y-2"
               >
                 {/* Top row: Resource info and amount */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
                     {/* Resource info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                         {allocation.resourceType === 'wewrite' ? (
-                          <p className="font-medium truncate">WeWrite Platform</p>
+                          <p className="font-medium truncate text-sm sm:text-base">WeWrite Platform</p>
                         ) : allocation.resourceType === 'user' ? (
                           <div className="flex items-center space-x-2">
                             <PillLink href={`/user/${allocation.authorUsername || allocation.resourceId}`}>
                               {allocation.authorUsername || allocation.resourceId}
                             </PillLink>
-                            <span className="text-sm text-muted-foreground">User</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">User</span>
                           </div>
                         ) : (
                           <PillLink href={`/${allocation.resourceId}`}>
@@ -149,7 +149,7 @@ export function UsdAllocationBreakdown({
                         )}
 
                         {allocation.resourceType !== 'user' && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs self-start sm:self-auto">
                             {getResourceTypeLabel(allocation.resourceType)}
                           </Badge>
                         )}
@@ -158,21 +158,21 @@ export function UsdAllocationBreakdown({
                   </div>
 
                   {/* Amount and percentage */}
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <span className="font-medium">{formatUsdCents(allocation.usdCents)}</span>
-                    <span>•</span>
-                    <span>{percentage.toFixed(1)}%</span>
+                  <div className="flex items-center space-x-1 text-xs sm:text-sm text-muted-foreground self-start sm:self-auto">
+                    <span className="font-semibold text-sm">{formatUsdCents(allocation.usdCents)}</span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="text-xs">{percentage.toFixed(1)}%</span>
                   </div>
                 </div>
 
                 {/* Middle row: Plus/Minus buttons and composition bar */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   {/* Plus/Minus buttons */}
                   <div className="flex items-center space-x-1">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 w-7 p-0"
+                      className="h-8 w-8 sm:h-7 sm:w-7 p-0"
                       title="Decrease allocation"
                       onClick={() => onDecreaseAllocation?.(allocation)}
                       disabled={!onDecreaseAllocation}
@@ -182,7 +182,7 @@ export function UsdAllocationBreakdown({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 w-7 p-0"
+                      className="h-8 w-8 sm:h-7 sm:w-7 p-0"
                       title="Increase allocation"
                       onClick={() => onIncreaseAllocation?.(allocation)}
                       disabled={!onIncreaseAllocation}
@@ -192,28 +192,26 @@ export function UsdAllocationBreakdown({
                   </div>
 
                   {/* Composition bar */}
-                  <div className="flex-1 relative h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="flex-1 relative h-3 sm:h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
                       style={{ width: `${Math.min(percentage, 100)}%` }}
                     />
                   </div>
-                </div>
 
-                {/* Bottom row: Actions */}
-                {showActions && onRemoveAllocation && (
-                  <div className="flex items-center justify-end space-x-1">
+                  {/* Actions - moved to same row on mobile */}
+                  {showActions && onRemoveAllocation && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onRemoveAllocation(allocation)}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      className="h-8 w-8 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive flex-shrink-0"
                       title="Remove allocation"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}
@@ -224,7 +222,7 @@ export function UsdAllocationBreakdown({
           <Button
             variant="ghost"
             onClick={() => setShowAll(!showAll)}
-            className="w-full"
+            className="w-full text-sm"
           >
             {showAll ? (
               <>
@@ -243,20 +241,20 @@ export function UsdAllocationBreakdown({
         {/* Unallocated funds */}
         {unallocatedCents > 0 && (
           <div className="border-t pt-4">
-            <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-3 sm:p-4 bg-muted/20 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0 text-muted-foreground">
                   <Building2 className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium">Unallocated Funds</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium text-sm sm:text-base">Unallocated Funds</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Available for allocation
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-semibold text-green-600">
+              <div className="text-left sm:text-right">
+                <p className="font-semibold text-green-600 text-base sm:text-base">
                   {formatUsdCents(unallocatedCents)}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -268,9 +266,9 @@ export function UsdAllocationBreakdown({
         )}
 
         {/* Summary */}
-        <div className="border-t pt-4 text-sm text-muted-foreground">
-          <p>
-            Funds are distributed to creators at the end of each month. 
+        <div className="border-t pt-4 text-xs sm:text-sm text-muted-foreground">
+          <p className="leading-relaxed">
+            Funds are distributed to creators at the end of each month.
             You can modify allocations anytime before the monthly processing date.
           </p>
         </div>

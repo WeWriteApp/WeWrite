@@ -410,6 +410,26 @@ export class ServerUsdService {
       // Commit the batch
       await batch.commit();
 
+      // Process earnings for the recipient if there's a valid recipient and positive allocation
+      if (recipientUserId && newPageAllocationCents > 0 && allocationDifference > 0) {
+        try {
+          console.log(`[USD ALLOCATION] Processing earnings for recipient ${recipientUserId}`);
+          const { ServerUsdEarningsService } = await import('./usdEarningsService.server');
+          await ServerUsdEarningsService.processUsdAllocation(
+            userId,
+            recipientUserId,
+            pageId,
+            'page',
+            allocationDifference,
+            currentMonth
+          );
+          console.log(`[USD ALLOCATION] Successfully processed earnings for recipient ${recipientUserId}`);
+        } catch (earningsError) {
+          console.error(`[USD ALLOCATION] Failed to process earnings for recipient ${recipientUserId}:`, earningsError);
+          // Don't fail the allocation if earnings processing fails
+        }
+      }
+
       console.log(`[USD ALLOCATION] Successfully allocated ${centsToDollars(newPageAllocationCents)} USD to page ${pageId} for user ${userId}`);
     } catch (error) {
       console.error('ServerUsdService: Error allocating USD to page:', error);
@@ -514,6 +534,26 @@ export class ServerUsdService {
 
       // Commit the batch
       await batch.commit();
+
+      // Process earnings for the recipient if there's a positive allocation difference
+      if (newUserAllocationCents > 0 && allocationDifference > 0) {
+        try {
+          console.log(`[USD USER ALLOCATION] Processing earnings for recipient ${recipientUserId}`);
+          const { ServerUsdEarningsService } = await import('./usdEarningsService.server');
+          await ServerUsdEarningsService.processUsdAllocation(
+            userId,
+            recipientUserId,
+            recipientUserId,
+            'user',
+            allocationDifference,
+            currentMonth
+          );
+          console.log(`[USD USER ALLOCATION] Successfully processed earnings for recipient ${recipientUserId}`);
+        } catch (earningsError) {
+          console.error(`[USD USER ALLOCATION] Failed to process earnings for recipient ${recipientUserId}:`, earningsError);
+          // Don't fail the allocation if earnings processing fails
+        }
+      }
 
       console.log(`[USD USER ALLOCATION] Successfully allocated ${centsToDollars(newUserAllocationCents)} USD to user ${recipientUserId} from user ${userId}`);
     } catch (error) {

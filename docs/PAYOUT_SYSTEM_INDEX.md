@@ -2,7 +2,7 @@
 
 ## Overview
 
-WeWrite's payout system enables content creators to convert earned tokens into real money through secure bank transfers. The system integrates with Stripe Connect to provide transparent fee structures, reliable transfers, and comprehensive testing capabilities.
+WeWrite's payout system enables content creators to convert earned USD into real money through secure bank transfers. The system integrates with Stripe Connect to provide transparent fee structures, reliable transfers, and comprehensive testing capabilities.
 
 ## Core Documentation
 

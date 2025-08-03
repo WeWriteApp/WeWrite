@@ -133,32 +133,32 @@ export default function UsdAllocationDisplay({
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-2 px-3 sm:px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
           <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
               Summary
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Your monthly funding overview
             </CardDescription>
           </div>
-          <Badge 
-            variant="secondary" 
-            className={`${statusColor} text-white border-0`}
+          <Badge
+            variant="secondary"
+            className={`${statusColor} text-white border-0 self-start sm:self-auto text-xs`}
           >
             {statusText}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 px-3 sm:px-4 pb-3">
         {/* Progress Bar */}
         <div className="space-y-2">
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-xs sm:text-sm">
             <span>Allocated</span>
-            <span>{Math.round(allocationPercentage)}%</span>
+            <span className="font-medium">{Math.round(allocationPercentage)}%</span>
           </div>
           <Progress
             value={progressValue}
@@ -176,18 +176,18 @@ export default function UsdAllocationDisplay({
 
 
         {/* Detailed Breakdown */}
-        <div className="border-t pt-4 space-y-2 text-sm">
-          <div className="flex justify-between">
+        <div className="border-t pt-3 space-y-2 text-xs sm:text-sm">
+          <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Funded Allocations</span>
-            <span className="font-medium text-green-600">
+            <span className="font-semibold text-green-600 text-sm">
               {formatUsdCents(fundedUsdCents)}
             </span>
           </div>
-          
+
           {unfundedUsdCents > 0 && (
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Unfunded Allocations</span>
-              <span className="font-medium text-orange-500">
+              <span className="font-semibold text-orange-500 text-sm">
                 {formatUsdCents(unfundedUsdCents)}
               </span>
             </div>
@@ -198,17 +198,17 @@ export default function UsdAllocationDisplay({
         {hasNoSubscription && (
           <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">No Active Subscription</span>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span className="font-medium text-sm">No Active Subscription</span>
             </div>
-            <p className="text-sm text-orange-700 dark:text-orange-300">
+            <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300 leading-relaxed">
               You have {formatUsdCents(allocatedUsdCents)} in unfunded allocations.
               Activate a subscription to fund these allocations.
             </p>
             <Button
               size="sm"
               onClick={() => router.push('/settings/fund-account')}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto text-xs"
             >
               {USD_UI_TEXT.FUND_ACCOUNT}
             </Button>
@@ -218,18 +218,19 @@ export default function UsdAllocationDisplay({
         {isOverspent && !hasNoSubscription && (
           <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">Overspent</span>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span className="font-medium text-sm">Overspent</span>
             </div>
-            <p className="text-sm text-red-700 dark:text-red-300">
+            <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 leading-relaxed">
               You've allocated {formatUsdCents(unfundedUsdCents)} more than your monthly budget.
               Consider upgrading your subscription or reducing allocations.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => router.push('/settings/fund-account')}
+                className="w-full sm:w-auto text-xs"
               >
                 Upgrade Plan
               </Button>
@@ -237,6 +238,7 @@ export default function UsdAllocationDisplay({
                 size="sm"
                 variant="outline"
                 onClick={() => router.push('/settings/spend')}
+                className="w-full sm:w-auto text-xs"
               >
                 Manage Allocations
               </Button>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-WeWrite uses a token-based subscription system powered by Stripe. Users pay monthly subscriptions and receive tokens that they can allocate to pages and creators. This document covers the complete subscription architecture, data flow, and implementation details.
+WeWrite uses a USD-based subscription system powered by Stripe. Users pay monthly subscriptions and receive USD credits that they can allocate directly to pages and creators. This document covers the complete subscription architecture, data flow, and implementation details.
 
 ## Architecture
 
@@ -10,13 +10,13 @@ WeWrite uses a token-based subscription system powered by Stripe. Users pay mont
 
 1. **Stripe Integration**: Handles payments, subscriptions, and customer management
 2. **Firebase/Firestore**: Stores subscription data and user information
-3. **Token System**: Manages token allocation and distribution
+3. **USD System**: Manages USD allocation and distribution
 4. **Environment Separation**: Dev/prod data isolation
 
 ### Data Flow
 
 ```
-User → Stripe Checkout → Webhook → Firestore → Token Allocation → Page Earnings
+User → Stripe Checkout → Webhook → Firestore → USD Allocation → Creator Earnings
 ```
 
 ### Simplified Architecture (2025)
@@ -24,7 +24,7 @@ User → Stripe Checkout → Webhook → Firestore → Token Allocation → Page
 **Key Principles:**
 - **Single API Endpoint**: `/api/account-subscription` is the only source of subscription data
 - **API-First Approach**: No complex real-time listeners, reliable server-side data fetching
-- **Automatic Token Integration**: Webhooks automatically update token balances
+- **Automatic USD Integration**: Webhooks automatically update USD balances
 - **Separate Stripe Accounts**:
   - Regular Stripe customers for subscription payments (spending)
   - Stripe Connect accounts for creator payouts (receiving)
@@ -56,14 +56,14 @@ SUBSCRIPTION_ENV=development/production
 ## Subscription Tiers
 
 ### Standard Tiers
-- **Tier 1**: $10/month → 100 tokens
-- **Tier 2**: $20/month → 200 tokens  
-- **Tier 3**: $30/month → 300 tokens (Champion)
+- **Tier 1 (Supporter)**: $5/month → $5 USD credits
+- **Tier 2 (Advocate)**: $25/month → $25 USD credits
+- **Tier 3 (Champion)**: $50/month → $50 USD credits
 
 ### Custom Tiers
-- **Range**: $1-$50/month
-- **Token Calculation**: $1 = 10 tokens
-- **Maximum**: $50/month = 500 tokens
+- **Range**: $100+/month
+- **USD Calculation**: $1 = $1 USD credit (direct 1:1 mapping)
+- **Minimum Custom**: $100/month for custom amounts
 
 ## API Endpoints
 
@@ -71,7 +71,7 @@ SUBSCRIPTION_ENV=development/production
 
 #### `/api/account-subscription` (SINGLE SOURCE OF TRUTH)
 - **Purpose**: Get current user's subscription data using reliable server-side Firebase
-- **Returns**: `{ hasSubscription, status, amount, tokens, cancelAtPeriodEnd, fullData: {...} }`
+- **Returns**: `{ hasSubscription, status, amount, cancelAtPeriodEnd, fullData: {...} }`
 - **Environment**: Uses environment-aware collection paths
 - **Approach**: API-first, no complex real-time listeners
 
@@ -82,7 +82,7 @@ SUBSCRIPTION_ENV=development/production
 
 #### `/api/subscription/create-with-payment-method`
 - **Purpose**: Create subscription after payment method setup
-- **Flow**: Creates subscription → updates Firestore → allocates tokens
+- **Flow**: Creates subscription → updates Firestore → allocates USD credits
 
 #### `/api/subscription/update`
 - **Purpose**: Modify existing subscription amount/tier

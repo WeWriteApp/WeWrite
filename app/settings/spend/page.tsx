@@ -20,6 +20,8 @@ export default function SpendPage() {
   const [allocations, setAllocations] = useState<UsdAllocation[]>([]);
   const [countdown, setCountdown] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
+  const [loadingSubscription, setLoadingSubscription] = useState(true);
 
   // Convert simulated USD data to real allocations
   const convertSimulatedUsdData = async () => {
@@ -59,6 +61,31 @@ export default function SpendPage() {
     }
   };
 
+  // Load subscription data function
+  const loadSubscription = async () => {
+    if (!user?.uid) return;
+
+    try {
+      setLoadingSubscription(true);
+      const response = await fetch('/api/account-subscription');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🎯 Spend: Subscription data:', data);
+        // Get the actual subscription amount, not the USD balance total
+        const amount = data.fullData?.amount || 0;
+        setSubscriptionAmount(amount);
+      } else {
+        console.error('🎯 Spend: Subscription API error:', response.status, response.statusText);
+        setSubscriptionAmount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      setSubscriptionAmount(0);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
   // Load allocations function
   const loadAllocations = async () => {
     if (!user?.uid) return;
@@ -77,11 +104,12 @@ export default function SpendPage() {
     }
   };
 
-  // Fetch user's allocations
+  // Fetch user's allocations and subscription data
   useEffect(() => {
-    const fetchAllocations = async () => {
+    const fetchData = async () => {
       if (!user?.uid) {
         setIsLoading(false);
+        setLoadingSubscription(false);
         return;
       }
 
@@ -89,16 +117,19 @@ export default function SpendPage() {
         // First convert any simulated data
         await convertSimulatedUsdData();
 
-        // Then load current allocations
-        await loadAllocations();
+        // Load subscription data and allocations in parallel
+        await Promise.all([
+          loadSubscription(),
+          loadAllocations()
+        ]);
       } catch (error) {
-        console.error('Error fetching allocations:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAllocations();
+    fetchData();
   }, [user?.uid]);
 
   // Handle allocation editing
@@ -239,22 +270,22 @@ export default function SpendPage() {
   }
 
   const totalUsdCents = usdBalance?.totalUsdCents || 0;
-  const hasBalance = totalUsdCents > 0;
+  const hasBalance = totalUsdCents > 0 || subscriptionAmount > 0;
 
   return (
     <NavPageLayout
       backUrl="/settings"
-      maxWidth="6xl"
-      loading={isLoading}
+      maxWidth="4xl"
+      loading={isLoading || loadingSubscription}
       loadingFallback={
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
           {/* Loading state for allocation display */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 px-4 sm:px-6">
               <div className="animate-pulse space-y-4">
-                <div className="h-6 bg-muted rounded w-1/3"></div>
-                <div className="h-4 bg-muted rounded w-1/2"></div>
-                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-5 sm:h-6 bg-muted rounded w-1/3"></div>
+                <div className="h-3 sm:h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-16 sm:h-20 bg-muted rounded"></div>
               </div>
             </CardContent>
           </Card>
@@ -313,20 +344,20 @@ export default function SpendPage() {
       }
     >
 
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
         {!hasBalance ? (
           /* No funding state */
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <Wallet className="h-12 w-12 mx-auto text-muted-foreground" />
+            <CardContent className="pt-4 pb-4">
+              <div className="text-center space-y-3">
+                <Wallet className="h-8 w-8 sm:h-10 sm:w-10 mx-auto text-muted-foreground" />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">No Account Funding</h3>
-                  <p className="text-muted-foreground mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold mb-1">No Account Funding</h3>
+                  <p className="text-sm text-muted-foreground mb-3 px-2">
                     Set up monthly funding to start supporting creators
                   </p>
                 </div>
-                <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                <Button asChild className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                   <Link href="/settings/fund-account">
                     <Wallet className="h-4 w-4 mr-2" />
                     Fund Account
@@ -339,32 +370,32 @@ export default function SpendPage() {
           <>
             {/* Simplified allocation display */}
             <UsdAllocationDisplay
-              subscriptionAmount={totalUsdCents / 100}
+              subscriptionAmount={subscriptionAmount}
               usdBalance={usdBalance}
             />
 
             {/* Next payment countdown */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+              <CardHeader className="pb-2 px-3 sm:px-4">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
                   Next payment
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Time remaining to adjust allocations
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-4">
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-primary font-mono">
+              <CardContent className="px-3 sm:px-4 pb-3">
+                <div className="text-center space-y-2 sm:space-y-3">
+                  <div className="space-y-1">
+                    <div className="text-lg sm:text-xl font-bold text-primary font-mono">
                       {countdown}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       to make adjustments
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto px-1">
                     Allocations will be sent to creators for the month of{' '}
                     <span className="font-medium">
                       {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -377,7 +408,7 @@ export default function SpendPage() {
             {/* Detailed breakdown */}
             <UsdAllocationBreakdown
               allocations={allocations}
-              totalUsdCents={totalUsdCents}
+              totalUsdCents={subscriptionAmount * 100} // Use actual subscription amount in cents
               onEditAllocation={handleEditAllocation}
               onRemoveAllocation={handleRemoveAllocation}
               onViewResource={handleViewResource}
