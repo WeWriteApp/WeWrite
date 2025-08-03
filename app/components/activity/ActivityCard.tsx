@@ -470,7 +470,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           </div>
         )}
 
-        {/* Token allocation UI - show for all users' pages when not viewing your own */}
+        {/* Dollar allocation UI - show for all users' pages when not viewing your own */}
         {activity.userId && activity.pageId && (!user || user.uid !== activity.userId) && (
           <div className="pt-3 border-t border-border/20 mt-3">
             <EmbeddedTokenAllocation

@@ -1,10 +1,18 @@
 "use client";
 
 /**
- * @deprecated This component is deprecated and will be removed in a future version.
- * Use UsdPledgeBar or UsdAllocationModal instead for USD-based allocations.
+ * EmbeddedTokenAllocation Component
  *
- * Legacy embedded token allocation - replaced by USD system.
+ * A compact dollar allocation interface designed for embedding in activity cards.
+ * Features:
+ * - Plus/minus buttons for quick dollar allocation (in $0.10 increments)
+ * - Visual composition bar showing allocation distribution
+ * - Centered dollar amount display for THIS PAGE allocation
+ * - Optimistic updates for responsive UX
+ * - Handles authentication and balance states
+ *
+ * Note: Despite the name "TokenAllocation", this component now uses the USD system
+ * internally but maintains backward compatibility with token-based calculations.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -229,9 +237,12 @@ export function EmbeddedTokenAllocation({
   const currentPagePercentage = totalTokens > 0 ? (currentPageAllocation / totalTokens) * 100 : 0;
   const availablePercentage = totalTokens > 0 ? (availableTokens / totalTokens) * 100 : 0;
 
+  // Convert current page allocation from tokens to dollars for display
+  const currentPageDollars = currentPageAllocation / 10;
+
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      {/* Token controls - Minus button on left */}
+      {/* Minus button on left */}
       <Button
         size="sm"
         variant="ghost"
@@ -242,43 +253,41 @@ export function EmbeddedTokenAllocation({
         <Minus className="h-4 w-4" />
       </Button>
 
-      {/* Token composition bar - matches PledgeBar style */}
-      <div className="flex-1 h-8 flex gap-1">
-        {/* Other pages (spent elsewhere) - left side */}
-        {otherPagesTokens > 0 && (
-          <div
-            className="bg-muted-foreground/30 flex items-center justify-center rounded-md"
-            style={{ width: `${otherPagesPercentage}%`, minWidth: '20px' }}
-          >
-            <span className="text-white text-xs font-medium">
-              {Math.round(otherPagesTokens)}
-            </span>
-          </div>
-        )}
+      {/* Composition bar with centered dollar amount */}
+      <div className="flex-1 h-8 relative">
+        {/* Background composition bar */}
+        <div className="absolute inset-0 flex gap-1">
+          {/* Other pages (spent elsewhere) - left side */}
+          {otherPagesTokens > 0 && (
+            <div
+              className="bg-muted-foreground/30 rounded-md"
+              style={{ width: `${otherPagesPercentage}%` }}
+            />
+          )}
 
-        {/* Current page (spent here) - center, primary color */}
-        {currentPageAllocation > 0 && (
-          <div
-            className="bg-primary flex items-center justify-center rounded-md"
-            style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
-          >
-            <span className="text-white text-xs font-medium">
-              {Math.round(currentPageAllocation)}
-            </span>
-          </div>
-        )}
+          {/* Current page (spent here) - center, primary color */}
+          {currentPageAllocation > 0 && (
+            <div
+              className="bg-primary rounded-md"
+              style={{ width: `${currentPagePercentage}%` }}
+            />
+          )}
 
-        {/* Available tokens - right side */}
-        {availableTokens > 0 && (
-          <div
-            className="bg-muted-foreground/10 flex items-center justify-center rounded-md"
-            style={{ width: `${availablePercentage}%`, minWidth: '20px' }}
-          >
-            <span className="text-muted-foreground text-xs font-medium">
-              {Math.round(availableTokens)}
-            </span>
-          </div>
-        )}
+          {/* Available tokens - right side */}
+          {availableTokens > 0 && (
+            <div
+              className="bg-muted-foreground/10 rounded-md"
+              style={{ width: `${availablePercentage}%` }}
+            />
+          )}
+        </div>
+
+        {/* Centered dollar amount overlay */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-1 rounded backdrop-blur-sm">
+            ${currentPageDollars.toFixed(2)}
+          </span>
+        </div>
       </div>
 
       {/* Plus button on right */}
