@@ -1,10 +1,18 @@
 "use client";
 
 /**
- * @deprecated This component is deprecated and will be removed in a future version.
- * Use UsdPledgeBar or UsdAllocationModal instead for USD-based allocations.
+ * EmbeddedTokenAllocation Component
  *
- * Legacy embedded token allocation - replaced by USD system.
+ * A compact dollar allocation interface designed for embedding in activity cards.
+ * Features:
+ * - Plus/minus buttons for quick dollar allocation (in $0.10 increments)
+ * - Visual composition bar showing allocation distribution
+ * - Centered dollar amount display for THIS PAGE allocation
+ * - Optimistic updates for responsive UX
+ * - Handles authentication and balance states
+ *
+ * Note: Despite the name "TokenAllocation", this component now uses the USD system
+ * internally but maintains backward compatibility with token-based calculations.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -96,12 +104,15 @@ export function EmbeddedTokenAllocation({
     const newAllocationCents = Math.floor((newAllocation / 10) * 100);
     const changeCents = Math.floor((change / 10) * 100);
 
-    // Optimistic updates
+    // Immediate optimistic updates for instant UI feedback
     const previousAllocation = currentPageAllocation;
     setCurrentPageAllocation(newAllocation);
     updateOptimisticBalance(changeCents);
 
-    // No need to set updating state - buttons stay enabled
+    // Add visual feedback for successful optimistic update
+    console.log(`[EmbeddedTokenAllocation] Optimistic update: ${change > 0 ? '+' : ''}$${Math.abs(changeCents / 100).toFixed(2)} → $${(newAllocation / 10).toFixed(2)}`);
+
+    // No loading state - keep buttons enabled for rapid interactions
 
     try {
       const response = await fetch('/api/usd/page-allocation', {
@@ -229,63 +240,64 @@ export function EmbeddedTokenAllocation({
   const currentPagePercentage = totalTokens > 0 ? (currentPageAllocation / totalTokens) * 100 : 0;
   const availablePercentage = totalTokens > 0 ? (availableTokens / totalTokens) * 100 : 0;
 
+  // Convert current page allocation from tokens to dollars for display
+  const currentPageDollars = currentPageAllocation / 10;
+
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      {/* Token controls - Minus button on left */}
+      {/* Minus button on left */}
       <Button
         size="sm"
         variant="ghost"
-        className="h-8 w-8 p-0 hover:bg-destructive/20 flex-shrink-0"
+        className="h-8 w-8 p-0 hover:bg-destructive/20 active:scale-95 transition-all duration-150 flex-shrink-0"
         onClick={(e) => handleTokenChange(-1, e)}
         disabled={false}
       >
         <Minus className="h-4 w-4" />
       </Button>
 
-      {/* Token composition bar - matches PledgeBar style */}
-      <div className="flex-1 h-8 flex gap-1">
-        {/* Other pages (spent elsewhere) - left side */}
-        {otherPagesTokens > 0 && (
-          <div
-            className="bg-muted-foreground/30 flex items-center justify-center rounded-md"
-            style={{ width: `${otherPagesPercentage}%`, minWidth: '20px' }}
-          >
-            <span className="text-white text-xs font-medium">
-              {Math.round(otherPagesTokens)}
-            </span>
-          </div>
-        )}
+      {/* Composition bar with centered dollar amount */}
+      <div className="flex-1 h-8 relative">
+        {/* Background composition bar with smooth transitions */}
+        <div className="absolute inset-0 flex gap-1">
+          {/* Other pages (spent elsewhere) - left side */}
+          {otherPagesTokens > 0 && (
+            <div
+              className="bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
+              style={{ width: `${otherPagesPercentage}%` }}
+            />
+          )}
 
-        {/* Current page (spent here) - center, primary color */}
-        {currentPageAllocation > 0 && (
-          <div
-            className="bg-primary flex items-center justify-center rounded-md"
-            style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
-          >
-            <span className="text-white text-xs font-medium">
-              {Math.round(currentPageAllocation)}
-            </span>
-          </div>
-        )}
+          {/* Current page (spent here) - center, primary color */}
+          {currentPageAllocation > 0 && (
+            <div
+              className="bg-primary rounded-md transition-all duration-300 ease-out"
+              style={{ width: `${currentPagePercentage}%` }}
+            />
+          )}
 
-        {/* Available tokens - right side */}
-        {availableTokens > 0 && (
-          <div
-            className="bg-muted-foreground/10 flex items-center justify-center rounded-md"
-            style={{ width: `${availablePercentage}%`, minWidth: '20px' }}
-          >
-            <span className="text-muted-foreground text-xs font-medium">
-              {Math.round(availableTokens)}
-            </span>
-          </div>
-        )}
+          {/* Available tokens - right side */}
+          {availableTokens > 0 && (
+            <div
+              className="bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+              style={{ width: `${availablePercentage}%` }}
+            />
+          )}
+        </div>
+
+        {/* Centered dollar amount overlay with smooth transitions */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-1 rounded backdrop-blur-sm transition-all duration-200 ease-out">
+            ${currentPageDollars.toFixed(2)}
+          </span>
+        </div>
       </div>
 
       {/* Plus button on right */}
       <Button
         size="sm"
         variant="outline"
-        className="h-8 w-8 p-0 flex-shrink-0"
+        className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0"
         onClick={(e) => isOutOfTokens ? handleOutOfTokens(e) : handleTokenChange(1, e)}
         disabled={false}
       >

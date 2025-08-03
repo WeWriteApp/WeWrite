@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/', // Explicit path for PWA
-        domain: process.env.NODE_ENV === 'production' ? '.getwewrite.app' : undefined
+        domain: process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? '.getwewrite.app' : undefined
       });
 
       // Update last login time
@@ -359,7 +359,7 @@ async function createUserSession(request: NextRequest, userId: string) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/', // Explicit path for PWA
-      domain: process.env.NODE_ENV === 'production' ? '.getwewrite.app' : undefined
+      domain: process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? '.getwewrite.app' : undefined
     });
 
     console.log(`Created user session ${sessionId} for user ${userId}`);
