@@ -404,6 +404,95 @@ input[type="range"]::-moz-range-thumb,
     flex-wrap: nowrap !important;
   }
 
+  /* STRIPE LINK MOBILE OPTIMIZATION: Fix height observer clipping */
+  .p-HeightObserverProvider {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  .p-HeightObserverProvider-container {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure Stripe Link autofill prompt wraps properly */
+  .p-ReturnAutofillPrompt {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Fix Stripe Link dropdown positioning on mobile */
+  .p-ReturnAutofillPrompt-manageDropdown {
+    position: absolute !important;
+    right: 0 !important;
+    top: 100% !important;
+    max-width: calc(100vw - 32px) !important;
+  }
+
+  /* General Stripe Elements mobile optimization */
+  .__PrivateStripeElement,
+  .StripeElement {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* FORCE Stripe Element to behave properly */
+  .StripeElement {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .__PrivateStripeElement {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .__PrivateStripeElement iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  /* Nuclear option for Stripe iframes */
+  iframe[name*="__privateStripeFrame"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  /* Ensure Stripe tabs don't overflow on mobile */
+  .p-Tabs,
+  .p-TabList {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Fix Stripe payment method tabs on mobile */
+  .p-Tab {
+    min-width: auto !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
   /* Ensure composition bar takes available space */
   [data-pledge-bar] .flex-1 {
     min-width: 0 !important; /* Allow flex item to shrink */

@@ -551,6 +551,11 @@ export function PaymentStep({
                             billingDetails: {
                               email: 'auto' // Auto-populate email for Link
                             }
+                          },
+                          // MOBILE OPTIMIZATION: Ensure Stripe Link and other payment methods are mobile-friendly
+                          wallets: {
+                            applePay: 'auto',
+                            googlePay: 'auto'
                           }
                         }}
                         onChange={handlePaymentElementChange}
