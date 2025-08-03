@@ -118,10 +118,11 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     async function processParams() {
+      let extractedId = '';
       try {
         // Simplified params processing
         const unwrappedParams = await Promise.resolve(params);
-        let extractedId = unwrappedParams?.id || '';
+        extractedId = unwrappedParams?.id || '';
 
         // Clean up the ID
         if (extractedId.includes('%2F')) {
