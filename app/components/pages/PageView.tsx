@@ -319,20 +319,6 @@ export default function PageView({
     // Declare fallbackTimeout in the proper scope
     let fallbackTimeout: NodeJS.Timeout;
 
-    // If showing version or diff, load version data instead of live page
-    if (showVersion && versionId) {
-      pageLogger.debug('Loading version data', { versionId });
-      loadVersionData();
-    } else if (showDiff && versionId) {
-      pageLogger.debug('Loading diff data', { versionId });
-      loadDiffData();
-    } else {
-      pageLogger.debug('Setting up page loading with optimized data fetching', { pageId });
-
-      // OPTIMIZATION: Use optimized data fetching with aggressive caching
-      loadOptimizedPageData();
-    }
-
     // Function to load page data using optimized caching
     const loadOptimizedPageData = async () => {
       try {
@@ -447,8 +433,19 @@ export default function PageView({
         }
       };
 
-      // Load the page data
+    // If showing version or diff, load version data instead of live page
+    if (showVersion && versionId) {
+      pageLogger.debug('Loading version data', { versionId });
+      loadVersionData();
+    } else if (showDiff && versionId) {
+      pageLogger.debug('Loading diff data', { versionId });
+      loadDiffData();
+    } else {
+      pageLogger.debug('Setting up page loading with optimized data fetching', { pageId });
+
+      // OPTIMIZATION: Use optimized data fetching with aggressive caching
       loadOptimizedPageData();
+    }
 
     return () => {
       if (unsubscribeRef.current) {
