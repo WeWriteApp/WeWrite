@@ -15,11 +15,11 @@
 
 ## Overview
 
-The WeWrite Payout System is a comprehensive financial infrastructure that handles automated token-to-cash payouts for content creators. The system integrates with Stripe Connect to process payments while maintaining full audit trails and compliance requirements.
+The WeWrite Payout System is a comprehensive financial infrastructure that handles automated USD-to-cash payouts for content creators. The system integrates with Stripe Connect to process payments while maintaining full audit trails and compliance requirements.
 
 ### Key Features
 
-- **Automated Payout Processing**: Scheduled monthly payouts based on token earnings
+- **Automated Payout Processing**: Scheduled monthly payouts based on USD earnings
 - **Multi-Currency Support**: USD, EUR, GBP, CAD, AUD with automatic conversion
 - **Intelligent Retry Logic**: Exponential backoff with configurable retry policies
 - **Real-time Status Tracking**: Complete payout lifecycle monitoring

@@ -79,10 +79,10 @@ if (isTestSubscription) {
 
 ```typescript
 const TIERS = {
-  tier1: { amount: 10, tokens: 100, name: 'Supporter' },
-  tier2: { amount: 20, tokens: 200, name: 'Advocate' }, 
-  tier3: { amount: 30, tokens: 300, name: 'Champion' },
-  custom: { amount: 1-50, tokens: amount * 10, name: 'Custom' }
+  tier1: { amount: 5, usdCents: 500, name: 'Supporter' },
+  tier2: { amount: 25, usdCents: 2500, name: 'Advocate' },
+  tier3: { amount: 50, usdCents: 5000, name: 'Champion' },
+  custom: { amount: 100+, usdCents: amount * 100, name: 'Custom' }
 };
 ```
 
@@ -95,7 +95,7 @@ const data = await response.json();
 const subscription = data.hasSubscription ? data.fullData : null;
 
 // Expected fields:
-// { hasSubscription, status, amount, tokens, cancelAtPeriodEnd, fullData: {...} }
+// { hasSubscription, status, amount, cancelAtPeriodEnd, fullData: {...} }
 ```
 
 ### Update Subscription
@@ -250,7 +250,7 @@ import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentC
 import { getUsernameById } from '../utils/userUtils';
 
 // Subscription tiers
-import { getTierById, calculateTokensForAmount } from '../utils/subscriptionTiers';
+import { getTierById, calculateUsdCentsForAmount } from '../utils/subscriptionTiers';
 ```
 
 ---
