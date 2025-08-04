@@ -29,14 +29,9 @@ import { useToast } from '../ui/use-toast';
 import { cn } from '../../lib/utils';
 import { AllocationIntervalModal } from './AllocationIntervalModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
-
-interface EmbeddedAllocationBarProps {
-  pageId: string;
-  authorId: string;
-  pageTitle: string;
-  className?: string;
-  source?: string;
-}
+import { useAllocationState } from '../../hooks/useAllocationState';
+import { useAllocationActions } from '../../hooks/useAllocationActions';
+import { EmbeddedAllocationBarProps, CompositionBarData } from '../../types/allocation';
 
 export function EmbeddedAllocationBar({
   pageId,
@@ -46,18 +41,12 @@ export function EmbeddedAllocationBar({
   source = 'EmbeddedCard'
 }: EmbeddedAllocationBarProps) {
   const { user } = useAuth();
-  const { usdBalance, isLoading: usdLoading, updateOptimisticBalance } = useUsdBalance();
+  const { usdBalance, isLoading: usdLoading } = useUsdBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [currentPageAllocationCents, setCurrentPageAllocationCents] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [showIntervalModal, setShowIntervalModal] = useState(false);
-  
-  // Batching state for API calls
-  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingChangeCents = useRef(0);
 
   // Long press handling
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,86 +55,58 @@ export function EmbeddedAllocationBar({
   // Don't show for page owners
   const isPageOwner = user?.uid === authorId;
 
-  // Fetch current allocation for this page
-  useEffect(() => {
-    if (!pageId || !user?.uid || isPageOwner) {
-      setIsLoading(false);
-      return;
+  // Use our shared hooks
+  const { allocationState, setOptimisticAllocation } = useAllocationState({
+    pageId,
+    enabled: !isPageOwner && !!user?.uid
+  });
+
+  const { handleAllocationChange, isProcessing } = useAllocationActions({
+    pageId,
+    authorId,
+    pageTitle,
+    currentAllocationCents: allocationState.currentAllocationCents,
+    source,
+    onOptimisticUpdate: setOptimisticAllocation
+  });
+
+  // Calculate composition bar data
+  const getCompositionData = (): CompositionBarData => {
+    if (!usdBalance) {
+      return {
+        otherPagesPercentage: 0,
+        currentPagePercentage: 0,
+        availablePercentage: 100,
+        isOutOfFunds: false
+      };
     }
 
-    const fetchAllocation = async () => {
-      try {
-        const response = await fetch(`/api/usd/allocation?pageId=${pageId}&userId=${user.uid}`);
-        if (response.ok) {
-          const data = await response.json();
-          setCurrentPageAllocationCents(data.allocationCents || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching allocation:', error);
-      } finally {
-        setIsLoading(false);
-      }
+    const totalCents = usdBalance.totalUsdCents;
+    const allocatedCents = usdBalance.allocatedUsdCents;
+    const availableCents = usdBalance.availableUsdCents;
+
+    const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
+    const isOutOfFunds = availableCents <= 0 && totalCents > 0;
+
+    // Calculate percentages for composition bar
+    const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
+    const currentPagePercentage = totalCents > 0 ? (allocationState.currentAllocationCents / totalCents) * 100 : 0;
+    const availablePercentage = totalCents > 0 ? Math.max(0, (availableCents / totalCents) * 100) : 0;
+
+    return {
+      otherPagesPercentage,
+      currentPagePercentage,
+      availablePercentage,
+      isOutOfFunds
     };
-
-    fetchAllocation();
-  }, [pageId, user?.uid, isPageOwner]);
-
-  // Handle allocation changes with batching
-  const handleAllocationChange = async (changeCents: number) => {
-    if (!user?.uid || isPageOwner) return;
-
-    // Optimistic update
-    setCurrentPageAllocationCents(prev => Math.max(0, prev + changeCents));
-    updateOptimisticBalance(changeCents);
-
-    // Add to pending changes
-    pendingChangeCents.current += changeCents;
-
-    // Clear existing timeout
-    if (batchTimeoutRef.current) {
-      clearTimeout(batchTimeoutRef.current);
-    }
-
-    // Set new timeout to batch the API call
-    batchTimeoutRef.current = setTimeout(async () => {
-      const totalChangeCents = pendingChangeCents.current;
-      pendingChangeCents.current = 0;
-
-      try {
-        const response = await fetch('/api/usd/allocate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pageId,
-            changeCents: totalChangeCents,
-            pageTitle,
-            authorId,
-            source
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update allocation');
-        }
-      } catch (error) {
-        console.error('Error updating allocation:', error);
-        // Revert optimistic update on error
-        setCurrentPageAllocationCents(prev => Math.max(0, prev - totalChangeCents));
-        updateOptimisticBalance(-totalChangeCents);
-        
-        toast({
-          title: "Error",
-          description: "Failed to update allocation. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }, 500); // 500ms debounce
   };
+
+  const compositionData = getCompositionData();
 
   const handleButtonClick = (direction: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!user) {
       router.push('/auth/login');
       return;
@@ -153,8 +114,8 @@ export function EmbeddedAllocationBar({
 
     if (isPageOwner) return;
 
-    const changeCents = direction * (allocationIntervalCents || 100); // Default to $1.00
-    handleAllocationChange(changeCents);
+    // Use our shared allocation change handler
+    handleAllocationChange(direction as 1 | -1, e);
   };
 
   // Long press handlers
@@ -191,9 +152,6 @@ export function EmbeddedAllocationBar({
   // Cleanup timeouts
   useEffect(() => {
     return () => {
-      if (batchTimeoutRef.current) {
-        clearTimeout(batchTimeoutRef.current);
-      }
       if (longPressTimeoutRef.current) {
         clearTimeout(longPressTimeoutRef.current);
       }
@@ -206,7 +164,7 @@ export function EmbeddedAllocationBar({
   }
 
   // Show loading state while data loads
-  if (isLoading || usdLoading || intervalLoading) {
+  if (allocationState.isLoading || usdLoading || intervalLoading) {
     return (
       <div className={cn("flex items-center gap-3", className)}>
         <div className="h-8 w-8 bg-muted rounded animate-pulse" />
@@ -232,25 +190,11 @@ export function EmbeddedAllocationBar({
     );
   }
 
-  // Work directly with USD cents - no conversion needed
-  const totalCents = usdBalance?.totalUsdCents || 0;
-  const allocatedCents = usdBalance?.allocatedUsdCents || 0;
-  const availableCents = totalCents - allocatedCents;
-
-  // Calculate USD distribution for composition bar
-  const otherPagesCents = Math.max(0, allocatedCents - currentPageAllocationCents);
-  const isOutOfFunds = availableCents <= 0;
-
-  // Calculate percentages for the composition bar (order: other, this, available)
-  const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
-  const currentPagePercentage = totalCents > 0 ? (currentPageAllocationCents / totalCents) * 100 : 0;
-  const availablePercentage = totalCents > 0 ? (availableCents / totalCents) * 100 : 0;
-
   return (
     <div className={cn("w-full", className)}>
       {/* Allocation amount display above the controls */}
       <AllocationAmountDisplay
-        allocationCents={currentPageAllocationCents}
+        allocationCents={allocationState.currentAllocationCents}
       />
 
       <div className="flex items-center gap-3">
@@ -263,7 +207,7 @@ export function EmbeddedAllocationBar({
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          disabled={false}
+          disabled={isProcessing || allocationState.currentAllocationCents <= 0}
         >
           <Minus className="h-4 w-4" />
         </Button>
@@ -279,26 +223,29 @@ export function EmbeddedAllocationBar({
           {/* Background composition bar with smooth transitions */}
           <div className="absolute inset-0 flex gap-1">
             {/* Other pages (spent elsewhere) - left side */}
-            {otherPagesCents > 0 && (
+            {compositionData.otherPagesPercentage > 0 && (
               <div
                 className="bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
-                style={{ width: `${otherPagesPercentage}%` }}
+                style={{ width: `${compositionData.otherPagesPercentage}%` }}
               />
             )}
 
             {/* Current page (spent here) - center, primary color */}
-            {currentPageAllocationCents > 0 && (
+            {compositionData.currentPagePercentage > 0 && (
               <div
-                className="bg-primary rounded-md transition-all duration-300 ease-out"
-                style={{ width: `${currentPagePercentage}%` }}
+                className={cn(
+                  "rounded-md transition-all duration-300 ease-out",
+                  compositionData.isOutOfFunds ? "bg-orange-500" : "bg-primary"
+                )}
+                style={{ width: `${compositionData.currentPagePercentage}%` }}
               />
             )}
 
             {/* Available funds - right side */}
-            {availableCents > 0 && (
+            {compositionData.availablePercentage > 0 && (
               <div
                 className="bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
-                style={{ width: `${availablePercentage}%` }}
+                style={{ width: `${compositionData.availablePercentage}%` }}
               />
             )}
           </div>
@@ -309,11 +256,11 @@ export function EmbeddedAllocationBar({
           size="sm"
           variant="outline"
           className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0"
-          onClick={(e) => isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
+          onClick={(e) => compositionData.isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          disabled={false}
+          disabled={isProcessing}
         >
           <Plus className="h-4 w-4" />
         </Button>
