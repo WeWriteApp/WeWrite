@@ -323,6 +323,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 allocationCents={currentUsdAllocation}
               />
 
+              {/* Out of funds message */}
+              {isOutOfFunds && (
+                <div className="text-center text-sm text-orange-500 font-medium">
+                  Out of funds
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
               {isLoading ? (
                 <div className="flex items-center gap-3 w-full">
@@ -353,7 +360,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
                   {/* Composition Bar */}
                   <div className={cn(
-                    "flex-1 rounded-lg h-12 flex gap-1 p-1 relative",
+                    "flex-1 rounded-lg h-12 flex gap-1 p-1",
                     isOutOfFunds ? "bg-orange-500/20" : "bg-muted"
                   )}>
                     {/* Always show composition - even when out of funds */}
@@ -361,7 +368,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                       {/* Other pages */}
                       {otherPagesPercentage > 0 && (
                         <div
-                          className="h-full bg-muted-foreground/30 rounded-md"
+                          className="h-full bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
                           style={{ width: `${otherPagesPercentage}%` }}
                         />
                       )}
@@ -370,34 +377,21 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                       {currentPagePercentage > 0 && (
                         <div
                           className={cn(
-                            "h-full rounded-md",
+                            "h-full rounded-md transition-all duration-300 ease-out",
                             isOutOfFunds ? "bg-orange-500" : "bg-primary"
                           )}
                           style={{ width: `${currentPagePercentage}%` }}
                         />
                       )}
 
-                      {/* Available/Remaining - just dotted border, no background fill */}
+                      {/* Available/Remaining */}
                       {availablePercentage > 0 && (
                         <div
-                          className="h-full rounded-md border-2 border-dashed border-muted-foreground/30"
+                          className="h-full bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
                           style={{ width: `${availablePercentage}%` }}
                         />
                       )}
                     </>
-
-                    {/* Centered dollar amount overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={cn(
-                        "text-sm font-medium transition-all duration-200 ease-out",
-                        isOutOfFunds ? "text-orange-500" : "text-foreground"
-                      )}>
-                        {isOutOfFunds
-                          ? "Out of funds"
-                          : `${formatUsdCents(currentUsdAllocation)}/mo`
-                        }
-                      </span>
-                    </div>
                   </div>
 
                   <Button
