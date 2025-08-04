@@ -311,6 +311,57 @@ body .paragraph-number {
   margin-left: 0;
 }
 
+/* Mobile optimizations for dense mode */
+@media (max-width: 767px) {
+  /* Ensure dense mode paragraphs display inline on mobile */
+  .viewer-paragraph.dense-paragraph {
+    @apply inline-block mr-4;
+    /* Force inline-block display on mobile */
+    display: inline-block !important;
+  }
+
+  /* Ensure proper spacing for dense mode paragraph numbers on mobile */
+  .viewer-paragraph.dense-paragraph .paragraph-number {
+    @apply mr-3;
+    /* Maintain proper spacing on mobile */
+    margin-right: 0.75rem !important;
+  }
+
+  /* Ensure dense content flows properly on mobile */
+  .dense-content-flow {
+    @apply leading-relaxed;
+    /* Maintain proper line height on mobile */
+    line-height: 1.625 !important;
+    /* Ensure dense content container allows inline flow on mobile */
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Prevent mobile from breaking dense mode layout */
+  .viewer-paragraph.dense-paragraph .paragraph-content {
+    @apply inline;
+    /* Ensure content stays inline on mobile */
+    display: inline !important;
+  }
+
+  /* Additional mobile dense mode fixes with higher specificity */
+  .viewer-paragraph.dense-paragraph,
+  .wewrite-viewer-paragraph.dense {
+    /* Force inline-block with higher specificity */
+    display: inline-block !important;
+    margin-right: 1rem !important;
+    vertical-align: top !important;
+    /* Allow normal text wrapping but maintain inline-block structure */
+    white-space: normal !important;
+  }
+
+  /* Ensure content within dense paragraphs displays inline */
+  .viewer-paragraph.dense-paragraph .paragraph-content,
+  .wewrite-viewer-paragraph.dense .paragraph-content {
+    display: inline !important;
+  }
+}
+
 /* Global zoom prevention (applies to all screen sizes) */
 html {
   /* Prevent zoom via CSS zoom property */
@@ -605,6 +656,15 @@ input[type="range"]::-moz-range-thumb,
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+
+  /* EXCEPTION: Dense mode paragraphs should maintain normal word breaking */
+  .viewer-paragraph.dense-paragraph,
+  .viewer-paragraph.dense-paragraph p,
+  .viewer-paragraph.dense-paragraph span,
+  .viewer-paragraph.dense-paragraph div {
+    word-break: normal !important;
+    overflow-wrap: normal !important;
   }
 
   /* Headings get special treatment to prevent unnecessary hyphenation */

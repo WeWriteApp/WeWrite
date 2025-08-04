@@ -271,7 +271,7 @@
 
 /**
  * Mobile Optimizations
- * 
+ *
  * Ensure content displays properly on mobile devices.
  */
 @media (max-width: 767px) {
@@ -282,15 +282,29 @@
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    
+
     /* Prevent horizontal scrolling */
     overflow-wrap: break-word;
     word-break: break-word;
   }
-  
-  .wewrite-viewer-paragraph {
+
+  .wewrite-viewer-paragraph,
+  .viewer-paragraph {
     /* Adjust paragraph spacing on mobile */
     @apply gap-2 py-1;
+  }
+
+  /* Ensure dense mode works properly on mobile */
+  .wewrite-viewer-paragraph.dense,
+  .viewer-paragraph.dense-paragraph {
+    @apply inline-block mr-4;
+    /* Maintain dense mode behavior on mobile */
+  }
+
+  .wewrite-viewer-paragraph.dense .paragraph-number,
+  .viewer-paragraph.dense-paragraph .paragraph-number {
+    @apply mr-3;
+    /* Proper spacing for paragraph numbers in dense mode on mobile */
   }
 }
 
