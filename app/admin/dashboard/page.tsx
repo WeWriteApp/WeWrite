@@ -5,7 +5,7 @@ import './dashboard.css';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Filter } from 'lucide-react';
+import { ChevronLeft, Filter, GripVertical } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';

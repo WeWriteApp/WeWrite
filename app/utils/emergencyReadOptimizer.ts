@@ -215,9 +215,13 @@ class EmergencyReadOptimizer {
     // Example: Increase polling intervals or disable certain polls
     if (typeof window !== 'undefined') {
       // Client-side polling adjustments
-      window.dispatchEvent(new CustomEvent('emergency-optimization', {
-        detail: { action: 'disable-polling' }
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('emergency-optimization', {
+          detail: { action: 'disable-polling' }
+        }));
+      } catch (error) {
+        console.warn('Failed to dispatch emergency optimization event:', error);
+      }
     }
   }
 

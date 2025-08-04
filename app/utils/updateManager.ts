@@ -19,8 +19,11 @@ class UpdateManager {
   private listeners = new Set<(hasUpdate: boolean) => void>();
 
   private constructor() {
-    this.loadFromStorage();
-    this.detectCurrentBuild();
+    // Only initialize on client-side
+    if (typeof window !== 'undefined') {
+      this.loadFromStorage();
+      this.detectCurrentBuild();
+    }
   }
 
   static getInstance(): UpdateManager {
@@ -34,6 +37,9 @@ class UpdateManager {
    * Detect current build ID from various sources
    */
   private detectCurrentBuild(): void {
+    // Only run on client-side
+    if (typeof window === 'undefined') return;
+
     // Try to get build ID from meta tag
     const metaBuildId = document.querySelector('meta[name="build-id"]')?.getAttribute('content');
     if (metaBuildId) {
@@ -57,6 +63,9 @@ class UpdateManager {
    * Load update states from localStorage
    */
   private loadFromStorage(): void {
+    // Only run on client-side
+    if (typeof window === 'undefined') return;
+
     try {
       const stored = localStorage.getItem('updateStates');
       if (stored) {
@@ -72,6 +81,9 @@ class UpdateManager {
    * Save update states to localStorage
    */
   private saveToStorage(): void {
+    // Only run on client-side
+    if (typeof window === 'undefined') return;
+
     try {
       const states = Object.fromEntries(this.updateStates.entries());
       localStorage.setItem('updateStates', JSON.stringify(states));
@@ -137,9 +149,11 @@ class UpdateManager {
     this.updateStates.set(buildId, state);
     this.saveToStorage();
 
-    // Also set legacy dismissal keys for backward compatibility
-    localStorage.setItem(`updateDismissed_${buildId}`, Date.now().toString());
-    localStorage.setItem('updateDismissedAt', Date.now().toString());
+    // Also set legacy dismissal keys for backward compatibility (client-side only)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`updateDismissed_${buildId}`, Date.now().toString());
+      localStorage.setItem('updateDismissedAt', Date.now().toString());
+    }
 
     console.log('🔕 Update dismissed for build:', buildId);
 
@@ -154,7 +168,12 @@ class UpdateManager {
     // Clear the update state since it's been applied
     this.updateStates.delete(buildId);
     this.currentBuildId = buildId;
-    localStorage.setItem('currentBuildId', buildId);
+
+    // Only update localStorage on client-side
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('currentBuildId', buildId);
+    }
+
     this.saveToStorage();
 
     console.log('✅ Update applied for build:', buildId);
@@ -174,13 +193,15 @@ class UpdateManager {
     // Don't show if already dismissed or shown
     if (state?.dismissed || state?.shown) return false;
 
-    // Check if recently dismissed (within 1 hour)
-    const dismissedAt = localStorage.getItem('updateDismissedAt');
-    if (dismissedAt) {
-      const dismissedTime = parseInt(dismissedAt);
-      const oneHour = 60 * 60 * 1000;
-      if (Date.now() - dismissedTime < oneHour) {
-        return false;
+    // Check if recently dismissed (within 1 hour) - client-side only
+    if (typeof window !== 'undefined') {
+      const dismissedAt = localStorage.getItem('updateDismissedAt');
+      if (dismissedAt) {
+        const dismissedTime = parseInt(dismissedAt);
+        const oneHour = 60 * 60 * 1000;
+        if (Date.now() - dismissedTime < oneHour) {
+          return false;
+        }
       }
     }
 
@@ -248,14 +269,18 @@ class UpdateManager {
    */
   reset(): void {
     this.updateStates.clear();
-    localStorage.removeItem('updateStates');
-    localStorage.removeItem('updateDismissedAt');
-    
-    // Clear all build-specific dismissals
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('updateDismissed_')) {
-        localStorage.removeItem(key);
+
+    // Only clear localStorage on client-side
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('updateStates');
+      localStorage.removeItem('updateDismissedAt');
+
+      // Clear all build-specific dismissals
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('updateDismissed_')) {
+          localStorage.removeItem(key);
+        }
       }
     }
 
