@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { updateManager, shouldShowUpdate, markUpdateShown, markUpdateDismissed } from '../utils/updateManager';
 
 interface UpdateDetectionConfig {
   checkInterval?: number; // in milliseconds
@@ -94,8 +95,16 @@ export function useUpdateDetection({
       setLastChecked(new Date());
 
       if (newBuildId && currentBuildId && newBuildId !== currentBuildId) {
-        console.log('Update detected:', { current: currentBuildId, new: newBuildId });
-        setIsUpdateAvailable(true);
+        // Use centralized update manager
+        if (shouldShowUpdate(newBuildId)) {
+          console.log('🔄 New update detected via UpdateManager:', { current: currentBuildId, new: newBuildId });
+          setIsUpdateAvailable(true);
+          setCurrentBuildId(newBuildId);
+          markUpdateShown(newBuildId);
+        } else {
+          console.log('🔕 Update already handled by UpdateManager:', newBuildId);
+          setCurrentBuildId(newBuildId);
+        }
       } else if (!currentBuildId && newBuildId) {
         // First time setting build ID
         setCurrentBuildId(newBuildId);
@@ -108,9 +117,11 @@ export function useUpdateDetection({
   // Dismiss the update notification
   const dismissUpdate = useCallback(() => {
     setIsUpdateAvailable(false);
-    // Store dismissal time to avoid showing again too soon
-    localStorage.setItem('updateDismissedAt', Date.now().toString());
-  }, []);
+    // Use centralized update manager
+    if (currentBuildId) {
+      markUpdateDismissed(currentBuildId);
+    }
+  }, [currentBuildId]);
 
   // Set up periodic checking
   useEffect(() => {
@@ -130,18 +141,30 @@ export function useUpdateDetection({
 
   // Check if user recently dismissed an update
   useEffect(() => {
+    if (!currentBuildId) return;
+
+    // Check if this specific build was dismissed
+    const dismissalKey = `updateDismissed_${currentBuildId}`;
+    const wasDismissed = localStorage.getItem(dismissalKey);
+
+    if (wasDismissed) {
+      setIsUpdateAvailable(false);
+      return;
+    }
+
+    // Also check general dismissal time (fallback)
     const dismissedAt = localStorage.getItem('updateDismissedAt');
     if (dismissedAt) {
       const dismissedTime = parseInt(dismissedAt);
       const now = Date.now();
       const oneHour = 60 * 60 * 1000;
-      
+
       // Don't show update notification if dismissed within the last hour
       if (now - dismissedTime < oneHour) {
         setIsUpdateAvailable(false);
       }
     }
-  }, []);
+  }, [currentBuildId]);
 
   // Listen for focus events to check for updates when user returns
   useEffect(() => {

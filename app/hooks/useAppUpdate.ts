@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { updateManager, shouldShowUpdate, markUpdateShown, markUpdateDismissed } from '../utils/updateManager';
 
 interface AppUpdateState {
   isUpdateAvailable: boolean;
@@ -30,12 +31,18 @@ export function useAppUpdate(): AppUpdateState {
         const currentBuildTime = data.buildTime || data.timestamp;
         
         if (lastBuildTime && lastBuildTime !== currentBuildTime) {
-          console.log('🔄 App update detected:', { 
-            previous: lastBuildTime, 
-            current: currentBuildTime 
-          });
-          setIsUpdateAvailable(true);
-          setShowModal(true);
+          // Use centralized update manager
+          if (shouldShowUpdate(currentBuildTime)) {
+            console.log('🔄 App update detected via UpdateManager:', {
+              previous: lastBuildTime,
+              current: currentBuildTime
+            });
+            setIsUpdateAvailable(true);
+            setShowModal(true);
+            markUpdateShown(currentBuildTime);
+          } else {
+            console.log('🔕 Update already handled by UpdateManager:', currentBuildTime);
+          }
         }
         
         setLastBuildTime(currentBuildTime);
@@ -47,7 +54,12 @@ export function useAppUpdate(): AppUpdateState {
 
   const dismissUpdate = () => {
     setShowModal(false);
-    // Don't reset isUpdateAvailable - keep it true until refresh
+    setIsUpdateAvailable(false);
+
+    // Use centralized update manager
+    if (lastBuildTime) {
+      markUpdateDismissed(lastBuildTime);
+    }
   };
 
   const applyUpdate = () => {

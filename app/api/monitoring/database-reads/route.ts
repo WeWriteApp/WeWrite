@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getReadStats, resetReadStats } from '../../../utils/databaseReadTracker';
+import { analyzeDatabaseReads, getEndpointReport, exportReadData } from '../../../utils/databaseReadAnalyzer';
 
 /**
  * Database Read Monitoring API
@@ -20,16 +21,58 @@ import { getReadStats, resetReadStats } from '../../../utils/databaseReadTracker
 
 /**
  * GET /api/monitoring/database-reads
- * Get current database read statistics
+ * Get current database read statistics with advanced analysis
  */
 export async function GET(request: NextRequest) {
   try {
     // Optional: Require admin access for monitoring
     const userId = await getUserIdFromRequest(request);
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    const endpoint = searchParams.get('endpoint');
 
-    // Use shared tracking system
-    const response = getReadStats();
-    return NextResponse.json(response);
+    // Handle different analysis types
+    switch (action) {
+      case 'analyze':
+        const analysis = analyzeDatabaseReads();
+        return NextResponse.json({
+          success: true,
+          analysis,
+          timestamp: new Date().toISOString()
+        });
+
+      case 'endpoint-report':
+        if (!endpoint) {
+          return NextResponse.json({
+            error: 'Endpoint parameter required for endpoint-report action'
+          }, { status: 400 });
+        }
+        const report = getEndpointReport(endpoint);
+        return NextResponse.json({
+          success: true,
+          report,
+          timestamp: new Date().toISOString()
+        });
+
+      case 'export':
+        const exportData = exportReadData();
+        return NextResponse.json({
+          success: true,
+          data: exportData,
+          timestamp: new Date().toISOString()
+        });
+
+      default:
+        // Default: return basic stats + analysis
+        const basicStats = getReadStats();
+        const advancedAnalysis = analyzeDatabaseReads();
+
+        return NextResponse.json({
+          ...basicStats,
+          advancedAnalysis,
+          timestamp: new Date().toISOString()
+        });
+    }
 
   } catch (error) {
     console.error('Error getting database read stats:', error);

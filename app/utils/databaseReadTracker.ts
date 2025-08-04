@@ -1,9 +1,11 @@
 /**
  * Database Read Tracker Utility
- * 
+ *
  * Simple utility to track database reads for the monitoring system
- * without circular import issues
+ * without circular import issues. Now enhanced with advanced analysis.
  */
+
+import { recordDatabaseRead } from './databaseReadAnalyzer';
 
 // Global read tracking
 let readStats = {
@@ -29,11 +31,15 @@ const endpointReadTracker = new Map<string, {
  * Track a database read operation
  */
 export function trackDatabaseRead(
-  endpoint: string, 
-  readCount: number = 1, 
+  endpoint: string,
+  readCount: number = 1,
   responseTime: number = 0,
-  fromCache: boolean = false
+  fromCache: boolean = false,
+  userId?: string,
+  sessionId?: string
 ) {
+  // Record in advanced analyzer
+  recordDatabaseRead(endpoint, readCount, responseTime, fromCache, userId, sessionId);
   // Update global stats
   readStats.totalReads += readCount;
   readStats.hourlyReads += readCount;
@@ -85,8 +91,10 @@ export function trackDatabaseRead(
     console.error(`🚨 COST ALERT: Estimated daily cost $${readStats.estimatedCost.toFixed(2)}`);
   }
 
-  // Log the read for debugging
-  console.log(`📊 DB READ: ${endpoint} - ${readCount} reads, ${responseTime}ms, cache: ${fromCache}`);
+  // Log the read for debugging (only for high-volume endpoints)
+  if (readCount > 5 || !fromCache) {
+    console.log(`📊 DB READ: ${endpoint} - ${readCount} reads, ${responseTime}ms, cache: ${fromCache}`);
+  }
 }
 
 /**

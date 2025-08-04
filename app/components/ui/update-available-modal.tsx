@@ -58,8 +58,13 @@ export function UpdateAvailableModal({ isOpen, onClose, onRefresh }: UpdateAvail
 
   const handleLater = () => {
     onClose();
-    // Set a flag to remind user later (optional)
+    // Set a flag to remind user later with build-specific dismissal
     localStorage.setItem('updateDismissedAt', Date.now().toString());
+    // Also set a build-specific dismissal if we can determine the build
+    const buildId = document.querySelector('meta[name="build-id"]')?.getAttribute('content');
+    if (buildId) {
+      localStorage.setItem(`updateDismissed_${buildId}`, Date.now().toString());
+    }
   };
 
   return (
