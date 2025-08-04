@@ -37,28 +37,33 @@ export function AllocationAmountDisplay({
       return () => clearTimeout(timer);
     }
 
-    // Update visibility
+    // Update visibility - always show when there's any allocation
     setIsVisible(allocationCents > 0);
     setPreviousAmount(allocationCents);
   }, [allocationCents, previousAmount]);
 
+  // Always show when there's an allocation, even if small
+  const shouldShow = allocationCents > 0;
+
   return (
-    <div 
+    <div
       className={cn(
         "overflow-hidden transition-all duration-300 ease-in-out",
-        isVisible ? "max-h-8 mb-2" : "max-h-0 mb-0",
+        shouldShow ? "max-h-8 mb-2" : "max-h-0 mb-0",
         className
       )}
     >
-      <div 
-        className={cn(
-          "text-center font-bold text-sm transition-all duration-300 ease-in-out",
-          "text-primary", // Accent color
-          showFlash && "animate-flash-background"
-        )}
-      >
-        {allocationCents > 0 && `${formatUsdCents(allocationCents)}/mo`}
-      </div>
+      {shouldShow && (
+        <div
+          className={cn(
+            "text-center font-bold text-sm transition-all duration-300 ease-in-out",
+            "text-primary", // Accent color - should be blue/purple
+            showFlash && "animate-flash-background"
+          )}
+        >
+          {formatUsdCents(allocationCents)}/mo
+        </div>
+      )}
     </div>
   );
 }
