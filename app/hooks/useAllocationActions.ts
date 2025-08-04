@@ -15,6 +15,11 @@ import {
 } from '../types/allocation';
 import { useAllocationMutation } from './useAllocationQueries';
 import { allocationBatcher } from '../utils/allocationBatching';
+import {
+  allocationErrorHandler,
+  getUserFriendlyErrorMessage,
+  getErrorRecoveryActions
+} from '../utils/allocationErrorHandling';
 import { showUsdAllocationNotification } from '../utils/usdNotifications';
 
 /**
@@ -115,17 +120,33 @@ export function useAllocationActions({
     } catch (error) {
       console.error('Allocation error:', error);
 
-      // Show error message
-      const errorMessage = error instanceof AllocationError
-        ? error.message
-        : 'Failed to update allocation';
+      // Use comprehensive error handling
+      const errorContext = {
+        pageId,
+        userId: user?.uid,
+        changeCents,
+        source,
+        timestamp: new Date()
+      };
 
-      setError(errorMessage);
-      toast({
-        title: "Allocation Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      const errorResult = allocationErrorHandler.handleError(error as Error, errorContext);
+
+      setError(errorResult.userMessage);
+
+      if (errorResult.showToUser) {
+        toast({
+          title: "Allocation Failed",
+          description: errorResult.userMessage,
+          variant: "destructive",
+        });
+      }
+
+      // Report to analytics if needed
+      if (errorResult.reportToAnalytics) {
+        const analyticsData = allocationErrorHandler.createErrorAnalytics(error as Error, errorContext);
+        // TODO: Send to analytics service
+        console.log('Error analytics:', analyticsData);
+      }
     }
   }, [
     clearBatch,
@@ -261,13 +282,33 @@ export function useAllocationActions({
       updateOptimisticBalance(-changeCents);
       onOptimisticUpdate?.(currentAllocationCents);
 
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update allocation';
-      setError(errorMessage);
-      toast({
-        title: "Allocation Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Use comprehensive error handling
+      const errorContext = {
+        pageId,
+        userId: user?.uid,
+        changeCents,
+        source,
+        timestamp: new Date()
+      };
+
+      const errorResult = allocationErrorHandler.handleError(error as Error, errorContext);
+
+      setError(errorResult.userMessage);
+
+      if (errorResult.showToUser) {
+        toast({
+          title: "Allocation Failed",
+          description: errorResult.userMessage,
+          variant: "destructive",
+        });
+      }
+
+      // Report to analytics if needed
+      if (errorResult.reportToAnalytics) {
+        const analyticsData = allocationErrorHandler.createErrorAnalytics(error as Error, errorContext);
+        // TODO: Send to analytics service
+        console.log('Error analytics:', analyticsData);
+      }
     });
 
     setError(null);

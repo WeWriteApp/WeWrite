@@ -12,6 +12,7 @@ import {
 } from '../types/allocation';
 import { getLoggedOutPageAllocation, allocateLoggedOutUsd } from '../utils/simulatedUsd';
 import { getCacheConfig } from '../utils/reactQueryConfig';
+import { allocationErrorHandler } from '../utils/allocationErrorHandling';
 
 /**
  * React Query hooks for allocation data management
@@ -104,13 +105,26 @@ export function usePageAllocation(pageId: string, enabled: boolean = true) {
     staleTime: cacheConfig.staleTime,
     gcTime: cacheConfig.gcTime,
     retry: (failureCount, error) => {
-      // Retry only for retryable errors and up to 3 times
-      if (error instanceof AllocationError && error.retryable && failureCount < 3) {
-        return true;
-      }
-      return false;
+      // Use comprehensive error handling to determine retry logic
+      const errorContext = {
+        pageId,
+        userId: user?.uid,
+        timestamp: new Date()
+      };
+
+      const errorResult = allocationErrorHandler.handleError(error as Error, errorContext);
+      return errorResult.shouldRetry && failureCount < (errorResult.maxRetries || 3);
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex, error) => {
+      const errorContext = {
+        pageId,
+        userId: user?.uid,
+        timestamp: new Date()
+      };
+
+      const retryConfig = allocationErrorHandler.getRetryConfig(error as Error, errorContext);
+      return Math.min(retryConfig.delay * Math.pow(2, attemptIndex), 30000);
+    },
   });
 }
 
