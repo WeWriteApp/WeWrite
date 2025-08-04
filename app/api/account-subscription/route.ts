@@ -13,6 +13,9 @@ import { getDocumentOptimized, trackFirestoreRead } from '../../utils/firestoreO
 const subscriptionCache = new Map<string, { data: any; timestamp: number }>();
 const SUBSCRIPTION_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
 
+// Export cache for invalidation from other modules
+export { subscriptionCache };
+
 export async function GET(request: NextRequest) {
   try {
     // Get authenticated user
@@ -129,9 +132,33 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST() {
-  return NextResponse.json(
-    { error: 'Method not allowed' },
-    { status: 405 }
-  );
+export async function POST(request: NextRequest) {
+  try {
+    const { action, userId } = await request.json();
+
+    if (action === 'invalidate-cache' && userId) {
+      // Invalidate the cache for this user
+      const cacheKey = `subscription:${userId}`;
+      if (subscriptionCache.has(cacheKey)) {
+        subscriptionCache.delete(cacheKey);
+        console.log(`🗑️ Subscription cache invalidated for user: ${userId}`);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Cache invalidated for user ${userId}`
+      });
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid action or missing userId' },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error('Error in POST handler:', error);
+    return NextResponse.json(
+      { error: 'Method not allowed' },
+      { status: 405 }
+    );
+  }
 }

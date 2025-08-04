@@ -41,6 +41,9 @@ import {
 } from "../../components/admin/FundedTokensWidget";
 import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
 
+// 🚨 CRITICAL: Database Reads Crisis Monitoring
+import { DatabaseReadsWidget } from "../../components/admin/DatabaseReadsWidget";
+
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
 import { SubscriptionsOverTimeWidget } from "../../components/admin/SubscriptionsOverTimeWidget";
@@ -108,6 +111,8 @@ const DraggableWidget = ({ id, index, moveWidget, children }: any) => {
 };
 
 const initialWidgets = [
+  // 🚨 CRITICAL: Database reads monitoring at the top for visibility
+  { id: 'database-reads-crisis', component: DatabaseReadsWidget },
   { id: 'live-visitors', component: LiveVisitorsWidget },
   { id: 'new-accounts', component: NewAccountsWidget },
   { id: 'new-pages', component: NewPagesWidget },

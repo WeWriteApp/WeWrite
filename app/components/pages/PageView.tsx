@@ -21,7 +21,7 @@ import logger, { createLogger } from '../../utils/logger';
 import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader";
 import PageFooter from "./PageFooter";
-import PledgeBar from "../payments/PledgeBar";
+import AllocationBar from "../payments/AllocationBar";
 import RelatedPagesSection from "../features/RelatedPagesSection";
 import PageGraphView from "./PageGraphView";
 
@@ -1532,9 +1532,9 @@ export default function PageView({
             )}
           </div>
 
-          {/* Pledge Bar - Only shows on other users' pages */}
+          {/* Allocation Bar - Only shows on other users' pages */}
           {page && (
-            <PledgeBar
+            <AllocationBar
               pageId={page.id}
               pageTitle={page.title}
               authorId={page.userId}

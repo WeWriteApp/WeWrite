@@ -24,7 +24,7 @@ import { useDateFormat } from "../../contexts/DateFormatContext";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
 import { RotateCcw } from "lucide-react";
-import { EmbeddedTokenAllocation } from "../payments/EmbeddedTokenAllocation";
+import { AllocationControls } from "../payments/AllocationControls";
 
 
 /**
@@ -320,7 +320,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
+        "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 no-underline bg-card overflow-hidden",
         "flex flex-col",
         // Reduced padding for better screen real estate
         "p-3 md:p-3",
@@ -328,10 +328,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
         "md:mb-0"
       )}
       style={{ transform: 'none' }}
-      onClick={handleCardClick}
     >
-      {/* Header section */}
-      <div className="flex justify-between items-start w-full mb-3">
+      {/* Header section - clickable area */}
+      <div
+        className="flex justify-between items-start w-full mb-3 cursor-pointer"
+        onClick={handleCardClick}
+      >
         {/* Left side: Page link and user info that can wrap */}
         <div className="flex-1 min-w-0 pr-3">
           {/* Page title and user info on same line, can wrap */}
@@ -420,8 +422,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
         </div>
       </div>
 
-      {/* Diff section at bottom */}
-      <div className="mt-auto">
+      {/* Diff section at bottom - clickable area */}
+      <div className="mt-auto cursor-pointer" onClick={handleCardClick}>
         {isTitleChange ? (
           <div className="flex items-center justify-center py-4 text-sm text-muted-foreground italic">
             Page title was changed
@@ -473,7 +475,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
         {/* Dollar allocation UI - show for all users' pages when not viewing your own */}
         {activity.userId && activity.pageId && (!user || user.uid !== activity.userId) && (
           <div className="pt-3 border-t border-border/20 mt-3">
-            <EmbeddedTokenAllocation
+            <AllocationControls
               pageId={activity.pageId}
               authorId={activity.userId}
               pageTitle={currentPageName}

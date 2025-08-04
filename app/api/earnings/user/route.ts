@@ -18,6 +18,10 @@ import {
   getUserUsdBalance
 } from '../../../utils/simulatedUsd';
 
+// 🚨 CRITICAL COST OPTIMIZATION: Aggressive caching for earnings data
+const earningsCache = new Map<string, { data: any; timestamp: number }>();
+const EARNINGS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
 /**
  * Get unfunded earnings for a user from logged-out users and users without subscriptions
  * UPDATED: Now uses USD system instead of tokens
@@ -185,6 +189,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // 🚨 CRITICAL: Check cache first to prevent massive read costs
+    const cacheKey = `earnings:${userId}`;
+    const cached = earningsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < EARNINGS_CACHE_TTL) {
+      console.log(`🚀 COST OPTIMIZATION: Returning cached earnings for ${userId}`);
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheAge: Date.now() - cached.timestamp
+      });
+    }
+
     // Get USD earnings data (new system)
     const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
 
@@ -208,10 +224,28 @@ export async function GET(request: NextRequest) {
       unfundedEarnings
     };
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: earnings
+    };
+
+    // 🚨 CRITICAL: Cache the response to prevent future reads
+    earningsCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    // Clean cache periodically
+    if (Math.random() < 0.01) {
+      const now = Date.now();
+      for (const [key, value] of earningsCache.entries()) {
+        if (now - value.timestamp > EARNINGS_CACHE_TTL * 2) {
+          earningsCache.delete(key);
+        }
+      }
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     // Use enhanced error handling for better debugging

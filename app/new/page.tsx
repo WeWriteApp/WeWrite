@@ -24,7 +24,7 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 
-import PledgeBar from "../components/payments/PledgeBar";
+import AllocationBar from "../components/payments/AllocationBar";
 
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
@@ -1285,7 +1285,7 @@ function NewPageContent() {
           </div> {/* Close full-width header area */}
         </div>
         {!isEditing && (
-          <PledgeBar
+          <AllocationBar
             pageId="new-page"
             pageTitle="New Page"
             authorId={user?.uid}

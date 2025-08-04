@@ -36,6 +36,9 @@ import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
+// 🚨 CRITICAL: Database Reads Crisis Monitoring
+import { DatabaseReadsWidget } from './DatabaseReadsWidget';
+
 // Import all the analytics hooks
 import {
   useAccountsMetrics,
@@ -519,11 +522,16 @@ export function DesktopOptimizedDashboard({
 
   return (
     <div className="desktop-optimized-dashboard">
+      {/* 🚨 CRITICAL: Database Reads Crisis Monitor - Always Visible */}
+      <div className="mb-6">
+        <DatabaseReadsWidget />
+      </div>
+
       {/* Instructions */}
       <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
         💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights. On mobile, pinch vertically to resize.
       </div>
-      
+
       {/* Dashboard Rows */}
       <div className="space-y-4">
         {dashboardRows.map((row) => (

@@ -65,11 +65,22 @@ Each device shows:
 - Returns all active sessions for the current user
 - Includes device information and activity data
 - Requires authentication
+- Works with both production Firebase Auth and development auth
 
 **DELETE `/api/auth/sessions/[sessionId]`**
 - Revokes a specific session
 - Logs out the target device
 - Returns success/error status
+- Supports both production and development sessions
+
+### Development Environment Support
+
+**Dev Auth Compatibility**: The device management system fully supports development authentication:
+- Dev auth sessions create proper session records in `DEV_userSessions` collection
+- Session validation works correctly for `dev_session_` prefixed session IDs
+- Device information is captured and stored for dev users
+- Remote logout functionality works for development test accounts
+- All device management features available during local development
 
 ### Data Structures
 

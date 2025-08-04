@@ -4,6 +4,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { useSidebarContext } from './UnifiedSidebar';
+import SiteFooter from './SiteFooter';
 
 /**
  * SidebarLayout Component
@@ -41,8 +42,12 @@ export default function SidebarLayout({ children, className }: SidebarLayoutProp
       />
 
       {/* Main content area */}
-      <div className={cn("flex-1 min-w-0", className)}>
-        {children}
+      <div className={cn("flex-1 min-w-0 flex flex-col", className)}>
+        <div className="flex-1">
+          {children}
+        </div>
+        {/* Global site footer */}
+        <SiteFooter />
       </div>
     </div>
   );

@@ -306,7 +306,7 @@ async function migrateWriterTokenBalances(dryRun = false, specificUserId = null)
 
       if (!dryRun) {
         // Create USD writer balance record
-        await db.collection('writerUsdBalances').doc(userId).set(usdData);
+        await db.collection(getCollectionName('writerUsdBalances')).doc(userId).set(usdData);
 
         // Log audit entry
         await logAuditEntry({
@@ -446,7 +446,7 @@ async function verifyMigration(specificUserId = null) {
   
   for (const doc of tokenBalanceSnapshot.docs) {
     const tokenData = doc.data();
-    const usdDoc = await db.collection('usdBalances').doc(tokenData.userId).get();
+    const usdDoc = await db.collection(getCollectionName('usdBalances')).doc(tokenData.userId).get();
     
     if (!usdDoc.exists) {
       verificationResults.tokenBalances.missing++;

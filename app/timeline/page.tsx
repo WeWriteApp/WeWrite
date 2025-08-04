@@ -135,22 +135,27 @@ function TimelineContent() {
 
   return (
     <NavPageLayout
-      backUrl="/"
       maxWidth="full"
       className="px-4"
-      rightContent={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={scrollToToday}
-          className="rounded-2xl relative"
-          aria-label="Scroll to today"
-        >
-          <Clock className="h-4 w-4" />
-          <span className="hidden md:inline ml-2">Today</span>
-        </Button>
-      }
     >
+        {/* Page header with actions */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Timeline</h1>
+            <p className="text-muted-foreground">{getDescription()}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={scrollToToday}
+            className="rounded-2xl relative"
+            aria-label="Scroll to today"
+          >
+            <Clock className="h-4 w-4" />
+            <span className="hidden md:inline ml-2">Today</span>
+          </Button>
+        </div>
+
         {/* View Mode Toggle - only for daily notes, in body section */}
         {type === 'daily-notes' && (
           <div className="flex justify-center mb-6">

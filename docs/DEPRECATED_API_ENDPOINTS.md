@@ -34,15 +34,15 @@ This document lists all API endpoints that have been deprecated as part of the m
 
 #### `POST /api/tokens/page-allocation`
 - **Status**: Deprecated
-- **Replacement**: `POST /api/usd/page-allocation`
+- **Replacement**: `POST /api/usd/allocate`
 - **Description**: Simple token allocation for pages (used by TokenAllocationBar)
-- **Migration**: Use USD page allocation endpoint for UsdPledgeBar
+- **Migration**: Use unified USD allocation endpoint
 
 #### `GET /api/tokens/page-allocation`
 - **Status**: Deprecated
-- **Replacement**: `GET /api/usd/page-allocation`
+- **Replacement**: `GET /api/usd/allocate`
 - **Description**: Get current token allocation for a page
-- **Migration**: Use USD page allocation endpoint for current USD allocations
+- **Migration**: Use unified USD allocation endpoint for current USD allocations
 
 #### `POST /api/tokens/allocate-user`
 - **Status**: Deprecated
@@ -105,8 +105,8 @@ These endpoints were used for the token-to-USD migration and should be removed a
 | `POST /api/tokens/allocate` | `POST /api/usd/allocate` |
 | `POST /api/tokens/initialize-balance` | `POST /api/usd/initialize-balance` |
 | `GET /api/tokens/allocations` | `GET /api/usd/allocations` |
-| `POST /api/tokens/page-allocation` | `POST /api/usd/page-allocation` |
-| `GET /api/tokens/page-allocation` | `GET /api/usd/page-allocation` |
+| `POST /api/tokens/page-allocation` | `POST /api/usd/allocate` |
+| `GET /api/tokens/page-allocation` | `GET /api/usd/allocate` |
 | `POST /api/tokens/allocate-user` | `POST /api/usd/allocate-user` |
 | `GET /api/tokens/allocate-user` | `GET /api/usd/allocate-user` |
 | `GET /api/tokens/earnings` | `GET /api/usd/earnings` |

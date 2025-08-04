@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
 import Link from "next/link";
-import { X, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
-
-import { openExternalLink } from "../../utils/pwa-detection";
+import {
+  X, Heart, Map, Info, MessageSquare, Code, Home, Search,
+  Shuffle, TrendingUp, Clock, Bell, User, Settings
+} from 'lucide-react';
+import { useAuth } from "../../providers/AuthProvider";
+import { usePathname } from "next/navigation";
 
 interface SiteFooterProps {
   className?: string;
@@ -14,157 +16,46 @@ interface FooterLink {
   href: string;
   label: string;
   icon: React.ReactNode;
-  external: boolean;
+  external?: boolean;
+  section: 'navigation' | 'content' | 'external';
 }
 
 /**
- * SiteFooter component for the application.
- * Displays links to various pages and external resources.
+ * Global site footer with navigation and content page links.
+ * Excludes settings pages and settings subpages.
+ * Positioned at bottom of pages without interfering with floating elements.
  */
 export default function SiteFooter({ className = "" }: SiteFooterProps) {
-  const currentYear = new Date().getFullYear();
-  // Payments feature is now always enabled
-  // Payments are always enabled - no feature flag needed
+  const { user } = useAuth();
+  const pathname = usePathname();
 
-  // Interactive footer text options
-  const [madeWithIndex, setMadeWithIndex] = useState(0);
-  const [locationIndex, setLocationIndex] = useState(0);
-  const [isAnimatingMadeWith, setIsAnimatingMadeWith] = useState(false);
-  const [isAnimatingLocation, setIsAnimatingLocation] = useState(false);
-  const madeWithRef = useRef(null);
-  const locationRef = useRef(null);
+  // Don't show footer on settings pages or settings subpages
+  if (pathname.startsWith('/settings/')) {
+    return null;
+  }
 
-  const madeWithOptions = ["Made with agápē", "Vibe coded"];
-  const locationOptions = ["in America", "in New York City", "on Earth"];
 
-  const animateTextChange = (element: HTMLElement | null, newText: string, callback: () => void): void => {
-    if (!element) return;
 
-    const originalText = element.innerText;
-    const frames = 10; // Number of animation frames
-    let frame = 0;
-
-    const animate = (): void => {
-      if (frame < frames) {
-        // During first half, scramble the text
-        if (frame < frames / 2) {
-          const progress = frame / (frames / 2);
-          const scrambleLength = Math.floor(originalText.length * progress);
-          const keepLength = originalText.length - scrambleLength;
-
-          let scrambledText = originalText.substring(0, keepLength);
-          for (let i = 0; i < scrambleLength; i++) {
-            scrambledText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
-          }
-
-          element.innerText = scrambledText;
-        }
-        // During second half, reveal the new text
-        else {
-          const progress = (frame - frames / 2) / (frames / 2);
-          const revealLength = Math.floor(newText.length * progress);
-
-          let revealedText = newText.substring(0, revealLength);
-          for (let i = 0; i < newText.length - revealLength; i++) {
-            revealedText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
-          }
-
-          element.innerText = revealedText;
-        }
-
-        frame++;
-        requestAnimationFrame(animate);
-      } else {
-        // Animation complete
-        element.innerText = newText;
-        callback();
-      }
-    };
-
-    animate();
-  };
-
-  const handleMadeWithClick = () => {
-    if (isAnimatingMadeWith) return;
-
-    setIsAnimatingMadeWith(true);
-    const nextIndex = (madeWithIndex + 1) % madeWithOptions.length;
-
-    animateTextChange(
-      madeWithRef.current,
-      madeWithOptions[nextIndex],
-      () => {
-        setMadeWithIndex(nextIndex);
-        setIsAnimatingMadeWith(false);
-      }
-    );
-  };
-
-  const handleLocationClick = () => {
-    if (isAnimatingLocation) return;
-
-    setIsAnimatingLocation(true);
-    const nextIndex = (locationIndex + 1) % locationOptions.length;
-
-    animateTextChange(
-      locationRef.current,
-      locationOptions[nextIndex],
-      () => {
-        setLocationIndex(nextIndex);
-        setIsAnimatingLocation(false);
-      }
-    );
-  };
-
+  // All footer links (content pages and external links only)
   const footerLinks: FooterLink[] = [
-    {
-      href: "https://x.com/WeWriteApp",
-      label: "X",
-      icon: <X className="h-3 w-3" />,
-      external: true
-    },
-    {
-      href: "https://github.com/WeWriteApp/WeWrite",
-      label: "GitHub",
-      icon: <Github className="h-3 w-3" />,
-      external: true
-    },
-    {
-      href: "/settings/subscription",
-      label: "Support us",
-      icon: <Heart className="h-3 w-3" />,
-      external: false
-    },
-    {
-      href: "/zRNwhNgIEfLFo050nyAT",
-      label: "Feature Roadmap",
-      icon: <Map className="h-3 w-3" />,
-      external: false
-    },
-    {
-      href: "/sUASL4gNdCMVHkr7Qzty",
-      label: "About us",
-      icon: <Info className="h-3 w-3" />,
-      external: false
-    },
-    {
-      href: "/Kva5XqFpFb2bl5TCZoxE",
-      label: "Feedback",
-      icon: <MessageSquare className="h-3 w-3" />,
-      external: false
-    }
+    { href: "/zRNwhNgIEfLFo050nyAT", label: "Feature Roadmap", icon: <Map className="h-3 w-3" />, section: 'content' },
+    { href: "/sUASL4gNdCMVHkr7Qzty", label: "About us", icon: <Info className="h-3 w-3" />, section: 'content' },
+    { href: "/Kva5XqFpFb2bl5TCZoxE", label: "Feedback", icon: <MessageSquare className="h-3 w-3" />, section: 'content' },
+    { href: "https://x.com/WeWriteApp", label: "Follow on X", icon: <X className="h-3 w-3" />, external: true, section: 'external' },
+    { href: "https://github.com/WeWriteApp/WeWrite", label: "Source code", icon: <Code className="h-3 w-3" />, external: true, section: 'external' },
   ];
 
   return (
-    <footer className={`w-full py-4 px-4 border-t-only bg-background ${className}`}>
-      <div className="container mx-auto flex flex-col items-center">
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-4">
+    <footer className={`w-full py-6 px-4 border-t bg-background/50 backdrop-blur-sm mt-12 pb-32 ${className}`}>
+      <div className="container mx-auto">
+        {/* All footer links in a centered wrapped list */}
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
           {footerLinks.map((link, index) => (
             <Link
               key={index}
               href={link.href}
-              target={(link.external || link.forceNewTab) ? "_blank" : undefined}
-              rel={(link.external || link.forceNewTab) ? "noopener noreferrer" : undefined}
+              target={link.external ? "_blank" : undefined}
+              rel={link.external ? "noopener noreferrer" : undefined}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 group"
             >
               <span className="text-muted-foreground group-hover:text-foreground transition-colors">
@@ -174,28 +65,6 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
             </Link>
           ))}
         </div>
-
-        <div className="text-xs text-muted-foreground select-none">
-          <span
-            ref={madeWithRef}
-            onClick={handleMadeWithClick}
-            className="cursor-pointer hover:text-foreground transition-colors select-none"
-            title="Click me!"
-          >
-            {madeWithOptions[madeWithIndex]}
-          </span>{" "}
-          <span
-            ref={locationRef}
-            onClick={handleLocationClick}
-            className="cursor-pointer hover:text-foreground transition-colors select-none"
-            title="Click me too!"
-          >
-            {locationOptions[locationIndex]}
-          </span>
-        </div>
-
-        {/* Natural spacing for footer content */}
-        <div className="h-4"></div>
       </div>
     </footer>
   );

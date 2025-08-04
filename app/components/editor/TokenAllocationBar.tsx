@@ -1,6 +1,6 @@
 /**
  * @deprecated This component is deprecated and will be removed in a future version.
- * Use UsdPledgeBar instead for USD-based allocation bars.
+ * Use UsdAllocationBar instead for USD-based allocation bars.
  *
  * Legacy token allocation bar - replaced by USD system.
  */

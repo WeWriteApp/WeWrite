@@ -4,8 +4,7 @@ import React from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { SidebarProvider } from './UnifiedSidebar';
 import MobileBottomNav from './MobileBottomNav';
-import MobileFloatingActionButton from './MobileFloatingActionButton';
-import DesktopFloatingActionButton from './DesktopFloatingActionButton';
+import FloatingActionButton from './FloatingActionButton';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 
@@ -20,6 +19,8 @@ import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 export default function GlobalNavigation({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
 
+
+
   // Only render navigation for authenticated users
   if (!isAuthenticated || !user) {
     return <>{children}</>;
@@ -32,10 +33,8 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
       </SidebarLayout>
       {/* Mobile bottom navigation - handles its own visibility logic */}
       <MobileBottomNav />
-      {/* Mobile floating action button - shows on NavPages where mobile toolbar is visible */}
-      <MobileFloatingActionButton />
-      {/* Desktop floating action button - shows on all pages except ContentPages and user pages */}
-      <DesktopFloatingActionButton />
+      {/* Floating action button - shows on both mobile and desktop */}
+      <FloatingActionButton />
       {/* Username enforcement modal - shows when user needs to set username */}
       <UsernameEnforcementModal />
     </SidebarProvider>

@@ -71,6 +71,7 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
  * - Proper z-index management to appear above all content including headers
  * - Click-outside-to-collapse functionality
  * - Smooth expand/collapse animations
+ * - Always visible (no scroll-based hiding for simplified UX)
  */
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -124,9 +125,7 @@ export default function MobileBottomNav() {
   // Navigation state management
   const [isExpanded, setIsExpanded] = useState(false); // Renamed from sidebarOpen for clarity
   const [isPWAMode, setIsPWAMode] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // SIMPLIFIED: Removed scroll-related state (isVisible, lastScrollY, scrollTimeoutRef)
 
   // Logout confirmation state
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -239,47 +238,8 @@ export default function MobileBottomNav() {
     };
   }, [isPWAMode]);
 
-  // Scroll detection for auto-hide functionality
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-
-      // Hide on scroll down, show on scroll up
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false);
-      } else if (currentScrollY < lastScrollY) {
-        setIsVisible(true);
-      }
-
-      // Always show when near top
-      if (currentScrollY < 50) {
-        setIsVisible(true);
-      }
-
-      // Auto-show after scroll stops
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsVisible(true);
-      }, 1000);
-
-      setLastScrollY(currentScrollY);
-    };
-
-    const mediaQuery = window.matchMedia('(max-width: 767px)');
-    if (mediaQuery.matches) {
-      window.addEventListener('scroll', handleScroll, { passive: true });
-    }
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [lastScrollY]);
+  // SIMPLIFIED: Mobile toolbar is now always visible (no scroll-based hiding)
+  // This eliminates complexity and ensures consistent positioning
 
   // Ensure scroll is never prevented when toolbar is collapsed
   useEffect(() => {
@@ -636,7 +596,7 @@ export default function MobileBottomNav() {
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-all duration-300 ease-in-out",
-          (isVisible && !shouldHideNav) ? "translate-y-0" : "translate-y-full",
+          !shouldHideNav ? "translate-y-0" : "translate-y-full", // SIMPLIFIED: Always visible when not hidden by route
           "touch-manipulation"
         )}
         style={{

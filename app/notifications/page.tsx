@@ -95,8 +95,16 @@ function NotificationsContent() {
 
   return (
     <>
-
-      <div className="mb-6" />
+      {/* Page header with actions */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Notifications</h1>
+          <p className="text-muted-foreground">Stay updated with your latest activity</p>
+        </div>
+        {notifications.length > 0 && (
+          <NotificationsHeaderButton />
+        )}
+      </div>
 
       <div className="mt-6">
         {loading && notifications.length === 0 ? (
@@ -146,12 +154,7 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <NavPageLayout
-      backUrl="/"
-      rightContent={
-        <NotificationsHeaderButton />
-      }
-    >
+    <NavPageLayout>
       <NotificationsContent />
     </NavPageLayout>
   );

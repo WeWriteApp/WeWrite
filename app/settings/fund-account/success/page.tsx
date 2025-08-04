@@ -1,43 +1,96 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../providers/AuthProvider';
 import NavPageLayout from '../../../components/layout/NavPageLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { CheckCircle, Home } from 'lucide-react';
-import Link from 'next/link';
+import Confetti from 'react-confetti';
 
 export default function FundAccountSuccessPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
+
+  // Get window dimensions for confetti
+  useEffect(() => {
+    const updateWindowDimensions = () => {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    updateWindowDimensions();
+    window.addEventListener('resize', updateWindowDimensions);
+
+    return () => window.removeEventListener('resize', updateWindowDimensions);
+  }, []);
+
+  // Redirect if no user and show confetti
+  useEffect(() => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    // Show confetti immediately
+    setShowConfetti(true);
+
+    // Stop confetti after 5 seconds
+    const timer = setTimeout(() => {
+      setShowConfetti(false);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [user, router]);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <NavPageLayout>
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="max-w-md w-full space-y-6">
-          {/* Success message */}
-          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
-            <CardHeader className="text-center pb-6">
-              <div className="flex justify-center mb-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-              <CardTitle className="text-2xl text-green-800 dark:text-green-200">
-                Success!
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-6">
-              <p className="text-green-700 dark:text-green-300">
-                Your account funding has been activated successfully. You can now start supporting creators!
-              </p>
+      {showConfetti && (
+        <Confetti
+          width={windowDimensions.width}
+          height={windowDimensions.height}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.3}
+        />
+      )}
 
-              <Button asChild className="w-full">
-                <Link href="/">
-                  <Home className="h-4 w-4 mr-2" />
-                  Go to Home
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-8 max-w-md mx-auto px-4">
+          {/* Success icon */}
+          <div className="flex justify-center">
+            <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full">
+              <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+
+          {/* Success message */}
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-green-800 dark:text-green-400">
+              Success!
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Your account funding has been activated. You can now start supporting creators!
+            </p>
+          </div>
+
+          {/* Go to home button */}
+          <Button
+            onClick={() => router.push('/')}
+            size="lg"
+            className="w-full max-w-xs mx-auto"
+          >
+            <Home className="h-5 w-5 mr-2" />
+            Go to Home Page
+          </Button>
         </div>
       </div>
     </NavPageLayout>
