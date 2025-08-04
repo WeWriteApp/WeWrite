@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
       version,
       buildId,
       buildTime,
-      timestamp: Date.now(),
+      // REMOVED: timestamp that changes on every request - this was causing false updates!
+      // timestamp: Date.now(),
       // Include git commit if available (Vercel provides this)
       commit: process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7),
       // Include deployment URL if available

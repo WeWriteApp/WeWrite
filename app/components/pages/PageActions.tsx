@@ -364,31 +364,7 @@ export function PageActions({
           </Button>
         </div>
 
-        {/* Paragraph Mode Toggle - only show for pages user doesn't own (read-only mode) */}
-        {!isOwner && (
-          <div className="flex items-center justify-center gap-3 py-4 border-t border-border/50">
-            <div className="flex items-center gap-3">
-              {lineMode === LINE_MODES.DENSE ? (
-                <AlignJustify className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <AlignLeft className="h-4 w-4 text-muted-foreground" />
-              )}
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Dense Mode</span>
-                <span className="text-xs text-muted-foreground">
-                  Continuous text flow with inline paragraph numbers
-                </span>
-              </div>
-            </div>
-            <Switch
-              checked={lineMode === LINE_MODES.DENSE}
-              onCheckedChange={(checked) => {
-                setLineMode(checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
-              }}
-              aria-label="Toggle dense mode"
-            />
-          </div>
-        )}
+        {/* REMOVED: Duplicate dense mode toggle - keeping only the one under page content */}
 
       </div>
 

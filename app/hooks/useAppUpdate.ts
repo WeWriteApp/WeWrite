@@ -17,6 +17,11 @@ export function useAppUpdate(): AppUpdateState {
   const [lastBuildTime, setLastBuildTime] = useState<string | null>(null);
 
   const checkForUpdates = async () => {
+    // NEVER check for updates in development mode
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return;
+    }
+
     try {
       // Check for build time changes by fetching a timestamp endpoint
       const response = await fetch('/api/build-info', {
@@ -25,11 +30,11 @@ export function useAppUpdate(): AppUpdateState {
           'Cache-Control': 'no-cache'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        const currentBuildTime = data.buildTime || data.timestamp;
-        
+        const currentBuildTime = data.buildTime; // Only use buildTime, not timestamp
+
         if (lastBuildTime && lastBuildTime !== currentBuildTime) {
           // Use centralized update manager
           if (shouldShowUpdate(currentBuildTime)) {
@@ -44,7 +49,7 @@ export function useAppUpdate(): AppUpdateState {
             console.log('🔕 Update already handled by UpdateManager:', currentBuildTime);
           }
         }
-        
+
         setLastBuildTime(currentBuildTime);
       }
     } catch (error) {

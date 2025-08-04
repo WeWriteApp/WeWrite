@@ -97,7 +97,12 @@ class UpdateManager {
    */
   checkForUpdate(newBuildId: string): boolean {
     if (!this.currentBuildId || !newBuildId) return false;
-    
+
+    // NEVER show updates in development mode
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return false;
+    }
+
     // Same build, no update
     if (newBuildId === this.currentBuildId) return false;
 
@@ -186,10 +191,15 @@ class UpdateManager {
    * Check if update should be shown
    */
   shouldShowUpdate(buildId: string): boolean {
+    // NEVER show updates in development mode
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return false;
+    }
+
     if (!this.checkForUpdate(buildId)) return false;
 
     const state = this.updateStates.get(buildId);
-    
+
     // Don't show if already dismissed or shown
     if (state?.dismissed || state?.shown) return false;
 

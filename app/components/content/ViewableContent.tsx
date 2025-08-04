@@ -1,16 +1,18 @@
 'use client';
 
 import React from 'react';
-import ContentViewer from '../viewer/ContentViewer';
+import TextView from '../editor/TextView';
 import { LINE_MODES } from '../../contexts/LineSettingsContext';
 
 /**
  * ViewableContent - Pure Viewing Component
- * 
+ *
  * This component handles all viewing functionality for WeWrite content.
  * It provides a clean, distraction-free reading experience with support
  * for dense mode and other viewing features.
- * 
+ *
+ * CONSOLIDATED: Now uses TextView with canEdit=false instead of duplicate ContentViewer
+ *
  * Responsibilities:
  * - Clean content viewing
  * - Dense/normal mode support
@@ -18,7 +20,7 @@ import { LINE_MODES } from '../../contexts/LineSettingsContext';
  * - Diff viewing
  * - Search result highlighting
  * - Link navigation (no editing)
- * 
+ *
  * Styling Philosophy:
  * - No borders (clean viewing experience)
  * - Transparent background
@@ -54,12 +56,15 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
 }) => {
   return (
     <div className={`wewrite-viewable-content ${className}`}>
-      <ContentViewer
+      <TextView
         content={content}
         showDiff={showDiff}
         showLineNumbers={showLineNumbers}
         isSearch={isSearch}
         onRenderComplete={onRenderComplete}
+        canEdit={false} // VIEWING ONLY - no editing capabilities
+        viewMode="normal"
+        isEditing={false}
       />
     </div>
   );

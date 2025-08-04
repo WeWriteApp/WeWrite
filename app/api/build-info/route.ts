@@ -5,10 +5,11 @@ const BUILD_TIME = process.env.BUILD_TIME || new Date().toISOString();
 
 export async function GET() {
   try {
-    // Return build information that changes when the app is redeployed
+    // Return build information that ONLY changes when the app is redeployed
     const buildInfo = {
       buildTime: BUILD_TIME,
-      timestamp: new Date().toISOString(),
+      // REMOVED: timestamp that changes on every request - this was causing false updates!
+      // timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
       nodeEnv: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV,

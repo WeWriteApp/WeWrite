@@ -51,7 +51,7 @@ export function useUpdateDetection({
       
       if (response.ok) {
         const data = await response.json();
-        return data.buildId || data.version || data.timestamp;
+        return data.buildId || data.buildTime || data.version;
       }
 
       // Method 3: Check for changes in the main JS bundle
@@ -78,8 +78,8 @@ export function useUpdateDetection({
         }
       }
 
-      // Fallback: use current timestamp as version indicator
-      return Date.now().toString();
+      // Fallback: return null if no build ID found
+      return null;
     } catch (error) {
       console.error('Error getting build ID:', error);
       return null;
@@ -126,6 +126,11 @@ export function useUpdateDetection({
   // Set up periodic checking
   useEffect(() => {
     if (!enabled) return;
+
+    // NEVER check for updates in development mode
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return;
+    }
 
     // Initial check after a short delay
     const initialTimeout = setTimeout(checkForUpdates, 2000);
