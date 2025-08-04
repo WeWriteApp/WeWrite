@@ -14,10 +14,11 @@ import {
 } from "../../utils/simulatedUsd";
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocationModal } from './UsdAllocationModal';
+import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 
-interface PledgeBarProps {
+interface AllocationBarProps {
   pageId?: string;
   pageTitle?: string;
   authorId?: string;
@@ -39,7 +40,7 @@ interface Subscription {
   tier: string;
 }
 
-const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
+const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   pageId: propPageId,
   pageTitle,
   authorId,
@@ -222,8 +223,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     }
   };
 
-  // Handle pledge bar click
-  const handlePledgeBarClick = () => {
+  // Handle allocation bar click
+  const handleAllocationBarClick = () => {
     if (!user && !isPageOwner) {
       router.push('/');
     } else {
@@ -276,8 +277,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           "bg-background/90 backdrop-blur-xl border border-white/20",
           className
         )}
-        data-pledge-bar
-        onClick={handlePledgeBarClick}
+        data-allocation-bar
+        onClick={handleAllocationBarClick}
       >
         {/* Main Content */}
         <div className={cn(
@@ -316,7 +317,13 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
           {/* USD Controls */}
           {!isPageOwner && (
-            <div className="flex items-center gap-3">
+            <>
+              {/* Allocation amount display above the controls */}
+              <AllocationAmountDisplay
+                allocationCents={currentUsdAllocation}
+              />
+
+              <div className="flex items-center gap-3">
               {isLoading ? (
                 <div className="flex items-center gap-3 w-full">
                   <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
@@ -346,7 +353,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
                   {/* Composition Bar */}
                   <div className={cn(
-                    "flex-1 rounded-lg h-12 flex gap-1 p-1",
+                    "flex-1 rounded-lg h-12 flex gap-1 p-1 relative",
                     isOutOfFunds ? "bg-orange-500/20" : "bg-muted"
                   )}>
                     {/* Always show composition - even when out of funds */}
@@ -378,6 +385,19 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                         />
                       )}
                     </>
+
+                    {/* Centered dollar amount overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className={cn(
+                        "text-sm font-medium transition-all duration-200 ease-out",
+                        isOutOfFunds ? "text-orange-500" : "text-foreground"
+                      )}>
+                        {isOutOfFunds
+                          ? "Out of funds"
+                          : `${formatUsdCents(currentUsdAllocation)}/mo`
+                        }
+                      </span>
+                    </div>
                   </div>
 
                   <Button
@@ -401,22 +421,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                 </>
               )}
             </div>
+            </>
           )}
 
-          {/* USD Text - Only show for non-page owners */}
-          {!isPageOwner && (
-            <div className="text-center">
-              <span className={cn(
-                "font-medium text-sm",
-                isOutOfFunds ? "text-orange-500" : "text-primary"
-              )}>
-                {isOutOfFunds
-                  ? "You're out of funds"
-                  : `${formatUsdCents(currentUsdAllocation)} pledged per month`
-                }
-              </span>
-            </div>
-          )}
+
         </div>
 
         {/* Warning Banners */}
@@ -424,7 +432,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         {showLoginNotice && (
           <div
             className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
-            onClick={handlePledgeBarClick}
+            onClick={handleAllocationBarClick}
           >
             <p className="text-sm font-medium text-center">
               Log in to begin allocating funds
@@ -466,6 +474,6 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   );
 });
 
-PledgeBar.displayName = 'PledgeBar';
+AllocationBar.displayName = 'AllocationBar';
 
-export default PledgeBar;
+export default AllocationBar;

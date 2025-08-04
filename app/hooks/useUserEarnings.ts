@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-
 
 interface UserEarnings {
   totalEarnings: number;
@@ -11,74 +10,152 @@ interface UserEarnings {
   hasEarnings: boolean;
 }
 
-export function useUserEarnings(): { earnings: UserEarnings | null; loading: boolean; error: string | null } {
+interface CachedEarnings {
+  data: UserEarnings;
+  timestamp: number;
+  userId: string;
+}
+
+// Global cache for earnings data - shared across all components
+const earningsCache = new Map<string, CachedEarnings>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const STALE_WHILE_REVALIDATE_DURATION = 30 * 1000; // 30 seconds
+
+export function useUserEarnings(): { earnings: UserEarnings | null; loading: boolean; error: string | null; refresh: () => Promise<void> } {
   const { user } = useAuth();
   const [earnings, setEarnings] = useState<UserEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchingRef = useRef<Promise<void> | null>(null);
 
 
-  useEffect(() => {
-    const fetchEarnings = async () => {
-      if (!user?.uid) {
-        setEarnings(null);
+  const fetchEarnings = async (forceRefresh = false): Promise<void> => {
+    if (!user?.uid) {
+      setEarnings(null);
+      setLoading(false);
+      return;
+    }
+
+    // Check cache first
+    const cached = earningsCache.get(user.uid);
+    const now = Date.now();
+
+    if (!forceRefresh && cached && cached.userId === user.uid) {
+      const age = now - cached.timestamp;
+
+      // If cache is fresh, use it immediately
+      if (age < CACHE_DURATION) {
+        console.log('[useUserEarnings] ✅ Using fresh cached data (age: ' + Math.round(age / 1000) + 's)');
+        setEarnings(cached.data);
         setLoading(false);
         return;
       }
 
+      // If cache is stale but not too old, use it while revalidating
+      if (age < CACHE_DURATION + STALE_WHILE_REVALIDATE_DURATION) {
+        console.log('[useUserEarnings] 🔄 Using stale cached data while revalidating (age: ' + Math.round(age / 1000) + 's)');
+        setEarnings(cached.data);
+        setLoading(false);
+        // Continue to fetch fresh data in background
+      }
+    }
+
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) {
+      return fetchingRef.current;
+    }
+
+    const fetchPromise = (async () => {
       try {
-        setLoading(true);
+        if (!cached || forceRefresh) {
+          setLoading(true);
+        }
         setError(null);
 
+        console.log('[useUserEarnings] Fetching fresh earnings data');
         const response = await fetch('/api/earnings/user');
-        
+
         if (!response.ok) {
           if (response.status === 404) {
             // No earnings data found - user has no earnings, but still show counter
-            setEarnings({
+            const earningsData = {
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
               hasEarnings: true // Always show earnings counter, even when zero
+            };
+
+            setEarnings(earningsData);
+
+            // Cache the result
+            earningsCache.set(user.uid, {
+              data: earningsData,
+              timestamp: now,
+              userId: user.uid
             });
           } else {
             throw new Error('Failed to fetch earnings');
           }
         } else {
           const data = await response.json();
-          
+
+          let earningsData: UserEarnings;
+
           if (data.success && data.earnings) {
             const totalEarnings = data.earnings.totalEarnings || 0;
             const availableBalance = data.earnings.availableBalance || 0;
             const pendingBalance = data.earnings.pendingBalance || 0;
-            
-            setEarnings({
+
+            earningsData = {
               totalEarnings,
               availableBalance,
               pendingBalance,
               hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0
-            });
+            };
           } else {
             // No earnings data, but still show counter
-            setEarnings({
+            earningsData = {
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
               hasEarnings: true // Always show earnings counter, even when zero
-            });
+            };
           }
+
+          setEarnings(earningsData);
+
+          // Cache the result
+          earningsCache.set(user.uid, {
+            data: earningsData,
+            timestamp: now,
+            userId: user.uid
+          });
         }
       } catch (err) {
         console.error('Error fetching user earnings:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch earnings');
-        setEarnings(null);
+
+        // If we have cached data, keep using it on error
+        if (!cached) {
+          setEarnings(null);
+        }
       } finally {
         setLoading(false);
+        fetchingRef.current = null;
       }
-    };
+    })();
 
+    fetchingRef.current = fetchPromise;
+    return fetchPromise;
+  };
+
+  useEffect(() => {
     fetchEarnings();
   }, [user?.uid]);
 
-  return { earnings, loading, error };
+  const refresh = async () => {
+    await fetchEarnings(true);
+  };
+
+  return { earnings, loading, error, refresh };
 }

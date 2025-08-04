@@ -314,6 +314,7 @@ export const COLLECTIONS = {
   USER_STREAKS: 'userStreaks',
   USERNAME_HISTORY: 'usernameHistory',
   USERNAMES: 'usernames',
+  USER_PREFERENCES: 'userPreferences',
 
   // Feature management collections
   FEATURE_HISTORY: 'featureHistory',
@@ -326,7 +327,8 @@ export const COLLECTIONS = {
   COUNTERS: 'counters',
   BACKLINKS: 'backlinks',
   FOLLOWS: 'follows',
-  PAGE_FOLLOWERS: 'pageFollowers'
+  PAGE_FOLLOWERS: 'pageFollowers',
+  MIGRATION_AUDIT_LOGS: 'migrationAuditLogs'
 } as const;
 
 /**

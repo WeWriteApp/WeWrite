@@ -55,7 +55,7 @@ export function UsdAllocationModal({
   }, [isOpen, currentAllocation]);
 
   // Quick allocation amounts in dollars
-  const quickAmounts = [0.25, 0.50, 1.00, 2.50, 5.00, 10.00];
+  const quickAmounts = [0.00, 0.01, 0.10, 1.00, 5.00, 10.00];
 
   // Increment amount options in dollars
   const incrementOptions = [0.25, 0.50, 1.00, 2.50];
@@ -225,10 +225,10 @@ export function UsdAllocationModal({
 
             {/* Composition Bar */}
             <div className="space-y-2">
-              <div className="relative h-6 bg-muted rounded-full overflow-hidden">
+              <div className="relative h-6 bg-muted rounded-md overflow-hidden">
                 {/* Current allocation (blue/accent) */}
                 <div
-                  className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all duration-300"
+                  className="absolute left-0 top-0 h-full bg-primary rounded-md transition-all duration-300"
                   style={{
                     width: `${Math.min((currentAllocation / totalUsdCents) * 100, 100)}%`
                   }}
@@ -243,7 +243,7 @@ export function UsdAllocationModal({
                   if (newAllocationCents !== currentAllocation && newPercentage > currentPercentage) {
                     return (
                       <div
-                        className="absolute left-0 top-0 h-full bg-primary/60 rounded-full transition-all duration-300"
+                        className="absolute left-0 top-0 h-full bg-primary/60 rounded-md transition-all duration-300"
                         style={{
                           width: `${Math.min(newPercentage, 100)}%`
                         }}
@@ -255,7 +255,7 @@ export function UsdAllocationModal({
 
                 {/* Remaining allocation (dotted pattern) */}
                 <div
-                  className="absolute right-0 top-0 h-full bg-muted-foreground/20 rounded-full"
+                  className="absolute right-0 top-0 h-full bg-muted-foreground/20 rounded-md"
                   style={{
                     width: `${Math.max(100 - Math.min((Math.max(currentAllocation, parseDollarInputToCents(inputValue) || 0) / totalUsdCents) * 100, 100), 0)}%`,
                     backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 4px)`
@@ -359,7 +359,8 @@ export function UsdAllocationModal({
               {quickAmounts.map((amount) => {
                 const cents = dollarsToCents(amount);
                 const isDisabled = cents > availableUsdCents + currentAllocation;
-                
+                const isZero = amount === 0.00;
+
                 return (
                   <Button
                     key={amount}
@@ -367,7 +368,7 @@ export function UsdAllocationModal({
                     size="sm"
                     onClick={() => handleQuickAmount(amount)}
                     disabled={isDisabled}
-                    className="text-xs"
+                    className={`text-xs ${isZero ? 'text-red-600 hover:text-red-700 border-red-200 hover:border-red-300' : ''}`}
                   >
                     ${amount.toFixed(2)}
                   </Button>
@@ -430,36 +431,21 @@ export function UsdAllocationModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-border flex-shrink-0">
-          <div className="flex space-x-2">
-            {currentAllocation > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleRemoveAllocation}
-                disabled={isLoading}
-                className="text-destructive hover:text-destructive"
-              >
-                Remove
-              </Button>
-            )}
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isLoading ? 'Saving...' : 'Save Allocation'}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-border flex-shrink-0">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isLoading ? 'Saving...' : 'Save Allocation'}
+          </Button>
         </div>
       </div>
     </div>

@@ -3,15 +3,19 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
-import { ChevronLeft } from "lucide-react";
+import { Badge } from "../ui/badge";
+import { ChevronLeft, DollarSign, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useSidebarContext } from "./UnifiedSidebar";
 import { Logo } from "../ui/Logo";
+import { useAuth } from '../../providers/AuthProvider';
+import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { RemainingFundsDisplay, OverspendWarningDisplay } from "../ui/RemainingUsdCounter";
+import { useUsdBalance } from "../../contexts/UsdBalanceContext";
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { formatUsdCents } from "../../utils/formatCurrency";
 
 export interface NavHeaderProps {
-  backUrl?: string;
-  backLabel?: string;
-  rightContent?: React.ReactNode;
   className?: string;
 }
 
@@ -19,20 +23,22 @@ export interface NavHeaderProps {
  * NavHeader Component
  *
  * Standardized header for navigation pages with:
- * - Left: Back button
+ * - Left: Spend/balance display (same as homepage)
  * - Center: WeWrite logo (clickable to home)
- * - Right: Action buttons
+ * - Right: Earnings display (same as homepage)
  * - Position: Below status bar on second row
  * - No title text or icons
+ * - Back button removed - use sidebar navigation instead
  */
 export default function NavHeader({
-  backUrl,
-  backLabel = "Back",
-  rightContent,
   className = ""
 }: NavHeaderProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
+  const { usdBalance, isLoading: usdLoading } = useUsdBalance();
+  const { earnings, loading: earningsLoading } = useUserEarnings();
+  const { hasActiveSubscription } = useSubscriptionWarning();
 
   // Calculate header positioning width - should match other headers
   const headerSidebarWidth = React.useMemo(() => {
@@ -45,27 +51,129 @@ export default function NavHeader({
     }
   }, [isExpanded, sidebarWidth]);
 
-  const handleBack = () => {
-    if (backUrl) {
-      console.log("NavHeader: Navigating to backUrl:", backUrl);
+  // Helper function to render earnings display (same as homepage)
+  const renderEarningsDisplay = () => {
+    // Don't show anything for unauthenticated users
+    if (!user?.uid) return null;
 
-      // Navigate without scrolling current page - scroll restoration handled by destination
-      window.location.href = backUrl;
-    } else {
-      console.log("NavHeader: Going back in history");
+    // Show loading state while earnings are being fetched
+    if (earningsLoading) {
+      return (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer hover:bg-secondary/80 transition-colors"
+          onClick={() => router.push('/settings/earnings')}
+          title="Loading earnings..."
+        >
+          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          <span className="text-xs">Loading</span>
+        </Badge>
+      );
+    }
 
-      // Go to previous page - users can reach home via WeWrite logo
-      // Navigate without scrolling current page - scroll restoration handled by destination
+    // Show earnings data (even if zero)
+    if (earnings) {
+      const totalUsdEarned = earnings.totalEarnings; // Already in USD
+      const isZeroEarnings = totalUsdEarned === 0;
 
-      // Try router.back() first, but fall back to window.history if needed
-      try {
-        router.back();
-      } catch (error) {
-        console.error("Navigation error:", error);
-        window.history.back();
+      return (
+        <Badge
+          variant="secondary"
+          className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
+            isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
+          }`}
+          onClick={() => router.push('/settings/earnings')}
+          title={`${formatUsdCents(totalUsdEarned * 100)} earned`}
+        >
+          {formatUsdCents(totalUsdEarned * 100)}
+        </Badge>
+      );
+    }
+
+    // Fallback: show zero earnings if no data but not loading
+    return (
+      <Badge
+        variant="secondary"
+        className="cursor-pointer hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
+        onClick={() => router.push('/settings/earnings')}
+        title="$0.00 earned"
+      >
+        $0.00
+      </Badge>
+    );
+  };
+
+  // Helper function to render spend/overspend display (same as homepage)
+  const renderSpendDisplay = () => {
+    // Don't show anything for unauthenticated users
+    if (!user) {
+      return null;
+    }
+
+    // Show loading state while USD balance is being fetched
+    if (usdLoading) {
+      return (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer hover:bg-secondary/80 transition-colors text-sm"
+          onClick={() => router.push('/settings/spend')}
+          title="Loading balance..."
+        >
+          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          <span>Loading</span>
+        </Badge>
+      );
+    }
+
+    // Show "Add Funds" button if user has no active subscription or zero USD
+    const shouldShowAddFunds = hasActiveSubscription === false ||
+      (usdBalance && usdBalance.totalUsdCents === 0) ||
+      (!usdBalance && !usdLoading);
+
+    if (shouldShowAddFunds) {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/settings/fund-account')}
+          className="text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          <DollarSign className="h-4 w-4 mr-2" />
+          Add Funds
+        </Button>
+      );
+    }
+
+    // Show spend/overspend display for users with USD balance
+    if (usdBalance) {
+      const isOverspending = usdBalance.allocatedUsdCents > usdBalance.totalUsdCents;
+      const overspendingAmount = isOverspending ? usdBalance.allocatedUsdCents - usdBalance.totalUsdCents : 0;
+
+      // Business logic: Show EITHER remaining funds with pie chart OR overspend warning with icon
+      if (isOverspending) {
+        // Show overspend badge with warning icon to the right
+        return (
+          <OverspendWarningDisplay
+            overspendUsdCents={overspendingAmount}
+            onClick={() => router.push('/settings/spend')}
+          />
+        );
+      } else {
+        // Show pie chart of remaining funds and amount left to spend
+        return (
+          <RemainingFundsDisplay
+            allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
+            totalUsdCents={usdBalance.totalUsdCents || 0}
+            onClick={() => router.push('/settings/spend')}
+          />
+        );
       }
     }
+
+    return null;
   };
+
+
 
   return (
     <div className={`flex flex-col pt-8 pb-6 ${className}`}>
@@ -77,25 +185,15 @@ export default function NavHeader({
           style={{ width: `${headerSidebarWidth}px` }}
         />
 
-        {/* Header content area - standardized navigation layout */}
+        {/* Header content area - matches homepage layout with money elements */}
         <div className="flex-1 min-w-0">
-          <div className="grid grid-cols-3 items-center w-full h-14 px-4 sm:px-6">
-            {/* Left: Back button (mobile only) */}
-            <div className="flex items-center justify-start">
-              {backUrl !== undefined && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBack}
-                  className="flex items-center gap-2 lg:hidden"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden md:inline">{backLabel}</span>
-                </Button>
-              )}
+          <div className="flex items-center h-14 px-3 sm:px-4 md:px-6">
+            {/* Spend/Overspend Display (left side) */}
+            <div className="flex-1 flex justify-start">
+              {renderSpendDisplay()}
             </div>
 
-            {/* Center: WeWrite logo - clickable to go home */}
+            {/* Logo/Title (centered) - clickable to go home */}
             <div className="flex items-center justify-center">
               <div
                 className="cursor-pointer transition-transform hover:scale-105"
@@ -105,9 +203,9 @@ export default function NavHeader({
               </div>
             </div>
 
-            {/* Right: Action buttons */}
-            <div className="flex items-center justify-end">
-              {rightContent}
+            {/* Earnings Display (right side) */}
+            <div className="flex-1 flex justify-end">
+              {renderEarningsDisplay()}
             </div>
           </div>
         </div>

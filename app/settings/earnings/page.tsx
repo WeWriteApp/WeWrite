@@ -19,7 +19,7 @@ export default function EarningsPage() {
   }
 
   return (
-    <NavPageLayout backUrl="/settings" maxWidth="6xl">
+    <NavPageLayout maxWidth="6xl">
 
         {/* Tabbed Interface */}
             <Tabs defaultValue="earnings" className="space-y-4 sm:space-y-6" urlNavigation="hash">

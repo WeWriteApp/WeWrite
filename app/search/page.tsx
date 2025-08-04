@@ -380,23 +380,7 @@ const SearchPage = React.memo(() => {
   // All search content is now isolated in SearchPageContent component
 
   return (
-    <NavPageLayout
-      backUrl="/"
-      rightContent={
-        currentQuery && currentQuery.trim() && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={shareSearchUrl}
-            className="flex items-center gap-2 rounded-2xl"
-            aria-label="Share search results"
-          >
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Share</span>
-          </Button>
-        )
-      }
-    >
+    <NavPageLayout>
       {/* Performance monitoring - only active in development */}
       <PerformanceMonitor
         name="SearchPage"
@@ -428,6 +412,28 @@ const SearchPage = React.memo(() => {
           onSelect={handleRecentSearchSelect}
           userId={userId}
         />
+      )}
+
+      {/* Search Results Header with Share Button */}
+      {currentQuery && currentQuery.trim() && (
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold">Search Results</h2>
+            <p className="text-sm text-muted-foreground">
+              Results for "{currentQuery}"
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={shareSearchUrl}
+            className="flex items-center gap-2 rounded-2xl"
+            aria-label="Share search results"
+          >
+            <Share2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        </div>
       )}
 
       {/* Search Results Display Component */}

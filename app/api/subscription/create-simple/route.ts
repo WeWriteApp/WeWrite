@@ -137,6 +137,18 @@ export async function POST(request: NextRequest) {
 
     await subscriptionRef.set(subscriptionData);
 
+    // Invalidate subscription cache to ensure fresh data is returned
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/account-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalidate-cache', userId })
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate subscription cache:', cacheError);
+      // Don't fail the subscription creation if cache invalidation fails
+    }
+
     return NextResponse.json({
       success: true,
       subscriptionId: subscription.id,

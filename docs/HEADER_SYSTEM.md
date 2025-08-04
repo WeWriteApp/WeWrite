@@ -12,15 +12,16 @@ WeWrite uses a standardized two-header system to provide consistent navigation a
 
 **Design Specifications**:
 - **Position**: Below status bar on second row
-- **Left**: Back button (chevron + "Back" text on desktop)
+- **Left**: Spend/balance display (same as homepage)
 - **Center**: WeWrite logo (clickable to go home)
-- **Right**: Action button group (specific to each page)
+- **Right**: Earnings display (same as homepage)
 - **No title text** - logo serves as the identifier
-- **No icons** in any text elements
+- **No back button** - use sidebar navigation instead
+- **Consistent financial info** - users always see their money status
 
 **Layout Structure**:
 ```
-[← Back]     [WeWrite Logo]     [Action Buttons]
+[Spend/Balance]     [WeWrite Logo]     [Earnings]
 ```
 
 ### 2. ContentPageHeader - Content Pages
@@ -62,12 +63,14 @@ WeWrite uses a standardized two-header system to provide consistent navigation a
 ### NavHeader Props
 ```typescript
 interface NavHeaderProps {
-  backUrl?: string;           // URL for back navigation
-  backLabel?: string;         // Text for back button (default: "Back")
-  rightContent?: ReactNode;   // Action buttons for right side
   className?: string;         // Additional CSS classes
 }
 ```
+
+**Note**: NavHeader now automatically displays:
+- **Left**: Spend/balance information (Add Funds button, remaining funds with pie chart, or overspend warning)
+- **Center**: WeWrite logo (clickable to home)
+- **Right**: Earnings information (total earnings with click to earnings page)
 
 ### ContentPageHeader Props
 ```typescript
@@ -106,39 +109,40 @@ interface ContentPageHeaderProps {
 ## Migration Checklist
 
 ### For Each Navigation Page:
-- [ ] Remove existing custom header implementation
-- [ ] Import and use NavHeader component
-- [ ] Remove icons from page titles
-- [ ] Add WeWrite logo in center
-- [ ] Move page-specific actions to rightContent prop
-- [ ] Test back navigation functionality
-- [ ] Verify responsive behavior
+- [x] Remove existing custom header implementation
+- [x] Import and use NavHeader component
+- [x] Remove back buttons and rightContent props
+- [x] Move page-specific actions into page content
+- [x] Add page headers with titles and descriptions
+- [x] Verify financial information displays correctly
 
 ### Common Patterns:
 
 #### Basic Navigation Page
 ```tsx
-<NavHeader 
-  backUrl="/"
-  rightContent={
+<NavPageLayout>
+  {/* Page header with actions */}
+  <div className="flex items-center justify-between mb-6">
+    <div>
+      <h1 className="text-2xl font-bold">Page Title</h1>
+      <p className="text-muted-foreground">Page description</p>
+    </div>
     <Button variant="outline" size="sm">
       Action
     </Button>
-  }
-/>
+  </div>
+
+  {/* Page content */}
+  <div>...</div>
+</NavPageLayout>
 ```
 
 #### Settings Page
 ```tsx
-<NavHeader 
-  backUrl="/settings"
-  rightContent={
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm">Save</Button>
-      <Button variant="ghost" size="sm">Reset</Button>
-    </div>
-  }
-/>
+<NavPageLayout maxWidth="4xl">
+  {/* Page content with embedded actions */}
+  <div>...</div>
+</NavPageLayout>
 ```
 
 ## Implementation Status

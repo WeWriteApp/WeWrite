@@ -9,21 +9,22 @@ import { formatUsdCents, dollarsToCents } from '../../utils/formatCurrency';
 import { USD_UI_TEXT } from '../../utils/usdConstants';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { UsdAllocationModal } from './UsdAllocationModal';
+import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { toast } from '../ui/use-toast';
 
-interface UserUsdPledgeBarProps {
+interface UserUsdAllocationBarProps {
   recipientUserId: string;
   username: string;
   visible?: boolean;
   className?: string;
 }
 
-export function UserUsdPledgeBar({
+export function UserUsdAllocationBar({
   recipientUserId,
   username,
   visible = true,
   className
-}: UserUsdPledgeBarProps) {
+}: UserUsdAllocationBarProps) {
   const { user } = useAuth();
   const { usdBalance, refreshUsdBalance, updateOptimisticBalance } = useUsdBalance();
   
@@ -142,15 +143,11 @@ export function UserUsdPledgeBar({
           <span className="text-sm font-medium">Support {username}</span>
         </div>
 
-        {/* Current allocation display */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Current allocation:
-          </div>
-          <div className="font-semibold text-accent-foreground">
-            {formatUsdCents(currentUsdAllocation)}
-          </div>
-        </div>
+        {/* Allocation amount display */}
+        <AllocationAmountDisplay
+          allocationCents={currentUsdAllocation}
+          className="py-1"
+        />
 
         {/* Allocation controls */}
         {user?.uid ? (

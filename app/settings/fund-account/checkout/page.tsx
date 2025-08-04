@@ -10,6 +10,7 @@ import { useTheme } from '../../../providers/ThemeProvider';
 import { Button } from '../../../components/ui/button';
 import { Loader2, ChevronLeft } from 'lucide-react';
 import { Logo } from '../../../components/ui/Logo';
+import NavHeader from '../../../components/layout/NavHeader';
 
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
@@ -46,26 +47,74 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
       });
 
       const data = await response.json();
+      console.log('Initial subscription creation response:', data);
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create subscription');
       }
 
       if (data.clientSecret) {
-        const { error } = await stripe.confirmPayment({
-          elements,
-          clientSecret: data.clientSecret,
-          confirmParams: {
-            return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
-          },
-          redirect: 'if_required'
-        });
+        // Check if this is a SetupIntent or PaymentIntent based on the client secret
+        const isSetupIntent = data.clientSecret.startsWith('seti_');
 
-        if (error) {
-          throw new Error(error.message);
+        if (isSetupIntent) {
+          // Use confirmSetup for SetupIntents
+          const { error } = await stripe.confirmSetup({
+            elements,
+            clientSecret: data.clientSecret,
+            confirmParams: {
+              return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
+            },
+            redirect: 'if_required'
+          });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          console.log('Setup intent confirmed, creating subscription with setupIntentId:', data.setupIntentId);
+
+          // After setup intent is confirmed, create the subscription
+          const subscriptionResponse = await fetch('/api/subscription/create-after-setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user?.uid,
+              amount: amount,
+              setupIntentId: data.setupIntentId
+            }),
+          });
+
+          const subscriptionData = await subscriptionResponse.json();
+          console.log('Subscription creation response:', subscriptionData);
+
+          if (!subscriptionResponse.ok) {
+            throw new Error(subscriptionData.error || 'Failed to create subscription after setup');
+          }
+
+          console.log('Calling onSuccess with subscriptionId:', subscriptionData.subscriptionId);
+          onSuccess(subscriptionData.subscriptionId);
+        } else {
+          // Use confirmPayment for PaymentIntents
+          const { error } = await stripe.confirmPayment({
+            elements,
+            clientSecret: data.clientSecret,
+            confirmParams: {
+              return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
+            },
+            redirect: 'if_required'
+          });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          onSuccess(data.subscriptionId);
         }
+      } else {
+        // Direct subscription creation (when payment method already exists)
+        onSuccess(data.subscriptionId);
       }
-
-      onSuccess(data.subscriptionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed');
     } finally {
@@ -77,29 +126,7 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
     <>
       {/* NavHeader for mobile navigation */}
       <div className="md:hidden">
-        <div className="grid grid-cols-3 items-center p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-start">
-            <button
-              onClick={() => router.back()}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center gap-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>Back</span>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-center">
-            <div
-              className="cursor-pointer transition-transform hover:scale-105"
-              onClick={() => router.push('/')}
-            >
-              <Logo size="md" priority={true} styled={true} clickable={true} />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end">
-          </div>
-        </div>
+        <NavHeader />
       </div>
 
       {/* Content - FIXED: Added proper spacing to prevent clipping behind fixed button */}

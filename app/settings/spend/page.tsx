@@ -10,6 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Wallet, TrendingUp, Calendar, Settings } from 'lucide-react';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useAllocationInterval, ALLOCATION_INTERVAL_OPTIONS } from '../../contexts/AllocationIntervalContext';
+import { AllocationIntervalModal } from '../../components/payments/AllocationIntervalModal';
+import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
 import Link from 'next/link';
 import { getLoggedOutUsdBalance, clearLoggedOutUsd } from '../../utils/simulatedUsd';
@@ -17,11 +20,13 @@ import { getLoggedOutUsdBalance, clearLoggedOutUsd } from '../../utils/simulated
 export default function SpendPage() {
   const { user } = useAuth();
   const { usdBalance, refreshUsdBalance } = useUsdBalance();
+  const { allocationIntervalCents } = useAllocationInterval();
   const [allocations, setAllocations] = useState<UsdAllocation[]>([]);
   const [countdown, setCountdown] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
+  const [showIntervalModal, setShowIntervalModal] = useState(false);
 
   // Convert simulated USD data to real allocations
   const convertSimulatedUsdData = async () => {
@@ -274,7 +279,6 @@ export default function SpendPage() {
 
   return (
     <NavPageLayout
-      backUrl="/settings"
       maxWidth="4xl"
       loading={isLoading || loadingSubscription}
       loadingFallback={
@@ -374,6 +378,42 @@ export default function SpendPage() {
               usdBalance={usdBalance}
             />
 
+            {/* Allocation Interval Settings */}
+            <Card>
+              <CardHeader className="pb-2 px-3 sm:px-4">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Allocation Interval
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  How much each + or - button adjusts your allocations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-3 sm:px-4 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="text-lg font-semibold">
+                      {formatUsdCents(allocationIntervalCents)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      per button press
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowIntervalModal(true)}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Change
+                  </Button>
+                </div>
+                <div className="mt-3 p-2 bg-muted/30 rounded text-xs text-muted-foreground">
+                  <strong>Tip:</strong> Long-press any + or - button to quickly change this setting
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Next payment countdown */}
             <Card>
               <CardHeader className="pb-2 px-3 sm:px-4">
@@ -446,6 +486,12 @@ export default function SpendPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Allocation Interval Modal */}
+      <AllocationIntervalModal
+        isOpen={showIntervalModal}
+        onClose={() => setShowIntervalModal(false)}
+      />
     </NavPageLayout>
   );
 }

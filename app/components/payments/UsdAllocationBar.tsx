@@ -21,8 +21,9 @@ import { PulsingButtonEffect } from '../effects/PulsingButtonEffect';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { toast } from '../ui/use-toast';
 import { getNextMonthlyProcessingDate } from '../../utils/subscriptionTiers';
+import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 
-interface UsdPledgeBarProps {
+interface UsdAllocationBarProps {
   pageId?: string;
   pageTitle?: string;
   authorId?: string;
@@ -40,7 +41,7 @@ interface Subscription {
   tier: string;
 }
 
-export const UsdPledgeBar = React.forwardRef<HTMLDivElement, UsdPledgeBarProps>(({
+export const UsdAllocationBar = React.forwardRef<HTMLDivElement, UsdAllocationBarProps>(({
   pageId: propPageId,
   pageTitle,
   authorId,
@@ -271,22 +272,16 @@ export const UsdPledgeBar = React.forwardRef<HTMLDivElement, UsdPledgeBarProps>(
           className
         )}
       >
-        <div className="flex items-center justify-between px-4 py-3 max-w-screen-xl mx-auto">
-          {/* Left side - Current allocation display */}
-          <div 
-            ref={accentSectionRef}
-            className="flex items-center space-x-2 text-sm"
-          >
-            <span className="text-muted-foreground">
-              {isUserAllocation ? `To ${username}:` : 'Allocated:'}
-            </span>
-            <span className="font-semibold text-accent-foreground">
-              {formatUsdCents(currentUsdAllocation)}
-            </span>
-          </div>
+        <div className="px-4 py-3 max-w-screen-xl mx-auto">
+          {/* Allocation amount display above the controls */}
+          <AllocationAmountDisplay
+            allocationCents={currentUsdAllocation}
+            className="mb-2"
+          />
 
-          {/* Right side - Allocation controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center">
+            {/* Allocation controls centered */}
+            <div className="flex items-center space-x-2">
             {/* Quick amount buttons */}
             {quickAmounts.map((cents) => (
               <Button
@@ -316,6 +311,7 @@ export const UsdPledgeBar = React.forwardRef<HTMLDivElement, UsdPledgeBarProps>(
                 <Minus className="h-4 w-4" />
               </Button>
             )}
+            </div>
           </div>
         </div>
 
@@ -344,4 +340,4 @@ export const UsdPledgeBar = React.forwardRef<HTMLDivElement, UsdPledgeBarProps>(
   );
 });
 
-UsdPledgeBar.displayName = "UsdPledgeBar";
+UsdAllocationBar.displayName = "UsdAllocationBar";

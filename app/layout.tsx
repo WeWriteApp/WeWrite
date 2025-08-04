@@ -22,6 +22,7 @@ import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
+import { AllocationIntervalProvider } from "./contexts/AllocationIntervalContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 // import SimpleNavigationOptimizer from "./components/navigation/SimpleNavigationOptimizer" // Temporarily disabled
 
@@ -85,6 +86,7 @@ export default function RootLayout({
                                 <RecentPagesProvider>
                                   <TokenIncrementProvider>
                                     <UsdBalanceProvider>
+                                      <AllocationIntervalProvider>
                                         <NavigationOrderProvider>
                                             <SessionAuthInitializer>
                                               <SessionMonitor />
@@ -93,8 +95,9 @@ export default function RootLayout({
                                               </GlobalNavigation>
                                             </SessionAuthInitializer>
                                         </NavigationOrderProvider>
-                                      </UsdBalanceProvider>
-                                    </TokenIncrementProvider>
+                                      </AllocationIntervalProvider>
+                                    </UsdBalanceProvider>
+                                  </TokenIncrementProvider>
                                 </RecentPagesProvider>
                               </LineSettingsProvider>
                             </PillStyleProvider>

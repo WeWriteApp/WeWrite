@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { centsToDollars, formatUsdCents } from '../utils/formatCurrency';
 
@@ -9,6 +9,17 @@ interface UsdBalance {
   allocatedUsdCents: number;
   availableUsdCents: number;
 }
+
+interface CachedUsdBalance {
+  data: UsdBalance;
+  timestamp: number;
+  userId: string;
+}
+
+// Global cache for USD balance data - shared across all components
+const usdBalanceCache = new Map<string, CachedUsdBalance>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const STALE_WHILE_REVALIDATE_DURATION = 30 * 1000; // 30 seconds
 
 interface UsdBalanceContextType {
   usdBalance: UsdBalance | null;
@@ -29,8 +40,9 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
   const [usdBalance, setUsdBalance] = useState<UsdBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const fetchingRef = useRef<Promise<void> | null>(null);
 
-  const fetchUsdBalance = useCallback(async () => {
+  const fetchUsdBalance = useCallback(async (forceRefresh = false): Promise<void> => {
     if (!user?.uid) {
       console.log('[UsdBalanceContext] Skipping USD balance fetch:', {
         hasAccount: !!user?.uid
@@ -40,68 +52,114 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    // Prevent excessive API calls - only fetch if it's been more than 10 seconds
+    // Check cache first
+    const cached = usdBalanceCache.get(user.uid);
     const now = Date.now();
-    const lastFetchTime = lastUpdated?.getTime() || 0;
-    const timeSinceLastFetch = now - lastFetchTime;
 
-    if (timeSinceLastFetch < 10000 && usdBalance) {
-      console.log('[UsdBalanceContext] Skipping fetch - too recent:', timeSinceLastFetch + 'ms ago');
-      return;
+    if (!forceRefresh && cached && cached.userId === user.uid) {
+      const age = now - cached.timestamp;
+
+      // If cache is fresh, use it immediately
+      if (age < CACHE_DURATION) {
+        console.log('[UsdBalanceContext] ✅ Using fresh cached data (age: ' + Math.round(age / 1000) + 's)');
+        setUsdBalance(cached.data);
+        setLastUpdated(new Date(cached.timestamp));
+        setIsLoading(false);
+        return;
+      }
+
+      // If cache is stale but not too old, use it while revalidating
+      if (age < CACHE_DURATION + STALE_WHILE_REVALIDATE_DURATION) {
+        console.log('[UsdBalanceContext] 🔄 Using stale cached data while revalidating (age: ' + Math.round(age / 1000) + 's)');
+        setUsdBalance(cached.data);
+        setLastUpdated(new Date(cached.timestamp));
+        setIsLoading(false);
+        // Continue to fetch fresh data in background
+      }
     }
 
-    console.log('[UsdBalanceContext] Fetching USD balance for user:', user.uid);
-    setIsLoading(true);
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) {
+      return fetchingRef.current;
+    }
 
-    try {
-      const response = await fetch('/api/usd/balance', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.log('[UsdBalanceContext] User not authenticated');
-          setUsdBalance(null);
-          return;
+    const fetchPromise = (async () => {
+      try {
+        if (!cached || forceRefresh) {
+          setIsLoading(true);
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
-      const data = await response.json();
-      console.log('[UsdBalanceContext] Received USD balance data:', data);
+        console.log('[UsdBalanceContext] Fetching fresh USD balance for user:', user.uid);
 
-      if (data.balance) {
-        const balance: UsdBalance = {
-          totalUsdCents: data.balance.totalUsdCents || 0,
-          allocatedUsdCents: data.balance.allocatedUsdCents || 0,
-          availableUsdCents: data.balance.availableUsdCents || 0,
-        };
-        setUsdBalance(balance);
-        setLastUpdated(new Date());
-        console.log('[UsdBalanceContext] Updated USD balance:', {
-          total: formatUsdCents(balance.totalUsdCents),
-          allocated: formatUsdCents(balance.allocatedUsdCents),
-          available: formatUsdCents(balance.availableUsdCents)
+        const response = await fetch('/api/usd/balance', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
-      } else {
-        console.log('[UsdBalanceContext] No USD balance found in response');
-        setUsdBalance(null);
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            console.log('[UsdBalanceContext] User not authenticated');
+            setUsdBalance(null);
+            return;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('[UsdBalanceContext] Received USD balance data:', data);
+
+        if (data.balance) {
+          const balance: UsdBalance = {
+            totalUsdCents: data.balance.totalUsdCents || 0,
+            allocatedUsdCents: data.balance.allocatedUsdCents || 0,
+            availableUsdCents: data.balance.availableUsdCents || 0,
+          };
+
+          setUsdBalance(balance);
+          setLastUpdated(new Date());
+
+          // Cache the result
+          usdBalanceCache.set(user.uid, {
+            data: balance,
+            timestamp: now,
+            userId: user.uid
+          });
+
+          console.log('[UsdBalanceContext] Updated USD balance:', {
+            total: formatUsdCents(balance.totalUsdCents),
+            allocated: formatUsdCents(balance.allocatedUsdCents),
+            available: formatUsdCents(balance.availableUsdCents)
+          });
+        } else {
+          console.log('[UsdBalanceContext] No USD balance found in response');
+
+          // If we have cached data, keep using it on no data response
+          if (!cached) {
+            setUsdBalance(null);
+          }
+        }
+      } catch (error) {
+        console.error('[UsdBalanceContext] Error fetching USD balance:', error);
+
+        // If we have cached data, keep using it on error
+        if (!cached) {
+          setUsdBalance(null);
+        }
+      } finally {
+        setIsLoading(false);
+        fetchingRef.current = null;
       }
-    } catch (error) {
-      console.error('[UsdBalanceContext] Error fetching USD balance:', error);
-      // Don't clear existing balance on error, just log it
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.uid, lastUpdated, usdBalance]);
+    })();
+
+    fetchingRef.current = fetchPromise;
+    return fetchPromise;
+  }, [user?.uid]);
 
   const refreshUsdBalance = useCallback(async () => {
     console.log('[UsdBalanceContext] Force refreshing USD balance');
-    setLastUpdated(null); // Reset to force fetch
-    await fetchUsdBalance();
+    await fetchUsdBalance(true);
   }, [fetchUsdBalance]);
 
   const updateOptimisticBalance = useCallback((changeCents: number) => {

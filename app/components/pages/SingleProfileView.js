@@ -16,7 +16,7 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 import NavHeader from "../layout/NavHeader";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
-import PledgeBar from '../payments/PledgeBar';
+import { UserUsdAllocationBar } from '../payments/UserUsdAllocationBar';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -25,105 +25,47 @@ const SingleProfileView = ({ profile }) => {
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
 
+  // Share profile function
+  const handleShareProfile = () => {
+    // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
+    const profileUrl = window.location.href;
+    const shareText = `${profile.username || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
+
+    // Check if the Web Share API is available
+    if (navigator.share) {
+      navigator.share({
+        title: `${profile.username || 'User'} on WeWrite`,
+        text: shareText,
+        url: profileUrl
+      }).catch((error) => {
+        // Silent error handling - no toast
+        console.error('Error sharing:', error);
+      });
+    } else {
+      // Create a Twitter share URL as fallback
+      try {
+        // First try to open Twitter share dialog
+        const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+        window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
+      } catch (error) {
+        console.error('Error opening Twitter share:', error);
+
+        // If that fails, copy the URL to clipboard
+        try {
+          navigator.clipboard.writeText(profileUrl);
+        } catch (clipboardError) {
+          console.error('Error copying link:', clipboardError);
+        }
+      }
+    }
+  };
+
   // UsernameBadge handles all data fetching automatically
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
       {/* Navigation Header */}
-      <NavHeader
-        backUrl="/"
-        rightContent={
-          <>
-            {/* Desktop: Button with text and icon */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden sm:flex gap-1"
-              onClick={() => {
-                // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
-                const profileUrl = window.location.href;
-                const shareText = `${profile.username || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
-
-                // Check if the Web Share API is available
-                if (navigator.share) {
-                  navigator.share({
-                    title: `${profile.username || 'User'} on WeWrite`,
-                    text: shareText,
-                    url: profileUrl
-                  }).catch((error) => {
-                    // Silent error handling - no toast
-                    console.error('Error sharing:', error);
-                  });
-                } else {
-                  // Create a Twitter share URL as fallback
-                  try {
-                    // First try to open Twitter share dialog
-                    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-                    window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
-                  } catch (error) {
-                    console.error('Error opening Twitter share:', error);
-
-                    // If that fails, copy the URL to clipboard
-                    try {
-                      navigator.clipboard.writeText(profileUrl);
-                    } catch (clipboardError) {
-                      console.error('Error copying link:', clipboardError);
-                    }
-                  }
-                }
-              }}
-              title="Share"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>Share</span>
-            </Button>
-
-            {/* Mobile: Icon-only button */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="sm:hidden"
-              onClick={() => {
-                // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
-                const profileUrl = window.location.href;
-                const shareText = `${profile.username || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
-
-                // Check if the Web Share API is available
-                if (navigator.share) {
-                  navigator.share({
-                    title: `${profile.username || 'User'} on WeWrite`,
-                    text: shareText,
-                    url: profileUrl
-                  }).catch((error) => {
-                    // Silent error handling - no toast
-                    console.error('Error sharing:', error);
-                  });
-                } else {
-                  // Create a Twitter share URL as fallback
-                  try {
-                    // First try to open Twitter share dialog
-                    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-                    window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
-                  } catch (error) {
-                    console.error('Error opening Twitter share:', error);
-
-                    // If that fails, copy the URL to clipboard
-                    try {
-                      navigator.clipboard.writeText(profileUrl);
-                    } catch (clipboardError) {
-                      console.error('Error copying link:', clipboardError);
-                    }
-                  }
-                }
-              }}
-              title="Share"
-              aria-label="Share profile"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          </>
-        }
-      />
+      <NavHeader />
 
       {/* Apply WeWrite standardized padding for consistent layout */}
       <div className="p-5 md:p-4">
@@ -154,6 +96,20 @@ const SingleProfileView = ({ profile }) => {
             </div>
           )}
 
+          {/* Share button */}
+          <div className="mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShareProfile}
+              className="flex items-center gap-2"
+              title="Share profile"
+            >
+              <Share2 className="h-4 w-4" />
+              <span>Share Profile</span>
+            </Button>
+          </div>
+
           {/* UsernameBadge handles all subscription display automatically */}
         </div>
 
@@ -163,13 +119,12 @@ const SingleProfileView = ({ profile }) => {
 
         <UserProfileTabs profile={profile} />
 
-        {/* User Pledge Bar - floating and persistent across tabs - only show on other people's pages */}
+        {/* User USD Allocation Bar - floating and persistent across tabs - only show on other people's pages */}
         {!isCurrentUser && (
-          <PledgeBar
-            authorId={profile.uid}
+          <UserUsdAllocationBar
+            recipientUserId={profile.uid}
             username={profile.username || profile.displayName || 'User'}
             visible={true}
-            isUserAllocation={true}
           />
         )}
       </div>

@@ -13,6 +13,7 @@ import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
+import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
 
 interface RandomPage {
   id: string;
@@ -239,6 +240,16 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                   })()}
                 </span>
               </div>
+            </div>
+
+            {/* Embedded Allocation Bar */}
+            <div className="pt-2 border-t border-border/20">
+              <EmbeddedAllocationBar
+                pageId={page.id}
+                authorId={page.userId}
+                pageTitle={page.title}
+                source="RandomPages"
+              />
             </div>
           </div>
         ))}
