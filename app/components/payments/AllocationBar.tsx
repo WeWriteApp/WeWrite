@@ -25,6 +25,11 @@ interface AllocationBarProps extends Omit<FloatingAllocationBarProps, 'pageId' |
   pageId?: string;
   pageTitle?: string;
   authorId?: string;
+  // Variant support for different allocation bar styles
+  variant?: 'default' | 'simple' | 'user';
+  // For user allocation mode
+  isUserAllocation?: boolean;
+  username?: string;
 }
 
 const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
@@ -33,6 +38,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   authorId,
   visible = true,
   className,
+  variant = 'default',
+  isUserAllocation = false,
+  username,
 }, ref) => {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -232,6 +240,46 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 </div>
               )}
 
+              {/* Simple variant with quick amount buttons */}
+              {variant === 'simple' ? (
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center space-x-2">
+                    {/* Quick amount buttons */}
+                    {[25, 50, 100, 250].map((cents) => (
+                      <Button
+                        key={cents}
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAllocationChange(cents / allocationIntervalCents, e);
+                        }}
+                        disabled={isProcessing || cents > (usdBalance?.availableUsdCents || 0)}
+                        className="h-8 px-2 text-xs"
+                      >
+                        +{formatUsdCents(cents)}
+                      </Button>
+                    ))}
+
+                    {/* Minus button */}
+                    {allocationState.currentAllocationCents > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const decreaseAmount = Math.min(allocationState.currentAllocationCents, 25);
+                          handleAllocationChange(-decreaseAmount / allocationIntervalCents, e);
+                        }}
+                        disabled={isProcessing}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
               <div className="flex items-center gap-3">
               {allocationState.isLoading ? (
                 <div className="flex items-center gap-3 w-full">
@@ -314,6 +362,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 </>
               )}
             </div>
+              )}
             </>
           )}
 
