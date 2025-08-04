@@ -14,6 +14,7 @@ This index provides a comprehensive overview of all WeWrite documentation, organ
 - **[LEGACY_CODE_CLEANUP_GUIDE](./LEGACY_CODE_CLEANUP_GUIDE.md)** - 🧹 Dangerous patterns to remove immediately
 
 ### Recent Changes (2025 Updates)
+- **[SAVE_SYSTEM_RELIABILITY_ARCHITECTURE](./SAVE_SYSTEM_RELIABILITY_ARCHITECTURE.md)** - 🆕 Critical save system fixes and PWA updates
 - **[RECENT_CHANGES_SUMMARY](./RECENT_CHANGES_SUMMARY.md)** - 🆕 Quick overview of major 2025 changes
 - **[CONTENT_DISPLAY_REFACTORING_SUMMARY](./CONTENT_DISPLAY_REFACTORING_SUMMARY.md)** - Content system unification
 - **[DEPRECATED_UI_PATTERNS](./DEPRECATED_UI_PATTERNS.md)** - UI patterns that must be removed

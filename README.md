@@ -60,6 +60,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ### 🆕 Recent Changes (Start Here for 2025 Updates)
 
+- **[SAVE_SYSTEM_RELIABILITY_ARCHITECTURE](docs/SAVE_SYSTEM_RELIABILITY_ARCHITECTURE.md)** - **🆕 2025**: Critical save system fixes, caching overhaul, and PWA update system
 - **[RECENT_CHANGES_SUMMARY](docs/RECENT_CHANGES_SUMMARY.md)** - **🆕 2025**: Quick overview of major changes and what patterns to avoid
 - **[EMERGENCY_COST_OPTIMIZATION_SUMMARY](EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - **🚨 CRITICAL**: Firebase cost optimization and real-time listener cleanup
 
