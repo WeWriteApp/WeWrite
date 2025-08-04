@@ -16,7 +16,7 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 import NavHeader from "../layout/NavHeader";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
-import { UserUsdAllocationBar } from '../payments/UserUsdAllocationBar';
+import AllocationBar from '../payments/AllocationBar';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -118,16 +118,20 @@ const SingleProfileView = ({ profile }) => {
 
 
         <UserProfileTabs profile={profile} />
-
-        {/* User USD Allocation Bar - floating and persistent across tabs - only show on other people's pages */}
-        {!isCurrentUser && (
-          <UserUsdAllocationBar
-            recipientUserId={profile.uid}
-            username={profile.username || profile.displayName || 'User'}
-            visible={true}
-          />
-        )}
       </div>
+
+      {/* Floating allocation bar - only show on other people's pages */}
+      {!isCurrentUser && (
+        <AllocationBar
+          pageId={profile.uid}
+          pageTitle={`@${profile.username || profile.displayName || 'User'}`}
+          authorId={profile.uid}
+          visible={true}
+          variant="user"
+          isUserAllocation={true}
+          username={profile.username || profile.displayName || 'User'}
+        />
+      )}
     </ProfilePagesProvider>
   );
 };

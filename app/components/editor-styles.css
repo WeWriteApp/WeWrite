@@ -162,7 +162,39 @@ a[data-user-id]::before {
 /* Dense paragraph content styling */
 .dense-paragraph-content {
   /* Ensure proper text color in dense mode */
-  color: hsl(var(--foreground));
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Override any prose classes that might be interfering with text color */
+.prose .dense-paragraph-content,
+.prose-lg .dense-paragraph-content,
+.dense-mode-container .dense-paragraph-content,
+.dense-mode .dense-paragraph-content {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all text content in dense mode uses proper foreground color */
+.dense-mode-container,
+.dense-mode-container *,
+.dense-paragraph-content,
+.dense-paragraph-content * {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Override prose text colors specifically */
+.prose .dense-mode-container,
+.prose .dense-mode-container *,
+.prose-lg .dense-mode-container,
+.prose-lg .dense-mode-container * {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Additional overrides for any text elements in dense mode */
+.dense-mode-container span,
+.dense-paragraph-content span,
+.dense-mode-container p,
+.dense-paragraph-content p {
+  color: hsl(var(--foreground)) !important;
 }
 
 /* ============================================================================
