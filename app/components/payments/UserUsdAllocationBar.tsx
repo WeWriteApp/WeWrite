@@ -146,6 +146,8 @@ export function UserUsdAllocationBar({
         {/* Allocation amount display */}
         <AllocationAmountDisplay
           allocationCents={currentUsdAllocation}
+          availableBalanceCents={usdBalance?.availableUsdCents || 0}
+          variant="user"
           className="py-1"
         />
 

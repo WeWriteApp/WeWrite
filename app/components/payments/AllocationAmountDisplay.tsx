@@ -6,23 +6,27 @@ import { cn } from '../../lib/utils';
 
 interface AllocationAmountDisplayProps {
   allocationCents: number;
+  availableBalanceCents?: number;
+  variant?: 'page' | 'user';
   className?: string;
 }
 
 /**
- * Displays the allocation amount above pledge bars with smooth animations
- * - Shows "$x/mo" in accent color when amount > 0
- * - Hides when amount is 0
- * - Animates height changes smoothly
+ * Displays allocation information above pledge bars with smooth animations
+ * - Shows "Available: $x" in normal text color when allocation is 0
+ * - Shows "$x/mo to page/user" in accent color when allocation > 0
+ * - Always visible (no blank space when allocation is zero)
+ * - Animates color and content changes smoothly
  * - Shows flash animation when going from 0 to positive amount
  */
-export function AllocationAmountDisplay({ 
-  allocationCents, 
-  className 
+export function AllocationAmountDisplay({
+  allocationCents,
+  availableBalanceCents = 0,
+  variant = 'page',
+  className
 }: AllocationAmountDisplayProps) {
   const [previousAmount, setPreviousAmount] = useState(allocationCents);
   const [showFlash, setShowFlash] = useState(false);
-  const [isVisible, setIsVisible] = useState(allocationCents > 0);
 
   useEffect(() => {
     // Check if we're going from 0 to positive (trigger flash)
@@ -37,33 +41,34 @@ export function AllocationAmountDisplay({
       return () => clearTimeout(timer);
     }
 
-    // Update visibility - always show when there's any allocation
-    setIsVisible(allocationCents > 0);
     setPreviousAmount(allocationCents);
   }, [allocationCents, previousAmount]);
 
-  // Always show when there's an allocation, even if small
-  const shouldShow = allocationCents > 0;
+  // Determine what to display
+  const hasAllocation = allocationCents > 0;
+  const displayText = hasAllocation
+    ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
+    : `Available: ${formatUsdCents(availableBalanceCents)}`;
+
+  // Color based on whether there's an allocation
+  const textColorClass = hasAllocation ? "text-primary" : "text-muted-foreground";
 
   return (
     <div
       className={cn(
-        "overflow-hidden transition-all duration-300 ease-in-out",
-        shouldShow ? "max-h-8 mb-2" : "max-h-0 mb-0",
+        "overflow-hidden transition-all duration-300 ease-in-out max-h-8 mb-2",
         className
       )}
     >
-      {shouldShow && (
-        <div
-          className={cn(
-            "text-center font-bold text-sm transition-all duration-300 ease-in-out",
-            "text-primary", // Accent color - should be blue/purple
-            showFlash && "animate-flash-background"
-          )}
-        >
-          {formatUsdCents(allocationCents)}/mo
-        </div>
-      )}
+      <div
+        className={cn(
+          "text-center font-bold text-sm transition-all duration-300 ease-in-out",
+          textColorClass,
+          showFlash && "animate-flash-background"
+        )}
+      >
+        {displayText}
+      </div>
     </div>
   );
 }

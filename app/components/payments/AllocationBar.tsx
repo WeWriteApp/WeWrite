@@ -231,6 +231,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
               {/* Allocation amount display above the controls */}
               <AllocationAmountDisplay
                 allocationCents={allocationState.currentAllocationCents}
+                availableBalanceCents={usdBalance?.availableUsdCents || 0}
+                variant={isUserAllocation ? 'user' : 'page'}
               />
 
               {/* Out of funds message */}
