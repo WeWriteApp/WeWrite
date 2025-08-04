@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     // EMERGENCY COST OPTIMIZATION: Enable aggressive caching
     const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}`;
-    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 15 * 60 * 1000; // 30 seconds in dev, 15 minutes in prod
+    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 2 * 60 * 1000; // 30 seconds in dev, 2 minutes in prod
 
     // Check cache first
     const cached = globalRecentEditsCache.get(cacheKey);

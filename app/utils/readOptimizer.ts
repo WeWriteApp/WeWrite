@@ -42,9 +42,9 @@ class ReadOptimizer {
     lastReset: Date.now()
   };
 
-  // Configuration - DISABLED CACHING IN DEVELOPMENT TO PREVENT DATA LOSS
-  private readonly DEFAULT_CACHE_DURATION = process.env.NODE_ENV === 'development' ? 0 : 5 * 60 * 1000; // No cache in dev
-  private readonly AGGRESSIVE_CACHE_DURATION = process.env.NODE_ENV === 'development' ? 0 : 30 * 60 * 1000; // No cache in dev
+  // Configuration - REDUCED CACHING TO PREVENT DATA LOSS
+  private readonly DEFAULT_CACHE_DURATION = process.env.NODE_ENV === 'development' ? 0 : 30 * 1000; // No cache in dev, 30s in prod
+  private readonly AGGRESSIVE_CACHE_DURATION = process.env.NODE_ENV === 'development' ? 0 : 2 * 60 * 1000; // No cache in dev, 2min in prod
   private readonly BATCH_DELAY = 50; // 50ms batch window
   private readonly MAX_CACHE_SIZE = 1000;
   private readonly CLEANUP_INTERVAL = 60 * 1000; // 1 minute

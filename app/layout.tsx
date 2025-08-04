@@ -36,6 +36,7 @@ import GlobalNavigation from "./components/layout/GlobalNavigation"
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
 import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
+import AppUpdateManager from './components/common/AppUpdateManager'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
@@ -92,6 +93,7 @@ export default function RootLayout({
                                         <NavigationOrderProvider>
                                             <SessionAuthInitializer>
                                               <SessionMonitor />
+                                              <AppUpdateManager />
                                               <GlobalNavigation>
                                                 {children}
                                               </GlobalNavigation>

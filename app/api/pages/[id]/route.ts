@@ -68,10 +68,17 @@ export async function GET(
       fromCache: false // Will be set by readOptimizer
     });
 
-    // CRITICAL FIX: NO CACHING for page content to prevent data loss
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
+    // REDUCED CACHING: Short cache to prevent data loss while maintaining some performance
+    if (process.env.NODE_ENV === 'development') {
+      // No caching in development
+      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+    } else {
+      // Short cache in production (30 seconds)
+      response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      response.headers.set('CDN-Cache-Control', 'public, max-age=30');
+    }
     
     return response;
 
