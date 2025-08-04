@@ -1,0 +1,261 @@
+"use client";
+
+import React, { useMemo } from 'react';
+import { useAuth } from '../../providers/AuthProvider';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
+import { useRouter } from 'next/navigation';
+import { Button } from '../ui/button';
+import { Plus, Minus } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { 
+  BaseAllocationProps,
+  AllocationBarVariant,
+  CompositionBarData,
+  UseCompositionBarReturn
+} from '../../types/allocation';
+import { useAllocationState } from '../../hooks/useAllocationState';
+import { useAllocationActions } from '../../hooks/useAllocationActions';
+import { AllocationAmountDisplay } from './AllocationAmountDisplay';
+import { AllocationIntervalModal } from './AllocationIntervalModal';
+
+/**
+ * Base component for all allocation bars
+ * 
+ * This component provides the core allocation functionality that can be
+ * extended by specific allocation bar implementations (floating, embedded, etc.)
+ */
+
+interface AllocationBarBaseProps extends BaseAllocationProps {
+  variant: AllocationBarVariant;
+  className?: string;
+  showAmountDisplay?: boolean;
+  showCompositionBar?: boolean;
+  showControls?: boolean;
+  buttonSize?: 'sm' | 'md' | 'lg';
+  buttonVariant?: 'default' | 'outline' | 'ghost';
+  disabled?: boolean;
+  onLongPress?: () => void;
+}
+
+// Hook for composition bar calculations
+function useCompositionBar(
+  currentAllocationCents: number,
+  usdBalance: any
+): UseCompositionBarReturn {
+  return useMemo(() => {
+    if (!usdBalance) {
+      return {
+        compositionData: {
+          otherPagesPercentage: 0,
+          currentPagePercentage: 0,
+          availablePercentage: 100,
+          isOutOfFunds: false
+        },
+        isOutOfFunds: false,
+        hasBalance: false
+      };
+    }
+
+    const totalCents = usdBalance.totalUsdCents;
+    const allocatedCents = usdBalance.allocatedUsdCents;
+    const availableCents = usdBalance.availableUsdCents;
+    
+    const otherPagesCents = Math.max(0, allocatedCents - currentAllocationCents);
+    const isOutOfFunds = availableCents <= 0 && totalCents > 0;
+
+    // Calculate percentages for composition bar
+    const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
+    const currentPagePercentage = totalCents > 0 ? (currentAllocationCents / totalCents) * 100 : 0;
+    const availablePercentage = totalCents > 0 ? Math.max(0, (availableCents / totalCents) * 100) : 0;
+
+    return {
+      compositionData: {
+        otherPagesPercentage,
+        currentPagePercentage,
+        availablePercentage,
+        isOutOfFunds
+      },
+      isOutOfFunds,
+      hasBalance: totalCents > 0
+    };
+  }, [currentAllocationCents, usdBalance]);
+}
+
+export function AllocationBarBase({
+  pageId,
+  authorId,
+  pageTitle,
+  variant,
+  source,
+  className,
+  showAmountDisplay = true,
+  showCompositionBar = true,
+  showControls = true,
+  buttonSize = 'sm',
+  buttonVariant = 'outline',
+  disabled = false,
+  onLongPress
+}: AllocationBarBaseProps) {
+  const { user } = useAuth();
+  const { usdBalance } = useUsdBalance();
+  const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
+  const router = useRouter();
+
+  // Check if current user is the page owner
+  const isPageOwner = !!(user && authorId && user.uid === authorId);
+
+  // Use allocation state hook
+  const { allocationState, setOptimisticAllocation } = useAllocationState({
+    pageId,
+    enabled: !isPageOwner
+  });
+
+  // Use allocation actions hook
+  const { handleAllocationChange, isProcessing, error } = useAllocationActions({
+    pageId,
+    authorId,
+    pageTitle,
+    currentAllocationCents: allocationState.currentAllocationCents,
+    source,
+    onOptimisticUpdate: setOptimisticAllocation
+  });
+
+  // Use composition bar hook
+  const { compositionData, isOutOfFunds, hasBalance } = useCompositionBar(
+    allocationState.currentAllocationCents,
+    usdBalance
+  );
+
+  // Don't render for page owners or when loading critical data
+  if (isPageOwner || (allocationState.isLoading && intervalLoading)) {
+    return null;
+  }
+
+  // Show login prompt if not authenticated
+  if (!user) {
+    return (
+      <div className={cn("flex items-center gap-3", className)}>
+        <Button
+          size={buttonSize}
+          variant="outline"
+          className="h-8 px-3 text-xs"
+          onClick={() => router.push('/auth/login')}
+        >
+          Login to allocate funds
+        </Button>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (allocationState.isLoading || intervalLoading) {
+    return (
+      <div className={cn("flex items-center gap-3", className)}>
+        <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+        <div className="flex-1 h-8 bg-muted rounded animate-pulse" />
+        <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("w-full", className)}>
+      {/* Allocation amount display */}
+      {showAmountDisplay && (
+        <AllocationAmountDisplay
+          allocationCents={allocationState.currentAllocationCents}
+        />
+      )}
+
+      {/* Out of funds message */}
+      {isOutOfFunds && (
+        <div className="text-center text-sm text-orange-500 font-medium mb-2">
+          Out of funds
+        </div>
+      )}
+
+      {/* Controls */}
+      {showControls && (
+        <div className="flex items-center gap-3">
+          {/* Minus button */}
+          <Button
+            size={buttonSize}
+            variant={buttonVariant}
+            className={cn(
+              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0",
+              buttonVariant === 'ghost' && "hover:bg-destructive/20"
+            )}
+            onClick={(e) => handleAllocationChange(-1, e)}
+            disabled={disabled || isProcessing || allocationState.currentAllocationCents <= 0}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+
+          {/* Composition bar */}
+          {showCompositionBar && (
+            <div className="flex-1 h-8 relative">
+              <div className="absolute inset-0 flex gap-1">
+                {/* Other pages (spent elsewhere) */}
+                {compositionData.otherPagesPercentage > 0 && (
+                  <div
+                    className="bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
+                    style={{ width: `${compositionData.otherPagesPercentage}%` }}
+                  />
+                )}
+
+                {/* Current page (spent here) */}
+                {compositionData.currentPagePercentage > 0 && (
+                  <div
+                    className={cn(
+                      "rounded-md transition-all duration-300 ease-out",
+                      isOutOfFunds ? "bg-orange-500" : "bg-primary"
+                    )}
+                    style={{ width: `${compositionData.currentPagePercentage}%` }}
+                  />
+                )}
+
+                {/* Available funds */}
+                {compositionData.availablePercentage > 0 && (
+                  <div
+                    className="bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+                    style={{ width: `${compositionData.availablePercentage}%` }}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Plus button */}
+          <Button
+            size={buttonSize}
+            variant={buttonVariant}
+            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0"
+            onClick={(e) => isOutOfFunds ? handleOutOfFunds(e) : handleAllocationChange(1, e)}
+            disabled={disabled || isProcessing}
+            onContextMenu={onLongPress ? (e) => {
+              e.preventDefault();
+              onLongPress();
+            } : undefined}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && (
+        <div className="text-center text-sm text-destructive mt-2">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+
+  // Handle out of funds click
+  function handleOutOfFunds(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    router.push('/settings/fund-account');
+  }
+}
