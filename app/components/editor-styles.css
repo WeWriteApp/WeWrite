@@ -155,6 +155,14 @@ a[data-user-id]::before {
 .unified-text-content {
   flex: 1;
   min-width: 0;
+  /* Ensure proper text color inheritance */
+  color: hsl(var(--foreground));
+}
+
+/* Dense paragraph content styling */
+.dense-paragraph-content {
+  /* Ensure proper text color in dense mode */
+  color: hsl(var(--foreground));
 }
 
 /* ============================================================================

@@ -35,7 +35,7 @@
 }
 
 .viewer-paragraph .paragraph-content {
-  @apply flex-1 leading-relaxed;
+  @apply flex-1 leading-relaxed text-foreground;
 }
 
 .viewer-text-content {
