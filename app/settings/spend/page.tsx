@@ -280,7 +280,6 @@ export default function SpendPage() {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
-        <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
           {/* Loading state for allocation display */}
           <Card>
             <CardContent className="pt-6 px-4 sm:px-6">
@@ -486,13 +485,12 @@ export default function SpendPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Allocation Interval Modal */}
-      <AllocationIntervalModal
-        isOpen={showIntervalModal}
-        onClose={() => setShowIntervalModal(false)}
-      />
+        {/* Allocation Interval Modal */}
+        <AllocationIntervalModal
+          isOpen={showIntervalModal}
+          onClose={() => setShowIntervalModal(false)}
+        />
       </div>
     </div>
   );
