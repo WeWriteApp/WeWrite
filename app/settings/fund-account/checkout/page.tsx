@@ -185,7 +185,7 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
           </Button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
