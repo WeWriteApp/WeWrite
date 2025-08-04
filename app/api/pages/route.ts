@@ -820,6 +820,20 @@ export async function PUT(request: NextRequest) {
       updateFields: Object.keys(updateData)
     }, 'PAGE_SAVE');
 
+    // SIMPLIFIED: Basic cache clearing only - no complex invalidation
+    try {
+      console.log('🗑️ SIMPLE CACHE: Basic cache clearing for saved page:', id);
+
+      // Clear read optimizer cache only
+      const { clearOptimizedCache } = await import('../../utils/readOptimizer');
+      clearOptimizedCache(`page:${id}:`);
+
+      console.log('✅ SIMPLE CACHE: Basic cache clearing completed');
+    } catch (cacheError) {
+      console.warn('⚠️ SIMPLE CACHE: Error clearing caches (non-fatal):', cacheError);
+      // Don't fail the save if cache invalidation fails
+    }
+
     const responseData = {
       id,
       ...updateData,

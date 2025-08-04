@@ -11,10 +11,11 @@ import { trackFirebaseRead } from '../../../utils/costMonitor';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const pageId = params.id;
+    // Next.js 15 requires awaiting params
+    const { id: pageId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const requestedUserId = searchParams.get('userId');
 
@@ -67,9 +68,10 @@ export async function GET(
       fromCache: false // Will be set by readOptimizer
     });
 
-    // Add cache headers for browser caching
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600'); // 5 min cache, 10 min stale
-    response.headers.set('CDN-Cache-Control', 'public, max-age=300');
+    // CRITICAL FIX: NO CACHING for page content to prevent data loss
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     
     return response;
 

@@ -60,7 +60,7 @@ export function useAllocationActions({
   maxRetries = DEFAULT_MAX_RETRIES
 }: UseAllocationActionsOptions): UseAllocationActionsReturn {
   const { user } = useAuth();
-  const { usdBalance } = useUsdBalance();
+  const { usdBalance, updateOptimisticBalance } = useUsdBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const { toast } = useToast();
 

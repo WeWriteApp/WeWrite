@@ -712,13 +712,31 @@ export default function PageView({
     setEditorState(content);
 
     // Only set unsaved changes if content actually differs from original
-    const originalContent = page?.content ? JSON.parse(page.content) : [];
+    let originalContent = [];
+
+    if (page?.content) {
+      try {
+        // Handle both string and object formats
+        if (typeof page.content === 'string') {
+          originalContent = JSON.parse(page.content);
+        } else if (Array.isArray(page.content)) {
+          originalContent = page.content;
+        } else {
+          originalContent = [];
+        }
+      } catch (error) {
+        console.warn('🔍 CONTENT CHANGE: Error parsing original content, treating as empty:', error);
+        originalContent = [];
+      }
+    }
+
     const contentChanged = JSON.stringify(content) !== JSON.stringify(originalContent);
 
     console.log('🔍 CONTENT CHANGE: Comparing content', {
       originalContentLength: originalContent.length,
       newContentLength: content ? content.length : 0,
       contentChanged,
+      originalContentType: typeof page?.content,
       originalSample: JSON.stringify(originalContent).substring(0, 100),
       newSample: content ? JSON.stringify(content).substring(0, 100) : 'null'
     });
@@ -1098,12 +1116,12 @@ export default function PageView({
       console.log('✅ PAGE SAVE: Page saved successfully via API', { pageId });
       pageLogger.info('Page saved successfully via API', { pageId });
 
-      // CRITICAL: Update local page state with saved content to fix comparison logic
+      // CRITICAL FIX: Properly update both page state and editor state to prevent Slate errors
       console.log('🔍 PAGE SAVE: Updating local page state with saved content');
       if (page) {
         const updatedPage = {
           ...page,
-          content: JSON.stringify(contentToSave), // Store as string like it comes from DB
+          content: contentToSave, // Store as array/object like editor expects
           title: title.trim(),
           location: location,
           customDate: customDate,
@@ -1111,6 +1129,32 @@ export default function PageView({
         };
         setPage(updatedPage);
         console.log('✅ PAGE SAVE: Local page state updated');
+
+        // CRITICAL: Reset editor state to prevent Slate DOM errors
+        try {
+          console.log('🔄 EDITOR FIX: Resetting editor state to prevent Slate errors');
+          // Force editor to re-render with clean state
+          setEditorState([]);
+          setTimeout(() => {
+            setEditorState(contentToSave);
+            console.log('✅ EDITOR FIX: Editor state reset and updated with saved content');
+          }, 100);
+        } catch (editorError) {
+          console.warn('⚠️ EDITOR FIX: Error resetting editor state:', editorError);
+        }
+      }
+
+      // SIMPLIFIED: Just clear basic caches - no complex invalidation
+      try {
+        console.log('🗑️ SIMPLE CACHE: Basic cache clearing for saved page:', pageId);
+
+        // Clear read optimizer cache only
+        const { clearOptimizedCache } = await import('../../utils/readOptimizer');
+        clearOptimizedCache(`page:${pageId}:`);
+
+        console.log('✅ SIMPLE CACHE: Basic cache clearing completed');
+      } catch (cacheError) {
+        console.warn('⚠️ SIMPLE CACHE: Error clearing caches (non-fatal):', cacheError);
       }
 
       // Emit page save event for real-time updates
