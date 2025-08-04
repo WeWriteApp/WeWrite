@@ -1937,8 +1937,12 @@ select,
 
 /* Text contrast is now handled by PillStyleContext - removed conflicting rules */
 
-/* Ensure outline pills use the accent color for text */
-a.bg-transparent, button.bg-transparent, div.bg-transparent {
+/* Ensure outline pills use the accent color for text - but NOT text content */
+a.bg-transparent.pill-link,
+button.bg-transparent,
+div.bg-transparent.pill-link,
+a.bg-transparent[href],
+button.bg-transparent[type] {
   color: hsl(var(--primary)) !important;
 }
 
@@ -2564,3 +2568,5 @@ body.has-sticky-save-header .page-header-edit-mode {
 body.has-sticky-save-header header[data-component="main-header"] + div {
   height: unset !important;
 }
+
+

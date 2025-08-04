@@ -148,12 +148,18 @@ export function useAllocationMutation() {
       }
 
       try {
+        // Transform the request to match API expectations
+        const apiRequest = {
+          pageId: request.pageId,
+          usdCentsChange: request.changeCents
+        };
+
         const response = await fetch('/api/usd/allocate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(request),
+          body: JSON.stringify(apiRequest),
         });
 
         if (!response.ok) {

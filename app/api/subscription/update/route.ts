@@ -9,6 +9,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../../utils/environmentConfig';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { initAdmin } from '../../../firebase/admin';
+import { ServerUsdService } from '../../../services/usdService.server';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -145,6 +146,10 @@ export async function POST(request: NextRequest) {
 
     // Update subscription in Firestore
     await subscriptionRef.update(subscriptionData);
+
+    // Update user's USD allocation to reflect new subscription amount
+    console.log(`[SUBSCRIPTION UPDATE] Updating USD allocation for user ${userId}: $${newAmount}`);
+    await ServerUsdService.updateMonthlyUsdAllocation(userId, newAmount);
 
     // Simple logging - just log to console for now to avoid complex dependencies
     console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription:`, {

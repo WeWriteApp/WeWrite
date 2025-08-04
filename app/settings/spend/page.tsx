@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
-import NavPageLayout from '../../components/layout/NavPageLayout';
 import UsdAllocationDisplay from '../../components/payments/UsdAllocationDisplay';
 import { UsdAllocationBreakdown } from '../../components/payments/UsdAllocationBreakdown';
 import { UsdPieChart } from '../../components/ui/UsdPieChart';
@@ -277,11 +276,10 @@ export default function SpendPage() {
   const totalUsdCents = usdBalance?.totalUsdCents || 0;
   const hasBalance = totalUsdCents > 0 || subscriptionAmount > 0;
 
-  return (
-    <NavPageLayout
-      maxWidth="4xl"
-      loading={isLoading || loadingSubscription}
-      loadingFallback={
+  if (isLoading || loadingSubscription) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
         <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
           {/* Loading state for allocation display */}
           <Card>
@@ -345,9 +343,12 @@ export default function SpendPage() {
             </CardContent>
           </Card>
         </div>
-      }
-    >
+      </div>
+    );
+  }
 
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
       <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
         {!hasBalance ? (
           /* No funding state */
@@ -492,6 +493,7 @@ export default function SpendPage() {
         isOpen={showIntervalModal}
         onClose={() => setShowIntervalModal(false)}
       />
-    </NavPageLayout>
+      </div>
+    </div>
   );
 }

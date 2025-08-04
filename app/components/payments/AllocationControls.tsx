@@ -183,6 +183,8 @@ export function AllocationControls({
       {/* Allocation amount display above the controls */}
       <AllocationAmountDisplay
         allocationCents={allocationState.currentAllocationCents}
+        availableBalanceCents={usdBalance?.availableUsdCents || 0}
+        variant="page"
       />
 
       <div className="flex items-center gap-3">

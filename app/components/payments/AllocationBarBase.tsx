@@ -165,6 +165,8 @@ export function AllocationBarBase({
       {showAmountDisplay && (
         <AllocationAmountDisplay
           allocationCents={allocationState.currentAllocationCents}
+          availableBalanceCents={usdBalance?.availableUsdCents || 0}
+          variant={variant === 'user' ? 'user' : 'page'}
         />
       )}
 

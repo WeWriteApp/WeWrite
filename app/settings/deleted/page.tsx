@@ -3,9 +3,6 @@
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Button } from "../../components/ui/button";
-import { ChevronLeft } from 'lucide-react';
-import NavPageLayout from '../../components/layout/NavPageLayout';
 import RecentlyDeletedPages from '../../components/settings/RecentlyDeletedPages';
 
 export default function RecentlyDeletedPage() {
@@ -24,10 +21,9 @@ export default function RecentlyDeletedPage() {
   }
 
   return (
-    <NavPageLayout backUrl="/settings">
-
-        {/* Recently Deleted Pages Component */}
-        <RecentlyDeletedPages />
-    </NavPageLayout>
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Recently Deleted Pages Component */}
+      <RecentlyDeletedPages />
+    </div>
   );
 }

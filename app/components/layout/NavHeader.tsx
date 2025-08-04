@@ -14,6 +14,7 @@ import { RemainingFundsDisplay, OverspendWarningDisplay } from "../ui/RemainingU
 import { useUsdBalance } from "../../contexts/UsdBalanceContext";
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { formatUsdCents } from "../../utils/formatCurrency";
+import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
 
 export interface NavHeaderProps {
   className?: string;
@@ -77,29 +78,41 @@ export default function NavHeader({
       const isZeroEarnings = totalUsdEarned === 0;
 
       return (
-        <Badge
-          variant="secondary"
-          className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
-            isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
-          }`}
-          onClick={() => router.push('/settings/earnings')}
-          title={`${formatUsdCents(totalUsdEarned * 100)} earned`}
-        >
-          {formatUsdCents(totalUsdEarned * 100)}
-        </Badge>
+        <FinancialDropdown
+          title="Click to view earnings"
+          onNavigate={() => router.push('/settings/earnings')}
+          direction="southwest"
+          trigger={
+            <Badge
+              variant="secondary"
+              className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
+                isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
+              }`}
+            >
+              {formatUsdCents(totalUsdEarned * 100)}
+            </Badge>
+          }
+          content={<EarningsBreakdown totalEarnings={totalUsdEarned} />}
+        />
       );
     }
 
     // Fallback: show zero earnings if no data but not loading
     return (
-      <Badge
-        variant="secondary"
-        className="cursor-pointer hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
-        onClick={() => router.push('/settings/earnings')}
-        title="$0.00 earned"
-      >
-        $0.00
-      </Badge>
+      <FinancialDropdown
+        title="Click to view earnings"
+        onNavigate={() => router.push('/settings/earnings')}
+        direction="southwest"
+        trigger={
+          <Badge
+            variant="secondary"
+            className="cursor-pointer hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
+          >
+            $0.00
+          </Badge>
+        }
+        content={<EarningsBreakdown totalEarnings={0} />}
+      />
     );
   };
 
@@ -153,18 +166,46 @@ export default function NavHeader({
       if (isOverspending) {
         // Show overspend badge with warning icon to the right
         return (
-          <OverspendWarningDisplay
-            overspendUsdCents={overspendingAmount}
-            onClick={() => router.push('/settings/spend')}
+          <FinancialDropdown
+            title="Click to view full spend breakdown"
+            onNavigate={() => router.push('/settings/spend')}
+            direction="southeast"
+            trigger={
+              <OverspendWarningDisplay
+                overspendUsdCents={overspendingAmount}
+              />
+            }
+            content={
+              <SpendBreakdown
+                totalUsdCents={usdBalance.totalUsdCents}
+                allocatedUsdCents={usdBalance.allocatedUsdCents}
+                availableUsdCents={Math.max(0, usdBalance.totalUsdCents - usdBalance.allocatedUsdCents)}
+              />
+            }
           />
         );
       } else {
         // Show pie chart of remaining funds and amount left to spend
+        const availableUsdCents = Math.max(0, usdBalance.totalUsdCents - usdBalance.allocatedUsdCents);
+
         return (
-          <RemainingFundsDisplay
-            allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
-            totalUsdCents={usdBalance.totalUsdCents || 0}
-            onClick={() => router.push('/settings/spend')}
+          <FinancialDropdown
+            title="Click to view full spend breakdown"
+            onNavigate={() => router.push('/settings/spend')}
+            direction="southeast"
+            trigger={
+              <RemainingFundsDisplay
+                allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
+                totalUsdCents={usdBalance.totalUsdCents || 0}
+              />
+            }
+            content={
+              <SpendBreakdown
+                totalUsdCents={usdBalance.totalUsdCents}
+                allocatedUsdCents={usdBalance.allocatedUsdCents}
+                availableUsdCents={availableUsdCents}
+              />
+            }
           />
         );
       }

@@ -12,6 +12,7 @@ import { UsdAllocationModal } from './UsdAllocationModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import {
@@ -47,6 +48,10 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const router = useRouter();
   const { triggerDelayedBanner } = useDelayedLoginBanner();
   const { usdBalance } = useUsdBalance();
+  const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
+
+  // Flash animation state
+  const [flashType, setFlashType] = useState<'accent' | 'red' | null>(null);
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
@@ -54,6 +59,14 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
   // Auto-detect pageId from URL if not provided
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
+
+  // Debug logging
+  console.log('🎯 AllocationBar: pageId info', {
+    propPageId,
+    pathname,
+    derivedPageId: pageId,
+    hasPageId: !!pageId
+  });
 
   // Check if current user is the page owner
   const isPageOwner = !!(user && authorId && user.uid === authorId);
@@ -69,7 +82,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     enabled: !isPageOwner && !!pageId
   });
 
-  const { handleAllocationChange, isProcessing } = useAllocationActions({
+  const { handleAllocationChange: originalHandleAllocationChange, isProcessing } = useAllocationActions({
     pageId,
     authorId: authorId || '',
     pageTitle: pageTitle || '',
@@ -77,6 +90,31 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     source: 'FloatingBar',
     onOptimisticUpdate: setOptimisticAllocation
   });
+
+  // Flash animation trigger
+  const triggerFlash = (type: 'accent' | 'red') => {
+    setFlashType(type);
+    setTimeout(() => setFlashType(null), 500); // Match animation duration
+  };
+
+  // Wrapper for allocation change that triggers flash
+  const handleAllocationChange = (amount: number, event?: React.MouseEvent) => {
+    // Ensure we have a valid pageId before proceeding
+    if (!pageId) {
+      console.error('AllocationBar: Cannot allocate - pageId is missing');
+      return;
+    }
+
+    // Trigger appropriate flash based on whether we're increasing or decreasing
+    if (amount > 0) {
+      triggerFlash('accent');
+    } else if (amount < 0) {
+      triggerFlash('red');
+    }
+
+    // Call the original handler
+    return originalHandleAllocationChange(amount, event);
+  };
 
   // Scroll detection effect
   useEffect(() => {
@@ -185,6 +223,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         className={cn(
           "relative w-full max-w-md shadow-2xl overflow-hidden rounded-2xl",
           "bg-background/90 backdrop-blur-xl border border-white/20",
+          "transition-all duration-300 ease-in-out", // Ensure smooth transitions
+          flashType === 'accent' && "animate-flash-bar-accent",
+          flashType === 'red' && "animate-flash-bar-red",
           className
         )}
         data-allocation-bar
@@ -192,7 +233,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       >
         {/* Main Content */}
         <div className={cn(
-          "space-y-4",
+          "space-y-2",
           isPageOwner ? "p-3" : "p-4"
         )}>
           {/* Page Stats for Page Owners */}
@@ -233,6 +274,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 allocationCents={allocationState.currentAllocationCents}
                 availableBalanceCents={usdBalance?.availableUsdCents || 0}
                 variant={isUserAllocation ? 'user' : 'page'}
+                flashType={flashType}
+                allocationIntervalCents={allocationIntervalCents}
               />
 
               {/* Out of funds message */}
@@ -283,7 +326,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 </div>
               ) : (
               <div className="flex items-center gap-3">
-              {allocationState.isLoading ? (
+              {(allocationState.isLoading || intervalLoading) ? (
                 <div className="flex items-center gap-3 w-full">
                   <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
                   <div className="flex-1 h-12 bg-muted animate-pulse rounded-lg"></div>
@@ -306,10 +349,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   </Button>
 
                   {/* Composition Bar */}
-                  <div className={cn(
-                    "flex-1 rounded-lg h-12 flex gap-1 p-1",
-                    compositionData.isOutOfFunds ? "bg-orange-500/20" : "bg-muted"
-                  )}>
+                  <div className="flex-1 h-12 flex gap-1 items-center">
                     {/* Always show composition - even when out of funds */}
                     <>
                       {/* Other pages */}

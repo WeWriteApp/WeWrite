@@ -172,7 +172,7 @@ export const USD_UI_TEXT = {
   FUND_ACCOUNT: 'Fund Account',
   SPEND: 'Spend', 
   GET_PAID: 'Get Paid',
-  TOOLTIP_TEXT: 'This amount is in USD. Your payment will be converted from your local currency at checkout.',
+  TOOLTIP_TEXT: 'This amount is in USD.',
   SUBTEXT: 'Payments processed in USD via Stripe. Local currency may be converted at checkout.',
   NO_BALANCE_MESSAGE: 'No USD balance found. Subscribe to start allocating funds.',
   OUT_OF_FUNDS: 'Out of funds! Click to add more.',

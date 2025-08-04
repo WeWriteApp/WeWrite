@@ -273,12 +273,18 @@ class AllocationBatcher {
    */
   private async executeRequest(batchedRequest: BatchedRequest): Promise<void> {
     try {
+      // Transform the request to match API expectations
+      const apiRequest = {
+        pageId: batchedRequest.request.pageId,
+        usdCentsChange: batchedRequest.request.changeCents
+      };
+
       const response = await fetch('/api/usd/allocate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(batchedRequest.request),
+        body: JSON.stringify(apiRequest),
       });
 
       if (!response.ok) {

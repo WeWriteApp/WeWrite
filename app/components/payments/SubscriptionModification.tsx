@@ -23,6 +23,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { toast } from '../ui/use-toast';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG, getTierById, calculateTokensForAmount, validateCustomAmount } from '../../utils/subscriptionTiers';
 
@@ -42,6 +43,7 @@ interface ProrationPreview {
 
 export function SubscriptionModification({ subscription, onModificationSuccess }: SubscriptionModificationProps) {
   const { user } = useAuth();
+  const { refreshUsdBalance } = useUsdBalance();
   // Payments feature is now always enabled
   // Payments are always enabled - no feature flag needed
   
@@ -190,6 +192,9 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
       setShowConfirmDialog(false);
       setSelectedTier('');
       setProrationPreview(null);
+
+      // Refresh USD balance to reflect new subscription amount
+      await refreshUsdBalance();
 
       if (onModificationSuccess) {
         onModificationSuccess();
@@ -488,9 +493,11 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
             currentSubscription={subscription}
             newTier={selectedTier}
             newAmount={selectedTier === 'custom' ? customAmount : getTierById(selectedTier)?.amount || 0}
-            onSuccess={() => {
+            onSuccess={async () => {
               setShowUpgradeFlow(false);
               setSelectedTier('');
+              // Refresh USD balance to reflect new subscription amount
+              await refreshUsdBalance();
               onModificationSuccess?.();
             }}
             onCancel={() => {

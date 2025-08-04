@@ -9,6 +9,8 @@ interface AllocationAmountDisplayProps {
   availableBalanceCents?: number;
   variant?: 'page' | 'user';
   className?: string;
+  flashType?: 'accent' | 'red' | null;
+  allocationIntervalCents?: number;
 }
 
 /**
@@ -23,28 +25,32 @@ export function AllocationAmountDisplay({
   allocationCents,
   availableBalanceCents = 0,
   variant = 'page',
-  className
+  className,
+  flashType = null,
+  allocationIntervalCents = 10 // Default to $0.10
 }: AllocationAmountDisplayProps) {
-  const [previousAmount, setPreviousAmount] = useState(allocationCents);
-  const [showFlash, setShowFlash] = useState(false);
-
-  useEffect(() => {
-    // Check if we're going from 0 to positive (trigger flash)
-    const wasZero = previousAmount === 0;
-    const isNowPositive = allocationCents > 0;
-    const shouldFlash = wasZero && isNowPositive;
-
-    if (shouldFlash) {
-      setShowFlash(true);
-      // Remove flash after animation completes
-      const timer = setTimeout(() => setShowFlash(false), 600);
-      return () => clearTimeout(timer);
-    }
-
-    setPreviousAmount(allocationCents);
-  }, [allocationCents, previousAmount]);
+  // Show interval amount during flash animation
+  const isFlashing = flashType !== null;
 
   // Determine what to display
+  if (isFlashing) {
+    // During flash, show the interval amount with +/- prefix
+    const prefix = flashType === 'accent' ? '+' : '-';
+    const intervalFormatted = formatUsdCents(allocationIntervalCents);
+    return (
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out max-h-8 mb-2",
+          className
+        )}
+      >
+        <div className="text-center font-bold text-sm text-white">
+          {prefix}{intervalFormatted}
+        </div>
+      </div>
+    );
+  }
+
   const hasAllocation = allocationCents > 0;
   const displayText = hasAllocation
     ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
@@ -63,8 +69,7 @@ export function AllocationAmountDisplay({
       <div
         className={cn(
           "text-center font-bold text-sm transition-all duration-300 ease-in-out",
-          textColorClass,
-          showFlash && "animate-flash-background"
+          textColorClass
         )}
       >
         {displayText}

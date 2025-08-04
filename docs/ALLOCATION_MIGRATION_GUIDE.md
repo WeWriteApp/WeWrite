@@ -66,8 +66,7 @@ const handleIncrease = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         pageId,
-        changeCents: allocationIntervalCents,
-        source: 'FloatingBar'
+        usdCentsChange: allocationIntervalCents
       })
     });
     
@@ -134,8 +133,9 @@ const AllocationBar = ({ pageId, authorId, pageTitle }) => {
   
   return (
     <div>
-      <AllocationAmountDisplay 
-        allocationCents={allocationState.currentAllocationCents} 
+      <AllocationAmountDisplay
+        allocationCents={allocationState.currentAllocationCents}
+        availableBalanceCents={usdBalance?.availableUsdCents || 0}
       />
       <AllocationControls
         onIncrease={(e) => handleAllocationChange(1, e)}
@@ -225,8 +225,9 @@ const handleIncrease = (event) => {
 #### Use Shared Components
 ```typescript
 // ✅ Consistent, reusable components
-<AllocationAmountDisplay 
-  allocationCents={allocationState.currentAllocationCents} 
+<AllocationAmountDisplay
+  allocationCents={allocationState.currentAllocationCents}
+  availableBalanceCents={usdBalance?.availableUsdCents || 0}
 />
 ```
 

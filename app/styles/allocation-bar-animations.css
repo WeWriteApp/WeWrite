@@ -117,6 +117,52 @@
   animation: flash-background 0.6s ease-out forwards;
 }
 
+/* Flash entire allocation bar with accent color (for plus/increase) */
+@keyframes flash-bar-accent {
+  0% {
+    background-color: hsl(var(--primary) / 0.2);
+    border-color: hsl(var(--primary));
+    transform: scale(1);
+  }
+  50% {
+    background-color: hsl(var(--primary) / 0.4);
+    border-color: hsl(var(--primary));
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    border-color: hsl(var(--border));
+    transform: scale(1);
+  }
+}
+
+/* Flash entire allocation bar with red (for minus/decrease) */
+@keyframes flash-bar-red {
+  0% {
+    background-color: hsl(0 84% 60% / 0.2);
+    border-color: hsl(0 84% 60%);
+    transform: scale(1);
+  }
+  50% {
+    background-color: hsl(0 84% 60% / 0.4);
+    border-color: hsl(0 84% 60%);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    border-color: hsl(var(--border));
+    transform: scale(1);
+  }
+}
+
+.animate-flash-bar-accent {
+  animation: flash-bar-accent 0.5s ease-out forwards;
+}
+
+.animate-flash-bar-red {
+  animation: flash-bar-red 0.5s ease-out forwards;
+}
+
 /* Smooth transition for allocation bar visibility */
 .allocation-bar-transition {
   transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),

@@ -43,7 +43,7 @@ function isContentPageRoute(pathname: string, user: any): boolean {
  */
 function shouldShowFABOnRoute(pathname: string, user: any): boolean {
   if (!user) return false;
-  
+
   // Hide on admin routes
   if (pathname.startsWith('/admin/')) {
     return false;
@@ -51,6 +51,11 @@ function shouldShowFABOnRoute(pathname: string, user: any): boolean {
 
   // Hide on auth routes
   if (pathname.startsWith('/auth/')) {
+    return false;
+  }
+
+  // Hide on settings pages (modal-like behavior)
+  if (pathname.startsWith('/settings')) {
     return false;
   }
 
@@ -94,6 +99,11 @@ function shouldShowMobileNavOnRoute(pathname: string, user: any): boolean {
 
   // Hide on admin routes
   if (pathname.startsWith('/admin/')) {
+    return false;
+  }
+
+  // Hide on settings pages (modal-like behavior)
+  if (pathname.startsWith('/settings')) {
     return false;
   }
 

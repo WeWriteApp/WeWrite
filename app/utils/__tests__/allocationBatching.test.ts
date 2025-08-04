@@ -147,8 +147,7 @@ describe('AllocationBatcher', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pageId: 'test-page',
-          changeCents: 150, // 50 + 100
-          source: 'FloatingBar'
+          usdCentsChange: 150 // 50 + 100
         })
       });
 

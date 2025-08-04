@@ -153,14 +153,20 @@ Displays allocation amounts with consistent formatting.
 ```typescript
 interface AllocationAmountDisplayProps {
   allocationCents: number;
+  availableBalanceCents?: number;
+  variant?: 'page' | 'user';
   className?: string;
+  flashType?: 'accent' | 'red' | null;
+  allocationIntervalCents?: number;
 }
 ```
 
 **Usage:**
 ```tsx
 <AllocationAmountDisplay
-  allocationCents={500} // Displays "$5.00/mo"
+  allocationCents={500} // Displays "$5.00/mo to page"
+  availableBalanceCents={3000} // Shows "Available: $30.00" when allocation is 0
+  variant="page"
   className="text-lg font-bold"
 />
 ```

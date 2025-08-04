@@ -52,11 +52,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <NavPageLayout
-      backUrl="/settings"
-      maxWidth="md"
-    >
-
+    <div className="p-6 max-w-md mx-auto">
       {/* Add meta tag for password managers */}
       <head>
         <meta name="apple-itunes-app" content="app-id=123456789, app-argument=https://wewrite.com/settings/reset-password" />
@@ -123,6 +119,6 @@ export default function ResetPasswordPage() {
           </form>
         )}
       </div>
-    </NavPageLayout>
+    </div>
   );
 }

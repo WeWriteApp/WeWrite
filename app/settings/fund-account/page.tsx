@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import NavPageLayout from '../../components/layout/NavPageLayout';
 import UsdFundingTierSlider from '../../components/payments/UsdFundingTierSlider';
 import { useAuth } from '../../providers/AuthProvider';
 import { Loader2 } from 'lucide-react';
@@ -70,25 +69,25 @@ export default function FundAccountPage() {
 
   if (isLoading) {
     return (
-      <NavPageLayout backUrl="/settings">
+      <div className="p-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
             <p className="text-muted-foreground">Loading subscription...</p>
           </div>
         </div>
-      </NavPageLayout>
+      </div>
     );
   }
 
   return (
-    <NavPageLayout backUrl="/settings">
+    <div className="p-6 max-w-4xl mx-auto">
       <UsdFundingTierSlider
         selectedAmount={selectedAmount}
         onAmountSelect={setSelectedAmount}
         currentSubscription={currentSubscription}
         showCurrentOption={true}
       />
-    </NavPageLayout>
+    </div>
   );
 }

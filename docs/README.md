@@ -108,8 +108,9 @@ const MyAllocationComponent = ({ pageId }: { pageId: string }) => {
 
   return (
     <div>
-      <AllocationAmountDisplay 
-        allocationCents={allocationState.currentAllocationCents} 
+      <AllocationAmountDisplay
+        allocationCents={allocationState.currentAllocationCents}
+        availableBalanceCents={usdBalance?.availableUsdCents || 0}
       />
       <AllocationControls
         onIncrease={(e) => handleAllocationChange(1, e)}

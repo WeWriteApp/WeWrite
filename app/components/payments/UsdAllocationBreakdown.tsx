@@ -137,15 +137,18 @@ export function UsdAllocationBreakdown({
                           <p className="font-medium truncate text-sm sm:text-base">WeWrite Platform</p>
                         ) : allocation.resourceType === 'user' ? (
                           <div className="flex items-center space-x-2">
+                            <span className="text-xs sm:text-sm text-muted-foreground">User:</span>
                             <PillLink href={`/user/${allocation.authorUsername || allocation.resourceId}`}>
                               {allocation.authorUsername || allocation.resourceId}
                             </PillLink>
-                            <span className="text-xs sm:text-sm text-muted-foreground">User</span>
                           </div>
                         ) : (
-                          <PillLink href={`/${allocation.resourceId}`}>
-                            {allocation.pageTitle || allocation.resourceId}
-                          </PillLink>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs sm:text-sm text-muted-foreground">Page:</span>
+                            <PillLink href={`/${allocation.resourceId}`}>
+                              {allocation.pageTitle || allocation.resourceId}
+                            </PillLink>
+                          </div>
                         )}
 
                         {allocation.resourceType !== 'user' && (
@@ -191,12 +194,22 @@ export function UsdAllocationBreakdown({
                     </Button>
                   </div>
 
-                  {/* Composition bar */}
-                  <div className="flex-1 relative h-3 sm:h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
+                  {/* Composition bar - styled like AllocationBar */}
+                  <div className="flex-1 h-8 flex gap-1 items-center bg-muted/20 rounded-md p-1">
+                    {/* Allocated portion */}
+                    {percentage > 0 && (
+                      <div
+                        className="h-full bg-primary rounded-md transition-all duration-300 ease-out"
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                      />
+                    )}
+                    {/* Remaining portion */}
+                    {percentage < 100 && (
+                      <div
+                        className="h-full bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+                        style={{ width: `${100 - Math.min(percentage, 100)}%` }}
+                      />
+                    )}
                   </div>
 
                   {/* Actions - moved to same row on mobile */}

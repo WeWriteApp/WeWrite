@@ -17,8 +17,7 @@ import { useAlert } from '../../hooks/useAlert';
 import { useConfirmation } from '../../hooks/useConfirmation';
 import AlertModal from '../../components/utils/AlertModal';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
-import { ChevronLeft, Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
-import NavPageLayout from '../../components/layout/NavPageLayout';
+import { Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -261,11 +260,9 @@ export default function ProfilePage() {
     return null;
   }
 
-  return (
-    <NavPageLayout
-      backUrl="/settings"
-      loading={!user || isLoading}
-      loadingFallback={
+  if (!user || isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
         <div className="w-full space-y-6">
           <Card className="wewrite-card">
             <CardHeader className="pb-6">
@@ -286,8 +283,12 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
-      }
-    >
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">{/* Profile Settings Content */}
 
         {/* Profile Section */}
         <Card className="wewrite-card">
@@ -656,6 +657,6 @@ export default function ProfilePage() {
           variant={confirmationState.variant}
           icon={confirmationState.icon}
         />
-    </NavPageLayout>
+    </div>
   );
 }

@@ -10,6 +10,7 @@ const COLORS = {
   purple: '#8B5CF6',
   amber: '#F59E0B',
   sky: '#0EA5E9',
+  pink: '#EC4899',
 } as const;
 
 // HSL values for CSS variables
@@ -20,6 +21,7 @@ const COLOR_HSL = {
   purple: { h: 262, s: 83, l: 58 },
   amber: { h: 43, s: 96, l: 56 },
   sky: { h: 199, s: 89, l: 48 },
+  pink: { h: 330, s: 81, l: 60 },
 } as const;
 
 type ColorKey = keyof typeof COLORS;
@@ -96,6 +98,7 @@ export const ACCENT_COLORS = {
   AMBER: 'amber',
   PURPLE: 'purple',
   SKY: 'sky',
+  PINK: 'pink',
 } as const;
 
 export const ACCENT_COLOR_VALUES = COLORS;

@@ -31,7 +31,7 @@ interface PageQuery {
   includeDeleted?: boolean;
   limit?: number;
   startAfter?: string;
-  orderBy?: 'lastModified' | 'createdAt' | 'title';
+  orderBy?: 'lastModified' | 'createdAt' | 'title' | 'deletedAt';
   orderDirection?: 'asc' | 'desc';
 }
 
@@ -84,8 +84,12 @@ export async function GET(request: NextRequest) {
       // Build simplified Firestore query to avoid composite index requirements
       // We'll filter by userId and orderBy only, then filter other conditions client-side
       let firestoreQuery = db.collection(getCollectionName('pages'))
-        .where('userId', '==', query.userId)
-        .orderBy(query.orderBy, query.orderDirection);
+        .where('userId', '==', query.userId);
+
+      // For deleted pages, we need to order by lastModified since deletedAt might not be indexed
+      // We'll sort by deletedAt client-side if needed
+      const orderByField = query.orderBy === 'deletedAt' ? 'lastModified' : query.orderBy;
+      firestoreQuery = firestoreQuery.orderBy(orderByField, query.orderDirection);
 
       // Add pagination
       if (query.startAfter) {
@@ -124,14 +128,17 @@ export async function GET(request: NextRequest) {
 
         // Apply additional filters
 
-        // Filter deleted pages (exclude by default unless specifically requested)
-        if (!query.includeDeleted && data.deleted === true) {
-          return; // Skip deleted pages
-        }
-
-        // If specifically requesting deleted pages, only show deleted ones
-        if (query.includeDeleted && query.userId === currentUserId && data.deleted !== true) {
-          return; // Skip non-deleted pages when requesting deleted ones
+        // Filter deleted pages based on includeDeleted flag
+        if (query.includeDeleted) {
+          // When includeDeleted=true, only show deleted pages
+          if (data.deleted !== true) {
+            return; // Skip non-deleted pages
+          }
+        } else {
+          // When includeDeleted=false (default), exclude deleted pages
+          if (data.deleted === true) {
+            return; // Skip deleted pages
+          }
         }
 
         // Page passes all filters, add it to results
@@ -172,6 +179,15 @@ export async function GET(request: NextRequest) {
           location: p.location
         }))
       });
+
+      // Sort by deletedAt if requested (client-side since it might not be indexed)
+      if (query.orderBy === 'deletedAt') {
+        pages.sort((a, b) => {
+          const aDate = a.deletedAt ? new Date(a.deletedAt).getTime() : 0;
+          const bDate = b.deletedAt ? new Date(b.deletedAt).getTime() : 0;
+          return query.orderDirection === 'desc' ? bDate - aDate : aDate - bDate;
+        });
+      }
 
       // Trim results to requested limit (since we fetched extra for filtering)
       const limitedPages = pages.slice(0, query.limit);

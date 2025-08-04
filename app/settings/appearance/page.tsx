@@ -3,12 +3,10 @@
 import { useAuth } from '../../providers/AuthProvider';
 import { useTheme } from "../../providers/ThemeProvider";
 import { useRouter } from 'next/navigation';
-import { Button } from "../../components/ui/button";
-import { ChevronLeft, Sun, Moon, Laptop, Check } from 'lucide-react';
+import { Sun, Moon, Laptop, Check } from 'lucide-react';
 import AccentColorSwitcher from '../../components/utils/AccentColorSwitcher';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import { cn } from "../../lib/utils";
-import NavPageLayout from '../../components/layout/NavPageLayout';
 
 export default function AppearancePage() {
   const { user } = useAuth();
@@ -42,9 +40,8 @@ export default function AppearancePage() {
   ];
 
   return (
-    <NavPageLayout backUrl="/settings">
-
-        <div className="space-y-8">
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="space-y-8">
           {/* Theme Selection */}
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="mb-6">
@@ -106,6 +103,7 @@ export default function AppearancePage() {
             <PillStyleToggle />
           </div>
         </div>
-    </NavPageLayout>
+      </div>
+    </div>
   );
 }

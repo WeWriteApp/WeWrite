@@ -15,10 +15,11 @@ import {
   AlertTriangle,
   ShoppingCart,
   Coins,
-  Palette
+  Palette,
+  X
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
-import NavHeader from '../components/layout/NavHeader';
+import SettingsHeader from '../components/settings/SettingsHeader';
 
 import { cn } from '../lib/utils';
 // Removed old optimized subscription import - using API-first approach
@@ -204,21 +205,13 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header - Only show on main settings page */}
-      {pathname === '/settings' && (
-        <div className="lg:hidden">
-          <NavHeader backUrl="/" />
-        </div>
-      )}
+      {/* Settings Header - handles mobile/desktop logic */}
+      <SettingsHeader />
 
-      <div className="lg:flex">
+      <div className="lg:flex h-[calc(100vh-3.5rem)]">
         {/* Desktop Persistent Sidebar */}
-        <div className="hidden lg:block lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-border lg:bg-background lg:z-10">
+        <div className="hidden lg:block lg:w-64 lg:border-r lg:border-border lg:bg-background">
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-center px-6 py-4 border-b border-border">
-              <h1 className="text-xl font-semibold select-none">Settings</h1>
-            </div>
-
             <nav className="flex-1 px-3 py-4">
               <div className="space-y-1">
                 {availableSections.map((section) => {
@@ -326,7 +319,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
         </div>
 
         {/* Main Content Area */}
-        <div className="lg:ml-64 flex-1">
+        <div className="lg:ml-64 flex-1 overflow-auto">
           {children}
         </div>
       </div>
