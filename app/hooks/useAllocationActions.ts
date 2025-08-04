@@ -14,6 +14,7 @@ import {
   AllocationRequest
 } from '../types/allocation';
 import { useAllocationMutation } from './useAllocationQueries';
+import { allocationBatcher } from '../utils/allocationBatching';
 import { showUsdAllocationNotification } from '../utils/usdNotifications';
 
 /**
@@ -76,7 +77,7 @@ export function useAllocationActions({
     pendingChangeCents.current = 0;
   }, []);
 
-  // Process batched allocation change using React Query
+  // Process batched allocation change using enhanced batching system
   const processBatchedChange = useCallback(async () => {
     const changeCents = pendingChangeCents.current;
     if (changeCents === 0) return;
@@ -92,7 +93,8 @@ export function useAllocationActions({
     };
 
     try {
-      const result = await allocationMutation.mutateAsync(request);
+      // Use enhanced batcher for intelligent request batching
+      const result = await allocationBatcher.batchRequest(request, 'normal');
 
       if (result.success) {
         // Update the actual allocation
@@ -129,7 +131,6 @@ export function useAllocationActions({
     clearBatch,
     pageId,
     source,
-    allocationMutation,
     onAllocationChange,
     pageTitle,
     toast
@@ -236,22 +237,52 @@ export function useAllocationActions({
     updateOptimisticBalance(changeCents);
     onOptimisticUpdate?.(cents);
 
-    // Clear any pending batch and execute immediately
+    // Clear any pending batch and execute with high priority
     clearBatch();
-    pendingChangeCents.current = changeCents;
-    processBatchedChange();
+
+    // Use high priority batching for direct allocations
+    const request: AllocationRequest = {
+      pageId,
+      changeCents,
+      source
+    };
+
+    allocationBatcher.batchRequest(request, 'high').then(result => {
+      if (result.success) {
+        onAllocationChange?.(result.currentAllocation);
+        showUsdAllocationNotification(changeCents, pageTitle, result.currentAllocation);
+      } else {
+        throw new Error(result.error || 'Allocation failed');
+      }
+    }).catch(error => {
+      console.error('Direct allocation error:', error);
+
+      // Rollback optimistic updates
+      updateOptimisticBalance(-changeCents);
+      onOptimisticUpdate?.(currentAllocationCents);
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update allocation';
+      setError(errorMessage);
+      toast({
+        title: "Allocation Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    });
 
     setError(null);
   }, [
-    user, 
-    pageId, 
-    authorId, 
-    currentAllocationCents, 
-    usdBalance, 
-    updateOptimisticBalance, 
-    onOptimisticUpdate, 
-    clearBatch, 
-    processBatchedChange, 
+    user,
+    pageId,
+    authorId,
+    currentAllocationCents,
+    source,
+    usdBalance,
+    updateOptimisticBalance,
+    onOptimisticUpdate,
+    onAllocationChange,
+    pageTitle,
+    clearBatch,
     toast
   ]);
 
