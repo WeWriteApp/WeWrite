@@ -7,37 +7,24 @@ import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
-import {
-  getLoggedOutUsdBalance,
-  allocateLoggedOutUsd,
-  getLoggedOutPageAllocation,
-} from "../../utils/simulatedUsd";
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocationModal } from './UsdAllocationModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useAllocationState } from '../../hooks/useAllocationState';
+import { useAllocationActions } from '../../hooks/useAllocationActions';
+import {
+  FloatingAllocationBarProps,
+  PageStats,
+  Subscription,
+  CompositionBarData
+} from '../../types/allocation';
 
-interface AllocationBarProps {
+interface AllocationBarProps extends Omit<FloatingAllocationBarProps, 'pageId' | 'authorId' | 'pageTitle'> {
   pageId?: string;
   pageTitle?: string;
   authorId?: string;
-  visible?: boolean;
-  className?: string;
-}
-
-interface UsdBalance {
-  totalUsdCents: number;
-  allocatedUsdCents: number;
-  availableUsdCents: number;
-  lastUpdated: Date;
-}
-
-interface Subscription {
-  id: string;
-  status: string;
-  amount: number;
-  tier: string;
 }
 
 const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
@@ -51,7 +38,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const pathname = usePathname();
   const router = useRouter();
   const { triggerDelayedBanner } = useDelayedLoginBanner();
-  const { usdBalance, updateOptimisticBalance } = useUsdBalance();
+  const { usdBalance } = useUsdBalance();
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
@@ -63,17 +50,25 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   // Check if current user is the page owner
   const isPageOwner = !!(user && authorId && user.uid === authorId);
 
-  // State
-  const [usdBalanceState, setUsdBalanceState] = useState<UsdBalance | null>(null);
-  const [currentUsdAllocation, setCurrentUsdAllocation] = useState(0);
+  // State for floating bar specific features
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [pageStats, setPageStats] = useState<{
-    sponsorCount: number;
-    totalPledgedUsdCents: number;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pageStats, setPageStats] = useState<PageStats | null>(null);
+
+  // Use our new shared hooks
+  const { allocationState, setOptimisticAllocation } = useAllocationState({
+    pageId,
+    enabled: !isPageOwner && !!pageId
+  });
+
+  const { handleAllocationChange, isProcessing } = useAllocationActions({
+    pageId,
+    authorId: authorId || '',
+    pageTitle: pageTitle || '',
+    currentAllocationCents: allocationState.currentAllocationCents,
+    source: 'FloatingBar',
+    onOptimisticUpdate: setOptimisticAllocation
+  });
 
   // Scroll detection effect
   useEffect(() => {
@@ -98,130 +93,56 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Load USD data
+  // Load subscription data when component mounts or user changes
   useEffect(() => {
-    if (!pageId) return;
-
-    const loadUsdData = async () => {
-      setIsLoading(true);
+    const loadSubscriptionData = async () => {
       try {
         if (user && user.uid) {
-          // Logged-in user - use real USD balance from context
-          if (usdBalance) {
-            setUsdBalanceState({
-              totalUsdCents: usdBalance.totalUsdCents,
-              allocatedUsdCents: usdBalance.allocatedUsdCents,
-              availableUsdCents: usdBalance.availableUsdCents,
-              lastUpdated: new Date()
-            });
-          }
-
-          // Get current page allocation from API
-          try {
-            const response = await fetch(`/api/usd/allocate?pageId=${pageId}`);
-            if (response.ok) {
-              const data = await response.json();
-              setCurrentUsdAllocation(data.currentAllocation || 0);
-            } else {
-              setCurrentUsdAllocation(0);
-            }
-          } catch (error) {
-            console.error('Error fetching page allocation:', error);
-            setCurrentUsdAllocation(0);
-          }
-
+          // For now, set a default subscription - this should come from an API
           setSubscription({ status: 'active', amount: 10, tier: 'tier1', id: 'test' });
         } else {
-          // Logged out - use simulated USD
-          const balance = getLoggedOutUsdBalance();
-          const currentAllocation = getLoggedOutPageAllocation(pageId);
-
-          setUsdBalanceState({
-            totalUsdCents: balance.totalUsdCents,
-            allocatedUsdCents: balance.allocatedUsdCents,
-            availableUsdCents: balance.availableUsdCents,
-            lastUpdated: new Date(balance.lastUpdated)
-          });
-          setCurrentUsdAllocation(currentAllocation);
           setSubscription(null);
         }
       } catch (error) {
-        console.error('Error loading USD data:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading subscription data:', error);
       }
     };
 
-    loadUsdData();
-  }, [user, pageId, usdBalance]);
+    loadSubscriptionData();
+  }, [user]);
 
-  // Handle USD allocation changes
-  const handleUsdChange = async (change: number) => {
-    if (!pageId || isPageOwner) return;
-
-    setIsRefreshing(true);
-    const newAllocation = Math.max(0, currentUsdAllocation + change);
-    const previousAllocation = currentUsdAllocation;
-    const previousBalance = usdBalanceState;
-
-    // Optimistic update - update both allocation and balance state
-    setCurrentUsdAllocation(newAllocation);
-
-    // Update balance state to reflect the change in total allocated amount
-    if (usdBalanceState) {
-      const newAllocatedUsdCents = usdBalanceState.allocatedUsdCents + change;
-      setUsdBalanceState({
-        ...usdBalanceState,
-        allocatedUsdCents: newAllocatedUsdCents,
-        availableUsdCents: usdBalanceState.totalUsdCents - newAllocatedUsdCents,
-        lastUpdated: new Date()
-      });
+  // Calculate composition bar data
+  const getCompositionData = (): CompositionBarData => {
+    if (!usdBalance) {
+      return {
+        otherPagesPercentage: 0,
+        currentPagePercentage: 0,
+        availablePercentage: 100,
+        isOutOfFunds: false
+      };
     }
 
-    try {
-      if (user && user.uid) {
-        // Logged-in user - use real API
-        const response = await fetch('/api/usd/allocate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pageId,
-            usdCentsChange: change
-          })
-        });
+    const totalCents = usdBalance.totalUsdCents;
+    const allocatedCents = usdBalance.allocatedUsdCents;
+    const availableCents = usdBalance.availableUsdCents;
 
-        if (!response.ok) {
-          throw new Error('Failed to allocate USD');
-        }
+    const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
+    const isOutOfFunds = availableCents <= 0 && totalCents > 0;
 
-        // Update the global USD balance context
-        updateOptimisticBalance(change);
-      } else {
-        // Logged-out user - use simulated USD
-        const success = allocateLoggedOutUsd(pageId, pageTitle || 'Untitled', newAllocation);
+    // Calculate percentages for composition bar
+    const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
+    const currentPagePercentage = totalCents > 0 ? (allocationState.currentAllocationCents / totalCents) * 100 : 0;
+    const availablePercentage = totalCents > 0 ? Math.max(0, (availableCents / totalCents) * 100) : 0;
 
-        if (!success) {
-          // Revert both allocation and balance state on failure
-          setCurrentUsdAllocation(previousAllocation);
-          if (previousBalance) {
-            setUsdBalanceState(previousBalance);
-          }
-        } else {
-          // Trigger delayed login banner for logged-out users
-          triggerDelayedBanner();
-        }
-      }
-    } catch (error) {
-      console.error('Error allocating USD:', error);
-      // Revert both allocation and balance state on error
-      setCurrentUsdAllocation(previousAllocation);
-      if (previousBalance) {
-        setUsdBalanceState(previousBalance);
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
+    return {
+      otherPagesPercentage,
+      currentPagePercentage,
+      availablePercentage,
+      isOutOfFunds
+    };
   };
+
+  const compositionData = getCompositionData();
 
   // Handle allocation bar click
   const handleAllocationBarClick = () => {
@@ -235,32 +156,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   // Don't show if not visible or no pageId
   if (!visible || !pageId) return null;
 
-  // Don't show pledge bar when viewing your own page
+  // Don't show allocation bar when viewing your own page
   if (isPageOwner) return null;
 
-  // Calculate USD data - FIXED LOGIC
-  const totalUsdCents = usdBalanceState?.totalUsdCents || 0;
-  const allocatedUsdCents = usdBalanceState?.allocatedUsdCents || 0;
-
-  // Other pages spending stays constant (doesn't change when THIS page allocation changes)
-  const otherPagesUsdCents = Math.max(0, allocatedUsdCents - currentUsdAllocation);
-
-  // Available funds = total - other pages - current page (gets squeezed when THIS increases)
-  const availableUsdCents = totalUsdCents - otherPagesUsdCents - currentUsdAllocation;
-
-  // Calculate percentages for composition bar
-  const otherPagesPercentage = totalUsdCents > 0 ? (otherPagesUsdCents / totalUsdCents) * 100 : 0;
-  const currentPagePercentage = totalUsdCents > 0 ? (currentUsdAllocation / totalUsdCents) * 100 : 0;
-  const availablePercentage = totalUsdCents > 0 ? Math.max(0, (availableUsdCents / totalUsdCents) * 100) : 0;
-
   // User state checks
-  const isOutOfFunds = availableUsdCents <= 0 && totalUsdCents > 0 && !isPageOwner;
   const hasSubscription = subscription && isActiveSubscription(subscription.status);
   const showSubscriptionNotice = user && !hasSubscription && !isPageOwner;
   const showLoginNotice = !user && !isPageOwner;
-
-  // USD increment amount (25 cents = $0.25)
-  const incrementAmount = 25;
 
   return createPortal(
     <div
@@ -320,18 +222,18 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
             <>
               {/* Allocation amount display above the controls */}
               <AllocationAmountDisplay
-                allocationCents={currentUsdAllocation}
+                allocationCents={allocationState.currentAllocationCents}
               />
 
               {/* Out of funds message */}
-              {isOutOfFunds && (
+              {compositionData.isOutOfFunds && (
                 <div className="text-center text-sm text-orange-500 font-medium">
                   Out of funds
                 </div>
               )}
 
               <div className="flex items-center gap-3">
-              {isLoading ? (
+              {allocationState.isLoading ? (
                 <div className="flex items-center gap-3 w-full">
                   <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
                   <div className="flex-1 h-12 bg-muted animate-pulse rounded-lg"></div>
@@ -342,18 +244,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (currentUsdAllocation > 0) {
-                        handleUsdChange(-incrementAmount);
-                      }
-                    }}
+                    onClick={(e) => handleAllocationChange(-1, e)}
                     className={cn(
                       "h-8 w-8 p-0",
-                      currentUsdAllocation <= 0 && "opacity-50",
-                      isRefreshing && "opacity-75"
+                      allocationState.currentAllocationCents <= 0 && "opacity-50",
+                      isProcessing && "opacity-75"
                     )}
-                    disabled={currentUsdAllocation <= 0}
+                    disabled={allocationState.currentAllocationCents <= 0 || isProcessing}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -361,34 +258,34 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   {/* Composition Bar */}
                   <div className={cn(
                     "flex-1 rounded-lg h-12 flex gap-1 p-1",
-                    isOutOfFunds ? "bg-orange-500/20" : "bg-muted"
+                    compositionData.isOutOfFunds ? "bg-orange-500/20" : "bg-muted"
                   )}>
                     {/* Always show composition - even when out of funds */}
                     <>
                       {/* Other pages */}
-                      {otherPagesPercentage > 0 && (
+                      {compositionData.otherPagesPercentage > 0 && (
                         <div
                           className="h-full bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
-                          style={{ width: `${otherPagesPercentage}%` }}
+                          style={{ width: `${compositionData.otherPagesPercentage}%` }}
                         />
                       )}
 
                       {/* Current page */}
-                      {currentPagePercentage > 0 && (
+                      {compositionData.currentPagePercentage > 0 && (
                         <div
                           className={cn(
                             "h-full rounded-md transition-all duration-300 ease-out",
-                            isOutOfFunds ? "bg-orange-500" : "bg-primary"
+                            compositionData.isOutOfFunds ? "bg-orange-500" : "bg-primary"
                           )}
-                          style={{ width: `${currentPagePercentage}%` }}
+                          style={{ width: `${compositionData.currentPagePercentage}%` }}
                         />
                       )}
 
                       {/* Available/Remaining */}
-                      {availablePercentage > 0 && (
+                      {compositionData.availablePercentage > 0 && (
                         <div
                           className="h-full bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
-                          style={{ width: `${availablePercentage}%` }}
+                          style={{ width: `${compositionData.availablePercentage}%` }}
                         />
                       )}
                     </>
@@ -399,16 +296,18 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!isOutOfFunds) {
-                        handleUsdChange(incrementAmount);
+                      if (compositionData.isOutOfFunds) {
+                        router.push('/settings/fund-account');
+                      } else {
+                        handleAllocationChange(1, e);
                       }
                     }}
                     className={cn(
                       "h-8 w-8 p-0",
-                      isOutOfFunds && "opacity-50",
-                      isRefreshing && "opacity-75"
+                      compositionData.isOutOfFunds && "opacity-50",
+                      isProcessing && "opacity-75"
                     )}
-                    disabled={isOutOfFunds}
+                    disabled={isProcessing}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -457,10 +356,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         pageId={pageId}
         pageTitle={pageTitle}
         authorId={authorId}
-        currentAllocation={currentUsdAllocation}
+        currentAllocation={allocationState.currentAllocationCents}
         onAllocationChange={(newAllocationCents: number) => {
-          const changeCents = newAllocationCents - currentUsdAllocation;
-          handleUsdChange(changeCents);
+          setOptimisticAllocation(newAllocationCents);
         }}
       />
     </div>,
