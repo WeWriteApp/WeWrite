@@ -28,6 +28,7 @@ import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
+import { ReactQueryProvider } from "./providers/ReactQueryProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
@@ -74,9 +75,10 @@ export default function RootLayout({
           <ErrorBoundary name="root">
             <GlobalErrorHandler />
             <ThemeProvider>
-              <AuthProvider>
-                <LogRocketProvider>
-                  <NotificationProvider>
+              <ReactQueryProvider>
+                <AuthProvider>
+                  <LogRocketProvider>
+                    <NotificationProvider>
                     <MobileProvider>
                       <DataProvider>
                         <DateFormatProvider>
@@ -106,8 +108,9 @@ export default function RootLayout({
                       </DataProvider>
                     </MobileProvider>
                   </NotificationProvider>
-                </LogRocketProvider>
-              </AuthProvider>
+                  </LogRocketProvider>
+                </AuthProvider>
+              </ReactQueryProvider>
             </ThemeProvider>
           </ErrorBoundary>
         </NextJSErrorBoundary>

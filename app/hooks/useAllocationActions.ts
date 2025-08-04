@@ -5,16 +5,15 @@ import { useAuth } from '../providers/AuthProvider';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
 import { useAllocationInterval } from '../contexts/AllocationIntervalContext';
 import { useToast } from '../components/ui/use-toast';
-import { 
+import {
   UseAllocationActionsReturn,
   AllocationDirection,
   AllocationSource,
   AllocationError,
   ALLOCATION_ERROR_CODES,
-  AllocationRequest,
-  AllocationResponse
+  AllocationRequest
 } from '../types/allocation';
-import { allocateLoggedOutUsd } from '../utils/simulatedUsd';
+import { useAllocationMutation } from './useAllocationQueries';
 import { showUsdAllocationNotification } from '../utils/usdNotifications';
 
 /**
@@ -55,18 +54,18 @@ export function useAllocationActions({
   maxRetries = DEFAULT_MAX_RETRIES
 }: UseAllocationActionsOptions): UseAllocationActionsReturn {
   const { user } = useAuth();
-  const { usdBalance, updateOptimisticBalance } = useUsdBalance();
+  const { usdBalance } = useUsdBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const { toast } = useToast();
 
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Batching state
   const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingChangeCents = useRef(0);
-  const retryCountRef = useRef(0);
-  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Use React Query mutation for allocation changes
+  const allocationMutation = useAllocationMutation();
 
   // Clear any pending batched requests
   const clearBatch = useCallback(() => {
@@ -77,19 +76,14 @@ export function useAllocationActions({
     pendingChangeCents.current = 0;
   }, []);
 
-  // Execute the actual API call
-  const executeAllocationChange = useCallback(async (
-    changeCents: number,
-    signal?: AbortSignal
-  ): Promise<AllocationResponse> => {
-    if (!user?.uid) {
-      // Handle logged-out users with simulated allocation
-      const newAllocation = allocateLoggedOutUsd(pageId, changeCents);
-      return {
-        success: true,
-        currentAllocation: newAllocation
-      };
-    }
+  // Process batched allocation change using React Query
+  const processBatchedChange = useCallback(async () => {
+    const changeCents = pendingChangeCents.current;
+    if (changeCents === 0) return;
+
+    // Clear the batch
+    clearBatch();
+    setError(null);
 
     const request: AllocationRequest = {
       pageId,
@@ -98,97 +92,18 @@ export function useAllocationActions({
     };
 
     try {
-      const response = await fetch('/api/usd/allocate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-        signal
-      });
+      const result = await allocationMutation.mutateAsync(request);
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new AllocationError(
-            'Authentication required',
-            ALLOCATION_ERROR_CODES.UNAUTHORIZED
-          );
-        }
-        if (response.status === 400) {
-          const errorData = await response.json().catch(() => ({}));
-          if (errorData.code === 'INSUFFICIENT_FUNDS') {
-            throw new AllocationError(
-              'Insufficient funds',
-              ALLOCATION_ERROR_CODES.INSUFFICIENT_FUNDS
-            );
-          }
-          throw new AllocationError(
-            errorData.message || 'Invalid request',
-            ALLOCATION_ERROR_CODES.INVALID_AMOUNT
-          );
-        }
-        if (response.status === 429) {
-          throw new AllocationError(
-            'Too many requests',
-            ALLOCATION_ERROR_CODES.RATE_LIMITED,
-            true
-          );
-        }
-        throw new AllocationError(
-          `HTTP ${response.status}: ${response.statusText}`,
-          ALLOCATION_ERROR_CODES.NETWORK_ERROR,
-          true
-        );
-      }
-
-      const data: AllocationResponse = await response.json();
-      return data;
-    } catch (error) {
-      if (error instanceof AllocationError) {
-        throw error;
-      }
-      if (error.name === 'AbortError') {
-        throw error;
-      }
-      throw new AllocationError(
-        'Network request failed',
-        ALLOCATION_ERROR_CODES.NETWORK_ERROR,
-        true
-      );
-    }
-  }, [user?.uid, pageId, source]);
-
-  // Process batched allocation change
-  const processBatchedChange = useCallback(async () => {
-    const changeCents = pendingChangeCents.current;
-    if (changeCents === 0) return;
-
-    // Clear the batch
-    clearBatch();
-    setIsProcessing(true);
-    setError(null);
-
-    // Cancel any existing request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    try {
-      const result = await executeAllocationChange(changeCents, abortControllerRef.current.signal);
-      
       if (result.success) {
         // Update the actual allocation
         onAllocationChange?.(result.currentAllocation);
-        
+
         // Show success notification
         showUsdAllocationNotification(
           changeCents,
           pageTitle,
           result.currentAllocation
         );
-
-        retryCountRef.current = 0;
       } else {
         throw new AllocationError(
           result.error || 'Allocation failed',
@@ -196,51 +111,27 @@ export function useAllocationActions({
         );
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
-        return; // Request was cancelled
-      }
-
       console.error('Allocation error:', error);
 
-      // Handle retries for retryable errors
-      if (error instanceof AllocationError && error.retryable && retryCountRef.current < maxRetries) {
-        retryCountRef.current++;
-        const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff
-        
-        setTimeout(() => {
-          pendingChangeCents.current = changeCents; // Restore the pending change
-          processBatchedChange();
-        }, delay);
-        return;
-      }
-
-      // Rollback optimistic updates
-      updateOptimisticBalance(-changeCents);
-      onOptimisticUpdate?.(currentAllocationCents);
-
       // Show error message
-      const errorMessage = error instanceof AllocationError 
-        ? error.message 
+      const errorMessage = error instanceof AllocationError
+        ? error.message
         : 'Failed to update allocation';
-      
+
       setError(errorMessage);
       toast({
         title: "Allocation Failed",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsProcessing(false);
     }
   }, [
-    clearBatch, 
-    executeAllocationChange, 
-    onAllocationChange, 
-    pageTitle, 
-    maxRetries, 
-    updateOptimisticBalance, 
-    onOptimisticUpdate, 
-    currentAllocationCents, 
+    clearBatch,
+    pageId,
+    source,
+    allocationMutation,
+    onAllocationChange,
+    pageTitle,
     toast
   ]);
 
@@ -368,16 +259,13 @@ export function useAllocationActions({
   useEffect(() => {
     return () => {
       clearBatch();
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
     };
   }, [clearBatch]);
 
   return {
     handleAllocationChange,
     handleDirectAllocation,
-    isProcessing,
+    isProcessing: allocationMutation.isPending,
     error
   };
 }
