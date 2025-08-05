@@ -260,12 +260,10 @@ class OptimizedNotificationsService {
    * Initialize WebSocket connection for real-time updates
    */
   private initializeWebSocket(): void {
-    if (this.isConnecting || typeof window === 'undefined') return;
-    
-    this.isConnecting = true;
-    
-    try {
-      this.websocket = new WebSocket(this.WEBSOCKET_URL);
+    // 🚨 EMERGENCY: Disable WebSocket connections to prevent connection failures and retry loops
+    console.warn('🚨 EMERGENCY: WebSocket notifications disabled to prevent connection failures');
+    // DISABLED: WebSocket connections to prevent excessive retry attempts
+    return;
       
       this.websocket.onopen = () => {
         console.log('🔔 [OptimizedNotifications] WebSocket connected');

@@ -469,7 +469,7 @@ export default function PageView({
         if (!pageData) {
           pageLogger.error('Page data is undefined', { data });
           setError('Page not found or failed to load');
-          setLoading(false);
+          setIsLoading(false);
           return;
         }
 

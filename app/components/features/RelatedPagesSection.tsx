@@ -132,7 +132,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
         const params = new URLSearchParams({
           pageId: page.id,
           pageTitle: page.title || '',
-          pageContent: (page.content || '').substring(0, 2000), // Limit content length for URL
+          pageContent: String(page.content || '').substring(0, 2000), // Limit content length for URL
           limit: '10'
         });
 
