@@ -3,9 +3,16 @@
  *
  * Simple utility to track database reads for the monitoring system
  * without circular import issues. Now enhanced with advanced analysis.
+ *
+ * PRODUCTION MONITORING MODE: When enabled, tracks production collection usage
+ * even when running in development environment for accurate cost analysis.
  */
 
 import { recordDatabaseRead } from './databaseReadAnalyzer';
+
+// Production monitoring mode - tracks production collections for cost analysis
+const PRODUCTION_MONITORING_MODE = process.env.ENABLE_PRODUCTION_MONITORING === 'true' ||
+                                   process.env.NODE_ENV === 'production';
 
 // Global read tracking
 let readStats = {
@@ -28,7 +35,7 @@ const endpointReadTracker = new Map<string, {
 }>();
 
 /**
- * Track a database read operation
+ * Track a database read operation with production monitoring support
  */
 export function trackDatabaseRead(
   endpoint: string,
@@ -36,10 +43,20 @@ export function trackDatabaseRead(
   responseTime: number = 0,
   fromCache: boolean = false,
   userId?: string,
-  sessionId?: string
+  sessionId?: string,
+  collectionName?: string
 ) {
-  // Record in advanced analyzer
-  recordDatabaseRead(endpoint, readCount, responseTime, fromCache, userId, sessionId);
+  // Normalize endpoint for production monitoring
+  const normalizedEndpoint = PRODUCTION_MONITORING_MODE ?
+    normalizeEndpointForProduction(endpoint) : endpoint;
+
+  // Normalize collection name for production monitoring
+  const normalizedCollection = PRODUCTION_MONITORING_MODE && collectionName ?
+    normalizeCollectionForProduction(collectionName) : collectionName;
+
+  // Record in advanced analyzer with normalized names
+  recordDatabaseRead(normalizedEndpoint, readCount, responseTime, fromCache, userId, sessionId);
+
   // Update global stats
   readStats.totalReads += readCount;
   readStats.hourlyReads += readCount;
@@ -175,4 +192,52 @@ export function resetReadStats() {
   };
 
   endpointReadTracker.clear();
+}
+
+/**
+ * Normalize endpoint names for production monitoring
+ * Removes dev-specific parameters and normalizes paths
+ */
+function normalizeEndpointForProduction(endpoint: string): string {
+  if (!PRODUCTION_MONITORING_MODE) return endpoint;
+
+  // Remove dev-specific query parameters
+  let normalized = endpoint.replace(/[?&]dev=true/g, '');
+  normalized = normalized.replace(/[?&]test=true/g, '');
+
+  // Normalize user IDs to generic pattern for better aggregation
+  normalized = normalized.replace(/\/user\/[a-zA-Z0-9_-]+/g, '/user/{userId}');
+  normalized = normalized.replace(/\/pages\/[a-zA-Z0-9_-]+/g, '/pages/{pageId}');
+
+  // Remove trailing query separators
+  normalized = normalized.replace(/[?&]$/, '');
+
+  return normalized;
+}
+
+/**
+ * Normalize collection names for production monitoring
+ * Removes DEV_ prefixes to track production collection equivalents
+ */
+function normalizeCollectionForProduction(collectionName: string): string {
+  if (!PRODUCTION_MONITORING_MODE) return collectionName;
+
+  // Remove DEV_ prefix to get production collection name
+  return collectionName.replace(/^DEV_/, '');
+}
+
+/**
+ * Get production monitoring status and configuration
+ */
+export function getProductionMonitoringInfo() {
+  return {
+    enabled: PRODUCTION_MONITORING_MODE,
+    reason: process.env.ENABLE_PRODUCTION_MONITORING === 'true' ?
+      'Explicitly enabled via ENABLE_PRODUCTION_MONITORING' :
+      process.env.NODE_ENV === 'production' ?
+      'Enabled because NODE_ENV=production' :
+      'Disabled - development environment',
+    environment: process.env.NODE_ENV,
+    vercelEnv: process.env.VERCEL_ENV
+  };
 }

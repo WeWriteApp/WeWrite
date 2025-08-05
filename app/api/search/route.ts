@@ -3,6 +3,8 @@ import { BigQuery } from "@google-cloud/bigquery";
 import { searchUsers, getUserGroupMemberships, getGroupsData } from "../../firebase/database";
 import { getCollectionName, COLLECTIONS } from "../../utils/environmentConfig";
 import { cacheHelpers, CACHE_TTL } from "../../utils/serverCache";
+import { searchCache } from "../../utils/searchCache";
+import { trackFirebaseRead } from "../../utils/costMonitor";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -577,22 +579,52 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const startTime = Date.now();
+
   try {
     // Extract query parameters from the URL
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const filterByUserId = searchParams.get("filterByUserId"); // Add parameter to filter by specific user
+    const filterByUserId = searchParams.get("filterByUserId");
     const groupIds = searchParams.get("groupIds")
       ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
       : [];
     const searchTerm = searchParams.get("searchTerm") || "";
 
-    console.log(`Search API called with searchTerm: "${searchTerm}", userId: ${userId}, filterByUserId: ${filterByUserId}`);
-    console.log(`SEARCH API USING FIXED MULTI-WORD SEARCH LOGIC`);
+    console.log(`🔍 [Search API] Enhanced: "${searchTerm}", userId: ${userId}, filterByUserId: ${filterByUserId}`);
 
-    // Create cache key for search results
+    // Check enhanced search cache first
+    const searchOptions = { filterByUserId, groupIds, context: 'main' };
+    const cachedResults = searchCache.get(searchTerm, userId, 'pages', searchOptions);
+
+    if (cachedResults) {
+      const responseTime = Date.now() - startTime;
+      console.log(`🚀 [Search API] Cache hit for "${searchTerm}" (${responseTime}ms, ${cachedResults.length} results)`);
+
+      const response = NextResponse.json({
+        pages: cachedResults,
+        users: [], // Users would be cached separately
+        source: "enhanced_cache_hit",
+        performance: {
+          searchTimeMs: responseTime,
+          pagesFound: cachedResults.length,
+          fromCache: true
+        }
+      }, { status: 200 });
+
+      response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15min browser, 30min CDN
+      response.headers.set('X-Cache-Status', 'HIT');
+      response.headers.set('X-Response-Time', `${responseTime}ms`);
+      response.headers.set('X-Database-Reads', '0');
+
+      return response;
+    }
+
+    console.log(`💸 [Search API] Cache miss for "${searchTerm}" - executing search`);
+
+    // Create fallback cache key for existing cache system
     const cacheKey = `search:${searchTerm}:${userId || 'anonymous'}:${filterByUserId || ''}:${groupIds.join(',')}`;
-    console.log('🔍 Search API - Cache key:', cacheKey);
+    console.log('🔍 Search API - Fallback cache key:', cacheKey);
 
     // IMPORTANT FIX: Log more details about the search request
     console.log('Search API request details:', {
@@ -727,6 +759,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       }
 
+      // Track database reads for cost monitoring
+      const estimatedReads = Math.max((pages?.length || 0) * 2, 50); // Estimate search complexity
+      trackFirebaseRead('pages', 'search', estimatedReads, 'api-search-pages');
+
+      if (users && users.length > 0) {
+        trackFirebaseRead('users', 'search', users.length, 'api-search-users');
+      }
+
       return {
         pages: pages || [],
         users: users || [],
@@ -737,16 +777,44 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       };
     });
 
+    // Store results in enhanced cache for future requests
+    if (cachedResult.pages && cachedResult.pages.length > 0) {
+      searchCache.set(searchTerm, userId, cachedResult.pages, 'pages', searchOptions);
+    }
+
+    if (cachedResult.users && cachedResult.users.length > 0) {
+      searchCache.set(searchTerm, userId, cachedResult.users, 'users', searchOptions);
+    }
+
+    const responseTime = Date.now() - startTime;
+    console.log(`✅ [Search API] Enhanced: Completed search for "${searchTerm}" (${responseTime}ms)`);
+
     console.log(`Search API returning response:`, {
       pagesCount: cachedResult.pages.length,
       usersCount: cachedResult.users.length,
       source: cachedResult.source,
-      searchTerm: cachedResult.searchTerm
+      searchTerm: cachedResult.searchTerm,
+      responseTime: `${responseTime}ms`
     });
 
-    const response = NextResponse.json(cachedResult, { status: 200 });
-    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=1200'); // 10 min browser, 20 min CDN
-    response.headers.set('Vary', 'Authorization'); // Vary by user authentication
+    const response = NextResponse.json({
+      ...cachedResult,
+      performance: {
+        searchTimeMs: responseTime,
+        pagesFound: cachedResult.pages.length,
+        usersFound: cachedResult.users.length,
+        fromCache: false
+      }
+    }, { status: 200 });
+
+    // Enhanced cache headers for fresh search results
+    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=900, stale-while-revalidate=1800'); // 10min browser, 15min CDN
+    response.headers.set('ETag', `"search-${searchTerm}-${Date.now()}"`);
+    response.headers.set('X-Cache-Status', 'MISS');
+    response.headers.set('X-Response-Time', `${responseTime}ms`);
+    response.headers.set('X-Database-Reads', estimatedReads.toString());
+    response.headers.set('Vary', 'Authorization');
+
     return response;
 
   } catch (error) {

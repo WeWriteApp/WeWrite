@@ -14,6 +14,7 @@ import { useUsdBalance } from "../../contexts/UsdBalanceContext";
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
+import { useSidebarContext } from './UnifiedSidebar';
 
 export interface NavHeaderProps {
   className?: string;
@@ -38,6 +39,21 @@ export default function NavHeader({
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
   const { earnings, loading: earningsLoading } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
+  const { sidebarWidth, isExpanded } = useSidebarContext();
+
+  // Calculate header positioning width - should match PageHeader.tsx and SidebarLayout.tsx
+  const headerSidebarWidth = React.useMemo(() => {
+    // Header should only respond to persistent expanded state, not hover state
+    // When expanded: always use full width (256px) regardless of hover
+    // When collapsed: always use collapsed width (64px) regardless of hover
+    if (isExpanded) {
+      return sidebarWidth; // Use full expanded width (256px)
+    } else if (sidebarWidth > 0) {
+      return 64; // Use collapsed width (64px) for collapsed state
+    } else {
+      return 0; // No sidebar (user not authenticated)
+    }
+  }, [isExpanded, sidebarWidth]);
 
   // Helper function to render earnings display (same as homepage)
   const renderEarningsDisplay = () => {
@@ -206,23 +222,22 @@ export default function NavHeader({
   return (
     <header
       data-component="nav-header"
-      className={`fixed top-0 z-[70] w-full bg-background border-b border-border transition-all duration-300 ease-in-out ${className}`}
+      className={`fixed top-0 right-0 z-[70] bg-background border-b border-border transition-all duration-300 ease-in-out ${className}`}
       style={{
+        left: `${headerSidebarWidth}px`,
         transform: 'translateZ(0)', // Force GPU acceleration
         height: '56px', // Explicit height to ensure consistency
       }}
     >
-        {/* Header content area - matches page content width and padding */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+        {/* Header content area - fills full width of container */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between min-w-0">
             {/* Spend/Overspend Display (left side) */}
-            <div className="flex-1 flex justify-start items-center">
-              <div className="flex items-center">
-                {renderSpendDisplay()}
-              </div>
+            <div className="flex items-center min-w-0 flex-shrink-0">
+              {renderSpendDisplay()}
             </div>
 
             {/* Logo/Title (centered) - clickable to go home */}
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center flex-shrink-0 mx-4">
               <div
                 className="cursor-pointer transition-transform hover:scale-105"
                 onClick={() => router.push('/')}
@@ -232,10 +247,8 @@ export default function NavHeader({
             </div>
 
             {/* Earnings Display (right side) */}
-            <div className="flex-1 flex justify-end items-center">
-              <div className="flex items-center">
-                {renderEarningsDisplay()}
-              </div>
+            <div className="flex items-center min-w-0 flex-shrink">
+              {renderEarningsDisplay()}
             </div>
         </div>
     </header>

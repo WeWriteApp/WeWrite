@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-
-// AGGRESSIVE CACHING FOR USER PROFILES - MAJOR COST OPTIMIZATION
-const userProfileCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 300000; // 5 minutes cache for user profiles
+import { userCache } from '../../../utils/userCache';
+import { trackFirebaseRead } from '../../../utils/costMonitor';
 
 /**
  * GET /api/users/profile?id=userId&username=username
  *
- * Get user profile by ID or username
- * Supports both direct ID lookup and username lookup
- * NOW WITH AGGRESSIVE CACHING TO REDUCE FIREBASE COSTS
+ * Get user profile by ID or username with enhanced caching
+ * Features:
+ * - Multi-tier caching (hot/warm/cold)
+ * - Smart cache promotion based on access frequency
+ * - Cost tracking and optimization
  */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -24,15 +26,25 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Either id or username parameter is required');
     }
 
-    // Create cache key
-    const cacheKey = `profile:${id || username}`;
+    const lookupValue = id || username;
+    console.log(`👤 [User Profile API] Fetching profile for: ${lookupValue}`);
 
-    // Check cache first - MAJOR COST OPTIMIZATION
-    const cached = userProfileCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log('🚀 COST OPTIMIZATION: Returning cached user profile for', id || username);
-      return createApiResponse(cached.data);
+    // Check enhanced cache first
+    const cachedProfile = userCache.get(lookupValue, 'profile');
+    if (cachedProfile) {
+      const responseTime = Date.now() - startTime;
+      console.log(`🚀 [User Profile API] Cache hit for ${lookupValue} (${responseTime}ms)`);
+
+      const response = createApiResponse(cachedProfile);
+      response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15min browser, 30min CDN
+      response.headers.set('X-Cache-Status', 'HIT');
+      response.headers.set('X-Response-Time', `${responseTime}ms`);
+      response.headers.set('X-Database-Reads', '0');
+
+      return response;
     }
+
+    console.log(`💸 [User Profile API] Cache miss for ${lookupValue} - fetching from database`);
 
     let admin;
     try {
@@ -100,17 +112,24 @@ export async function GET(request: NextRequest) {
       website: userData.website || null,
     };
 
-    // Cache the result - MAJOR COST OPTIMIZATION
-    userProfileCache.set(cacheKey, { data: profileData, timestamp: Date.now() });
+    // Track database read for cost monitoring
+    trackFirebaseRead('users', 'getUserProfile', 1, 'api-user-profile');
 
-    // Clean up old cache entries to prevent memory leaks
-    if (userProfileCache.size > 200) {
-      const oldestKey = userProfileCache.keys().next().value;
-      userProfileCache.delete(oldestKey);
-    }
+    // Cache the result in enhanced cache system
+    userCache.set(lookupValue, profileData, 'profile');
 
-    // Return user profile data
-    return createApiResponse(profileData);
+    const responseTime = Date.now() - startTime;
+    console.log(`✅ [User Profile API] Successfully fetched ${lookupValue} (${responseTime}ms)`);
+
+    // Return user profile data with optimized cache headers
+    const response = createApiResponse(profileData);
+    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=900, stale-while-revalidate=1800'); // 10min browser, 15min CDN
+    response.headers.set('ETag', `"user-${lookupValue}-${Date.now()}"`);
+    response.headers.set('X-Cache-Status', 'MISS');
+    response.headers.set('X-Response-Time', `${responseTime}ms`);
+    response.headers.set('X-Database-Reads', '1');
+
+    return response;
 
   } catch (error) {
     console.error('Error fetching user profile:', error);

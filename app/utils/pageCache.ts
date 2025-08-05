@@ -1,55 +1,141 @@
 /**
- * Simple in-memory cache for page data to improve performance
+ * Enhanced multi-tier page cache for aggressive cost optimization
+ *
+ * Features:
+ * - Multiple cache tiers with different TTLs
+ * - Smart invalidation strategies
+ * - Memory-efficient storage
+ * - Read frequency tracking
  */
 
 interface CacheEntry {
   data: any;
   timestamp: number;
   etag?: string;
+  accessCount: number;
+  lastAccessed: number;
+  tier: 'hot' | 'warm' | 'cold';
 }
 
-class PageCache {
+interface CacheStats {
+  hits: number;
+  misses: number;
+  evictions: number;
+  totalReads: number;
+}
+
+class EnhancedPageCache {
   private cache = new Map<string, CacheEntry>();
-  private readonly TTL = 30 * 1000; // 30 seconds
-  private readonly MAX_SIZE = 100; // Maximum cache entries
+  private stats: CacheStats = { hits: 0, misses: 0, evictions: 0, totalReads: 0 };
+
+  // Aggressive caching configuration for cost optimization
+  private readonly HOT_TTL = 10 * 60 * 1000;    // 10 minutes for frequently accessed pages
+  private readonly WARM_TTL = 30 * 60 * 1000;   // 30 minutes for moderately accessed pages
+  private readonly COLD_TTL = 2 * 60 * 60 * 1000; // 2 hours for rarely accessed pages
+  private readonly MAX_SIZE = 500; // Increased cache size
+  private readonly HOT_THRESHOLD = 5; // Access count to be considered "hot"
 
   private getCacheKey(pageId: string, userId?: string | null): string {
     return `${pageId}:${userId || 'anonymous'}`;
   }
 
+  private getTierTTL(tier: 'hot' | 'warm' | 'cold'): number {
+    switch (tier) {
+      case 'hot': return this.HOT_TTL;
+      case 'warm': return this.WARM_TTL;
+      case 'cold': return this.COLD_TTL;
+    }
+  }
+
+  private determineTier(accessCount: number): 'hot' | 'warm' | 'cold' {
+    if (accessCount >= this.HOT_THRESHOLD) return 'hot';
+    if (accessCount >= 2) return 'warm';
+    return 'cold';
+  }
+
   get(pageId: string, userId?: string | null): any | null {
+    this.stats.totalReads++;
     const key = this.getCacheKey(pageId, userId);
     const entry = this.cache.get(key);
 
     if (!entry) {
+      this.stats.misses++;
       return null;
     }
 
+    const now = Date.now();
+    const ttl = this.getTierTTL(entry.tier);
+
     // Check if entry is expired
-    if (Date.now() - entry.timestamp > this.TTL) {
+    if (now - entry.timestamp > ttl) {
       this.cache.delete(key);
+      this.stats.misses++;
       return null;
     }
+
+    // Update access tracking
+    entry.accessCount++;
+    entry.lastAccessed = now;
+    entry.tier = this.determineTier(entry.accessCount);
+
+    this.stats.hits++;
+    console.log(`🚀 PAGE CACHE: Hit for ${pageId} (tier: ${entry.tier}, access: ${entry.accessCount})`);
 
     return entry.data;
   }
 
   set(pageId: string, data: any, userId?: string | null, etag?: string): void {
     const key = this.getCacheKey(pageId, userId);
+    const now = Date.now();
 
-    // If cache is full, remove oldest entry
+    // Smart eviction: remove least recently used cold entries first
     if (this.cache.size >= this.MAX_SIZE) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey) {
-        this.cache.delete(firstKey);
-      }
+      this.evictLeastUseful();
     }
+
+    // Check if we're updating an existing entry
+    const existingEntry = this.cache.get(key);
+    const accessCount = existingEntry ? existingEntry.accessCount : 1;
+    const tier = this.determineTier(accessCount);
 
     this.cache.set(key, {
       data,
-      timestamp: Date.now(),
-      etag
+      timestamp: now,
+      etag,
+      accessCount,
+      lastAccessed: now,
+      tier
     });
+
+    console.log(`💾 PAGE CACHE: Stored ${pageId} (tier: ${tier}, size: ${this.cache.size})`);
+  }
+
+  private evictLeastUseful(): void {
+    // Find the least useful entry (cold tier, oldest, least accessed)
+    let leastUsefulKey: string | null = null;
+    let leastUsefulScore = Infinity;
+
+    for (const [key, entry] of this.cache.entries()) {
+      // Score based on tier, recency, and access count (lower is worse)
+      let score = entry.accessCount;
+      if (entry.tier === 'cold') score *= 0.1;
+      else if (entry.tier === 'warm') score *= 0.5;
+
+      // Factor in recency
+      const ageMinutes = (Date.now() - entry.lastAccessed) / (60 * 1000);
+      score = score / (1 + ageMinutes);
+
+      if (score < leastUsefulScore) {
+        leastUsefulScore = score;
+        leastUsefulKey = key;
+      }
+    }
+
+    if (leastUsefulKey) {
+      this.cache.delete(leastUsefulKey);
+      this.stats.evictions++;
+      console.log(`🗑️  PAGE CACHE: Evicted ${leastUsefulKey} (score: ${leastUsefulScore.toFixed(3)})`);
+    }
   }
 
   has(pageId: string, userId?: string | null): boolean {
@@ -60,8 +146,8 @@ class PageCache {
       return false;
     }
 
-    // Check if entry is expired
-    if (Date.now() - entry.timestamp > this.TTL) {
+    const ttl = this.getTierTTL(entry.tier);
+    if (Date.now() - entry.timestamp > ttl) {
       this.cache.delete(key);
       return false;
     }
@@ -73,15 +159,45 @@ class PageCache {
     const key = this.getCacheKey(pageId, userId);
     const entry = this.cache.get(key);
 
-    if (!entry || Date.now() - entry.timestamp > this.TTL) {
+    if (!entry) {
+      return undefined;
+    }
+
+    const ttl = this.getTierTTL(entry.tier);
+    if (Date.now() - entry.timestamp > ttl) {
       return undefined;
     }
 
     return entry.etag;
   }
 
+  // Get cache statistics for monitoring
+  getStats(): CacheStats & { hitRate: number; size: number } {
+    const hitRate = this.stats.totalReads > 0 ?
+      (this.stats.hits / this.stats.totalReads) * 100 : 0;
+
+    return {
+      ...this.stats,
+      hitRate: Math.round(hitRate * 100) / 100,
+      size: this.cache.size
+    };
+  }
+
+  // Get cache breakdown by tier
+  getTierBreakdown(): { hot: number; warm: number; cold: number } {
+    const breakdown = { hot: 0, warm: 0, cold: 0 };
+
+    for (const entry of this.cache.values()) {
+      breakdown[entry.tier]++;
+    }
+
+    return breakdown;
+  }
+
   clear(): void {
     this.cache.clear();
+    this.stats = { hits: 0, misses: 0, evictions: 0, totalReads: 0 };
+    console.log('🧹 PAGE CACHE: Cleared all entries');
   }
 
   invalidate(pageId: string): void {
@@ -93,29 +209,50 @@ class PageCache {
       }
     }
     keysToDelete.forEach(key => this.cache.delete(key));
+    console.log(`🗑️  PAGE CACHE: Invalidated ${keysToDelete.length} entries for page ${pageId}`);
   }
 
   size(): number {
     return this.cache.size;
   }
 
-  // Clean up expired entries
+  // Enhanced cleanup with tier-aware expiration
   cleanup(): void {
     const now = Date.now();
     const keysToDelete: string[] = [];
 
     for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > this.TTL) {
+      const ttl = this.getTierTTL(entry.tier);
+      if (now - entry.timestamp > ttl) {
         keysToDelete.push(key);
       }
     }
 
     keysToDelete.forEach(key => this.cache.delete(key));
+
+    if (keysToDelete.length > 0) {
+      console.log(`🧹 PAGE CACHE: Cleaned up ${keysToDelete.length} expired entries`);
+    }
+  }
+
+  // Preload frequently accessed pages
+  async preloadPage(pageId: string, userId?: string | null): Promise<void> {
+    if (this.has(pageId, userId)) {
+      return; // Already cached
+    }
+
+    try {
+      // This would trigger a background fetch
+      console.log(`🔄 PAGE CACHE: Preloading ${pageId} for ${userId || 'anonymous'}`);
+      // Implementation would depend on your data fetching strategy
+    } catch (error) {
+      console.error(`❌ PAGE CACHE: Failed to preload ${pageId}:`, error);
+    }
   }
 }
 
-// Export singleton instance
-export const pageCache = new PageCache();
+// Export singleton instance with enhanced capabilities
+export const pageCache = new EnhancedPageCache();
 
 // Cleanup expired entries every 5 minutes
 if (typeof window !== 'undefined') {

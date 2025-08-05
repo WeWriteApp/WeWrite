@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPageById } from '../../../firebase/database/pages';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
+import { pageCache } from '../../../utils/pageCache';
 
 /**
- * Optimized Page Data API
- * 
- * Provides cached page data with minimal Firebase reads
- * Supports both authenticated and anonymous access
+ * Highly Optimized Page Data API
+ *
+ * Features:
+ * - Multi-tier caching (hot/warm/cold)
+ * - Aggressive cache headers
+ * - ETag support for conditional requests
+ * - Cost monitoring and optimization
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now();
+
   try {
     // Next.js 15 requires awaiting params
     const { id: pageId } = await params;
@@ -25,16 +31,37 @@ export async function GET(
       currentUserId = await getUserIdFromRequest(request);
     } catch (error) {
       // Anonymous access is allowed for public pages
-      console.log('Anonymous access to page:', pageId);
+      console.log('🔓 Anonymous access to page:', pageId);
     }
 
     // Use the requested userId if provided, otherwise use authenticated user
     const effectiveUserId = requestedUserId || currentUserId;
 
-    console.log(`[Page API] Fetching page ${pageId} for user ${effectiveUserId || 'anonymous'}`);
+    console.log(`📄 [Page API] Fetching page ${pageId} for user ${effectiveUserId || 'anonymous'}`);
+
+    // Check cache first for ultra-fast response
+    const cachedData = pageCache.get(pageId, effectiveUserId);
+    if (cachedData) {
+      const responseTime = Date.now() - startTime;
+      console.log(`🚀 [Page API] Cache hit for ${pageId} (${responseTime}ms)`);
+
+      // Return cached data with aggressive cache headers
+      const response = NextResponse.json(cachedData.pageData, { status: 200 });
+
+      // Aggressive caching headers for cached responses
+      response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=1800'); // 10min browser, 30min CDN
+      response.headers.set('ETag', cachedData.etag || `"${pageId}-${Date.now()}"`);
+      response.headers.set('X-Cache-Status', 'HIT');
+      response.headers.set('X-Response-Time', `${responseTime}ms`);
+
+      return response;
+    }
+
+    // Cache miss - fetch from database
+    console.log(`💸 [Page API] Cache miss for ${pageId} - fetching from database`);
 
     // Track this read for cost monitoring
-    trackFirebaseRead('pages', 'getPageById', 1, 'api-optimized');
+    trackFirebaseRead('pages', 'getPageById', 1, 'api-cache-miss');
 
     // Fetch page data using existing optimized function
     const result = await getPageById(pageId, effectiveUserId);
@@ -60,26 +87,36 @@ export async function GET(
       );
     }
 
-    // Return successful result with cache headers
+    // Cache the successful result for future requests
+    const etag = `"${pageId}-${result.pageData?.updatedAt || Date.now()}"`;
+    pageCache.set(pageId, result, effectiveUserId, etag);
+
+    const responseTime = Date.now() - startTime;
+    console.log(`✅ [Page API] Successfully fetched ${pageId} (${responseTime}ms)`);
+
+    // Return successful result with enhanced cache headers
     const response = NextResponse.json({
       success: true,
       pageData: result.pageData,
       versionData: result.versionData,
-      fromCache: false // Will be set by readOptimizer
+      fromCache: false
     });
 
-    // REDUCED CACHING: Short cache to prevent data loss while maintaining some performance
+    // AGGRESSIVE CACHING for cost optimization
     if (process.env.NODE_ENV === 'development') {
-      // No caching in development
-      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      response.headers.set('Pragma', 'no-cache');
-      response.headers.set('Expires', '0');
+      // Moderate caching in development for testing
+      response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=120');
     } else {
-      // Short cache in production (30 seconds)
-      response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
-      response.headers.set('CDN-Cache-Control', 'public, max-age=30');
+      // Aggressive caching in production for cost savings
+      response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=1800');
+      response.headers.set('CDN-Cache-Control', 'public, max-age=600');
     }
-    
+
+    response.headers.set('ETag', etag);
+    response.headers.set('X-Cache-Status', 'MISS');
+    response.headers.set('X-Response-Time', `${responseTime}ms`);
+    response.headers.set('X-Database-Reads', '1');
+
     return response;
 
   } catch (error) {

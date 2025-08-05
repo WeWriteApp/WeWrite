@@ -1,8 +1,15 @@
 /**
  * Firebase Cost Monitor - Real-time tracking and alerting
- * 
- * Monitors database reads and costs to prevent expensive operations
+ *
+ * Monitors database reads and costs to prevent expensive operations.
+ *
+ * PRODUCTION MONITORING MODE: When enabled, normalizes collection names
+ * to track production collection costs even in development environment.
  */
+
+// Production monitoring mode for accurate cost tracking
+const PRODUCTION_MONITORING_MODE = process.env.ENABLE_PRODUCTION_MONITORING === 'true' ||
+                                   process.env.NODE_ENV === 'production';
 
 interface ReadOperation {
   timestamp: number;
@@ -37,7 +44,7 @@ class CostMonitor {
   private readonly RTDB_READ_COST = 0.054 / 1000000;     // $0.054 per 1M reads
 
   /**
-   * Track a database read operation
+   * Track a database read operation with production monitoring support
    */
   trackRead(
     collection: string,
@@ -45,11 +52,15 @@ class CostMonitor {
     documentsRead: number = 1,
     source: string = 'unknown'
   ): void {
-    const estimatedCost = this.calculateCost(collection, documentsRead);
-    
+    // Normalize collection name for production monitoring
+    const normalizedCollection = PRODUCTION_MONITORING_MODE ?
+      this.normalizeCollectionForProduction(collection) : collection;
+
+    const estimatedCost = this.calculateCost(normalizedCollection, documentsRead);
+
     const readOp: ReadOperation = {
       timestamp: Date.now(),
-      collection,
+      collection: normalizedCollection,
       operation,
       documentsRead,
       estimatedCost,
@@ -224,6 +235,16 @@ class CostMonitor {
         emergency: dailyCost > this.THRESHOLDS.emergency
       }
     };
+  }
+
+  /**
+   * Normalize collection names for production monitoring
+   */
+  private normalizeCollectionForProduction(collectionName: string): string {
+    if (!PRODUCTION_MONITORING_MODE) return collectionName;
+
+    // Remove DEV_ prefix to get production collection name
+    return collectionName.replace(/^DEV_/, '');
   }
 
   /**

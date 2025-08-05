@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { getReadStats, resetReadStats } from '../../../utils/databaseReadTracker';
+import { getReadStats, resetReadStats, getProductionMonitoringInfo } from '../../../utils/databaseReadTracker';
 import { analyzeDatabaseReads, getEndpointReport, exportReadData } from '../../../utils/databaseReadAnalyzer';
 
 /**
@@ -63,13 +63,15 @@ export async function GET(request: NextRequest) {
         });
 
       default:
-        // Default: return basic stats + analysis
+        // Default: return basic stats + analysis + production monitoring info
         const basicStats = getReadStats();
         const advancedAnalysis = analyzeDatabaseReads();
+        const productionMonitoring = getProductionMonitoringInfo();
 
         return NextResponse.json({
           ...basicStats,
           advancedAnalysis,
+          productionMonitoring,
           timestamp: new Date().toISOString()
         });
     }

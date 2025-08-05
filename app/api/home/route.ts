@@ -4,9 +4,15 @@ import { initAdmin } from '../../firebase/admin';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../utils/environmentConfig';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
-// Server-side cache for home data - reduced TTL for recent edits functionality
+// Enhanced multi-tier caching system for home data
 const homeCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-const HOME_CACHE_TTL = 10 * 60 * 1000; // 10 minutes server-side cache (increased for cost optimization)
+const userStatsCache = new Map<string, { data: any; timestamp: number }>();
+const batchUserDataCache = new Map<string, { data: any; timestamp: number }>();
+
+// Optimized cache TTLs based on data volatility
+const HOME_CACHE_TTL = 15 * 60 * 1000; // 15 minutes for full home data
+const USER_STATS_TTL = 60 * 60 * 1000; // 1 hour for user stats (changes infrequently)
+const BATCH_USER_DATA_TTL = 30 * 60 * 1000; // 30 minutes for user subscription data
 
 interface HomeData {
   recentlyVisitedPages: any[]; // Renamed from recentPages for clarity
@@ -31,45 +37,46 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    // Check server-side cache first
+    // Enhanced multi-tier cache checking
     const cacheKey = `home:${userId || 'anonymous'}`;
     const cached = homeCache.get(cacheKey);
 
-    if (cached && Date.now() - cached.timestamp < cached.ttl) { // Re-enabled cache for cost optimization
-      console.log('🏠 HOME API: Returning cached data:', {
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      console.log('🚀 HOME API: Cache hit - returning cached data:', {
         recentlyVisitedPagesCount: cached.data.recentlyVisitedPages?.length || 0,
         hasUserStats: !!cached.data.userStats,
-        cacheAge: Date.now() - cached.timestamp
+        cacheAge: Math.round((Date.now() - cached.timestamp) / 1000) + 's'
       });
+
+      // Track cache hit for monitoring
+      console.log('📊 DB READ: /api/home - 0 reads, 0ms, cache: true');
+
       const cachedResponse = NextResponse.json({
         ...cached.data,
         cached: true,
         cacheAge: Date.now() - cached.timestamp
       });
-      cachedResponse.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5 min browser, 10 min CDN
-      cachedResponse.headers.set('Vary', 'Authorization'); // Vary by user authentication
+      cachedResponse.headers.set('Cache-Control', 'public, max-age=600, s-maxage=900'); // 10 min browser, 15 min CDN
+      cachedResponse.headers.set('Vary', 'Authorization');
       return cachedResponse;
     }
 
-    console.log('Home: Fetching fresh data');
-    
-    // Fetch all data in a single batched operation with deduplication
+    console.log('🏠 HOME API: Fetching fresh data with enhanced caching');
+
+    // Enhanced data fetching with individual cache checks
     const [
       allRecentlyVisitedPages,
       userStats
     ] = await Promise.all([
+      // Recently visited pages with longer cache for cost optimization
       executeDeduplicatedOperation(
-        'getRecentlyVisitedPages', // Renamed for clarity
+        'getRecentlyVisitedPages',
         { limit: 40, userId },
-        () => getRecentlyVisitedPagesOptimized(40, userId), // Renamed function
-        { cacheTTL: 5 * 60 * 1000 } // 5 minutes cache for recently visited pages (increased for cost optimization)
+        () => getRecentlyVisitedPagesOptimized(40, userId),
+        { cacheTTL: 10 * 60 * 1000 } // 10 minutes cache (increased from 5m)
       ),
-      userId ? executeDeduplicatedOperation(
-        'getUserStats',
-        { userId },
-        () => getUserStatsOptimized(userId),
-        { cacheTTL: 30 * 60 * 1000 } // 30 minutes cache for user stats (increased for cost optimization)
-      ) : Promise.resolve(null)
+      // User stats with individual cache check
+      userId ? getUserStatsWithCache(userId) : Promise.resolve(null)
     ]);
 
     // Derive trending pages from recently visited pages to avoid duplicate queries
@@ -82,20 +89,15 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, 5);
 
-    // Batch fetch user subscription data with deduplication
+    // Enhanced batch user data fetching with smart caching
     const uniqueUserIds = [...new Set(recentlyVisitedPages.map(page => page.userId).filter(Boolean))];
     let batchUserData = {};
 
     if (uniqueUserIds.length > 0) {
       try {
-        batchUserData = await executeDeduplicatedOperation(
-          'getBatchUserData',
-          { userIds: uniqueUserIds.sort() }, // Sort for consistent cache keys
-          () => getBatchUserDataOptimized(uniqueUserIds),
-          { cacheTTL: 10 * 60 * 1000 } // 10 minutes cache for user data (increased from 3m for cost optimization)
-        );
+        batchUserData = await getBatchUserDataWithCache(uniqueUserIds);
       } catch (error) {
-        console.warn('Error fetching batch user data:', error);
+        console.warn('🚨 Error fetching batch user data:', error);
         // Continue without user data rather than failing the entire request
       }
     }
@@ -119,15 +121,8 @@ export async function GET(request: NextRequest) {
       ttl: HOME_CACHE_TTL
     });
 
-    // Clean up old cache entries periodically
-    if (Math.random() < 0.1) { // 10% chance to clean up
-      const now = Date.now();
-      for (const [key, value] of homeCache.entries()) {
-        if (now - value.timestamp > value.ttl) {
-          homeCache.delete(key);
-        }
-      }
-    }
+    // Enhanced cache cleanup with size limits
+    cleanupCaches();
 
     console.log(`🏠 HOME API: Fresh data fetched in ${loadTime.toFixed(2)}ms:`, {
       recentlyVisitedPagesCount: recentlyVisitedPages.length,
@@ -455,5 +450,122 @@ async function getBatchUserDataOptimized(userIds: string[]): Promise<Record<stri
   } catch (error) {
     console.error('Error in getBatchUserDataOptimized:', error);
     return {};
+  }
+}
+
+/**
+ * Enhanced user stats fetching with individual cache
+ */
+async function getUserStatsWithCache(userId: string): Promise<any> {
+  const cacheKey = `userStats:${userId}`;
+  const cached = userStatsCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < USER_STATS_TTL) {
+    console.log(`🚀 USER STATS: Cache hit for ${userId}`);
+    return cached.data;
+  }
+
+  console.log(`💸 USER STATS: Cache miss for ${userId} - fetching from database`);
+  const stats = await getUserStatsOptimized(userId);
+
+  if (stats) {
+    userStatsCache.set(cacheKey, {
+      data: stats,
+      timestamp: Date.now()
+    });
+  }
+
+  return stats;
+}
+
+/**
+ * Enhanced batch user data fetching with smart caching
+ */
+async function getBatchUserDataWithCache(userIds: string[]): Promise<Record<string, any>> {
+  const sortedUserIds = userIds.sort(); // Consistent cache keys
+  const cacheKey = `batchUserData:${sortedUserIds.join(',')}`;
+  const cached = batchUserDataCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < BATCH_USER_DATA_TTL) {
+    console.log(`🚀 BATCH USER DATA: Cache hit for ${userIds.length} users`);
+    return cached.data;
+  }
+
+  // Check for partial cache hits
+  const cachedUsers: Record<string, any> = {};
+  const uncachedUserIds: string[] = [];
+
+  for (const userId of userIds) {
+    const userCacheKey = `userData:${userId}`;
+    const userCached = batchUserDataCache.get(userCacheKey);
+
+    if (userCached && Date.now() - userCached.timestamp < BATCH_USER_DATA_TTL) {
+      cachedUsers[userId] = userCached.data;
+    } else {
+      uncachedUserIds.push(userId);
+    }
+  }
+
+  console.log(`💸 BATCH USER DATA: ${Object.keys(cachedUsers).length} cached, ${uncachedUserIds.length} need fetching`);
+
+  // Fetch only uncached users
+  let freshData = {};
+  if (uncachedUserIds.length > 0) {
+    freshData = await getBatchUserDataOptimized(uncachedUserIds);
+
+    // Cache individual user data
+    for (const [userId, userData] of Object.entries(freshData)) {
+      const userCacheKey = `userData:${userId}`;
+      batchUserDataCache.set(userCacheKey, {
+        data: userData,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  // Combine cached and fresh data
+  const combinedData = { ...cachedUsers, ...freshData };
+
+  // Cache the full batch result
+  batchUserDataCache.set(cacheKey, {
+    data: combinedData,
+    timestamp: Date.now()
+  });
+
+  return combinedData;
+}
+
+/**
+ * Enhanced cache cleanup with size limits and TTL management
+ */
+function cleanupCaches(): void {
+  const now = Date.now();
+  const MAX_CACHE_SIZE = 1000; // Prevent memory bloat
+
+  // Clean up home cache
+  if (homeCache.size > MAX_CACHE_SIZE || Math.random() < 0.1) {
+    for (const [key, value] of homeCache.entries()) {
+      if (now - value.timestamp > value.ttl) {
+        homeCache.delete(key);
+      }
+    }
+  }
+
+  // Clean up user stats cache
+  if (userStatsCache.size > MAX_CACHE_SIZE || Math.random() < 0.05) {
+    for (const [key, value] of userStatsCache.entries()) {
+      if (now - value.timestamp > USER_STATS_TTL) {
+        userStatsCache.delete(key);
+      }
+    }
+  }
+
+  // Clean up batch user data cache
+  if (batchUserDataCache.size > MAX_CACHE_SIZE || Math.random() < 0.05) {
+    for (const [key, value] of batchUserDataCache.entries()) {
+      if (now - value.timestamp > BATCH_USER_DATA_TTL) {
+        batchUserDataCache.delete(key);
+      }
+    }
   }
 }

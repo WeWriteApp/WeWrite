@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { trackFirebaseRead } from '../../../../utils/costMonitor';
+import { userCache } from '../../../../utils/userCache';
 
 /**
  * Optimized User Data API
@@ -14,6 +15,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
+  const startTime = Date.now();
+
   try {
     const userId = params.userId;
 
@@ -23,13 +26,52 @@ export async function GET(
       currentUserId = await getUserIdFromRequest(request);
     } catch (error) {
       // Anonymous access is allowed for public user data
-      console.log('Anonymous access to user data:', userId);
+      console.log('🔓 Anonymous access to user data:', userId);
     }
 
-    console.log(`[User API] Fetching user ${userId} for ${currentUserId || 'anonymous'}`);
+    console.log(`👤 [User API] Fetching user ${userId} for ${currentUserId || 'anonymous'}`);
+
+    // Check enhanced cache first
+    const cachedUserData = userCache.get(userId, 'profile');
+    if (cachedUserData) {
+      const responseTime = Date.now() - startTime;
+      console.log(`🚀 [User API] Cache hit for ${userId} (${responseTime}ms)`);
+
+      // Filter data based on access permissions
+      const publicUserData = {
+        id: cachedUserData.id,
+        username: cachedUserData.username,
+        displayName: cachedUserData.displayName,
+        bio: cachedUserData.bio,
+        profilePicture: cachedUserData.profilePicture,
+        isVerified: cachedUserData.isVerified || false,
+        createdAt: cachedUserData.createdAt,
+        // Include additional fields only for the user themselves
+        ...(currentUserId === userId && {
+          email: cachedUserData.email,
+          preferences: cachedUserData.preferences,
+          settings: cachedUserData.settings
+        })
+      };
+
+      const response = NextResponse.json({
+        success: true,
+        userData: publicUserData,
+        fromCache: true
+      });
+
+      response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15min browser, 30min CDN
+      response.headers.set('X-Cache-Status', 'HIT');
+      response.headers.set('X-Response-Time', `${responseTime}ms`);
+      response.headers.set('X-Database-Reads', '0');
+
+      return response;
+    }
+
+    console.log(`💸 [User API] Cache miss for ${userId} - fetching from database`);
 
     // Track this read for cost monitoring
-    trackFirebaseRead('users', 'getUserById', 1, 'api-optimized');
+    trackFirebaseRead('users', 'getUserById', 1, 'api-user-profile-data');
 
     // Get Firebase Admin
     const admin = getFirebaseAdmin();
@@ -73,18 +115,26 @@ export async function GET(
       })
     };
 
-    // Return successful result with cache headers
+    // Cache the result in enhanced cache system
+    userCache.set(userId, userData, 'profile');
+
+    const responseTime = Date.now() - startTime;
+    console.log(`✅ [User API] Successfully fetched ${userId} (${responseTime}ms)`);
+
+    // Return successful result with enhanced cache headers
     const response = NextResponse.json({
       success: true,
       userData: publicUserData,
-      fromCache: false // Will be set by readOptimizer
+      fromCache: false
     });
 
-    // Add cache headers for browser caching
-    // Longer cache for user data since it changes less frequently
-    response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1200'); // 10 min cache, 20 min stale
-    response.headers.set('CDN-Cache-Control', 'public, max-age=600');
-    
+    // Enhanced cache headers for fresh data
+    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=900, stale-while-revalidate=1800'); // 10min browser, 15min CDN
+    response.headers.set('ETag', `"user-${userId}-${Date.now()}"`);
+    response.headers.set('X-Cache-Status', 'MISS');
+    response.headers.set('X-Response-Time', `${responseTime}ms`);
+    response.headers.set('X-Database-Reads', '1');
+
     return response;
 
   } catch (error) {

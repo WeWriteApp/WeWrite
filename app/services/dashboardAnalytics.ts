@@ -2,6 +2,8 @@ import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 import { AnalyticsAggregationService } from './analyticsAggregation';
 import { getCollectionName } from "../utils/environmentConfig";
+import { analyticsCache } from '../utils/analyticsCache';
+import { trackFirebaseRead } from '../utils/costMonitor';
 
 // Helper function to get Firestore instance from Firebase Admin
 function getAdminFirestore() {
@@ -211,11 +213,28 @@ export class DashboardAnalyticsService {
     });
 
     try {
-      // Check cache first (include granularity in cache key)
-      const cacheKey = getCacheKey('accounts', dateRange) + (granularity ? `-g${granularity}` : '');
-      const cachedData = getCachedData<ChartDataPoint[]>(cacheKey);
+      // Check enhanced analytics cache first
+      const cacheParams = {
+        dateRange: `${dateRange.startDate.toISOString()}-${dateRange.endDate.toISOString()}`,
+        granularity,
+        type: 'accounts'
+      };
+      const cachedData = analyticsCache.get('users', cacheParams);
       if (cachedData) {
+        console.log('🚀 [Analytics Service] Enhanced cache hit for accounts data:', cachedData.length, 'items');
         return cachedData;
+      }
+
+      console.log('💸 [Analytics Service] Cache miss for accounts - fetching from database');
+
+      // Check legacy cache as fallback
+      const cacheKey = getCacheKey('accounts', dateRange) + (granularity ? `-g${granularity}` : '');
+      const legacyCachedData = getCachedData<ChartDataPoint[]>(cacheKey);
+      if (legacyCachedData) {
+        console.log('📦 [Analytics Service] Legacy cache hit for accounts data');
+        // Store in enhanced cache for future requests
+        analyticsCache.set('users', legacyCachedData, cacheParams, 100);
+        return legacyCachedData;
       }
 
       const { startDate, endDate } = dateRange;
@@ -303,8 +322,14 @@ export class DashboardAnalyticsService {
         };
       });
 
-      // Cache the result
+      // Track database reads for cost monitoring
+      const estimatedReads = Math.max(result.length * 2, 50); // Estimate based on query complexity
+      trackFirebaseRead('users', 'analytics_accounts', estimatedReads, 'analytics-accounts');
+
+      // Cache in both legacy and enhanced cache systems
       setCachedData(cacheKey, result);
+      analyticsCache.set('users', result, cacheParams, estimatedReads);
+
       console.log('📊 [Analytics Service] Returning accounts result:', result.length, 'data points, total accounts:', result.reduce((sum, item) => sum + item.count, 0));
       return result;
 

@@ -10,6 +10,8 @@ import { getCollectionName } from '../../utils/environmentConfig';
 import logger from '../../utils/unifiedLogger';
 import { cachedQuery } from '../../utils/globalCache';
 import { cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
+import { trackFirebaseRead } from '../../utils/costMonitor';
+import { pagesListCache } from '../../utils/pagesListCache';
 
 interface PageData {
   id?: string;
@@ -64,18 +66,40 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
-    console.log('🗺️ API /pages - Query info:', {
+    console.log('📄 API /pages - Query info:', {
       currentUserId: currentUserId,
       requestedUserId: query.userId,
       userIdMatch: currentUserId === query.userId,
       limit: query.limit
     });
 
-    // Create cache key based on query parameters
-    const cacheKey = `pages_${currentUserId}_${JSON.stringify(query)}`;
-    console.log('🗺️ API /pages - Cache key:', cacheKey);
+    // ENHANCED CACHING: Check our aggressive pages list cache first
+    const cachedPages = pagesListCache.get(query.userId!, query);
+    if (cachedPages) {
+      console.log(`🚀 API /pages - Cache hit for user ${query.userId} (${cachedPages.length} pages)`);
 
-    // Use cached data if available
+      const response = NextResponse.json({
+        pages: cachedPages,
+        fromCache: true,
+        cacheStats: pagesListCache.getStats()
+      });
+
+      // Aggressive cache headers for cached responses
+      response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15min browser, 30min CDN
+      response.headers.set('ETag', pagesListCache.getETag(query.userId!, query) || `"pages-${Date.now()}"`);
+      response.headers.set('X-Cache-Status', 'HIT');
+      response.headers.set('X-Database-Reads', '0');
+
+      return response;
+    }
+
+    console.log(`💸 API /pages - Cache miss for user ${query.userId} - fetching from database`);
+
+    // Create cache key based on query parameters (fallback cache)
+    const cacheKey = `pages_${currentUserId}_${JSON.stringify(query)}`;
+    console.log('📄 API /pages - Fallback cache key:', cacheKey);
+
+    // Use cached data if available (existing cache system as fallback)
     const cachedResult = await cacheHelpers.getApiData(cacheKey, async () => {
       console.log('🗺️ API /pages - Cache miss, executing fresh query');
       const admin = getFirebaseAdmin();
@@ -208,6 +232,9 @@ export async function GET(request: NextRequest) {
         }))
       });
 
+      // Track database read for cost monitoring
+      trackFirebaseRead('pages', 'list', limitedPages.length, 'api-pages-list');
+
       return {
         pages: limitedPages,
         pagination: {
@@ -218,9 +245,24 @@ export async function GET(request: NextRequest) {
       };
     }, CACHE_TTL.PAGE_DATA); // Use 4-hour cache for page data
 
-    const response = createApiResponse(cachedResult);
-    response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15 min browser, 30 min CDN
-    response.headers.set('Vary', 'Authorization'); // Vary by user authentication
+    // Store in our enhanced cache for future requests
+    if (cachedResult.pages && cachedResult.pages.length > 0) {
+      pagesListCache.set(query.userId!, query, cachedResult.pages, cachedResult.pages.length);
+    }
+
+    const response = createApiResponse({
+      ...cachedResult,
+      fromCache: false,
+      cacheStats: pagesListCache.getStats()
+    });
+
+    // Enhanced cache headers for fresh data
+    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=900, stale-while-revalidate=1800'); // 10min browser, 15min CDN
+    response.headers.set('ETag', `"pages-${query.userId}-${Date.now()}"`);
+    response.headers.set('X-Cache-Status', 'MISS');
+    response.headers.set('X-Database-Reads', cachedResult.pages?.length?.toString() || '0');
+    response.headers.set('Vary', 'Authorization');
+
     return response;
 
   } catch (error) {

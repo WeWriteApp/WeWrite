@@ -1,13 +1,29 @@
 "use client";
 
 /**
- * Cache invalidation utilities for WeWrite application
+ * Enhanced Cache Invalidation System for WeWrite
  *
- * This module provides centralized cache invalidation mechanisms
- * to ensure data consistency across the application when content changes.
+ * Comprehensive cache invalidation that maintains data consistency
+ * across all cache systems while preserving cache efficiency
  */
 
-// Type definitions
+// Import our cache systems (conditionally for server-side compatibility)
+let pageCache: any, pagesListCache: any, userCache: any, searchCache: any, analyticsCache: any;
+
+if (typeof window === 'undefined') {
+  // Server-side imports
+  try {
+    pageCache = require('./pageCache').pageCache;
+    pagesListCache = require('./pagesListCache').pagesListCache;
+    userCache = require('./userCache').userCache;
+    searchCache = require('./searchCache').searchCache;
+    analyticsCache = require('./analyticsCache').analyticsCache;
+  } catch (error) {
+    console.warn('Cache systems not available:', error.message);
+  }
+}
+
+// Legacy type definitions (maintained for backward compatibility)
 type CacheInvalidatorFunction = (userId?: string) => void;
 type CacheType = 'recentActivity' | 'userPages' | 'staticActivity';
 
@@ -15,6 +31,16 @@ interface CacheInvalidators {
   recentActivity: CacheInvalidatorFunction[];
   userPages: CacheInvalidatorFunction[];
   staticActivity: CacheInvalidatorFunction[];
+}
+
+// Enhanced invalidation types
+interface InvalidationEvent {
+  type: 'page' | 'user' | 'search' | 'analytics' | 'global';
+  action: 'create' | 'update' | 'delete' | 'bulk_update';
+  entityId?: string;
+  relatedIds?: string[];
+  metadata?: any;
+  timestamp: number;
 }
 
 
@@ -189,6 +215,165 @@ export const clearAllCacheInvalidators = (): void => {
 };
 
 // Initialize debug utilities in development
+/**
+ * Enhanced Cache Invalidation System
+ *
+ * Smart invalidation that works across all our cache systems
+ */
+class EnhancedCacheInvalidation {
+  /**
+   * Invalidate page-related caches
+   */
+  static async invalidatePageUpdate(pageId: string, userId?: string): Promise<void> {
+    console.log(`🗑️  ENHANCED INVALIDATION: Page update ${pageId}`);
+
+    try {
+      // Invalidate specific page cache
+      if (typeof pageCache !== 'undefined') {
+        pageCache.invalidate(pageId);
+      }
+
+      // Invalidate pages list cache for the user
+      if (typeof pagesListCache !== 'undefined' && userId) {
+        pagesListCache.invalidateUser(userId);
+      }
+
+      // Clear search results that might contain this page
+      if (typeof searchCache !== 'undefined') {
+        searchCache.clearByType('pages');
+      }
+
+      // Legacy invalidation for backward compatibility
+      invalidateAllCaches(userId);
+
+      console.log(`✅ Enhanced page invalidation completed for ${pageId}`);
+    } catch (error) {
+      console.error('❌ Error in enhanced page invalidation:', error);
+    }
+  }
+
+  static async invalidatePageDelete(pageId: string, userId?: string): Promise<void> {
+    console.log(`🗑️  ENHANCED INVALIDATION: Page delete ${pageId}`);
+
+    try {
+      // More aggressive invalidation for deletions
+      if (typeof pageCache !== 'undefined') {
+        pageCache.invalidate(pageId);
+      }
+
+      if (typeof pagesListCache !== 'undefined' && userId) {
+        pagesListCache.invalidateUser(userId);
+      }
+
+      if (typeof searchCache !== 'undefined') {
+        searchCache.clearByType('pages');
+      }
+
+      if (typeof analyticsCache !== 'undefined') {
+        analyticsCache.clearByType('pages');
+      }
+
+      // Legacy invalidation
+      invalidateAllCaches(userId);
+
+      console.log(`✅ Enhanced page deletion invalidation completed for ${pageId}`);
+    } catch (error) {
+      console.error('❌ Error in enhanced page deletion invalidation:', error);
+    }
+  }
+
+  static async invalidateUserUpdate(userId: string): Promise<void> {
+    console.log(`🗑️  ENHANCED INVALIDATION: User update ${userId}`);
+
+    try {
+      // Invalidate user-specific caches
+      if (typeof userCache !== 'undefined') {
+        userCache.invalidateUser(userId);
+      }
+
+      if (typeof pagesListCache !== 'undefined') {
+        pagesListCache.invalidateUser(userId);
+      }
+
+      if (typeof searchCache !== 'undefined') {
+        searchCache.clearByType('users');
+      }
+
+      // Legacy invalidation
+      invalidateAllCaches(userId);
+
+      console.log(`✅ Enhanced user invalidation completed for ${userId}`);
+    } catch (error) {
+      console.error('❌ Error in enhanced user invalidation:', error);
+    }
+  }
+
+  static async invalidateSearchResults(): Promise<void> {
+    console.log(`🗑️  ENHANCED INVALIDATION: Search results`);
+
+    try {
+      if (typeof searchCache !== 'undefined') {
+        searchCache.clear();
+      }
+
+      console.log(`✅ Enhanced search invalidation completed`);
+    } catch (error) {
+      console.error('❌ Error in enhanced search invalidation:', error);
+    }
+  }
+
+  static async invalidateAnalytics(dateRange?: string): Promise<void> {
+    console.log(`🗑️  ENHANCED INVALIDATION: Analytics ${dateRange || 'all'}`);
+
+    try {
+      if (typeof analyticsCache !== 'undefined') {
+        if (dateRange) {
+          analyticsCache.clearByDateRange(dateRange);
+        } else {
+          analyticsCache.clearByType('dashboard');
+        }
+      }
+
+      console.log(`✅ Enhanced analytics invalidation completed`);
+    } catch (error) {
+      console.error('❌ Error in enhanced analytics invalidation:', error);
+    }
+  }
+
+  static async invalidateAll(): Promise<void> {
+    console.log(`🗑️  ENHANCED INVALIDATION: All caches`);
+
+    try {
+      // Clear all enhanced caches
+      if (typeof pageCache !== 'undefined') pageCache.clear();
+      if (typeof pagesListCache !== 'undefined') pagesListCache.clear();
+      if (typeof userCache !== 'undefined') userCache.clear();
+      if (typeof searchCache !== 'undefined') searchCache.clear();
+      if (typeof analyticsCache !== 'undefined') analyticsCache.clear();
+
+      // Legacy invalidation
+      invalidateAllCaches();
+
+      console.log(`✅ Enhanced full invalidation completed`);
+    } catch (error) {
+      console.error('❌ Error in enhanced full invalidation:', error);
+    }
+  }
+}
+
+// Export enhanced invalidation functions
+export const {
+  invalidatePageUpdate,
+  invalidatePageDelete,
+  invalidateUserUpdate,
+  invalidateSearchResults,
+  invalidateAnalytics,
+  invalidateAll
+} = EnhancedCacheInvalidation;
+
+// Export the class for advanced usage
+export { EnhancedCacheInvalidation };
+
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   // Import debug utilities only in development
   import('./cacheDebugUtils').catch(error => {

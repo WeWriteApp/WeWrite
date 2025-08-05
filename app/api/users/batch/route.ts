@@ -9,6 +9,8 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { executeDeduplicatedOperation } from '../../../utils/serverRequestDeduplication';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
+import { userCache } from '../../../utils/userCache';
+import { trackFirebaseRead } from '../../../utils/costMonitor';
 
 interface UserData {
   uid: string;
@@ -46,22 +48,18 @@ function getEffectiveTier(amount: number | null, tier: number | null, status: st
   }
 }
 
-// POST endpoint - Get batch user data
+// POST endpoint - Get batch user data with enhanced caching
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
-
-    // Try to initialize realtime database, but don't fail if it's not available
-    let rtdb = null;
-    try {
-      rtdb = admin.database();
-    } catch (rtdbError) {
-      console.warn('Realtime Database not available, continuing without it:', rtdbError.message);
-    }
-
     // Authentication is optional for this endpoint since it's used for public user data
-    const currentUserId = await getUserIdFromRequest(request);
+    let currentUserId: string | null = null;
+    try {
+      currentUserId = await getUserIdFromRequest(request);
+    } catch (error) {
+      console.log('🔓 Anonymous batch user request');
+    }
 
     const body = await request.json();
     const { userIds } = body;
@@ -78,24 +76,86 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Maximum 100 user IDs allowed per request');
     }
 
-    console.log(`Batch user data: Fetching data for ${userIds.length} users`);
+    console.log(`👥 [Batch User API] Enhanced: Fetching data for ${userIds.length} users`);
 
-    // Use deduplication for the entire batch operation
-    const results = await executeDeduplicatedOperation(
-      'batchUserData',
-      { userIds: userIds.sort() }, // Sort for consistent cache keys
-      async () => {
-        return await fetchBatchUserDataInternal(userIds, db, rtdb);
-      },
-      { cacheTTL: 3 * 60 * 1000 } // 3 minutes cache
-    );
+    // Use enhanced cache system for batch operations
+    const batchResults = await userCache.getBatchProfiles(userIds);
 
-    console.log(`Batch user data: Successfully fetched data for ${Object.keys(results).length} users`);
+    // Count cache performance
+    const cacheHits = Object.keys(batchResults).length;
+    const cacheMisses = userIds.length - cacheHits;
 
-    return createApiResponse({
-      users: results,
-      count: Object.keys(results).length
+    console.log(`📊 [Batch User API] Cache performance: ${cacheHits} hits, ${cacheMisses} misses`);
+
+    // If we have cache misses, fall back to original batch function for complex data
+    let finalResults = batchResults;
+
+    if (cacheMisses > 0) {
+      console.log(`💸 [Batch User API] Fetching ${cacheMisses} users from database`);
+
+      // Track database reads for cost monitoring
+      trackFirebaseRead('users', 'batchGetUsers', cacheMisses, 'api-batch-enhanced');
+
+      // Get uncached user IDs
+      const uncachedIds = userIds.filter(id => !batchResults[id]);
+
+      // Use deduplication for the uncached users only
+      const uncachedResults = await executeDeduplicatedOperation(
+        'batchUserData',
+        { userIds: uncachedIds.sort() },
+        async () => {
+          const admin = getFirebaseAdmin();
+          const db = admin.firestore();
+          let rtdb = null;
+          try {
+            rtdb = admin.database();
+          } catch (rtdbError) {
+            console.warn('Realtime Database not available:', rtdbError.message);
+          }
+          return await fetchBatchUserDataInternal(uncachedIds, db, rtdb);
+        },
+        { cacheTTL: 3 * 60 * 1000 }
+      );
+
+      // Merge cached and fresh results
+      finalResults = { ...batchResults, ...uncachedResults };
+
+      // Cache the fresh results
+      for (const [userId, userData] of Object.entries(uncachedResults)) {
+        if (userData) {
+          userCache.set(userId, userData, 'profile');
+        }
+      }
+    }
+
+    const responseTime = Date.now() - startTime;
+    console.log(`✅ [Batch User API] Enhanced: Successfully fetched data for ${Object.keys(finalResults).length} users (${responseTime}ms)`);
+
+    const response = createApiResponse({
+      users: finalResults,
+      count: Object.keys(finalResults).length,
+      metadata: {
+        cacheHits,
+        cacheMisses,
+        responseTime: `${responseTime}ms`,
+        enhanced: true
+      }
     });
+
+    // Enhanced cache headers based on performance
+    if (cacheHits > cacheMisses) {
+      response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // Aggressive for mostly cached
+      response.headers.set('X-Cache-Status', 'MOSTLY_HIT');
+    } else {
+      response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // Moderate for mostly fresh
+      response.headers.set('X-Cache-Status', 'MOSTLY_MISS');
+    }
+
+    response.headers.set('X-Response-Time', `${responseTime}ms`);
+    response.headers.set('X-Database-Reads', cacheMisses.toString());
+    response.headers.set('X-Cache-Hits', cacheHits.toString());
+
+    return response;
 
   } catch (error) {
     console.error('Error fetching batch user data:', error);
