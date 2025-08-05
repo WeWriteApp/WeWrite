@@ -95,17 +95,20 @@ export function useOptimizedUserProfile(
         if (includeSubscription && profileData) {
           try {
             console.log(`[useOptimizedUserProfile] Fetching subscription for user: ${userId}`);
-            
-            // Import fetchUserSubscription dynamically to avoid circular dependencies
-            const { fetchUserSubscription } = await import('../firebase/database/subscriptions');
-            const subscription = await fetchUserSubscription(userId);
-            
-            profileData = {
-              ...profileData,
-              tier: subscription?.tier || null,
-              subscriptionStatus: subscription?.status || null,
-              subscriptionAmount: subscription?.amount || null
-            };
+
+            // Use API endpoint to fetch subscription data
+            const response = await fetch(`/api/account-subscription?userId=${userId}`);
+            if (response.ok) {
+              const subscriptionData = await response.json();
+              const subscription = subscriptionData.fullData;
+
+              profileData = {
+                ...profileData,
+                tier: subscription?.tier || null,
+                subscriptionStatus: subscription?.status || null,
+                subscriptionAmount: subscription?.amount || null
+              };
+            }
           } catch (subscriptionError) {
             console.warn(`[useOptimizedUserProfile] Failed to fetch subscription for ${userId}:`, subscriptionError);
             // Don't fail the entire request if subscription fetch fails
