@@ -26,7 +26,7 @@ import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { WarningDot } from '../ui/warning-dot';
-// Navigation optimization temporarily disabled
+import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 
 /**
  * MobileBottomNav Component
@@ -79,6 +79,9 @@ export default function MobileBottomNav() {
   const { user, signOut } = useAuth();
   const editorContext = useEditorContext();
   const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar, sidebarOrder, reorderSidebarItem, clearCache } = useNavigationOrder();
+
+  // 🚀 OPTIMIZATION: Navigation preloader for smooth mobile navigation
+  const { handleNavigationFocus } = useNavigationPreloader();
 
   // Detect if we're on a touch device for drag backend selection
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -345,7 +348,10 @@ export default function MobileBottomNav() {
       id: 'home',
       icon: Home,
       onClick: handleHomeClick,
-      onHover: () => handleButtonHover('/'),
+      onHover: () => {
+        handleButtonHover('/');
+        handleNavigationFocus('/'); // 🚀 Preload home data
+      },
       isActive: isHomeActive,
       ariaLabel: 'Home',
       label: 'Home',
@@ -366,7 +372,10 @@ export default function MobileBottomNav() {
       id: 'notifications',
       icon: Bell,
       onClick: handleNotificationsClick,
-      onHover: () => handleButtonHover('/notifications'),
+      onHover: () => {
+        handleButtonHover('/notifications');
+        handleNavigationFocus('/notifications'); // 🚀 Preload notifications
+      },
       isActive: isNotificationsActive,
       ariaLabel: 'Notifications',
       label: 'Alerts',
@@ -382,7 +391,12 @@ export default function MobileBottomNav() {
       id: 'profile',
       icon: User,
       onClick: handleProfileClick,
-      onHover: () => user?.uid && handleButtonHover(`/user/${user.uid}`),
+      onHover: () => {
+        if (user?.uid) {
+          handleButtonHover(`/user/${user.uid}`);
+          handleNavigationFocus(`/user/${user.uid}`); // 🚀 Preload user profile
+        }
+      },
       isActive: isProfileActive,
       ariaLabel: 'Profile',
       label: 'Profile',

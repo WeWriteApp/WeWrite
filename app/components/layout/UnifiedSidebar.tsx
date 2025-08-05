@@ -15,7 +15,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
 import DraggableSidebarItem from './DraggableSidebarItem';
-// Navigation optimization temporarily disabled
+import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 
 import MapEditor from "../editor/MapEditor";
 
@@ -125,6 +125,9 @@ export default function UnifiedSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // 🚀 OPTIMIZATION: Navigation preloader for smooth navigation
+  const { handleNavigationHover } = useNavigationPreloader();
 
 
   // Load sidebar state from localStorage and handle mounting
@@ -390,6 +393,7 @@ function UnifiedSidebarContent({
                     label={item.label}
                     href={item.href}
                     onClick={() => handleNavItemClick(item)}
+                    onMouseEnter={() => handleNavigationHover(item.href)} // 🚀 Preload on hover
                     isActive={isActive}
                     index={index}
                     moveItem={reorderCompleteItems}

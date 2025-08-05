@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-// Removed Firebase imports - now using API endpoints
 import UnifiedLoader from '../../components/ui/unified-loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
-
-
 import { useAuth } from '../../providers/AuthProvider';
 import { PageProvider } from '../../contexts/PageContext';
-import { getUserSubscriptionTier } from '../../utils/userUtils';
+import { useOptimizedUserProfile } from '../../hooks/useOptimizedUserProfile';
 
 interface UserPageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -31,89 +28,29 @@ export default function UserPage({ params }: UserPageProps) {
   const { id } = unwrappedParams;
   const router = useRouter();
   const { user } = useAuth();
-  // Payments are always enabled - no feature flag needed
 
-  const [profile, setProfile] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // 🚀 OPTIMIZATION: Use cached user profile hook for instant navigation
+  const {
+    profile,
+    loading: isLoading,
+    error,
+    isFromCache
+  } = useOptimizedUserProfile(id, {
+    backgroundRefresh: true,
+    cacheTTL: 10 * 60 * 1000, // 10 minutes cache for smooth navigation
+    includeSubscription: true
+  });
 
-  // Use the same subscription data pipeline as page headers
-  const fetchUserSubscription = async (userId) => {
-    try {
-      const subscriptionData = await getUserSubscriptionTier(userId);
-      return subscriptionData;
-    } catch (error) {
-      console.error('Error fetching user subscription:', error);
-      return { tier: null, status: null, amount: null };
-    }
-  };
-
+  // 🚀 OPTIMIZATION: Log cache performance for monitoring
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        console.warn('🔍 User page: Fetching user data', {
-          id,
-          currentAccountEmail: user?.email,
-          currentAccountUid: user?.uid,
-          timestamp: new Date().toISOString()
-        });
-
-        // Use API endpoint to get user profile (works in both dev and prod)
-        const response = await fetch(`/api/users/profile?id=${encodeURIComponent(id)}`);
-
-        let userData = null;
-        let userId = id;
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            userData = result.data;
-            userId = userData.uid || userData.id;
-          } else {
-            console.warn('API returned error for user profile:', result.error);
-          }
-        } else {
-          console.warn('User profile API request failed:', response.status, response.statusText);
-        }
-
-        if (userData) {
-          // Get user's subscription to check for supporter tier
-          let subscription = null;
-          console.warn('🔍 User page: Fetching subscription data for user', userId);
-          subscription = await fetchUserSubscription(userId);
-          console.warn('🔍 User profile subscription data:', {
-            userId,
-            subscription,
-            tier: subscription?.tier,
-            status: subscription?.status,
-            amount: subscription?.amount
-          });
-
-          setProfile({
-            uid: userId,
-            ...userData,
-            tier: subscription?.tier || null,
-            subscriptionStatus: subscription?.status || null,
-            subscriptionAmount: subscription?.amount || null
-          });
-          setIsLoading(false);
-          return;
-        }
-
-
-
-        // User not found by either ID or username
-        setError('User not found');
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        setError('Error loading user profile');
-        setIsLoading(false);
-      }
+    if (profile) {
+      console.log(`🚀 User profile loaded for ${id}:`, {
+        username: profile.username,
+        fromCache: isFromCache,
+        loadTime: isFromCache ? 'instant' : 'fresh'
+      });
     }
-
-    fetchUser();
-  }, [id, router]);
+  }, [profile, isFromCache, id]);
 
   useEffect(() => {
     if (profile && profile.username) {
