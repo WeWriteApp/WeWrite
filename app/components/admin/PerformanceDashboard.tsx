@@ -51,8 +51,10 @@ export function PerformanceDashboard() {
 
   useEffect(() => {
     loadPerformanceData();
-    const interval = setInterval(loadPerformanceData, 30000); // Update every 30s
-    return () => clearInterval(interval);
+    // 🚨 EMERGENCY: Disable auto-refresh to stop 13K reads/min crisis
+    // const interval = setInterval(loadPerformanceData, 30000); // Update every 30s
+    // return () => clearInterval(interval);
+    console.warn('🚨 EMERGENCY: PerformanceDashboard auto-refresh disabled to stop database read crisis');
   }, []);
 
   const loadPerformanceData = async () => {

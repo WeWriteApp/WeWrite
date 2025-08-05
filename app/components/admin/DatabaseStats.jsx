@@ -77,12 +77,12 @@ export default function DatabaseStats() {
   useEffect(() => {
     fetchStats();
 
-    // Set up interval to refresh stats
-    const interval = setInterval(() => {
-      setQueryStats(getQueryStats());
-    }, 5000);
-
-    return () => clearInterval(interval);
+    // 🚨 EMERGENCY: Disable auto-refresh to stop 13K reads/min crisis
+    // const interval = setInterval(() => {
+    //   setQueryStats(getQueryStats());
+    // }, 5000);
+    // return () => clearInterval(interval);
+    console.warn('🚨 EMERGENCY: DatabaseStats auto-refresh disabled to stop database read crisis');
   }, []);
 
   if (loading) {

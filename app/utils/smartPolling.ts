@@ -37,38 +37,38 @@ class SmartPollingManager {
 
   // Default configurations for different data types
   private readonly DEFAULT_CONFIGS: Record<string, PollingConfig> = {
-    // Critical data - frequent polling
+    // 🚨 EMERGENCY: Critical data - MUCH slower polling to stop 13K reads/min
     critical: {
-      baseInterval: 15000,      // 15 seconds
-      maxInterval: 120000,      // 2 minutes
-      backoffMultiplier: 1.5,
+      baseInterval: 300000,     // 5 minutes (was 15s)
+      maxInterval: 1200000,     // 20 minutes
+      backoffMultiplier: 3.0,   // More aggressive backoff
       activityThreshold: 300000, // 5 minutes
       enableBackoff: true
     },
-    
-    // High priority data - moderate polling
+
+    // 🚨 EMERGENCY: High priority data - very slow polling
     high: {
-      baseInterval: 30000,      // 30 seconds
-      maxInterval: 300000,      // 5 minutes
-      backoffMultiplier: 2,
+      baseInterval: 600000,     // 10 minutes (was 30s)
+      maxInterval: 1800000,     // 30 minutes
+      backoffMultiplier: 4.0,   // Much more aggressive
       activityThreshold: 600000, // 10 minutes
       enableBackoff: true
     },
     
-    // Medium priority data - slower polling
+    // 🚨 EMERGENCY: Medium priority data - extremely slow polling
     medium: {
-      baseInterval: 60000,      // 1 minute
-      maxInterval: 600000,      // 10 minutes
-      backoffMultiplier: 2,
+      baseInterval: 900000,     // 15 minutes (was 1min)
+      maxInterval: 2700000,     // 45 minutes
+      backoffMultiplier: 5.0,   // Very aggressive
       activityThreshold: 900000, // 15 minutes
       enableBackoff: true
     },
-    
-    // Low priority data - very slow polling
+
+    // 🚨 EMERGENCY: Low priority data - minimal polling
     low: {
-      baseInterval: 300000,     // 5 minutes
-      maxInterval: 1800000,     // 30 minutes
-      backoffMultiplier: 2,
+      baseInterval: 1800000,    // 30 minutes (was 5min)
+      maxInterval: 7200000,     // 2 hours
+      backoffMultiplier: 6.0,   // Extremely aggressive
       activityThreshold: 1800000, // 30 minutes
       enableBackoff: true
     }

@@ -120,10 +120,11 @@ export function PayoutSystemMonitor() {
 
   useEffect(() => {
     refreshData();
-    
-    // Set up auto-refresh every 60 seconds (payouts are less frequent than payments)
-    const interval = setInterval(refreshData, 60000);
-    return () => clearInterval(interval);
+
+    // 🚨 EMERGENCY: Disable auto-refresh to stop 13K reads/min crisis
+    // const interval = setInterval(refreshData, 60000);
+    // return () => clearInterval(interval);
+    console.warn('🚨 EMERGENCY: PayoutSystemMonitor auto-refresh disabled to stop database read crisis');
   }, []);
 
   const getAlertIcon = (type: string) => {

@@ -74,8 +74,10 @@ export function DatabaseReadsWidget() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
+    // 🚨 EMERGENCY: Disable auto-refresh to stop 13K reads/min crisis
+    // const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+    // return () => clearInterval(interval);
+    console.warn('🚨 EMERGENCY: DatabaseReadsWidget auto-refresh disabled to stop database read crisis');
   }, []);
 
   const getStatusColor = (status: string) => {

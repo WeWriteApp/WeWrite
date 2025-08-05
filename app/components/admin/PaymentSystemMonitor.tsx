@@ -168,9 +168,10 @@ export function PaymentSystemMonitor() {
     if (isAuthenticated && user) {
       refreshData();
 
-      // Set up auto-refresh every 30 seconds
-      const interval = setInterval(refreshData, 30000);
-      return () => clearInterval(interval);
+      // 🚨 EMERGENCY: Disable auto-refresh to stop 13K reads/min crisis
+      // const interval = setInterval(refreshData, 30000);
+      // return () => clearInterval(interval);
+      console.warn('🚨 EMERGENCY: PaymentSystemMonitor auto-refresh disabled to stop database read crisis');
     } else {
       setLoading(false);
     }

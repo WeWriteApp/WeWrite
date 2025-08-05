@@ -171,6 +171,11 @@ class VisitorTrackingService {
    * @param isAuthenticated - Whether the visitor is authenticated
    */
   async trackVisitor(userId?: string, isAuthenticated: boolean = false): Promise<void> {
+    // 🚨 EMERGENCY: Completely disable visitor tracking to stop 13K reads/min crisis
+    console.warn('🚨 EMERGENCY: Visitor tracking completely disabled to stop database read crisis');
+    return; // Exit early to prevent any database operations
+
+    /* DISABLED FOR EMERGENCY COST OPTIMIZATION
     try {
       // Check if already tracking this session
       if (this.isTracking && this.currentAccount) {
@@ -180,6 +185,7 @@ class VisitorTrackingService {
         }
         return;
       }
+    */
 
       // Generate browser fingerprint
       const fingerprint = await BotDetectionService.generateFingerprint();

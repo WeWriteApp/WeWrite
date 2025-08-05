@@ -91,14 +91,16 @@ export function DatabaseReadOptimizationDashboard() {
     }
   };
 
-  // Auto-refresh effect
+  // 🚨 EMERGENCY: Disable auto-refresh to stop 13K reads/min crisis
   useEffect(() => {
     fetchAnalysis();
-    
-    if (autoRefresh) {
-      const interval = setInterval(fetchAnalysis, 30000); // 30 seconds
-      return () => clearInterval(interval);
-    }
+
+    // DISABLED: Auto-refresh causing excessive database reads
+    // if (autoRefresh) {
+    //   const interval = setInterval(fetchAnalysis, 30000); // 30 seconds
+    //   return () => clearInterval(interval);
+    // }
+    console.warn('🚨 EMERGENCY: DatabaseReadOptimizationDashboard auto-refresh disabled to stop database read crisis');
   }, [autoRefresh]);
 
   // Manual optimization trigger
