@@ -264,38 +264,6 @@ class OptimizedNotificationsService {
     console.warn('🚨 EMERGENCY: WebSocket notifications disabled to prevent connection failures');
     // DISABLED: WebSocket connections to prevent excessive retry attempts
     return;
-      
-      this.websocket.onopen = () => {
-        console.log('🔔 [OptimizedNotifications] WebSocket connected');
-        this.reconnectAttempts = 0;
-        this.isConnecting = false;
-      };
-      
-      this.websocket.onmessage = (event) => {
-        try {
-          const update: NotificationUpdate = JSON.parse(event.data);
-          this.handleWebSocketUpdate(update);
-        } catch (error) {
-          console.error('🔔 [OptimizedNotifications] Error parsing WebSocket message:', error);
-        }
-      };
-      
-      this.websocket.onclose = () => {
-        console.log('🔔 [OptimizedNotifications] WebSocket disconnected');
-        this.websocket = null;
-        this.isConnecting = false;
-        this.scheduleReconnect();
-      };
-      
-      this.websocket.onerror = (error) => {
-        console.error('🔔 [OptimizedNotifications] WebSocket error:', error);
-      };
-      
-    } catch (error) {
-      console.error('🔔 [OptimizedNotifications] Failed to initialize WebSocket:', error);
-      this.isConnecting = false;
-      this.scheduleReconnect();
-    }
   }
 
   /**
