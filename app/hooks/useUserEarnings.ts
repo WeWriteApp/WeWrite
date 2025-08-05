@@ -18,7 +18,7 @@ interface CachedEarnings {
 
 // Global cache for earnings data - shared across all components
 const earningsCache = new Map<string, CachedEarnings>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 30 * 60 * 1000; // 🚨 EMERGENCY: 30 minutes (was 5 minutes) to reduce earnings API reads by 80%
 const STALE_WHILE_REVALIDATE_DURATION = 30 * 1000; // 30 seconds
 
 export function useUserEarnings(): { earnings: UserEarnings | null; loading: boolean; error: string | null; refresh: () => Promise<void> } {

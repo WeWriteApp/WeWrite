@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import Header from '../components/layout/Header';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import RandomPages from '../components/features/RandomPages';
 import { Shuffle, MoreHorizontal, Grid3X3, UserX } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '../components/ui/dropdown-menu';
-import MobileBottomNav from '../components/layout/MobileBottomNav';
 import { RandomPagesSkeleton } from '../components/ui/skeleton-loaders';
 
 /**
@@ -102,25 +101,11 @@ export default function RandomPagesPage() {
     window.dispatchEvent(shuffleEvent);
   };
 
-  // Show progressive loading state during hydration - show page structure immediately
+  // Show progressive loading state during hydration
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Show page structure immediately */}
-        <div className="p-5 md:p-4">
-          {/* Navigation header skeleton */}
-          <div className="flex items-center mb-6">
-            <div className="flex-1">
-              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
-            </div>
-            <div className="flex-1 flex justify-center">
-              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
-            </div>
-            <div className="flex-1 flex justify-end">
-              <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
-            </div>
-          </div>
-
+      <NavPageLayout loading={true} loadingFallback={
+        <div>
           {/* Page header skeleton */}
           <div className="text-center mb-8">
             <div className="h-10 w-48 bg-muted rounded-md mx-auto mb-4 animate-pulse" />
@@ -141,7 +126,7 @@ export default function RandomPagesPage() {
             <RandomPagesSkeleton limit={20} />
           </div>
         </div>
-      </div>
+      } />
     );
   }
 
@@ -229,12 +214,7 @@ export default function RandomPagesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      {/* Main content area */}
-      <main className="transition-all duration-300 ease-in-out">
-        <div className="container mx-auto px-4 py-6">
+    <NavPageLayout>
           {/* Page Header with Controls */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -306,11 +286,6 @@ export default function RandomPagesPage() {
               </p>
             </div>
           </div>
-        </div>
-      </main>
-
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
-    </div>
+    </NavPageLayout>
   );
 }

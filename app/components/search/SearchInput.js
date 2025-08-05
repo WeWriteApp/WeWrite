@@ -166,7 +166,7 @@ const SearchInput = ({
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full pl-10 pr-12 rounded-2xl"
+          className="w-full pl-10 pr-12"
           autoComplete="off"
         />
 

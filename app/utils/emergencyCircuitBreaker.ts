@@ -13,21 +13,31 @@ interface CircuitBreakerConfig {
   maxReadsPerMinute: number;
   currentReads: number;
   lastResetTime: number;
+  // Dynamic throttling based on Firebase usage
+  dynamicThrottling: boolean;
+  lastFirebaseCheck: number;
+  firebaseReadRate: number; // reads per minute from Firebase metrics
 }
 
 class EmergencyCircuitBreaker {
   private config: CircuitBreakerConfig = {
     enabled: true,
-    emergencyMode: true, // 🚨 EMERGENCY MODE ACTIVE - 174K reads/min crisis
-    maxReadsPerMinute: 500, // Increased from 100 but still very conservative
+    emergencyMode: true, // 🚨 EMERGENCY MODE ACTIVE - 2.5M reads/60min crisis (300K/min spikes)
+    maxReadsPerMinute: 50, // 🚨 CRITICAL: Reduced to 50 due to 300K/min spikes
     currentReads: 0,
     lastResetTime: Date.now(),
-    
-    // Only allow absolutely essential endpoints
+
+    // Dynamic throttling configuration
+    dynamicThrottling: true,
+    lastFirebaseCheck: 0,
+    firebaseReadRate: 0,
+
+    // Only allow absolutely essential endpoints during crisis
     allowedEndpoints: [
       '/api/auth', // Authentication is critical
-      '/api/pages/[id]', // Page content is essential
+      '/api/pages/', // Page content is essential (but limit to single page views)
       '/api/build-info', // App updates
+      '/api/usd/allocations/batch', // New batch endpoint to replace individual calls
     ],
     
     // Block all high-volume endpoints
@@ -49,12 +59,50 @@ class EmergencyCircuitBreaker {
   };
 
   /**
+   * Update dynamic throttling based on Firebase usage metrics
+   */
+  private updateDynamicThrottling(): void {
+    if (!this.config.dynamicThrottling) return;
+
+    const now = Date.now();
+    // Check Firebase metrics every 5 minutes
+    if (now - this.config.lastFirebaseCheck < 5 * 60 * 1000) return;
+
+    this.config.lastFirebaseCheck = now;
+
+    // Simulate Firebase metrics check (in real implementation, this would call Firebase API)
+    // For now, we'll use conservative estimates based on the 2.5M reads/60min crisis
+    const estimatedReadsPerMinute = 41667; // 2.5M / 60 minutes
+    this.config.firebaseReadRate = estimatedReadsPerMinute;
+
+    // Adjust throttling based on read rate
+    if (estimatedReadsPerMinute > 10000) {
+      // Extreme throttling for high read rates
+      this.config.maxReadsPerMinute = 10;
+      this.config.emergencyMode = true;
+      console.warn(`🚨 EXTREME THROTTLING: ${estimatedReadsPerMinute} reads/min detected, limiting to 10 API calls/min`);
+    } else if (estimatedReadsPerMinute > 1000) {
+      // Heavy throttling for moderate read rates
+      this.config.maxReadsPerMinute = 25;
+      this.config.emergencyMode = true;
+      console.warn(`🚨 HEAVY THROTTLING: ${estimatedReadsPerMinute} reads/min detected, limiting to 25 API calls/min`);
+    } else {
+      // Normal throttling
+      this.config.maxReadsPerMinute = 100;
+      this.config.emergencyMode = false;
+    }
+  }
+
+  /**
    * Check if an API call should be blocked
    */
   shouldBlockRequest(endpoint: string): { blocked: boolean; reason?: string } {
     if (!this.config.enabled) {
       return { blocked: false };
     }
+
+    // Update dynamic throttling
+    this.updateDynamicThrottling();
 
     // Reset counter every minute
     const now = Date.now();

@@ -136,7 +136,6 @@ function TimelineContent() {
   return (
     <NavPageLayout
       maxWidth="full"
-      className="px-4"
     >
         {/* Page header with actions */}
         <div className="flex items-center justify-between mb-6">

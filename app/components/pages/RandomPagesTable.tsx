@@ -136,16 +136,17 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         )}
 
         <div className="border-b border-theme-medium bg-muted/30 p-4">
-          <div className="grid grid-cols-[1fr_200px_150px] gap-4 text-sm font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4 text-sm font-medium text-muted-foreground">
             <div>Title</div>
             <div>Author</div>
             <div>Last Edited</div>
+            <div>Allocation</div>
           </div>
         </div>
         <div className="divide-y divide-theme-medium">
           {pages.map((page) => (
             <div key={page.id} className="p-4 hover:bg-muted/30 transition-colors">
-              <div className="grid grid-cols-[1fr_200px_150px] gap-4 items-center">
+              <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4 items-center">
                 {/* Title Column - Flexible width with proper truncation */}
                 <div className="min-w-0 overflow-hidden">
                   <div className="max-w-full flex items-center gap-2">
@@ -181,6 +182,16 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                       }
                     })()}
                   </span>
+                </div>
+
+                {/* Allocation Column */}
+                <div className="min-w-0">
+                  <EmbeddedAllocationBar
+                    pageId={page.id}
+                    authorId={page.userId}
+                    pageTitle={page.title}
+                    source="RandomPages"
+                  />
                 </div>
               </div>
             </div>

@@ -112,6 +112,16 @@ export default function UserPage({ params }: UserPageProps) {
     );
   }
 
+  // Additional safety check - don't render if profile is null
+  if (!profile) {
+    return (
+      <UnifiedLoader
+        isLoading={true}
+        message="Loading user profile..."
+      />
+    );
+  }
+
   return (
     <>
       {/* ...existing profile rendering... */}

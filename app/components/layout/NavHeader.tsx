@@ -6,7 +6,6 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { ChevronLeft, DollarSign, Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { useSidebarContext } from "./UnifiedSidebar";
 import { Logo } from "../ui/Logo";
 import { useAuth } from '../../providers/AuthProvider';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
@@ -36,21 +35,9 @@ export default function NavHeader({
 }: NavHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
   const { earnings, loading: earningsLoading } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
-
-  // Calculate header positioning width - should match other headers
-  const headerSidebarWidth = React.useMemo(() => {
-    if (isExpanded) {
-      return sidebarWidth; // Use full expanded width (256px)
-    } else if (sidebarWidth > 0) {
-      return 64; // Use collapsed width (64px) for collapsed state
-    } else {
-      return 0; // No sidebar (user not authenticated)
-    }
-  }, [isExpanded, sidebarWidth]);
 
   // Helper function to render earnings display (same as homepage)
   const renderEarningsDisplay = () => {
@@ -132,28 +119,28 @@ export default function NavHeader({
           onClick={() => router.push('/settings/spend')}
           title="Loading balance..."
         >
-          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-          <span>Loading</span>
+          <Loader2 className="h-3 w-3 animate-spin mr-1 flex-shrink-0" />
+          <span className="flex items-center">Loading</span>
         </Badge>
       );
     }
 
-    // Show "Add Funds" button if user has no active subscription or zero USD
+    // Show "Add Funds" badge if user has no active subscription or zero USD
     const shouldShowAddFunds = hasActiveSubscription === false ||
       (usdBalance && usdBalance.totalUsdCents === 0) ||
       (!usdBalance && !usdLoading);
 
     if (shouldShowAddFunds) {
       return (
-        <Button
-          variant="outline"
-          size="sm"
+        <Badge
+          variant="secondary"
+          className="cursor-pointer hover:bg-secondary/80 transition-colors text-sm"
           onClick={() => router.push('/settings/fund-account')}
-          className="text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+          title="Click to add funds"
         >
-          <DollarSign className="h-4 w-4 mr-2" />
-          Add Funds
-        </Button>
+          <DollarSign className="h-3 w-3 mr-1 flex-shrink-0" />
+          <span className="flex items-center">Add Funds</span>
+        </Badge>
       );
     }
 
@@ -217,21 +204,21 @@ export default function NavHeader({
 
 
   return (
-    <div className={`flex flex-col pt-8 pb-6 ${className}`}>
-      {/* Use the same layout approach as other headers for consistent spacing */}
-      <div className="flex w-full">
-        {/* Sidebar spacer - only on desktop, matches other headers */}
-        <div
-          className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
-          style={{ width: `${headerSidebarWidth}px` }}
-        />
-
-        {/* Header content area - matches homepage layout with money elements */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center h-14 px-3 sm:px-4 md:px-6">
+    <header
+      data-component="nav-header"
+      className={`fixed top-0 z-[70] w-full bg-background border-b border-border transition-all duration-300 ease-in-out ${className}`}
+      style={{
+        transform: 'translateZ(0)', // Force GPU acceleration
+        height: '56px', // Explicit height to ensure consistency
+      }}
+    >
+        {/* Header content area - matches page content width and padding */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
             {/* Spend/Overspend Display (left side) */}
-            <div className="flex-1 flex justify-start">
-              {renderSpendDisplay()}
+            <div className="flex-1 flex justify-start items-center">
+              <div className="flex items-center">
+                {renderSpendDisplay()}
+              </div>
             </div>
 
             {/* Logo/Title (centered) - clickable to go home */}
@@ -245,16 +232,12 @@ export default function NavHeader({
             </div>
 
             {/* Earnings Display (right side) */}
-            <div className="flex-1 flex justify-end">
-              {renderEarningsDisplay()}
+            <div className="flex-1 flex justify-end items-center">
+              <div className="flex items-center">
+                {renderEarningsDisplay()}
+              </div>
             </div>
-          </div>
         </div>
-      </div>
-
-
-
-      {/* Mobile overflow sidebar functionality moved to MobileBottomNav */}
-    </div>
+    </header>
   );
 }

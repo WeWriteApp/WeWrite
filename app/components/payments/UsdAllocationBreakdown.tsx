@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
 import {
   Trash2,
@@ -53,9 +52,69 @@ export function UsdAllocationBreakdown({
   showSectionHeader = true
 }: UsdAllocationBreakdownProps) {
   const [showAll, setShowAll] = useState(false);
+  const [stableSortedOrder, setStableSortedOrder] = useState<string[]>([]);
+  const sortTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sort allocations by amount (highest first)
-  const sortedAllocations = [...allocations].sort((a, b) => b.usdCents - a.usdCents);
+  // Function to get the correct sort order
+  const getSortedOrder = (allocs: EnhancedUsdAllocation[]) => {
+    return [...allocs]
+      .sort((a, b) => b.usdCents - a.usdCents)
+      .map(a => a.id);
+  };
+
+  // Initialize stable order on first load
+  useEffect(() => {
+    if (allocations.length > 0 && stableSortedOrder.length === 0) {
+      setStableSortedOrder(getSortedOrder(allocations));
+    }
+  }, [allocations, stableSortedOrder.length]);
+
+  // Handle delayed sorting when allocations change
+  useEffect(() => {
+    if (stableSortedOrder.length === 0) return;
+
+    const newSortOrder = getSortedOrder(allocations);
+    const currentOrder = stableSortedOrder;
+
+    // Check if order needs to change
+    const orderChanged = !newSortOrder.every((id, index) => id === currentOrder[index]);
+
+    if (orderChanged) {
+      // Clear any existing timeout
+      if (sortTimeoutRef.current) {
+        clearTimeout(sortTimeoutRef.current);
+      }
+
+      // Set new timeout for delayed sorting
+      sortTimeoutRef.current = setTimeout(() => {
+        setStableSortedOrder(newSortOrder);
+      }, 500); // 500ms delay
+    }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (sortTimeoutRef.current) {
+        clearTimeout(sortTimeoutRef.current);
+      }
+    };
+  }, [allocations, stableSortedOrder]);
+
+  // Get sorted allocations using stable order
+  const sortedAllocations = useMemo(() => {
+    if (stableSortedOrder.length === 0) {
+      // Fallback to immediate sort if no stable order yet
+      return [...allocations].sort((a, b) => b.usdCents - a.usdCents);
+    }
+
+    // Sort according to stable order, with updated values
+    const sorted = stableSortedOrder
+      .map(id => allocations.find(a => a.id === id))
+      .filter(Boolean) as EnhancedUsdAllocation[];
+
+    // Add any new allocations that aren't in the stable order yet
+    const newAllocations = allocations.filter(a => !stableSortedOrder.includes(a.id));
+    return [...sorted, ...newAllocations];
+  }, [allocations, stableSortedOrder]);
   
   // Calculate totals
   const totalAllocatedCents = allocations.reduce((sum, allocation) => sum + allocation.usdCents, 0);
@@ -65,19 +124,7 @@ export function UsdAllocationBreakdown({
   const visibleAllocations = showAll ? sortedAllocations : sortedAllocations.slice(0, maxVisible);
   const hasMore = sortedAllocations.length > maxVisible;
 
-  // Get resource type label
-  const getResourceTypeLabel = (resourceType: string) => {
-    switch (resourceType) {
-      case 'user':
-        return 'User';
-      case 'page':
-        return 'Page';
-      case 'wewrite':
-        return 'WeWrite';
-      default:
-        return 'Unknown';
-    }
-  };
+
 
   // Handle empty state
   if (allocations.length === 0) {
@@ -126,127 +173,122 @@ export function UsdAllocationBreakdown({
               {allocations.length} allocation{allocations.length !== 1 ? 's' : ''} • {formatUsdCents(totalAllocatedCents)} total
             </p>
           </div>
-          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-            {((totalAllocatedCents / totalUsdCents) * 100).toFixed(1)}% allocated
-          </Badge>
         </div>
       )}
 
       {/* Allocation list */}
-      <div className="space-y-2">
+      <div className="space-y-2 transition-all duration-500 ease-in-out">
         {visibleAllocations.map((allocation) => {
           const percentage = totalUsdCents > 0 ? (allocation.usdCents / totalUsdCents) * 100 : 0;
 
           return (
             <div
               key={allocation.id}
-              className="p-2 sm:p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors space-y-2"
+              className="relative p-4 sm:p-6 bg-card border border-border rounded-xl hover:shadow-sm transition-all duration-500 ease-in-out space-y-4"
+              style={{
+                transform: 'translateZ(0)', // Force GPU acceleration for smooth animations
+                willChange: 'transform, opacity'
+              }}
             >
-              {/* Top row: Resource info and amount */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                  {/* Resource info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      {allocation.resourceType === 'wewrite' ? (
-                        <p className="font-medium truncate text-sm sm:text-base">WeWrite Platform</p>
-                      ) : allocation.resourceType === 'user' ? (
-                        <div className="flex items-center space-x-1">
-                          <PillLink href={`/user/${allocation.authorUsername || allocation.resourceId}`}>
-                            {allocation.authorUsername || allocation.resourceId}
-                          </PillLink>
-                          <span className="text-xs sm:text-sm text-muted-foreground">(User)</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-1">
-                          <PillLink href={`/${allocation.resourceId}`}>
-                            {allocation.pageTitle || allocation.resourceId}
-                          </PillLink>
-                          {allocation.authorUsername && (
-                            <>
-                              <span className="text-xs sm:text-sm text-muted-foreground">by</span>
-                              <PillLink href={`/user/${allocation.authorUsername}`}>
-                                {allocation.authorUsername}
-                              </PillLink>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                        {allocation.resourceType !== 'user' && (
-                          <Badge variant="outline" className="text-xs self-start sm:self-auto">
-                            {getResourceTypeLabel(allocation.resourceType)}
-                          </Badge>
-                        )}
-                      </div>
+              {/* Top row: Resource info with trash icon in top right */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  {allocation.resourceType === 'wewrite' ? (
+                    <p className="font-medium truncate text-sm sm:text-base">WeWrite Platform</p>
+                  ) : allocation.resourceType === 'user' ? (
+                    <div className="flex items-center space-x-1">
+                      <PillLink href={`/user/${allocation.authorUsername || allocation.resourceId}`}>
+                        {allocation.authorUsername || allocation.resourceId}
+                      </PillLink>
+                      <span className="text-xs sm:text-sm text-muted-foreground">(User)</span>
                     </div>
-                  </div>
-
-                  {/* Amount and percentage */}
-                  <div className="flex items-center space-x-1 text-xs sm:text-sm text-muted-foreground self-start sm:self-auto">
-                    <span className="font-semibold text-sm">{formatUsdCents(allocation.usdCents)}</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="text-xs">{percentage.toFixed(1)}%</span>
-                  </div>
-                </div>
-
-                {/* Middle row: Plus/Minus buttons and composition bar */}
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  {/* Plus/Minus buttons */}
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 sm:h-7 sm:w-7 p-0"
-                      title="Decrease allocation"
-                      onClick={() => onDecreaseAllocation?.(allocation)}
-                      disabled={!onDecreaseAllocation}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 sm:h-7 sm:w-7 p-0"
-                      title="Increase allocation"
-                      onClick={() => onIncreaseAllocation?.(allocation)}
-                      disabled={!onIncreaseAllocation}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-
-                  {/* Composition bar - styled like AllocationBar */}
-                  <div className="flex-1 h-8 flex gap-1 items-center bg-muted/20 rounded-md p-1">
-                    {/* Allocated portion */}
-                    {percentage > 0 && (
-                      <div
-                        className="h-full bg-primary rounded-md transition-all duration-300 ease-out"
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                      />
-                    )}
-                    {/* Remaining portion */}
-                    {percentage < 100 && (
-                      <div
-                        className="h-full bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
-                        style={{ width: `${100 - Math.min(percentage, 100)}%` }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Actions - moved to same row on mobile */}
-                  {showActions && onRemoveAllocation && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRemoveAllocation(allocation)}
-                      className="h-8 w-8 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive flex-shrink-0"
-                      title="Remove allocation"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-1 flex-wrap">
+                      <PillLink href={`/${allocation.resourceId}`}>
+                        {allocation.pageTitle || allocation.resourceId}
+                      </PillLink>
+                      {allocation.authorUsername && (
+                        <>
+                          <span className="text-xs sm:text-sm text-muted-foreground">by</span>
+                          <PillLink href={`/user/${allocation.authorUsername}`}>
+                            {allocation.authorUsername}
+                          </PillLink>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
+
+                {/* Trash icon in top right */}
+                {showActions && onRemoveAllocation && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemoveAllocation(allocation)}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive flex-shrink-0"
+                    title="Remove allocation"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Current allocation amount - centered above the bar */}
+              <div className="text-center">
+                <span className="text-lg font-semibold">{formatUsdCents(allocation.usdCents)}</span>
+                <span className="text-xs text-muted-foreground ml-1">/mo</span>
+              </div>
+
+              {/* Three-part allocation bar with minus/plus buttons */}
+              <div className="flex items-center gap-2">
+                {/* Minus button on left */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 flex-shrink-0"
+                  title="Decrease allocation"
+                  onClick={() => onDecreaseAllocation?.(allocation)}
+                  disabled={!onDecreaseAllocation}
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+
+                {/* Three-part composition bar in middle */}
+                <div className="flex-1 h-8 relative bg-muted/20 rounded-md overflow-hidden">
+                  {/* Background composition bar with three sections */}
+                  <div className="absolute inset-0 flex gap-1 p-1">
+                    {/* Other allocations (left section) - muted */}
+                    <div
+                      className="bg-muted-foreground/30 rounded-sm transition-all duration-300 ease-out"
+                      style={{ width: `${Math.max(0, (totalUsdCents - allocation.usdCents - (totalUsdCents - totalAllocatedCents)) / totalUsdCents * 100)}%` }}
+                    />
+
+                    {/* Current allocation (center section) - primary color */}
+                    <div
+                      className="bg-primary rounded-sm transition-all duration-300 ease-out"
+                      style={{ width: `${(allocation.usdCents / totalUsdCents) * 100}%` }}
+                    />
+
+                    {/* Available funds (right section) - light */}
+                    <div
+                      className="bg-muted-foreground/10 rounded-sm transition-all duration-300 ease-out"
+                      style={{ width: `${((totalUsdCents - totalAllocatedCents) / totalUsdCents) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Plus button on right */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 flex-shrink-0"
+                  title="Increase allocation"
+                  onClick={() => onIncreaseAllocation?.(allocation)}
+                  disabled={!onIncreaseAllocation}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
               </div>
             );
       })}
@@ -322,9 +364,7 @@ export function UsdAllocationBreakdown({
                 {allocations.length} allocation{allocations.length !== 1 ? 's' : ''} • {formatUsdCents(totalAllocatedCents)} total
               </CardDescription>
             </div>
-            <Badge variant="secondary" className="bg-green-100 text-green-800 self-start sm:self-auto text-xs">
-              {((totalAllocatedCents / totalUsdCents) * 100).toFixed(1)}% allocated
-            </Badge>
+
           </div>
         </CardHeader>
         <CardContent className="space-y-3 px-3 sm:px-4 pb-3">

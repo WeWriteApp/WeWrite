@@ -155,7 +155,7 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full pl-10 pr-10 rounded-2xl"
+          className="w-full pl-10 pr-10"
           autoComplete="off"
         />
 
@@ -399,6 +399,12 @@ const SearchPage = React.memo(() => {
         }}
       />
 
+      {/* Page header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Search</h1>
+        <p className="text-muted-foreground">Find pages, users, and content across WeWrite</p>
+      </div>
+
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput
         initialValue={currentQuery || initialQuery}
@@ -431,7 +437,7 @@ const SearchPage = React.memo(() => {
             variant="outline"
             size="sm"
             onClick={shareSearchUrl}
-            className="flex items-center gap-2 rounded-2xl"
+            className="flex items-center gap-2"
             aria-label="Share search results"
           >
             <Share2 className="h-4 w-4" />

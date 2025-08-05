@@ -3,13 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Check, X, RefreshCw } from 'lucide-react';
+import { MoreVertical, Check, X, RefreshCw, Smartphone, Bell, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useNotifications } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
 import { Button } from '../ui/button';
 import { dismissEmailVerificationNotifications } from '../../services/emailVerificationNotifications';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
+import { updateNotificationCriticality, type NotificationCriticality } from '../../services/notificationsApi';
 
 /**
  * NotificationItem Component
@@ -122,6 +123,25 @@ export default function NotificationItem({ notification }) {
       setShowMenu(false);
     } catch (error) {
       console.error(`Failed to mark notification as unread:`, error);
+    }
+  };
+
+  const handleCriticalityChange = async (e, newCriticality: NotificationCriticality) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowMenu(false);
+
+    try {
+      await updateNotificationCriticality(notification.id, newCriticality);
+      trackNotificationInteraction('criticality_change', notification.type, {
+        new_criticality: newCriticality,
+        old_criticality: notification.criticality || 'normal'
+      });
+
+      // Refresh notifications to show updated criticality
+      // The NotificationProvider will handle the state update
+    } catch (error) {
+      console.error('Error updating notification criticality:', error);
     }
   };
 
@@ -501,6 +521,56 @@ export default function NotificationItem({ notification }) {
                       <span>Mark as read</span>
                     </button>
                   )}
+
+                  {/* Criticality Settings */}
+                  <div className="border-t border-border my-2"></div>
+                  <div className="px-4 py-1">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Notification Level
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={(e) => handleCriticalityChange(e, 'device')}
+                    className={cn(
+                      "flex items-center w-full px-4 py-2.5 text-sm hover:bg-muted transition-colors text-left whitespace-nowrap",
+                      (notification.criticality || 'normal') === 'device' ? "bg-primary/10 text-primary" : "text-foreground"
+                    )}
+                  >
+                    <Smartphone className="h-4 w-4 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span>Device notification</span>
+                      <div className="text-xs text-muted-foreground">Most critical</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={(e) => handleCriticalityChange(e, 'normal')}
+                    className={cn(
+                      "flex items-center w-full px-4 py-2.5 text-sm hover:bg-muted transition-colors text-left whitespace-nowrap",
+                      (notification.criticality || 'normal') === 'normal' ? "bg-primary/10 text-primary" : "text-foreground"
+                    )}
+                  >
+                    <Bell className="h-4 w-4 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span>Show in notifications</span>
+                      <div className="text-xs text-muted-foreground">Normal</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={(e) => handleCriticalityChange(e, 'hidden')}
+                    className={cn(
+                      "flex items-center w-full px-4 py-2.5 text-sm hover:bg-muted transition-colors text-left whitespace-nowrap",
+                      (notification.criticality || 'normal') === 'hidden' ? "bg-primary/10 text-primary" : "text-foreground"
+                    )}
+                  >
+                    <EyeOff className="h-4 w-4 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span>Hide notification</span>
+                      <div className="text-xs text-muted-foreground">Not critical</div>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}

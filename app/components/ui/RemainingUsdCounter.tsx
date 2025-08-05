@@ -65,13 +65,9 @@ export function RemainingFundsDisplay({
     : formatUsdCents(remainingUsdCents);
 
   return (
-    <div
-      className={`inline-flex items-center gap-2 cursor-pointer hover:bg-secondary/80 transition-colors text-sm px-2 py-1 rounded-md font-medium ${containerClasses} ${className} ${textColor}`}
-      title={titleText}
-      onClick={onClick}
-    >
-      {/* Pie Chart */}
-      <div className="relative">
+    <div className={`inline-flex items-center gap-2 cursor-pointer ${className}`} onClick={onClick} title={titleText}>
+      {/* Pie Chart - outside the chip */}
+      <div className="relative flex items-center">
         <svg
           width={size}
           height={size}
@@ -108,10 +104,10 @@ export function RemainingFundsDisplay({
         </svg>
       </div>
 
-      {/* Amount remaining text */}
-      <span>
-        {displayText}
-      </span>
+      {/* Dollar amount chip - separate from pie chart */}
+      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors text-sm font-semibold">
+        <span>{displayText}</span>
+      </div>
     </div>
   );
 }
@@ -137,7 +133,7 @@ export function OverspendWarningDisplay({
 
   return (
     <div
-      className={`inline-flex items-center gap-2 cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/80 transition-colors text-sm px-2 py-1 rounded-md font-medium ${className}`}
+      className={`inline-flex items-center gap-2 cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/80 transition-colors text-sm font-semibold px-2.5 py-0.5 rounded-full border-transparent ${className}`}
       onClick={onClick}
       title={titleText}
     >

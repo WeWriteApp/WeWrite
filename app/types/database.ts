@@ -415,13 +415,30 @@ export interface Notification {
 }
 
 export type NotificationType =
-  | 'page_mention'
-  | 'page_follow'
-  | 'system_announcement'
-  | 'email_verification'
+  // User interaction notifications
+  | 'follow'                    // User follows your page
+  | 'link'                      // User links to your page
+  | 'append'                    // User adds your page to their page
+  | 'page_mention'              // Page mentioned in another page
+  | 'page_follow'               // Page followed (different from user follow)
 
-  | 'payout_processed'
-  | 'payment_failed';
+  // System notifications
+  | 'system_announcement'       // System-wide announcements
+  | 'email_verification'        // Email verification required
+
+  // Payment notifications
+  | 'payment_failed'            // Subscription payment failed
+  | 'payment_failed_warning'    // Payment failure warning
+  | 'payment_failed_final'      // Final payment failure notice
+
+  // Payout notifications
+  | 'payout_initiated'          // Payout has been started
+  | 'payout_processing'         // Payout is being processed
+  | 'payout_completed'          // Payout completed successfully
+  | 'payout_failed'             // Payout failed
+  | 'payout_retry_scheduled'    // Payout retry scheduled
+  | 'payout_cancelled'          // Payout was cancelled
+  | 'payout_processed';         // Payout processed (legacy)
 
 // Feature flags have been removed - all features are now always enabled
 

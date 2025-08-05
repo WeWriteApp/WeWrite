@@ -318,8 +318,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="lg:ml-64 flex-1 overflow-auto">
+        {/* Main Content Area - Remove excessive left margin, content is already in safe zone */}
+        <div className="flex-1 overflow-auto">
           {children}
         </div>
       </div>

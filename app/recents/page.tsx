@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 
-import Header from '../components/layout/Header';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import RandomPagesTable from '../components/pages/RandomPagesTable';
 import EmptyState from '../components/ui/EmptyState';
 import { getRecentlyViewedPageIds } from '../utils/recentSearches';
@@ -56,7 +56,13 @@ export default function RecentsPage() {
               return null;
             }
 
-            const page = await response.json();
+            const result = await response.json();
+            if (!result.success || !result.pageData) {
+              console.warn(`Invalid response for page ${id}:`, result);
+              return null;
+            }
+
+            const page = result.pageData;
             return {
               id,
               title: page.title || 'Untitled',
@@ -99,17 +105,14 @@ export default function RecentsPage() {
   }
 
   return (
-    <>
-      <Header />
-      <main className="p-6 bg-background min-h-screen">
-        <div className="max-w-4xl mx-auto">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Recently Viewed</h1>
-            <p className="text-muted-foreground">
-              Pages you've viewed recently
-            </p>
-          </div>
+    <NavPageLayout>
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Recently Viewed</h1>
+        <p className="text-muted-foreground">
+          Pages you've viewed recently
+        </p>
+      </div>
 
           {/* Content */}
           {loading ? (
@@ -147,8 +150,6 @@ export default function RecentsPage() {
               />
             </div>
           )}
-        </div>
-      </main>
-    </>
+    </NavPageLayout>
   );
 }

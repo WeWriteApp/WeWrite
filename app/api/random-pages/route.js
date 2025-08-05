@@ -62,24 +62,125 @@ export async function GET(request) {
       }, { headers });
     }
 
-    // PERFORMANCE OPTIMIZATION: Use larger pool size when shuffling for more variety
-    let poolSize = Math.max(limitCount * 2, 20); // Base pool size
-    if (isShuffling) {
-      // When shuffling, use a much larger pool to ensure variety
-      poolSize = Math.max(limitCount * 4, 50);
-    }
-
     // Import environment config
     const { getCollectionName } = await import('../../utils/environmentConfig');
 
-    // Query for pages only with server-side filtering for deleted pages
-    // Use admin SDK query
-    // Note: All pages are now public, no need to filter by isPublic
-    let pagesQuery = db.collection(getCollectionName('pages'))
-      .orderBy('lastModified', 'desc')
-      .limit(poolSize);
+    // NEW APPROACH: User-first randomization for better diversity
+    // Instead of just shuffling recent pages (which favors prolific users),
+    // we first select a diverse set of users, then pick pages from those users.
+    // This ensures a more balanced representation across different authors.
 
-    const pagesSnapshot = await pagesQuery.get();
+    // Step 1: Get a diverse set of users by sampling from different time periods
+    const now = new Date();
+    const timeRanges = [
+      new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),   // Last 7 days
+      new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),  // Last 30 days
+      new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),  // Last 90 days
+    ];
+
+    const userSampleSize = Math.max(limitCount * 2, 30); // Get more users than needed
+    let allUsers = new Set();
+
+    // Sample users from different time periods to ensure diversity
+    for (const timeRange of timeRanges) {
+      try {
+        const userQuery = db.collection(getCollectionName('pages'))
+          .where('lastModified', '>=', timeRange.toISOString())
+          .orderBy('lastModified', 'desc')
+          .limit(userSampleSize);
+
+        const userSnapshot = await userQuery.get();
+
+        userSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.userId && !data.deleted) {
+            allUsers.add(data.userId);
+          }
+        });
+
+        // If we have enough users, break early
+        if (allUsers.size >= userSampleSize) break;
+      } catch (error) {
+        console.warn(`Error sampling users from time range ${timeRange.toISOString()}:`, error);
+      }
+    }
+
+    // Step 2: Randomly select a subset of users
+    const userArray = Array.from(allUsers);
+    const selectedUsers = [];
+    const targetUserCount = Math.min(limitCount, userArray.length);
+
+    // Fisher-Yates shuffle to randomly select users
+    const shuffledUsers = [...userArray];
+    for (let i = shuffledUsers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledUsers[i], shuffledUsers[j]] = [shuffledUsers[j], shuffledUsers[i]];
+    }
+
+    selectedUsers.push(...shuffledUsers.slice(0, targetUserCount));
+
+    console.log(`Random pages API: Selected ${selectedUsers.length} diverse users from ${userArray.length} total users`);
+
+    // Step 3: Get pages from selected users
+    const pagesPerUser = Math.ceil(limitCount * 1.5 / selectedUsers.length); // Get a few pages per user
+    let allPages = [];
+
+    for (const userId of selectedUsers) {
+      try {
+        const userPagesQuery = db.collection(getCollectionName('pages'))
+          .where('userId', '==', userId)
+          .orderBy('lastModified', 'desc')
+          .limit(pagesPerUser);
+
+        const userPagesSnapshot = await userPagesQuery.get();
+
+        userPagesSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (!data.deleted) {
+            allPages.push({
+              id: doc.id,
+              ...data
+            });
+          }
+        });
+      } catch (error) {
+        console.warn(`Error fetching pages for user ${userId}:`, error);
+      }
+    }
+
+    console.log(`Random pages API: Collected ${allPages.length} pages from ${selectedUsers.length} users`);
+
+    // Fallback: If we don't have enough pages, supplement with traditional approach
+    if (allPages.length < limitCount) {
+      console.log(`Random pages API: Insufficient pages (${allPages.length}), supplementing with traditional approach`);
+
+      const supplementQuery = db.collection(getCollectionName('pages'))
+        .orderBy('lastModified', 'desc')
+        .limit(limitCount * 2);
+
+      const supplementSnapshot = await supplementQuery.get();
+
+      supplementSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (!data.deleted && !allPages.some(p => p.id === doc.id)) {
+          allPages.push({
+            id: doc.id,
+            ...data
+          });
+        }
+      });
+
+      console.log(`Random pages API: After supplementing, have ${allPages.length} total pages`);
+    }
+
+    // Create a mock snapshot-like structure for compatibility with existing code
+    const pagesSnapshot = {
+      empty: allPages.length === 0,
+      docs: allPages.map(page => ({
+        id: page.id,
+        data: () => page
+      }))
+    };
 
     if (pagesSnapshot.empty) {
       console.log('No pages found');
@@ -91,10 +192,10 @@ export async function GET(request) {
 
     // Convert to array and filter deleted pages client-side
     let pages = [];
-    pagesSnapshot.forEach((doc) => {
+    pagesSnapshot.docs.forEach((doc) => {
       const pageData = doc.data();
 
-      // Filter out deleted pages client-side
+      // Filter out deleted pages client-side (already filtered above, but double-check)
       if (pageData.deleted === true) {
         return;
       }
@@ -202,8 +303,17 @@ export async function GET(request) {
     // Take only the requested number of pages
     const randomPages = shuffledPages.slice(0, limitCount);
 
+    // Log diversity metrics
+    const finalUniqueUsers = [...new Set(randomPages.map(page => page.userId).filter(Boolean))];
+    console.log(`Random pages API: Final diversity metrics:`, {
+      totalPages: randomPages.length,
+      uniqueUsers: finalUniqueUsers.length,
+      diversityRatio: finalUniqueUsers.length / randomPages.length,
+      pagesPerUser: randomPages.length / finalUniqueUsers.length
+    });
+
     // Batch fetch user subscription data
-    const uniqueUserIds = [...new Set(randomPages.map(page => page.userId).filter(Boolean))];
+    const uniqueUserIds = finalUniqueUsers;
     let batchUserData = {};
 
     if (uniqueUserIds.length > 0) {

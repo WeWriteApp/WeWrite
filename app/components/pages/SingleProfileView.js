@@ -22,6 +22,11 @@ const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
   const router = useRouter();
 
+  // Early return if profile is not available
+  if (!profile) {
+    return null;
+  }
+
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
 

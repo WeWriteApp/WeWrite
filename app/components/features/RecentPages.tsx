@@ -48,11 +48,11 @@ const RecentPages = React.memo(function RecentPages() {
 
           const result = await response.json();
 
-          if (!result.success) {
+          if (!result.success || !result.pageData) {
             throw new Error(result.error || 'Failed to fetch page');
           }
 
-          const page = result.data;
+          const page = result.pageData;
           if (!page) return null;
 
           // Only include pages the user has access to and that are not deleted

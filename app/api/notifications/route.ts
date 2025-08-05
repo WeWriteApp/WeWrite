@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, notificationId, notificationData } = body;
+    const { action, notificationId, notificationData, criticality } = body;
 
     // Get the current user ID from request (authenticated user)
     const userId = await getUserIdFromRequest(request);
@@ -154,9 +154,13 @@ export async function POST(request: NextRequest) {
           .collection(getCollectionName('notifications'));
         const notificationRef = notificationsRef.doc();
 
+        // Import criticality utilities
+        const { getDefaultCriticality } = await import('../../utils/notificationCriticality');
+
         const notification = {
           ...notificationData,
           read: notificationData.read || false,
+          criticality: notificationData.criticality || getDefaultCriticality(notificationData.type as any),
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -266,6 +270,35 @@ export async function POST(request: NextRequest) {
         });
 
         await markAllBatch.commit();
+        return NextResponse.json({ success: true });
+
+      case 'updateCriticality':
+        if (!notificationId || !criticality) {
+          return NextResponse.json(
+            { error: 'Notification ID and criticality are required for updateCriticality' },
+            { status: 400 }
+          );
+        }
+
+        // Validate criticality value
+        if (!['device', 'normal', 'hidden'].includes(criticality)) {
+          return NextResponse.json(
+            { error: 'Invalid criticality value. Must be: device, normal, or hidden' },
+            { status: 400 }
+          );
+        }
+
+        // Update notification criticality in subcollection
+        const criticalityNotificationRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'))
+          .doc(notificationId);
+
+        await criticalityNotificationRef.update({
+          criticality,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
         return NextResponse.json({ success: true });
 
       case 'delete':

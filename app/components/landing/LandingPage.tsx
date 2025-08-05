@@ -8,7 +8,7 @@ import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
-import Header from '../layout/Header';
+import Header from '../marketing/Header';
 import { PagePreviewCard } from './PagePreviewCard';
 import { useTheme } from "next-themes";
 import PillLink from "../utils/PillLink";

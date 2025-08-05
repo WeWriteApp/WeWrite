@@ -832,6 +832,28 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* 🚨 EMERGENCY: Database Read Analytics Dashboard */}
+            <div className="flex flex-col p-4 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-destructive">🚨 Database Read Analytics</h3>
+                <Badge variant="destructive">EMERGENCY</Badge>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Real-time monitoring of database read patterns, cost projections, and optimization effectiveness. Critical for managing the 2.5M reads/60min crisis.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/database-analytics')}
+                >
+                  <Database className="h-4 w-4" />
+                  Open Read Analytics
+                </Button>
+              </div>
+            </div>
+
             {/* Design System */}
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">

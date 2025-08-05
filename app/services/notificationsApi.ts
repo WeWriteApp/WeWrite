@@ -7,6 +7,8 @@
  * using environment-aware API endpoints instead of direct Firebase calls.
  */
 
+export type NotificationCriticality = 'device' | 'normal' | 'hidden';
+
 export interface NotificationData {
   userId: string;
   type: string;
@@ -18,6 +20,7 @@ export interface NotificationData {
   actionUrl?: string;
   metadata?: Record<string, any>;
   read?: boolean;
+  criticality?: NotificationCriticality;
 }
 
 export interface Notification extends NotificationData {
@@ -25,6 +28,7 @@ export interface Notification extends NotificationData {
   createdAt: any; // Can be Timestamp or string
   read: boolean;
   readAt?: any;
+  criticality: NotificationCriticality;
 }
 
 export interface NotificationResult {
@@ -298,6 +302,45 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 };
 
 /**
+ * Update notification criticality level
+ */
+export const updateNotificationCriticality = async (
+  notificationId: string,
+  criticality: NotificationCriticality
+): Promise<void> => {
+  try {
+    console.log('🔔 updateNotificationCriticality: Updating criticality for notification:', notificationId, 'to:', criticality);
+
+    const response = await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'updateCriticality',
+        notificationId,
+        criticality
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update notification criticality: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to update notification criticality');
+    }
+
+    console.log('🔔 updateNotificationCriticality: Successfully updated notification criticality');
+  } catch (error) {
+    console.error('🔔 updateNotificationCriticality: Error updating notification criticality:', error);
+    throw error;
+  }
+};
+
+/**
  * Create an email verification notification
  */
 export const createEmailVerificationNotification = async (userId: string): Promise<string | null> => {
@@ -314,6 +357,7 @@ export const createEmailVerificationNotification = async (userId: string): Promi
       title: 'Verify Your Email',
       message: 'Please verify your email address to access all features.',
       actionUrl: '/settings?tab=account',
+      criticality: 'device', // Email verification is critical
       metadata: {
         priority: 'high',
         category: 'account'

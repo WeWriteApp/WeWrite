@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Header from "../layout/Header";
+import NavHeader from "../layout/NavHeader";
 // Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Activity } from "lucide-react";
 import GlobalRecentEdits from "./GlobalRecentEdits";
@@ -32,10 +32,10 @@ const Home: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <NavHeader />
 
         {/* Show page structure immediately */}
-        <div className="container max-w-4xl mx-auto px-4 py-6">
+        <div className="container max-w-4xl mx-auto px-4 pt-20 py-6">
           {/* Daily notes section skeleton */}
           <div className="mb-8">
             <div className="h-6 w-32 bg-muted rounded animate-pulse mb-4" />
@@ -66,10 +66,10 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <NavHeader />
       {/* Main content area with proper sidebar spacing */}
       <main className="transition-all duration-300 ease-in-out">
-          <div className="container mx-auto px-4 py-4 space-y-6">
+          <div className="container mx-auto px-4 pt-20 py-4 space-y-6">
             {/* Email Verification Alert */}
             <EmailVerificationAlert className="max-w-2xl mx-auto" />
 

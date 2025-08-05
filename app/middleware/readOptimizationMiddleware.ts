@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isCircuitBroken, shouldRateLimit } from '../utils/emergencyReadOptimizer';
 import { trackDatabaseRead } from '../utils/databaseReadTracker';
+import { emergencyCircuitBreaker } from '../utils/emergencyCircuitBreaker';
 
 interface OptimizationConfig {
   enableCircuitBreaker: boolean;
@@ -42,6 +43,28 @@ const responseCache = new Map<string, {
   ttl: number;
 }>();
 
+// 🚨 EMERGENCY: Request deduplication cache to prevent duplicate calls within 5-second windows
+const requestDeduplicationCache = new Map<string, {
+  promise: Promise<NextResponse>;
+  timestamp: number;
+  requestId: string;
+}>();
+const DEDUPLICATION_WINDOW = 5000; // 5 seconds
+
+// Enhanced cache TTL configuration for emergency read reduction
+const CACHE_TTL_CONFIG = {
+  '/api/home': 1800000,       // 🚨 EMERGENCY: 30 minutes
+  '/api/pages': 900000,       // 🚨 EMERGENCY: 15 minutes
+  '/api/recent-edits': 1800000, // 🚨 EMERGENCY: 30 minutes
+  '/api/users': 3600000,      // 🚨 EMERGENCY: 60 minutes
+  '/api/notifications': 1800000, // 🚨 EMERGENCY: 30 minutes
+  '/api/trending': 1800000,   // 🚨 EMERGENCY: 30 minutes
+  '/api/earnings': 3600000,   // 🚨 EMERGENCY: 60 minutes
+  '/api/subscription': 3600000, // 🚨 EMERGENCY: 60 minutes
+  '/api/usd': 1800000,        // 🚨 EMERGENCY: 30 minutes for financial data
+  default: 900000             // 🚨 EMERGENCY: 15 minutes default
+};
+
 /**
  * Apply read optimization middleware to API request
  */
@@ -60,17 +83,40 @@ export async function applyReadOptimization(
   const sessionId = request.headers.get('x-session-id') || 'unknown';
 
   try {
-    // 1. Circuit Breaker Check
-    if (finalConfig.enableCircuitBreaker && isCircuitBroken(pathname)) {
-      console.warn(`🚫 Circuit breaker active for ${pathname}`);
+    // 1. Circuit Breaker Check (Enhanced)
+    const circuitCheck = emergencyCircuitBreaker.shouldBlockRequest(pathname);
+    if (circuitCheck.blocked) {
+      console.warn(`🚫 Emergency circuit breaker blocked ${pathname}: ${circuitCheck.reason}`);
       return NextResponse.json({
-        error: 'Service temporarily unavailable',
-        code: 'CIRCUIT_BREAKER_OPEN',
-        retryAfter: 60
+        error: 'Service temporarily unavailable due to high load',
+        code: 'EMERGENCY_CIRCUIT_BREAKER',
+        reason: circuitCheck.reason,
+        retryAfter: 300 // 5 minutes
       }, { status: 503 });
     }
 
-    // 2. Rate Limiting Check
+    // 2. Request Deduplication Check (NEW - prevents duplicate calls within 5 seconds)
+    if (method === 'GET') {
+      const deduplicationKey = `${pathname}:${userId || 'anonymous'}:${request.url}`;
+      const existingRequest = requestDeduplicationCache.get(deduplicationKey);
+
+      if (existingRequest && Date.now() - existingRequest.timestamp < DEDUPLICATION_WINDOW) {
+        console.log(`🔄 Request deduplication: Using existing request for ${pathname}`);
+        return existingRequest.promise;
+      }
+
+      // Clean up old deduplication entries
+      if (Math.random() < 0.1) { // 10% chance to clean up
+        const now = Date.now();
+        for (const [key, value] of requestDeduplicationCache.entries()) {
+          if (now - value.timestamp > DEDUPLICATION_WINDOW * 2) {
+            requestDeduplicationCache.delete(key);
+          }
+        }
+      }
+    }
+
+    // 3. Rate Limiting Check
     if (finalConfig.enableRateLimit && shouldRateLimit(pathname, userId)) {
       console.warn(`🚦 Rate limit exceeded for ${pathname} by ${userId || 'anonymous'}`);
       return NextResponse.json({
@@ -102,9 +148,37 @@ export async function applyReadOptimization(
       }
     }
 
-    // 4. Execute original handler
-    const response = await handler(request);
-    const responseTime = Date.now() - startTime;
+    // 4. Execute original handler (with deduplication for GET requests)
+    let response: NextResponse;
+    let responseTime: number;
+
+    if (method === 'GET') {
+      const deduplicationKey = `${pathname}:${userId || 'anonymous'}:${request.url}`;
+
+      // Create and store the promise for deduplication
+      const handlerPromise = (async () => {
+        const handlerResponse = await handler(request);
+        responseTime = Date.now() - startTime;
+        return handlerResponse;
+      })();
+
+      requestDeduplicationCache.set(deduplicationKey, {
+        promise: handlerPromise,
+        timestamp: Date.now(),
+        requestId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      });
+
+      response = await handlerPromise;
+      responseTime = Date.now() - startTime;
+
+      // Clean up this request from deduplication cache after completion
+      setTimeout(() => {
+        requestDeduplicationCache.delete(deduplicationKey);
+      }, DEDUPLICATION_WINDOW);
+    } else {
+      response = await handler(request);
+      responseTime = Date.now() - startTime;
+    }
 
     // 5. Cache successful responses
     if (finalConfig.enableCaching && method === 'GET' && response.status === 200) {
@@ -176,15 +250,17 @@ function generateCacheKey(request: NextRequest): string {
  * Get cache TTL based on endpoint
  */
 function getCacheTTL(pathname: string): number {
-  // Aggressive caching for high-volume endpoints
-  if (pathname.includes('pledge-bar-data')) return 60 * 1000; // 1 minute
-  if (pathname.includes('earnings')) return 5 * 60 * 1000; // 5 minutes
-  if (pathname.includes('user') && pathname.includes('profile')) return 10 * 60 * 1000; // 10 minutes
-  if (pathname.includes('subscription')) return 10 * 60 * 1000; // 10 minutes
-  if (pathname.includes('recent-edits')) return 2 * 60 * 1000; // 2 minutes
-  
-  // Default cache
-  return 5 * 60 * 1000; // 5 minutes
+  // 🚨 EMERGENCY: Use enhanced cache configuration for massive read reduction
+  for (const [pattern, ttl] of Object.entries(CACHE_TTL_CONFIG)) {
+    if (pattern === 'default') continue;
+    if (pathname.startsWith(pattern)) {
+      console.log(`🚨 EMERGENCY CACHE: ${pathname} cached for ${ttl/1000/60} minutes`);
+      return ttl;
+    }
+  }
+
+  console.log(`🚨 EMERGENCY CACHE: ${pathname} using default ${CACHE_TTL_CONFIG.default/1000/60} minutes`);
+  return CACHE_TTL_CONFIG.default;
 }
 
 /**

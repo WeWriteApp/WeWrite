@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import Header from '../components/layout/Header';
-import MobileBottomNav from '../components/layout/MobileBottomNav';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Users, FileText, Heart, Lock, UserPlus } from 'lucide-react';
 import UserFollowingList from '../components/utils/UserFollowingList';
@@ -39,22 +38,8 @@ export default function FollowingPage() {
   // Show progressive loading state during hydration
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Show page structure immediately */}
-        <div className="p-5 md:p-4">
-          {/* Navigation header skeleton */}
-          <div className="flex items-center mb-6">
-            <div className="flex-1">
-              <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
-            </div>
-            <div className="flex-1 flex justify-center">
-              <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
-            </div>
-            <div className="flex-1 flex justify-end">
-              <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
-            </div>
-          </div>
-
+      <NavPageLayout loading={true} loadingFallback={
+        <div>
           {/* Page header skeleton */}
           <div className="text-center mb-8">
             <div className="h-10 w-48 bg-muted rounded-md mx-auto mb-4 animate-pulse" />
@@ -76,48 +61,39 @@ export default function FollowingPage() {
             ))}
           </div>
         </div>
-      </div>
+      } />
     );
   }
 
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-              <Lock className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold mb-4">Sign In Required</h1>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              You need to sign in to view and manage your following relationships.
-            </p>
-            <Button onClick={() => router.push('/auth/login')}>
-              Sign In
-            </Button>
+      <NavPageLayout>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+            <Lock className="h-8 w-8 text-primary" />
           </div>
-        </main>
-        <MobileBottomNav />
-      </div>
+          <h1 className="text-2xl font-bold mb-4">Sign In Required</h1>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            You need to sign in to view and manage your following relationships.
+          </p>
+          <Button onClick={() => router.push('/auth/login')}>
+            Sign In
+          </Button>
+        </div>
+      </NavPageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      {/* Main content area */}
-      <main className="transition-all duration-300 ease-in-out">
-        <div className="container mx-auto px-4 py-6">
-          {/* Page Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Heart className="h-8 w-8 text-primary" />
-                <h1 className="text-3xl font-bold">Following</h1>
-              </div>
+    <NavPageLayout>
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Heart className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">Following</h1>
+          </div>
               
               {/* Quick Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -135,75 +111,70 @@ export default function FollowingPage() {
             <p className="text-muted-foreground text-lg">
               Manage your followed users and pages. Stay connected with the content and creators you care about.
             </p>
-          </div>
+      </div>
 
-          {/* Following Content with Tabs */}
-          <div className="min-h-[600px]">
-            <Tabs defaultValue="users" className="w-full">
-              <TabsList className="grid grid-cols-2 mb-6 w-full max-w-md">
-                <TabsTrigger value="users" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>Following Users</span>
-                </TabsTrigger>
-                <TabsTrigger value="pages" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  <span>Following Pages</span>
-                </TabsTrigger>
-              </TabsList>
+      {/* Following Content with Tabs */}
+      <div className="min-h-[600px]">
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid grid-cols-2 mb-6 w-full max-w-md">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Following Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="pages" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span>Following Pages</span>
+            </TabsTrigger>
+          </TabsList>
 
-              <TabsContent value="users" className="mt-0">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Users You Follow</h2>
-                  </div>
-                  <UserFollowingList 
-                    userId={user.uid} 
-                    isCurrentUser={true} 
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="pages" className="mt-0">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Pages You Follow</h2>
-                  </div>
-                  <FollowedPages
-                    userId={user.uid}
-                    isCurrentUser={true}
-                    showHeader={false}
-                    limit={100}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-12 p-6 bg-muted/30 rounded-lg">
-            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-              <Heart className="h-5 w-5 text-red-500" />
-              About Following
-            </h2>
-            <div className="space-y-2 text-muted-foreground">
-              <p>
-                Following users lets you stay updated with their latest content and activity. 
-                You'll see their recent edits and new pages in your activity feed.
-              </p>
-              <p>
-                Following pages gives you quick access to specific content you want to track. 
-                You'll be notified when these pages are updated.
-              </p>
-              <p>
-                Your following relationships are private and only visible to you.
-              </p>
+          <TabsContent value="users" className="mt-0">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Users You Follow</h2>
+              </div>
+              <UserFollowingList
+                userId={user.uid}
+                isCurrentUser={true}
+              />
             </div>
-          </div>
+          </TabsContent>
+
+          <TabsContent value="pages" className="mt-0">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Pages You Follow</h2>
+              </div>
+              <FollowedPages
+                userId={user.uid}
+                isCurrentUser={true}
+                showHeader={false}
+                limit={100}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Additional Info */}
+      <div className="mt-12 p-6 bg-muted/30 rounded-lg">
+        <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+          <Heart className="h-5 w-5 text-red-500" />
+          About Following
+        </h2>
+        <div className="space-y-2 text-muted-foreground">
+          <p>
+            Following users lets you stay updated with their latest content and activity.
+            You'll see their recent edits and new pages in your activity feed.
+          </p>
+          <p>
+            Following pages gives you quick access to specific content you want to track.
+            You'll be notified when these pages are updated.
+          </p>
+          <p>
+            Your following relationships are private and only visible to you.
+          </p>
         </div>
-      </main>
-      
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
-    </div>
+      </div>
+    </NavPageLayout>
   );
 }

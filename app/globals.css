@@ -1288,6 +1288,34 @@ html[data-high-contrast="true"] .border-border {
     padding: 1.25rem !important; /* 20px padding on mobile */
   }
 
+  /* Standardized mobile header content padding */
+  [data-component="nav-header"] .flex.items-center.h-14,
+  [data-component="main-header"] .flex.items-center.h-full {
+    height: 56px !important;
+    padding-left: 1rem !important; /* 16px */
+    padding-right: 1rem !important; /* 16px */
+  }
+
+  /* Standardized mobile badge sizing for header financial displays */
+  [data-component="nav-header"] .inline-flex.items-center.gap-2,
+  [data-component="main-header"] .inline-flex.items-center.gap-2 {
+    font-size: 0.75rem !important; /* 12px - consistent badge text size */
+    padding: 0.125rem 0.625rem !important; /* 2px 10px - consistent badge padding */
+    border-radius: 9999px !important; /* Full rounded */
+  }
+
+  /* Ensure consistent mobile navigation page layout - only for pages with mobile nav */
+  [data-has-mobile-nav="true"] {
+    padding-bottom: 8rem !important; /* 128px - consistent bottom padding for mobile nav */
+  }
+
+  /* Desktop override - remove mobile-specific padding */
+  @media (min-width: 768px) {
+    [data-has-mobile-nav="true"] {
+      padding-bottom: 2rem !important; /* 32px - standard desktop bottom padding */
+    }
+  }
+
   /* Standardized bottom margin for individual cards */
   .mobile-card-spacing {
     margin-bottom: 1.5rem !important; /* 24px bottom margin */

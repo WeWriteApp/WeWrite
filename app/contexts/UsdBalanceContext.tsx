@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { centsToDollars, formatUsdCents } from '../utils/formatCurrency';
+import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
 
 interface UsdBalance {
   totalUsdCents: number;
@@ -18,8 +19,8 @@ interface CachedUsdBalance {
 
 // Global cache for USD balance data - shared across all components
 const usdBalanceCache = new Map<string, CachedUsdBalance>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const STALE_WHILE_REVALIDATE_DURATION = 30 * 1000; // 30 seconds
+const CACHE_DURATION = 30 * 60 * 1000; // 🚨 EMERGENCY: 30 minutes (was 5 minutes) to reduce financial API reads by 80%
+const STALE_WHILE_REVALIDATE_DURATION = 5 * 60 * 1000; // 🚨 EMERGENCY: 5 minutes (was 30 seconds) for background refresh
 
 interface UsdBalanceContextType {
   usdBalance: UsdBalance | null;
@@ -78,6 +79,26 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
       }
     }
 
+    // 🚨 EMERGENCY: Check persistent cache if no memory cache (survives page refreshes)
+    if (!forceRefresh && !cached) {
+      const persistentCacheKey = generateCacheKey('usd_balance', user.uid);
+      const persistentCached = getCacheItem<UsdBalance>(persistentCacheKey);
+      if (persistentCached) {
+        console.log('[UsdBalanceContext] 💾 Using persistent cached USD balance');
+        setUsdBalance(persistentCached);
+        setIsLoading(false);
+        setLastUpdated(new Date());
+
+        // Also update memory cache
+        usdBalanceCache.set(user.uid, {
+          data: persistentCached,
+          timestamp: Date.now(),
+          userId: user.uid
+        });
+        return;
+      }
+    }
+
     // Prevent multiple simultaneous fetches
     if (fetchingRef.current) {
       return fetchingRef.current;
@@ -120,12 +141,16 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
           setUsdBalance(balance);
           setLastUpdated(new Date());
 
-          // Cache the result
+          // Cache the result in memory
           usdBalanceCache.set(user.uid, {
             data: balance,
             timestamp: now,
             userId: user.uid
           });
+
+          // 🚨 EMERGENCY: Also save to persistent cache (survives page refreshes)
+          const persistentCacheKey = generateCacheKey('usd_balance', user.uid);
+          setCacheItem(persistentCacheKey, balance, CACHE_DURATION);
 
           console.log('[UsdBalanceContext] Updated USD balance:', {
             total: formatUsdCents(balance.totalUsdCents),

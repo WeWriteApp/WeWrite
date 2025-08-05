@@ -49,10 +49,11 @@ export default function NavPageLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={`${maxWidthClasses[maxWidth]} mx-auto px-4 sm:px-6 lg:px-8 pb-32 md:pb-8 ${className}`}>
-        {/* NavHeader loads instantly - no suspense */}
-        <NavHeader {...navHeaderProps} />
+      {/* NavHeader positioned at top like main Header */}
+      <NavHeader {...navHeaderProps} />
 
+      {/* Content area with proper top padding to account for fixed header */}
+      <div className={`${maxWidthClasses[maxWidth]} mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32 md:pb-8 ${className}`}>
         {/* Content loads progressively below header */}
         {loading ? (
           loadingFallback || defaultLoadingFallback

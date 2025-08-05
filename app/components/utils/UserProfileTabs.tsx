@@ -657,7 +657,7 @@ export default function UserProfileTabs({ profile }) {
                 )}
 
                 {/* End of list indicator */}
-                {!hasMore && !loadingMore && sortedPages.length > 0 && (
+                {!hasMore && !loadingMore && sortedPages && sortedPages.length > 0 && (
                   <div className="flex justify-center py-6">
                     <div className="text-center text-muted-foreground">
                       <div className="w-12 h-px bg-border mx-auto mb-2"></div>
