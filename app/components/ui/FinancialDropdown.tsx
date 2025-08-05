@@ -72,7 +72,7 @@ export function FinancialDropdown({
 
       <DropdownMenuContent
         align={direction === 'southeast' ? 'start' : 'end'}
-        className="w-[200px] p-3"
+        className="w-auto min-w-[200px] max-w-[280px] p-3"
       >
         {/* Title */}
         <div className="text-sm font-medium text-foreground mb-3 text-center">
@@ -87,14 +87,14 @@ export function FinancialDropdown({
         <DropdownMenuSeparator />
 
         {/* Buttons */}
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-col sm:flex-row gap-2 mt-3">
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
               if (onClose) onClose();
             }}
-            className="flex-1"
+            className="flex-1 whitespace-nowrap"
           >
             Close
           </Button>
@@ -103,7 +103,7 @@ export function FinancialDropdown({
             onClick={() => {
               onNavigate();
             }}
-            className="flex-1"
+            className="flex-1 whitespace-nowrap"
           >
             {title === 'Spending' ? 'Go to spend' : 'Go to earnings'}
           </Button>

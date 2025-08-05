@@ -230,14 +230,14 @@ export default function NavHeader({
       }}
     >
         {/* Header content area - fills full width of container */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between min-w-0">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between min-w-0 relative">
             {/* Spend/Overspend Display (left side) */}
             <div className="flex items-center min-w-0 flex-shrink-0">
               {renderSpendDisplay()}
             </div>
 
-            {/* Logo/Title (centered) - clickable to go home */}
-            <div className="flex items-center justify-center flex-shrink-0 mx-4">
+            {/* Logo/Title (absolutely centered) - clickable to go home */}
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
               <div
                 className="cursor-pointer transition-transform hover:scale-105"
                 onClick={() => router.push('/')}
