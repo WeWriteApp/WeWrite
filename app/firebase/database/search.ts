@@ -84,9 +84,39 @@ export const searchUsers = async (searchQuery: string, limitCount: number = 10) 
             const username = userData.username || "";
             const email = userData.email || "";
 
-            // Client-side filtering for partial matches
-            if (username.toLowerCase().includes(searchLower) ||
-                email.toLowerCase().includes(searchLower)) {
+            // ENHANCED: Client-side filtering with out-of-order word support
+            const usernameLower = username.toLowerCase();
+            const emailLower = email.toLowerCase();
+
+            let isMatch = false;
+
+            // Check for exact phrase match first
+            if (usernameLower.includes(searchLower) || emailLower.includes(searchLower)) {
+              isMatch = true;
+            } else {
+              // Check for out-of-order word matching
+              const searchWords = searchLower.split(/\s+/).filter(word => word.length > 1);
+              if (searchWords.length > 1) {
+                // Count how many search words are found in username or email
+                let usernameMatches = 0;
+                let emailMatches = 0;
+
+                for (const word of searchWords) {
+                  if (usernameLower.includes(word)) {
+                    usernameMatches++;
+                  }
+                  if (emailLower.includes(word)) {
+                    emailMatches++;
+                  }
+                }
+
+                // If most words are found in either username or email, consider it a match
+                const requiredMatches = Math.ceil(searchWords.length * 0.7);
+                isMatch = usernameMatches >= requiredMatches || emailMatches >= requiredMatches;
+              }
+            }
+
+            if (isMatch) {
               results.set(doc.id, {
                 id: doc.id,
                 username: username || "Anonymous",

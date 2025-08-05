@@ -113,11 +113,10 @@ export const calculateMatchScore = (title: string, searchTerm: string, isContent
     }
   }
 
-  // Handle multi-word search terms
-  const searchTermWords = normalizedSearchTerm.split(/\s+/);
+  // Handle multi-word search terms with enhanced out-of-order matching
+  const searchTermWords = normalizedSearchTerm.split(/\s+/).filter(word => word.length > 0);
   if (searchTermWords.length > 1) {
-    // Check for sequential matches of search term words in the title
-    // This helps with cases like "research topics" matching "research"
+    // Check for sequential matches of search term words in the title (exact order)
     let sequentialMatches = 0;
     let maxSequentialMatches = 0;
 
@@ -142,22 +141,74 @@ export const calculateMatchScore = (title: string, searchTerm: string, isContent
       return applyContentPenalty(Math.min(90, sequenceScore)); // Cap at 90 to keep below exact matches
     }
 
-    // Count how many search term words are found in the title (non-sequential)
-    let matchedWords = 0;
-    for (const word of searchTermWords) {
-      if (word.length > 1 && normalizedTitle.includes(word)) {
-        matchedWords++;
+    // ENHANCED: Count how many search term words are found in the title (any order)
+    let exactWordMatches = 0;
+    let partialWordMatches = 0;
+    let wordStartMatches = 0;
+
+    for (const searchWord of searchTermWords) {
+      if (searchWord.length <= 1) continue; // Skip single characters
+
+      let foundMatch = false;
+      for (const titleWord of titleWords) {
+        // Exact word match (highest priority)
+        if (titleWord === searchWord) {
+          exactWordMatches++;
+          foundMatch = true;
+          break;
+        }
+        // Word starts with search term (high priority)
+        else if (titleWord.startsWith(searchWord)) {
+          wordStartMatches++;
+          foundMatch = true;
+          break;
+        }
+        // Search term starts with title word (medium priority)
+        else if (searchWord.startsWith(titleWord) && titleWord.length > 2) {
+          wordStartMatches++;
+          foundMatch = true;
+          break;
+        }
+        // Partial word match (lower priority)
+        else if (titleWord.includes(searchWord) || searchWord.includes(titleWord)) {
+          if (!foundMatch) { // Only count if we haven't found a better match
+            partialWordMatches++;
+            foundMatch = true;
+          }
+        }
       }
     }
 
-    // If all words are found, give a high score
-    if (matchedWords === searchTermWords.length) {
-      return applyContentPenalty(75); // All words found but not in exact order
+    const totalMatches = exactWordMatches + wordStartMatches + partialWordMatches;
+    const matchRatio = totalMatches / searchTermWords.length;
+
+    // If all words are found with exact matches, give highest score for out-of-order
+    if (exactWordMatches === searchTermWords.length) {
+      return applyContentPenalty(85); // High score for all exact words found (any order)
     }
 
-    // If some words are found, give a proportional score
-    if (matchedWords > 0) {
-      return applyContentPenalty(60 + (matchedWords / searchTermWords.length) * 10);
+    // If all words are found with word-start matches
+    if ((exactWordMatches + wordStartMatches) === searchTermWords.length) {
+      return applyContentPenalty(80); // Good score for all words found as prefixes (any order)
+    }
+
+    // If all words are found (including partial matches)
+    if (totalMatches === searchTermWords.length) {
+      return applyContentPenalty(75); // All words found but some partial matches (any order)
+    }
+
+    // If most words are found, give proportional score
+    if (matchRatio >= 0.7) {
+      const baseScore = 65;
+      const bonusScore = (exactWordMatches * 5) + (wordStartMatches * 3) + (partialWordMatches * 1);
+      return applyContentPenalty(Math.min(74, baseScore + bonusScore));
+    }
+
+    // If some words are found, give a lower proportional score
+    if (totalMatches > 0) {
+      const baseScore = 50;
+      const bonusScore = (exactWordMatches * 4) + (wordStartMatches * 2) + (partialWordMatches * 1);
+      return applyContentPenalty(Math.min(64, baseScore + bonusScore));
     }
   }
 

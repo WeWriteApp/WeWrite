@@ -264,6 +264,31 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           );
           queryPromises.push(getDocs(allPagesCaseVariationQuery));
         }
+
+        // ENHANCED: Search for individual words to support out-of-order matching
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+        if (searchWords.length > 1) {
+          console.log(`🔍 [SEARCH DEBUG] Adding individual word searches for: ${searchWords.join(', ')}`);
+
+          for (const word of searchWords) {
+            // Search for each word individually with case variations
+            const wordVariations = new Set([
+              word,
+              word.charAt(0).toUpperCase() + word.slice(1),
+              word.toUpperCase()
+            ]);
+
+            for (const wordVariation of wordVariations) {
+              const wordQuery = query(
+                collection(db, getCollectionName('pages')),
+                where('title', '>=', wordVariation),
+                where('title', '<=', wordVariation + '\uf8ff'),
+                limit(Math.min(finalMaxResults, 20))
+              );
+              queryPromises.push(getDocs(wordQuery));
+            }
+          }
+        }
       }
     }
 

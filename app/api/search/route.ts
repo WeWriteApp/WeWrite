@@ -314,16 +314,54 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           if (isEmptySearch) {
             isMatch = true;
           } else {
-            // PERFORMANCE OPTIMIZATION: Simplified matching logic
-            // Check title first (most common case)
-            const titleMatch = normalizedTitle.includes(searchTermLower) ||
-                             normalizedTitle.startsWith(searchTermLower);
+            // ENHANCED: Improved matching logic with out-of-order word support
+            let titleMatch = false;
+
+            // Check for exact phrase match first (highest priority)
+            if (normalizedTitle.includes(searchTermLower) || normalizedTitle.startsWith(searchTermLower)) {
+              titleMatch = true;
+            } else {
+              // Check for out-of-order word matching
+              const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
+              if (searchWords.length > 1) {
+                // Count how many search words are found in the title
+                let foundWords = 0;
+                for (const word of searchWords) {
+                  if (normalizedTitle.includes(word)) {
+                    foundWords++;
+                  }
+                }
+                // If most words are found, consider it a match
+                titleMatch = foundWords >= Math.ceil(searchWords.length * 0.7);
+              } else if (searchWords.length === 1) {
+                // Single word - check for partial matches
+                const word = searchWords[0];
+                titleMatch = normalizedTitle.includes(word);
+              }
+            }
 
             // Only check content if title doesn't match and we have content
             let contentMatch = false;
             if (!titleMatch && data.content) {
               const normalizedContent = data.content.toLowerCase();
-              contentMatch = normalizedContent.includes(searchTermLower);
+
+              // Check for exact phrase match in content
+              if (normalizedContent.includes(searchTermLower)) {
+                contentMatch = true;
+              } else {
+                // Check for out-of-order word matching in content
+                const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
+                if (searchWords.length > 1) {
+                  let foundWords = 0;
+                  for (const word of searchWords) {
+                    if (normalizedContent.includes(word)) {
+                      foundWords++;
+                    }
+                  }
+                  // Require more words to match in content (stricter than title)
+                  contentMatch = foundWords >= Math.ceil(searchWords.length * 0.8);
+                }
+              }
             }
 
             isMatch = titleMatch || contentMatch;
@@ -388,15 +426,54 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           if (isEmptySearch) {
             isMatch = true;
           } else {
-            // PERFORMANCE OPTIMIZATION: Simplified matching logic
-            const titleMatch = normalizedTitle.includes(searchTermLower) ||
-                             normalizedTitle.startsWith(searchTermLower);
+            // ENHANCED: Improved matching logic with out-of-order word support
+            let titleMatch = false;
+
+            // Check for exact phrase match first (highest priority)
+            if (normalizedTitle.includes(searchTermLower) || normalizedTitle.startsWith(searchTermLower)) {
+              titleMatch = true;
+            } else {
+              // Check for out-of-order word matching
+              const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
+              if (searchWords.length > 1) {
+                // Count how many search words are found in the title
+                let foundWords = 0;
+                for (const word of searchWords) {
+                  if (normalizedTitle.includes(word)) {
+                    foundWords++;
+                  }
+                }
+                // If most words are found, consider it a match
+                titleMatch = foundWords >= Math.ceil(searchWords.length * 0.7);
+              } else if (searchWords.length === 1) {
+                // Single word - check for partial matches
+                const word = searchWords[0];
+                titleMatch = normalizedTitle.includes(word);
+              }
+            }
 
             // Only check content if title doesn't match and we have content
             let contentMatch = false;
             if (!titleMatch && data.content) {
               const normalizedContent = data.content.toLowerCase();
-              contentMatch = normalizedContent.includes(searchTermLower);
+
+              // Check for exact phrase match in content
+              if (normalizedContent.includes(searchTermLower)) {
+                contentMatch = true;
+              } else {
+                // Check for out-of-order word matching in content
+                const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
+                if (searchWords.length > 1) {
+                  let foundWords = 0;
+                  for (const word of searchWords) {
+                    if (normalizedContent.includes(word)) {
+                      foundWords++;
+                    }
+                  }
+                  // Require more words to match in content (stricter than title)
+                  contentMatch = foundWords >= Math.ceil(searchWords.length * 0.8);
+                }
+              }
             }
 
             isMatch = titleMatch || contentMatch;
