@@ -17,7 +17,7 @@ export default function EarningsPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 lg:p-8">
       {/* Tabbed Interface */}
       <Tabs defaultValue="earnings" className="space-y-4 sm:space-y-6" urlNavigation="hash">
         <TabsList className="grid w-full grid-cols-2 h-auto">

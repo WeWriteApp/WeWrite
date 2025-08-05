@@ -40,7 +40,7 @@ export default function AppearancePage() {
   ];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8">
       <div className="space-y-8">
         {/* Theme Selection */}
         <div className="bg-card border border-border rounded-lg p-6">

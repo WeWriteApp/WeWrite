@@ -355,7 +355,7 @@ export default function SpendPage() {
   }
 
   return (
-    <div className="p-3 max-w-5xl mx-auto">
+    <div className="p-6 lg:p-8">
       <div className="space-y-6">
         {!hasBalance ? (
           /* No funding state */

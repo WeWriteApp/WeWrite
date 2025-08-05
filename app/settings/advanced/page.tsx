@@ -22,7 +22,7 @@ export default function AdvancedPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8">
       {/* Advanced Settings Sections */}
       <div className="space-y-8">
         {/* Logged in devices */}

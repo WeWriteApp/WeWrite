@@ -262,7 +262,7 @@ export default function ProfilePage() {
 
   if (!user || isLoading) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6 lg:p-8">
         <div className="w-full space-y-6">
           <Card className="wewrite-card">
             <CardHeader className="pb-6">
@@ -288,7 +288,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">{/* Profile Settings Content */}
+    <div className="p-6 lg:p-8">{/* Profile Settings Content */}
 
         {/* Profile Section */}
         <Card className="wewrite-card">

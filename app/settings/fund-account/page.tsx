@@ -69,7 +69,7 @@ export default function FundAccountPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6 lg:p-8">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
@@ -81,7 +81,7 @@ export default function FundAccountPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8">
       <UsdFundingTierSlider
         selectedAmount={selectedAmount}
         onAmountSelect={setSelectedAmount}
