@@ -89,27 +89,10 @@ class SmartPollingManager {
     priority: 'critical' | 'high' | 'medium' | 'low' = 'medium',
     customConfig?: Partial<PollingConfig>
   ): string {
-    // Stop existing session if it exists
-    this.stopPolling(sessionId);
-
-    const config = {
-      ...this.DEFAULT_CONFIGS[priority],
-      ...customConfig
-    };
-
-    const session: PollingSession = {
-      id: sessionId,
-      callback,
-      fetcher,
-      config,
-      currentInterval: config.baseInterval,
-      lastActivity: Date.now(),
-      lastFetch: 0,
-      intervalId: null,
-      isActive: true,
-      errorCount: 0,
-      lastData: null
-    };
+    // 🚨 EMERGENCY: Disable all smart polling to prevent excessive Firebase reads
+    console.warn('🚨 EMERGENCY: Smart polling disabled to prevent excessive database reads (20K-30K reads/min crisis)');
+    // DISABLED: All smart polling to prevent database read overload
+    return sessionId;
 
     this.sessions.set(sessionId, session);
     this.scheduleNextPoll(sessionId);

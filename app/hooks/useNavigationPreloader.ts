@@ -163,36 +163,12 @@ export function useNavigationPreloader() {
     };
   }, [user?.uid, preloadUserProfile, preloadHomeData, preloadNotifications, preloadRecentPages, preloadTrendingPages, preloadSearchData]);
 
-  // Preload on hover for desktop navigation
+  // 🚨 EMERGENCY: Disable navigation preloading to prevent excessive Firebase reads
   const handleNavigationHover = useCallback((route: string) => {
-    // Only preload on hover for desktop (not mobile to save bandwidth)
-    if (typeof window !== 'undefined' && window.innerWidth > 768) {
-      switch (route) {
-        case '/':
-          preloadHomeData();
-          break;
-        case '/notifications':
-          preloadNotifications();
-          break;
-        case '/search':
-          preloadSearchData();
-          break;
-        case '/recents':
-          preloadRecentPages();
-          break;
-        case '/trending-pages':
-          preloadTrendingPages();
-          break;
-        default:
-          if (route.startsWith('/user/') && user?.uid) {
-            const userId = route.split('/user/')[1];
-            if (userId && userId !== user.uid) {
-              preloadUserProfile(userId);
-            }
-          }
-      }
-    }
-  }, [user?.uid, preloadHomeData, preloadNotifications, preloadSearchData, preloadRecentPages, preloadTrendingPages, preloadUserProfile]);
+    console.warn('🚨 EMERGENCY: Navigation preloading disabled to prevent excessive database reads');
+    // DISABLED: All hover preloading to prevent 20K-30K reads/min crisis
+    return;
+  }, []);
 
   // Preload on focus for mobile navigation
   const handleNavigationFocus = useCallback((route: string) => {
@@ -222,56 +198,9 @@ export function useIntelligentPrefetch() {
   useEffect(() => {
     if (!user?.uid) return;
 
-    // Prefetch likely next routes based on current route
-    const currentPath = window.location.pathname;
-    
-    const prefetchRoutes: PreloadConfig[] = [];
-
-    // Add route-specific prefetch logic
-    switch (currentPath) {
-      case '/':
-        // From home, likely to visit profile or notifications
-        prefetchRoutes.push(
-          { route: `/user/${user.uid}`, priority: 'high', delay: 1000 },
-          { route: '/notifications', priority: 'medium', delay: 2000 }
-        );
-        break;
-      
-      case '/notifications':
-        // From notifications, likely to go back to home
-        prefetchRoutes.push(
-          { route: '/', priority: 'high', delay: 500 }
-        );
-        break;
-        
-      default:
-        if (currentPath.startsWith('/user/')) {
-          // From user profile, likely to go to home or their own profile
-          prefetchRoutes.push(
-            { route: '/', priority: 'medium', delay: 1000 }
-          );
-          
-          if (currentPath !== `/user/${user.uid}`) {
-            prefetchRoutes.push(
-              { route: `/user/${user.uid}`, priority: 'medium', delay: 1500 }
-            );
-          }
-        }
-    }
-
-    // Execute prefetch with delays
-    const timeouts: NodeJS.Timeout[] = [];
-    
-    prefetchRoutes.forEach(({ route, delay }) => {
-      const timeout = setTimeout(() => {
-        router.prefetch(route);
-      }, delay);
-      
-      timeouts.push(timeout);
-    });
-
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout));
-    };
+    // 🚨 EMERGENCY: Disable route-based prefetching to prevent excessive Firebase reads
+    console.warn('🚨 EMERGENCY: Route-based prefetching disabled to prevent excessive database reads (20K-30K reads/min crisis)');
+    // DISABLED: All route-based prefetching to prevent database read overload
+    return;
   }, [user?.uid, router]);
 }

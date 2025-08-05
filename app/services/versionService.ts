@@ -15,7 +15,7 @@ import { PageVersion } from '../types/database';
 
 // Cache for version data to avoid repeated API calls
 const versionCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 seconds
+const CACHE_DURATION = 1800000; // 🚨 EMERGENCY: 30 minutes (was 30 seconds) to reduce database reads
 
 /**
  * Get all versions for a page

@@ -295,15 +295,10 @@ class IntelligentCacheWarmingManager {
    * Setup periodic pattern analysis
    */
   private setupPeriodicAnalysis(): void {
-    // Run analysis every 30 minutes
-    setInterval(() => {
-      this.executeIntelligentWarming();
-    }, this.ANALYSIS_INTERVAL);
-
-    // Initial analysis after 5 minutes
-    setTimeout(() => {
-      this.executeIntelligentWarming();
-    }, 5 * 60 * 1000);
+    // 🚨 EMERGENCY: Disable all cache warming to prevent excessive Firebase reads
+    console.warn('🚨 EMERGENCY: Intelligent cache warming disabled to prevent excessive database reads (20K-30K reads/min crisis)');
+    // DISABLED: All periodic cache warming to prevent database read overload
+    return;
   }
 
   /**
