@@ -147,13 +147,22 @@ const DayContainer = React.memo(function DayContainer({
             <button
               className={cn(
                 "w-full flex items-center justify-center gap-2 px-3 py-2",
-                "rounded-lg border-2 border-dashed transition-all duration-200",
+                "rounded-lg border-2 transition-all duration-200",
                 "text-sm font-medium hover:scale-[1.02] active:scale-[0.98]",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2",
-                "border-border text-muted-foreground",
-                "hover:border-border/80 hover:text-foreground"
+                // Conditional styling based on whether there are notes
+                notes.length === 0
+                  ? "border-solid text-white hover:opacity-90" // Empty state: solid accent button
+                  : "border-dashed border-border text-muted-foreground hover:border-border/80 hover:text-foreground" // Has notes: dotted outline
               )}
               style={{
+                ...(notes.length === 0
+                  ? {
+                      backgroundColor: accentColor,
+                      borderColor: accentColor
+                    }
+                  : {}
+                ),
                 focusRingColor: accentColor + '40' // 25% opacity for focus ring
               }}
               onClick={() => onAddNewClick(date)}
