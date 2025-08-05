@@ -1304,6 +1304,13 @@ html[data-high-contrast="true"] .border-border {
     border-radius: 9999px !important; /* Full rounded */
   }
 
+  /* NavHeader sidebar offset - only on desktop */
+  @media (min-width: 768px) {
+    [data-component="nav-header"] {
+      left: var(--sidebar-width, 0px) !important;
+    }
+  }
+
   /* Ensure consistent mobile navigation page layout - only for pages with mobile nav */
   [data-has-mobile-nav="true"] {
     padding-bottom: 8rem !important; /* 128px - consistent bottom padding for mobile nav */

@@ -56,8 +56,9 @@ export function AllocationAmountDisplay({
     ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
     : `Available: ${formatUsdCents(availableBalanceCents)}`;
 
-  // Color based on whether there's an allocation
+  // Color and font weight based on whether there's an allocation
   const textColorClass = hasAllocation ? "text-primary" : "text-muted-foreground";
+  const fontWeightClass = hasAllocation ? "font-bold" : "font-normal";
 
   return (
     <div
@@ -68,8 +69,9 @@ export function AllocationAmountDisplay({
     >
       <div
         className={cn(
-          "text-center font-bold text-sm transition-all duration-300 ease-in-out",
-          textColorClass
+          "text-center text-sm transition-all duration-300 ease-in-out",
+          textColorClass,
+          fontWeightClass
         )}
       >
         {displayText}
