@@ -12,6 +12,7 @@ import { UsdAllocationModal } from './UsdAllocationModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
@@ -47,7 +48,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const pathname = usePathname();
   const router = useRouter();
   const { triggerDelayedBanner } = useDelayedLoginBanner();
-  const { usdBalance, isFakeBalance, hasActiveSubscription } = useUsdBalance();
+  const { usdBalance, isFakeBalance } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscriptionWarning();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
 
   // Flash animation state
@@ -72,7 +74,6 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const isPageOwner = !!(user && authorId && user.uid === authorId);
 
   // State for floating bar specific features
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pageStats, setPageStats] = useState<PageStats | null>(null);
 
@@ -139,23 +140,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Load subscription data when component mounts or user changes
-  useEffect(() => {
-    const loadSubscriptionData = async () => {
-      try {
-        if (user && user.uid) {
-          // For now, set a default subscription - this should come from an API
-          setSubscription({ status: 'active', amount: 10, tier: 'tier1', id: 'test' });
-        } else {
-          setSubscription(null);
-        }
-      } catch (error) {
-        console.error('Error loading subscription data:', error);
-      }
-    };
 
-    loadSubscriptionData();
-  }, [user]);
 
   // Calculate composition bar data
   const getCompositionData = (): CompositionBarData => {
@@ -204,8 +189,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   // Don't show allocation bar when viewing your own page
   if (isPageOwner) return null;
 
-  // User state checks
-  const hasSubscription = subscription && isActiveSubscription(subscription.status);
+  // User state checks - use the correct subscription state from UsdBalance context
   const showSubscriptionNotice = user && !hasActiveSubscription && !isPageOwner && isFakeBalance;
   const showLoginNotice = !user && !isPageOwner;
 
