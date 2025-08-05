@@ -54,7 +54,8 @@ export function WebVitalsMonitor() {
     monitorUserInteractions();
     
     // Set up periodic reporting
-    const reportingInterval = setInterval(reportMetrics, 30000); // Report every 30s
+    // 🚨 EMERGENCY: Reduced frequency to prevent database read crisis
+    const reportingInterval = setInterval(reportMetrics, 300000); // Report every 5 minutes (was 30s)
     
     return () => {
       clearInterval(reportingInterval);

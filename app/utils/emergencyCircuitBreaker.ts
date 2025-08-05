@@ -18,8 +18,8 @@ interface CircuitBreakerConfig {
 class EmergencyCircuitBreaker {
   private config: CircuitBreakerConfig = {
     enabled: true,
-    emergencyMode: true, // 🚨 EMERGENCY MODE ACTIVE
-    maxReadsPerMinute: 100, // Extremely low limit
+    emergencyMode: true, // 🚨 EMERGENCY MODE ACTIVE - 174K reads/min crisis
+    maxReadsPerMinute: 500, // Increased from 100 but still very conservative
     currentReads: 0,
     lastResetTime: Date.now(),
     

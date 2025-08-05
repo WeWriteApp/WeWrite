@@ -167,21 +167,26 @@ export default function AutomaticUpdateManager() {
 
   // Set up periodic checking
   React.useEffect(() => {
-    // NEVER run in development
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return;
-    }
+    // 🚨 EMERGENCY: Auto-update checking disabled to prevent database read crisis
+    console.warn('🚨 EMERGENCY: Auto-update checking disabled to prevent excessive database reads (174K reads/min crisis)');
+    return;
 
-    // Initial check after a short delay
-    const initialTimeout = setTimeout(checkForUpdates, 3000);
+    // DISABLED: All automatic update checking to prevent database read overload
+    // // NEVER run in development
+    // if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    //   return;
+    // }
 
-    // Set up interval for periodic checks (every 5 minutes)
-    const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
+    // // Initial check after a short delay
+    // const initialTimeout = setTimeout(checkForUpdates, 3000);
 
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
+    // // Set up interval for periodic checks (every 5 minutes)
+    // const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
+
+    // return () => {
+    //   clearTimeout(initialTimeout);
+    //   clearInterval(interval);
+    // };
   }, [checkForUpdates]);
 
   // Reset update state when pathname changes (in case update was applied)

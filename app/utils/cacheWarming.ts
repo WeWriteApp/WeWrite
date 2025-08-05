@@ -150,38 +150,43 @@ class CacheWarmingManager {
    * Setup automatic cache warming
    */
   private setupAutomaticWarming(): void {
-    // Warm caches on page load
-    if (typeof window !== 'undefined') {
-      window.addEventListener('load', () => {
-        setTimeout(() => this.warmAllCaches(), 2000); // Wait 2 seconds after load
-      });
+    // 🚨 EMERGENCY: Cache warming disabled to prevent database read crisis
+    console.warn('🚨 EMERGENCY: Cache warming system disabled to prevent excessive database reads (174K reads/min crisis)');
+    return;
 
-      // Warm caches periodically
-      setInterval(() => {
-        this.warmAllCaches();
-      }, 30 * 60 * 1000); // Every 30 minutes
+    // DISABLED: All automatic cache warming to prevent database read overload
+    // // Warm caches on page load
+    // if (typeof window !== 'undefined') {
+    //   window.addEventListener('load', () => {
+    //     setTimeout(() => this.warmAllCaches(), 2000); // Wait 2 seconds after load
+    //   });
 
-      // Warm caches when user becomes active
-      let isUserActive = true;
-      let inactivityTimer: NodeJS.Timeout;
+    //   // Warm caches periodically
+    //   setInterval(() => {
+    //     this.warmAllCaches();
+    //   }, 30 * 60 * 1000); // Every 30 minutes
 
-      const resetInactivityTimer = () => {
-        clearTimeout(inactivityTimer);
-        if (!isUserActive) {
-          isUserActive = true;
-          console.log('🔥 [CacheWarming] User became active, warming critical caches');
-          this.warmCriticalCaches();
-        }
-        
-        inactivityTimer = setTimeout(() => {
-          isUserActive = false;
-        }, 5 * 60 * 1000); // 5 minutes of inactivity
-      };
+    //   // Warm caches when user becomes active
+    //   let isUserActive = true;
+    //   let inactivityTimer: NodeJS.Timeout;
 
-      ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
-        window.addEventListener(event, resetInactivityTimer, { passive: true });
-      });
-    }
+    //   const resetInactivityTimer = () => {
+    //     clearTimeout(inactivityTimer);
+    //     if (!isUserActive) {
+    //       isUserActive = true;
+    //       console.log('🔥 [CacheWarming] User became active, warming critical caches');
+    //       this.warmCriticalCaches();
+    //     }
+
+    //     inactivityTimer = setTimeout(() => {
+    //       isUserActive = false;
+    //     }, 5 * 60 * 1000); // 5 minutes of inactivity
+    //   };
+
+    //   ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+    //     window.addEventListener(event, resetInactivityTimer, { passive: true });
+    //   });
+    // }
   }
 
   /**
