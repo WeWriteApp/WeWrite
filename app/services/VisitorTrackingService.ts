@@ -175,7 +175,7 @@ class VisitorTrackingService {
     console.warn('🚨 EMERGENCY: Visitor tracking completely disabled to stop database read crisis');
     return; // Exit early to prevent any database operations
 
-    /* DISABLED FOR EMERGENCY COST OPTIMIZATION
+    /* DISABLED FOR EMERGENCY COST OPTIMIZATION - ALL CODE BELOW COMMENTED OUT
     try {
       // Check if already tracking this session
       if (this.isTracking && this.currentAccount) {
@@ -185,7 +185,6 @@ class VisitorTrackingService {
         }
         return;
       }
-    */
 
       // Generate browser fingerprint
       const fingerprint = await BotDetectionService.generateFingerprint();
@@ -216,7 +215,6 @@ class VisitorTrackingService {
       }
 
 
-
       // Create new session
       const sessionId = this.generateSessionId(fingerprint);
       this.sessionStartTime = Date.now();
@@ -243,7 +241,7 @@ class VisitorTrackingService {
       };
 
       // Store session in Firestore (filter out undefined values)
-const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
+      const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
       const sessionData = {
         ...this.currentAccount,
         startTime: this.currentAccount.startTime,
@@ -278,6 +276,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
       }
       this.isTracking = false;
     }
+    END OF DISABLED CODE */
   }
 
   /**
