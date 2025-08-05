@@ -24,6 +24,7 @@ import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscr
 import { WarningDot } from '../components/ui/warning-dot';
 import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
+import { useUserEarnings } from '../hooks/useUserEarnings';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
 import { UsdPieChart } from '../components/ui/UsdPieChart';
 import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
@@ -45,8 +46,9 @@ export default function SettingsIndexPage() {
   const [isLoadingSubscription, setIsLoadingSubscription] = useState<boolean>(true);
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
-  // Get bank setup status and balances
+  // Get bank setup status, earnings, and balances
   const bankSetupStatus = useBankSetupStatus();
+  const { earnings } = useUserEarnings();
   const { usdBalance } = useUsdBalance();
 
   const settingsSections: SettingsSection[] = [
@@ -281,7 +283,7 @@ export default function SettingsIndexPage() {
                       </span>
                     )}
 
-                    {section.id === 'earnings' && (
+                    {section.id === 'earnings' && earnings?.hasEarnings && (
                       bankSetupStatus.isSetup ? (
                         <StatusIcon status="success" size="sm" position="static" />
                       ) : (

@@ -13,7 +13,6 @@ import { Share2 } from "lucide-react";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { Button } from "../ui/button";
 import { UserFollowButton } from "../utils/UserFollowButton";
-import NavHeader from "../layout/NavHeader";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
@@ -69,11 +68,8 @@ const SingleProfileView = ({ profile }) => {
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
-      {/* Navigation Header */}
-      <NavHeader />
-
-      {/* Apply WeWrite standardized padding for consistent layout */}
-      <div className="p-5 md:p-4">
+      {/* Content area - header spacing handled by NavPageLayout */}
+      <div className="space-y-6">
 
         {/* Username row */}
         <div className="flex flex-col items-center mb-6">

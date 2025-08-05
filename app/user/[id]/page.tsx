@@ -7,6 +7,7 @@ import SingleProfileView from '../../components/pages/SingleProfileView';
 import { useAuth } from '../../providers/AuthProvider';
 import { PageProvider } from '../../contexts/PageContext';
 import { useOptimizedUserProfile } from '../../hooks/useOptimizedUserProfile';
+import NavPageLayout from '../../components/layout/NavPageLayout';
 
 interface UserPageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -123,11 +124,10 @@ export default function UserPage({ params }: UserPageProps) {
   }
 
   return (
-    <>
-      {/* ...existing profile rendering... */}
+    <NavPageLayout>
       <PageProvider>
         <SingleProfileView profile={profile} />
       </PageProvider>
-    </>
+    </NavPageLayout>
   );
 }

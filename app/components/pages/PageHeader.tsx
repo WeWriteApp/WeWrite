@@ -760,7 +760,7 @@ export default function PageHeader({
                           <MoreHorizontal className="h-5 w-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-80 p-2 min-w-80">
+                      <DropdownMenuContent align="end" className="w-80 p-2 min-w-80 z-[100]">
                         {/* Menu items for existing pages */}
                         {!isNewPage && (
                           <>
@@ -781,7 +781,7 @@ export default function PageHeader({
                                       </div>
                                       <div className="flex flex-col flex-1">
                                         <span className="font-medium text-sm whitespace-nowrap">Insert link</span>
-                                        <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                        <span className="text-xs text-muted-foreground leading-relaxed">
                                           Add a link to another page
                                         </span>
                                       </div>
@@ -802,7 +802,7 @@ export default function PageHeader({
                                 </div>
                                 <div className="flex flex-col flex-1">
                                   <span className="font-medium text-sm whitespace-nowrap">Share</span>
-                                  <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                  <span className="text-xs text-muted-foreground leading-relaxed">
                                     Copy link to this page
                                   </span>
                                 </div>
@@ -819,7 +819,7 @@ export default function PageHeader({
                                 </div>
                                 <div className="flex flex-col flex-1">
                                   <span className="font-medium text-sm whitespace-nowrap">Add to Page</span>
-                                  <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                  <span className="text-xs text-muted-foreground leading-relaxed">
                                     Add this page to another page of yours, perhaps a category page
                                   </span>
                                 </div>
@@ -837,7 +837,7 @@ export default function PageHeader({
                                     </div>
                                     <div className="flex flex-col flex-1">
                                       <span className="font-medium text-sm whitespace-nowrap">Reply</span>
-                                      <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                                      <span className="text-xs text-muted-foreground leading-relaxed">
                                         Create a response to this page
                                       </span>
                                     </div>

@@ -69,7 +69,7 @@ const DropdownMenuContent = ({ children, className, ...props }: any) => {
   return (
     <div
       className={cn(
-        "absolute right-0 top-full mt-1 z-[80] min-w-[8rem] overflow-hidden rounded-xl border-theme-strong bg-card text-card-foreground shadow-lg",
+        "absolute right-0 top-full mt-1 z-[100] min-w-[8rem] overflow-hidden rounded-xl border-theme-strong bg-card text-card-foreground shadow-lg",
         "dark:bg-card/95 dark:backdrop-blur-sm",
         "p-2",
         className

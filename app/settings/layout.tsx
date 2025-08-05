@@ -264,17 +264,20 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
 
                         {section.id === 'earnings' && (() => {
-                          // Show "Set up bank" if bank isn't set up
-                          if (!bankSetupStatus.isSetup) {
-                            return (
-                              <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full font-medium">
-                                Set up bank
-                              </span>
-                            );
-                          }
-                          // Show success if bank is set up properly
-                          if (bankSetupStatus.isSetup) {
-                            return <StatusIcon status="success" size="sm" position="static" />;
+                          // Only show bank setup notices if user has earnings to pay out
+                          if (earnings?.hasEarnings) {
+                            // Show "Set up bank" if bank isn't set up but user has earnings
+                            if (!bankSetupStatus.isSetup) {
+                              return (
+                                <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full font-medium">
+                                  Set up bank
+                                </span>
+                              );
+                            }
+                            // Show success if bank is set up properly
+                            if (bankSetupStatus.isSetup) {
+                              return <StatusIcon status="success" size="sm" position="static" />;
+                            }
                           }
                           return null;
                         })()}

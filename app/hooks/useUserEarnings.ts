@@ -82,7 +82,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
-              hasEarnings: true // Always show earnings counter, even when zero
+              hasEarnings: false // Only true when user actually has earnings > 0
             };
 
             setEarnings(earningsData);
@@ -118,7 +118,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
-              hasEarnings: true // Always show earnings counter, even when zero
+              hasEarnings: false // Only true when user actually has earnings > 0
             };
           }
 
