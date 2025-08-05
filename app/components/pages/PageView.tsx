@@ -466,6 +466,13 @@ export default function PageView({
         const pageData = data.pageData;
         const versionData = data.versionData;
 
+        if (!pageData) {
+          pageLogger.error('Page data is undefined', { data });
+          setError('Page not found or failed to load');
+          setLoading(false);
+          return;
+        }
+
         setPage(pageData);
         if (pageData.title !== title) {
           pageLogger.debug('Title updated from page data', {
