@@ -130,34 +130,11 @@ export function useNavigationPreloader() {
     }
   }, [user?.uid]);
 
-  // Main preloading effect
+  // 🚨 EMERGENCY: Disable main preloading effect to prevent excessive Firebase reads
   useEffect(() => {
-    if (!user?.uid) return;
-
-    // Preload critical navigation targets with staggered timing
-    const preloadTasks = [
-      { fn: () => preloadUserProfile(user.uid), delay: 100, priority: 'high' },
-      { fn: preloadHomeData, delay: 200, priority: 'high' },
-      { fn: preloadNotifications, delay: 500, priority: 'medium' },
-      { fn: preloadRecentPages, delay: 1000, priority: 'medium' },
-      { fn: preloadTrendingPages, delay: 1500, priority: 'low' },
-      { fn: preloadSearchData, delay: 2000, priority: 'low' },
-    ];
-
-    const timeouts: NodeJS.Timeout[] = [];
-
-    preloadTasks.forEach(({ fn, delay, priority }) => {
-      const timeout = setTimeout(() => {
-        // Only preload if user is still active (not navigating rapidly)
-        if (document.visibilityState === 'visible') {
-          fn();
-        }
-      }, delay);
-
-      timeouts.push(timeout);
-    });
-
-    // Cleanup timeouts on unmount
+    console.warn('🚨 EMERGENCY: Main preloading effect disabled to prevent excessive database reads (20K-30K reads/min crisis)');
+    // DISABLED: All main preloading to prevent database read overload
+    return;
     return () => {
       timeouts.forEach(timeout => clearTimeout(timeout));
     };
