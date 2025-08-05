@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, X, ChevronRight } from 'lucide-react';
-import { getRecentSearches, clearRecentSearches } from "../../utils/recentSearches";
+import { getRecentSearches, clearRecentSearches, removeRecentSearch } from "../../utils/recentSearches";
 import { Button } from "../ui/button";
 import PillLink from "../utils/PillLink";
 
@@ -24,13 +24,22 @@ export default function RecentSearches({ onSelect, userId = null }) {
 
   // Load recent searches on mount
   useEffect(() => {
-    const searches = getRecentSearches(userId);
-    setRecentSearches(searches);
+    const loadRecentSearches = async () => {
+      try {
+        const searches = await getRecentSearches(userId);
+        setRecentSearches(searches);
 
-    // Fetch search results for each recent search
-    searches.forEach(search => {
-      fetchSearchResults(search.term);
-    });
+        // Fetch search results for each recent search
+        searches.forEach(search => {
+          fetchSearchResults(search.term);
+        });
+      } catch (error) {
+        console.error('Error loading recent searches:', error);
+        setRecentSearches([]);
+      }
+    };
+
+    loadRecentSearches();
   }, [userId]);
 
   // Check overflow when search results change
@@ -81,9 +90,13 @@ export default function RecentSearches({ onSelect, userId = null }) {
   };
 
   // Handle clearing all recent searches
-  const handleClearAll = () => {
-    clearRecentSearches(userId);
-    setRecentSearches([]);
+  const handleClearAll = async () => {
+    try {
+      await clearRecentSearches(userId);
+      setRecentSearches([]);
+    } catch (error) {
+      console.error('Error clearing recent searches:', error);
+    }
   };
 
   // If there are no recent searches, don't render anything
@@ -122,13 +135,16 @@ export default function RecentSearches({ onSelect, userId = null }) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  const newSearches = recentSearches.filter((_, i) => i !== index);
-                  setRecentSearches(newSearches);
-                  localStorage.setItem(
-                    userId ? `recentSearches_${userId}` : 'recentSearches',
-                    JSON.stringify(newSearches)
-                  );
+                onClick={async () => {
+                  try {
+                    const updatedSearches = await removeRecentSearch(search.term, userId);
+                    setRecentSearches(updatedSearches);
+                  } catch (error) {
+                    console.error('Error removing search:', error);
+                    // Fallback to local removal
+                    const newSearches = recentSearches.filter((_, i) => i !== index);
+                    setRecentSearches(newSearches);
+                  }
                 }}
                 className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
               >

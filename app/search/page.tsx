@@ -259,12 +259,16 @@ const SearchPage = React.memo(() => {
   }, [initialQuery, performSearch, userId]); // Removed authLoading dependency
 
   // Memoized callback functions for SearchInput component
-  const handleSearch = useCallback((searchTerm) => {
+  const handleSearch = useCallback(async (searchTerm) => {
     performSearch(searchTerm);
 
     // Save to recent searches if it's a valid search term
     if (searchTerm && searchTerm.trim()) {
-      addRecentSearch(searchTerm.trim(), userId);
+      try {
+        await addRecentSearch(searchTerm.trim(), userId);
+      } catch (error) {
+        console.error('Error saving recent search:', error);
+      }
     }
 
     // Update URL to reflect the search query

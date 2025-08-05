@@ -7,96 +7,217 @@ const MAX_RECENT_SEARCHES = 10;
 
 /**
  * Add a search term to the recent searches list
- * 
+ * Now uses database storage for authenticated users with localStorage fallback
+ *
  * @param {string} searchTerm - The search term to add
- * @param {string} userId - The user ID (optional)
+ * @param {string} userId - The user ID (required for database storage)
  */
-export const addRecentSearch = (searchTerm, userId = null) => {
+export const addRecentSearch = async (searchTerm, userId = null) => {
   if (!searchTerm || typeof window === 'undefined') return;
-  
+
   // Trim the search term and ensure it's not empty
   const trimmedTerm = searchTerm.trim();
   if (!trimmedTerm) return;
-  
+
+  // If user is authenticated, save to database
+  if (userId) {
+    try {
+      const response = await fetch('/api/user-preferences/recent-searches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ searchTerm: trimmedTerm }),
+      });
+
+      if (response.ok) {
+        console.log('Recent search saved to database');
+        return;
+      } else {
+        console.warn('Failed to save recent search to database, falling back to localStorage');
+      }
+    } catch (error) {
+      console.warn('Error saving recent search to database, falling back to localStorage:', error);
+    }
+  }
+
+  // Fallback to localStorage (for unauthenticated users or when API fails)
   try {
-    // Create a storage key that's specific to the user if provided
     const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
-    
+
     // Get existing recent searches
     const existingSearchesStr = localStorage.getItem(storageKey);
     let recentSearches = existingSearchesStr ? JSON.parse(existingSearchesStr) : [];
-    
+
     // Ensure it's an array
     if (!Array.isArray(recentSearches)) {
       recentSearches = [];
     }
-    
+
     // Remove this search term if it already exists (to avoid duplicates)
-    recentSearches = recentSearches.filter(item => 
+    recentSearches = recentSearches.filter(item =>
       item.term.toLowerCase() !== trimmedTerm.toLowerCase()
     );
-    
+
     // Add the new search term to the beginning with timestamp
     recentSearches.unshift({
       term: trimmedTerm,
       timestamp: Date.now()
     });
-    
+
     // Keep only the most recent searches
     recentSearches = recentSearches.slice(0, MAX_RECENT_SEARCHES);
-    
+
     // Save back to localStorage
     localStorage.setItem(storageKey, JSON.stringify(recentSearches));
   } catch (error) {
-    console.error("Error adding recent search:", error);
+    console.error("Error adding recent search to localStorage:", error);
   }
 };
 
 /**
  * Get the list of recent searches
- * 
- * @param {string} userId - The user ID (optional)
- * @returns {Array} - Array of recent search objects with term and timestamp
+ * Now fetches from database for authenticated users with localStorage fallback
+ *
+ * @param {string} userId - The user ID (required for database storage)
+ * @returns {Promise<Array>} - Array of recent search objects with term and timestamp
  */
-export const getRecentSearches = (userId = null) => {
+export const getRecentSearches = async (userId = null) => {
   if (typeof window === 'undefined') return [];
-  
+
+  // If user is authenticated, try to get from database first
+  if (userId) {
+    try {
+      const response = await fetch('/api/user-preferences/recent-searches');
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data.recentSearches)) {
+          return data.data.recentSearches;
+        }
+      } else {
+        console.warn('Failed to fetch recent searches from database, falling back to localStorage');
+      }
+    } catch (error) {
+      console.warn('Error fetching recent searches from database, falling back to localStorage:', error);
+    }
+  }
+
+  // Fallback to localStorage
   try {
-    // Create a storage key that's specific to the user if provided
     const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
-    
+
     // Get existing recent searches
     const existingSearchesStr = localStorage.getItem(storageKey);
     let recentSearches = existingSearchesStr ? JSON.parse(existingSearchesStr) : [];
-    
+
     // Ensure it's an array
     if (!Array.isArray(recentSearches)) {
       return [];
     }
-    
+
     return recentSearches;
   } catch (error) {
-    console.error("Error getting recent searches:", error);
+    console.error("Error getting recent searches from localStorage:", error);
     return [];
   }
 };
 
 /**
  * Clear all recent searches
- * 
- * @param {string} userId - The user ID (optional)
+ * Now clears from database for authenticated users with localStorage fallback
+ *
+ * @param {string} userId - The user ID (required for database storage)
  */
-export const clearRecentSearches = (userId = null) => {
+export const clearRecentSearches = async (userId = null) => {
   if (typeof window === 'undefined') return;
-  
+
+  // If user is authenticated, clear from database
+  if (userId) {
+    try {
+      const response = await fetch('/api/user-preferences/recent-searches', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        console.log('Recent searches cleared from database');
+        // Also clear localStorage to keep them in sync
+        const storageKey = `recentSearches_${userId}`;
+        localStorage.removeItem(storageKey);
+        return;
+      } else {
+        console.warn('Failed to clear recent searches from database, falling back to localStorage');
+      }
+    } catch (error) {
+      console.warn('Error clearing recent searches from database, falling back to localStorage:', error);
+    }
+  }
+
+  // Fallback to localStorage
   try {
-    // Create a storage key that's specific to the user if provided
     const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
-    
-    // Remove the item from localStorage
     localStorage.removeItem(storageKey);
   } catch (error) {
-    console.error("Error clearing recent searches:", error);
+    console.error("Error clearing recent searches from localStorage:", error);
+  }
+};
+
+/**
+ * Remove a specific search term from recent searches
+ *
+ * @param {string} searchTerm - The search term to remove
+ * @param {string} userId - The user ID (required for database storage)
+ */
+export const removeRecentSearch = async (searchTerm, userId = null) => {
+  if (!searchTerm || typeof window === 'undefined') return;
+
+  const trimmedTerm = searchTerm.trim();
+  if (!trimmedTerm) return;
+
+  // If user is authenticated, remove from database
+  if (userId) {
+    try {
+      const response = await fetch(`/api/user-preferences/recent-searches?term=${encodeURIComponent(trimmedTerm)}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Recent search removed from database');
+        return data.data.recentSearches || [];
+      } else {
+        console.warn('Failed to remove recent search from database, falling back to localStorage');
+      }
+    } catch (error) {
+      console.warn('Error removing recent search from database, falling back to localStorage:', error);
+    }
+  }
+
+  // Fallback to localStorage
+  try {
+    const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
+
+    // Get existing recent searches
+    const existingSearchesStr = localStorage.getItem(storageKey);
+    let recentSearches = existingSearchesStr ? JSON.parse(existingSearchesStr) : [];
+
+    // Ensure it's an array
+    if (!Array.isArray(recentSearches)) {
+      recentSearches = [];
+    }
+
+    // Filter out the specific search term
+    recentSearches = recentSearches.filter(search =>
+      search.term.toLowerCase() !== trimmedTerm.toLowerCase()
+    );
+
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(recentSearches));
+
+    return recentSearches;
+  } catch (error) {
+    console.error("Error removing recent search from localStorage:", error);
+    return [];
   }
 };
 
