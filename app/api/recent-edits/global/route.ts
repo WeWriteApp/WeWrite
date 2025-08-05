@@ -49,14 +49,16 @@ const adminDb = getFirestore(globalRecentEditsApp);
  */
 
 export async function GET(request: NextRequest) {
-  // Temporary quota bypass for development
+  // 🚨 EMERGENCY QUOTA BYPASS - More aggressive fallback
   if (process.env.NEXT_PUBLIC_BYPASS_FIREBASE_QUOTA === 'true') {
-    console.log('🚧 [GLOBAL_RECENT_EDITS] Using quota bypass - returning mock data');
+    console.log('🚧 [GLOBAL_RECENT_EDITS] EMERGENCY: Using quota bypass - returning mock data');
     return NextResponse.json({
       edits: [],
       hasMore: false,
       nextCursor: null,
-      message: 'Firebase quota exceeded - using fallback'
+      message: 'Firebase quota exceeded - service temporarily limited to prevent cost overrun',
+      quotaBypass: true,
+      timestamp: new Date().toISOString()
     });
   }
 
@@ -88,9 +90,9 @@ export async function GET(request: NextRequest) {
       subscriptions: getCollectionName('subscriptions')
     });
 
-    // EMERGENCY COST OPTIMIZATION: Enable aggressive caching
+    // 🚨 EMERGENCY COST OPTIMIZATION: ULTRA AGGRESSIVE CACHING
     const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}`;
-    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 2 * 60 * 1000; // 30 seconds in dev, 2 minutes in prod
+    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 10 * 60 * 1000; // 30 seconds in dev, 10 minutes in prod
 
     // Check cache first
     const cached = globalRecentEditsCache.get(cacheKey);

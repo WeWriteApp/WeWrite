@@ -57,7 +57,7 @@ export function useOptimizedHome() {
     {
       enableCache: true,
       backgroundRefresh: true,
-      cacheTTL: 3 * 60 * 1000, // 3 minutes cache
+      cacheTTL: 15 * 60 * 1000, // 🚨 EMERGENCY: 15 minutes cache to reduce reads
       enabled: !!user?.uid,
     }
   );

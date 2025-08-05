@@ -6,7 +6,7 @@ import { trackDatabaseRead } from '../../../utils/databaseReadTracker';
 
 // 🚨 CRITICAL COST OPTIMIZATION: Aggressive caching for allocation bar data
 const allocationBarDataCache = new Map<string, { data: any; timestamp: number }>();
-const ALLOCATION_BAR_CACHE_TTL = 60 * 1000; // 1 minute cache (short for real-time feel)
+const ALLOCATION_BAR_CACHE_TTL = 10 * 60 * 1000; // 🚨 EMERGENCY: 10 minutes cache to stop read spike
 
 /**
  * GET /api/usd/allocation-bar-data

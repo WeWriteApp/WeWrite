@@ -20,7 +20,7 @@ import {
 
 // 🚨 CRITICAL COST OPTIMIZATION: Aggressive caching for earnings data
 const earningsCache = new Map<string, { data: any; timestamp: number }>();
-const EARNINGS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+const EARNINGS_CACHE_TTL = 15 * 60 * 1000; // 🚨 EMERGENCY: 15 minutes cache to stop read spike
 
 /**
  * Get unfunded earnings for a user from logged-out users and users without subscriptions

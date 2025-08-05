@@ -40,15 +40,15 @@ class EmergencyReadOptimizer {
     this.optimizationRules = [
       {
         name: 'Emergency Circuit Breaker',
-        condition: (analysis) => analysis.readsPerMinute > 2000,
+        condition: (analysis) => analysis.readsPerMinute > 500, // 🚨 REDUCED from 2000 to 500
         action: async (analysis) => {
           console.error('🚨 EMERGENCY: Activating circuit breakers for high-volume endpoints');
           for (const pattern of analysis.topOffenders.slice(0, 5)) {
-            this.activateCircuitBreaker(pattern.endpoint, 60000); // 1 minute
+            this.activateCircuitBreaker(pattern.endpoint, 120000); // 🚨 INCREASED to 2 minutes
           }
         },
         priority: 'critical',
-        description: 'Activate circuit breakers when reads exceed 2000/min'
+        description: 'Activate circuit breakers when reads exceed 500/min'
       },
       {
         name: 'Rate Limit High Frequency Endpoints',
@@ -56,7 +56,7 @@ class EmergencyReadOptimizer {
         action: async (analysis) => {
           console.warn('⚠️ Applying rate limits to suspicious endpoints');
           for (const pattern of analysis.suspiciousPatterns) {
-            this.applyRateLimit(pattern.endpoint, 100, 60000); // 100 requests per minute
+            this.applyRateLimit(pattern.endpoint, 20, 60000); // 🚨 REDUCED from 100 to 20 requests per minute
           }
         },
         priority: 'high',
