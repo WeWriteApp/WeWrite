@@ -56,7 +56,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
   const touchStartX = useRef<number>(0)
   const touchEndX = useRef<number>(0)
 
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -186,20 +186,17 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
   const handleLogoutConfirm = async () => {
     setIsLoggingOut(true);
     try {
-      console.log('🔐 [MOBILE SIDEBAR] Logging out via API');
-      const response = await userProfileApi.logout();
-      if (response.success) {
-        console.log('🔐 [MOBILE SIDEBAR] Logout successful');
-        onClose();
-      } else {
-        console.error('🔐 [MOBILE SIDEBAR] Logout failed:', response.error);
-      }
+      console.log('🔐 [MOBILE SIDEBAR] Logging out via AuthProvider signOut');
+      await signOut(); // Use AuthProvider's signOut method which handles refresh
+      console.log('🔐 [MOBILE SIDEBAR] Logout completed - page should refresh');
     } catch (error) {
       console.error('🔐 [MOBILE SIDEBAR] Logout error:', error);
-    } finally {
+      // Still close modal and sidebar on error
       setIsLoggingOut(false);
       setShowLogoutConfirmation(false);
+      onClose();
     }
+    // Note: No finally block needed since signOut() triggers page refresh
   };
 
   const handleLogoutCancel = () => {

@@ -76,7 +76,7 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const editorContext = useEditorContext();
   const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar, sidebarOrder, reorderSidebarItem, clearCache } = useNavigationOrder();
 
@@ -638,19 +638,16 @@ export default function MobileBottomNav() {
                         if (confirmed) {
                           setIsLoggingOut(true);
                           try {
-                            console.log('🔐 [MOBILE NAV] Logging out via API');
-                            const response = await userProfileApi.logout();
-                            if (response.success) {
-                              console.log('🔐 [MOBILE NAV] Logout successful');
-                              setIsExpanded(false); // Close expanded section
-                            } else {
-                              console.error('🔐 [MOBILE NAV] Logout failed:', response.error);
-                            }
+                            console.log('🔐 [MOBILE NAV] Logging out via AuthProvider signOut');
+                            await signOut(); // Use AuthProvider's signOut method which handles refresh
+                            console.log('🔐 [MOBILE NAV] Logout completed - page should refresh');
                           } catch (error) {
                             console.error('🔐 [MOBILE NAV] Error during logout:', error);
-                          } finally {
+                            // Still close expanded section on error
                             setIsLoggingOut(false);
+                            setIsExpanded(false);
                           }
+                          // Note: No finally block needed since signOut() triggers page refresh
                         }
                       }}
                       className="text-xs bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20 dark:bg-destructive/10 dark:border-destructive/30 dark:text-destructive dark:hover:bg-destructive/20"
