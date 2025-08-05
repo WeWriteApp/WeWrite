@@ -34,7 +34,7 @@ export function UsdAllocationModal({
   isUserAllocation = false,
   username
 }: UsdAllocationModalProps) {
-  const { usdBalance } = useUsdBalance();
+  const { usdBalance, isFakeBalance, hasActiveSubscription } = useUsdBalance();
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -203,6 +203,24 @@ export function UsdAllocationModal({
 
         {/* Content */}
         <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-0">
+          {/* Fake Balance Notice */}
+          {isFakeBalance && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Demo Mode - Fake $10/mo
+                </span>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                {!hasActiveSubscription
+                  ? "Activate your subscription to make these allocations real"
+                  : "Try the allocation system with fake funds"
+                }
+              </p>
+            </div>
+          )}
+
           {/* Balance info */}
           <div className="bg-muted/50 rounded-lg p-3 space-y-2">
             <div className="flex justify-between text-sm">

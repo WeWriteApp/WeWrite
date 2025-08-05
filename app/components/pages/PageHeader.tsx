@@ -760,7 +760,7 @@ export default function PageHeader({
                           <MoreHorizontal className="h-5 w-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-80 p-2 min-w-80 z-[100]">
+                      <DropdownMenuContent align="end" className="w-80 p-2 min-w-80 z-[9999]">
                         {/* Menu items for existing pages */}
                         {!isNewPage && (
                           <>

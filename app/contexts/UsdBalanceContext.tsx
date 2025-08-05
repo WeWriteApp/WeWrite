@@ -4,6 +4,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from '../providers/AuthProvider';
 import { centsToDollars, formatUsdCents } from '../utils/formatCurrency';
 import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
+import {
+  getLoggedOutUsdBalance,
+  getUserUsdBalance,
+  allocateLoggedOutUsd,
+  allocateUserUsd,
+  type SimulatedUsdBalance
+} from '../utils/simulatedUsd';
 
 interface UsdBalance {
   totalUsdCents: number;
@@ -32,6 +39,9 @@ interface UsdBalanceContextType {
   getTotalUsdFormatted: () => string;
   getAvailableUsdFormatted: () => string;
   getAllocatedUsdFormatted: () => string;
+  // New properties for fake balance system
+  isFakeBalance: boolean;
+  hasActiveSubscription: boolean;
 }
 
 const UsdBalanceContext = createContext<UsdBalanceContextType | undefined>(undefined);
@@ -41,15 +51,23 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
   const [usdBalance, setUsdBalance] = useState<UsdBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isFakeBalance, setIsFakeBalance] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const fetchingRef = useRef<Promise<void> | null>(null);
 
   const fetchUsdBalance = useCallback(async (forceRefresh = false): Promise<void> => {
+    // Handle logged out users with fake $10/mo balance
     if (!user?.uid) {
-      console.log('[UsdBalanceContext] Skipping USD balance fetch:', {
-        hasAccount: !!user?.uid
+      console.log('[UsdBalanceContext] Providing fake balance for logged out user');
+      const fakeBalance = getLoggedOutUsdBalance();
+      setUsdBalance({
+        totalUsdCents: fakeBalance.totalUsdCents,
+        allocatedUsdCents: fakeBalance.allocatedUsdCents,
+        availableUsdCents: fakeBalance.availableUsdCents
       });
-      setUsdBalance(null);
-      setLastUpdated(null);
+      setIsFakeBalance(true);
+      setHasActiveSubscription(false);
+      setLastUpdated(new Date());
       return;
     }
 
@@ -139,6 +157,8 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
           };
 
           setUsdBalance(balance);
+          setIsFakeBalance(false);
+          setHasActiveSubscription(true);
           setLastUpdated(new Date());
 
           // Cache the result in memory
@@ -158,19 +178,34 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
             available: formatUsdCents(balance.availableUsdCents)
           });
         } else {
-          console.log('[UsdBalanceContext] No USD balance found in response');
+          console.log('[UsdBalanceContext] No USD balance found - providing fake $10/mo balance');
 
-          // If we have cached data, keep using it on no data response
-          if (!cached) {
-            setUsdBalance(null);
-          }
+          // User has account but no subscription - provide fake balance
+          const fakeBalance = getUserUsdBalance(user.uid);
+          setUsdBalance({
+            totalUsdCents: fakeBalance.totalUsdCents,
+            allocatedUsdCents: fakeBalance.allocatedUsdCents,
+            availableUsdCents: fakeBalance.availableUsdCents
+          });
+          setIsFakeBalance(true);
+          setHasActiveSubscription(false);
+          setLastUpdated(new Date());
         }
       } catch (error) {
         console.error('[UsdBalanceContext] Error fetching USD balance:', error);
 
         // If we have cached data, keep using it on error
         if (!cached) {
-          setUsdBalance(null);
+          // On error, provide fake balance for logged in users
+          console.log('[UsdBalanceContext] Error occurred - providing fake balance');
+          const fakeBalance = getUserUsdBalance(user.uid);
+          setUsdBalance({
+            totalUsdCents: fakeBalance.totalUsdCents,
+            allocatedUsdCents: fakeBalance.allocatedUsdCents,
+            availableUsdCents: fakeBalance.availableUsdCents
+          });
+          setIsFakeBalance(true);
+          setHasActiveSubscription(false);
         }
       } finally {
         setIsLoading(false);
@@ -191,22 +226,48 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
     console.log('[UsdBalanceContext] Optimistic balance update:', {
       changeCents,
       changeFormatted: formatUsdCents(Math.abs(changeCents)),
-      direction: changeCents > 0 ? 'increase' : 'decrease'
+      direction: changeCents > 0 ? 'increase' : 'decrease',
+      isFakeBalance
     });
-    
+
     setUsdBalance(prev => {
       if (!prev) return null;
-      
+
       const newAllocatedCents = Math.max(0, prev.allocatedUsdCents + changeCents);
       const newAvailableCents = prev.totalUsdCents - newAllocatedCents;
-      
-      return {
+
+      const newBalance = {
         ...prev,
         allocatedUsdCents: newAllocatedCents,
         availableUsdCents: newAvailableCents
       };
+
+      // If this is a fake balance, update localStorage
+      if (isFakeBalance) {
+        if (!user?.uid) {
+          // Update logged out balance in localStorage
+          const currentFakeBalance = getLoggedOutUsdBalance();
+          const updatedFakeBalance = {
+            ...currentFakeBalance,
+            allocatedUsdCents: newAllocatedCents,
+            availableUsdCents: newAvailableCents
+          };
+          localStorage.setItem('wewrite_logged_out_usd', JSON.stringify(updatedFakeBalance));
+        } else {
+          // Update user fake balance in localStorage
+          const currentFakeBalance = getUserUsdBalance(user.uid);
+          const updatedFakeBalance = {
+            ...currentFakeBalance,
+            allocatedUsdCents: newAllocatedCents,
+            availableUsdCents: newAvailableCents
+          };
+          localStorage.setItem(`wewrite_user_usd_${user.uid}`, JSON.stringify(updatedFakeBalance));
+        }
+      }
+
+      return newBalance;
     });
-  }, []);
+  }, [isFakeBalance, user?.uid]);
 
   // Helper methods for formatted display
   const getTotalUsdFormatted = useCallback(() => {
@@ -246,7 +307,9 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
     lastUpdated,
     getTotalUsdFormatted,
     getAvailableUsdFormatted,
-    getAllocatedUsdFormatted
+    getAllocatedUsdFormatted,
+    isFakeBalance,
+    hasActiveSubscription
   };
 
   return (

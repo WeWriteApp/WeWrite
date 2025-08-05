@@ -47,7 +47,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const pathname = usePathname();
   const router = useRouter();
   const { triggerDelayedBanner } = useDelayedLoginBanner();
-  const { usdBalance } = useUsdBalance();
+  const { usdBalance, isFakeBalance, hasActiveSubscription } = useUsdBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
 
   // Flash animation state
@@ -192,9 +192,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
   // Handle allocation bar click
   const handleAllocationBarClick = () => {
-    if (!user && !isPageOwner) {
-      router.push('/');
-    } else {
+    // Allow both logged out users and logged in users to open the modal
+    if (!isPageOwner) {
       setIsModalOpen(true);
     }
   };
@@ -207,7 +206,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
   // User state checks
   const hasSubscription = subscription && isActiveSubscription(subscription.status);
-  const showSubscriptionNotice = user && !hasSubscription && !isPageOwner;
+  const showSubscriptionNotice = user && !hasActiveSubscription && !isPageOwner && isFakeBalance;
   const showLoginNotice = !user && !isPageOwner;
 
   return createPortal(
@@ -416,10 +415,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         {showLoginNotice && (
           <div
             className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
-            onClick={handleAllocationBarClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push('/');
+            }}
           >
             <p className="text-sm font-medium text-center">
-              Log in to begin allocating funds
+              Try allocating with fake $10/mo • Log in to make it real
             </p>
           </div>
         )}
@@ -434,7 +436,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
             }}
           >
             <p className="text-sm font-medium text-center">
-              Fund your account to support writers
+              Activate your subscription to make the funds real
             </p>
           </div>
         )}

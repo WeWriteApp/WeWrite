@@ -7,6 +7,7 @@ import {
   UseAllocationStateReturn
 } from '../types/allocation';
 import { usePageAllocation } from './useAllocationQueries';
+import { getLoggedOutPageAllocation, getUserPageAllocation } from '../utils/simulatedUsd';
 
 /**
  * Custom hook for managing allocation state for a specific page
@@ -42,10 +43,25 @@ export function useAllocationState({
     refetch
   } = usePageAllocation(pageId, enabled);
 
-  // Calculate current allocation (optimistic or server value)
+  // Calculate current allocation (optimistic, server, or fake value)
   const currentAllocationCents = useMemo(() => {
-    return optimisticAllocation !== null ? optimisticAllocation : serverAllocation;
-  }, [optimisticAllocation, serverAllocation]);
+    if (optimisticAllocation !== null) {
+      return optimisticAllocation;
+    }
+
+    // If user is not logged in, get fake allocation from localStorage
+    if (!user?.uid) {
+      return getLoggedOutPageAllocation(pageId);
+    }
+
+    // For logged in users, try server allocation first, then fake allocation
+    if (serverAllocation > 0) {
+      return serverAllocation;
+    }
+
+    // Check for fake allocation for logged in users without subscriptions
+    return getUserPageAllocation(user.uid, pageId);
+  }, [optimisticAllocation, serverAllocation, user?.uid, pageId]);
 
   // Create allocation state object
   const allocationState = useMemo((): AllocationState => ({

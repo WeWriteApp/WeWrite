@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import PerformanceMonitor from '../utils/PerformanceMonitor';
-import { Pin } from 'lucide-react';
+
 import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
@@ -30,7 +30,6 @@ const SearchResultsDisplay = React.memo(({
   isLoading,
   groupsEnabled,
   userId,
-  onSave,
   error = null,
   searchStats = {}
 }) => {
@@ -104,32 +103,13 @@ const SearchResultsDisplay = React.memo(({
           resultsCount: totalResults
         }}
       />
-      {/* Search Results Summary with Performance Metrics */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="text-sm text-muted-foreground">
-            {isLoading
-              ? "Searching..."
-              : `${totalResults} results`}
-          </p>
-          {!isLoading && searchStats.searchTimeMs && isAdmin && (
-            <p className="text-xs text-muted-foreground">
-              Found in {searchStats.searchTimeMs}ms
-              {searchStats.source && ` • ${searchStats.source}`}
-            </p>
-          )}
-        </div>
-        {!isLoading && query && onSave && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSave(query)}
-            className="flex items-center gap-2"
-          >
-            <Pin className="h-4 w-4" />
-            Save search
-          </Button>
-        )}
+      {/* Search Results Summary */}
+      <div className="mb-4">
+        <p className="text-sm text-muted-foreground">
+          {isLoading
+            ? "Searching..."
+            : `${totalResults} results`}
+        </p>
       </div>
 
       <div className="space-y-6">

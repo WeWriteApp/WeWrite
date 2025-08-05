@@ -424,7 +424,7 @@ const SearchPage = React.memo(() => {
         />
       )}
 
-      {/* Search Results Header with Share Button */}
+      {/* Search Results Header with Share and Save Buttons */}
       {currentQuery && currentQuery.trim() && (
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -433,16 +433,28 @@ const SearchPage = React.memo(() => {
               Results for "{currentQuery}"
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={shareSearchUrl}
-            className="flex items-center gap-2"
-            aria-label="Share search results"
-          >
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Share</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSave(currentQuery)}
+              className="flex items-center gap-2"
+              aria-label="Save search"
+            >
+              <Pin className="h-4 w-4" />
+              <span className="hidden sm:inline">Save search</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={shareSearchUrl}
+              className="flex items-center gap-2"
+              aria-label="Share search results"
+            >
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+          </div>
         </div>
       )}
 
@@ -453,7 +465,6 @@ const SearchPage = React.memo(() => {
         isLoading={isLoading}
         groupsEnabled={groupsEnabled}
         userId={userId}
-        onSave={handleSave}
         error={error}
         searchStats={searchStats}
       />

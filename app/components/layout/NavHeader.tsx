@@ -66,7 +66,7 @@ export default function NavHeader({
 
       return (
         <FinancialDropdown
-          title="Click to view earnings"
+          title="Earnings"
           onNavigate={() => router.push('/settings/earnings')}
           direction="southwest"
           trigger={
@@ -87,7 +87,7 @@ export default function NavHeader({
     // Fallback: show zero earnings if no data but not loading
     return (
       <FinancialDropdown
-        title="Click to view earnings"
+        title="Earnings"
         onNavigate={() => router.push('/settings/earnings')}
         direction="southwest"
         trigger={
@@ -154,7 +154,7 @@ export default function NavHeader({
         // Show overspend badge with warning icon to the right
         return (
           <FinancialDropdown
-            title="Click to view full spend breakdown"
+            title="Spending"
             onNavigate={() => router.push('/settings/spend')}
             direction="southeast"
             trigger={
@@ -177,7 +177,7 @@ export default function NavHeader({
 
         return (
           <FinancialDropdown
-            title="Click to view full spend breakdown"
+            title="Spending"
             onNavigate={() => router.push('/settings/spend')}
             direction="southeast"
             trigger={

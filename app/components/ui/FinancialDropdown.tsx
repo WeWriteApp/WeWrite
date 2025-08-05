@@ -3,12 +3,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
+import { Button } from './button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from './dropdown-menu';
 
 interface FinancialDropdownProps {
   trigger: React.ReactNode;
   content: React.ReactNode;
   title: string;
   onNavigate: () => void;
+  onClose?: () => void;
   direction?: 'southeast' | 'southwest';
   className?: string;
 }
@@ -25,123 +33,83 @@ interface EarningsBreakdownProps {
 
 /**
  * FinancialDropdown - Reusable dropdown for financial displays
- * 
- * Features:
- * - Desktop: Shows on hover with tooltip-style behavior
- * - Mobile: Shows on tap, dismisses on outside click or second tap
- * - Directional positioning to avoid screen edge collisions
+ *
+ * Now uses the main dropdown component for consistent animations and behavior
  */
 export function FinancialDropdown({
   trigger,
   content,
   title,
   onNavigate,
+  onClose,
   direction = 'southeast',
   className = ''
 }: FinancialDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLDivElement>(null);
 
   // Detect mobile vs desktop
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
+      setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Handle outside clicks on mobile
-  useEffect(() => {
-    if (!isMobile || !isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        triggerRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        !triggerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMobile, isOpen]);
-
-  const handleTriggerClick = () => {
-    if (isMobile) {
-      if (isOpen) {
-        // Second tap - navigate
-        onNavigate();
-        setIsOpen(false);
-      } else {
-        // First tap - show dropdown
-        setIsOpen(true);
-      }
-    } else {
-      // Desktop - navigate immediately
-      onNavigate();
-    }
-  };
-
-  const handleMouseEnter = () => {
-    if (!isMobile) {
-      setIsOpen(true);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (!isMobile) {
-      setIsOpen(false);
-    }
-  };
-
-  // Position classes based on direction
-  const positionClasses = direction === 'southeast' 
-    ? 'top-full left-0 mt-2' 
-    : 'top-full right-0 mt-2';
-
   return (
-    <div 
-      className={`relative ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {/* Trigger */}
-      <div
-        ref={triggerRef}
-        onClick={handleTriggerClick}
-        className="cursor-pointer"
-      >
-        {trigger}
-      </div>
-
-      {/* Dropdown */}
-      {isOpen && (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <div
-          ref={dropdownRef}
-          className={cn(
-            "absolute z-50 min-w-[200px] bg-popover border border-border rounded-lg shadow-lg p-3",
-            "animate-in fade-in-0 zoom-in-95 duration-200",
-            positionClasses
-          )}
+          className={cn("cursor-pointer", className)}
+          // Remove onClick - no more click-to-navigate behavior
+          // Dropdown opens on click, navigation happens via button
         >
-          {/* Title */}
-          <div className="text-sm font-medium text-foreground mb-2 text-center">
-            {title}
-          </div>
+          {trigger}
+        </div>
+      </DropdownMenuTrigger>
 
-          {/* Content */}
+      <DropdownMenuContent
+        align={direction === 'southeast' ? 'start' : 'end'}
+        className="w-[200px] p-3"
+      >
+        {/* Title */}
+        <div className="text-sm font-medium text-foreground mb-3 text-center">
+          {title}
+        </div>
+
+        {/* Content */}
+        <div className="mb-3">
           {content}
         </div>
-      )}
-    </div>
+
+        <DropdownMenuSeparator />
+
+        {/* Buttons */}
+        <div className="flex gap-2 mt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (onClose) onClose();
+            }}
+            className="flex-1"
+          >
+            Close
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              onNavigate();
+            }}
+            className="flex-1"
+          >
+            {title === 'Spending' ? 'Go to spend' : 'Go to earnings'}
+          </Button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

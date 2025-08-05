@@ -21,6 +21,7 @@ import {
   getErrorRecoveryActions
 } from '../utils/allocationErrorHandling';
 import { showUsdAllocationNotification } from '../utils/usdNotifications';
+import { allocateLoggedOutUsd, allocateUserUsd } from '../utils/simulatedUsd';
 
 /**
  * Custom hook for handling allocation actions (increment/decrement)
@@ -60,7 +61,7 @@ export function useAllocationActions({
   maxRetries = DEFAULT_MAX_RETRIES
 }: UseAllocationActionsOptions): UseAllocationActionsReturn {
   const { user } = useAuth();
-  const { usdBalance, updateOptimisticBalance } = useUsdBalance();
+  const { usdBalance, updateOptimisticBalance, isFakeBalance, hasActiveSubscription } = useUsdBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const { toast } = useToast();
 
@@ -91,13 +92,54 @@ export function useAllocationActions({
     clearBatch();
     setError(null);
 
-    const request: AllocationRequest = {
-      pageId,
-      changeCents,
-      source
-    };
-
     try {
+      // Handle fake balance allocations
+      if (isFakeBalance) {
+        console.log('[AllocationActions] Processing fake balance allocation:', {
+          changeCents,
+          pageId,
+          pageTitle,
+          isLoggedOut: !user?.uid
+        });
+
+        // Use simulated USD allocation functions
+        if (!user?.uid) {
+          // Logged out user
+          const result = allocateLoggedOutUsd(pageId, pageTitle, currentAllocationCents + changeCents);
+          if (result.success) {
+            onAllocationChange?.(currentAllocationCents + changeCents);
+            showUsdAllocationNotification(
+              changeCents,
+              pageTitle,
+              currentAllocationCents + changeCents
+            );
+          } else {
+            throw new Error(result.error || 'Fake allocation failed');
+          }
+        } else {
+          // Logged in user without subscription
+          const result = allocateUserUsd(user.uid, pageId, pageTitle, currentAllocationCents + changeCents);
+          if (result.success) {
+            onAllocationChange?.(currentAllocationCents + changeCents);
+            showUsdAllocationNotification(
+              changeCents,
+              pageTitle,
+              currentAllocationCents + changeCents
+            );
+          } else {
+            throw new Error(result.error || 'Fake allocation failed');
+          }
+        }
+        return;
+      }
+
+      // Real allocation for users with subscriptions
+      const request: AllocationRequest = {
+        pageId,
+        changeCents,
+        source
+      };
+
       // Use enhanced batcher for intelligent request batching
       const result = await allocationBatcher.batchRequest(request, 'normal');
 
