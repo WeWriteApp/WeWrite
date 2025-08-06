@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import { getUserIdFromRequest } from '../../../../utils/auth';
+import { getUserIdFromRequest } from '../../../auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { createErrorResponse, createSuccessResponse } from '../../../../utils/apiHelpers';
 
