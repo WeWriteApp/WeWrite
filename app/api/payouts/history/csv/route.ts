@@ -5,8 +5,26 @@ import { getStripeSecretKey } from '../../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentConfig';
 
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
+// Initialize Firebase Admin lazily
+let admin;
+
+function initializeFirebase() {
+  if (admin) return { admin }; // Already initialized
+
+  try {
+    admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { admin: null };
+    }
+    console.log('Firebase Admin initialized successfully in payouts/history/csv');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in payouts/history/csv:', error);
+    return { admin: null };
+  }
+
+  return { admin };
+}
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -37,6 +55,12 @@ function formatCurrencyForCsv(amount: number, currency: string = 'usd'): string 
 // GET /api/payouts/history/csv - Download payout history as CSV
 export async function GET(request: NextRequest) {
   try {
+    const { admin } = initializeFirebase();
+    if (!admin) {
+      console.warn('Firebase Admin not available for payouts/history/csv');
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {

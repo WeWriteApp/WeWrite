@@ -6,8 +6,26 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../auth-helper';
 
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
+// Initialize Firebase Admin lazily
+let admin;
+
+function initializeFirebase() {
+  if (admin) return { admin }; // Already initialized
+
+  try {
+    admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { admin: null };
+    }
+    console.log('Firebase Admin initialized successfully in payment-history');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in payment-history:', error);
+    return { admin: null };
+  }
+
+  return { admin };
+}
 
 // Initialize Stripe with the appropriate key based on environment
 const stripeSecretKey = getStripeSecretKey();
@@ -16,6 +34,12 @@ console.log('Stripe initialized for payment history');
 
 // Helper function to fetch payment history for a user
 async function fetchPaymentHistoryForUser(userId) {
+  const { admin } = initializeFirebase();
+  if (!admin) {
+    console.warn('Firebase Admin not available for payment-history');
+    throw new Error('Database not available');
+  }
+
   // Verify the user exists in Firebase
   try {
     await admin.auth().getUser(userId);

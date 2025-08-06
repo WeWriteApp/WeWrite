@@ -5,8 +5,26 @@ import { getStripeSecretKey } from '../../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentConfig';
 
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
+// Initialize Firebase Admin lazily
+let admin;
+
+function initializeFirebase() {
+  if (admin) return { admin }; // Already initialized
+
+  try {
+    admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { admin: null };
+    }
+    console.log('Firebase Admin initialized successfully in stripe/bank-accounts/primary');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in stripe/bank-accounts/primary:', error);
+    return { admin: null };
+  }
+
+  return { admin };
+}
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -16,6 +34,12 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
 // POST /api/stripe/bank-accounts/primary - Set a bank account as primary
 export async function POST(request: NextRequest) {
   try {
+    const { admin } = initializeFirebase();
+    if (!admin) {
+      console.warn('Firebase Admin not available for stripe/bank-accounts/primary');
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -25,8 +49,8 @@ export async function POST(request: NextRequest) {
     const { bankAccountId } = await request.json();
 
     if (!bankAccountId) {
-      return NextResponse.json({ 
-        error: 'Bank account ID is required' 
+      return NextResponse.json({
+        error: 'Bank account ID is required'
       }, { status: 400 });
     }
 
