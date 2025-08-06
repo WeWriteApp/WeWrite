@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
 
     // 🚨 CRITICAL: Check cache first to prevent massive read costs
     // Add version to cache key to bust cache after earnings fix
-    const cacheKey = `earnings:${userId}:v2025080601`;
+    const cacheKey = `earnings:${userId}:v2025080602`;
     const cached = earningsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < EARNINGS_CACHE_TTL) {
       console.log(`🚀 COST OPTIMIZATION: Returning cached earnings for ${userId}`);
