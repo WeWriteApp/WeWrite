@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         return createErrorResponse('Invalid credentials');
       }
 
-      // Create session cookie
+      // Create simple session cookie - no complex device management
       const cookieStore = await cookies();
       const sessionData = {
         uid: account.uid,
@@ -106,19 +106,8 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
+        maxAge: 60 * 60 * 24 * 30 // 30 days - longer for better UX
       });
-
-      // CRITICAL FIX: Create proper session record for dev auth (for device management)
-      const sessionId = await createDevUserSession(request, account.uid);
-      if (sessionId) {
-        cookieStore.set('sessionId', sessionId, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7 // 7 days
-        });
-      }
 
       // SECURITY: Use secure logging to prevent email exposure
       secureLogger.info('[Auth] Dev auth login successful', {
@@ -217,97 +206,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Helper function to create user session for dev auth (for device management compatibility)
- */
-async function createDevUserSession(request: NextRequest, userId: string): Promise<string | null> {
-  try {
-    const admin = getFirebaseAdmin();
-    if (!admin) return null;
-
-    const db = admin.firestore();
-    const userAgent = request.headers.get('user-agent') || '';
-    const ipAddress = getClientIP(request);
-    const deviceInfo = parseUserAgent(userAgent);
-
-    const sessionId = 'dev_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-    const sessionData = {
-      userId,
-      deviceInfo: {
-        userAgent,
-        ...deviceInfo,
-      },
-      createdAt: new Date().toISOString(),
-      lastActiveAt: new Date().toISOString(),
-      ipAddress,
-      isActive: true,
-      isDevelopment: true, // Mark as dev session
-    };
-
-    // Store session in Firestore using environment-aware collection name
-    await db.collection(getCollectionName('userSessions')).doc(sessionId).set(sessionData);
-
-    console.log(`Created dev user session ${sessionId} for user ${userId}`);
-    return sessionId;
-  } catch (error) {
-    console.error('Error creating dev user session:', error);
-    return null;
-  }
-}
-
-/**
- * Parse user agent to extract device information
- */
-function parseUserAgent(userAgent: string) {
-  const ua = userAgent.toLowerCase();
-
-  // Detect browser
-  let browser = 'Unknown';
-  if (ua.includes('chrome')) browser = 'Chrome';
-  else if (ua.includes('firefox')) browser = 'Firefox';
-  else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'Safari';
-  else if (ua.includes('edge')) browser = 'Edge';
-  else if (ua.includes('opera')) browser = 'Opera';
-
-  // Detect OS
-  let os = 'Unknown';
-  if (ua.includes('windows')) os = 'Windows';
-  else if (ua.includes('mac')) os = 'macOS';
-  else if (ua.includes('linux')) os = 'Linux';
-  else if (ua.includes('android')) os = 'Android';
-  else if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad')) os = 'iOS';
-
-  // Detect device type
-  let deviceType: 'desktop' | 'mobile' | 'tablet' = 'desktop';
-  if (ua.includes('mobile')) deviceType = 'mobile';
-  else if (ua.includes('tablet') || ua.includes('ipad')) deviceType = 'tablet';
-
-  // Detect platform
-  let platform = 'Unknown';
-  if (ua.includes('windows')) platform = 'Windows';
-  else if (ua.includes('macintosh') || ua.includes('mac os')) platform = 'Mac';
-  else if (ua.includes('linux')) platform = 'Linux';
-  else if (ua.includes('android')) platform = 'Android';
-  else if (ua.includes('iphone')) platform = 'iPhone';
-  else if (ua.includes('ipad')) platform = 'iPad';
-
-  return { browser, os, deviceType, platform };
-}
-
-/**
- * Get client IP address from request
- */
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  const cfConnectingIP = request.headers.get('cf-connecting-ip');
-
-  if (cfConnectingIP) return cfConnectingIP;
-  if (realIP) return realIP;
-  if (forwarded) return forwarded.split(',')[0].trim();
-
-  return 'unknown';
-}
+// Simplified authentication - no complex session management
 
 

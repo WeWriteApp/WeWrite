@@ -49,76 +49,20 @@ export async function GET(request: NextRequest) {
         return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session data');
       }
 
-      // Check if we should use dev auth system
-      // ONLY use dev auth for local development with USE_DEV_AUTH=true
-      // Preview and production environments should use Firebase Auth with real credentials
-      const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+      // SIMPLIFIED: Just trust the cookie data - no complex Firebase verification
+      const user: User = {
+        uid: sessionData.uid,
+        email: sessionData.email,
+        username: sessionData.username || '',
+        displayName: sessionData.displayName || sessionData.username || '',
+        photoURL: sessionData.photoURL || null,
+        emailVerified: sessionData.emailVerified !== false,
+        createdAt: sessionData.createdAt || new Date().toISOString(),
+        lastLoginAt: sessionData.lastLoginAt || new Date().toISOString()
+      };
 
-      if (useDevAuth) {
-        // Even in dev mode, we need to get fresh emailVerified status from Firebase
-        // to ensure users see updated verification status after verifying their email
-        const admin = getFirebaseAdmin();
-        const adminAuth = admin.auth();
-
-        let emailVerified = sessionData.emailVerified || false;
-
-        try {
-          // Get fresh emailVerified status from Firebase
-          const userRecord = await adminAuth.getUser(sessionData.uid);
-          emailVerified = userRecord.emailVerified;
-          console.log(`[Session] Dev auth: Fresh emailVerified status for ${sessionData.email}: ${emailVerified}`);
-        } catch (firebaseError) {
-          console.warn('[Session] Dev auth: Could not fetch fresh emailVerified status, using cached:', emailVerified);
-        }
-
-        const user: User = {
-          uid: sessionData.uid,
-          email: sessionData.email,
-          username: sessionData.username || '',
-          displayName: sessionData.displayName || '',
-          photoURL: sessionData.photoURL,
-          emailVerified: emailVerified,
-          createdAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString()
-        };
-
-        console.log('[Session] Dev auth session valid for:', user.email);
-        return createSuccessResponse(user);
-      }
-
-      // For production, verify with Firebase and get latest user data
-      const admin = getFirebaseAdmin();
-      const adminAuth = admin.auth();
-      const adminDb = admin.firestore();
-
-      try {
-        // Verify user still exists in Firebase
-        const userRecord = await adminAuth.getUser(sessionData.uid);
-
-        // Get latest user data from Firestore
-        const userDoc = await adminDb.collection(getCollectionName('users')).doc(sessionData.uid).get();
-        const userData = userDoc.data() || {};
-
-        const user: User = {
-          uid: userRecord.uid,
-          email: userRecord.email || '',
-          username: userData.username || '',
-          displayName: userData.displayName || userRecord.displayName || '',
-          photoURL: userData.photoURL || userRecord.photoURL || undefined,
-          emailVerified: userRecord.emailVerified,
-          createdAt: userData.createdAt || new Date().toISOString(),
-          lastLoginAt: userData.lastLoginAt || new Date().toISOString()
-        };
-
-        console.log(`[Session] Production session valid for: ${user.email}`);
-        return createSuccessResponse(user);
-
-      } catch (firebaseError) {
-        console.log('[Session] Firebase verification failed:', firebaseError);
-        // Clear invalid session cookie
-        cookieStore.delete('simpleUserSession');
-        return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Session expired');
-      }
+      console.log(`[Session] Simple session valid for: ${user.email}`);
+      return createSuccessResponse(user);
 
     } catch (parseError) {
       console.log('[Session] Failed to parse session cookie:', parseError);

@@ -57,19 +57,8 @@ export default function NavHeader({
 
   // Helper function to render earnings display (same as homepage)
   const renderEarningsDisplay = () => {
-    console.log('[NavHeader] renderEarningsDisplay called:', {
-      hasUser: !!user?.uid,
-      userId: user?.uid?.substring(0, 8) + '...',
-      earningsLoading,
-      hasEarnings: !!earnings,
-      earningsData: earnings
-    });
-
     // Don't show anything for unauthenticated users
-    if (!user?.uid) {
-      console.log('[NavHeader] No user, not showing earnings');
-      return null;
-    }
+    if (!user?.uid) return null;
 
     // Show loading state while earnings are being fetched
     if (earningsLoading) {
@@ -94,13 +83,6 @@ export default function NavHeader({
       const displayAmount = pendingUsdEarned > 0 ? pendingUsdEarned : availableUsdEarned;
       const isZeroEarnings = displayAmount === 0;
 
-      console.log('[NavHeader] Earnings display data:', {
-        pendingBalance: pendingUsdEarned,
-        availableBalance: availableUsdEarned,
-        displayAmount,
-        isZeroEarnings
-      });
-
       return (
         <FinancialDropdown
           title="Earnings"
@@ -109,8 +91,10 @@ export default function NavHeader({
           trigger={
             <Badge
               variant="secondary"
-              className={`cursor-pointer hover:bg-secondary/80 transition-colors text-sm ${
-                isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
+              className={`cursor-pointer transition-colors text-sm ${
+                isZeroEarnings
+                  ? 'text-muted-foreground hover:bg-secondary/80'
+                  : 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:bg-green-900'
               }`}
             >
               {formatUsdCents(displayAmount * 100)}

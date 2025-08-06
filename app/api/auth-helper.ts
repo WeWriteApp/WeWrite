@@ -1,4 +1,3 @@
-import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { NextRequest } from 'next/server';
 
 // Type definitions
@@ -23,41 +22,7 @@ interface UserSession {
 
 type ApiErrorType = 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'BAD_REQUEST' | 'INTERNAL_ERROR' | 'FEATURE_DISABLED';
 
-// Firebase Admin initialization function
-async function getFirebaseAuth(): Promise<Auth | null> {
-  try {
-    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-
-    // Check if app already exists
-    const existingApps = getApps();
-    let authApp = existingApps.find(app => app.name === 'auth-helper-app');
-
-    if (!authApp) {
-      // Initialize new app
-      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-      if (!base64Json) {
-        console.warn('No GOOGLE_CLOUD_KEY_JSON found, Firebase Admin auth unavailable');
-        return null;
-      }
-
-      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(decodedJson);
-
-      authApp = initializeApp({
-        credential: cert({
-          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-          clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-        })
-      }, 'auth-helper-app');
-    }
-
-    return getAuth(authApp);
-  } catch (error) {
-    console.error('Error initializing Firebase Admin in auth helper:', error);
-    return null;
-  }
-}
+// Removed Firebase Admin initialization - using simple cookie-based auth
 
 /**
  * Standard API response format for consistent error handling
@@ -142,31 +107,15 @@ export async function getUserEmailFromId(userId: string): Promise<string | null>
  * @returns The user ID or null if not authenticated
  */
 export async function getUserIdFromRequest(request: NextRequest): Promise<string | null> {
-  // Get Firebase Auth instance
-  const auth = await getFirebaseAuth();
-  if (!auth) {
-    console.warn('Firebase Auth not available, returning null');
-    return null;
-  }
-
   const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development';
 
-  // SIMPLIFIED: Only use the new auth system cookie
+  // SIMPLIFIED: Only use the simple session cookie - no complex Firebase verification
   const simpleSessionUserId = await trySimpleUserSessionCookie(request);
   if (simpleSessionUserId) {
     if (shouldLogAuthDebug) {
       console.log('[AUTH DEBUG] Using userId from simpleUserSession:', simpleSessionUserId);
     }
     return simpleSessionUserId;
-  }
-
-  // Fallback: Try Authorization header (Bearer token) for API calls
-  const authHeaderUserId = await tryAuthorizationHeader(request, auth);
-  if (authHeaderUserId) {
-    if (shouldLogAuthDebug) {
-      console.log('[AUTH DEBUG] Using userId from Authorization header:', authHeaderUserId);
-    }
-    return authHeaderUserId;
   }
 
   // No user ID found
@@ -206,128 +155,5 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
   }
 }
 
-/**
- * Try to authenticate using Firebase session cookie
- */
-async function trySessionCookie(request: NextRequest): Promise<string | null> {
-  if (!auth) return null;
-
-  const sessionCookie = request.cookies.get('session')?.value;
-  if (!sessionCookie) return null;
-
-  console.log('[AUTH DEBUG] Found session cookie, length:', sessionCookie.length);
-
-  try {
-    // Try to verify as session cookie first
-    const decodedClaims = await auth.verifySessionCookie(sessionCookie);
-    console.log('[AUTH DEBUG] Session cookie verified successfully, userId:', decodedClaims.uid);
-    return decodedClaims.uid;
-  } catch (sessionError: any) {
-    console.log('[AUTH DEBUG] Session cookie verification failed:', sessionError.message);
-    console.log('[AUTH DEBUG] Session error code:', sessionError.code);
-    console.log('[AUTH DEBUG] Session error details:', {
-      name: sessionError.name,
-      code: sessionError.code,
-      message: sessionError.message
-    });
-
-    try {
-      // If session cookie fails, try as ID token
-      const decodedToken = await auth.verifyIdToken(sessionCookie);
-      console.log('[AUTH DEBUG] Session cookie verified as ID token, userId:', decodedToken.uid);
-      return decodedToken.uid;
-    } catch (tokenError: any) {
-      console.error('[AUTH DEBUG] Error verifying session cookie as ID token:', tokenError.message);
-      console.error('[AUTH DEBUG] Token error code:', tokenError.code);
-      console.error('[AUTH DEBUG] Token error details:', {
-        name: tokenError.name,
-        code: tokenError.code,
-        message: tokenError.message
-      });
-      return null;
-    }
-  }
-}
-
-/**
- * Try to authenticate using userSession cookie (WeWrite format)
- */
-async function tryUserSessionCookie(request: NextRequest): Promise<string | null> {
-  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || (process.env.NODE_ENV === 'development' && Math.random() < 0.01);
-
-  const userSessionCookie = request.cookies.get('userSession')?.value;
-  if (!userSessionCookie) {
-    if (shouldLogAuthDebug) {
-      console.log('[AUTH DEBUG] No userSession cookie found');
-    }
-    return null;
-  }
-
-  // Only log userSession details when debugging
-  if (shouldLogAuthDebug) {
-    console.log('[AUTH DEBUG] Found userSession cookie, length:', userSessionCookie.length);
-  }
-
-  try {
-    // Try parsing as JSON first (new format)
-    const userSession: UserSession = JSON.parse(userSessionCookie);
-    if (userSession && userSession.uid) {
-      if (shouldLogAuthDebug) {
-        console.log('[AUTH DEBUG] Using userId from userSession cookie (JSON format):', userSession.uid);
-        console.log('[AUTH DEBUG] UserSession details:', {
-          uid: userSession.uid,
-          email: userSession.email,
-          username: userSession.username,
-          isDevelopment: userSession.isDevelopment
-        });
-      }
-      return userSession.uid;
-    } else {
-      console.log('[AUTH DEBUG] userSession cookie missing uid:', userSession);
-      return null;
-    }
-  } catch (error: any) {
-    // If JSON parsing fails, treat as plain string (legacy format)
-    console.log('[AUTH DEBUG] JSON parsing failed, treating as plain string:', userSessionCookie);
-    console.log('[AUTH DEBUG] Parse error details:', {
-      name: error.name,
-      message: error.message,
-      cookieLength: userSessionCookie.length,
-      cookiePreview: userSessionCookie.substring(0, 100)
-    });
-
-    if (userSessionCookie && typeof userSessionCookie === 'string' && userSessionCookie.trim()) {
-      if (shouldLogAuthDebug) {
-        console.log('[AUTH DEBUG] Using userId from userSession cookie (string format):', userSessionCookie);
-      }
-      return userSessionCookie.trim();
-    }
-    if (shouldLogAuthDebug) {
-      console.error('[AUTH DEBUG] Error parsing userSession cookie:', error);
-    }
-    return null;
-  }
-}
-
-/**
- * Try to authenticate using Authorization header
- */
-async function tryAuthorizationHeader(request: NextRequest, auth: Auth): Promise<string | null> {
-  if (!auth) return null;
-
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.substring(7);
-  try {
-    const decodedToken = await auth.verifyIdToken(token);
-    console.log('Using userId from Authorization header:', decodedToken.uid);
-    return decodedToken.uid;
-  } catch (error: any) {
-    console.error('Error verifying ID token:', error);
-    return null;
-  }
-}
+// Simplified authentication - only using simple session cookie
 

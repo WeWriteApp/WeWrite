@@ -126,16 +126,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [setLoading, clearError, setUser, setError]);
 
-  // Sign in
+  // Sign in (SIMPLIFIED)
   const signIn = useCallback(async (emailOrUsername: string, password: string) => {
     try {
       setLoading(true);
       clearError();
 
-      // Check if we should use dev auth system
-      // ONLY use dev auth for local development with NEXT_PUBLIC_USE_DEV_AUTH=true
-      // Preview and production environments should use Firebase Auth with real credentials
-      const useDevAuth = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_DEV_AUTH === 'true';
+      // SIMPLIFIED: Always use the login API endpoint
+      console.log('[Auth] Using simplified login API for all environments');
 
       if (useDevAuth) {
         console.log('[Auth] Using dev auth system (local development only)');
