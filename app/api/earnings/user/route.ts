@@ -130,29 +130,65 @@ async function getIncomingAllocationsForUser(userId: string) {
     let totalUsdCents = 0;
     const allocations = [];
 
-    snapshot.forEach(doc => {
+    // Process allocations and enrich with page titles and usernames
+    const allocationPromises = snapshot.docs.map(async (doc) => {
       const allocation = doc.data();
       const usdCents = allocation.usdCents || 0;
       totalUsdCents += usdCents;
 
-      allocations.push({
+      // Get page title if it's a page allocation
+      let pageTitle = 'Unknown Resource';
+      if (allocation.resourceType === 'page') {
+        try {
+          const pageDoc = await db.collection(getCollectionName('pages')).doc(allocation.resourceId).get();
+          if (pageDoc.exists) {
+            const pageData = pageDoc.data();
+            pageTitle = pageData?.title || 'Untitled Page';
+          }
+        } catch (error) {
+          console.warn(`[EARNINGS] Error fetching page title for ${allocation.resourceId}:`, error);
+        }
+      } else if (allocation.resourceType === 'user') {
+        pageTitle = 'User Support';
+      }
+
+      // Get username of the person who made the allocation
+      let fromUsername = 'Anonymous';
+      try {
+        const userDoc = await db.collection(getCollectionName('users')).doc(allocation.userId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          fromUsername = userData?.username || userData?.displayName || 'Anonymous';
+        }
+      } catch (error) {
+        console.warn(`[EARNINGS] Error fetching username for ${allocation.userId}:`, error);
+      }
+
+      return {
         id: doc.id,
         resourceType: allocation.resourceType,
         resourceId: allocation.resourceId,
+        pageTitle,
+        resourceTitle: pageTitle, // Alias for compatibility
         usdCents,
         usdValue: centsToDollars(usdCents),
         fromUserId: allocation.userId,
+        fromUsername,
+        username: fromUsername, // Alias for compatibility
         month: allocation.month,
         createdAt: allocation.createdAt
-      });
+      };
     });
 
+    const enrichedAllocations = await Promise.all(allocationPromises);
+
     console.log(`[EARNINGS] Total incoming allocations: ${centsToDollars(totalUsdCents)} USD (${totalUsdCents} cents)`);
+    console.log(`[EARNINGS] Enriched ${enrichedAllocations.length} allocations with page titles and usernames`);
 
     return {
       totalUsdCents,
       totalUsdValue: centsToDollars(totalUsdCents),
-      allocations
+      allocations: enrichedAllocations
     };
   } catch (error) {
     console.error('Error getting incoming allocations:', error);
