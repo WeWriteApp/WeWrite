@@ -4,7 +4,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { DollarSign, Wallet } from 'lucide-react';
-import WriterUsdDashboard from '../../components/payments/WriterUsdDashboard';
+
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
 import EarningsBreakdownCard from '../../components/payments/EarningsBreakdownCard';
 import EarningsSourceBreakdown from '../../components/payments/EarningsSourceBreakdown';
@@ -35,7 +35,6 @@ export default function EarningsPage() {
         <TabsContent value="earnings" className="space-y-4 sm:space-y-6">
           <EarningsBreakdownCard />
           <EarningsSourceBreakdown />
-          <WriterUsdDashboard />
         </TabsContent>
 
         <TabsContent value="payouts" className="space-y-4 sm:space-y-6">

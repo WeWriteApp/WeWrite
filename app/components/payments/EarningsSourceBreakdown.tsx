@@ -39,7 +39,14 @@ export default function EarningsSourceBreakdown() {
 
   // Process the pending allocations data
   const { pageBreakdown, sponsorBreakdown } = useMemo(() => {
+    console.log('[EarningsSourceBreakdown] Processing earnings data:', {
+      earnings,
+      pendingAllocations: earnings?.pendingAllocations,
+      pendingAllocationsLength: earnings?.pendingAllocations?.length
+    });
+
     if (!earnings?.pendingAllocations) {
+      console.log('[EarningsSourceBreakdown] No pending allocations found');
       return { pageBreakdown: [], sponsorBreakdown: [] };
     }
 

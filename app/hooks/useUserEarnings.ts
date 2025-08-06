@@ -8,6 +8,8 @@ interface UserEarnings {
   availableBalance: number;
   pendingBalance: number;
   hasEarnings: boolean;
+  pendingAllocations?: any[];
+  unfundedEarnings?: any;
 }
 
 interface CachedEarnings {
@@ -37,7 +39,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
     }
 
     // Check cache first (with version key to bust cache after earnings fix)
-    const cacheKey = `${user.uid}_v2025080601`;
+    const cacheKey = `${user.uid}_v2025080602`;
     const cached = earningsCache.get(cacheKey);
     const now = Date.now();
 
@@ -76,7 +78,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
         console.log('[useUserEarnings] Fetching fresh earnings data');
         // Add cache-busting parameter to force fresh data after earnings fix
         const timestamp = Date.now();
-        const response = await fetch(`/api/earnings/user?v=2025080601&t=${timestamp}`, {
+        const response = await fetch(`/api/earnings/user?v=2025080602&t=${timestamp}`, {
           cache: 'no-store', // Prevent browser caching
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -119,7 +121,9 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
               totalEarnings,
               availableBalance,
               pendingBalance,
-              hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0
+              hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0,
+              pendingAllocations: data.earnings.pendingAllocations || [],
+              unfundedEarnings: data.earnings.unfundedEarnings
             };
           } else {
             // No earnings data, but still show counter
@@ -127,7 +131,9 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
-              hasEarnings: false // Only true when user actually has earnings > 0
+              hasEarnings: false, // Only true when user actually has earnings > 0
+              pendingAllocations: [],
+              unfundedEarnings: null
             };
           }
 
@@ -166,7 +172,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
     console.log('[useUserEarnings] Manual refresh triggered - clearing cache and fetching fresh data');
     // Clear cache for this user to force fresh fetch
     if (user?.uid) {
-      const cacheKey = `${user.uid}_v2025080601`;
+      const cacheKey = `${user.uid}_v2025080602`;
       earningsCache.delete(cacheKey);
     }
     await fetchEarnings(true);
