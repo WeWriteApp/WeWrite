@@ -95,42 +95,59 @@ async function getUnfundedEarningsForUser(userId: string) {
  */
 async function getIncomingAllocationsForUser(userId: string) {
   try {
-    const admin = await import('../../../firebase/firebaseAdmin');
+    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
     const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
     const { getCurrentMonth } = await import('../../../utils/usdConstants');
     const { centsToDollars } = await import('../../../utils/formatCurrency');
 
-    const firebaseAdmin = admin.getFirebaseAdmin();
+    const firebaseAdmin = getFirebaseAdmin();
+    if (!firebaseAdmin) {
+      console.warn('[EARNINGS] Firebase Admin not available in getIncomingAllocationsForUser');
+      return {
+        totalUsdCents: 0,
+        totalUsdValue: 0,
+        allocations: []
+      };
+    }
     const db = firebaseAdmin.firestore();
     const currentMonth = getCurrentMonth();
 
+    console.log(`[EARNINGS] Getting incoming allocations for user ${userId.substring(0, 8)}... in ${currentMonth}`);
+
     // Get all allocations where this user is the recipient
-    const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+    const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
+    console.log(`[EARNINGS] Querying collection: ${allocationsCollectionName}`);
+
+    const allocationsRef = db.collection(allocationsCollectionName);
     const allocationsQuery = allocationsRef
       .where('recipientUserId', '==', userId)
       .where('month', '==', currentMonth)
       .where('status', '==', 'active');
 
     const snapshot = await allocationsQuery.get();
+    console.log(`[EARNINGS] Found ${snapshot.size} allocations for user ${userId.substring(0, 8)}... in ${currentMonth}`);
 
     let totalUsdCents = 0;
     const allocations = [];
 
     snapshot.forEach(doc => {
       const allocation = doc.data();
-      totalUsdCents += allocation.usdCents || 0;
+      const usdCents = allocation.usdCents || 0;
+      totalUsdCents += usdCents;
 
       allocations.push({
         id: doc.id,
         resourceType: allocation.resourceType,
         resourceId: allocation.resourceId,
-        usdCents: allocation.usdCents,
-        usdValue: centsToDollars(allocation.usdCents),
+        usdCents,
+        usdValue: centsToDollars(usdCents),
         fromUserId: allocation.userId,
         month: allocation.month,
         createdAt: allocation.createdAt
       });
     });
+
+    console.log(`[EARNINGS] Total incoming allocations: ${centsToDollars(totalUsdCents)} USD (${totalUsdCents} cents)`);
 
     return {
       totalUsdCents,
@@ -202,58 +219,52 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get USD earnings data (new system) - USE THE PROCESSED BALANCE DATA
-    const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
+    console.log(`[EARNINGS API] Starting earnings calculation for user ${userId.substring(0, 8)}...`);
 
-    // Get incoming allocations (earnings) to this user - for detailed breakdown only
+    // SIMPLIFIED APPROACH: Get current month allocations as primary source of truth
     const incomingAllocations = await getIncomingAllocationsForUser(userId);
-
-    // Get unfunded USD allocations
-    const unfundedEarnings = await getUnfundedEarningsForUser(userId);
-
-    // CRITICAL FIX: Use the processed balance data instead of raw allocations
-    let pendingBalance = 0;
-    let availableBalance = 0;
-    let totalEarnings = 0;
-
-    console.log(`[EARNINGS API] Processing earnings for user ${userId}:`, {
-      hasUsdBalance: !!usdBalance,
-      usdBalanceData: usdBalance ? {
-        totalUsdCentsEarned: usdBalance.totalUsdCentsEarned,
-        pendingUsdCents: usdBalance.pendingUsdCents,
-        availableUsdCents: usdBalance.availableUsdCents
-      } : null,
-      incomingAllocationsTotal: incomingAllocations.totalUsdValue
+    console.log(`[EARNINGS API] Incoming allocations result:`, {
+      totalUsdValue: incomingAllocations.totalUsdValue,
+      totalUsdCents: incomingAllocations.totalUsdCents,
+      allocationsCount: incomingAllocations.allocations.length
     });
 
-    if (usdBalance) {
-      // Use the processed earnings balance (this includes our fixed data)
-      totalEarnings = (usdBalance.totalUsdCentsEarned || 0) / 100; // Convert cents to dollars
-      availableBalance = (usdBalance.availableUsdCents || 0) / 100; // Convert cents to dollars
-
-      // CRITICAL FIX: Calculate pending balance from actual current allocations, not stored pendingUsdCents
-      // The stored pendingUsdCents may be stale, but incomingAllocations is always current
-      pendingBalance = incomingAllocations.totalUsdValue || 0;
-
-      console.log(`[EARNINGS API] Using processed balance data for ${userId}:`, {
-        totalEarnings,
-        pendingBalance: `${pendingBalance} (calculated from ${incomingAllocations.allocations?.length || 0} current allocations)`,
-        availableBalance,
-        storedPendingUsdCents: usdBalance.pendingUsdCents,
-        calculatedPendingFromAllocations: incomingAllocations.totalUsdValue
+    // Get processed balance data for historical earnings
+    let usdBalance = null;
+    try {
+      usdBalance = await ServerUsdService.getUserUsdBalance(userId);
+      console.log(`[EARNINGS API] USD balance result:`, {
+        hasBalance: !!usdBalance,
+        totalEarned: usdBalance?.totalUsdCentsEarned || 0,
+        available: usdBalance?.availableUsdCents || 0
       });
-    } else {
-      // Fallback to raw allocations only if no balance record exists
-      pendingBalance = incomingAllocations.totalUsdValue || 0;
-      availableBalance = 0;
-      totalEarnings = pendingBalance;
-
-      console.log(`[EARNINGS API] No balance record found for ${userId}, using raw allocations:`, {
-        totalEarnings,
-        pendingBalance,
-        availableBalance
-      });
+    } catch (error) {
+      console.warn(`[EARNINGS API] Failed to get USD balance for user ${userId.substring(0, 8)}...:`, error.message);
     }
+
+    // Get unfunded earnings (from logged-out users)
+    let unfundedEarnings = null;
+    try {
+      unfundedEarnings = await getUnfundedEarningsForUser(userId);
+      console.log(`[EARNINGS API] Unfunded earnings:`, {
+        totalUnfunded: unfundedEarnings?.totalUnfundedUsdValue || 0
+      });
+    } catch (error) {
+      console.warn(`[EARNINGS API] Failed to get unfunded earnings:`, error.message);
+      unfundedEarnings = { totalUnfundedUsdValue: 0, totalUnfundedUsdCents: 0 };
+    }
+
+    // SIMPLIFIED CALCULATION: Use current allocations as pending, balance data for historical
+    const pendingBalance = incomingAllocations.totalUsdValue || 0; // Current month allocations
+    const availableBalance = usdBalance ? (usdBalance.availableUsdCents || 0) / 100 : 0; // Available for payout
+    const totalEarnings = usdBalance ? (usdBalance.totalUsdCentsEarned || 0) / 100 : pendingBalance; // Lifetime total
+
+    console.log(`[EARNINGS API] Final earnings calculation for user ${userId.substring(0, 8)}...:`, {
+      pendingBalance: `$${pendingBalance.toFixed(2)} (from ${incomingAllocations.allocations.length} current allocations)`,
+      availableBalance: `$${availableBalance.toFixed(2)} (from balance record)`,
+      totalEarnings: `$${totalEarnings.toFixed(2)} (lifetime)`,
+      unfundedEarnings: `$${(unfundedEarnings?.totalUnfundedUsdValue || 0).toFixed(2)}`
+    });
 
     const earnings = {
       totalEarnings,

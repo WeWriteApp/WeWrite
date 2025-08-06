@@ -57,8 +57,19 @@ export default function NavHeader({
 
   // Helper function to render earnings display (same as homepage)
   const renderEarningsDisplay = () => {
+    console.log('[NavHeader] renderEarningsDisplay called:', {
+      hasUser: !!user?.uid,
+      userId: user?.uid?.substring(0, 8) + '...',
+      earningsLoading,
+      hasEarnings: !!earnings,
+      earningsData: earnings
+    });
+
     // Don't show anything for unauthenticated users
-    if (!user?.uid) return null;
+    if (!user?.uid) {
+      console.log('[NavHeader] No user, not showing earnings');
+      return null;
+    }
 
     // Show loading state while earnings are being fetched
     if (earningsLoading) {
@@ -77,8 +88,18 @@ export default function NavHeader({
 
     // Show earnings data (even if zero)
     if (earnings) {
-      const pendingUsdEarned = earnings.pendingBalance || 0; // Show pending earnings in main chip
-      const isZeroEarnings = pendingUsdEarned === 0;
+      // Show pending earnings if available, otherwise show available balance
+      const pendingUsdEarned = earnings.pendingBalance || 0;
+      const availableUsdEarned = earnings.availableBalance || 0;
+      const displayAmount = pendingUsdEarned > 0 ? pendingUsdEarned : availableUsdEarned;
+      const isZeroEarnings = displayAmount === 0;
+
+      console.log('[NavHeader] Earnings display data:', {
+        pendingBalance: pendingUsdEarned,
+        availableBalance: availableUsdEarned,
+        displayAmount,
+        isZeroEarnings
+      });
 
       return (
         <FinancialDropdown
@@ -92,7 +113,7 @@ export default function NavHeader({
                 isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
               }`}
             >
-              {formatUsdCents(pendingUsdEarned * 100)}
+              {formatUsdCents(displayAmount * 100)}
             </Badge>
           }
           content={<EarningsBreakdown

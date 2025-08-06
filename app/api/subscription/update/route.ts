@@ -7,19 +7,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../../utils/environmentConfig';
-import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
-import { initAdmin } from '../../../firebase/admin';
+import { determineTierFromAmount } from '../../../utils/subscriptionTiers';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { ServerUsdService } from '../../../services/usdService.server';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminDb = admin.firestore();
-const FieldValue = admin.firestore.FieldValue;
+// Initialize Firebase Admin lazily
+let admin: any;
+let adminDb: any;
+let FieldValue: any;
+
+function initializeFirebase() {
+  if (admin && adminDb && FieldValue) return { admin, adminDb, FieldValue }; // Already initialized
+
+  try {
+    admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { admin: null, adminDb: null, FieldValue: null };
+    }
+
+    adminDb = admin.firestore();
+    FieldValue = admin.firestore.FieldValue;
+    console.log('Firebase Admin initialized successfully in subscription update route');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in subscription update route:', error);
+    return { admin: null, adminDb: null, FieldValue: null };
+  }
+
+  return { admin, adminDb, FieldValue };
+}
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase lazily
+    const { admin: firebaseAdmin, adminDb: firestore, FieldValue: FirestoreFieldValue } = initializeFirebase();
+
+    if (!firebaseAdmin || !firestore || !FirestoreFieldValue) {
+      console.error('Firebase Admin not initialized properly in subscription update route');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local references
+    admin = firebaseAdmin;
+    adminDb = firestore;
+    FieldValue = FirestoreFieldValue;
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -159,8 +193,6 @@ export async function POST(request: NextRequest) {
       newAmount,
       oldTier: oldSubscriptionData?.tier || 'none',
       newTier: tier,
-      oldTokens: oldSubscriptionData?.tokens || 0,
-      newTokens: tokens,
       isTestSubscription
     });
 
