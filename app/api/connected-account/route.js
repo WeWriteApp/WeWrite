@@ -2,11 +2,35 @@ import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
+// Initialize Firebase Admin lazily
+let admin;
+
+function initializeFirebase() {
+  if (admin) return { admin }; // Already initialized
+
+  try {
+    admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { admin: null };
+    }
+    console.log('Firebase Admin initialized successfully in connected-account');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in connected-account:', error);
+    return { admin: null };
+  }
+
+  return { admin };
+}
 
 export async function POST(request) {
   try {
+    const { admin } = initializeFirebase();
+    if (!admin) {
+      console.warn('Firebase Admin not available for connected-account');
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
     const { userId } = await request.json();
 
     if (!userId) {
