@@ -4,17 +4,26 @@ import { getCollectionName } from '../../utils/environmentConfig';
 
 
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let adminDb;
-try {
-  const admin = getFirebaseAdmin();
-  if (!admin) {
-    throw new Error('Firebase Admin not available');
+
+function initializeFirebase() {
+  if (adminDb) return { adminDb }; // Already initialized
+
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { adminDb: null };
+    }
+    adminDb = admin.firestore();
+    console.log('Firebase Admin initialized successfully in my-pages');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in my-pages:', error);
+    return { adminDb: null };
   }
-  adminDb = admin.firestore();
-} catch (error) {
-  console.error('Error initializing Firebase Admin in my-pages:', error);
-  throw error;
+
+  return { adminDb };
 }
 
 /**
@@ -33,6 +42,12 @@ try {
  */
 export async function GET(request: NextRequest) {
   try {
+    const { adminDb } = initializeFirebase();
+    if (!adminDb) {
+      console.warn('Firebase Admin not available for my-pages');
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const sortBy = searchParams.get('sortBy') || 'lastModified';
