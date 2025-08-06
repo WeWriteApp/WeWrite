@@ -1315,6 +1315,7 @@ html[data-high-contrast="true"] .border-border {
   @media (min-width: 768px) {
     [data-component="nav-header"] {
       left: var(--sidebar-width, 0px) !important;
+      width: calc(100vw - var(--sidebar-width, 0px)) !important;
     }
   }
 

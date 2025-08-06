@@ -232,7 +232,7 @@ export default function NavHeader({
   return (
     <header
       data-component="nav-header"
-      className={`fixed top-0 left-0 right-0 md:left-auto md:right-0 z-[70] bg-background border-b border-border transition-all duration-300 ease-in-out ${className}`}
+      className={`fixed top-0 left-0 right-0 z-[70] bg-background border-b border-border transition-all duration-300 ease-in-out ${className}`}
       style={{
         ...(headerSidebarWidth > 0 ? { '--sidebar-width': `${headerSidebarWidth}px` } : {}),
         transform: 'translateZ(0)', // Force GPU acceleration
