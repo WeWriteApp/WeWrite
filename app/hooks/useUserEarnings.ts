@@ -36,8 +36,9 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
       return;
     }
 
-    // Check cache first
-    const cached = earningsCache.get(user.uid);
+    // Check cache first (with version key to bust cache after earnings fix)
+    const cacheKey = `${user.uid}_v2025080601`;
+    const cached = earningsCache.get(cacheKey);
     const now = Date.now();
 
     if (!forceRefresh && cached && cached.userId === user.uid) {
@@ -73,7 +74,8 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
         setError(null);
 
         console.log('[useUserEarnings] Fetching fresh earnings data');
-        const response = await fetch('/api/earnings/user');
+        // Add cache-busting parameter to force fresh data after earnings fix
+        const response = await fetch('/api/earnings/user?v=2025080601');
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -88,7 +90,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
             setEarnings(earningsData);
 
             // Cache the result
-            earningsCache.set(user.uid, {
+            earningsCache.set(cacheKey, {
               data: earningsData,
               timestamp: now,
               userId: user.uid
@@ -125,7 +127,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
           setEarnings(earningsData);
 
           // Cache the result
-          earningsCache.set(user.uid, {
+          earningsCache.set(cacheKey, {
             data: earningsData,
             timestamp: now,
             userId: user.uid

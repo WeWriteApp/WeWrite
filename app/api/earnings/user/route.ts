@@ -190,7 +190,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 🚨 CRITICAL: Check cache first to prevent massive read costs
-    const cacheKey = `earnings:${userId}`;
+    // Add version to cache key to bust cache after earnings fix
+    const cacheKey = `earnings:${userId}:v2025080601`;
     const cached = earningsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < EARNINGS_CACHE_TTL) {
       console.log(`🚀 COST OPTIMIZATION: Returning cached earnings for ${userId}`);
@@ -215,16 +216,38 @@ export async function GET(request: NextRequest) {
     let availableBalance = 0;
     let totalEarnings = 0;
 
+    console.log(`[EARNINGS API] Processing earnings for user ${userId}:`, {
+      hasUsdBalance: !!usdBalance,
+      usdBalanceData: usdBalance ? {
+        totalUsdCentsEarned: usdBalance.totalUsdCentsEarned,
+        pendingUsdCents: usdBalance.pendingUsdCents,
+        availableUsdCents: usdBalance.availableUsdCents
+      } : null,
+      incomingAllocationsTotal: incomingAllocations.totalUsdValue
+    });
+
     if (usdBalance) {
       // Use the processed earnings balance (this includes our fixed data)
       totalEarnings = (usdBalance.totalUsdCentsEarned || 0) / 100; // Convert cents to dollars
       pendingBalance = (usdBalance.pendingUsdCents || 0) / 100; // Convert cents to dollars
       availableBalance = (usdBalance.availableUsdCents || 0) / 100; // Convert cents to dollars
+
+      console.log(`[EARNINGS API] Using processed balance data for ${userId}:`, {
+        totalEarnings,
+        pendingBalance,
+        availableBalance
+      });
     } else {
       // Fallback to raw allocations only if no balance record exists
       pendingBalance = incomingAllocations.totalUsdValue || 0;
       availableBalance = 0;
       totalEarnings = pendingBalance;
+
+      console.log(`[EARNINGS API] No balance record found for ${userId}, using raw allocations:`, {
+        totalEarnings,
+        pendingBalance,
+        availableBalance
+      });
     }
 
     const earnings = {
