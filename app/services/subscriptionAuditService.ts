@@ -4,13 +4,18 @@
  * Tracks all subscription-related events for audit trail and history
  */
 
-import { initAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName } from '../utils/environmentConfig';
 import { FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const db = admin.firestore();
+// Get Firebase Admin instance
+const getAdminDb = () => {
+  const admin = getFirebaseAdmin();
+  if (!admin) {
+    throw new Error('Firebase Admin not available');
+  }
+  return admin.firestore();
+};
 
 export interface SubscriptionAuditEvent {
   userId: string;
@@ -41,6 +46,7 @@ class SubscriptionAuditService {
       };
 
       // Store in audit trail collection
+      const db = getAdminDb();
       await db.collection(getCollectionName('auditTrail')).add(auditEvent);
 
       console.log(`[SUBSCRIPTION AUDIT] ${event.eventType.toUpperCase()}`, {

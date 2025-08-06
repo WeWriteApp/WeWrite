@@ -39,6 +39,9 @@ const LandingPage = () => {
   const [pageContents, setPageContents] = useState<Record<string, any>>({});
   const [session, setUser] = useState<any>(null);
 
+  // Authentication state
+  const { user, isAuthenticated } = useAuth();
+
   // Analytics hook for tracking
   const analytics = useWeWriteAnalytics();
 
@@ -542,17 +545,43 @@ const LandingPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button
-              variant="secondary"
-              className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-              asChild
-              onClick={() => console.log('🟠 Desktop Sign In button clicked')}
-            >
-              <Link href="/auth/login" onClick={() => console.log('🟠 Desktop Sign In link clicked')}>Sign In</Link>
-            </Button>
-            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-              <Link href="/auth/register">Create Account</Link>
-            </Button>
+            {!isAuthenticated ? (
+              <>
+                <Button
+                  variant="secondary"
+                  className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                  asChild
+                >
+                  <Link
+                    href="/auth/login"
+                    onClick={() => {
+                      console.log('🟠 Desktop Sign In button clicked');
+                      // Track desktop sign-in click in analytics
+                      analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                        label: 'Desktop sign-in button',
+                        link_type: 'auth',
+                        link_text: 'Sign In',
+                        link_url: '/auth/login',
+                        device: 'desktop'
+                      });
+                    }}
+                  >
+                    Sign In
+                  </Link>
+                </Button>
+                <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                  <Link href="/auth/register">Create Account</Link>
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="default"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                asChild
+              >
+                <Link href="/new">Create Page</Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -580,32 +609,45 @@ const LandingPage = () => {
             </h1>
 
             <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                asChild
-              >
-                <Link
-                  href="/auth/login"
-                  onClick={() => {
-                    console.log('🟠 Mobile Sign In button clicked');
-                    // Track mobile sign-in click in analytics
-                    analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                      label: 'Mobile sign-in button',
-                      link_type: 'auth',
-                      link_text: 'Sign In',
-                      link_url: '/auth/login',
-                      device: 'mobile'
-                    });
-                  }}
+              {!isAuthenticated ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                    asChild
+                  >
+                    <Link
+                      href="/auth/login"
+                      onClick={() => {
+                        console.log('🟠 Mobile Sign In button clicked');
+                        // Track mobile sign-in click in analytics
+                        analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                          label: 'Mobile sign-in button',
+                          link_type: 'auth',
+                          link_text: 'Sign In',
+                          link_url: '/auth/login',
+                          device: 'mobile'
+                        });
+                      }}
+                    >
+                      Sign In
+                    </Link>
+                  </Button>
+                  <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                    <Link href="/auth/register">Sign Up</Link>
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  asChild
                 >
-                  Sign In
-                </Link>
-              </Button>
-              <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/auth/register">Sign Up</Link>
-              </Button>
+                  <Link href="/new">Create Page</Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
