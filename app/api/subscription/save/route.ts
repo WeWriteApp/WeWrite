@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminDb = admin.firestore();
-const FieldValue = admin.firestore.FieldValue;
+// Get Firebase Admin instance
+const getAdminDb = () => {
+  const admin = getFirebaseAdmin();
+  if (!admin) {
+    throw new Error('Firebase Admin not available');
+  }
+  return admin.firestore();
+};
 
 // POST /api/subscription/save - Save subscription data to Firestore
 export async function POST(request: NextRequest) {
@@ -46,10 +50,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Save to Firestore
+    const adminDb = getAdminDb();
+    const FieldValue = getFirebaseAdmin()?.firestore.FieldValue;
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
     await subscriptionRef.set({
       ...subscriptionData,
-      updatedAt: FieldValue.serverTimestamp()
+      updatedAt: FieldValue?.serverTimestamp()
     });
 
     console.log(`[SUBSCRIPTION SAVE] Successfully saved subscription for user ${userId}`);
