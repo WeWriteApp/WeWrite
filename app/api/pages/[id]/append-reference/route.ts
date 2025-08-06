@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../../../utils/auth';
+import { getUserIdFromRequest } from '../../../auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { createErrorResponse, createSuccessResponse } from '../../../../utils/apiHelpers';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 
 /**
  * POST /api/pages/[id]/append-reference
@@ -17,32 +18,19 @@ export async function POST(
     const resolvedParams = await params;
     const targetPageId = resolvedParams.id;
 
-    // Initialize Firebase Admin with proper error handling
-    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-    const { getFirestore } = await import('firebase-admin/firestore');
-
-    let appendRefApp = getApps().find(app => app.name === 'append-ref-app');
-    if (!appendRefApp) {
-      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(decodedJson);
-
-      appendRefApp = initializeApp({
-        credential: cert({
-          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-          clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-        })
-      }, 'append-ref-app');
-    }
-
-    const db = getFirestore(appendRefApp);
-
     // Get current user
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
+
+    // Initialize Firebase Admin using standardized function
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
+    }
+
+    const db = admin.firestore();
 
     // Parse request body
     const body = await request.json();

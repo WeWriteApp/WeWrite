@@ -1,13 +1,13 @@
 import { getAuth, type Auth } from 'firebase-admin/auth';
-import { initAdmin } from "../firebase/admin";
+import { getFirebaseAdmin } from "../firebase/firebaseAdmin";
 import type { NextRequest } from 'next/server';
 
 // Initialize Firebase Admin only if not during build time
 let auth: Auth | null = null;
 try {
-  const app = initAdmin();
-  if (app) {
-    auth = getAuth(app);
+  const admin = getFirebaseAdmin();
+  if (admin) {
+    auth = getAuth(admin);
   }
 } catch (error) {
   console.warn('Firebase Admin initialization failed in auth utils:', error);

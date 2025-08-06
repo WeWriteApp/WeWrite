@@ -1,41 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../../utils/auth';
+import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { createErrorResponse, createSuccessResponse } from '../../../utils/apiHelpers';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 
 /**
  * POST /api/batch/operations
- * 
+ *
  * Execute batch operations on Firestore with environment-aware collection naming.
  * Supports batch reads, writes, updates, and deletes.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Initialize Firebase Admin with proper error handling
-    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-    const { getFirestore } = await import('firebase-admin/firestore');
-
-    let batchOpsApp = getApps().find(app => app.name === 'batch-ops-app');
-    if (!batchOpsApp) {
-      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(decodedJson);
-
-      batchOpsApp = initializeApp({
-        credential: cert({
-          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-          clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-        })
-      }, 'batch-ops-app');
-    }
-
-    const db = getFirestore(batchOpsApp);
-
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
+
+    // Initialize Firebase Admin using standardized function
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
+    }
+
+    const db = admin.firestore();
 
     const body = await request.json();
     const { operations, options = {} } = body;
