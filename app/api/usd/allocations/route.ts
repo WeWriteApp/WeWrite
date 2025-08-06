@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`🎯 USD Allocations API: Getting enhanced allocations for user ${userId}`);
+    console.log(`🎯 USD Allocations API: Getting enhanced allocations for user ${userId} (with user allocation fix v3)`);
 
     // Get USD balance and allocations
     const balance = await ServerUsdService.getUserUsdBalance(userId);
@@ -48,18 +48,56 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Filter for page allocations only
-    const pageAllocations = allocations.filter(allocation => allocation.resourceType === 'page');
-
-    // Enhance allocations with page details
+    // Enhance allocations with page/user details
     const enhancedAllocations: EnhancedUsdAllocation[] = await Promise.all(
-      pageAllocations.map(async (allocation) => {
+      allocations.map(async (allocation) => {
         try {
-          // Get page metadata using direct Firebase call
+          // Handle different resource types
           const admin = getFirebaseAdmin();
           if (!admin) {
             throw new Error('Firebase Admin not initialized');
           }
+
+          // Handle user allocations (check both resourceType and resourceId pattern)
+          console.log(`Processing allocation: resourceType=${allocation.resourceType}, resourceId=${allocation.resourceId}`);
+          const isUserAllocation = allocation.resourceType === 'user' || allocation.resourceId.startsWith('user/');
+          console.log(`Is user allocation: ${isUserAllocation}, resourceType check: ${allocation.resourceType === 'user'}, resourceId check: ${allocation.resourceId.startsWith('user/')}`);
+
+          if (isUserAllocation) {
+            const userId = allocation.resourceId.replace('user/', '');
+
+            try {
+              console.log(`Fetching username for user allocation: ${userId}`);
+              const authorUsername = await getUsernameById(userId);
+
+              return {
+                id: allocation.id,
+                pageId: allocation.resourceId,
+                pageTitle: `User: ${authorUsername}`,
+                authorId: userId,
+                authorUsername,
+                usdCents: allocation.usdCents,
+                month: allocation.month,
+                resourceType: allocation.resourceType,
+                resourceId: allocation.resourceId
+              };
+            } catch (usernameError) {
+              console.error(`Error fetching username for user ${userId}:`, usernameError);
+              return {
+                id: allocation.id,
+                pageId: allocation.resourceId,
+                pageTitle: 'User allocation',
+                authorId: userId,
+                authorUsername: 'Unknown User',
+                usdCents: allocation.usdCents,
+                month: allocation.month,
+                resourceType: allocation.resourceType,
+                resourceId: allocation.resourceId
+              };
+            }
+          }
+
+          // Handle page allocations
           const pageDoc = await admin.firestore().collection(getCollectionName('pages')).doc(allocation.resourceId).get();
           const pageData = pageDoc.exists ? pageDoc.data() : null;
 

@@ -22,7 +22,7 @@ export const getUsernameById = async (userId: string): Promise<string> => {
   try {
     // Try to get user from API endpoint
     console.log('👤 [USER UTILS] Fetching user data via API for:', userId);
-    const response = await userProfileApi.getUserProfile(userId);
+    const response = await userProfileApi.getProfile(userId);
 
     if (response.success && response.data) {
       const userData = response.data as User;

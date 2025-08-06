@@ -27,6 +27,7 @@ import { db } from '../firebase/config';
 import { WriterUsdEarnings, WriterUsdBalance, UsdPayout, UsdAllocation } from '../types/database';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
 import { getCurrentMonth, getPreviousMonth } from '../utils/subscriptionTiers';
+import { centsToDollars, dollarsToCents } from '../utils/formatCurrency';
 import {
   FinancialOperationResult,
   FinancialError,
@@ -37,7 +38,6 @@ import {
 } from '../types/financial';
 import { FinancialValidationService } from './financialValidationService';
 import { getMinimumPayoutThreshold } from '../utils/feeCalculations';
-import { centsToDollars, dollarsToCents } from '../utils/formatCurrency';
 
 export class UsdEarningsService {
   
@@ -535,6 +535,8 @@ export class UsdEarningsService {
       return null;
     }
   }
+
+
 
   /**
    * Get complete writer earnings data including funded, pending, and unfunded USD
