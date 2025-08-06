@@ -3,10 +3,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { FileText, Users, TrendingUp } from 'lucide-react';
+import { FileText, Users, TrendingUp, Copy } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { toast } from '../ui/use-toast';
+import { PillLink } from '../utils/PillLink';
 
 interface PageEarning {
   pageId: string;
@@ -28,7 +29,7 @@ type BreakdownMode = 'pages' | 'sponsors';
 
 /**
  * EarningsSourceBreakdown - Shows where earnings are coming from
- * 
+ *
  * Two modes:
  * - Pages: Shows which pages are earning the most
  * - Sponsors: Shows which users are contributing the most
@@ -38,6 +39,25 @@ export default function EarningsSourceBreakdown() {
   const [mode, setMode] = useState<BreakdownMode>('pages');
   const [historicalEarnings, setHistoricalEarnings] = useState<any[]>([]);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
+
+  // Copy page link to clipboard
+  const copyPageLink = async (pageId: string, pageTitle: string) => {
+    try {
+      const url = `${window.location.origin}/${pageId}`;
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link copied!",
+        description: `Copied link for "${pageTitle}"`,
+      });
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      toast({
+        title: "Copy failed",
+        description: "Could not copy link to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Load historical earnings data to show sources for available balance
   useEffect(() => {
@@ -168,77 +188,98 @@ export default function EarningsSourceBreakdown() {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div className="h-6 w-48 bg-muted rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+          <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+        </div>
+
+        {/* Loading cards */}
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="p-4">
+              <div className="flex justify-between items-center">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                  <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                </div>
                 <div className="h-4 w-16 bg-muted rounded animate-pulse" />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </Card>
+          ))}
+        </div>
+      </div>
     );
   }
 
   const hasEarnings = pageBreakdown.length > 0 || sponsorBreakdown.length > 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            Earnings Sources
-          </CardTitle>
-          
-          {hasEarnings && (
-            <div className="flex gap-1">
-              <Button
-                variant={mode === 'pages' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setMode('pages')}
-                className="flex items-center gap-1"
-              >
-                <FileText className="h-3 w-3" />
-                Pages
-              </Button>
-              <Button
-                variant={mode === 'sponsors' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setMode('sponsors')}
-                className="flex items-center gap-1"
-              >
-                <Users className="h-3 w-3" />
-                Sponsors
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {!hasEarnings ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No current earnings sources</p>
-            <p className="text-xs mt-1">Start writing pages to earn from supporters</p>
+    <div className="space-y-4">
+      {/* Page Subheader */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-green-600" />
+          Earnings Sources
+        </h2>
+
+        {hasEarnings && (
+          <div className="flex gap-1">
+            <Button
+              variant={mode === 'pages' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMode('pages')}
+              className="flex items-center gap-1"
+            >
+              <FileText className="h-3 w-3" />
+              Pages
+            </Button>
+            <Button
+              variant={mode === 'sponsors' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMode('sponsors')}
+              className="flex items-center gap-1"
+            >
+              <Users className="h-3 w-3" />
+              Sponsors
+            </Button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {mode === 'pages' ? (
-              // Pages breakdown
-              pageBreakdown.map((page, index) => (
-                <div key={page.pageId} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+        )}
+      </div>
+
+      {/* Content */}
+      {!hasEarnings ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <p className="text-sm">No current earnings sources</p>
+          <p className="text-xs mt-1">Start writing pages to earn from supporters</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {mode === 'pages' ? (
+            // Pages breakdown - Each page gets its own card
+            pageBreakdown.map((page, index) => (
+              <Card key={page.pageId} className="p-4">
+                <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
-                      <h4 className="font-medium truncate">{page.pageTitle}</h4>
+                      <PillLink
+                        href={`/${page.pageId}`}
+                        pageId={page.pageId}
+                        isPublic={true}
+                      >
+                        {page.pageTitle}
+                      </PillLink>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => copyPageLink(page.pageId, page.pageTitle)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {page.sponsorCount} sponsor{page.sponsorCount !== 1 ? 's' : ''}
@@ -251,27 +292,35 @@ export default function EarningsSourceBreakdown() {
                     <div className="text-xs text-muted-foreground">/month</div>
                   </div>
                 </div>
-              ))
+              </Card>
+            ))
             ) : (
-              // Sponsors breakdown
+              // Sponsors breakdown - Each sponsor gets its own card
               sponsorBreakdown.map((sponsor, index) => (
-                <div key={sponsor.userId} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
-                      <h4 className="font-medium truncate">{sponsor.username}</h4>
+                <Card key={sponsor.userId} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
+                        <PillLink
+                          href={`/user/${sponsor.userId}`}
+                          isPublic={true}
+                        >
+                          {sponsor.username}
+                        </PillLink>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Supporting {sponsor.pageCount} page{sponsor.pageCount !== 1 ? 's' : ''}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Supporting {sponsor.pageCount} page{sponsor.pageCount !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-green-600">
-                      {formatUsdCents(sponsor.totalContribution * 100)}
+                    <div className="text-right">
+                      <div className="font-semibold text-green-600">
+                        {formatUsdCents(sponsor.totalContribution * 100)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">/month</div>
                     </div>
-                    <div className="text-xs text-muted-foreground">/month</div>
                   </div>
-                </div>
+                </Card>
               ))
             )}
             
@@ -291,7 +340,6 @@ export default function EarningsSourceBreakdown() {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
