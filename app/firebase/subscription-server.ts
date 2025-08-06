@@ -4,23 +4,28 @@
 import { initAdmin } from "./admin";
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let adminApp;
 let adminDb;
-try {
-  adminApp = initAdmin();
-  if (!adminApp) {
-    throw new Error('Firebase Admin not available');
-  }
-  adminDb = adminApp.firestore();
-} catch (error) {
-  console.error('Error initializing Firebase Admin in subscription-server:', error);
-  throw error;
-}
 
-// Debug: Check if admin is properly initialized
-console.log('Firebase Admin initialized:', !!adminApp);
-console.log('Firebase Admin apps count:', adminApp.apps?.length || 'N/A');
+function initializeFirebase() {
+  if (adminApp && adminDb) return { adminApp, adminDb }; // Already initialized
+
+  try {
+    adminApp = initAdmin();
+    if (!adminApp) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { adminApp: null, adminDb: null };
+    }
+    adminDb = adminApp.firestore();
+    console.log('Firebase Admin initialized successfully in subscription-server');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in subscription-server:', error);
+    return { adminApp: null, adminDb: null };
+  }
+
+  return { adminApp, adminDb };
+}
 
 // Type definitions for subscription operations
 interface SubscriptionData {
@@ -55,6 +60,12 @@ interface SubscriptionOptions {
 // Update a user's subscription (server-side only)
 export const updateSubscriptionServer = async (userId: string, subscriptionData: Partial<SubscriptionData>): Promise<boolean> => {
   try {
+    const { adminDb } = initializeFirebase();
+    if (!adminDb) {
+      console.warn('Firebase Admin not available for subscription update');
+      return false;
+    }
+
     const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc("current");
     await subscriptionRef.set({
@@ -73,6 +84,12 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
   const verbose = options.verbose || false;
 
   try {
+    const { adminDb } = initializeFirebase();
+    if (!adminDb) {
+      console.warn('Firebase Admin not available for subscription fetch');
+      return null;
+    }
+
     // Log environment info for debugging
     if (verbose) {
       console.log(`[getUserSubscriptionServer] Environment info:`, {
