@@ -132,6 +132,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       clearError();
 
+      // Check if we should use dev auth system
+      // ONLY use dev auth for local development with USE_DEV_AUTH=true
+      const useDevAuth = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_DEV_AUTH === 'true';
+
       // SIMPLIFIED: Always use the login API endpoint
       console.log('[Auth] Using simplified login API for all environments');
 

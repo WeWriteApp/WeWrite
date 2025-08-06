@@ -102,7 +102,7 @@ export default function NavHeader({
           }
           content={<EarningsBreakdown
             totalEarnings={earnings.totalEarnings || 0}
-            pendingEarnings={earnings.pendingBalance || 0}
+            pendingEarnings={displayAmount} // Show the same amount as the chip
             lastMonthEarnings={earnings.lastMonthEarnings || 0}
             monthlyChange={earnings.monthlyChange || 0}
           />}

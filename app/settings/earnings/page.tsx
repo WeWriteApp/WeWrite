@@ -7,6 +7,7 @@ import { DollarSign, Wallet } from 'lucide-react';
 import WriterUsdDashboard from '../../components/payments/WriterUsdDashboard';
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
 import EarningsBreakdownCard from '../../components/payments/EarningsBreakdownCard';
+import EarningsSourceBreakdown from '../../components/payments/EarningsSourceBreakdown';
 
 export default function EarningsPage() {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ export default function EarningsPage() {
 
         <TabsContent value="earnings" className="space-y-4 sm:space-y-6">
           <EarningsBreakdownCard />
+          <EarningsSourceBreakdown />
           <WriterUsdDashboard />
         </TabsContent>
 
