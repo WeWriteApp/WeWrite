@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getUsernameById } from '../../../utils/userUtils';
-import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 
@@ -15,10 +14,28 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
-    // Initialize Firebase Admin
-    const admin = initAdmin();
-    const adminAuth = admin.auth();
-    const adminDb = admin.firestore();
+    // Initialize Firebase Admin with proper error handling
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const { getAuth } = await import('firebase-admin/auth');
+
+    let setupIntentApp = getApps().find(app => app.name === 'setup-intent-app');
+    if (!setupIntentApp) {
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      setupIntentApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'setup-intent-app');
+    }
+
+    const adminAuth = getAuth(setupIntentApp);
+    const adminDb = getFirestore(setupIntentApp);
 
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../../../../utils/auth';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { createErrorResponse, createSuccessResponse } from '../../../../utils/apiHelpers';
@@ -18,11 +17,26 @@ export async function POST(
     const resolvedParams = await params;
     const targetPageId = resolvedParams.id;
 
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not initialized');
+    // Initialize Firebase Admin with proper error handling
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getFirestore } = await import('firebase-admin/firestore');
+
+    let appendRefApp = getApps().find(app => app.name === 'append-ref-app');
+    if (!appendRefApp) {
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      appendRefApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'append-ref-app');
     }
-    const db = admin.firestore();
+
+    const db = getFirestore(appendRefApp);
 
     // Get current user
     const currentUserId = await getUserIdFromRequest(request);
