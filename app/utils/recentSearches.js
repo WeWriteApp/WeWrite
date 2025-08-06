@@ -7,7 +7,7 @@ const MAX_RECENT_SEARCHES = 10;
 
 /**
  * Add a search term to the recent searches list
- * Now uses database storage for authenticated users with localStorage fallback
+ * OPTIMIZED: Primarily uses localStorage with periodic database sync to reduce reads
  *
  * @param {string} searchTerm - The search term to add
  * @param {string} userId - The user ID (required for database storage)
@@ -19,26 +19,57 @@ export const addRecentSearch = async (searchTerm, userId = null) => {
   const trimmedTerm = searchTerm.trim();
   if (!trimmedTerm) return;
 
-  // If user is authenticated, save to database
-  if (userId) {
-    try {
-      const response = await fetch('/api/user-preferences/recent-searches', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ searchTerm: trimmedTerm }),
-      });
+  // OPTIMIZATION: Always save to localStorage first for instant response
+  const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
 
-      if (response.ok) {
-        console.log('Recent search saved to database');
-        return;
-      } else {
-        console.warn('Failed to save recent search to database, falling back to localStorage');
-      }
-    } catch (error) {
-      console.warn('Error saving recent search to database, falling back to localStorage:', error);
+  try {
+    // Get existing recent searches from localStorage
+    const existingSearchesStr = localStorage.getItem(storageKey);
+    let recentSearches = existingSearchesStr ? JSON.parse(existingSearchesStr) : [];
+
+    // Ensure it's an array
+    if (!Array.isArray(recentSearches)) {
+      recentSearches = [];
     }
+
+    // Remove this search term if it already exists (to avoid duplicates)
+    recentSearches = recentSearches.filter(item =>
+      item.term.toLowerCase() !== trimmedTerm.toLowerCase()
+    );
+
+    // Add the new search term to the beginning with timestamp
+    recentSearches.unshift({
+      term: trimmedTerm,
+      timestamp: Date.now(),
+      synced: false // Mark as not synced to database
+    });
+
+    // Keep only the most recent searches
+    recentSearches = recentSearches.slice(0, MAX_RECENT_SEARCHES);
+
+    // Save to localStorage immediately
+    localStorage.setItem(storageKey, JSON.stringify(recentSearches));
+
+    // OPTIMIZATION: Only sync to database periodically to reduce writes
+    if (userId) {
+      // Check if we should sync (every 5 searches or every 5 minutes)
+      const lastSync = localStorage.getItem(`lastSearchSync_${userId}`);
+      const now = Date.now();
+      const unsyncedCount = recentSearches.filter(item => !item.synced).length;
+
+      const shouldSync = !lastSync ||
+                        (now - parseInt(lastSync) > 5 * 60 * 1000) || // 5 minutes
+                        unsyncedCount >= 5; // 5 unsynced searches
+
+      if (shouldSync) {
+        // Sync to database in background (don't await)
+        syncRecentSearchesToDatabase(userId, recentSearches).catch(error => {
+          console.warn('Background sync of recent searches failed:', error);
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error adding recent search to localStorage:", error);
   }
 
   // Fallback to localStorage (for unauthenticated users or when API fails)
@@ -85,35 +116,36 @@ export const addRecentSearch = async (searchTerm, userId = null) => {
 export const getRecentSearches = async (userId = null) => {
   if (typeof window === 'undefined') return [];
 
-  // If user is authenticated, try to get from database first
-  if (userId) {
-    try {
-      const response = await fetch('/api/user-preferences/recent-searches');
+  const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && Array.isArray(data.data.recentSearches)) {
-          return data.data.recentSearches;
-        }
-      } else {
-        console.warn('Failed to fetch recent searches from database, falling back to localStorage');
-      }
-    } catch (error) {
-      console.warn('Error fetching recent searches from database, falling back to localStorage:', error);
-    }
-  }
-
-  // Fallback to localStorage
+  // OPTIMIZATION: Always load from localStorage first for instant response
   try {
-    const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
-
-    // Get existing recent searches
     const existingSearchesStr = localStorage.getItem(storageKey);
     let recentSearches = existingSearchesStr ? JSON.parse(existingSearchesStr) : [];
 
     // Ensure it's an array
     if (!Array.isArray(recentSearches)) {
-      return [];
+      recentSearches = [];
+    }
+
+    // OPTIMIZATION: Only sync from database on first load or periodically
+    if (userId && recentSearches.length === 0) {
+      // Try to load from database only if localStorage is empty
+      try {
+        const response = await fetch('/api/user-preferences/recent-searches');
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.data.recentSearches)) {
+            console.log('Recent searches loaded from database (first time)');
+            // Save to localStorage for future instant access
+            localStorage.setItem(storageKey, JSON.stringify(data.data.recentSearches));
+            return data.data.recentSearches;
+          }
+        }
+      } catch (error) {
+        console.warn('Error fetching recent searches from database:', error);
+      }
     }
 
     return recentSearches;
@@ -122,6 +154,45 @@ export const getRecentSearches = async (userId = null) => {
     return [];
   }
 };
+
+/**
+ * OPTIMIZATION: Background sync function to reduce database writes
+ */
+async function syncRecentSearchesToDatabase(userId, recentSearches) {
+  try {
+    // Only sync unsynced items
+    const unsyncedSearches = recentSearches.filter(item => !item.synced);
+
+    if (unsyncedSearches.length === 0) {
+      return; // Nothing to sync
+    }
+
+    console.log(`Syncing ${unsyncedSearches.length} recent searches to database`);
+
+    // Sync the most recent search to database
+    const mostRecent = unsyncedSearches[0];
+    const response = await fetch('/api/user-preferences/recent-searches', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ searchTerm: mostRecent.term }),
+    });
+
+    if (response.ok) {
+      // Mark all items as synced in localStorage
+      const storageKey = `recentSearches_${userId}`;
+      const updatedSearches = recentSearches.map(item => ({ ...item, synced: true }));
+      localStorage.setItem(storageKey, JSON.stringify(updatedSearches));
+      localStorage.setItem(`lastSearchSync_${userId}`, Date.now().toString());
+      console.log('Recent searches synced to database successfully');
+    } else {
+      console.warn('Failed to sync recent searches to database');
+    }
+  } catch (error) {
+    console.error('Error syncing recent searches to database:', error);
+  }
+}
 
 /**
  * Clear all recent searches

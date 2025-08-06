@@ -3,9 +3,49 @@ import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, startAf
 import { db } from '../../firebase/database';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker.js';
+import { recordProductionRead } from '../../utils/productionReadMonitor';
 
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
+
+// OPTIMIZATION: Enhanced caching system to reduce database reads
+const searchCache = new Map();
+const SEARCH_CACHE_TTL = {
+  EMPTY_SEARCH: 10 * 60 * 1000,    // 10 minutes for empty searches (user's own pages)
+  TERM_SEARCH: 5 * 60 * 1000,      // 5 minutes for search terms
+  USER_SEARCH: 15 * 60 * 1000,     // 15 minutes for user-specific searches
+};
+
+function getCacheKey(searchTerm, userId, context, maxResults, filterByUserId) {
+  return `search:${searchTerm || 'empty'}:${userId || 'anon'}:${context}:${maxResults}:${filterByUserId || 'none'}`;
+}
+
+function getCachedResult(cacheKey) {
+  const cached = searchCache.get(cacheKey);
+  if (!cached) return null;
+
+  const now = Date.now();
+  if (now - cached.timestamp > cached.ttl) {
+    searchCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
+}
+
+function setCachedResult(cacheKey, data, ttl) {
+  // Limit cache size to prevent memory issues
+  if (searchCache.size > 1000) {
+    const oldestKey = searchCache.keys().next().value;
+    searchCache.delete(oldestKey);
+  }
+
+  searchCache.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    ttl
+  });
+}
 
 /**
  * UNIFIED SEARCH API - Single Source of Truth
@@ -558,6 +598,8 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
  * Main API route handler
  */
 export async function GET(request) {
+  const startTime = Date.now();
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -571,6 +613,29 @@ export async function GET(request) {
     const titleOnly = searchParams.get('titleOnly') === 'true';
     const filterByUserId = searchParams.get('filterByUserId') || null;
     const currentPageId = searchParams.get('currentPageId') || null;
+
+    // OPTIMIZATION: Check cache first
+    const cacheKey = getCacheKey(searchTerm, userId, context, maxResults, filterByUserId);
+    const cachedResult = getCachedResult(cacheKey);
+
+    if (cachedResult) {
+      console.log(`🚀 CACHE HIT: Search served from cache in ${Date.now() - startTime}ms`);
+
+      // Record cache hit for monitoring
+      recordProductionRead('/api/search-unified', 'search-cached', 0, {
+        userId,
+        cacheStatus: 'HIT',
+        responseTime: Date.now() - startTime,
+        userAgent: request.headers.get('user-agent'),
+        referer: request.headers.get('referer')
+      });
+
+      return NextResponse.json({
+        ...cachedResult,
+        cached: true,
+        cacheAge: Date.now() - cachedResult.timestamp
+      });
+    }
 
     console.log(`🔍 Unified Search API called:`, {
       searchTerm,
@@ -597,7 +662,7 @@ export async function GET(request) {
             currentPageId
           });
 
-          return NextResponse.json({
+          const emptySearchResult = {
             pages: pages || [],
             users: [],
             source: 'unified_empty_search',
@@ -607,7 +672,21 @@ export async function GET(request) {
               pagesFound: pages?.length || 0,
               usersFound: 0
             }
-          }, { status: 200 });
+          };
+
+          // OPTIMIZATION: Cache empty search results
+          setCachedResult(cacheKey, emptySearchResult, SEARCH_CACHE_TTL.EMPTY_SEARCH);
+
+          // Record production read
+          recordProductionRead('/api/search-unified', 'empty-search', pages?.length || 0, {
+            userId,
+            cacheStatus: 'MISS',
+            responseTime: Date.now() - startTime,
+            userAgent: request.headers.get('user-agent'),
+            referer: request.headers.get('referer')
+          });
+
+          return NextResponse.json(emptySearchResult, { status: 200 });
         } catch (error) {
           console.error('Error in empty search:', error);
           return NextResponse.json({
@@ -679,7 +758,7 @@ export async function GET(request) {
       'unified_search_api'
     );
 
-    return NextResponse.json({
+    const searchResult = {
       pages: pagesWithUsernames || [],
       users: users || [],
       source: 'unified_search',
@@ -691,7 +770,28 @@ export async function GET(request) {
         usersFound: users?.length || 0,
         maxResults: maxResults || 'unlimited'
       }
-    }, { status: 200 });
+    };
+
+    // OPTIMIZATION: Cache the result for future requests
+    const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
+    const cacheTTL = isEmptySearch ? SEARCH_CACHE_TTL.EMPTY_SEARCH :
+                     userId ? SEARCH_CACHE_TTL.USER_SEARCH : SEARCH_CACHE_TTL.TERM_SEARCH;
+
+    setCachedResult(cacheKey, searchResult, cacheTTL);
+
+    // Record production read for monitoring
+    recordProductionRead('/api/search-unified', 'search-fresh',
+      (pagesWithUsernames?.length || 0) + (users?.length || 0), {
+        userId,
+        cacheStatus: 'MISS',
+        responseTime: searchTime,
+        userAgent: request.headers.get('user-agent'),
+        referer: request.headers.get('referer')
+      });
+
+    console.log(`🔍 Search completed and cached: ${pagesWithUsernames?.length || 0} pages, ${users?.length || 0} users in ${searchTime}ms`);
+
+    return NextResponse.json(searchResult, { status: 200 });
 
   } catch (error) {
     console.error('❌ Error in unified search API:', error);

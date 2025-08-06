@@ -4,6 +4,7 @@ import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentCon
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { trackFirebaseRead } from '../../../../utils/costMonitor';
 import { userCache } from '../../../../utils/userCache';
+import { recordProductionRead } from '../../../../utils/productionReadMonitor';
 
 /**
  * Optimized User Data API
@@ -37,6 +38,15 @@ export async function GET(
       const responseTime = Date.now() - startTime;
       console.log(`🚀 [User API] Cache hit for ${userId} (${responseTime}ms)`);
 
+      // Record cache hit for production monitoring
+      recordProductionRead('/api/users/profile-data', 'user-profile-cached', 0, {
+        userId: currentUserId,
+        cacheStatus: 'HIT',
+        responseTime,
+        userAgent: request.headers.get('user-agent'),
+        referer: request.headers.get('referer')
+      });
+
       // Filter data based on access permissions
       const publicUserData = {
         id: cachedUserData.id,
@@ -60,7 +70,8 @@ export async function GET(
         fromCache: true
       });
 
-      response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15min browser, 30min CDN
+      // OPTIMIZATION: Extended cache headers for navigation performance
+      response.headers.set('Cache-Control', 'public, max-age=1800, s-maxage=3600, stale-while-revalidate=7200'); // 30min browser, 1hr CDN
       response.headers.set('X-Cache-Status', 'HIT');
       response.headers.set('X-Response-Time', `${responseTime}ms`);
       response.headers.set('X-Database-Reads', '0');
@@ -72,6 +83,15 @@ export async function GET(
 
     // Track this read for cost monitoring
     trackFirebaseRead('users', 'getUserById', 1, 'api-user-profile-data');
+
+    // Record production read for monitoring
+    recordProductionRead('/api/users/profile-data', 'user-profile-fresh', 1, {
+      userId: currentUserId,
+      cacheStatus: 'MISS',
+      responseTime: 0, // Will be updated later
+      userAgent: request.headers.get('user-agent'),
+      referer: request.headers.get('referer')
+    });
 
     // Get Firebase Admin
     const admin = getFirebaseAdmin();

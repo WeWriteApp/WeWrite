@@ -2,13 +2,27 @@
 
 /**
  * Request Deduplication System
- * 
+ *
  * Prevents redundant API calls and Firebase operations by:
  * - Deduplicating identical requests within time windows
  * - Caching in-flight requests to prevent duplicate calls
  * - Implementing smart cache invalidation
  * - Providing request coalescing for similar operations
+ *
+ * PRODUCTION OPTIMIZATION: Integrated with production read monitoring
+ * to track deduplication effectiveness and database read savings.
  */
+
+// Import production monitoring (only works in browser)
+let recordProductionRead: any = null;
+if (typeof window !== 'undefined') {
+  try {
+    recordProductionRead = require('./productionReadMonitor').recordProductionRead;
+  } catch (error) {
+    // Graceful fallback if monitoring not available
+    recordProductionRead = () => {};
+  }
+}
 
 interface PendingRequest<T = any> {
   promise: Promise<T>;
@@ -118,6 +132,15 @@ class RequestDeduplicationManager {
       const cached = this.getCachedData<T>(key);
       if (cached) {
         console.log(`[RequestDedup] Cache hit for ${url}`);
+
+        // PRODUCTION MONITORING: Record cache hit
+        if (recordProductionRead) {
+          recordProductionRead(url, 'request-dedup-cache-hit', 0, {
+            cacheStatus: 'HIT',
+            responseTime: 0
+          });
+        }
+
         return cached;
       }
     }
@@ -125,6 +148,15 @@ class RequestDeduplicationManager {
     // Check if request is already pending (unless skipped)
     if (!skipDedup && this.isPending(key)) {
       console.log(`[RequestDedup] Deduplicating request for ${url}`);
+
+      // PRODUCTION MONITORING: Record deduplication
+      if (recordProductionRead) {
+        recordProductionRead(url, 'request-deduplicated', 0, {
+          cacheStatus: 'DEDUP',
+          responseTime: 0
+        });
+      }
+
       return this.pendingRequests.get(key)!.promise as Promise<T>;
     }
 
