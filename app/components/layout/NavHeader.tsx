@@ -257,7 +257,7 @@ export default function NavHeader({
             </div>
 
             {/* Earnings Display (right side) */}
-            <div className="flex items-center min-w-0 flex-shrink">
+            <div className="flex items-center min-w-0 flex-shrink-0">
               {renderEarningsDisplay()}
             </div>
         </div>

@@ -1288,21 +1288,28 @@ html[data-high-contrast="true"] .border-border {
     padding: 1.25rem !important; /* 20px padding on mobile */
   }
 
-  /* Standardized mobile header content padding */
-  [data-component="nav-header"] .flex.items-center.h-14,
+  /* Standardized mobile header content padding - only for specific legacy headers */
   [data-component="main-header"] .flex.items-center.h-full {
     height: 56px !important;
     padding-left: 1rem !important; /* 16px */
     padding-right: 1rem !important; /* 16px */
   }
 
-  /* Standardized mobile badge sizing for header financial displays */
-  [data-component="nav-header"] .inline-flex.items-center.gap-2,
+  /* NavHeader uses its own responsive padding system */
+  [data-component="nav-header"] .flex.items-center.h-14 {
+    height: 56px !important;
+    padding-left: 1rem !important; /* 16px */
+    padding-right: 1rem !important; /* 16px */
+  }
+
+  /* Standardized mobile badge sizing for header financial displays - only for legacy components */
   [data-component="main-header"] .inline-flex.items-center.gap-2 {
     font-size: 0.75rem !important; /* 12px - consistent badge text size */
     padding: 0.125rem 0.625rem !important; /* 2px 10px - consistent badge padding */
     border-radius: 9999px !important; /* Full rounded */
   }
+
+  /* NavHeader uses standard badge component styling */
 
   /* NavHeader sidebar offset - only on desktop */
   @media (min-width: 768px) {
