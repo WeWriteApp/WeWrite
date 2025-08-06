@@ -64,7 +64,242 @@ export async function GET(request: NextRequest) {
 
     console.log(`🧪 TEST GET: ${action} for user ${userId}`);
 
-    if (action === 'process-existing-allocations') {
+    if (action === 'check-production-data') {
+      // URGENT: Check production collections for real user data
+      try {
+        console.log(`🚨 URGENT: Checking production collections for real user data`);
+
+        const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const { getCurrentMonth } = await import('../../../utils/usdConstants');
+
+        // Get Firebase Admin instance
+        let prodCheckApp = getApps().find(app => app.name === 'prod-check-app');
+        if (!prodCheckApp) {
+          const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+          const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+          const serviceAccount = JSON.parse(decodedJson);
+
+          prodCheckApp = initializeApp({
+            credential: cert({
+              projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+              clientEmail: serviceAccount.client_email,
+              privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+            })
+          }, 'prod-check-app');
+        }
+
+        const db = getFirestore(prodCheckApp);
+        const currentMonth = getCurrentMonth();
+
+        // Check PRODUCTION collections (without DEV_ prefix)
+        const prodCollections = {
+          allocations: 'usdAllocations',
+          earnings: 'writerUsdEarnings',
+          balances: 'writerUsdBalances'
+        };
+
+        const results = {};
+
+        // Check allocations in production collection
+        const allocationsSnapshot = await db.collection(prodCollections.allocations)
+          .where('month', '==', currentMonth)
+          .where('status', '==', 'active')
+          .limit(50)
+          .get();
+
+        results.productionAllocations = {
+          total: allocationsSnapshot.size,
+          sample: allocationsSnapshot.docs.slice(0, 10).map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+        };
+
+        // Check for specific users
+        const userIds = [userId, 'fWNeCuussPgYgkN2LGohFRCPXiy1', 'I5IoRbISVuOjSEkyhaE4nZkcMQ42'];
+
+        for (const checkUserId of userIds) {
+          // Check allocations where this user is recipient
+          const userAllocationsSnapshot = await db.collection(prodCollections.allocations)
+            .where('recipientUserId', '==', checkUserId)
+            .where('month', '==', currentMonth)
+            .where('status', '==', 'active')
+            .get();
+
+          // Check earnings
+          const userEarningsSnapshot = await db.collection(prodCollections.earnings)
+            .where('userId', '==', checkUserId)
+            .where('month', '==', currentMonth)
+            .get();
+
+          // Check balance
+          const userBalanceDoc = await db.collection(prodCollections.balances)
+            .doc(checkUserId)
+            .get();
+
+          results[checkUserId] = {
+            allocations: userAllocationsSnapshot.size,
+            earnings: userEarningsSnapshot.size,
+            hasBalance: userBalanceDoc.exists,
+            balanceData: userBalanceDoc.exists ? userBalanceDoc.data() : null
+          };
+        }
+
+        console.log(`🚨 PRODUCTION DATA CHECK RESULTS:`, results);
+
+        return NextResponse.json({
+          success: true,
+          message: `Production data check completed`,
+          currentMonth,
+          collections: prodCollections,
+          results
+        });
+      } catch (error) {
+        console.error(`🚨 PRODUCTION DATA CHECK ERROR:`, error);
+        return NextResponse.json({
+          error: 'Failed to check production data',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    } else if (action === 'process-production-allocations') {
+      // URGENT: Process PRODUCTION allocations into earnings records
+      try {
+        console.log(`🚨 URGENT: Processing PRODUCTION allocations into earnings records`);
+
+        const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { getCurrentMonth } = await import('../../../utils/usdConstants');
+
+        // Get Firebase Admin instance
+        let prodProcessApp = getApps().find(app => app.name === 'prod-process-app');
+        if (!prodProcessApp) {
+          const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+          const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+          const serviceAccount = JSON.parse(decodedJson);
+
+          prodProcessApp = initializeApp({
+            credential: cert({
+              projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+              clientEmail: serviceAccount.client_email,
+              privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+            })
+          }, 'prod-process-app');
+        }
+
+        const db = getFirestore(prodProcessApp);
+        const currentMonth = getCurrentMonth();
+
+        // Get all active allocations from PRODUCTION collection (no DEV_ prefix)
+        const allocationsSnapshot = await db.collection('usdAllocations')
+          .where('month', '==', currentMonth)
+          .where('status', '==', 'active')
+          .get();
+
+        console.log(`🚨 Found ${allocationsSnapshot.size} PRODUCTION allocations to process`);
+
+        let processedCount = 0;
+        let errorCount = 0;
+        const errors = [];
+
+        // Process each allocation
+        for (const doc of allocationsSnapshot.docs) {
+          try {
+            const allocation = doc.data();
+
+            if (allocation.recipientUserId) {
+              // Process this allocation into earnings using PRODUCTION collections
+              // We need to manually process this since the service uses environment-based collection names
+
+              // Create earnings record directly in production collection
+              const earningsRef = db.collection('writerUsdEarnings').doc(`${allocation.recipientUserId}_${allocation.month}`);
+              const earningsDoc = await earningsRef.get();
+
+              const allocationData = {
+                allocationId: `${allocation.userId}_${allocation.resourceId}_${Date.now()}`,
+                fromUserId: allocation.userId,
+                resourceType: allocation.resourceType,
+                resourceId: allocation.resourceId,
+                usdCents: allocation.usdCents,
+                timestamp: new Date()
+              };
+
+              if (earningsDoc.exists) {
+                // Update existing earnings record
+                await earningsRef.update({
+                  allocations: [...(earningsDoc.data()?.allocations || []), allocationData],
+                  totalUsdCentsReceived: (earningsDoc.data()?.totalUsdCentsReceived || 0) + allocation.usdCents,
+                  updatedAt: new Date()
+                });
+              } else {
+                // Create new earnings record
+                await earningsRef.set({
+                  userId: allocation.recipientUserId,
+                  month: allocation.month,
+                  status: 'pending',
+                  createdAt: new Date(),
+                  allocations: [allocationData],
+                  totalUsdCentsReceived: allocation.usdCents,
+                  updatedAt: new Date()
+                });
+              }
+
+              // Update balance in production collection
+              const balanceRef = db.collection('writerUsdBalances').doc(allocation.recipientUserId);
+              const balanceDoc = await balanceRef.get();
+
+              if (balanceDoc.exists) {
+                const currentBalance = balanceDoc.data();
+                await balanceRef.update({
+                  totalUsdCentsEarned: (currentBalance?.totalUsdCentsEarned || 0) + allocation.usdCents,
+                  pendingUsdCents: (currentBalance?.pendingUsdCents || 0) + allocation.usdCents,
+                  updatedAt: new Date()
+                });
+              } else {
+                await balanceRef.set({
+                  userId: allocation.recipientUserId,
+                  totalUsdCentsEarned: allocation.usdCents,
+                  pendingUsdCents: allocation.usdCents,
+                  availableUsdCents: 0,
+                  paidOutUsdCents: 0,
+                  lastProcessedMonth: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                });
+              }
+
+              processedCount++;
+              console.log(`✅ Processed PRODUCTION allocation ${doc.id}: $${(allocation.usdCents / 100).toFixed(2)} to ${allocation.recipientUserId}`);
+            }
+          } catch (error) {
+            errorCount++;
+            errors.push({
+              allocationId: doc.id,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            console.error(`❌ Failed to process PRODUCTION allocation ${doc.id}:`, error);
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: `Processed ${processedCount} PRODUCTION allocations into earnings records`,
+          summary: {
+            totalAllocations: allocationsSnapshot.size,
+            processedCount,
+            errorCount,
+            errors: errors.slice(0, 10) // Limit error details
+          }
+        });
+      } catch (error) {
+        console.error(`🚨 URGENT PRODUCTION PROCESSING ERROR:`, error);
+        return NextResponse.json({
+          error: 'Failed to process PRODUCTION allocations',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    } else if (action === 'process-existing-allocations') {
       // URGENT: Process all existing allocations into earnings records
       try {
         console.log(`🚨 URGENT: Processing existing allocations into earnings records`);
@@ -313,7 +548,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       error: 'Unknown action',
-      availableActions: ['pending-earnings', 'monthly-processing', 'payout-processing', 'process-existing-allocations']
+      availableActions: ['pending-earnings', 'monthly-processing', 'payout-processing', 'process-existing-allocations', 'check-production-data', 'process-production-allocations']
     }, { status: 400 });
 
   } catch (error) {
