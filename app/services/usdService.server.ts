@@ -6,23 +6,44 @@
  * This file should ONLY be imported in API routes and server components
  */
 
-import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getCurrentMonth } from '../utils/usdConstants';
 import { dollarsToCents, centsToDollars } from '../utils/formatCurrency';
 import type { UsdBalance, UsdAllocation } from '../types/database';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
 
-// Lazy initialization function for Firebase Admin
+// Robust Firebase Admin initialization function - uses the same pattern as working endpoints
 function getFirebaseAdminAndDb() {
   try {
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      throw new Error('Firebase Admin not available');
+    // Check if we already have an app for USD services
+    let usdServiceApp = getApps().find(app => app.name === 'usd-service-app');
+
+    if (!usdServiceApp) {
+      // Initialize a new app specifically for USD services
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      if (!base64Json) {
+        throw new Error('GOOGLE_CLOUD_KEY_JSON environment variable not found');
+      }
+
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      usdServiceApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'usd-service-app');
+
+      console.log('[USD Service] Firebase Admin initialized successfully');
     }
-    const db = admin.firestore();
-    return { admin, db };
+
+    const db = getFirestore(usdServiceApp);
+    return { admin: usdServiceApp, db };
   } catch (error) {
-    console.error('Error initializing Firebase Admin in usdService.server:', error);
+    console.error('[USD Service] Error initializing Firebase Admin:', error);
     throw error;
   }
 }
@@ -52,7 +73,7 @@ export class ServerUsdService {
           availableUsdCents: usdCents - (existingData?.allocatedUsdCents || 0),
           monthlyAllocationCents: usdCents,
           lastAllocationDate: currentMonth,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          updatedAt: FieldValue.serverTimestamp()
         });
       } else {
         // Create new balance record
@@ -63,8 +84,8 @@ export class ServerUsdService {
           availableUsdCents: usdCents,
           monthlyAllocationCents: usdCents,
           lastAllocationDate: currentMonth,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
         });
       }
 
@@ -126,7 +147,7 @@ export class ServerUsdService {
             totalUsdCents: expectedUsdCents,
             monthlyAllocationCents: expectedUsdCents,
             availableUsdCents: expectedUsdCents - actualAllocatedUsdCents,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         }
       }
@@ -266,10 +287,18 @@ export class ServerUsdService {
    * Allocate USD to a page (server-side)
    */
   static async allocateUsdToPage(userId: string, pageId: string, usdCentsChange: number): Promise<void> {
+    const startTime = Date.now();
+    const correlationId = `page_alloc_${userId}_${pageId}_${Date.now()}`;
+
     try {
+      // Validate inputs
+      if (!userId || !pageId || usdCentsChange === 0) {
+        throw new Error(`[${correlationId}] Invalid allocation parameters: userId=${userId}, pageId=${pageId}, usdCentsChange=${usdCentsChange}`);
+      }
+
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
-      console.log(`[USD ALLOCATION] Starting allocation for user ${userId}, page ${pageId}, change ${centsToDollars(usdCentsChange)} USD`);
+      console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${centsToDollars(usdCentsChange)} USD`);
 
       // Get current USD balance
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
@@ -347,7 +376,7 @@ export class ServerUsdService {
       batch.update(balanceRef, {
         allocatedUsdCents: newAllocatedCents,
         availableUsdCents: newAvailableCents,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
       });
 
       // Handle allocation record
@@ -369,7 +398,7 @@ export class ServerUsdService {
           const existingDoc = existingSnapshot.docs[0];
           batch.update(existingDoc.ref, {
             usdCents: newPageAllocationCents,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         } else {
           // Create new allocation
@@ -382,8 +411,8 @@ export class ServerUsdService {
             usdCents: newPageAllocationCents,
             month: currentMonth,
             status: 'active',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
           });
         }
       } else {
@@ -402,7 +431,7 @@ export class ServerUsdService {
           const existingDoc = existingSnapshot.docs[0];
           batch.update(existingDoc.ref, {
             status: 'cancelled',
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         }
       }
@@ -430,10 +459,24 @@ export class ServerUsdService {
         }
       }
 
-      console.log(`[USD ALLOCATION] Successfully allocated ${centsToDollars(newPageAllocationCents)} USD to page ${pageId} for user ${userId}`);
+      console.log(`[USD ALLOCATION] [${correlationId}] Successfully allocated ${centsToDollars(newPageAllocationCents)} USD to page ${pageId} for user ${userId}`);
     } catch (error) {
-      console.error('ServerUsdService: Error allocating USD to page:', error);
-      throw error;
+      const duration = Date.now() - startTime;
+      console.error(`[USD ALLOCATION] [${correlationId}] Error allocating USD to page (${duration}ms):`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId,
+        pageId,
+        usdCentsChange,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      // Re-throw with correlation ID for better tracking
+      const enhancedError = new Error(`[${correlationId}] USD page allocation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      enhancedError.cause = error;
+      throw enhancedError;
+    } finally {
+      const duration = Date.now() - startTime;
+      console.log(`[USD ALLOCATION] [${correlationId}] Page allocation completed in ${duration}ms`);
     }
   }
 
@@ -472,7 +515,7 @@ export class ServerUsdService {
       batch.update(balanceRef, {
         allocatedUsdCents: newAllocatedCents,
         availableUsdCents: newAvailableCents,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
       });
 
       // Handle allocation record
@@ -494,7 +537,7 @@ export class ServerUsdService {
           const existingDoc = existingSnapshot.docs[0];
           batch.update(existingDoc.ref, {
             usdCents: newUserAllocationCents,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         } else {
           // Create new allocation
@@ -507,8 +550,8 @@ export class ServerUsdService {
             usdCents: newUserAllocationCents,
             month: currentMonth,
             status: 'active',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
           });
         }
       } else {
@@ -527,7 +570,7 @@ export class ServerUsdService {
           const existingDoc = existingSnapshot.docs[0];
           batch.update(existingDoc.ref, {
             status: 'cancelled',
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         }
       }

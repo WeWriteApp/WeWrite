@@ -7,19 +7,40 @@
  * This file should ONLY be imported in API routes and server components.
  */
 
-import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Lazy initialization function for Firebase Admin
+// Robust Firebase Admin initialization function - uses the same pattern as working endpoints
 function getFirebaseAdminAndDb() {
   try {
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      throw new Error('Firebase Admin not available');
+    // Check if we already have an app for USD earnings services
+    let earningsServiceApp = getApps().find(app => app.name === 'earnings-service-app');
+
+    if (!earningsServiceApp) {
+      // Initialize a new app specifically for USD earnings services
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      if (!base64Json) {
+        throw new Error('GOOGLE_CLOUD_KEY_JSON environment variable not found');
+      }
+
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      earningsServiceApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'earnings-service-app');
+
+      console.log('[USD Earnings Service] Firebase Admin initialized successfully');
     }
-    const db = admin.firestore();
-    return { admin, db };
+
+    const db = getFirestore(earningsServiceApp);
+    return { admin: earningsServiceApp, db };
   } catch (error) {
-    console.error('Error initializing Firebase Admin in usdEarningsService.server:', error);
+    console.error('[USD Earnings Service] Error initializing Firebase Admin:', error);
     throw error;
   }
 }
@@ -115,9 +136,17 @@ export class ServerUsdEarningsService {
     usdCentsChange: number,
     month: string
   ): Promise<void> {
+    const startTime = Date.now();
+    const correlationId = `alloc_${fromUserId}_${recipientUserId}_${Date.now()}`;
+
     try {
+      // Validate inputs
+      if (!fromUserId || !recipientUserId || !resourceId || usdCentsChange <= 0) {
+        throw new Error(`[${correlationId}] Invalid allocation parameters: fromUserId=${fromUserId}, recipientUserId=${recipientUserId}, resourceId=${resourceId}, usdCentsChange=${usdCentsChange}`);
+      }
+
       const { admin, db } = getFirebaseAdminAndDb();
-      console.log(`[ServerUsdEarningsService] Processing USD allocation: ${centsToDollars(usdCentsChange)} from ${fromUserId} to ${recipientUserId}`);
+      console.log(`[ServerUsdEarningsService] [${correlationId}] Processing USD allocation: ${centsToDollars(usdCentsChange)} from ${fromUserId} to ${recipientUserId}`);
 
       const earningsId = `${recipientUserId}_${month}`;
       const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
@@ -134,7 +163,7 @@ export class ServerUsdEarningsService {
           resourceType,
           resourceId,
           usdCents: usdCentsChange,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
+          timestamp: new Date() // Use regular Date instead of FieldValue.serverTimestamp() in arrays
         };
 
         if (earningsDoc.exists) {
@@ -146,7 +175,7 @@ export class ServerUsdEarningsService {
           transaction.update(earningsRef, {
             totalUsdCentsReceived: totalUsdCents,
             allocations: updatedAllocations,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         } else {
           // Create new earnings record
@@ -156,8 +185,8 @@ export class ServerUsdEarningsService {
             totalUsdCentsReceived: usdCentsChange,
             status: 'pending',
             allocations: [allocationData],
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
           };
 
           transaction.set(earningsRef, newEarnings);
@@ -169,8 +198,25 @@ export class ServerUsdEarningsService {
 
       console.log(`[ServerUsdEarningsService] Successfully processed USD allocation for ${recipientUserId}`);
     } catch (error) {
-      console.error('[ServerUsdEarningsService] Error processing USD allocation:', error);
-      throw error;
+      const duration = Date.now() - startTime;
+      console.error(`[ServerUsdEarningsService] [${correlationId}] Error processing USD allocation (${duration}ms):`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fromUserId,
+        recipientUserId,
+        resourceId,
+        resourceType,
+        usdCentsChange,
+        month,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      // Re-throw with correlation ID for better tracking
+      const enhancedError = new Error(`[${correlationId}] USD allocation processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      enhancedError.cause = error;
+      throw enhancedError;
+    } finally {
+      const duration = Date.now() - startTime;
+      console.log(`[ServerUsdEarningsService] [${correlationId}] Allocation processing completed in ${duration}ms`);
     }
   }
 
@@ -224,7 +270,7 @@ export class ServerUsdEarningsService {
         availableUsdCents,
         paidOutUsdCents,
         lastProcessedMonth,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
       };
 
       // Update or create balance document within transaction
@@ -233,7 +279,7 @@ export class ServerUsdEarningsService {
       } else {
         transaction.set(balanceRef, {
           ...balanceData,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
+          createdAt: FieldValue.serverTimestamp()
         });
       }
     } catch (error) {
@@ -266,8 +312,8 @@ export class ServerUsdEarningsService {
       earningsSnapshot.docs.forEach(doc => {
         batch.update(doc.ref, {
           status: 'available',
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          processedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
         });
       });
 
