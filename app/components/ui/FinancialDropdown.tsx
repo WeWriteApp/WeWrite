@@ -181,8 +181,9 @@ export function EarningsBreakdown({
   totalEarnings,
   pendingEarnings = 0,
   lastMonthEarnings = 0,
-  monthlyChange = 0
-}: EarningsBreakdownProps) {
+  monthlyChange = 0,
+  onRefresh
+}: EarningsBreakdownProps & { onRefresh?: () => void }) {
   const changeIsPositive = monthlyChange > 0;
   const changeIsNegative = monthlyChange < 0;
 

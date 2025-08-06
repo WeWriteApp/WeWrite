@@ -37,7 +37,7 @@ export default function NavHeader({
   const router = useRouter();
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
-  const { earnings, loading: earningsLoading } = useUserEarnings();
+  const { earnings, loading: earningsLoading, refresh: refreshEarnings } = useUserEarnings();
   const { hasActiveSubscription } = useSubscriptionWarning();
   const { sidebarWidth, isExpanded } = useSidebarContext();
 
