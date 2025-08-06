@@ -13,6 +13,9 @@ import { serverTimestamp } from 'firebase-admin/firestore';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+// Force dynamic rendering to prevent build-time prerendering
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Initialize Firebase Admin
