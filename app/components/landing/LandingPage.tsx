@@ -585,9 +585,23 @@ const LandingPage = () => {
                 size="sm"
                 className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
                 asChild
-                onClick={() => console.log('🟠 Mobile Sign In button clicked')}
               >
-                <Link href="/auth/login" onClick={() => console.log('🟠 Mobile Sign In link clicked')}>Sign In</Link>
+                <Link
+                  href="/auth/login"
+                  onClick={() => {
+                    console.log('🟠 Mobile Sign In button clicked');
+                    // Track mobile sign-in click in analytics
+                    analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                      label: 'Mobile sign-in button',
+                      link_type: 'auth',
+                      link_text: 'Sign In',
+                      link_url: '/auth/login',
+                      device: 'mobile'
+                    });
+                  }}
+                >
+                  Sign In
+                </Link>
               </Button>
               <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
                 <Link href="/auth/register">Sign Up</Link>

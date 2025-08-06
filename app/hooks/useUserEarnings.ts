@@ -75,7 +75,14 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
 
         console.log('[useUserEarnings] Fetching fresh earnings data');
         // Add cache-busting parameter to force fresh data after earnings fix
-        const response = await fetch('/api/earnings/user?v=2025080601');
+        const timestamp = Date.now();
+        const response = await fetch(`/api/earnings/user?v=2025080601&t=${timestamp}`, {
+          cache: 'no-store', // Prevent browser caching
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -156,6 +163,12 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
   }, [user?.uid]);
 
   const refresh = async () => {
+    console.log('[useUserEarnings] Manual refresh triggered - clearing cache and fetching fresh data');
+    // Clear cache for this user to force fresh fetch
+    if (user?.uid) {
+      const cacheKey = `${user.uid}_v2025080601`;
+      earningsCache.delete(cacheKey);
+    }
     await fetchEarnings(true);
   };
 

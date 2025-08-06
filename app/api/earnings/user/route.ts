@@ -229,13 +229,18 @@ export async function GET(request: NextRequest) {
     if (usdBalance) {
       // Use the processed earnings balance (this includes our fixed data)
       totalEarnings = (usdBalance.totalUsdCentsEarned || 0) / 100; // Convert cents to dollars
-      pendingBalance = (usdBalance.pendingUsdCents || 0) / 100; // Convert cents to dollars
       availableBalance = (usdBalance.availableUsdCents || 0) / 100; // Convert cents to dollars
+
+      // CRITICAL FIX: Calculate pending balance from actual current allocations, not stored pendingUsdCents
+      // The stored pendingUsdCents may be stale, but incomingAllocations is always current
+      pendingBalance = incomingAllocations.totalUsdValue || 0;
 
       console.log(`[EARNINGS API] Using processed balance data for ${userId}:`, {
         totalEarnings,
-        pendingBalance,
-        availableBalance
+        pendingBalance: `${pendingBalance} (calculated from ${incomingAllocations.allocations?.length || 0} current allocations)`,
+        availableBalance,
+        storedPendingUsdCents: usdBalance.pendingUsdCents,
+        calculatedPendingFromAllocations: incomingAllocations.totalUsdValue
       });
     } else {
       // Fallback to raw allocations only if no balance record exists
