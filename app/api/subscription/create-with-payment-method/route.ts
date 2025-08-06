@@ -10,21 +10,51 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { getEffectiveUsdTier } from '../../../utils/usdConstants';
 import { dollarsToCents } from '../../../utils/formatCurrency';
-import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionAnalyticsService } from '../../../services/subscriptionAnalyticsService';
 import { ServerUsdService } from '../../../services/usdService.server';
 
-// Initialize Firebase Admin
-const admin = initAdmin();
-const adminDb = admin.firestore();
-const FieldValue = admin.firestore.FieldValue;
+// Firebase Admin initialization function
+async function getFirebaseAdminAndDb() {
+  try {
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+
+    // Check if app already exists
+    const existingApps = getApps();
+    let adminApp = existingApps.find(app => app.name === 'subscription-create-app');
+
+    if (!adminApp) {
+      // Initialize new app
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      adminApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'subscription-create-app');
+    }
+
+    const db = getFirestore(adminApp);
+    return { adminApp, db, FieldValue };
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in subscription create:', error);
+    throw error;
+  }
+}
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin
+    const { adminApp, db: adminDb, FieldValue } = await getFirebaseAdminAndDb();
+
     // Environment validation
     if (!process.env.STRIPE_SECRET_KEY) {
       console.error('[CREATE SUBSCRIPTION] Missing STRIPE_SECRET_KEY environment variable');
