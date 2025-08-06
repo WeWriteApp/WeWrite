@@ -1161,17 +1161,60 @@ export default function PageView({
         }
       }
 
-      // SIMPLIFIED: Just clear basic caches - no complex invalidation
+      // COMPREHENSIVE CLIENT-SIDE CACHE INVALIDATION
       try {
-        console.log('🗑️ SIMPLE CACHE: Basic cache clearing for saved page:', pageId);
+        console.log('🗑️ CLIENT CACHE: Comprehensive cache clearing for saved page:', pageId);
 
-        // Clear read optimizer cache only
+        // 1. Clear read optimizer cache
         const { clearOptimizedCache } = await import('../../utils/readOptimizer');
         clearOptimizedCache(`page:${pageId}:`);
 
-        console.log('✅ SIMPLE CACHE: Basic cache clearing completed');
+        // 2. Clear page cache
+        const { pageCache } = await import('../../utils/pageCache');
+        pageCache.invalidate(pageId);
+
+        // 3. Clear batch page cache
+        const { clearBatchCache } = await import('../../utils/batchPageLoader');
+        clearBatchCache();
+
+        // 4. Clear global cache entries for this page
+        const { invalidateCache } = await import('../../utils/globalCache');
+        invalidateCache(`page:${pageId}`);
+        invalidateCache(`pageData:${pageId}`);
+
+        // 5. Force refresh page data from server
+        console.log('🔄 CLIENT CACHE: Forcing page data refresh from server');
+        const response = await fetch(`/api/pages/${pageId}?bustCache=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+
+        if (response.ok) {
+          const freshPageData = await response.json();
+          console.log('✅ CLIENT CACHE: Fresh page data loaded:', freshPageData.title);
+
+          // Update the page state with fresh data
+          setPage(freshPageData);
+
+          // Update editor state with fresh content if available
+          if (freshPageData.content) {
+            try {
+              const parsedContent = typeof freshPageData.content === 'string'
+                ? JSON.parse(freshPageData.content)
+                : freshPageData.content;
+              setEditorState(parsedContent);
+              console.log('✅ CLIENT CACHE: Editor state updated with fresh content');
+            } catch (parseError) {
+              console.warn('⚠️ CLIENT CACHE: Error parsing fresh content:', parseError);
+            }
+          }
+        }
+
+        console.log('✅ CLIENT CACHE: Comprehensive cache clearing completed');
       } catch (cacheError) {
-        console.warn('⚠️ SIMPLE CACHE: Error clearing caches (non-fatal):', cacheError);
+        console.warn('⚠️ CLIENT CACHE: Error clearing caches (non-fatal):', cacheError);
       }
 
       // Emit page save event for real-time updates

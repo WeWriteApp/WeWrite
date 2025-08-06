@@ -878,17 +878,34 @@ export async function PUT(request: NextRequest) {
       updateFields: Object.keys(updateData)
     }, 'PAGE_SAVE');
 
-    // SIMPLIFIED: Basic cache clearing only - no complex invalidation
+    // COMPREHENSIVE CACHE INVALIDATION: Clear all relevant caches after page save
     try {
-      console.log('🗑️ SIMPLE CACHE: Basic cache clearing for saved page:', id);
+      console.log('🗑️ COMPREHENSIVE CACHE: Clearing all caches for saved page:', id);
 
-      // Clear read optimizer cache only
+      // 1. Clear read optimizer cache
       const { clearOptimizedCache } = await import('../../utils/readOptimizer');
       clearOptimizedCache(`page:${id}:`);
 
-      console.log('✅ SIMPLE CACHE: Basic cache clearing completed');
+      // 2. Clear page cache
+      const { pageCache } = await import('../../utils/pageCache');
+      pageCache.invalidate(id);
+
+      // 3. Clear batch page cache
+      const { clearBatchCache } = await import('../../utils/batchPageLoader');
+      clearBatchCache();
+
+      // 4. Clear global cache entries for this page
+      const { invalidateCache } = await import('../../utils/globalCache');
+      invalidateCache(`page:${id}`);
+      invalidateCache(`pageData:${id}`);
+
+      // 5. Clear version cache for this page
+      const { clearPageVersionCache } = await import('../../services/versionService');
+      clearPageVersionCache(id);
+
+      console.log('✅ COMPREHENSIVE CACHE: All cache clearing completed');
     } catch (cacheError) {
-      console.warn('⚠️ SIMPLE CACHE: Error clearing caches (non-fatal):', cacheError);
+      console.warn('⚠️ COMPREHENSIVE CACHE: Error clearing caches (non-fatal):', cacheError);
       // Don't fail the save if cache invalidation fails
     }
 
