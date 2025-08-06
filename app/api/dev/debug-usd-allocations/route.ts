@@ -15,8 +15,26 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Debugging USD allocations for:', userId);
 
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    // Initialize Firebase Admin with proper error handling
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getFirestore } = await import('firebase-admin/firestore');
+
+    let debugApp = getApps().find(app => app.name === 'debug-usd-app');
+    if (!debugApp) {
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      debugApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'debug-usd-app');
+    }
+
+    const db = getFirestore(debugApp);
     const currentMonth = getCurrentMonth();
 
     console.log('📅 Current month:', currentMonth);

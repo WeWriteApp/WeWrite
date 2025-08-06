@@ -64,7 +64,95 @@ export async function GET(request: NextRequest) {
 
     console.log(`🧪 TEST GET: ${action} for user ${userId}`);
 
-    if (action === 'payout-processing') {
+    if (action === 'process-existing-allocations') {
+      // URGENT: Process all existing allocations into earnings records
+      try {
+        console.log(`🚨 URGENT: Processing existing allocations into earnings records`);
+
+        const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
+        const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { getCurrentMonth } = await import('../../../utils/usdConstants');
+
+        // Get Firebase Admin instance
+        let processApp = getApps().find(app => app.name === 'process-allocations-app');
+        if (!processApp) {
+          const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+          const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+          const serviceAccount = JSON.parse(decodedJson);
+
+          processApp = initializeApp({
+            credential: cert({
+              projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+              clientEmail: serviceAccount.client_email,
+              privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+            })
+          }, 'process-allocations-app');
+        }
+
+        const db = getFirestore(processApp);
+        const currentMonth = getCurrentMonth();
+
+        // Get all active allocations for current month
+        const allocationsSnapshot = await db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS))
+          .where('month', '==', currentMonth)
+          .where('status', '==', 'active')
+          .get();
+
+        console.log(`🚨 Found ${allocationsSnapshot.size} active allocations to process`);
+
+        let processedCount = 0;
+        let errorCount = 0;
+        const errors = [];
+
+        // Process each allocation
+        for (const doc of allocationsSnapshot.docs) {
+          try {
+            const allocation = doc.data();
+
+            if (allocation.recipientUserId) {
+              // Process this allocation into earnings
+              await ServerUsdEarningsService.processUsdAllocation(
+                allocation.userId,
+                allocation.recipientUserId,
+                allocation.resourceId,
+                allocation.resourceType,
+                allocation.usdCents,
+                allocation.month
+              );
+
+              processedCount++;
+              console.log(`✅ Processed allocation ${doc.id}: $${(allocation.usdCents / 100).toFixed(2)} to ${allocation.recipientUserId}`);
+            }
+          } catch (error) {
+            errorCount++;
+            errors.push({
+              allocationId: doc.id,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            console.error(`❌ Failed to process allocation ${doc.id}:`, error);
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: `Processed ${processedCount} allocations into earnings records`,
+          summary: {
+            totalAllocations: allocationsSnapshot.size,
+            processedCount,
+            errorCount,
+            errors: errors.slice(0, 10) // Limit error details
+          }
+        });
+      } catch (error) {
+        console.error(`🚨 URGENT PROCESSING ERROR:`, error);
+        return NextResponse.json({
+          error: 'Failed to process existing allocations',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    } else if (action === 'payout-processing') {
       // Test payout processing with fees
       try {
         console.log(`🧪 PAYOUT PROCESSING: Testing payout for ${userId}`);
@@ -225,7 +313,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       error: 'Unknown action',
-      availableActions: ['pending-earnings', 'monthly-processing', 'payout-processing']
+      availableActions: ['pending-earnings', 'monthly-processing', 'payout-processing', 'process-existing-allocations']
     }, { status: 400 });
 
   } catch (error) {
