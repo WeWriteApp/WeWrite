@@ -1,5 +1,4 @@
 import { getAuth, type Auth } from 'firebase-admin/auth';
-import { initAdmin } from "../firebase/admin";
 import type { NextRequest } from 'next/server';
 
 // Type definitions
@@ -24,15 +23,40 @@ interface UserSession {
 
 type ApiErrorType = 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'BAD_REQUEST' | 'INTERNAL_ERROR' | 'FEATURE_DISABLED';
 
-// Initialize Firebase Admin only if not during build time
-let auth: Auth | null = null;
-try {
-  const app = initAdmin();
-  if (app) {
-    auth = getAuth();
+// Firebase Admin initialization function
+async function getFirebaseAuth(): Promise<Auth | null> {
+  try {
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+
+    // Check if app already exists
+    const existingApps = getApps();
+    let authApp = existingApps.find(app => app.name === 'auth-helper-app');
+
+    if (!authApp) {
+      // Initialize new app
+      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+      if (!base64Json) {
+        console.warn('No GOOGLE_CLOUD_KEY_JSON found, Firebase Admin auth unavailable');
+        return null;
+      }
+
+      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(decodedJson);
+
+      authApp = initializeApp({
+        credential: cert({
+          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+          clientEmail: serviceAccount.client_email,
+          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
+        })
+      }, 'auth-helper-app');
+    }
+
+    return getAuth(authApp);
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in auth helper:', error);
+    return null;
   }
-} catch (error) {
-  console.warn('Firebase Admin initialization skipped during build time');
 }
 
 /**
@@ -118,7 +142,8 @@ export async function getUserEmailFromId(userId: string): Promise<string | null>
  * @returns The user ID or null if not authenticated
  */
 export async function getUserIdFromRequest(request: NextRequest): Promise<string | null> {
-  // Return null if auth is not available (during build time)
+  // Get Firebase Auth instance
+  const auth = await getFirebaseAuth();
   if (!auth) {
     console.warn('Firebase Auth not available, returning null');
     return null;
@@ -136,7 +161,7 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
   }
 
   // Fallback: Try Authorization header (Bearer token) for API calls
-  const authHeaderUserId = await tryAuthorizationHeader(request);
+  const authHeaderUserId = await tryAuthorizationHeader(request, auth);
   if (authHeaderUserId) {
     if (shouldLogAuthDebug) {
       console.log('[AUTH DEBUG] Using userId from Authorization header:', authHeaderUserId);
@@ -287,7 +312,7 @@ async function tryUserSessionCookie(request: NextRequest): Promise<string | null
 /**
  * Try to authenticate using Authorization header
  */
-async function tryAuthorizationHeader(request: NextRequest): Promise<string | null> {
+async function tryAuthorizationHeader(request: NextRequest, auth: Auth): Promise<string | null> {
   if (!auth) return null;
 
   const authHeader = request.headers.get('authorization');
