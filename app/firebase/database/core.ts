@@ -27,6 +27,7 @@ import { firestore } from "../config";
 import { rtdb } from "../rtdb";
 import { get, ref } from "firebase/database";
 import { getCollectionName } from "../../utils/environmentConfig";
+import { protectedFirebaseOperation } from "../../utils/firebaseCircuitBreaker";
 
 // Import utility functions
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
@@ -158,21 +159,23 @@ export const createDoc = async (collectionName: string, data: any): Promise<stri
  * Uses environment-aware collection naming
  */
 export const getDocById = async (collectionName: string, docId: string): Promise<any | null> => {
-  try {
-    // Use environment-aware collection name
-    const envCollectionName = getCollectionName(collectionName);
-    const docRef = doc(db, envCollectionName, docId);
-    const docSnap = await getDoc(docRef);
+  return await protectedFirebaseOperation(async () => {
+    try {
+      // Use environment-aware collection name
+      const envCollectionName = getCollectionName(collectionName);
+      const docRef = doc(db, envCollectionName, docId);
+      const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
-    } else {
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error(`Error fetching document from ${envCollectionName}:`, error);
       return null;
     }
-  } catch (error) {
-    console.error(`Error fetching document from ${envCollectionName}:`, error);
-    return null;
-  }
+  }, `getDocById:${collectionName}:${docId}`);
 };
 
 /**

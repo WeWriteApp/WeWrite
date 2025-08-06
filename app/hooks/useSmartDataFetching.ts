@@ -47,7 +47,7 @@ export function useSmartDataFetching<T>(
   options: SmartDataFetchingOptions = {}
 ): SmartDataFetchingResult<T> {
   const {
-    cacheDuration = 300000, // 🚨 EMERGENCY: 5 minutes (was 30 seconds) to reduce database reads
+    cacheDuration = 900000, // 🚨 FIREBASE OPTIMIZATION: 15 minutes (was 5 minutes) to dramatically reduce reads
     skipDuringRapidNav = true,
     debounceDelay = 300,
     refetchOnNavigationSettle = true

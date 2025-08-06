@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isCircuitBroken, shouldRateLimit } from '../utils/emergencyReadOptimizer';
 import { trackDatabaseRead } from '../utils/databaseReadTracker';
 import { emergencyCircuitBreaker } from '../utils/emergencyCircuitBreaker';
+import { getCircuitBreakerStatus } from '../utils/firebaseCircuitBreaker';
 
 interface OptimizationConfig {
   enableCircuitBreaker: boolean;

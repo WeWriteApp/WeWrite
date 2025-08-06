@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { cachedApiCall } from '../utils/aggressiveCache';
 
 interface UserEarnings {
   totalEarnings: number;
@@ -75,16 +76,23 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
         }
         setError(null);
 
-        console.log('[useUserEarnings] Fetching fresh earnings data');
-        // Add cache-busting parameter to force fresh data after earnings fix
-        const timestamp = Date.now();
-        const response = await fetch(`/api/earnings/user?v=2025080602&t=${timestamp}`, {
-          cache: 'no-store', // Prevent browser caching
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        });
+        console.log('[useUserEarnings] Fetching earnings data with aggressive caching');
+
+        // 🚨 FIREBASE OPTIMIZATION: Use aggressive caching to prevent excessive API calls
+        const response = await cachedApiCall(
+          `earnings/user/${user.uid}`,
+          async () => {
+            const timestamp = Date.now();
+            return fetch(`/api/earnings/user?v=2025080602&t=${timestamp}`, {
+              cache: 'no-store', // Prevent browser caching
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              }
+            });
+          },
+          1800000 // 30 minutes cache (was no cache)
+        );
 
         if (!response.ok) {
           if (response.status === 404) {

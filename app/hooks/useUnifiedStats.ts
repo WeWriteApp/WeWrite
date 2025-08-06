@@ -95,15 +95,9 @@ export function usePageStats(options: UsePageStatsOptions): UsePageStatsResult {
   }, [pageId]);
 
   const subscribe = useCallback(() => {
-    if (!realTime) return () => {};
-
-    const unsub = unifiedStatsService.subscribeToPageStats(pageId, (newStats) => {
-      setStats(newStats);
-      console.log(`📊 [usePageStats] Real-time update for ${pageId}:`, newStats);
-    });
-
-    setUnsubscriber(() => unsub);
-    return unsub;
+    // 🚨 FIREBASE OPTIMIZATION: Disable real-time stats to prevent excessive reads
+    console.warn('🚨 FIREBASE OPTIMIZATION: Real-time page stats disabled to prevent excessive reads');
+    return () => {};
   }, [pageId, realTime]);
 
   const unsubscribe = useCallback(() => {
@@ -198,15 +192,9 @@ export function useUserStats(options: UseUserStatsOptions): UseUserStatsResult {
   }, [userId]);
 
   const subscribe = useCallback(() => {
-    if (!realTime) return () => {};
-
-    const unsub = unifiedStatsService.subscribeToUserStats(userId, (newStats) => {
-      setStats(newStats);
-      console.log(`📊 [useUserStats] Real-time update for ${userId}:`, newStats);
-    });
-
-    setUnsubscriber(() => unsub);
-    return unsub;
+    // 🚨 FIREBASE OPTIMIZATION: Disable real-time stats to prevent excessive reads
+    console.warn('🚨 FIREBASE OPTIMIZATION: Real-time user stats disabled to prevent excessive reads');
+    return () => {};
   }, [userId, realTime]);
 
   const unsubscribe = useCallback(() => {
