@@ -870,7 +870,17 @@ export default function PageView({
           const result = await response.json();
           console.log('✅ PAGE SAVE: Created new page from link:', { title: pageRef.title, id: result.id });
         } else {
-          console.error('🔴 PAGE SAVE: Failed to create new page from link:', pageRef.title);
+          // Parse the error response to get the specific error message
+          let errorMessage = `Failed to create page "${pageRef.title}"`;
+          try {
+            const errorData = await response.json();
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (parseError) {
+            console.error('🔴 PAGE SAVE: Failed to parse error response:', parseError);
+          }
+          console.error('🔴 PAGE SAVE: Failed to create new page from link:', pageRef.title, errorMessage);
         }
       } catch (error) {
         console.error('🔴 PAGE SAVE: Error creating new page from link:', error);

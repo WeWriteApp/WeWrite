@@ -469,7 +469,17 @@ function NewPageContent() {
           const result = await response.json();
           console.log('✅ DEBUG: Created new page from link:', { title: pageRef.title, id: result.id });
         } else {
-          console.error('🔴 DEBUG: Failed to create new page from link:', pageRef.title);
+          // Parse the error response to get the specific error message
+          let errorMessage = `Failed to create page "${pageRef.title}"`;
+          try {
+            const errorData = await response.json();
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (parseError) {
+            console.error('🔴 DEBUG: Failed to parse error response:', parseError);
+          }
+          console.error('🔴 DEBUG: Failed to create new page from link:', pageRef.title, errorMessage);
         }
       } catch (error) {
         console.error('🔴 DEBUG: Error creating new page from link:', error);
@@ -765,6 +775,18 @@ function NewPageContent() {
           });
 
           if (!response.ok) {
+            // Parse the error response to get the specific error message
+            let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+
+            try {
+              const errorData = await response.json();
+              if (errorData.message) {
+                errorMessage = errorData.message;
+              }
+            } catch (parseError) {
+              console.error('🔴 DEBUG: Failed to parse error response:', parseError);
+            }
+
             // Handle authentication errors specifically
             if (response.status === 401 && !authRetryAttempted) {
               console.error('🔴 DEBUG: Authentication error - attempting to refresh auth');
@@ -815,7 +837,7 @@ function NewPageContent() {
               throw new Error(`Authentication failed: Please refresh the page and log in again.`);
             }
 
-            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            throw new Error(errorMessage);
           }
 
           const result = await response.json();
@@ -830,11 +852,18 @@ function NewPageContent() {
         } catch (apiError) {
           console.error('🔴 DEBUG: API request failed:', apiError);
           setIsSaving(false);
-          const errorMsg = "Failed to create page via API. Please try again.";
+
+          // Use the specific error message from the API if available
+          const errorMsg = apiError instanceof Error ? apiError.message : "Failed to create page via API. Please try again.";
           setError(errorMsg);
 
+          // Set title error if it's a duplicate title error
+          if (errorMsg.includes("already have a page titled")) {
+            setTitleError(true);
+          }
+
           toast({
-            title: "Creation Failed",
+            title: errorMsg.includes("already have a page titled") ? "Duplicate Title" : "Creation Failed",
             description: errorMsg,
             variant: "destructive"
           });

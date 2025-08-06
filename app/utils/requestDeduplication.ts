@@ -14,14 +14,18 @@
  */
 
 // Import production monitoring (only works in browser)
-let recordProductionRead: any = null;
+let recordProductionRead: any = () => {}; // Default no-op function
+
+// Dynamically import production monitoring in browser
 if (typeof window !== 'undefined') {
-  try {
-    recordProductionRead = require('./productionReadMonitor').recordProductionRead;
-  } catch (error) {
-    // Graceful fallback if monitoring not available
-    recordProductionRead = () => {};
-  }
+  import('./productionReadMonitor')
+    .then(module => {
+      recordProductionRead = module.recordProductionRead;
+    })
+    .catch(() => {
+      // Graceful fallback if monitoring not available
+      recordProductionRead = () => {};
+    });
 }
 
 interface PendingRequest<T = any> {

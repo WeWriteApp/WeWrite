@@ -598,14 +598,16 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
  * Main API route handler
  */
 export async function GET(request) {
-  const startTime = Date.now();
+  let searchTerm = '';
+  let userId = null;
+  const startTime = Date.now(); // Move this BEFORE the try block
 
   try {
     const { searchParams } = new URL(request.url);
 
     // Extract parameters
-    const searchTerm = searchParams.get('searchTerm') || searchParams.get('q') || '';
-    const userId = searchParams.get('userId') || null;
+    searchTerm = searchParams.get('searchTerm') || searchParams.get('q') || '';
+    userId = searchParams.get('userId') || null;
     const context = searchParams.get('context') || SEARCH_CONTEXTS.MAIN;
     const maxResults = parseInt(searchParams.get('maxResults')) || null;
     const includeContent = searchParams.get('includeContent') !== 'false';
@@ -619,13 +621,14 @@ export async function GET(request) {
     const cachedResult = getCachedResult(cacheKey);
 
     if (cachedResult) {
-      console.log(`🚀 CACHE HIT: Search served from cache in ${Date.now() - startTime}ms`);
+      const responseTime = Date.now() - startTime;
+      console.log(`🚀 CACHE HIT: Search served from cache in ${responseTime}ms`);
 
       // Record cache hit for monitoring
       recordProductionRead('/api/search-unified', 'search-cached', 0, {
         userId,
         cacheStatus: 'HIT',
-        responseTime: Date.now() - startTime,
+        responseTime,
         userAgent: request.headers.get('user-agent'),
         referer: request.headers.get('referer')
       });

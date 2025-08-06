@@ -9,34 +9,52 @@ import { cn } from "../../lib/utils"
 const DropdownContext = React.createContext<{
   open: boolean;
   setOpen: (open: boolean) => void;
-}>({ open: false, setOpen: () => {} });
+  triggerRef: React.RefObject<HTMLElement> | null;
+}>({ open: false, setOpen: () => {}, triggerRef: null });
 
-const DropdownMenu = ({ children }: { children: React.ReactNode }) => {
+const DropdownMenu = ({
+  children,
+  onOpenChange
+}: {
+  children: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
+}) => {
   const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLElement>(null);
+
+  // Enhanced setOpen that calls onOpenChange callback
+  const handleSetOpen = React.useCallback((newOpen: boolean) => {
+    setOpen(newOpen);
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    }
+  }, [onOpenChange]);
 
   // Close on outside click
   React.useEffect(() => {
-    const handleClick = () => setOpen(false);
+    const handleClick = () => handleSetOpen(false);
     if (open) {
       document.addEventListener('click', handleClick);
       return () => document.removeEventListener('click', handleClick);
     }
-  }, [open]);
+  }, [open, handleSetOpen]);
 
   return (
-    <DropdownContext.Provider value={{ open, setOpen }}>
+    <DropdownContext.Provider value={{ open, setOpen: handleSetOpen, triggerRef }}>
       <div className="relative inline-block">{children}</div>
     </DropdownContext.Provider>
   );
 };
 
 const DropdownMenuTrigger = ({ children, className, asChild, ...props }: any) => {
-  const { setOpen } = React.useContext(DropdownContext);
+  const { open, setOpen, triggerRef } = React.useContext(DropdownContext);
 
   // If asChild is true, clone the child and add our click handler
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children, {
+      ref: triggerRef,
       'data-dropdown-trigger': 'true',
+      'aria-expanded': open,
       onClick: (e: any) => {
         e.stopPropagation();
         setOpen((prev: boolean) => !prev);
@@ -52,8 +70,10 @@ const DropdownMenuTrigger = ({ children, className, asChild, ...props }: any) =>
   const { asChild: _, ...domProps } = props;
   return (
     <button
+      ref={triggerRef}
       className={className}
       data-dropdown-trigger="true"
+      aria-expanded={open}
       onClick={(e) => {
         e.stopPropagation();
         setOpen(prev => !prev);
@@ -66,11 +86,12 @@ const DropdownMenuTrigger = ({ children, className, asChild, ...props }: any) =>
 };
 
 const DropdownMenuContent = ({ children, className, align = "end", ...props }: any) => {
-  const { open } = React.useContext(DropdownContext);
+  const { open, triggerRef } = React.useContext(DropdownContext);
   const [triggerRect, setTriggerRect] = React.useState<DOMRect | null>(null);
   const [mounted, setMounted] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [shouldRender, setShouldRender] = React.useState(false);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   // Ensure we're mounted on client side
   React.useEffect(() => {
@@ -100,34 +121,32 @@ const DropdownMenuContent = ({ children, className, align = "end", ...props }: a
 
   // Get trigger element position when dropdown opens
   React.useEffect(() => {
-    if (shouldRender) {
-      // Find the trigger element that's currently expanded (active)
-      const activeTrigger = document.querySelector('[data-dropdown-trigger="true"][aria-expanded="true"]') as HTMLElement;
+    if (shouldRender && open && triggerRef?.current) {
+      const activeTrigger = triggerRef.current;
 
-      if (activeTrigger) {
-        const updatePosition = () => {
-          setTriggerRect(activeTrigger.getBoundingClientRect());
-        };
+      const updatePosition = () => {
+        setTriggerRect(activeTrigger.getBoundingClientRect());
+      };
 
-        updatePosition();
+      updatePosition();
 
-        // Update position on scroll/resize
-        window.addEventListener('scroll', updatePosition, true);
-        window.addEventListener('resize', updatePosition);
+      // Update position on scroll/resize
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
 
-        return () => {
-          window.removeEventListener('scroll', updatePosition, true);
-          window.removeEventListener('resize', updatePosition);
-        };
-      }
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
-  }, [shouldRender]);
+  }, [shouldRender, open, triggerRef]);
 
   if (!shouldRender || !triggerRect || !mounted) return null;
 
   // Calculate position based on alignment
   const calculatePosition = () => {
     const gap = 4;
+    const viewportPadding = 8; // Padding from viewport edges
     let left: number;
     let transformOrigin: string;
 
@@ -135,16 +154,38 @@ const DropdownMenuContent = ({ children, className, align = "end", ...props }: a
       // Align to left edge of trigger
       left = triggerRect.left;
       transformOrigin = "top left";
+      // Ensure dropdown doesn't go off left edge
+      left = Math.max(viewportPadding, left);
     } else {
       // Default: align to right edge of trigger (end)
-      left = triggerRect.right - 200; // Assume dropdown width ~200px
+      // For earnings dropdown, we want the RIGHT edge of the dropdown to align with the RIGHT edge of the trigger
+
+      // Try to get actual dropdown width if element exists
+      let dropdownWidth = 280; // Default estimate
+      if (contentRef.current) {
+        const rect = contentRef.current.getBoundingClientRect();
+        if (rect.width > 0) {
+          dropdownWidth = rect.width;
+        }
+      }
+
+      // Position so the right edge of dropdown aligns with right edge of trigger
+      left = triggerRect.right - dropdownWidth;
       transformOrigin = "top right";
+
+      // Ensure dropdown doesn't go off left edge of viewport
+      left = Math.max(viewportPadding, left);
+
+      // If the dropdown would still go off the right edge, adjust
+      if (left + dropdownWidth > window.innerWidth - viewportPadding) {
+        left = window.innerWidth - dropdownWidth - viewportPadding;
+      }
     }
 
     return {
       position: 'fixed' as const,
       top: triggerRect.bottom + gap,
-      left: Math.max(8, Math.min(left, window.innerWidth - 208)), // Keep within viewport
+      left,
       zIndex: 99999,
       transformOrigin
     };
@@ -191,6 +232,7 @@ const DropdownMenuContent = ({ children, className, align = "end", ...props }: a
 
   const dropdownContent = (
     <div
+      ref={contentRef}
       className={cn(
         "min-w-[8rem] overflow-hidden rounded-xl border-theme-strong bg-card text-card-foreground shadow-lg",
         "dark:bg-card/95 dark:backdrop-blur-sm",
@@ -222,8 +264,16 @@ const DropdownMenuItem = ({ children, className, onClick, ...props }: any) => {
         className
       )}
       onClick={(e) => {
-        onClick?.(e);
-        setOpen(false);
+        if (onClick) {
+          onClick(e);
+          // Only close dropdown if the event wasn't prevented
+          if (!e.defaultPrevented) {
+            setOpen(false);
+          }
+        } else {
+          // Default behavior: close dropdown
+          setOpen(false);
+        }
       }}
       {...props}
     >

@@ -101,6 +101,8 @@ export function FinancialDropdown({
             variant="outline"
             size="sm"
             onClick={() => {
+              // Close the dropdown by setting isOpen to false
+              setIsOpen(false);
               if (onClose) onClose();
             }}
             className="flex-1 whitespace-nowrap"
@@ -110,6 +112,8 @@ export function FinancialDropdown({
           <Button
             size="sm"
             onClick={() => {
+              // Close dropdown before navigating
+              setIsOpen(false);
               onNavigate();
             }}
             className="flex-1 whitespace-nowrap"
@@ -183,38 +187,25 @@ export function EarningsBreakdown({
   const changeIsNegative = monthlyChange < 0;
 
   return (
-    <div className="space-y-2 text-sm">
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Total Earned:</span>
-        <span className="font-medium text-green-600">{formatUsdCents(totalEarnings * 100)}</span>
+    <div className="space-y-3 text-sm">
+      <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Pending: This month</span>
+        <span className="font-medium text-green-600 ml-4">{formatUsdCents(pendingEarnings * 100)}</span>
       </div>
 
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Pending:</span>
-        <span className="font-medium text-orange-600">{formatUsdCents(pendingEarnings * 100)}</span>
+      <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Earned last month</span>
+        <span className="font-medium ml-4">{formatUsdCents(lastMonthEarnings * 100)}</span>
       </div>
 
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Last Month:</span>
-        <span className="font-medium">{formatUsdCents(lastMonthEarnings * 100)}</span>
+      <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Lifetime earnings</span>
+        <span className="font-medium ml-4">{formatUsdCents(totalEarnings * 100)}</span>
       </div>
-
-      {monthlyChange !== 0 && (
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Change:</span>
-          <span className={`font-medium flex items-center gap-1 ${
-            changeIsPositive ? 'text-green-600' : changeIsNegative ? 'text-red-600' : 'text-muted-foreground'
-          }`}>
-            {changeIsPositive && '↗'}
-            {changeIsNegative && '↘'}
-            {formatUsdCents(Math.abs(monthlyChange) * 100)}
-          </span>
-        </div>
-      )}
 
       {totalEarnings === 0 && (
-        <div className="text-xs text-muted-foreground text-center mt-3 pt-2 border-t border-border">
-          Start creating content to earn from supporters
+        <div className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t border-border">
+          Start writing pages to earn from supporters
         </div>
       )}
     </div>

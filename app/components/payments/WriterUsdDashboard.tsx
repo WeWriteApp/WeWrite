@@ -236,53 +236,6 @@ export default function WriterUsdDashboard({ className }: WriterUsdDashboardProp
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="wewrite-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium text-muted-foreground">Available</span>
-            </div>
-            <p className="text-3xl font-bold text-green-600">
-              {formatCurrency(availableUsd)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ready for payout
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="wewrite-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-5 w-5 text-amber-600" />
-              <span className="text-sm font-medium text-muted-foreground">Pending</span>
-            </div>
-            <p className="text-3xl font-bold text-amber-600">
-              {formatCurrency(pendingUsd)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Processing this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="wewrite-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <span className="text-sm font-medium text-muted-foreground">Total Earned</span>
-            </div>
-            <p className="text-3xl font-bold text-blue-600">
-              {formatCurrency(totalEarningsUsd)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              All time earnings
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Payout Action */}
       {availableUsd > 0 && (

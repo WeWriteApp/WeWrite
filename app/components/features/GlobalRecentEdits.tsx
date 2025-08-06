@@ -291,23 +291,43 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
             
             {isAuthenticated && (
               <>
-                <div className="flex items-center justify-between px-2 py-1.5">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Don't close dropdown when clicking this item
+                  }}
+                  className="flex items-center justify-between px-2 py-1.5 cursor-default"
+                >
                   <span className="text-sm">Include my edits</span>
                   <Switch
                     checked={includeOwn}
-                    onCheckedChange={handleIncludeOwnChange}
+                    onCheckedChange={(checked) => {
+                      handleIncludeOwnChange(checked);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
                     size="sm"
                   />
-                </div>
-                
-                <div className="flex items-center justify-between px-2 py-1.5">
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Don't close dropdown when clicking this item
+                  }}
+                  className="flex items-center justify-between px-2 py-1.5 cursor-default"
+                >
                   <span className="text-sm">Following only</span>
                   <Switch
                     checked={followingOnly}
-                    onCheckedChange={handleFollowingOnlyChange}
+                    onCheckedChange={(checked) => {
+                      handleFollowingOnlyChange(checked);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
                     size="sm"
                   />
-                </div>
+                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>

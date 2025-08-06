@@ -77,8 +77,8 @@ export default function NavHeader({
 
     // Show earnings data (even if zero)
     if (earnings) {
-      const totalUsdEarned = earnings.totalEarnings; // Already in USD
-      const isZeroEarnings = totalUsdEarned === 0;
+      const pendingUsdEarned = earnings.pendingBalance || 0; // Show pending earnings in main chip
+      const isZeroEarnings = pendingUsdEarned === 0;
 
       return (
         <FinancialDropdown
@@ -92,12 +92,12 @@ export default function NavHeader({
                 isZeroEarnings ? 'text-muted-foreground' : 'text-green-600 border-green-200'
               }`}
             >
-              {formatUsdCents(totalUsdEarned * 100)}
+              {formatUsdCents(pendingUsdEarned * 100)}
             </Badge>
           }
           content={<EarningsBreakdown
-            totalEarnings={totalUsdEarned}
-            pendingEarnings={earnings.pendingEarnings || 0}
+            totalEarnings={earnings.totalEarnings || 0}
+            pendingEarnings={earnings.pendingBalance || 0}
             lastMonthEarnings={earnings.lastMonthEarnings || 0}
             monthlyChange={earnings.monthlyChange || 0}
           />}
