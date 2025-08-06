@@ -275,7 +275,12 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              data-dropdown-trigger="true"
+              data-dropdown-id="recent-edits-filter"
+            >
               <Filter className="h-4 w-4 mr-2" />
               Filters
             </Button>

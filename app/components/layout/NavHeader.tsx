@@ -95,7 +95,12 @@ export default function NavHeader({
               {formatUsdCents(totalUsdEarned * 100)}
             </Badge>
           }
-          content={<EarningsBreakdown totalEarnings={totalUsdEarned} />}
+          content={<EarningsBreakdown
+            totalEarnings={totalUsdEarned}
+            pendingEarnings={earnings.pendingEarnings || 0}
+            lastMonthEarnings={earnings.lastMonthEarnings || 0}
+            monthlyChange={earnings.monthlyChange || 0}
+          />}
         />
       );
     }
@@ -114,7 +119,12 @@ export default function NavHeader({
             $0.00
           </Badge>
         }
-        content={<EarningsBreakdown totalEarnings={0} />}
+        content={<EarningsBreakdown
+          totalEarnings={0}
+          pendingEarnings={0}
+          lastMonthEarnings={0}
+          monthlyChange={0}
+        />}
       />
     );
   };

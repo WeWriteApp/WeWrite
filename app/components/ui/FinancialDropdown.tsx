@@ -29,6 +29,9 @@ interface SpendBreakdownProps {
 
 interface EarningsBreakdownProps {
   totalEarnings: number;
+  pendingEarnings?: number;
+  lastMonthEarnings?: number;
+  monthlyChange?: number;
 }
 
 /**
@@ -46,6 +49,8 @@ export function FinancialDropdown({
   className = ''
 }: FinancialDropdownProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   // Detect mobile vs desktop
   useEffect(() => {
@@ -59,10 +64,14 @@ export function FinancialDropdown({
   }, []);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <div
+          ref={triggerRef}
           className={cn("cursor-pointer", className)}
+          data-dropdown-trigger="true"
+          data-dropdown-id={`financial-${title.toLowerCase()}`}
+          aria-expanded={isOpen}
           // Remove onClick - no more click-to-navigate behavior
           // Dropdown opens on click, navigation happens via button
         >
@@ -86,8 +95,8 @@ export function FinancialDropdown({
 
         <DropdownMenuSeparator />
 
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-2 mt-3">
+        {/* Buttons - Always horizontal layout */}
+        <div className="flex gap-2 mt-3">
           <Button
             variant="outline"
             size="sm"
@@ -162,20 +171,49 @@ export function SpendBreakdown({
 }
 
 /**
- * EarningsBreakdown - Shows earnings information
+ * EarningsBreakdown - Shows detailed earnings information
  */
 export function EarningsBreakdown({
-  totalEarnings
+  totalEarnings,
+  pendingEarnings = 0,
+  lastMonthEarnings = 0,
+  monthlyChange = 0
 }: EarningsBreakdownProps) {
+  const changeIsPositive = monthlyChange > 0;
+  const changeIsNegative = monthlyChange < 0;
+
   return (
     <div className="space-y-2 text-sm">
       <div className="flex justify-between">
         <span className="text-muted-foreground">Total Earned:</span>
         <span className="font-medium text-green-600">{formatUsdCents(totalEarnings * 100)}</span>
       </div>
-      
+
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Pending:</span>
+        <span className="font-medium text-orange-600">{formatUsdCents(pendingEarnings * 100)}</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Last Month:</span>
+        <span className="font-medium">{formatUsdCents(lastMonthEarnings * 100)}</span>
+      </div>
+
+      {monthlyChange !== 0 && (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Change:</span>
+          <span className={`font-medium flex items-center gap-1 ${
+            changeIsPositive ? 'text-green-600' : changeIsNegative ? 'text-red-600' : 'text-muted-foreground'
+          }`}>
+            {changeIsPositive && '↗'}
+            {changeIsNegative && '↘'}
+            {formatUsdCents(Math.abs(monthlyChange) * 100)}
+          </span>
+        </div>
+      )}
+
       {totalEarnings === 0 && (
-        <div className="text-xs text-muted-foreground text-center mt-2">
+        <div className="text-xs text-muted-foreground text-center mt-3 pt-2 border-t border-border">
           Start creating content to earn from supporters
         </div>
       )}

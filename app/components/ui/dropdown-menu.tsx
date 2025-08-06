@@ -101,11 +101,12 @@ const DropdownMenuContent = ({ children, className, align = "end", ...props }: a
   // Get trigger element position when dropdown opens
   React.useEffect(() => {
     if (shouldRender) {
-      // Find the trigger element
-      const trigger = document.querySelector('[data-dropdown-trigger="true"]') as HTMLElement;
-      if (trigger) {
+      // Find the trigger element that's currently expanded (active)
+      const activeTrigger = document.querySelector('[data-dropdown-trigger="true"][aria-expanded="true"]') as HTMLElement;
+
+      if (activeTrigger) {
         const updatePosition = () => {
-          setTriggerRect(trigger.getBoundingClientRect());
+          setTriggerRect(activeTrigger.getBoundingClientRect());
         };
 
         updatePosition();
