@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -36,17 +36,65 @@ type BreakdownMode = 'pages' | 'sponsors';
 export default function EarningsSourceBreakdown() {
   const { earnings, loading } = useUserEarnings();
   const [mode, setMode] = useState<BreakdownMode>('pages');
+  const [historicalEarnings, setHistoricalEarnings] = useState<any[]>([]);
+  const [loadingHistorical, setLoadingHistorical] = useState(false);
 
-  // Process the pending allocations data
+  // Load historical earnings data to show sources for available balance
+  useEffect(() => {
+    if (earnings?.availableBalance > 0 && !loadingHistorical) {
+      setLoadingHistorical(true);
+      fetch('/api/usd/earnings')
+        .then(res => res.json())
+        .then(data => {
+          console.log('[EarningsSourceBreakdown] Historical earnings data:', data);
+          if (data.success && data.data?.earnings) {
+            setHistoricalEarnings(data.data.earnings);
+          }
+        })
+        .catch(err => {
+          console.error('[EarningsSourceBreakdown] Error loading historical earnings:', err);
+        })
+        .finally(() => {
+          setLoadingHistorical(false);
+        });
+    }
+  }, [earnings?.availableBalance, loadingHistorical]);
+
+  // Process both pending allocations AND historical earnings data
   const { pageBreakdown, sponsorBreakdown } = useMemo(() => {
     console.log('[EarningsSourceBreakdown] Processing earnings data:', {
       earnings,
       pendingAllocations: earnings?.pendingAllocations,
-      pendingAllocationsLength: earnings?.pendingAllocations?.length
+      pendingAllocationsLength: earnings?.pendingAllocations?.length,
+      historicalEarnings: historicalEarnings.length,
+      availableBalance: earnings?.availableBalance,
+      totalEarnings: earnings?.totalEarnings
     });
 
-    if (!earnings?.pendingAllocations) {
-      console.log('[EarningsSourceBreakdown] No pending allocations found');
+    // Combine current pending allocations with historical earnings data
+    const allEarningsData = [];
+
+    // Add current month pending allocations
+    if (earnings?.pendingAllocations) {
+      allEarningsData.push(...earnings.pendingAllocations);
+    }
+
+    // Add historical earnings data (for available balance sources)
+    if (historicalEarnings.length > 0) {
+      historicalEarnings.forEach(earning => {
+        if (earning.allocations) {
+          allEarningsData.push(...earning.allocations.map(allocation => ({
+            ...allocation,
+            isHistorical: true
+          })));
+        }
+      });
+    }
+
+    console.log('[EarningsSourceBreakdown] Combined earnings data:', allEarningsData.length);
+
+    if (allEarningsData.length === 0) {
+      console.log('[EarningsSourceBreakdown] No earnings data found (pending or historical)');
       return { pageBreakdown: [], sponsorBreakdown: [] };
     }
 
@@ -54,7 +102,7 @@ export default function EarningsSourceBreakdown() {
     const pageMap = new Map<string, PageEarning>();
     const sponsorMap = new Map<string, SponsorInfo>();
 
-    earnings.pendingAllocations.forEach((allocation: any) => {
+    allEarningsData.forEach((allocation: any) => {
       const pageId = allocation.resourceId;
       const pageTitle = allocation.pageTitle || allocation.resourceTitle || 'Untitled Page';
       const userId = allocation.fromUserId || allocation.userId;
@@ -116,7 +164,7 @@ export default function EarningsSourceBreakdown() {
       .sort((a, b) => b.totalContribution - a.totalContribution);
 
     return { pageBreakdown, sponsorBreakdown };
-  }, [earnings?.pendingAllocations]);
+  }, [earnings?.pendingAllocations, historicalEarnings]);
 
   if (loading) {
     return (

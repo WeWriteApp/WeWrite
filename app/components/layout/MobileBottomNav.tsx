@@ -179,8 +179,10 @@ export default function MobileBottomNav() {
       return true;
     }
 
-    // Show on settings pages now (including subscription pages)
-    // (Removed the settings page exclusions)
+    // Hide on all settings subpages (but show on main /settings page)
+    if (pathname.startsWith('/settings/')) {
+      return true;
+    }
 
     // Hide on location picker pages
     if (pathname.includes('/location')) {
