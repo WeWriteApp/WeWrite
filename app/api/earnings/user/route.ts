@@ -201,19 +201,31 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get USD earnings data (new system)
+    // Get USD earnings data (new system) - USE THE PROCESSED BALANCE DATA
     const usdBalance = await ServerUsdService.getUserUsdBalance(userId);
 
-    // Get incoming allocations (earnings) to this user
+    // Get incoming allocations (earnings) to this user - for detailed breakdown only
     const incomingAllocations = await getIncomingAllocationsForUser(userId);
 
     // Get unfunded USD allocations
     const unfundedEarnings = await getUnfundedEarningsForUser(userId);
 
-    // Calculate totals from USD system
-    const pendingBalance = incomingAllocations.totalUsdValue || 0;
-    const availableBalance = 0; // TODO: Implement available balance for payouts
-    const totalEarnings = pendingBalance;
+    // CRITICAL FIX: Use the processed balance data instead of raw allocations
+    let pendingBalance = 0;
+    let availableBalance = 0;
+    let totalEarnings = 0;
+
+    if (usdBalance) {
+      // Use the processed earnings balance (this includes our fixed data)
+      totalEarnings = (usdBalance.totalUsdCentsEarned || 0) / 100; // Convert cents to dollars
+      pendingBalance = (usdBalance.pendingUsdCents || 0) / 100; // Convert cents to dollars
+      availableBalance = (usdBalance.availableUsdCents || 0) / 100; // Convert cents to dollars
+    } else {
+      // Fallback to raw allocations only if no balance record exists
+      pendingBalance = incomingAllocations.totalUsdValue || 0;
+      availableBalance = 0;
+      totalEarnings = pendingBalance;
+    }
 
     const earnings = {
       totalEarnings,
@@ -226,7 +238,8 @@ export async function GET(request: NextRequest) {
 
     const responseData = {
       success: true,
-      data: earnings
+      earnings: earnings, // Frontend expects 'earnings' field, not 'data'
+      data: earnings // Keep both for backward compatibility
     };
 
     // 🚨 CRITICAL: Cache the response to prevent future reads
