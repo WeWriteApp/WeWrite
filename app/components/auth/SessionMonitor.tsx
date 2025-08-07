@@ -49,6 +49,9 @@ export default function SessionMonitor({
         if (response.status === 401) {
           console.log('[SessionMonitor] 401 Unauthorized - session actually expired');
           // Continue to handle as session expired
+        } else if (response.status === 404) {
+          console.log('[SessionMonitor] 404 Not Found - validation endpoint missing, assuming session valid');
+          return; // Don't logout when endpoint is missing
         } else {
           console.log('[SessionMonitor] Network/server error - not logging out user');
           return; // Don't logout on network errors

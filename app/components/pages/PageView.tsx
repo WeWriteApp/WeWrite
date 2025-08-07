@@ -474,10 +474,18 @@ export default function PageView({
         const versionData = data.versionData;
 
         if (!pageData) {
-          pageLogger.error('Page data is undefined', { data });
-          setError('Page not found or failed to load');
-          setIsLoading(false);
-          return;
+          pageLogger.warn('Page data is undefined, attempting API fallback', { data, pageId });
+
+          // Try API fallback before giving up
+          try {
+            await loadFromApiFallback();
+            return; // loadFromApiFallback handles loading state
+          } catch (fallbackError) {
+            pageLogger.error('Both primary and API fallback failed', { fallbackError, pageId });
+            setError('Page not found or failed to load');
+            setIsLoading(false);
+            return;
+          }
         }
 
         setPage(pageData);

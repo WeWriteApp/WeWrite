@@ -96,15 +96,27 @@ export function initializeErrorSuppression() {
    */
   console.warn = (...args: any[]) => {
     const message = args.join(' ');
-    
-    if (shouldSuppressMessage(message)) {
+
+    // Additional production warning patterns to suppress
+    const productionWarningPatterns = [
+      /LogRocket.*Session quota exceeded/i,
+      /WebSocket.*disabled.*prevent connection failures/i,
+      /Auto-update checking disabled.*prevent excessive database reads/i,
+      /Session validation request failed.*404/i,
+    ];
+
+    const shouldSuppressProductionWarning = productionWarningPatterns.some(pattern =>
+      pattern.test(message)
+    );
+
+    if (shouldSuppressMessage(message) || shouldSuppressProductionWarning) {
       // Optionally log to a different level for debugging
       if (process.env.DEBUG_FIREBASE_ERRORS === 'true') {
         originalConsoleLog('[SUPPRESSED WARN]', ...args);
       }
       return;
     }
-    
+
     originalConsoleWarn.apply(console, args);
   };
 

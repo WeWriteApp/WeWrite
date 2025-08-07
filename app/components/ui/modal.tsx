@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { useFocusTrap, announceToScreenReader, getAccessibleButtonProps, getAccessibleIconProps } from '../../utils/accessibilityHelpers';
 
 interface ModalProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export function Modal({
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Enhanced accessibility with focus trap
+  const { containerRef, handleKeyDown } = useFocusTrap(isOpen);
+
   // Ensure we're mounted on the client side and detect mobile
   useEffect(() => {
     setMounted(true);
@@ -42,11 +46,15 @@ export function Modal({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Handle ESC key press and body scroll prevention
+  // Enhanced keyboard handling with accessibility and body scroll prevention
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
         onClose();
+        announceToScreenReader('Modal closed');
+      } else {
+        // Handle focus trapping for other keys
+        handleKeyDown(event);
       }
     };
 
@@ -56,13 +64,16 @@ export function Modal({
       document.body.style.overflow = 'hidden';
       document.addEventListener('keydown', handleEscKey);
 
+      // Announce modal opening to screen readers
+      announceToScreenReader(title ? `${title} dialog opened` : 'Dialog opened');
+
       return () => {
         // Restore body scroll when modal closes
         document.body.style.overflow = originalStyle;
         document.removeEventListener('keydown', handleEscKey);
       };
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, title, handleKeyDown]);
 
   // Handle click and touch events outside
   const handleBackdropInteraction = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
@@ -155,6 +166,8 @@ export function Modal({
           onTouchEnd={handleTouchEnd}
           aria-modal="true"
           role="dialog"
+          aria-labelledby={title ? "modal-title" : undefined}
+          aria-describedby="modal-content"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -181,7 +194,10 @@ export function Modal({
 
           {/* Modal Content */}
           <motion.div
-            ref={modalRef}
+            ref={(node) => {
+              if (modalRef.current !== node) modalRef.current = node;
+              if (containerRef.current !== node) containerRef.current = node;
+            }}
             className={cn(
               // Base styles
               "relative bg-background shadow-lg border-theme-medium z-10",
@@ -225,19 +241,19 @@ export function Modal({
                 size="icon"
                 className="absolute right-2 top-2"
                 onClick={onClose}
-                aria-label="Close"
+                {...getAccessibleButtonProps('Close modal', title ? `Close ${title} dialog` : undefined)}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" {...getAccessibleIconProps()} />
               </Button>
             )}
 
             {title && (
               <div className="mb-4 text-center flex-shrink-0">
-                <h3 className="text-lg font-semibold w-full">{title}</h3>
+                <h2 id="modal-title" className="text-lg font-semibold w-full">{title}</h2>
               </div>
             )}
 
-            <div className="py-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
+            <div id="modal-content" className="py-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
 
             {footer && <div className="mt-4 flex-shrink-0">{footer}</div>}
           </motion.div>

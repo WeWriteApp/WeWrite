@@ -65,6 +65,12 @@ class LogRocketService {
       vercelEnv: process.env.VERCEL_ENV
     });
 
+    // 🚨 PRODUCTION FIX: Disable LogRocket to prevent session quota issues
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('🚨 LogRocket disabled in production to prevent session quota exceeded errors');
+      return;
+    }
+
     // Skip initialization if:
     // - Already initialized
     // - Not in production
