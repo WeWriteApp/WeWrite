@@ -133,6 +133,13 @@ grep -r "@.*username" app/
 - [ ] Add server-side sanitization if needed
 - [ ] Document expected username format
 
+### For Search Systems
+- [ ] Never search by email addresses
+- [ ] Filter out users without proper usernames from results
+- [ ] Never include email information in search responses
+- [ ] Use "Missing username" fallback for invalid usernames
+- [ ] Exclude users with email-like usernames from search results
+
 ## 🚨 Emergency Response
 
 ### If Email Exposure is Discovered

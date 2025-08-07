@@ -37,13 +37,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Search for users
     const users = await searchUsers(searchTerm, limit);
 
-    // Format the users for the response
-    const formattedUsers: UserSearchResult[] = users.map(user => ({
-      id: user.id,
-      username: user.username || "Anonymous",
-      photoURL: user.photoURL || null,
-      type: 'user' as const // Add a type field to distinguish from pages
-    }));
+    // Format the users for the response - only include users with valid usernames
+    const formattedUsers: UserSearchResult[] = users
+      .filter(user => {
+        // SECURITY: Filter out users without proper usernames or with email-like usernames
+        const username = user.username || '';
+        return username &&
+               !username.includes('@') &&
+               username !== 'Anonymous' &&
+               !username.toLowerCase().includes('missing');
+      })
+      .map(user => ({
+        id: user.id,
+        username: user.username || "Missing username",
+        photoURL: user.photoURL || null,
+        type: 'user' as const // Add a type field to distinguish from pages
+      }));
 
     // SECURITY FIX: Use %s format specifier to prevent format string injection
     console.log('Found %d users matching "%s"', formattedUsers.length, searchTerm);

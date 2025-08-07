@@ -35,12 +35,17 @@ export const searchUsers = async (searchQuery: string, limitCount: number = 10) 
       const usernameResults = await getDocs(usernameQuery);
       usernameResults.forEach(doc => {
         const userData = doc.data();
-        results.set(doc.id, {
-          id: doc.id,
-          username: userData.username || "Anonymous",
-          email: userData.email || "",
-          photoURL: userData.photoURL || null
-        });
+        const username = userData.username || '';
+
+        // SECURITY: Only include users with valid usernames
+        if (username && !username.includes('@') && username !== 'Anonymous' && !username.toLowerCase().includes('missing')) {
+          results.set(doc.id, {
+            id: doc.id,
+            username,
+            // SECURITY: Never include email in search results
+            photoURL: userData.photoURL || null
+          });
+        }
       });
     } catch (error) {
       console.warn("Error searching by usernameLower field:", error);
@@ -90,37 +95,39 @@ export const searchUsers = async (searchQuery: string, limitCount: number = 10) 
 
             let isMatch = false;
 
-            // Check for exact phrase match first
-            if (usernameLower.includes(searchLower) || emailLower.includes(searchLower)) {
+            // SECURITY: Only search by username, never by email
+            // Also filter out users without proper usernames
+            if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
+              return; // Skip users without proper usernames
+            }
+
+            // Check for exact phrase match in username only
+            if (usernameLower.includes(searchLower)) {
               isMatch = true;
             } else {
-              // Check for out-of-order word matching
+              // Check for out-of-order word matching in username only
               const searchWords = searchLower.split(/\s+/).filter(word => word.length > 1);
               if (searchWords.length > 1) {
-                // Count how many search words are found in username or email
+                // Count how many search words are found in username
                 let usernameMatches = 0;
-                let emailMatches = 0;
 
                 for (const word of searchWords) {
                   if (usernameLower.includes(word)) {
                     usernameMatches++;
                   }
-                  if (emailLower.includes(word)) {
-                    emailMatches++;
-                  }
                 }
 
-                // If most words are found in either username or email, consider it a match
+                // If most words are found in username, consider it a match
                 const requiredMatches = Math.ceil(searchWords.length * 0.7);
-                isMatch = usernameMatches >= requiredMatches || emailMatches >= requiredMatches;
+                isMatch = usernameMatches >= requiredMatches;
               }
             }
 
             if (isMatch) {
               results.set(doc.id, {
                 id: doc.id,
-                username: username || "Anonymous",
-                email: email,
+                username,
+                // SECURITY: Never include email in search results
                 photoURL: userData.photoURL || null
               });
             }
@@ -135,12 +142,10 @@ export const searchUsers = async (searchQuery: string, limitCount: number = 10) 
     const sortedResults = Array.from(results.values()).sort((a, b) => {
       const aUsernameExact = a.username.toLowerCase() === searchLower;
       const bUsernameExact = b.username.toLowerCase() === searchLower;
-      const aEmailExact = a.email.toLowerCase() === searchLower;
-      const bEmailExact = b.email.toLowerCase() === searchLower;
 
-      // Exact matches first
-      if (aUsernameExact || aEmailExact) return -1;
-      if (bUsernameExact || bEmailExact) return 1;
+      // Exact username matches first
+      if (aUsernameExact) return -1;
+      if (bUsernameExact) return 1;
 
       // Then by username starts with
       const aUsernameStarts = a.username.toLowerCase().startsWith(searchLower);

@@ -525,14 +525,20 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
         if (results.has(doc.id)) return;
 
         const userData = doc.data();
-        const username = userData.username || 'Anonymous';
+        const username = userData.username || '';
+
+        // SECURITY: Only include users with valid usernames, never expose email information
+        if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
+          return; // Skip users without proper usernames
+        }
+
         const matchScore = calculateSearchScore(username, searchTerm, true, false);
 
         if (matchScore > 0) {
           results.set(doc.id, {
             id: doc.id,
             username,
-            email: userData.email || '',
+            // SECURITY: Never include email in search results
             photoURL: userData.photoURL || null,
             type: 'user',
             matchScore
@@ -554,18 +560,21 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
           if (!results.has(doc.id)) {
             const userData = doc.data();
             const username = userData.username || '';
-            const email = userData.email || '';
 
-            // Client-side filtering for partial matches
+            // SECURITY: Only include users with valid usernames, never search by email
+            if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
+              return; // Skip users without proper usernames
+            }
+
+            // Only search by username, never by email for security
             const usernameMatch = username.toLowerCase().includes(searchLower);
-            const emailMatch = email.toLowerCase().includes(searchLower);
 
-            if (usernameMatch || emailMatch) {
+            if (usernameMatch) {
               const matchScore = calculateSearchScore(username, searchTerm, true, false);
               results.set(doc.id, {
                 id: doc.id,
-                username: username || 'Anonymous',
-                email,
+                username,
+                // SECURITY: Never include email in search results
                 photoURL: userData.photoURL || null,
                 type: 'user',
                 matchScore
