@@ -106,10 +106,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in notifications API:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
-      { status: 500 }
-    );
+
+    // Return empty notifications instead of 500 error to prevent UI breaking
+    return NextResponse.json({
+      success: true,
+      notifications: [],
+      lastVisible: null,
+      hasMore: false,
+      error: 'Failed to fetch notifications - returning empty list'
+    }, { status: 200 });
   }
 }
 

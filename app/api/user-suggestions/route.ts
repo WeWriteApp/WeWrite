@@ -90,9 +90,12 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching user suggestions:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch user suggestions' },
-      { status: 500 }
-    );
+
+    // Return empty suggestions instead of 500 error to prevent UI breaking
+    return NextResponse.json({
+      success: true,
+      data: { suggestions: [] },
+      error: 'Failed to fetch user suggestions - returning empty list'
+    }, { status: 200 });
   }
 }
