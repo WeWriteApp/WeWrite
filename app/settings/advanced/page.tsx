@@ -4,7 +4,6 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import PWAInstallationCard from '../../components/utils/PWAInstallationCard';
-import LoggedInDevices from '../../components/settings/LoggedInDevices';
 
 export default function AdvancedPage() {
   const { user } = useAuth();
@@ -25,9 +24,6 @@ export default function AdvancedPage() {
     <div className="p-6 lg:p-8">
       {/* Advanced Settings Sections */}
       <div className="space-y-8">
-        {/* Logged in devices */}
-        <LoggedInDevices />
-
         {/* PWA Installation */}
         <PWAInstallationCard />
       </div>

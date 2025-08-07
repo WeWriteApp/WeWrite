@@ -17,6 +17,7 @@ import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
+import { fundTrackingService } from '../../../services/fundTrackingService';
 // Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
 import { parseStripeError, createDetailedErrorLog } from '../../../utils/stripeErrorMessages';
@@ -195,14 +196,17 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
         createdAt: serverTimestamp()});
     }
 
-    // Update user's USD allocation (primary system)
+    // Update user's USD allocation (primary system) - funds stay in platform account
     if (subscription.status === 'active') {
-      console.log(`[SUBSCRIPTION WEBHOOK] Updating USD allocation for user ${userId}: $${amount}`);
+      console.log(`[SUBSCRIPTION WEBHOOK] Updating USD allocation for user ${userId}: $${amount} (funds held in platform account)`);
       await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
 
       // Also maintain backward compatibility with token system during migration
       console.log(`[SUBSCRIPTION WEBHOOK] Maintaining token system compatibility for user ${userId}`);
       await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
+
+      // Add transfer_group to subscription metadata for tracking (no immediate transfer)
+      console.log(`[SUBSCRIPTION WEBHOOK] Subscription funds held in platform account for month-end processing`);
     }
 
     console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
@@ -335,16 +339,40 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       }
     }
 
-    // Ensure USD allocation is up to date (primary system)
+    // Ensure USD allocation is up to date (primary system) - funds stay in platform account
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
 
-    console.log(`[PAYMENT SUCCEEDED] Updating USD allocation for user ${userId}: $${amount}`);
+    console.log(`[PAYMENT SUCCEEDED] Updating USD allocation for user ${userId}: $${amount} (funds held in platform account)`);
     await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
 
     // Also maintain backward compatibility with token system during migration
     console.log(`[PAYMENT SUCCEEDED] Maintaining token system compatibility for user ${userId}`);
     await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
+
+    // Log that funds are being held for month-end processing
+    console.log(`[PAYMENT SUCCEEDED] Payment funds held in platform account for month-end payout processing`);
+
+    // Track funds in the new fund holding model
+    const transferGroup = subscription.metadata?.transferGroup || `subscription_${userId}_${new Date().toISOString().slice(0, 7)}`;
+    const fundTrackingResult = await fundTrackingService.trackSubscriptionPayment(
+      userId,
+      subscription.id,
+      amount,
+      invoice.id,
+      transferGroup,
+      {
+        stripeCustomerId: subscription.customer as string,
+        tier: subscription.metadata?.tier,
+        priceId: price.id
+      }
+    );
+
+    if (fundTrackingResult.success) {
+      console.log(`[PAYMENT SUCCEEDED] Fund tracking successful: ${fundTrackingResult.trackingId}`);
+    } else {
+      console.error(`[PAYMENT SUCCEEDED] Fund tracking failed: ${fundTrackingResult.error}`);
+    }
 
     // Track the subscription payment transaction - MANDATORY for audit compliance
     // Reuse the correlationId from the sync operation above

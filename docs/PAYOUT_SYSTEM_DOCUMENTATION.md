@@ -4,29 +4,32 @@
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [Core Components](#core-components)
-4. [API Reference](#api-reference)
-5. [Configuration](#configuration)
-6. [Monitoring & Logging](#monitoring--logging)
-7. [Error Handling](#error-handling)
-8. [Security](#security)
-9. [Deployment](#deployment)
-10. [Troubleshooting](#troubleshooting)
+3. [Fund Flow Model](#fund-flow-model)
+4. [Core Components](#core-components)
+5. [Earnings Visualization](#earnings-visualization)
+6. [API Reference](#api-reference)
+7. [Configuration](#configuration)
+8. [Monitoring & Logging](#monitoring--logging)
+9. [Error Handling](#error-handling)
+10. [Security](#security)
+11. [Deployment](#deployment)
+12. [Troubleshooting](#troubleshooting)
 
 ## Overview
 
-The WeWrite Payout System is a comprehensive financial infrastructure that handles automated USD-to-cash payouts for content creators. The system integrates with Stripe Connect to process payments while maintaining full audit trails and compliance requirements.
+The WeWrite Payout System uses **Stripe's Storage Balance** combined with the innovative **"Use It or Lose It"** model. Creator obligations are held in Storage Balance (escrowed), while platform revenue stays in Payments Balance, providing perfect fund separation and auditability.
 
 ### Key Features
 
-- **Automated Payout Processing**: Scheduled monthly payouts based on USD earnings
-- **Multi-Currency Support**: USD, EUR, GBP, CAD, AUD with automatic conversion
-- **Intelligent Retry Logic**: Exponential backoff with configurable retry policies
-- **Real-time Status Tracking**: Complete payout lifecycle monitoring
-- **Comprehensive Error Logging**: Structured logging with correlation IDs
-- **Admin Intervention Tools**: Manual override and investigation capabilities
-- **User Notifications**: Email, in-app, and push notifications for status changes
-- **Compliance & Audit**: Full transaction history and regulatory compliance
+- **Storage Balance Integration**: Creator obligations held in Stripe's Storage Balance (escrowed)
+- **Perfect Fund Separation**: Payments Balance = platform revenue, Storage Balance = creator obligations
+- **Monthly Allocation Locking**: User allocations lock at month-end, earnings calculated and paid
+- **"Use It or Lose It" System**: Unallocated funds move back to Payments Balance as platform revenue
+- **Automated Monthly Payouts**: Payouts processed from Storage Balance on 1st of each month
+- **Stripe-Managed Auditability**: Built-in escrow system for regulatory compliance
+- **Real-time Balance Monitoring**: Automatic monitoring of Storage vs. Payments Balance
+- **Enhanced Creator Trust**: Visible fund segregation through Stripe's escrow system
+- **User Bank Account Management**: Stripe Connect integration for secure bank account setup
 
 ### System Requirements
 
@@ -62,39 +65,117 @@ The WeWrite Payout System is a comprehensive financial infrastructure that handl
 
 ### Data Flow
 
-1. **Token Earnings Accumulation**: Users earn tokens through content engagement
-2. **Payout Eligibility Check**: System validates minimum thresholds and account status
-3. **Payout Creation**: Automated scheduler creates payout records
-4. **Stripe Processing**: Transfers are created via Stripe Connect API
-5. **Status Tracking**: Webhooks update payout status in real-time
-6. **User Notification**: Multi-channel notifications for status changes
-7. **Completion**: Funds arrive in user's bank account
+1. **Subscription Collection**: User subscriptions collected in WeWrite's main Stripe account
+2. **Fund Holding**: All subscription funds remain in platform account (no immediate transfers)
+3. **Monthly Allocation Tracking**: User allocations tracked in Firestore, funds stay in platform
+4. **Month-End Lock**: Allocations lock at month-end, earnings calculation begins
+5. **Earnings Calculation**: Calculate actual user earnings based on locked allocations
+6. **Payout Processing**: Transfer only earned amounts to users' connected accounts
+7. **Platform Revenue Retention**: Fees, unallocated, and unspent funds stay in platform account
+8. **Status Tracking**: Comprehensive tracking of earnings, payouts, and platform revenue
+
+## Fund Flow Model
+
+```
+User Subscription ($50) → WeWrite Platform Account
+                       ↓
+                   [Funds Stay Here]
+                       ↓
+              Month-End Processing:
+                       ↓
+    ┌─────────────────────────────────────┐
+    │  User Earned: $30 → User's Bank     │
+    │  Platform Fee: $3.50 → Platform     │
+    │  Unallocated: $16.50 → Platform     │
+    └─────────────────────────────────────┘
+```
 
 ### Environment Architecture
 
-- **Development**: Local development with test Stripe keys
-- **Preview**: Staging environment with Stripe test mode
-- **Production**: Live environment with production Stripe keys
+- **Development**: Local development with test Stripe keys, manual payout testing
+- **Preview**: Staging environment with Stripe test mode, automated payout simulation
+- **Production**: Live environment with production Stripe keys, real fund transfers
+
+## Earnings Visualization
+
+The new payout system provides comprehensive visibility into what's owed to users and platform revenue through several key interfaces:
+
+### Admin Dashboard Overview
+
+**Outstanding Earnings Tracker**
+- **Total Unpaid Earnings**: Real-time view of all user earnings not yet paid out
+- **Users Without Bank Accounts**: List of users with earnings who haven't set up payouts
+- **Pending Payout Queue**: Upcoming payouts scheduled for next processing cycle
+- **Failed Payout Recovery**: Users with failed payouts requiring attention
+
+**Platform Balance Monitoring**
+- **Stripe Account Balance**: Current available balance in platform account
+- **Outstanding Obligations**: Total amount owed to all users
+- **Balance Sufficiency**: Real-time alert if balance < obligations
+- **Platform Revenue**: Breakdown of fees, unallocated, and unspent funds
+
+### User Earnings Breakdown
+
+**Individual User View**
+```typescript
+interface UserEarningsView {
+  userId: string;
+  totalEarnings: number;        // All-time earnings
+  unpaidEarnings: number;       // Earnings not yet paid out
+  lastPayoutDate: Date | null;  // Most recent successful payout
+  bankAccountStatus: 'setup' | 'pending' | 'none';
+  payoutEligible: boolean;      // Can receive payouts
+  reasonsIneligible?: string[]; // Why they can't receive payouts
+  earningsHistory: MonthlyEarnings[];
+}
+```
+
+**Monthly Earnings Detail**
+- **Allocation Received**: How much users allocated to this creator
+- **Platform Fees**: Fees deducted from allocations
+- **Net Earnings**: Actual amount earned after fees
+- **Payout Status**: 'pending', 'processing', 'completed', 'failed'
 
 ## Core Components
 
-### 1. Payout Service (`StripePayoutService`)
+### 1. Fund Holding Service (`FundHoldingService`)
 
-**Purpose**: Core payout processing logic and Stripe integration
+**Purpose**: Manages subscription funds in platform account without immediate transfers
 
 **Key Methods**:
-- `processPayout(payoutId)`: Main payout processing entry point
-- `createStripeTransfer()`: Creates Stripe Connect transfers
-- `verifyStripeAccount()`: Validates recipient account status
-- `handleWebhookEvent()`: Processes Stripe webhook events
+- `processSubscription(userId, amount)`: Records subscription without transferring funds
+- `trackAllocation(userId, pageId, amount)`: Tracks user allocations in Firestore
+- `calculatePlatformBalance()`: Real-time platform account balance
+- `getOutstandingObligations()`: Total amount owed to all users
+
+### 2. Monthly Earnings Calculator (`MonthlyEarningsService`)
+
+**Purpose**: Calculates user earnings at month-end and implements "use it or lose it" logic
+
+**Key Methods**:
+- `lockMonthlyAllocations(month)`: Lock all user allocations for the month
+- `calculateUserEarnings(userId, month)`: Calculate actual earnings from allocations
+- `processUnallocatedFunds(month)`: Convert unallocated funds to platform revenue
+- `generateEarningsReport(month)`: Comprehensive earnings breakdown
+
+### 3. Payout Processing Service (`PayoutProcessingService`)
+
+**Purpose**: Processes monthly payouts using Stripe Connect transfers
+
+**Key Methods**:
+- `processMonthlyPayouts(month)`: Main monthly payout processing
+- `createStripeTransfer(userId, amount)`: Creates transfers to connected accounts
+- `verifyStripeAccount(accountId)`: Validates recipient account status
+- `handlePayoutFailure(payoutId, reason)`: Manages failed payout recovery
 
 **Configuration**:
 ```typescript
 {
   minimumPayoutThreshold: 25.00,
-  platformFeePercentage: 0.0,
-  stripeConnectFeePercentage: 0.0025,
-  newAccountReservePeriod: 7
+  platformFeePercentage: 7.0,
+  payoutProcessingDay: 1,        // 1st of each month
+  payoutSchedule: 'monthly',
+  newAccountReservePeriod: 0     // No reserve with new model
 }
 ```
 

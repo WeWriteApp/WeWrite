@@ -137,6 +137,7 @@ export default function PageView({
   const [error, setError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [justSaved, setJustSaved] = useState(false); // Flag to prevent data reload after save
 
   // Debug logging for hasUnsavedChanges state
   useEffect(() => {
@@ -432,6 +433,12 @@ export default function PageView({
       return;
     }
 
+    // CRITICAL FIX: Don't reload data immediately after save to prevent showing stale content
+    if (justSaved) {
+      console.log('📄 PageView: Skipping data loading - just saved, using current editor state');
+      return;
+    }
+
     pageLogger.debug('Starting page load', { pageId, userId: user?.uid });
     setIsLoading(true);
     setError(null);
@@ -580,7 +587,7 @@ export default function PageView({
       }
       clearTimeout(fallbackTimeout);
     };
-  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId]);
+  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId, justSaved]);
 
   // Record page view and add to recent pages
   useEffect(() => {
@@ -1133,7 +1140,7 @@ export default function PageView({
       console.log('✅ PAGE SAVE: Page saved successfully via API', { pageId });
       pageLogger.info('Page saved successfully via API', { pageId });
 
-      // CRITICAL FIX: Properly update both page state and editor state to prevent Slate errors
+      // CRITICAL FIX: Properly update both page state and editor state after save
       console.log('🔍 PAGE SAVE: Updating local page state with saved content');
       if (page) {
         const updatedPage = {
@@ -1147,18 +1154,10 @@ export default function PageView({
         setPage(updatedPage);
         console.log('✅ PAGE SAVE: Local page state updated');
 
-        // CRITICAL: Reset editor state to prevent Slate DOM errors
-        try {
-          console.log('🔄 EDITOR FIX: Resetting editor state to prevent Slate errors');
-          // Force editor to re-render with clean state
-          setEditorState([]);
-          setTimeout(() => {
-            setEditorState(contentToSave);
-            console.log('✅ EDITOR FIX: Editor state reset and updated with saved content');
-          }, 100);
-        } catch (editorError) {
-          console.warn('⚠️ EDITOR FIX: Error resetting editor state:', editorError);
-        }
+        // CRITICAL FIX: Update editor state directly without reset to prevent stale content
+        console.log('🔄 EDITOR FIX: Updating editor state with saved content (no reset)');
+        setEditorState(contentToSave);
+        console.log('✅ EDITOR FIX: Editor state updated with saved content');
       }
 
       // COMPREHENSIVE CLIENT-SIDE CACHE INVALIDATION
@@ -1182,35 +1181,11 @@ export default function PageView({
         invalidateCache(`page:${pageId}`);
         invalidateCache(`pageData:${pageId}`);
 
-        // 5. Force refresh page data from server
-        console.log('🔄 CLIENT CACHE: Forcing page data refresh from server');
-        const response = await fetch(`/api/pages/${pageId}?bustCache=${Date.now()}`, {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        });
-
-        if (response.ok) {
-          const freshPageData = await response.json();
-          console.log('✅ CLIENT CACHE: Fresh page data loaded:', freshPageData.title);
-
-          // Update the page state with fresh data
-          setPage(freshPageData);
-
-          // Update editor state with fresh content if available
-          if (freshPageData.content) {
-            try {
-              const parsedContent = typeof freshPageData.content === 'string'
-                ? JSON.parse(freshPageData.content)
-                : freshPageData.content;
-              setEditorState(parsedContent);
-              console.log('✅ CLIENT CACHE: Editor state updated with fresh content');
-            } catch (parseError) {
-              console.warn('⚠️ CLIENT CACHE: Error parsing fresh content:', parseError);
-            }
-          }
-        }
+        // NOTE: We don't need to fetch fresh data from server here because:
+        // 1. We already updated page state and editor state with the saved content above
+        // 2. The saved content IS the fresh content (we just saved it)
+        // 3. Fetching again creates a race condition that can show stale cached content
+        console.log('✅ CLIENT CACHE: Skipping server fetch - using saved content as fresh content');
 
         console.log('✅ CLIENT CACHE: Comprehensive cache clearing completed');
       } catch (cacheError) {
@@ -1252,6 +1227,13 @@ export default function PageView({
       pageLogger.info('Page saved successfully', { pageId, title });
       setHasUnsavedChanges(false);
       setError(null);
+
+      // Set justSaved flag to prevent data reloading that could show stale content
+      setJustSaved(true);
+      setTimeout(() => {
+        setJustSaved(false);
+        console.log('✅ PAGE SAVE: justSaved flag cleared - data reloading allowed again');
+      }, 2000); // Prevent reloading for 2 seconds after save
 
 
 

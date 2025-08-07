@@ -12,6 +12,7 @@ import { getCurrentMonth } from '../utils/usdConstants';
 import { dollarsToCents, centsToDollars } from '../utils/formatCurrency';
 import type { UsdBalance, UsdAllocation } from '../types/database';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
+import { fundTrackingService } from './fundTrackingService';
 
 // Robust Firebase Admin initialization function - uses the same pattern as working endpoints
 function getFirebaseAdminAndDb() {
@@ -97,11 +98,38 @@ export class ServerUsdService {
   }
 
   /**
-   * Get user's current USD balance (server-side)
+   * Get user's current USD balance (server-side) - Updated for fund holding model
    */
   static async getUserUsdBalance(userId: string): Promise<UsdBalance | null> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
+
+      // Get fund balance from the new fund tracking service
+      const fundBalance = await fundTrackingService.getUserFundBalance(userId);
+
+      if (fundBalance) {
+        console.log(`[USD BALANCE] Using fund tracking balance for user ${userId}:`, {
+          totalSubscribed: fundBalance.totalSubscribed,
+          totalAllocated: fundBalance.totalAllocated,
+          availableToAllocate: fundBalance.availableToAllocate
+        });
+
+        // Convert fund balance to UsdBalance format
+        return {
+          userId,
+          totalUsdCents: Math.round(fundBalance.totalSubscribed * 100),
+          allocatedUsdCents: Math.round(fundBalance.totalAllocated * 100),
+          availableUsdCents: Math.round(fundBalance.availableToAllocate * 100),
+          monthlyAllocationCents: Math.round(fundBalance.totalSubscribed * 100),
+          lastAllocationDate: getCurrentMonth(),
+          createdAt: fundBalance.lastUpdated,
+          updatedAt: fundBalance.lastUpdated
+        };
+      }
+
+      // Fallback to legacy balance system if fund tracking not available
+      console.log(`[USD BALANCE] Fund tracking not available, falling back to legacy balance for user ${userId}`);
+
       // Use the same subscription source as the sync logic
       const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
       const subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
@@ -298,7 +326,23 @@ export class ServerUsdService {
 
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
-      console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${centsToDollars(usdCentsChange)} USD`);
+      const usdDollarsChange = centsToDollars(usdCentsChange);
+      console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${usdDollarsChange} USD (fund holding model)`);
+
+      // Track allocation in fund tracking service for positive changes (no actual fund movement)
+      if (usdCentsChange > 0) {
+        const trackingResult = await fundTrackingService.trackUserAllocation(userId, {
+          pageId,
+          amount: usdDollarsChange
+        });
+
+        if (!trackingResult.success) {
+          console.error(`[USD ALLOCATION] [${correlationId}] Fund tracking failed: ${trackingResult.error}`);
+          // Continue with legacy system as fallback
+        } else {
+          console.log(`[USD ALLOCATION] [${correlationId}] Fund tracking successful for ${usdDollarsChange} USD to page ${pageId}`);
+        }
+      }
 
       // Get current USD balance
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
@@ -481,13 +525,29 @@ export class ServerUsdService {
   }
 
   /**
-   * Allocate USD to a user (server-side)
+   * Allocate USD to a user (server-side) - Updated for fund holding model
    */
   static async allocateUsdToUser(userId: string, recipientUserId: string, usdCentsChange: number): Promise<void> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
-      console.log(`[USD USER ALLOCATION] Starting allocation for user ${userId}, recipient ${recipientUserId}, change ${centsToDollars(usdCentsChange)} USD`);
+      const usdDollarsChange = centsToDollars(usdCentsChange);
+      console.log(`[USD USER ALLOCATION] Starting allocation for user ${userId}, recipient ${recipientUserId}, change ${usdDollarsChange} USD (fund holding model)`);
+
+      // Track allocation in fund tracking service for positive changes (no actual fund movement)
+      if (usdCentsChange > 0) {
+        const trackingResult = await fundTrackingService.trackUserAllocation(userId, {
+          recipientUserId,
+          amount: usdDollarsChange
+        });
+
+        if (!trackingResult.success) {
+          console.error(`[USD USER ALLOCATION] Fund tracking failed: ${trackingResult.error}`);
+          // Continue with legacy system as fallback
+        } else {
+          console.log(`[USD USER ALLOCATION] Fund tracking successful for ${usdDollarsChange} USD to user ${recipientUserId}`);
+        }
+      }
 
       // Get current USD balance
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);

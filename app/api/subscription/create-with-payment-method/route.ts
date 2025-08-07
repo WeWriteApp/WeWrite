@@ -202,17 +202,36 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Create subscription
+    // Create subscription with transfer_group for fund tracking (Stripe Connect model)
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    const transferGroup = `subscription_${userId}_${currentMonth}`;
+
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: price.id }],
       default_payment_method: paymentMethodId,
+      payment_behavior: 'default_incomplete',
+      payment_settings: {
+        payment_method_types: ['card', 'link'],
+        save_default_payment_method: 'on_subscription'
+      },
+      // Add transfer_group to payment_intent_data for Stripe Connect tracking
+      payment_intent_data: {
+        transfer_group: transferGroup,
+        metadata: {
+          userId,
+          subscriptionType: 'monthly_funding',
+          fundHoldingModel: 'platform_account'
+        }
+      },
       metadata: {
         userId,
         tier,
         tierName: tierName || tier,
         usdAmount: amount.toString(),
-        usdCents: dollarsToCents(amount).toString()
+        usdCents: dollarsToCents(amount).toString(),
+        transferGroup, // Also keep in subscription metadata for reference
+        fundHoldingModel: 'platform_account' // Indicate new model
       },
       expand: ['latest_invoice.payment_intent']
     });
@@ -309,13 +328,13 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to save subscription: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`);
     }
 
-    // Initialize user's USD balance directly to avoid internal API call issues
+    // Initialize user's USD balance - funds stay in platform account until month-end payout
     if (subscription.status === 'active') {
-      console.log(`[CREATE SUBSCRIPTION] Updating USD allocation directly...`);
+      console.log(`[CREATE SUBSCRIPTION] Updating USD allocation directly (funds held in platform account)...`);
       try {
-        // Initialize USD balance using the new USD service
+        // Initialize USD balance using the new USD service - no immediate transfers
         await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
-        console.log(`[CREATE SUBSCRIPTION] Successfully updated USD allocation: $${amount}`);
+        console.log(`[CREATE SUBSCRIPTION] Successfully updated USD allocation: $${amount} (held in platform account)`);
 
         // Also maintain backward compatibility with token system during migration
         console.log(`[CREATE SUBSCRIPTION] Maintaining token system compatibility...`);

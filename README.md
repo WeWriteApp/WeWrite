@@ -71,11 +71,28 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **[AUTHENTICATION_ARCHITECTURE](docs/AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
 - **[USER_DATA_FETCHING_PATTERNS](docs/USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for secure user data handling
 
-### 💰 USD Payment & Creator Support System
+### 💰 Storage Balance Payout System
 
-- **[USD_MIGRATION_GUIDE](docs/USD_MIGRATION_GUIDE.md)** - **NEW**: Complete USD migration guide and architecture
+WeWrite uses **Stripe's Storage Balance** system combined with the innovative **"Use It or Lose It"** model for perfect fund separation and enhanced auditability.
+
+#### **How It Works:**
+- **Payments Balance** = Platform Revenue (yours to keep)
+- **Storage Balance** = Creator Obligations (escrowed by Stripe)
+- **"Use It or Lose It"** = Unallocated funds become platform revenue
+
+#### **Key Benefits:**
+- ✅ **Perfect Fund Separation** in Stripe dashboard
+- ✅ **Stripe-Managed Auditability** for regulatory compliance
+- ✅ **Enhanced Creator Trust** through visible escrow
+- ✅ **Automated Monthly Payouts** from Storage Balance
+- ✅ **Maintained Innovation** with "use it or lose it" engagement
+
+#### **Documentation:**
+- **[STORAGE_BALANCE_GUIDE](docs/STORAGE_BALANCE_GUIDE.md)** - **🆕 CURRENT**: Complete Storage Balance system guide
+- **[STRIPE_DASHBOARD_QUICK_REFERENCE](docs/STRIPE_DASHBOARD_QUICK_REFERENCE.md)** - **🆕 CURRENT**: Quick reference for Stripe dashboard
+- **[PAYOUT_SYSTEM_DOCUMENTATION](docs/PAYOUT_SYSTEM_DOCUMENTATION.md)** - Complete payout system documentation
+- **[USD_MIGRATION_GUIDE](docs/USD_MIGRATION_GUIDE.md)** - USD migration guide and architecture
 - **[SUBSCRIPTION_SYSTEM](docs/SUBSCRIPTION_SYSTEM.md)** - Complete subscription architecture and implementation
-- **[PAYOUT_SYSTEM_DOCUMENTATION](docs/PAYOUT_SYSTEM_DOCUMENTATION.md)** - Creator compensation and payout system
 - **[PAYMENT_FLOW_TESTING_GUIDE](docs/PAYMENT_FLOW_TESTING_GUIDE.md)** - Comprehensive payment testing procedures
 - **[ENHANCED_PAYMENT_ERROR_MESSAGING](docs/ENHANCED_PAYMENT_ERROR_MESSAGING.md)** - User-friendly payment error handling
 - **[PAYMENT_FAILURE_TRACKING](docs/PAYMENT_FAILURE_TRACKING.md)** - Payment failure audit and tracking system

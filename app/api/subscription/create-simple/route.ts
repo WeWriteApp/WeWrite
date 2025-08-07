@@ -93,13 +93,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Customer has payment method - create subscription directly
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    const transferGroup = `subscription_${userId}_${currentMonth}`;
+
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
       items: [{ price: price.id }],
       default_payment_method: paymentMethods.data[0].id,
+      // Add transfer_group to payment_intent_data for Stripe Connect tracking
+      payment_intent_data: {
+        transfer_group: transferGroup,
+        metadata: {
+          userId,
+          subscriptionType: 'monthly_funding',
+          fundHoldingModel: 'platform_account'
+        }
+      },
       metadata: {
         userId: userId,
         amount: amount.toString(),
+        transferGroup,
+        fundHoldingModel: 'platform_account'
       },
     });
 

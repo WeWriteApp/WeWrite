@@ -111,17 +111,15 @@ interface SessionCookie {
 }
 ```
 
-### 4. Device Management System
+### 4. Session Management
 
-**Purpose**: Track and manage user sessions across multiple devices for security and convenience.
+**Purpose**: Manage user authentication sessions with Firebase Auth integration.
 
 **Key Features**:
-- **Device Detection**: Automatic detection of device type, browser, and OS
-- **Session Tracking**: Track active sessions across multiple devices
-- **Device List**: View all logged-in devices with details
-- **Remote Logout**: Ability to log out specific devices remotely
-- **Current Device Identification**: Clear indication of current device
-- **Security Monitoring**: Track IP addresses and last activity times
+- **Session Persistence**: Automatic session persistence via Firebase Auth
+- **Cookie Management**: HTTP-only session cookies for middleware compatibility
+- **Session Validation**: Server-side session validation for protected routes
+- **Automatic Cleanup**: Session expiration and cleanup handling
 
 **Device Information Structure**:
 ```typescript
@@ -235,32 +233,48 @@ function AdminComponent() {
 }
 ```
 
-## Device Management Usage
+## Session Management Usage
 
-### 1. Viewing Logged-In Devices
+### 1. Authentication State
 
-Users can view all their active sessions through the `LoggedInDevices` component:
+Access authentication state through the `useAuth` hook:
 
 ```typescript
-import LoggedInDevices from '../components/settings/LoggedInDevices';
+import { useAuth } from '../providers/AuthProvider';
 
-// In settings page or security section
-<LoggedInDevices />
+function MyComponent() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!isAuthenticated) return <div>Please log in</div>;
+
+  return <div>Welcome, {user.displayName}!</div>;
+}
 ```
 
-**Features**:
-- Shows device type icons (desktop, mobile, tablet)
-- Displays browser and OS information
-- Shows last activity time and IP address
-- Highlights current device with special badge
-- Provides refresh functionality
+### 2. Protected Routes
 
-### 2. Managing Device Sessions
+Protect routes by checking authentication status:
 
-**Logging Out Other Devices**:
 ```typescript
-// The LoggedInDevices component handles this automatically
-// Users can click "Log out" button next to any device
+import { useAuth } from '../providers/AuthProvider';
+import { useRouter } from 'next/navigation';
+
+function ProtectedPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!isAuthenticated) return null;
+
+  return <div>Protected content</div>;
+}
 ```
 
 **Security Benefits**:
@@ -298,11 +312,11 @@ import LoggedInDevices from '../components/settings/LoggedInDevices';
 - Session cookies provide middleware compatibility
 - No manual session management required
 
-### 5. Device Management Security
-- Encourage users to regularly review logged-in devices
-- Provide clear instructions for logging out unknown devices
-- Monitor for suspicious login patterns
-- Implement session timeout for inactive devices
+### 5. Session Security
+- Implement proper session timeout handling
+- Use secure HTTP-only cookies
+- Validate sessions on protected routes
+- Handle session expiration gracefully
 
 ## Migration from Complex Auth
 
@@ -343,27 +357,25 @@ Firebase Auth → SimpleAuthProvider → Components
 5. Session tracking begins for the new device
 6. Components access auth state via `useAuth()` hook
 
-### Device Management Flow
-1. User accesses device management in settings
-2. `LoggedInDevices` component fetches active sessions via `/api/auth/sessions`
-3. Device information is displayed with security details
-4. User can revoke specific sessions via `/api/auth/sessions/[sessionId]`
-5. Revoked sessions are immediately invalidated
-6. Current session logout redirects to login page
+### Session Management Flow
+1. User logs in through Firebase Auth
+2. Session cookie is created for middleware compatibility
+3. Session is validated on protected routes
+4. Session expires automatically or on logout
+5. Expired sessions redirect to login page
 
 ## Conclusion
 
-The simplified authentication system with device management provides:
+The simplified authentication system provides:
 - ✅ **Reliability** - Standard Firebase Auth implementation
 - ✅ **Maintainability** - Single authentication provider
 - ✅ **Performance** - Reduced complexity and overhead
-- ✅ **Security** - Firebase Auth security features + device tracking
+- ✅ **Security** - Firebase Auth security features
 - ✅ **Simplicity** - Easy to understand and debug
-- ✅ **Device Management** - Multi-device session tracking and control
-- ✅ **User Control** - Ability to view and manage logged-in devices
-- ✅ **Enhanced Security** - Remote device logout and session monitoring
+- ✅ **Session Management** - Proper session handling with cookies
+- ✅ **Middleware Compatibility** - Works with Next.js middleware
 
-This architecture replaces the complex multi-auth system with a simple, reliable solution that meets all authentication needs while providing enhanced security through device management capabilities. Users can now monitor their account access across devices and maintain better control over their security.
+This architecture replaces the complex multi-auth system with a simple, reliable solution that meets all authentication needs with clean session management.
 
 1. **Firebase Auth** triggers authentication state changes
 2. **SimpleAuthProvider** receives auth changes and updates user state

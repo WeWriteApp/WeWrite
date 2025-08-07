@@ -13,6 +13,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../../utils/firebase-error-handler';
 import { ServerUsdService } from '../../../services/usdService.server';
+import { earningsCalculationEngine } from '../../../services/earningsCalculationEngine';
+import { earningsHistoryService } from '../../../services/earningsHistoryService';
 import {
   getLoggedOutUsdBalance,
   getUserUsdBalance
@@ -290,10 +292,40 @@ export async function GET(request: NextRequest) {
       unfundedEarnings = { totalUnfundedUsdValue: 0, totalUnfundedUsdCents: 0 };
     }
 
-    // SIMPLIFIED CALCULATION: Use current allocations as pending, balance data for historical
-    const pendingBalance = incomingAllocations.totalUsdValue || 0; // Current month allocations
-    const availableBalance = usdBalance ? (usdBalance.availableUsdCents || 0) / 100 : 0; // Available for payout
-    const totalEarnings = usdBalance ? (usdBalance.totalUsdCentsEarned || 0) / 100 : pendingBalance; // Lifetime total
+    // NEW: Try to get earnings from the new earnings calculation engine
+    let newSystemEarnings = null;
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const userEarnings = await earningsCalculationEngine.getUserEarnings(userId, currentMonth);
+      const userHistory = await earningsHistoryService.getUserEarningsHistory(userId);
+
+      if (userEarnings || userHistory) {
+        newSystemEarnings = {
+          currentMonth: userEarnings,
+          history: userHistory
+        };
+        console.log(`[EARNINGS API] New system earnings found for user ${userId.substring(0, 8)}...`);
+      }
+    } catch (error) {
+      console.warn(`[EARNINGS API] New earnings system not available yet:`, error.message);
+    }
+
+    // CALCULATION: Use new system if available, fallback to current system
+    let pendingBalance, availableBalance, totalEarnings;
+
+    if (newSystemEarnings?.currentMonth) {
+      // Use new earnings calculation engine
+      pendingBalance = newSystemEarnings.currentMonth.netEarnings || 0;
+      availableBalance = newSystemEarnings.history?.outstandingEarnings || 0;
+      totalEarnings = newSystemEarnings.history?.totalLifetimeEarnings || pendingBalance;
+      console.log(`[EARNINGS API] Using NEW earnings system data`);
+    } else {
+      // Fallback to current system
+      pendingBalance = incomingAllocations.totalUsdValue || 0; // Current month allocations
+      availableBalance = usdBalance ? (usdBalance.availableUsdCents || 0) / 100 : 0; // Available for payout
+      totalEarnings = usdBalance ? (usdBalance.totalUsdCentsEarned || 0) / 100 : pendingBalance; // Lifetime total
+      console.log(`[EARNINGS API] Using LEGACY earnings system data`);
+    }
 
     console.log(`[EARNINGS API] Final earnings calculation for user ${userId.substring(0, 8)}...:`, {
       pendingBalance: `$${pendingBalance.toFixed(2)} (from ${incomingAllocations.allocations.length} current allocations)`,
