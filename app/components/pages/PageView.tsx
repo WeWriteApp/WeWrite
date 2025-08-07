@@ -595,7 +595,7 @@ export default function PageView({
       }
       clearTimeout(fallbackTimeout);
     };
-  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId, justSaved]);
+  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId]);
 
   // Record page view and add to recent pages
   useEffect(() => {

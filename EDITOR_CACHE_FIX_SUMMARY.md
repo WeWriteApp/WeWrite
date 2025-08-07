@@ -135,7 +135,7 @@ if (justSaved) {
 3. **Line 140**: Added `justSaved` flag to prevent data reloading
 4. **Line 1226**: Set `justSaved` flag in save completion
 5. **Line 436**: Check `justSaved` flag in data loading useEffect
-6. **Line 590**: Added `justSaved` to useEffect dependencies
+6. **Line 598**: FIXED - Removed `justSaved` from useEffect dependencies to prevent unnecessary reloads
 
 ### **State Management:**
 ```typescript
@@ -165,6 +165,33 @@ if (justSaved) return; // Skip data loading
 - ✅ **Reduced race conditions** - Fewer timing-dependent bugs
 - ✅ **Better performance** - No unnecessary server fetches
 - ✅ **More reliable editing** - Consistent editor state
+
+---
+
+## 🔧 **Final Fix: useEffect Dependency Issue**
+
+### **Problem Discovered:**
+Even after the initial fixes, the editor was still showing stale content after save because the `justSaved` flag was included in the useEffect dependency array. This caused:
+
+1. **Save triggers useEffect** → `justSaved` changes from `false` to `true`
+2. **useEffect runs but skips loading** → Due to guard clause
+3. **2 seconds later** → `justSaved` changes from `true` to `false`
+4. **useEffect runs again** → This time loads data, potentially showing stale cached content
+
+### **Final Fix Applied:**
+```typescript
+// BEFORE (problematic):
+}, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId, justSaved]);
+
+// AFTER (fixed):
+}, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId]);
+```
+
+### **Why This Works:**
+- `justSaved` is still used as a guard condition to prevent immediate post-save data loading
+- But it no longer triggers the useEffect when it changes
+- useEffect only runs when actual data dependencies change (pageId, user, etc.)
+- This prevents the problematic reload cycle that was showing stale content
 
 ---
 
