@@ -234,6 +234,10 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
     router.push(`/${pageId}/versions`);
   };
 
+  const goToCurrentVersion = () => {
+    router.push(`/${pageId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -283,7 +287,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="p-4 max-w-4xl mx-auto">
+      <div className="p-2 sm:p-4 max-w-4xl mx-auto">
             {/* Header */}
             <PageHeader
               title={`${currentVersion.title} - Version History`}
@@ -291,89 +295,186 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
               isLoading={false}
             />
 
-            {/* Version Navigation */}
-            <div className="mb-6 flex items-center justify-between bg-muted/50 rounded-lg p-4">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goBackToVersions}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Versions
-                </Button>
+            {/* Version Navigation - Mobile Optimized */}
+            <div className="mb-4 sm:mb-6 bg-muted/50 rounded-lg p-3 sm:p-4">
+              {/* Mobile: Stack vertically */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goBackToVersions}
+                    className="flex items-center justify-center gap-2 flex-1"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Versions
+                  </Button>
 
-                <div className="text-sm text-muted-foreground">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={goToCurrentVersion}
+                    className="flex items-center justify-center gap-2 flex-1"
+                  >
+                    Current Version
+                  </Button>
+                </div>
+
+                <div className="text-sm text-muted-foreground text-center">
                   Version {currentIndex + 1} of {versions.length}
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToOlder}
+                    disabled={currentIndex >= versions.length - 1}
+                    className="flex items-center justify-center gap-2 flex-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Older
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNewer}
+                    disabled={currentIndex <= 0}
+                    className="flex items-center justify-center gap-2 flex-1"
+                  >
+                    Newer
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToOlder}
-                  disabled={currentIndex >= versions.length - 1}
-                  className="flex items-center gap-2"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Older
-                </Button>
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden sm:flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goBackToVersions}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Versions
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToNewer}
-                  disabled={currentIndex <= 0}
-                  className="flex items-center gap-2"
-                >
-                  Newer
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={goToCurrentVersion}
+                    className="flex items-center gap-2"
+                  >
+                    Current Version
+                  </Button>
+
+                  <div className="text-sm text-muted-foreground">
+                    Version {currentIndex + 1} of {versions.length}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToOlder}
+                    disabled={currentIndex >= versions.length - 1}
+                    className="flex items-center gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Older
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNewer}
+                    disabled={currentIndex <= 0}
+                    className="flex items-center gap-2"
+                  >
+                    Newer
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
-            {/* Version Info */}
-            <div className="mb-6 bg-card rounded-lg border-theme-strong p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-semibold">{currentVersion.title}</h2>
-                <div className="text-sm text-muted-foreground">
+            {/* Version Info - Mobile Optimized */}
+            <div className="mb-4 sm:mb-6 bg-card rounded-lg border-theme-strong p-3 sm:p-4">
+              {/* Mobile: Stack vertically */}
+              <div className="sm:hidden">
+                <h2 className="text-lg font-semibold mb-2 break-words">{currentVersion.title}</h2>
+                <div className="text-sm text-muted-foreground mb-2">
                   by {sanitizeUsername(currentVersion.username)}
                 </div>
-              </div>
-
-              <div className="text-sm text-muted-foreground mb-2">
-                {timeInfo.relative} ({timeInfo.absolute})
-              </div>
-
-              {currentVersion.diff && currentVersion.diff.hasChanges && (
-                <div className="flex items-center gap-4 text-sm">
-                  {currentVersion.diff.added > 0 && (
-                    <span className="text-green-600 dark:text-green-400">
-                      +{currentVersion.diff.added} added
-                    </span>
-                  )}
-                  {currentVersion.diff.removed > 0 && (
-                    <span className="text-red-600 dark:text-red-400">
-                      -{currentVersion.diff.removed} removed
-                    </span>
-                  )}
+                <div className="text-sm text-muted-foreground mb-3">
+                  {timeInfo.relative}
                 </div>
-              )}
+                <div className="text-xs text-muted-foreground mb-3">
+                  {timeInfo.absolute}
+                </div>
+                {currentVersion.diff && currentVersion.diff.hasChanges && (
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    {currentVersion.diff.added > 0 && (
+                      <span className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                        +{currentVersion.diff.added} added
+                      </span>
+                    )}
+                    {currentVersion.diff.removed > 0 && (
+                      <span className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                        -{currentVersion.diff.removed} removed
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden sm:block">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-semibold">{currentVersion.title}</h2>
+                  <div className="text-sm text-muted-foreground">
+                    by {sanitizeUsername(currentVersion.username)}
+                  </div>
+                </div>
+
+                <div className="text-sm text-muted-foreground mb-2">
+                  {timeInfo.relative} ({timeInfo.absolute})
+                </div>
+
+                {currentVersion.diff && currentVersion.diff.hasChanges && (
+                  <div className="flex items-center gap-4 text-sm">
+                    {currentVersion.diff.added > 0 && (
+                      <span className="text-green-600 dark:text-green-400">
+                        +{currentVersion.diff.added} added
+                      </span>
+                    )}
+                    {currentVersion.diff.removed > 0 && (
+                      <span className="text-red-600 dark:text-red-400">
+                        -{currentVersion.diff.removed} removed
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Changes from previous version */}
+            {/* Changes from previous version - Mobile Optimized */}
             {previousVersion ? (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Changes from previous version</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg font-semibold px-1">Changes from previous version</h3>
 
                 {/* New Version with Diff Highlighting */}
                 <div className="bg-card rounded-lg border-theme-strong">
-                  <div className="p-4 border-b-only">
-                    <h4 className="font-medium text-green-600 dark:text-green-400">New Version (with changes highlighted)</h4>
+                  <div className="p-3 sm:p-4 border-b-only">
+                    <h4 className="font-medium text-green-600 dark:text-green-400 text-sm sm:text-base">
+                      New Version (with changes highlighted)
+                    </h4>
                   </div>
-                  <div className="p-4">
+                  <div className="p-3 sm:p-4 overflow-x-auto">
                     <WeWriteDiffView
                       currentContent={currentVersion.content}
                       previousContent={previousVersion.content}
@@ -384,10 +485,10 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
 
                 {/* Previous Version */}
                 <div className="bg-card rounded-lg border-theme-strong">
-                  <div className="p-4 border-b-only">
-                    <h4 className="font-medium text-muted-foreground">Previous Version</h4>
+                  <div className="p-3 sm:p-4 border-b-only">
+                    <h4 className="font-medium text-muted-foreground text-sm sm:text-base">Previous Version</h4>
                   </div>
-                  <div className="p-4">
+                  <div className="p-3 sm:p-4 overflow-x-auto">
                     <WeWriteDiffView
                       currentContent={previousVersion.content}
                       previousContent=""
@@ -398,10 +499,10 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
               </div>
             ) : (
               <div className="bg-card rounded-lg border-theme-strong">
-                <div className="p-4 border-b-only">
-                  <h3 className="font-medium">Initial version</h3>
+                <div className="p-3 sm:p-4 border-b-only">
+                  <h3 className="font-medium text-sm sm:text-base">Initial version</h3>
                 </div>
-                <div className="p-4">
+                <div className="p-3 sm:p-4 overflow-x-auto">
                   <WeWriteDiffView
                     currentContent={currentVersion.content}
                     previousContent=""

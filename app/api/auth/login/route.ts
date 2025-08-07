@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { secureLogger, maskEmail } from '../../../utils/secureLogging';
+import { DEV_TEST_USERS } from '../../../utils/testUsers';
 
 /**
  * Login API Endpoint
@@ -76,14 +77,11 @@ export async function POST(request: NextRequest) {
     if (useDevAuth) {
       console.log('[Auth] Using dev auth system (local development only)');
 
-      // In development mode, check against known test accounts
-      const testAccounts = [
-        { email: 'test@local.dev', username: 'testuser', password: 'TestPassword123!', uid: 'dev_test_user_1', isAdmin: false },
-        { email: 'jamie@wewrite.app', username: 'jamie', password: 'TestPassword123!', uid: 'dev_admin_user', isAdmin: true }
-      ];
+      // In development mode, check against known test accounts from testUsers.ts
+      const testAccountsArray = Object.values(DEV_TEST_USERS);
 
       // Find matching account
-      const account = testAccounts.find(acc =>
+      const account = testAccountsArray.find(acc =>
         (acc.email === emailOrUsername || acc.username === emailOrUsername) && acc.password === password
       );
 
@@ -98,7 +96,7 @@ export async function POST(request: NextRequest) {
         uid: account.uid,
         email: account.email,
         username: account.username,
-        displayName: account.username,
+        displayName: account.displayName || account.username,
         emailVerified: true
       };
 
@@ -119,7 +117,7 @@ export async function POST(request: NextRequest) {
         uid: account.uid,
         email: account.email,
         username: account.username,
-        displayName: account.username,
+        displayName: account.displayName || account.username,
         emailVerified: true
       });
     }

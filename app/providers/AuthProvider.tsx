@@ -138,9 +138,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // SIMPLIFIED: Always use the login API endpoint
       console.log('[Auth] Using simplified login API for all environments');
+      console.log('[Auth] Environment check:', {
+        NODE_ENV: process.env.NODE_ENV,
+        NEXT_PUBLIC_USE_DEV_AUTH: process.env.NEXT_PUBLIC_USE_DEV_AUTH,
+        useDevAuth: useDevAuth
+      });
 
       if (useDevAuth) {
         console.log('[Auth] Using dev auth system (local development only)');
+
+
 
         // Use server-side login endpoint for development
         const loginResponse = await fetch('/api/auth/login', {
@@ -168,6 +175,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Use client-side Firebase Auth for production
         console.log('[Auth] Using Firebase Auth for production/preview environment');
         console.log('[Auth] Attempting Firebase login for:', emailOrUsername);
+
+
         console.log('[Auth] Environment details:', {
           nodeEnv: process.env.NODE_ENV,
           hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',

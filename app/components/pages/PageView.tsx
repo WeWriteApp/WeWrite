@@ -236,8 +236,28 @@ export default function PageView({
         setIsLoading(false);
       } else if (result.pageData) {
         pageLogger.debug('API fallback successful', { pageId });
-        const pageData = result.pageData;
+        let pageData = result.pageData;
         const versionData = result.versionData;
+
+        // If username is missing or potentially outdated, fetch it from user profile
+        if (pageData && pageData.userId) {
+          try {
+            console.log('Fetching username for user:', pageData.userId);
+            const userResponse = await fetch(`/api/users/profile?id=${encodeURIComponent(pageData.userId)}`);
+            if (userResponse.ok) {
+              const userResult = await userResponse.json();
+              if (userResult.success && userResult.data?.username) {
+                // Update username if it's missing, 'Anonymous', or different from the actual username
+                if (!pageData.username || pageData.username === 'Anonymous' || pageData.username !== userResult.data.username) {
+                  pageData = { ...pageData, username: userResult.data.username };
+                  console.log('Updated page with username:', userResult.data.username);
+                }
+              }
+            }
+          } catch (userError) {
+            console.warn('Failed to fetch username:', userError);
+          }
+        }
 
         setPage(pageData);
         setTitle(pageData.title || '');
@@ -470,7 +490,7 @@ export default function PageView({
           contentLength: data.pageData?.content?.length || 0
         });
 
-        const pageData = data.pageData;
+        let pageData = data.pageData;
         const versionData = data.versionData;
 
         if (!pageData) {
@@ -478,13 +498,33 @@ export default function PageView({
 
           // Try API fallback before giving up
           try {
-            await loadFromApiFallback();
-            return; // loadFromApiFallback handles loading state
+            await tryApiFallback();
+            return; // tryApiFallback handles loading state
           } catch (fallbackError) {
             pageLogger.error('Both primary and API fallback failed', { fallbackError, pageId });
             setError('Page not found or failed to load');
             setIsLoading(false);
             return;
+          }
+        }
+
+        // If username is missing or potentially outdated, fetch it from user profile
+        if (pageData && pageData.userId) {
+          try {
+            console.log('Fetching username for user:', pageData.userId);
+            const userResponse = await fetch(`/api/users/profile?id=${encodeURIComponent(pageData.userId)}`);
+            if (userResponse.ok) {
+              const userResult = await userResponse.json();
+              if (userResult.success && userResult.data?.username) {
+                // Update username if it's missing, 'Anonymous', or different from the actual username
+                if (!pageData.username || pageData.username === 'Anonymous' || pageData.username !== userResult.data.username) {
+                  pageData = { ...pageData, username: userResult.data.username };
+                  console.log('Updated page with username:', userResult.data.username);
+                }
+              }
+            }
+          } catch (userError) {
+            console.warn('Failed to fetch username:', userError);
           }
         }
 

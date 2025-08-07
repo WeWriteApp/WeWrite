@@ -64,12 +64,14 @@ if (useDevAuth) {
 
 ## Test Credentials (Local Development Only)
 
+All test accounts are defined in `/app/utils/testUsers.ts` as the single source of truth:
+
 ```typescript
+// From DEV_TEST_USERS in /app/utils/testUsers.ts
 const testAccounts = [
-  { email: 'jamie@wewrite.app', password: 'TestPassword123!', isAdmin: true },
-  { email: 'test@wewrite.app', password: 'TestPassword123!', isAdmin: false },
-  { email: 'getwewrite@gmail.com', password: 'TestPassword123!', isAdmin: false },
-  { email: 'test@local.dev', password: 'TestPassword123!', isAdmin: false }
+  { email: 'jamie@wewrite.app', username: 'jamie', password: 'TestPassword123!', isAdmin: true },
+  { email: 'test@wewrite.app', username: 'testuser', password: 'TestPassword123!', isAdmin: false },
+  { email: 'getwewrite@gmail.com', username: 'getwewrite', password: 'TestPassword123!', isAdmin: false }
 ];
 ```
 

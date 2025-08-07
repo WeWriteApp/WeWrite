@@ -58,7 +58,11 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
           setLoading(false);
           return;
         }
-        setPage(pageResult.pageData);
+        let pageData = pageResult.pageData;
+
+
+
+        setPage(pageData);
 
         // Fetch page versions using the dedicated page versions API
         console.log('Page versions - Attempting to fetch versions for page:', id);
@@ -232,8 +236,6 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
     <div className="p-4 max-w-4xl mx-auto">
         <PageHeader
           title="Page History"
-          username={page?.username || "Anonymous"}
-          userId={page?.userId}
           isLoading={loading}
         />
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { DEV_TEST_USERS } from '../../../utils/testUsers';
 
 interface CreateTestAccountRequest {
   email?: string;
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const auth = admin.auth();
 
-    const testEmails = ['test@local.dev', 'jamie@wewrite.app', 'test@wewrite.app'];
+    const testEmails = Object.values(DEV_TEST_USERS).map(user => user.email);
     const accounts = [];
 
     for (const email of testEmails) {

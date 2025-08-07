@@ -20,15 +20,15 @@ WeWrite uses a clean Firebase authentication system. The complex development aut
 
 ### Test Users (Development)
 
-For development testing, you can create test accounts using standard Firebase Auth:
+Pre-configured test accounts are available in development mode (defined in `/app/utils/testUsers.ts`):
 
-| Purpose | Suggested Email | Notes |
-|---------|----------------|-------|
-| **Primary Testing** | test@wewrite.app | Main development account |
-| **Secondary Testing** | test2@wewrite.app | For testing interactions |
-| **Admin Testing** | jamie@wewrite.app | Admin features (jamie@wewrite.app has admin privileges) |
+| Email | Username | Password | Admin | Purpose |
+|-------|----------|----------|-------|---------|
+| **jamie@wewrite.app** | jamie | TestPassword123! | ✅ Yes | Admin testing |
+| **test@wewrite.app** | testuser | TestPassword123! | ❌ No | Regular user testing |
+| **getwewrite@gmail.com** | getwewrite | TestPassword123! | ❌ No | Official WeWrite account |
 
-**Note:** Create these accounts through the normal registration flow or Firebase console.
+**Note:** These accounts are automatically available when `USE_DEV_AUTH=true` in development.
 
 ### Admin Access
 

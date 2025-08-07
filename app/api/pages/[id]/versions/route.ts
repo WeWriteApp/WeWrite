@@ -70,7 +70,13 @@ export async function GET(
     const pageData = pageDoc.data();
 
     // Check permissions - user must own the page or it must be public
-    const currentUserId = await getUserIdFromRequest(request);
+    let currentUserId: string | null = null;
+    try {
+      currentUserId = await getUserIdFromRequest(request);
+    } catch (error) {
+      console.log('📊 [PAGE_VERSIONS] Anonymous access (getUserIdFromRequest failed):', error);
+      // Continue with null currentUserId for anonymous access
+    }
 
     // Enhanced permission check with admin support
     const isOwner = pageData?.userId === currentUserId;
@@ -190,7 +196,11 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching page versions:', error);
+    console.error('📊 [PAGE_VERSIONS] Error fetching page versions:', {
+      pageId: resolvedParams.id,
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return createErrorResponse('Failed to fetch page versions', 'INTERNAL_ERROR');
   }
 }

@@ -1,4 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { DEV_TEST_USERS } from '../utils/testUsers';
 
 // Type definitions
 interface ApiResponse<T = any> {
@@ -77,7 +79,13 @@ export const createErrorResponse = (
  */
 export async function getUserEmailFromId(userId: string): Promise<string | null> {
   try {
-    // Handle development users
+    // Handle development users from DEV_TEST_USERS
+    const testUser = Object.values(DEV_TEST_USERS).find(user => user.uid === userId);
+    if (testUser) {
+      return testUser.email;
+    }
+
+    // Handle legacy development user IDs
     if (userId === 'dev_admin_user') {
       return 'jamie@wewrite.app';
     }
@@ -86,12 +94,13 @@ export async function getUserEmailFromId(userId: string): Promise<string | null>
     }
 
     // Production: get from Firebase Auth
-    if (!auth) {
-      console.warn('Firebase Auth not available');
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('Firebase Admin not available');
       return null;
     }
 
-    const userRecord = await auth.getUser(userId);
+    const userRecord = await admin.auth().getUser(userId);
     return userRecord.email || null;
   } catch (error) {
     console.error('Error getting user email:', error);
