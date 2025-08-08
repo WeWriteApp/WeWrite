@@ -4,8 +4,6 @@
 
 WeWrite transforms knowledge sharing into a collaborative economy where writers earn direct USD payments from their contributions and readers support creators with transparent monthly funding.
 
-![WeWrite Platform](https://github.com/user-attachments/assets/ce72dc43-145b-43c0-b525-967a523902ca)
-
 ## 🌐 Connect With Us
 
 - **🔗 [Bento](https://bento.me/wewrite)** - All our links in one place
