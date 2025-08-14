@@ -6,7 +6,7 @@ import { useTheme } from '../../providers/ThemeProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '../ui/dialog';
 import { Wallet, AlertTriangle, CheckCircle, Loader2, Settings, Bell, Lock, Shield, Plus } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
@@ -360,84 +360,126 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
 
       {!loading && !error && (
         <>
-          {/* Clean status display */}
-          {bankStatus?.isConnected ? (
-            <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <div className="font-medium text-green-900">
-                    {bankStatus.bankName || 'Bank'} ****{bankStatus.last4}
+          {/* Bank Account Status */}
+          <div className="relative">
+            {/* Security Details Modal - Always available */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-0 right-0 h-8 w-8 p-0 text-muted-foreground hover:text-foreground z-10"
+                >
+                  <Lock className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Security Details
+                  </DialogTitle>
+                  <DialogDescription>
+                    All security checks passed for your bank account connection.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span>Authentication: User authenticated</span>
                   </div>
-                  <div className="text-sm text-green-700">
-                    {bankStatus.isVerified ? 'Verified' : 'Pending verification'}
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span>Secure Context: Secure HTTPS connection verified</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span>Stripe Configuration: Stripe configuration verified</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span>Content Security Policy: CSP headers recommended for enhanced security</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span>PWA Compatibility: PWA compatible</span>
                   </div>
                 </div>
-              </div>
+              </DialogContent>
+            </Dialog>
 
-              {/* Security Details Modal */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
-                    <Lock className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5" />
-                      Security Details
-                    </DialogTitle>
-                    <DialogDescription>
-                      All security checks passed for your bank account connection.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Authentication: User authenticated</span>
+            {bankStatus?.isConnected ? (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-3 pr-10">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <div className="font-medium text-green-900">
+                      {bankStatus.bankName || 'Bank'} ****{bankStatus.last4}
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Secure Context: Secure HTTPS connection verified</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Stripe Configuration: Stripe configuration verified</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Content Security Policy: CSP headers recommended for enhanced security</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>PWA Compatibility: PWA compatible</span>
+                    <div className="text-sm text-green-700">
+                      {bankStatus.isVerified ? 'Verified' : 'Pending verification'}
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <AlertTriangle className="h-8 w-8 text-yellow-600 mx-auto mb-3" />
-              <p className="text-muted-foreground mb-4">No bank account connected</p>
-              <Button
-                onClick={() => {
-                  const container = containerRef.current;
-                  if (container) {
-                    container.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Bank Account
-              </Button>
-            </div>
-          )}
+                </div>
+                <div className="mt-3 flex justify-center">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Replace Bank Account
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Replace Bank Account</DialogTitle>
+                        <DialogDescription>
+                          This will remove your current bank account and allow you to add a new one.
+                          Any pending payouts will be cancelled.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex justify-end gap-2">
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                          onClick={() => {
+                            // TODO: Implement bank account removal
+                            const container = containerRef.current;
+                            if (container) {
+                              container.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
+                          variant="destructive"
+                        >
+                          Remove & Add New
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 border rounded-lg">
+                <AlertTriangle className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No bank account connected</h3>
+                <p className="text-muted-foreground mb-6">Connect your bank account to receive payouts</p>
+                <Button
+                  onClick={() => {
+                    const container = containerRef.current;
+                    if (container) {
+                      container.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="mx-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Bank Account
+                </Button>
+              </div>
+            )}
+          </div>
 
           {/* Stripe Connect Component */}
-          <div ref={containerRef} className="min-h-[300px] rounded-lg border" />
+          <div ref={containerRef} className="min-h-[300px] rounded-lg border mt-4" />
         </>
       )}
       </div>
