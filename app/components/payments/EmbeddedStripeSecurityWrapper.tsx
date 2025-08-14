@@ -210,21 +210,8 @@ export const EmbeddedStripeSecurityWrapper: React.FC<EmbeddedStripeSecurityWrapp
   }
 
   return (
-    <div className="space-y-4">
-      {/* Security Status Indicator */}
-      <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border-theme-strong">
-        <CheckCircle className="h-4 w-4 text-green-600" />
-        <div className="text-sm">
-          <span className="font-medium text-green-800 dark:text-green-200">Secure Connection Verified</span>
-          <span className="text-green-600 dark:text-green-400 ml-2">
-            All security checks passed ({securityChecks.filter(c => c.status === 'passed').length}/{securityChecks.length})
-          </span>
-        </div>
-      </div>
-
+    <div>
       {/* Security details are now handled by the parent component in a modal */}
-
-      {/* Render children if security checks pass */}
       {children}
     </div>
   );

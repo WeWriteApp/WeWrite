@@ -221,41 +221,28 @@ export function PayoutsManager() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Bank Account Section - Mobile-optimized container */}
-      <Card className="wewrite-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
-            Bank Account Management
-          </CardTitle>
-          <CardDescription>
-            Manage your bank accounts for receiving payouts. Set one account as primary for automatic payouts.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmbeddedBankAccountManager
-            onUpdate={loadBankAccountStatus}
-            showTitle={false}
-          />
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {/* Single clean bank account section */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Bank Account</h2>
+        </div>
+        <EmbeddedBankAccountManager
+          onUpdate={loadBankAccountStatus}
+          showTitle={false}
+        />
+      </div>
 
 
       {/* Automatic Payout Settings */}
       {bankAccountStatus.isConnected && bankAccountStatus.isVerified && (
-        <Card className="wewrite-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Automatic Payouts
-            </CardTitle>
-            <CardDescription>
-              Configure automatic payout settings for your earnings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Settings className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Automatic Payouts</h2>
+          </div>
+          <div className="space-y-4 p-4 border rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="auto-payout" className="text-base font-medium">
@@ -336,26 +323,18 @@ export function PayoutsManager() {
                 </Alert>
               </div>
             )}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Payout History Section */}
-      <Card className="wewrite-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Payout History
-          </CardTitle>
-          <CardDescription>
-            View and download your complete payout history including status, amounts, and bank account details.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PayoutsHistoryTable showTitle={false} />
-        </CardContent>
-      </Card>
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Payout History</h2>
+        </div>
+        <PayoutsHistoryTable showTitle={false} />
+      </div>
 
     </div>
   );
