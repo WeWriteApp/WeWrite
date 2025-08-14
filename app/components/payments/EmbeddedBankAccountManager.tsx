@@ -47,6 +47,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
   const [error, setError] = useState<string | null>(null);
   const [stripeConnect, setStripeConnect] = useState<any>(null);
   const [bankStatus, setBankStatus] = useState<BankAccountStatus | null>(null);
+  const [showStripeComponent, setShowStripeComponent] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -200,6 +201,9 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
   useEffect(() => {
     if (!stripeConnect || !containerRef.current || !user?.uid) return;
 
+    // Only mount if we should show the component (either triggered or bank account exists)
+    if (!showStripeComponent && !bankStatus?.isConnected) return;
+
     const container = containerRef.current;
 
     // Clear any existing content
@@ -322,7 +326,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         if (cleanupFn) cleanupFn();
       });
     };
-  }, [stripeConnect, user?.uid, resolvedTheme]);
+  }, [stripeConnect, user?.uid, resolvedTheme, showStripeComponent, bankStatus?.isConnected]);
 
 
 
@@ -442,11 +446,14 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
                         </DialogClose>
                         <Button
                           onClick={() => {
-                            // TODO: Implement bank account removal
-                            const container = containerRef.current;
-                            if (container) {
-                              container.scrollIntoView({ behavior: 'smooth' });
-                            }
+                            // TODO: Implement bank account removal API call
+                            setShowStripeComponent(true);
+                            setTimeout(() => {
+                              const container = containerRef.current;
+                              if (container) {
+                                container.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }, 100);
                           }}
                           variant="destructive"
                         >
@@ -464,10 +471,14 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
                 <p className="text-muted-foreground mb-6">Connect your bank account to receive payouts</p>
                 <Button
                   onClick={() => {
-                    const container = containerRef.current;
-                    if (container) {
-                      container.scrollIntoView({ behavior: 'smooth' });
-                    }
+                    setShowStripeComponent(true);
+                    // Scroll to the component after showing it
+                    setTimeout(() => {
+                      const container = containerRef.current;
+                      if (container) {
+                        container.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }, 100);
                   }}
                   className="mx-auto"
                 >
@@ -478,8 +489,10 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
             )}
           </div>
 
-          {/* Stripe Connect Component */}
-          <div ref={containerRef} className="min-h-[300px] rounded-lg border mt-4" />
+          {/* Stripe Connect Component - Only show when triggered */}
+          {(showStripeComponent || bankStatus?.isConnected) && (
+            <div ref={containerRef} className="min-h-[300px] rounded-lg border mt-4" />
+          )}
         </>
       )}
       </div>
