@@ -16,7 +16,7 @@ import { TokenEarningsService } from '../../services/tokenEarningsService';
 import { TokenPayout } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { EmbeddedBankAccountSetup } from './EmbeddedBankAccountSetup';
-import { BankAccountManager } from './BankAccountManager';
+import { EmbeddedBankAccountManager } from './EmbeddedBankAccountManager';
 import { PayoutsHistoryTable } from './PayoutsHistoryTable';
 
 interface PayoutData {
@@ -234,7 +234,7 @@ export function PayoutsManager() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <BankAccountManager
+          <EmbeddedBankAccountManager
             onUpdate={loadBankAccountStatus}
             showTitle={false}
           />

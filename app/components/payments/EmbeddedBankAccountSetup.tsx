@@ -83,7 +83,22 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
       })
       .catch((err) => {
         console.error('Error loading Stripe Connect:', err);
-        setError('Failed to load payment components. Please refresh the page.');
+
+        // Provide detailed error messages
+        let errorMessage = 'Failed to load bank account setup system.';
+        let suggestions = [];
+
+        if (err.message?.includes('publishable key')) {
+          errorMessage = 'Payment system configuration error.';
+          suggestions = ['Contact support - this is a system issue that needs to be resolved'];
+        } else if (err.message?.includes('script') || err.message?.includes('load')) {
+          errorMessage = 'Unable to load secure payment components.';
+          suggestions = ['Check your internet connection', 'Disable ad blockers', 'Try refreshing the page'];
+        } else {
+          suggestions = ['Refresh the page', 'Check your internet connection', 'Contact support if the problem continues'];
+        }
+
+        setError(`${errorMessage} ${suggestions.length > 0 ? 'Try: ' + suggestions.join(', ') + '.' : ''}`);
       });
   }, []);
 
@@ -96,7 +111,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
       setError(null);
 
       try {
-        const response = await fetch('/api/stripe/account-user', {
+        const response = await fetch('/api/stripe/account-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -120,8 +135,18 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create account user');
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || response.statusText;
+
+          if (response.status === 401) {
+            throw new Error('Your session has expired. Please log out and log back in to continue setting up your bank account.');
+          } else if (response.status === 403) {
+            throw new Error('Access denied. Please ensure your account is verified and has permission to add bank accounts.');
+          } else if (response.status === 503) {
+            throw new Error('Bank account setup service is temporarily unavailable. Please try again in a few minutes.');
+          } else {
+            throw new Error(`Unable to initialize bank account setup: ${errorMessage}. Please try again or contact support if the issue persists.`);
+          }
         }
 
         const sessionData = await response.json();

@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * @deprecated This component is deprecated. Use EmbeddedBankAccountManager instead.
+ *
+ * This component relies on Stripe Financial Connections which requires additional
+ * configuration and has been replaced with embedded Stripe Connect components
+ * that provide a better user experience.
+ *
+ * Migration: Replace BankAccountManager with EmbeddedBankAccountManager
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

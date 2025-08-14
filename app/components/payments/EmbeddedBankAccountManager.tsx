@@ -102,7 +102,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
           publishableKey,
           fetchClientSecret: async () => {
             console.log('Fetching client secret for account user...');
-            const response = await fetch('/api/stripe/account-user', {
+            const response = await fetch('/api/stripe/account-session', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -135,7 +135,25 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
       })
       .catch((err) => {
         console.error('Error loading Stripe Connect:', err);
-        setError('Failed to load payment components. Please refresh the page.');
+
+        // Provide detailed error messages based on the error type
+        let errorMessage = 'Failed to load bank account management system.';
+        let suggestions = [];
+
+        if (err.message?.includes('publishable key')) {
+          errorMessage = 'Stripe configuration error - payment system not properly configured.';
+          suggestions = ['Contact support for assistance', 'This is a system configuration issue'];
+        } else if (err.message?.includes('script')) {
+          errorMessage = 'Unable to load Stripe payment components.';
+          suggestions = ['Check your internet connection', 'Try refreshing the page', 'Disable ad blockers if enabled'];
+        } else if (err.message?.includes('account session')) {
+          errorMessage = 'Unable to create secure payment session.';
+          suggestions = ['Try refreshing the page', 'Log out and log back in', 'Contact support if the issue persists'];
+        } else {
+          suggestions = ['Try refreshing the page', 'Check your internet connection', 'Contact support if the problem continues'];
+        }
+
+        setError(`${errorMessage} ${suggestions.length > 0 ? 'Try: ' + suggestions.join(', ') + '.' : ''}`);
       });
   }, []);
 
@@ -192,7 +210,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
     const mountComponent = async () => {
       try {
         // Create account user
-        const response = await fetch('/api/stripe/account-user', {
+        const response = await fetch('/api/stripe/account-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -210,7 +228,18 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to create account session: ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || response.statusText;
+
+          if (response.status === 401) {
+            throw new Error('Authentication expired. Please log out and log back in.');
+          } else if (response.status === 403) {
+            throw new Error('Access denied. Please ensure your account has the necessary permissions.');
+          } else if (response.status === 503) {
+            throw new Error('Bank account service is temporarily unavailable. Please try again in a few minutes.');
+          } else {
+            throw new Error(`Unable to initialize bank account setup: ${errorMessage}. Please try again or contact support.`);
+          }
         }
 
         const sessionData = await response.json();
@@ -257,7 +286,30 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         };
       } catch (err) {
         console.error('Error mounting component:', err);
-        setError('Failed to load account management interface.');
+
+        // Provide specific error messages based on the error
+        let errorMessage = 'Failed to load bank account management interface.';
+        let suggestions = [];
+
+        if (err instanceof Error) {
+          if (err.message.includes('Authentication expired')) {
+            errorMessage = 'Your session has expired.';
+            suggestions = ['Log out and log back in', 'Refresh the page'];
+          } else if (err.message.includes('Access denied')) {
+            errorMessage = 'Access denied to bank account management.';
+            suggestions = ['Ensure your account is verified', 'Contact support for assistance'];
+          } else if (err.message.includes('temporarily unavailable')) {
+            errorMessage = 'Bank account service is temporarily unavailable.';
+            suggestions = ['Try again in a few minutes', 'Check our status page for updates'];
+          } else if (err.message.includes('initialize')) {
+            errorMessage = 'Unable to initialize secure bank account interface.';
+            suggestions = ['Refresh the page', 'Clear browser cache', 'Try a different browser'];
+          } else {
+            suggestions = ['Refresh the page', 'Try again in a few minutes', 'Contact support if the issue persists'];
+          }
+        }
+
+        setError(`${errorMessage} ${suggestions.length > 0 ? 'Try: ' + suggestions.join(', ') + '.' : ''}`);
         setLoading(false);
       }
     };
