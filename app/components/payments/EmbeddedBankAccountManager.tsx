@@ -219,8 +219,8 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         console.log('StripeConnect instance type:', typeof stripeConnect);
 
         // Create the account management component with appearance settings
-        console.log('Creating account-management component...');
-        const accountManagement = stripeConnect.create('account-management', {
+        console.log('Creating account_management component...');
+        const accountManagement = stripeConnect.create('account_management', {
           appearance: {
             theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
             variables: {
