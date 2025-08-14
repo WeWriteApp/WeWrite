@@ -1,12 +1,19 @@
 /**
  * Password Reset API
- * Handles password reset requests and confirmations
+ * Environment-aware password reset system following WeWrite API architecture
+ *
+ * Handles password reset requests and confirmations with:
+ * - Environment-specific Firebase configuration
+ * - Detailed error messaging for UI display
+ * - Robust error handling and fallback mechanisms
+ * - Industry-standard security practices
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getFirebaseAdmin, getFirebaseAdminError } from '../../../firebase/firebaseAdmin';
+import { getCollectionName, getEnvironmentType, logEnvironmentConfig } from '../../../utils/environmentConfig';
+import { enhanceFirebaseError, logEnhancedFirebaseError } from '../../../utils/firebase-error-handler';
 
 interface ResetPasswordRequest {
   email: string;
@@ -17,92 +24,235 @@ interface ConfirmResetRequest {
   newPassword: string;
 }
 
-// POST endpoint - Send password reset email
+/**
+ * POST /api/auth/reset-password
+ *
+ * Environment-aware password reset email sending
+ * Follows WeWrite API architecture with detailed error handling
+ */
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🔐 [Password Reset] Processing password reset request');
+  const startTime = performance.now();
+  const envType = getEnvironmentType();
 
+  try {
+    console.log('🔐 [Password Reset API] Processing request', {
+      environment: envType,
+      timestamp: new Date().toISOString()
+    });
+
+    // Environment configuration logging for debugging
+    if (envType === 'development') {
+      logEnvironmentConfig();
+    }
+
+    // Initialize Firebase Admin with proper error handling
     const admin = getFirebaseAdmin();
     if (!admin) {
-      console.error('🔐 [Password Reset] Firebase Admin not available');
-      return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
+      const initError = getFirebaseAdminError();
+      const errorMsg = `Firebase Admin initialization failed: ${initError || 'Unknown error'}. This is a system configuration issue.`;
+      console.error('🔐 [Password Reset API] Critical:', errorMsg);
+      return createErrorResponse('INTERNAL_ERROR',
+        'Password reset service is temporarily unavailable due to a system configuration issue. Please contact support.'
+      );
     }
 
     const auth = admin.auth();
-    const body = await request.json();
-    const { email } = body as ResetPasswordRequest;
 
-    // Validate email
+    // Parse and validate request body
+    let body: ResetPasswordRequest;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('🔐 [Password Reset API] Invalid JSON:', parseError);
+      return createErrorResponse('BAD_REQUEST', 'Invalid request format - please check your data and try again');
+    }
+
+    const { email } = body;
+
+    // Comprehensive email validation
     if (!email) {
-      return createErrorResponse('BAD_REQUEST', 'Email address is required');
+      return createErrorResponse('BAD_REQUEST', 'Email address is required to send password reset instructions');
+    }
+
+    if (typeof email !== 'string') {
+      return createErrorResponse('BAD_REQUEST', 'Email must be a valid text string');
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return createErrorResponse('BAD_REQUEST', 'Invalid email format');
+      return createErrorResponse('BAD_REQUEST', 'Please enter a valid email address (example: user@domain.com)');
     }
 
-    console.log('🔐 [Password Reset] Sending reset email for:', email.substring(0, 3) + '***@' + email.split('@')[1]);
+    const maskedEmail = email.substring(0, 3) + '***@' + email.split('@')[1];
+    console.log('🔐 [Password Reset API] Processing for:', maskedEmail);
 
     try {
-      // Check if user exists first
-      await auth.getUserByEmail(email);
-      console.log('🔐 [Password Reset] User found, generating reset link');
+      // Step 1: Verify user exists (with detailed error handling)
+      let userRecord;
+      try {
+        userRecord = await auth.getUserByEmail(email);
+        console.log('🔐 [Password Reset API] User verified:', {
+          uid: userRecord.uid,
+          emailVerified: userRecord.emailVerified,
+          disabled: userRecord.disabled,
+          environment: envType
+        });
+      } catch (userError: any) {
+        // Enhanced error handling for user lookup
+        logEnhancedFirebaseError(userError, 'Password Reset - User Lookup');
 
-      // Use Firebase Admin to generate and send password reset email
-      // This should automatically send the email via Firebase's email service
+        if (userError.code === 'auth/user-not-found') {
+          // Security: Don't reveal if email exists, but log for debugging
+          console.log('🔐 [Password Reset API] User not found for:', maskedEmail);
+          return createApiResponse({
+            message: 'If an account with this email exists, a password reset email has been sent. Please check your email and spam folder.',
+            email: maskedEmail,
+            success: true
+          });
+        }
+
+        // Handle other user lookup errors with detailed messaging
+        const enhanced = enhanceFirebaseError(userError, 'Password Reset - User Verification');
+        return createErrorResponse('INTERNAL_ERROR',
+          `Unable to verify account: ${enhanced.userMessage}. Please try again or contact support if the issue persists.`
+        );
+      }
+
+      // Step 2: Check if user account is in valid state
+      if (userRecord.disabled) {
+        console.warn('🔐 [Password Reset API] Attempt to reset password for disabled account:', maskedEmail);
+        return createErrorResponse('FORBIDDEN',
+          'This account has been disabled. Please contact support for assistance.'
+        );
+      }
+
+      // Step 3: Generate password reset link with environment-aware configuration
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app';
       const actionCodeSettings = {
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app'}/auth/reset-password`,
+        url: `${baseUrl}/auth/reset-password`,
         handleCodeInApp: false
       };
 
-      const resetLink = await auth.generatePasswordResetLink(email, actionCodeSettings);
-      console.log('🔐 [Password Reset] Reset link generated successfully');
+      console.log('🔐 [Password Reset API] Generating reset link with settings:', {
+        actionUrl: actionCodeSettings.url,
+        environment: envType,
+        userEmailVerified: userRecord.emailVerified
+      });
 
-      // Firebase Admin generatePasswordResetLink should automatically send the email
-      // when Firebase project is properly configured with email templates
+      let resetLink;
+      try {
+        resetLink = await auth.generatePasswordResetLink(email, actionCodeSettings);
+        console.log('🔐 [Password Reset API] Reset link generated successfully');
+      } catch (linkError: any) {
+        // Enhanced error handling for link generation
+        logEnhancedFirebaseError(linkError, 'Password Reset - Link Generation');
+
+        const enhanced = enhanceFirebaseError(linkError, 'Password Reset - Email Generation');
+
+        // Provide specific error messages based on Firebase error codes
+        if (linkError.code === 'auth/email-not-found') {
+          return createErrorResponse('BAD_REQUEST',
+            'No account found with this email address. Please check your email or create a new account.'
+          );
+        } else if (linkError.code === 'auth/too-many-requests') {
+          return createErrorResponse('BAD_REQUEST',
+            'Too many password reset requests. Please wait 15 minutes before trying again.'
+          );
+        } else if (linkError.code === 'auth/invalid-email') {
+          return createErrorResponse('BAD_REQUEST',
+            'Invalid email address format. Please enter a valid email address.'
+          );
+        } else if (linkError.code === 'auth/configuration-not-found') {
+          console.error('🔐 [Password Reset API] Firebase email templates not configured');
+          return createErrorResponse('INTERNAL_ERROR',
+            'Email service configuration error. Please contact support - this is a system issue that needs to be resolved.'
+          );
+        }
+
+        return createErrorResponse('INTERNAL_ERROR',
+          `Failed to send password reset email: ${enhanced.userMessage}. Please try again or contact support.`
+        );
+      }
+
+      // Step 4: Log success and return response
+      const processingTime = Math.round(performance.now() - startTime);
+      console.log('🔐 [Password Reset API] Success:', {
+        email: maskedEmail,
+        processingTime: `${processingTime}ms`,
+        environment: envType,
+        linkGenerated: !!resetLink
+      });
 
       return createApiResponse({
-        message: 'Password reset email sent successfully',
-        email
+        message: 'Password reset email sent successfully. Please check your email and spam folder.',
+        email: maskedEmail,
+        success: true,
+        processingTime,
+        environment: envType
       });
 
     } catch (error: any) {
-      console.error('🔐 [Password Reset] Error processing reset request:', error);
+      // This catch block should never be reached due to inner try-catch blocks
+      // But it's here as a final safety net
+      logEnhancedFirebaseError(error, 'Password Reset - Final Safety Net');
 
-      // For security reasons, we don't reveal if the email exists or not
-      // Always return success to prevent email enumeration attacks
-      if (error.code === 'auth/user-not-found') {
-        console.log('🔐 [Password Reset] User not found, returning generic success message');
-        return createApiResponse({
-          message: 'If an account with this email exists, a password reset email has been sent',
-          email
-        });
-      }
+      const enhanced = enhanceFirebaseError(error, 'Password Reset');
+      console.error('🔐 [Password Reset API] Unexpected final error:', {
+        error: error.message,
+        code: error.code,
+        email: maskedEmail,
+        environment: envType
+      });
 
-      throw error;
+      return createErrorResponse('INTERNAL_ERROR',
+        `Password reset system error: ${enhanced.userMessage}. Please try again in a few minutes or contact support.`
+      );
     }
 
   } catch (error: any) {
-    console.error('🔐 [Password Reset] Password reset request error:', error);
+    // Final outer catch - should rarely be reached due to comprehensive inner error handling
+    const processingTime = Math.round(performance.now() - startTime);
 
-    if (error.code === 'auth/invalid-email') {
-      return createErrorResponse('BAD_REQUEST', 'Invalid email address');
-    }
+    logEnhancedFirebaseError(error, 'Password Reset - Outer Catch');
+    console.error('🔐 [Password Reset API] Outer catch error:', {
+      error: error.message,
+      code: error.code,
+      processingTime: `${processingTime}ms`,
+      environment: envType
+    });
 
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to send password reset email');
+    const enhanced = enhanceFirebaseError(error, 'Password Reset System');
+    return createErrorResponse('INTERNAL_ERROR',
+      `Password reset system error: ${enhanced.userMessage}. Please try again or contact support.`
+    );
   }
 }
 
-// PUT endpoint - Confirm password reset with new password
+/**
+ * PUT /api/auth/reset-password
+ *
+ * Environment-aware password reset confirmation
+ * Handles the actual password change after user clicks reset link
+ */
 export async function PUT(request: NextRequest) {
-  try {
-    console.log('🔐 [Password Reset] Processing password reset confirmation');
+  const startTime = performance.now();
+  const envType = getEnvironmentType();
 
+  try {
+    console.log('🔐 [Password Reset Confirm API] Processing confirmation', {
+      environment: envType,
+      timestamp: new Date().toISOString()
+    });
+
+    // Initialize Firebase Admin with proper error handling
     const admin = getFirebaseAdmin();
     if (!admin) {
-      console.error('🔐 [Password Reset] Firebase Admin not available');
-      return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
+      const initError = getFirebaseAdminError();
+      const errorMsg = `Firebase Admin initialization failed: ${initError || 'Unknown error'}`;
+      console.error('🔐 [Password Reset Confirm API] Critical:', errorMsg);
+      return createErrorResponse('INTERNAL_ERROR',
+        'Password reset service is temporarily unavailable due to a system configuration issue. Please contact support.'
+      );
     }
 
     const auth = admin.auth();

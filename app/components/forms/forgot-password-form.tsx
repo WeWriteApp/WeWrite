@@ -65,9 +65,9 @@ export function ForgotPasswordForm({
     setError("");
 
     try {
-      console.log("🔐 [Forgot Password] Attempting password reset for:", email.substring(0, 3) + '***@' + email.split('@')[1]);
+      console.log("🔐 [Forgot Password Form] Attempting password reset for:", email.substring(0, 3) + '***@' + email.split('@')[1]);
 
-      // Try API endpoint first
+      // Use API-first approach - no Firebase client SDK fallback
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -76,37 +76,28 @@ export function ForgotPasswordForm({
         body: JSON.stringify({ email }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        console.warn("🔐 [Forgot Password] API endpoint failed, trying Firebase client SDK fallback");
-
-        // Fallback to Firebase client SDK if API fails
-        const { sendPasswordResetEmail } = await import('firebase/auth');
-        const { auth } = await import('../../firebase/auth');
-
-        await sendPasswordResetEmail(auth, email);
-        console.log("🔐 [Forgot Password] Firebase client SDK reset email sent successfully");
-        setSuccess(true);
-        return;
+        // API returned an error - use the detailed error message from the API
+        console.error("🔐 [Forgot Password Form] API error:", data);
+        throw new Error(data.error || 'Failed to send reset email');
       }
 
-      const data = await response.json();
-      console.log("🔐 [Forgot Password] API reset email sent successfully");
+      console.log("🔐 [Forgot Password Form] Reset email sent successfully:", data);
       setSuccess(true);
+
     } catch (error: any) {
-      console.error("🔐 [Forgot Password] Password reset error:", error);
+      console.error("🔐 [Forgot Password Form] Error:", error);
 
-      // Handle specific Firebase error codes
-      let errorMessage = "Failed to send reset email. Please try again.";
+      // Use the error message from the API if available, otherwise provide fallback
+      let errorMessage = error.message || "Failed to send reset email. Please try again.";
 
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = "No account found with this email address";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "Please enter a valid email address";
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = "Too many requests. Please try again later";
-      } else if (error.message) {
-        errorMessage = error.message;
+      // Handle network errors specifically
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = "Network error. Please check your internet connection and try again.";
+      } else if (error.message.includes('JSON')) {
+        errorMessage = "Server communication error. Please try again.";
       }
 
       setError(errorMessage);
