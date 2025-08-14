@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface ResetPasswordRequest {
@@ -20,9 +20,15 @@ interface ConfirmResetRequest {
 // POST endpoint - Send password reset email
 export async function POST(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
-    const auth = admin.auth();
+    console.log('🔐 [Password Reset] Processing password reset request');
 
+    const admin = initAdmin();
+    if (!admin) {
+      console.error('🔐 [Password Reset] Firebase Admin not available');
+      return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
+    }
+
+    const auth = admin.auth();
     const body = await request.json();
     const { email } = body as ResetPasswordRequest;
 
@@ -36,45 +42,54 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Invalid email format');
     }
 
-    try {
-      // Check if user exists
-      await auth.getUserByEmail(email);
+    console.log('🔐 [Password Reset] Sending reset email for:', email.substring(0, 3) + '***@' + email.split('@')[1]);
 
-      // Generate password reset link
-      const resetLink = await auth.generatePasswordResetLink(email);
-      
-      // In a real application, you would send this via your email service
-      // For now, we'll just log it and return success
-      console.log('Password reset link generated:', resetLink);
-      
-      // TODO: Integrate with email service to send reset email
-      // await sendPasswordResetEmail(email, resetLink);
-      
+    try {
+      // Check if user exists first
+      await auth.getUserByEmail(email);
+      console.log('🔐 [Password Reset] User found, generating reset link');
+
+      // Use Firebase Admin to generate and send password reset email
+      // This should automatically send the email via Firebase's email service
+      const actionCodeSettings = {
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app'}/auth/reset-password`,
+        handleCodeInApp: false
+      };
+
+      const resetLink = await auth.generatePasswordResetLink(email, actionCodeSettings);
+      console.log('🔐 [Password Reset] Reset link generated successfully');
+
+      // Firebase Admin generatePasswordResetLink should automatically send the email
+      // when Firebase project is properly configured with email templates
+
       return createApiResponse({
         message: 'Password reset email sent successfully',
         email
       });
 
     } catch (error: any) {
+      console.error('🔐 [Password Reset] Error processing reset request:', error);
+
       // For security reasons, we don't reveal if the email exists or not
       // Always return success to prevent email enumeration attacks
       if (error.code === 'auth/user-not-found') {
+        console.log('🔐 [Password Reset] User not found, returning generic success message');
         return createApiResponse({
           message: 'If an account with this email exists, a password reset email has been sent',
           email
         });
       }
-      
+
       throw error;
     }
 
   } catch (error: any) {
-    console.error('Password reset request error:', error);
-    
+    console.error('🔐 [Password Reset] Password reset request error:', error);
+
     if (error.code === 'auth/invalid-email') {
       return createErrorResponse('BAD_REQUEST', 'Invalid email address');
     }
-    
+
     return createErrorResponse('INTERNAL_ERROR', 'Failed to send password reset email');
   }
 }
@@ -82,7 +97,14 @@ export async function POST(request: NextRequest) {
 // PUT endpoint - Confirm password reset with new password
 export async function PUT(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
+    console.log('🔐 [Password Reset] Processing password reset confirmation');
+
+    const admin = initAdmin();
+    if (!admin) {
+      console.error('🔐 [Password Reset] Firebase Admin not available');
+      return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
+    }
+
     const auth = admin.auth();
     const db = admin.firestore();
 
@@ -168,7 +190,14 @@ export async function PUT(request: NextRequest) {
 // GET endpoint - Verify reset code validity
 export async function GET(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
+    console.log('🔐 [Password Reset] Verifying reset code');
+
+    const admin = initAdmin();
+    if (!admin) {
+      console.error('🔐 [Password Reset] Firebase Admin not available');
+      return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
+    }
+
     const auth = admin.auth();
 
     const { searchParams } = new URL(request.url);

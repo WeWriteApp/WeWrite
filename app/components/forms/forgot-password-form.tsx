@@ -65,7 +65,9 @@ export function ForgotPasswordForm({
     setError("");
 
     try {
-      // Use API endpoint for password reset
+      console.log("🔐 [Forgot Password] Attempting password reset for:", email.substring(0, 3) + '***@' + email.split('@')[1]);
+
+      // Try API endpoint first
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -76,17 +78,26 @@ export function ForgotPasswordForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to send reset email: ${response.status}`);
+        console.warn("🔐 [Forgot Password] API endpoint failed, trying Firebase client SDK fallback");
+
+        // Fallback to Firebase client SDK if API fails
+        const { sendPasswordResetEmail } = await import('firebase/auth');
+        const { auth } = await import('../../firebase/auth');
+
+        await sendPasswordResetEmail(auth, email);
+        console.log("🔐 [Forgot Password] Firebase client SDK reset email sent successfully");
+        setSuccess(true);
+        return;
       }
 
       const data = await response.json();
-      console.log("Password reset email sent successfully to:", email);
+      console.log("🔐 [Forgot Password] API reset email sent successfully");
       setSuccess(true);
     } catch (error: any) {
-      console.error("Password reset error:", error);
+      console.error("🔐 [Forgot Password] Password reset error:", error);
 
       // Handle specific Firebase error codes
-      let errorMessage = "Failed to send reset email";
+      let errorMessage = "Failed to send reset email. Please try again.";
 
       if (error.code === 'auth/user-not-found') {
         errorMessage = "No account found with this email address";
