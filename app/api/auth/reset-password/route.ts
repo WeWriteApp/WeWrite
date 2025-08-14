@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface ResetPasswordRequest {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔐 [Password Reset] Processing password reset request');
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       console.error('🔐 [Password Reset] Firebase Admin not available');
       return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest) {
   try {
     console.log('🔐 [Password Reset] Processing password reset confirmation');
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       console.error('🔐 [Password Reset] Firebase Admin not available');
       return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔐 [Password Reset] Verifying reset code');
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       console.error('🔐 [Password Reset] Firebase Admin not available');
       return createErrorResponse('INTERNAL_ERROR', 'Service temporarily unavailable');
