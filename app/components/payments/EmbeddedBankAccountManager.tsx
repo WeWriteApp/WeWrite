@@ -214,50 +214,13 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
 
     const mountComponent = async () => {
       try {
-        // Create account user
-        const response = await fetch('/api/stripe/account-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            components: {
-              account_management: {
-                enabled: true,
-                features: {
-                  external_account_collection: true
-                }
-              }
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.error || response.statusText;
-
-          if (response.status === 401) {
-            throw new Error('Authentication expired. Please log out and log back in.');
-          } else if (response.status === 403) {
-            throw new Error('Access denied. Please ensure your account has the necessary permissions.');
-          } else if (response.status === 503) {
-            throw new Error('Bank account service is temporarily unavailable. Please try again in a few minutes.');
-          } else {
-            throw new Error(`Unable to initialize bank account setup: ${errorMessage}. Please try again or contact support.`);
-          }
-        }
-
-        const sessionData = await response.json();
-        console.log('Account user created successfully');
-
         // Debug what methods are available on stripeConnect
         console.log('StripeConnect instance methods:', Object.getOwnPropertyNames(stripeConnect));
         console.log('StripeConnect instance type:', typeof stripeConnect);
 
-        // Initialize Stripe Connect with the account user and theme
-        console.log('Calling stripeConnect.initialize...');
-        await stripeConnect.initialize({
-          clientSecret: sessionData.client_secret,
+        // Create the account management component with appearance settings
+        console.log('Creating account-management component...');
+        const accountManagement = stripeConnect.create('account-management', {
           appearance: {
             theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
             variables: {
@@ -270,11 +233,6 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
             }
           }
         });
-        console.log('StripeConnect initialized successfully');
-
-        // Create and mount the account management component
-        console.log('Creating account-management component...');
-        const accountManagement = stripeConnect.create('account-management');
         console.log('Account management component created:', accountManagement);
 
         console.log('Mounting component to container...');
