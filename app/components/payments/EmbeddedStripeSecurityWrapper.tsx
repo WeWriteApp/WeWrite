@@ -222,28 +222,7 @@ export const EmbeddedStripeSecurityWrapper: React.FC<EmbeddedStripeSecurityWrapp
         </div>
       </div>
 
-      {/* Security Details (collapsible) */}
-      <details className="text-sm">
-        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-          View security details
-        </summary>
-        <div className="mt-2 space-y-1 pl-4">
-          {securityChecks.map((check, index) => (
-            <div key={index} className="flex items-center gap-2">
-              {check.status === 'passed' ? (
-                <CheckCircle className="h-3 w-3 text-green-600" />
-              ) : check.status === 'failed' ? (
-                <AlertTriangle className="h-3 w-3 text-red-600" />
-              ) : (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              <span className="text-xs">
-                {check.name}: {check.message}
-              </span>
-            </div>
-          ))}
-        </div>
-      </details>
+      {/* Security details are now handled by the parent component in a modal */}
 
       {/* Render children if security checks pass */}
       {children}
