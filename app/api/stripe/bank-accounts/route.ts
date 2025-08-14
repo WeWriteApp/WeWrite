@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { initAdmin } from '../../../firebase/admin';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
-
-// Initialize Firebase Admin lazily
-let admin;
-
-function initializeFirebase() {
-  if (admin) return { admin }; // Already initialized
-
-  try {
-    admin = getFirebaseAdmin();
-    if (!admin) {
-      console.warn('Firebase Admin initialization skipped during build time');
-      return { admin: null };
-    }
-    console.log('Firebase Admin initialized successfully in stripe/bank-accounts');
-  } catch (error) {
-    console.error('Error initializing Firebase Admin in stripe/bank-accounts:', error);
-    return { admin: null };
-  }
-
-  return { admin };
-}
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -36,9 +15,9 @@ export async function GET(request: NextRequest) {
   console.log('🔍 [BANK ACCOUNTS API] Starting to retrieve bank accounts...');
 
   try {
-    const { admin } = initializeFirebase();
+    const admin = initAdmin();
     if (!admin) {
-      console.warn('Firebase Admin not available for stripe/bank-accounts');
+      console.error('Firebase Admin initialization returned null');
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 

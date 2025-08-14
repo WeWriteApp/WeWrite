@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { initAdmin } from '../../../firebase/admin';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
-
-// Initialize Firebase Admin lazily
-let admin;
-
-function initializeFirebase() {
-  if (admin) return { admin }; // Already initialized
-
-  try {
-    admin = getFirebaseAdmin();
-    if (!admin) {
-      console.warn('Firebase Admin initialization skipped during build time');
-      return { admin: null };
-    }
-    console.log('Firebase Admin initialized successfully in stripe/account-session');
-  } catch (error) {
-    console.error('Error initializing Firebase Admin in stripe/account-session:', error);
-    return { admin: null };
-  }
-
-  return { admin };
-}
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -33,9 +12,9 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
 
 export async function POST(request: NextRequest) {
   try {
-    const { admin } = initializeFirebase();
+    const admin = initAdmin();
     if (!admin) {
-      console.warn('Firebase Admin not available for stripe/account-session');
+      console.error('Firebase Admin initialization returned null');
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
