@@ -93,14 +93,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Create Stripe Connect Express account
+      // Note: Express accounts don't use controller parameters - they're mutually exclusive
       const account = await stripe.accounts.create({
         type: 'express',
         email: userEmail,
-        controller: {
-          stripe_dashboard: {
-            type: 'none'
-          }
-        },
         metadata: {
           firebaseUID: userId,
           username: username
