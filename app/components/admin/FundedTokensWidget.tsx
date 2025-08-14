@@ -13,12 +13,13 @@ interface TokenWidgetProps {
   className?: string;
 }
 
-export function FundedTokensWidget({ 
-  dateRange, 
-  globalFilters, 
-  className = '' 
+export function FundedTokensWidget({
+  dateRange,
+  globalFilters,
+  className = ''
 }: TokenWidgetProps) {
-  const { data, loading, error } = useFundedTokens(dateRange);
+  const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
+  const { data, loading, error } = useFundedTokens(dateRange, isCumulative);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -136,12 +137,13 @@ export function FundedTokensWidget({
   );
 }
 
-export function SubscriptionRevenueWidget({ 
-  dateRange, 
-  globalFilters, 
-  className = '' 
+export function SubscriptionRevenueWidget({
+  dateRange,
+  globalFilters,
+  className = ''
 }: TokenWidgetProps) {
-  const { data, loading, error } = useSubscriptionRevenue(dateRange);
+  const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
+  const { data, loading, error } = useSubscriptionRevenue(dateRange, isCumulative);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -227,12 +229,13 @@ export function SubscriptionRevenueWidget({
   );
 }
 
-export function WriterPayoutsWidget({ 
-  dateRange, 
-  globalFilters, 
-  className = '' 
+export function WriterPayoutsWidget({
+  dateRange,
+  globalFilters,
+  className = ''
 }: TokenWidgetProps) {
-  const { data, loading, error } = useWriterPayouts(dateRange);
+  const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
+  const { data, loading, error } = useWriterPayouts(dateRange, isCumulative);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

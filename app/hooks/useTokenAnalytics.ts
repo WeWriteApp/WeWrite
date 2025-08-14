@@ -46,7 +46,7 @@ interface UseTokenAnalyticsResult {
   refetch: () => void;
 }
 
-export function useTokenAnalytics(dateRange: DateRange): UseTokenAnalyticsResult {
+export function useTokenAnalytics(dateRange: DateRange, cumulative: boolean = false): UseTokenAnalyticsResult {
   const [data, setData] = useState<TokenAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +69,8 @@ export function useTokenAnalytics(dateRange: DateRange): UseTokenAnalyticsResult
 
       const params = new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
-        endDate: debouncedDateRange.endDate.toISOString()
+        endDate: debouncedDateRange.endDate.toISOString(),
+        cumulative: cumulative.toString()
       });
 
       const response = await fetch(`/api/admin/token-analytics?${params}`, {
@@ -99,7 +100,7 @@ export function useTokenAnalytics(dateRange: DateRange): UseTokenAnalyticsResult
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, cumulative]);
 
   useEffect(() => {
     fetchData();
@@ -114,9 +115,9 @@ export function useTokenAnalytics(dateRange: DateRange): UseTokenAnalyticsResult
 }
 
 // Individual hooks for specific metrics
-export function useUnfundedLoggedOutTokens(dateRange: DateRange) {
-  const { data, loading, error, refetch } = useTokenAnalytics(dateRange);
-  
+export function useUnfundedLoggedOutTokens(dateRange: DateRange, cumulative: boolean = false) {
+  const { data, loading, error, refetch } = useTokenAnalytics(dateRange, cumulative);
+
   return {
     data: data?.unfundedLoggedOut || { totalTokens: 0, totalUsdValue: 0, allocations: 0 },
     loading,
@@ -125,9 +126,9 @@ export function useUnfundedLoggedOutTokens(dateRange: DateRange) {
   };
 }
 
-export function useUnfundedLoggedInTokens(dateRange: DateRange) {
-  const { data, loading, error, refetch } = useTokenAnalytics(dateRange);
-  
+export function useUnfundedLoggedInTokens(dateRange: DateRange, cumulative: boolean = false) {
+  const { data, loading, error, refetch } = useTokenAnalytics(dateRange, cumulative);
+
   return {
     data: data?.unfundedLoggedIn || { totalTokens: 0, totalUsdValue: 0, allocations: 0 },
     loading,
@@ -136,9 +137,9 @@ export function useUnfundedLoggedInTokens(dateRange: DateRange) {
   };
 }
 
-export function useFundedTokens(dateRange: DateRange) {
-  const { data, loading, error, refetch } = useTokenAnalytics(dateRange);
-  
+export function useFundedTokens(dateRange: DateRange, cumulative: boolean = false) {
+  const { data, loading, error, refetch } = useTokenAnalytics(dateRange, cumulative);
+
   return {
     data: data?.funded || { totalTokens: 0, totalUsdValue: 0, allocations: 0 },
     loading,
@@ -147,9 +148,9 @@ export function useFundedTokens(dateRange: DateRange) {
   };
 }
 
-export function useSubscriptionRevenue(dateRange: DateRange) {
-  const { data, loading, error, refetch } = useTokenAnalytics(dateRange);
-  
+export function useSubscriptionRevenue(dateRange: DateRange, cumulative: boolean = false) {
+  const { data, loading, error, refetch } = useTokenAnalytics(dateRange, cumulative);
+
   return {
     data: data?.totalSubscriptionRevenue || 0,
     loading,
@@ -158,9 +159,9 @@ export function useSubscriptionRevenue(dateRange: DateRange) {
   };
 }
 
-export function useWriterPayouts(dateRange: DateRange) {
-  const { data, loading, error, refetch } = useTokenAnalytics(dateRange);
-  
+export function useWriterPayouts(dateRange: DateRange, cumulative: boolean = false) {
+  const { data, loading, error, refetch } = useTokenAnalytics(dateRange, cumulative);
+
   return {
     data: data?.totalWriterPayouts || 0,
     loading,
@@ -169,9 +170,9 @@ export function useWriterPayouts(dateRange: DateRange) {
   };
 }
 
-export function usePlatformFeeRevenueFromTokens(dateRange: DateRange) {
-  const { data, loading, error, refetch } = useTokenAnalytics(dateRange);
-  
+export function usePlatformFeeRevenueFromTokens(dateRange: DateRange, cumulative: boolean = false) {
+  const { data, loading, error, refetch } = useTokenAnalytics(dateRange, cumulative);
+
   return {
     data: data?.platformFeeRevenue || 0,
     loading,

@@ -58,9 +58,10 @@ interface PayoutRecord {
 
 interface PayoutsHistoryTableProps {
   showTitle?: boolean;
+  onRefresh?: () => void;
 }
 
-export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTableProps) {
+export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHistoryTableProps) {
   const { user } = useAuth();
   const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -298,18 +299,38 @@ export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTablePro
           </div>
         </div>
 
-        <Button 
-          onClick={downloadCsv} 
-          disabled={downloadingCsv || filteredPayouts.length === 0}
-          variant="outline"
-        >
-          {downloadingCsv ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" />
-          )}
-          Download CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              loadPayoutHistory();
+              onRefresh?.();
+            }}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Calendar className="h-4 w-4 mr-2" />
+            )}
+            Refresh
+          </Button>
+
+          <Button
+            onClick={downloadCsv}
+            disabled={downloadingCsv || filteredPayouts.length === 0}
+            variant="outline"
+            size="sm"
+          >
+            {downloadingCsv ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Download CSV
+          </Button>
+        </div>
       </div>
 
       {/* Payouts Table/Cards */}

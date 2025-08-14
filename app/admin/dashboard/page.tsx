@@ -39,6 +39,10 @@ import {
   SubscriptionRevenueWidget as TotalSubscriptionRevenueWidget,
   WriterPayoutsWidget
 } from "../../components/admin/FundedTokensWidget";
+import {
+  WriterEarningsWidget,
+  WriterPayoutsWidget as NewWriterPayoutsWidget
+} from "../../components/admin/WriterEarningsPayoutsWidget";
 import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
 
 // 🚨 CRITICAL: Database Reads Crisis Monitoring
@@ -135,6 +139,10 @@ const initialWidgets = [
   { id: 'total-subscription-revenue', component: TotalSubscriptionRevenueWidget },
   { id: 'total-writer-payouts', component: WriterPayoutsWidget },
   { id: 'platform-fee-revenue', component: PlatformFeeRevenueWidget },
+
+  // New Writer Analytics Widgets
+  { id: 'writer-earnings', component: WriterEarningsWidget },
+  { id: 'writer-payouts-new', component: NewWriterPayoutsWidget },
 ];
 
 export default function AdminDashboardPage() {

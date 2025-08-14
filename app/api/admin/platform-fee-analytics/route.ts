@@ -14,16 +14,17 @@ export async function GET(request: NextRequest) {
     const startDateStr = searchParams.get('startDate');
     const endDateStr = searchParams.get('endDate');
     const granularityStr = searchParams.get('granularity');
+    const cumulative = searchParams.get('cumulative') === 'true';
 
-    if (!startDateStr || !endDateStr) {
+    if (!cumulative && (!startDateStr || !endDateStr)) {
       return NextResponse.json(
-        { error: 'Missing required parameters: startDate, endDate' },
+        { error: 'Missing required parameters: startDate, endDate for period analysis' },
         { status: 400 }
       );
     }
 
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
+    const startDate = cumulative ? new Date('2020-01-01') : new Date(startDateStr!);
+    const endDate = cumulative ? new Date() : new Date(endDateStr!);
     const granularity = granularityStr ? parseInt(granularityStr) : undefined;
 
     // Validate dates

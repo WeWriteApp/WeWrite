@@ -15,8 +15,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
 import { TokenPayout } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { EmbeddedBankAccountSetup } from './EmbeddedBankAccountSetup';
-import { EmbeddedBankAccountManager } from './EmbeddedBankAccountManager';
+import { SimpleBankAccountManager } from './SimpleBankAccountManager';
 import { PayoutsHistoryTable } from './PayoutsHistoryTable';
 
 interface PayoutData {
@@ -41,12 +40,11 @@ interface AutoPayoutSettings {
   frequency: 'daily' | 'weekly' | 'monthly';
 }
 
-// Bank Setup Component - Now uses embedded Stripe Connect components
+// Bank Setup Component - Simple redirect-based implementation
 function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   return (
-    <EmbeddedBankAccountSetup
-      onSuccess={onSuccess}
-      onCancel={onCancel}
+    <SimpleBankAccountManager
+      onUpdate={onSuccess}
       showTitle={false}
     />
   );
@@ -106,6 +104,21 @@ export function PayoutsManager() {
     }
   }, [user]);
 
+  // Set up periodic refresh for payout status (every 30 seconds)
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      // Only refresh if user is on the payouts tab and page is visible
+      if (document.visibilityState === 'visible' && window.location.hash === '#payouts') {
+        loadBankAccountStatus();
+        loadPayoutHistory();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const loadPayoutData = async () => {
     if (!user?.uid) return;
 
@@ -152,14 +165,42 @@ export function PayoutsManager() {
   };
 
   const loadAutoPayoutSettings = async () => {
-    // Load auto payout settings from API or localStorage
+    if (!user?.uid) return;
+
     try {
-      const saved = localStorage.getItem(`autopayout_${user?.uid}`);
-      if (saved) {
-        setAutoPayoutSettings(JSON.parse(saved));
+      const response = await fetch('/api/payouts/preferences', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setAutoPayoutSettings({
+            enabled: result.data.autoPayoutEnabled || false,
+            minimumAmount: result.data.minimumThreshold || 25,
+            frequency: result.data.schedule === 'weekly' ? 'weekly' : 'monthly'
+          });
+        }
+      } else if (response.status === 404) {
+        // No preferences set yet, use defaults
+        setAutoPayoutSettings({
+          enabled: false,
+          minimumAmount: 25,
+          frequency: 'monthly'
+        });
       }
     } catch (error) {
       console.error('Error loading auto payout settings:', error);
+      // Fallback to localStorage for backward compatibility
+      try {
+        const saved = localStorage.getItem(`autopayout_${user?.uid}`);
+        if (saved) {
+          setAutoPayoutSettings(JSON.parse(saved));
+        }
+      } catch (fallbackError) {
+        console.error('Error loading fallback settings:', fallbackError);
+      }
     }
   };
 
@@ -167,10 +208,39 @@ export function PayoutsManager() {
     if (!user?.uid) return;
 
     try {
-      const payoutHistory = await TokenEarningsService.getPayoutHistory(user.uid, 10);
-      setPayouts(payoutHistory);
+      // Try to load USD payouts first (new system)
+      const response = await fetch('/api/payouts/history', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          // Convert API data to expected format
+          const formattedPayouts = result.data.map((payout: any) => ({
+            id: payout.id,
+            amount: payout.amountCents ? payout.amountCents / 100 : payout.amount,
+            currency: payout.currency || 'usd',
+            status: payout.status,
+            createdAt: payout.requestedAt || payout.createdAt,
+            processedAt: payout.processedAt,
+            bankAccount: payout.bankAccount || 'Connected Bank Account',
+            stripeTransferId: payout.stripeTransferId
+          }));
+          setPayouts(formattedPayouts);
+        } else {
+          setPayouts([]);
+        }
+      } else {
+        // Fallback to token earnings service for backward compatibility
+        const payoutHistory = await TokenEarningsService.getPayoutHistory(user.uid, 10);
+        setPayouts(payoutHistory);
+      }
     } catch (error) {
       console.error('Error loading payout history:', error);
+      // Set empty array on error
+      setPayouts([]);
     } finally {
       setLoading(false);
     }
@@ -179,19 +249,44 @@ export function PayoutsManager() {
   const updateAutoPayoutSettings = async (newSettings: AutoPayoutSettings) => {
     setUpdatingSettings(true);
     try {
-      // Save to localStorage for now (could be API endpoint later)
-      localStorage.setItem(`autopayout_${user?.uid}`, JSON.stringify(newSettings));
-      setAutoPayoutSettings(newSettings);
+      // Convert UI settings to API format
+      const apiPreferences = {
+        autoPayoutEnabled: newSettings.enabled,
+        minimumThreshold: newSettings.minimumAmount,
+        schedule: newSettings.frequency,
+        notificationsEnabled: true // Default to enabled
+      };
 
-      toast({
-        title: "Settings Updated",
-        description: "Your automatic payout preferences have been saved."
+      const response = await fetch('/api/payouts/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiPreferences)
       });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setAutoPayoutSettings(newSettings);
+
+          // Also save to localStorage as backup
+          localStorage.setItem(`autopayout_${user?.uid}`, JSON.stringify(newSettings));
+
+          toast({
+            title: "Settings Updated",
+            description: "Your automatic payout preferences have been saved."
+          });
+        } else {
+          throw new Error(result.error || 'Failed to update preferences');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update preferences');
+      }
     } catch (error) {
       console.error('Error updating auto payout settings:', error);
       toast({
         title: "Error",
-        description: "Failed to update payout settings. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update payout settings. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -200,12 +295,40 @@ export function PayoutsManager() {
   };
 
   const handleBankSetupSuccess = () => {
+    // Refresh all payout-related data
     loadBankAccountStatus();
+    loadAutoPayoutSettings();
+    loadPayoutHistory();
+
     toast({
       title: "Bank Account Connected",
       description: "Your bank account has been successfully connected for payouts."
     });
   };
+
+  // Check for URL parameters indicating return from Stripe
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('connected') === 'true') {
+      // User returned from successful Stripe onboarding
+      setTimeout(() => {
+        handleBankSetupSuccess();
+      }, 1000); // Small delay to ensure Stripe has processed changes
+
+      // Clean up URL parameters
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    } else if (urlParams.get('refresh') === 'true') {
+      // User returned from Stripe but may need to retry
+      setTimeout(() => {
+        loadBankAccountStatus();
+      }, 1000);
+
+      // Clean up URL parameters
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
 
 
@@ -228,7 +351,8 @@ export function PayoutsManager() {
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Bank Account</h2>
         </div>
-        <EmbeddedBankAccountManager
+
+        <SimpleBankAccountManager
           onUpdate={loadBankAccountStatus}
           showTitle={false}
         />
@@ -242,7 +366,7 @@ export function PayoutsManager() {
             <Settings className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Automatic Payouts</h2>
           </div>
-          <div className="space-y-4 p-4 border rounded-lg">
+          <div className="space-y-4 p-4 border border-border rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="auto-payout" className="text-base font-medium">
@@ -263,7 +387,7 @@ export function PayoutsManager() {
             </div>
 
             {autoPayoutSettings.enabled && (
-              <div className="space-y-4 pt-4 border-t border-theme-medium">
+              <div className="space-y-4 pt-4 border-t border-border">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="minimum-amount">Minimum Amount</Label>
@@ -333,7 +457,10 @@ export function PayoutsManager() {
           <TrendingUp className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Payout History</h2>
         </div>
-        <PayoutsHistoryTable showTitle={false} />
+        <PayoutsHistoryTable
+          showTitle={false}
+          onRefresh={loadPayoutHistory}
+        />
       </div>
 
     </div>

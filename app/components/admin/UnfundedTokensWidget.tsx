@@ -13,12 +13,13 @@ interface UnfundedTokensWidgetProps {
   className?: string;
 }
 
-export function UnfundedLoggedOutTokensWidget({ 
-  dateRange, 
-  globalFilters, 
-  className = '' 
+export function UnfundedLoggedOutTokensWidget({
+  dateRange,
+  globalFilters,
+  className = ''
 }: UnfundedTokensWidgetProps) {
-  const { data, loading, error } = useUnfundedLoggedOutTokens(dateRange);
+  const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
+  const { data, loading, error } = useUnfundedLoggedOutTokens(dateRange, isCumulative);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -136,12 +137,13 @@ export function UnfundedLoggedOutTokensWidget({
   );
 }
 
-export function UnfundedLoggedInTokensWidget({ 
-  dateRange, 
-  globalFilters, 
-  className = '' 
+export function UnfundedLoggedInTokensWidget({
+  dateRange,
+  globalFilters,
+  className = ''
 }: UnfundedTokensWidgetProps) {
-  const { data, loading, error } = useUnfundedLoggedInTokens(dateRange);
+  const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
+  const { data, loading, error } = useUnfundedLoggedInTokens(dateRange, isCumulative);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

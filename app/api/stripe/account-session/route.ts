@@ -76,6 +76,11 @@ export async function POST(request: NextRequest) {
       const account = await stripe.accounts.create({
         type: 'express',
         email: userEmail,
+        business_profile: {
+          url: 'https://www.getwewrite.app/',
+          mcc: '5815', // Digital goods/services
+          product_description: 'Content creation and writing platform'
+        },
         metadata: {
           firebaseUID: userId,
           username: username

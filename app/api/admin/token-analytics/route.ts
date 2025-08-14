@@ -34,21 +34,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const cumulative = searchParams.get('cumulative') === 'true';
 
-    if (!startDate || !endDate) {
-      return createErrorResponse('BAD_REQUEST', 'startDate and endDate are required');
+    if (!cumulative && (!startDate || !endDate)) {
+      return createErrorResponse('BAD_REQUEST', 'startDate and endDate are required for period analysis');
     }
 
-    const dateRange: DateRange = {
-      startDate: new Date(startDate),
-      endDate: new Date(endDate)
+    const dateRange: DateRange = cumulative ? {
+      startDate: new Date('2020-01-01'), // Use a very early date for cumulative
+      endDate: new Date()
+    } : {
+      startDate: new Date(startDate!),
+      endDate: new Date(endDate!)
     };
 
-    console.log('🔍 [Token Analytics] Fetching token analytics data...', dateRange);
+    console.log('🔍 [Token Analytics] Fetching token analytics data...', { dateRange, cumulative });
 
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    const analytics = await getTokenAnalytics(db, dateRange);
+    const analytics = await getTokenAnalytics(db, dateRange, cumulative);
 
     return createApiResponse({
       success: true,
@@ -65,7 +69,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getTokenAnalytics(db: any, dateRange: DateRange): Promise<TokenAnalyticsData> {
+async function getTokenAnalytics(db: any, dateRange: DateRange, cumulative: boolean = false): Promise<TokenAnalyticsData> {
   console.log('🔍 [Token Analytics] Starting comprehensive token analytics calculation...');
 
   // Initialize analytics data

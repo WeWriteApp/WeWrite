@@ -7,20 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { usePlatformFeeMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from './DateRangeFilter';
+import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart } from '../../utils/chartUtils';
 
 interface PlatformFeeRevenueWidgetProps {
   dateRange: DateRange;
+  globalFilters: GlobalAnalyticsFilters;
   granularity?: number;
   className?: string;
 }
 
-export function PlatformFeeRevenueWidget({ 
-  dateRange, 
-  granularity = 50, 
-  className = "" 
+export function PlatformFeeRevenueWidget({
+  dateRange,
+  globalFilters,
+  granularity = 50,
+  className = ""
 }: PlatformFeeRevenueWidgetProps) {
-  const { data, stats, loading, error } = usePlatformFeeMetrics(dateRange, granularity);
+  const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
+  const { data, stats, loading, error } = usePlatformFeeMetrics(dateRange, granularity, isCumulative);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data

@@ -922,7 +922,7 @@ export function useTotalPagesEverCreated() {
 /**
  * Hook for platform fee revenue analytics
  */
-export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number) {
+export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number, cumulative: boolean = false) {
   const [data, setData] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({
     totalRevenue: 0,
@@ -945,7 +945,8 @@ export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number
       const response = await fetch(`/api/admin/platform-fee-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
-        granularity: granularity?.toString() || '50'
+        granularity: granularity?.toString() || '50',
+        cumulative: cumulative.toString()
       }), {
         method: 'GET',
         credentials: 'include',
@@ -978,7 +979,7 @@ export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange, granularity]);
+  }, [debouncedDateRange, granularity, cumulative]);
 
   useEffect(() => {
     fetchData();

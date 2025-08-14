@@ -43,6 +43,11 @@ async function setupAccountForPayouts(userId: string, financialAccount: any) {
     const account = await stripe.accounts.create({
       type: 'express',
       email: userEmail,
+      business_profile: {
+        url: 'https://www.getwewrite.app/',
+        mcc: '5815', // Digital goods/services
+        product_description: 'Content creation and writing platform'
+      },
       metadata: {
         firebaseUID: userId,
         username: userData?.username || 'Unknown User'
