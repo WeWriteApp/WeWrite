@@ -5,15 +5,19 @@ let isInitialized = false;
 
 export const initAdmin = () => {
   if (isInitialized) {
+    console.log('🔥 [Firebase Admin] Already initialized, returning existing instance');
     return admin;
   }
 
   try {
     // Check if already initialized
     if (admin.apps.length > 0) {
+      console.log('🔥 [Firebase Admin] Found existing app, marking as initialized');
       isInitialized = true;
       return admin;
     }
+
+    console.log('🔥 [Firebase Admin] Starting initialization process');
 
     // Initialize with service account
     let serviceAccount;
@@ -47,10 +51,13 @@ export const initAdmin = () => {
         }
 
         serviceAccount = JSON.parse(jsonString);
-        console.log(`Using service account from ${keySource}: ${serviceAccount.client_email}`);
+        console.log(`🔥 [Firebase Admin] Using service account from ${keySource}: ${serviceAccount.client_email}`);
+        console.log(`🔥 [Firebase Admin] Project ID: ${serviceAccount.project_id}`);
 
         // Validate that the service account has the required fields
         if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+          console.error(`🔥 [Firebase Admin] Invalid service account in ${keySource}: missing required fields`);
+          console.error(`🔥 [Firebase Admin] Available fields:`, Object.keys(serviceAccount));
           throw new Error(`Invalid service account in ${keySource}: missing required fields`);
         }
 
@@ -94,16 +101,23 @@ export const initAdmin = () => {
       };
     }
 
+    console.log('🔥 [Firebase Admin] Initializing Firebase app with credentials');
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
       databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
     });
 
     isInitialized = true;
-    console.log('Firebase Admin initialized successfully');
+    console.log('🔥 [Firebase Admin] Firebase Admin initialized successfully');
     return admin;
   } catch (error) {
-    console.error('Error initializing Firebase Admin:', error);
+    console.error('🔥 [Firebase Admin] Error initializing Firebase Admin:', error);
+    console.error('🔥 [Firebase Admin] Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+    });
+    isInitialized = false; // Reset initialization flag on error
     throw error;
   }
 };
@@ -116,11 +130,19 @@ export const getFirebaseAdmin = () => {
   return initAdmin();
 };
 
-// Auto-initialize if in server environment, but not during build time
-if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'production') {
-  try {
-    initAdmin();
-  } catch (error) {
-    console.warn('Firebase Admin auto-initialization failed, will retry on first use:', error.message);
+// Auto-initialize if in server environment
+if (typeof window === 'undefined') {
+  // Only auto-initialize in production or when explicitly requested
+  const shouldAutoInit = process.env.VERCEL_ENV === 'production' ||
+                        process.env.NODE_ENV === 'production' ||
+                        process.env.FIREBASE_AUTO_INIT === 'true';
+
+  if (shouldAutoInit) {
+    try {
+      console.log('🔥 [Firebase Admin] Auto-initializing in server environment');
+      initAdmin();
+    } catch (error) {
+      console.warn('🔥 [Firebase Admin] Auto-initialization failed, will retry on first use:', error.message);
+    }
   }
 }

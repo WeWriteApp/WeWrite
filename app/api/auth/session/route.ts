@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
 
         // Get user data from Firestore using the UID from the token
-        const admin = getFirebaseAdmin();
+        const admin = initAdmin();
         const adminDb = admin.firestore();
         const userDoc = await adminDb.collection(getCollectionName('users')).doc(payload.user_id || payload.sub).get();
         const userData = userDoc.data() || {};
@@ -175,14 +175,32 @@ export async function POST(request: NextRequest) {
 
     // Production mode: verify ID token with Firebase Admin
     console.log('[Session POST] Production mode: verifying ID token with Firebase Admin');
-    const admin = getFirebaseAdmin();
-    const adminAuth = admin.auth();
-    const adminDb = admin.firestore();
-    console.log('[Session POST] Firebase Admin initialized:', {
-      hasAdmin: !!admin,
-      hasAdminDb: !!adminDb,
-      hasAdminAuth: !!adminAuth
-    });
+
+    let admin, adminAuth, adminDb;
+    try {
+      admin = initAdmin();
+      if (!admin) {
+        console.error('[Session POST] Firebase Admin initialization returned null');
+        return createErrorResponse(AuthErrorCode.INTERNAL_ERROR, 'Firebase Admin not available');
+      }
+
+      adminAuth = admin.auth();
+      adminDb = admin.firestore();
+
+      console.log('[Session POST] Firebase Admin initialized successfully:', {
+        hasAdmin: !!admin,
+        hasAdminDb: !!adminDb,
+        hasAdminAuth: !!adminAuth
+      });
+    } catch (initError) {
+      console.error('[Session POST] Firebase Admin initialization failed:', initError);
+      console.error('[Session POST] Error details:', {
+        message: initError.message,
+        code: initError.code,
+        stack: initError.stack?.split('\n').slice(0, 3).join('\n')
+      });
+      return createErrorResponse(AuthErrorCode.INTERNAL_ERROR, 'Firebase initialization failed');
+    }
 
     try {
       // Verify the ID token
@@ -271,7 +289,7 @@ export async function POST(request: NextRequest) {
  */
 async function createUserSession(request: NextRequest, userId: string) {
   try {
-    const admin = getFirebaseAdmin();
+    const admin = initAdmin();
     const db = admin.firestore();
 
     const userAgent = request.headers.get('user-agent') || '';

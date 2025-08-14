@@ -48,15 +48,23 @@ export async function GET(request: NextRequest) {
 
     let admin;
     try {
+      console.log(`👤 [User Profile API] Initializing Firebase Admin for ${lookupValue}`);
       admin = initAdmin();
-    } catch (error) {
-      console.error('Error initializing Firebase Admin:', error);
-      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin initialization failed');
-    }
 
-    if (!admin) {
-      console.error('Firebase Admin not available');
-      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
+      if (!admin) {
+        console.error('👤 [User Profile API] Firebase Admin initialization returned null');
+        return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
+      }
+
+      console.log('👤 [User Profile API] Firebase Admin initialized successfully');
+    } catch (error) {
+      console.error('👤 [User Profile API] Error initializing Firebase Admin:', error);
+      console.error('👤 [User Profile API] Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      });
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin initialization failed');
     }
 
     const db = admin.firestore();
