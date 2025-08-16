@@ -58,6 +58,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
   const { user, isAuthenticated } = useAuth();
   const [edits, setEdits] = useState<RecentEdit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMoreState, setLoadingMoreState] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -129,6 +130,8 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
       if (!append) {
         setLoading(true);
         setError(null);
+      } else {
+        setLoadingMoreState(true);
       }
 
       // Build query parameters for global recent edits
@@ -170,6 +173,8 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
       setHasMore(data.hasMore || false);
       setNextCursor(data.nextCursor || null);
 
+      console.log(`🔄 [GlobalRecentEdits] Fetch complete: append=${append}, newEdits=${data.edits?.length || 0}, totalEdits=${append ? edits.length + (data.edits?.length || 0) : data.edits?.length || 0}, hasMore=${data.hasMore}, nextCursor=${data.nextCursor}`);
+
     } catch (error) {
       console.error('Error fetching global recent edits:', error);
 
@@ -194,6 +199,8 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
     } finally {
       if (!append) {
         setLoading(false);
+      } else {
+        setLoadingMoreState(false);
       }
     }
   }, [includeOwn, followingOnly, user?.uid]);
@@ -204,7 +211,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
   }, [fetchEdits]);
 
   // Infinite scroll
-  const { loadingMore, loadMore, targetRef } = useInfiniteScrollWithLoadMore({
+  const { loadMore, targetRef } = useInfiniteScrollWithLoadMore({
     hasMore,
     onLoadMore: () => fetchEdits(true, nextCursor || undefined),
   });
@@ -381,7 +388,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
           })}
           
           {/* Infinite scroll loading indicator */}
-          {loadingMore && (
+          {loadingMoreState && (
             <div className="flex justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
@@ -391,11 +398,12 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
           <div ref={targetRef} className="h-4" />
 
           {/* Manual load more button as fallback */}
-          {hasMore && !loadingMore && (
+          {hasMore && !loadingMoreState && (
             <div className="flex justify-center pt-4">
               <Button
                 onClick={loadMore}
                 variant="outline"
+                disabled={loadingMoreState}
               >
                 Load More
               </Button>

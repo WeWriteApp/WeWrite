@@ -169,8 +169,9 @@ export function useInfiniteScrollWithLoadMore({
     setLoadingMore(true);
     onLoadMore();
 
-    // Reset loading state after a short delay to prevent rapid calls
-    setTimeout(() => setLoadingMore(false), 1000);
+    // Reset loading state after a reasonable delay to prevent rapid calls
+    // The component should handle its own loading state for better UX
+    setTimeout(() => setLoadingMore(false), 2000);
   }, [hasMore, loadingMore, onLoadMore]);
 
   const handleIntersection = useCallback(

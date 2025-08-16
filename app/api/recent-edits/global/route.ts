@@ -80,8 +80,9 @@ export async function GET(request: NextRequest) {
     });
 
     // 🚨 EMERGENCY COST OPTIMIZATION: ULTRA AGGRESSIVE CACHING
-    const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}`;
-    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 10 * 60 * 1000; // 30 seconds in dev, 10 minutes in prod
+    // Include cursor in cache key to avoid returning cached first page for paginated requests
+    const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${cursor || 'first'}`;
+    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 5 * 60 * 1000; // 30 seconds in dev, 5 minutes in prod (reduced for better UX)
 
     // Check cache first
     const cached = globalRecentEditsCache.get(cacheKey);
@@ -105,12 +106,12 @@ export async function GET(request: NextRequest) {
     let pagesQuery;
 
     if (userId) {
-      // For logged-in users, get recent pages (last 7 days) and filter deleted ones in code
-      // This avoids the composite index requirement while preventing excessive reads
-      const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+      // For logged-in users, get recent pages (last 30 days) and filter deleted ones in code
+      // Increased from 7 to 30 days to ensure enough content for pagination
+      const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
 
       pagesQuery = db.collection(getCollectionName('pages'))
-        .where('lastModified', '>=', sevenDaysAgo.toISOString())
+        .where('lastModified', '>=', thirtyDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
@@ -119,14 +120,16 @@ export async function GET(request: NextRequest) {
         pagesQuery = pagesQuery.startAfter(cursor);
       }
 
-      pagesQuery = pagesQuery.limit(Math.min(limit + 5, 25)); // REDUCED: Only get a few extra for filtering
+      // Fetch significantly more documents to account for filtering
+      // This ensures we have enough content after filtering out deleted/private/own pages
+      pagesQuery = pagesQuery.limit(Math.min(limit * 3, 50)); // Fetch 3x the limit to account for filtering
     } else {
-      // For anonymous users, only public pages from last 7 days (legacy behavior until isPublic is fully removed)
-      const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+      // For anonymous users, only public pages from last 30 days
+      const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
 
       pagesQuery = db.collection(getCollectionName('pages'))
         .where('isPublic', '==', true)
-        .where('lastModified', '>=', sevenDaysAgo.toISOString())
+        .where('lastModified', '>=', thirtyDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
@@ -135,7 +138,8 @@ export async function GET(request: NextRequest) {
         pagesQuery = pagesQuery.startAfter(cursor);
       }
 
-      pagesQuery = pagesQuery.limit(Math.min(limit + 3, 20)); // REDUCED: Only get a few extra for filtering
+      // Fetch more documents to account for filtering
+      pagesQuery = pagesQuery.limit(Math.min(limit * 2, 30)); // Fetch 2x the limit for anonymous users
     }
 
     const queryStartTime = Date.now();
@@ -237,13 +241,18 @@ export async function GET(request: NextRequest) {
     });
 
     // Determine if there are more pages available
-    // We have more if we got the full limit of filtered results, suggesting there might be more
-    const hasMorePages = enhancedEdits.length === limit && filteredPages.length >= limit;
+    // We have more if:
+    // 1. We got more filtered pages than we're returning (meaning there are more after slicing)
+    // 2. OR we got the maximum number of documents from Firestore (suggesting there might be more)
+    const totalFetched = pagesSnapshot.docs.length;
+    const maxPossibleFetch = userId ? Math.min(limit * 3, 50) : Math.min(limit * 2, 30);
+    const hasMorePages = (filteredPages.length > limit) || (totalFetched >= maxPossibleFetch);
+
     const nextCursor = hasMorePages && enhancedEdits.length > 0
       ? enhancedEdits[enhancedEdits.length - 1].lastModified
       : null;
 
-    console.log(`🔄 [GLOBAL_RECENT_EDITS] Pagination info: hasMore=${hasMorePages}, nextCursor=${nextCursor}`);
+    console.log(`🔄 [GLOBAL_RECENT_EDITS] Pagination info: totalFetched=${totalFetched}, filteredPages=${filteredPages.length}, enhancedEdits=${enhancedEdits.length}, hasMore=${hasMorePages}, nextCursor=${nextCursor}`);
 
     const responseData = {
       edits: enhancedEdits,
