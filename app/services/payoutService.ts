@@ -454,8 +454,8 @@ class PayoutService {
         const earningAmount = centsToDollars(earning.totalUsdCentsReceived);
         subscriptionEarnings += earningAmount;
 
-        // Estimate platform fees (7% of gross earnings)
-        totalPlatformFees += earningAmount * 0.07;
+        // Estimate platform fees (10% of gross earnings)
+        totalPlatformFees += earningAmount * 0.10;
       });
 
       return {

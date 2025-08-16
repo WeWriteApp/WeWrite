@@ -76,7 +76,7 @@ export function getMinPayout(): number {
  * Calculate platform fee in smallest units
  */
 export function calculatePlatformFee(amount: number): number {
-  const feePercentage = CURRENT_CURRENCY.PLATFORM_FEE_PERCENTAGE || 7.0;
+  const feePercentage = CURRENT_CURRENCY.PLATFORM_FEE_PERCENTAGE || 10.0;
   return Math.round(amount * (feePercentage / 100));
 }
 

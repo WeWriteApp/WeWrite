@@ -54,7 +54,7 @@ export function PlatformFeeRevenueWidget({
             <DollarSign className="h-5 w-5 text-green-600" />
             Platform Fee Revenue
           </CardTitle>
-          <CardDescription>WeWrite platform fee revenue (7% of payouts)</CardDescription>
+          <CardDescription>WeWrite platform fee revenue (10% of payouts)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -83,7 +83,7 @@ export function PlatformFeeRevenueWidget({
             <DollarSign className="h-5 w-5 text-red-600" />
             Platform Fee Revenue
           </CardTitle>
-          <CardDescription>WeWrite platform fee revenue (7% of payouts)</CardDescription>
+          <CardDescription>WeWrite platform fee revenue (10% of payouts)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -103,7 +103,7 @@ export function PlatformFeeRevenueWidget({
           Platform Fee Revenue
         </CardTitle>
         <CardDescription>
-          WeWrite platform fee revenue (7% of payouts) over time
+          WeWrite platform fee revenue (10% of payouts) over time
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -156,7 +156,7 @@ export function PlatformFeeRevenueWidget({
                     {stats.totalPayouts} total payouts
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    7% platform fee
+                    10% platform fee
                   </Badge>
                 </div>
               </div>
@@ -213,7 +213,7 @@ export function PlatformFeeRevenueWidget({
               
               {/* Additional insights */}
               <div className="text-xs text-muted-foreground">
-                Platform fee revenue is calculated as 7% of completed payout amounts. 
+                Platform fee revenue is calculated as 10% of completed payout amounts.
                 Growth is calculated month-over-month.
               </div>
             </div>

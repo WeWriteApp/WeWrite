@@ -401,7 +401,7 @@ DATADOG_API_KEY=...
 // Centralized in app/utils/feeCalculations.ts
 export const WEWRITE_FEE_STRUCTURE = {
   minimumPayoutThreshold: 25.00, // $25 USD minimum
-  platformFeePercentage: 0.0,    // 0% platform fee
+  platformFeePercentage: 0.10,   // 10% platform fee (updated from 7%)
   stripeConnectFeePercentage: 0.0025 // 0.25% Stripe fee
 };
 ```
@@ -554,7 +554,7 @@ WeWrite provides comprehensive testing tools for validating payout functionality
 
 ### Key Testing Features
 - Real-time fee calculation validation
-- Platform fee transparency verification (7% WeWrite fee)
+- Platform fee transparency verification (10% WeWrite fee)
 - Connected account setup flow testing
 - Stripe test mode integration
 - Mathematical accuracy validation

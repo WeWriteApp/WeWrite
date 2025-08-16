@@ -4,6 +4,8 @@
 
 WeWrite has a comprehensive platform fee management system that allows real-time configuration of the platform fee percentage through the admin interface. This system ensures that fee changes take effect immediately in production without requiring code deployments.
 
+**Current Platform Fee: 10%** (Updated from 7% as of August 2025)
+
 ## System Architecture
 
 ### 1. **Admin Interface Location**

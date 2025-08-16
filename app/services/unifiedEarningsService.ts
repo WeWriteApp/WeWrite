@@ -86,7 +86,7 @@ export interface CompleteEarningsData {
 
 export class UnifiedEarningsService {
   private static readonly MINIMUM_PAYOUT_THRESHOLD = 25; // $25 minimum
-  private static readonly PLATFORM_FEE_PERCENTAGE = 0.07; // 7% platform fee
+  private static readonly PLATFORM_FEE_PERCENTAGE = 0.10; // 10% platform fee
 
   /**
    * Get writer's complete balance information

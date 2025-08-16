@@ -28,7 +28,7 @@ export default function PayoutFeeBreakdown({
     // Fee configuration (should match backend)
     const stripeFeePercentage = 2.9; // 2.9%
     const stripeFeeFixed = 0.30; // $0.30
-    const platformFeePercentage = 7; // 7%
+    const platformFeePercentage = 10; // 10%
 
     const stripeFee = (amount * stripeFeePercentage) / 100;
     const platformFee = (amount * platformFeePercentage) / 100;
@@ -100,7 +100,7 @@ export default function PayoutFeeBreakdown({
           {/* Platform Fee */}
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-600 ml-2">
-              Platform fee ({formatPercentage(7)})
+              Platform fee ({formatPercentage(10)})
             </span>
             <span className="text-red-600">-{formatCurrency(fees.platformFee)}</span>
           </div>
@@ -145,7 +145,7 @@ export function CompactFeeBreakdown({
 }) {
   const calculateNetAmount = (amount: number): number => {
     const stripeFee = (amount * 2.9) / 100 + 0.30;
-    const platformFee = (amount * 7) / 100;
+    const platformFee = (amount * 10) / 100;
     return Math.max(0, amount - stripeFee - platformFee);
   };
 
@@ -187,7 +187,7 @@ export function PayoutSummary({
 }) {
   const calculateNetAmount = (amount: number): number => {
     const stripeFee = (amount * 2.9) / 100 + 0.30;
-    const platformFee = (amount * 7) / 100;
+    const platformFee = (amount * 10) / 100;
     return Math.max(0, amount - stripeFee - platformFee);
   };
 

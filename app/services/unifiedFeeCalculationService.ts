@@ -12,7 +12,7 @@ import { FinancialUtils, CorrelationId } from '../types/financial';
 
 export interface UnifiedFeeStructure {
   // WeWrite platform fees
-  platformFeePercentage: number; // As decimal (e.g., 0.07 for 7%)
+  platformFeePercentage: number; // As decimal (e.g., 0.10 for 10%)
   
   // Stripe processing fees (for incoming payments)
   stripeProcessingFeePercentage: number; // As decimal (e.g., 0.029 for 2.9%)

@@ -44,8 +44,8 @@ export interface PayoutFees {
  * CENTRALIZED CONFIGURATION - All payout thresholds should reference this
  */
 export const WEWRITE_FEE_STRUCTURE = {
-  // WeWrite platform fee (7% - CORRECTED TO MATCH ACTUAL IMPLEMENTATION)
-  platformFeePercentage: 0.07, // 7% - WeWrite platform fee
+  // WeWrite platform fee (10% - UPDATED FROM 7%)
+  platformFeePercentage: 0.10, // 10% - WeWrite platform fee
 
   // Stripe Connect fees for Express accounts
   stripeConnectFeePercentage: 0.0025, // 0.25% for Express accounts

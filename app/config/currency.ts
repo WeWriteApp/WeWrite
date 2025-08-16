@@ -29,7 +29,7 @@ export const CURRENCY_CONFIG = {
   PROCESSOR_CURRENCY_CODE: process.env.PROCESSOR_CURRENCY_CODE || 'usd',
   
   // Platform fee (as percentage)
-  PLATFORM_FEE_PERCENTAGE: parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '7.0')
+  PLATFORM_FEE_PERCENTAGE: parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '10.0')
 } as const;
 
 // Migration configuration for currency transitions
