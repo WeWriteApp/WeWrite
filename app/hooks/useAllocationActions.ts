@@ -61,7 +61,7 @@ export function useAllocationActions({
   maxRetries = DEFAULT_MAX_RETRIES
 }: UseAllocationActionsOptions): UseAllocationActionsReturn {
   const { user } = useAuth();
-  const { usdBalance, updateOptimisticBalance, isFakeBalance, hasActiveSubscription } = useUsdBalance();
+  const { usdBalance, updateOptimisticBalance, isFakeBalance, hasActiveSubscription, refreshFakeBalance } = useUsdBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const { toast } = useToast();
 
@@ -107,6 +107,8 @@ export function useAllocationActions({
           // Logged out user
           const result = allocateLoggedOutUsd(pageId, pageTitle, currentAllocationCents + changeCents);
           if (result.success) {
+            // Refresh the fake balance from localStorage to update the context
+            refreshFakeBalance();
             onAllocationChange?.(currentAllocationCents + changeCents);
             showUsdAllocationNotification(
               changeCents,
@@ -120,6 +122,8 @@ export function useAllocationActions({
           // Logged in user without subscription
           const result = allocateUserUsd(user.uid, pageId, pageTitle, currentAllocationCents + changeCents);
           if (result.success) {
+            // Refresh the fake balance from localStorage to update the context
+            refreshFakeBalance();
             onAllocationChange?.(currentAllocationCents + changeCents);
             showUsdAllocationNotification(
               changeCents,
@@ -237,8 +241,14 @@ export function useAllocationActions({
     }
 
     // Immediate optimistic updates
-    updateOptimisticBalance(changeCents);
-    onOptimisticUpdate?.(newAllocationCents);
+    if (isFakeBalance) {
+      // For fake balance, we'll refresh after the allocation is saved
+      onOptimisticUpdate?.(newAllocationCents);
+    } else {
+      // For real balance, use optimistic updates
+      updateOptimisticBalance(changeCents);
+      onOptimisticUpdate?.(newAllocationCents);
+    }
 
     // Add to pending batch
     pendingChangeCents.current += changeCents;

@@ -42,6 +42,8 @@ interface UsdBalanceContextType {
   // New properties for fake balance system
   isFakeBalance: boolean;
   hasActiveSubscription: boolean;
+  // Method to refresh fake balance from localStorage
+  refreshFakeBalance: () => void;
 }
 
 const UsdBalanceContext = createContext<UsdBalanceContextType | undefined>(undefined);
@@ -222,6 +224,29 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
     await fetchUsdBalance(true);
   }, [fetchUsdBalance]);
 
+  // Method to refresh fake balance from localStorage (for logged-out users)
+  const refreshFakeBalance = useCallback(() => {
+    if (!user?.uid) {
+      console.log('[UsdBalanceContext] Refreshing fake balance from localStorage');
+      const fakeBalance = getLoggedOutUsdBalance();
+      setUsdBalance({
+        totalUsdCents: fakeBalance.totalUsdCents,
+        allocatedUsdCents: fakeBalance.allocatedUsdCents,
+        availableUsdCents: fakeBalance.availableUsdCents
+      });
+      setLastUpdated(new Date());
+    } else {
+      // For logged-in users without subscriptions, refresh their fake balance
+      const fakeBalance = getUserUsdBalance(user.uid);
+      setUsdBalance({
+        totalUsdCents: fakeBalance.totalUsdCents,
+        allocatedUsdCents: fakeBalance.allocatedUsdCents,
+        availableUsdCents: fakeBalance.availableUsdCents
+      });
+      setLastUpdated(new Date());
+    }
+  }, [user?.uid]);
+
   const updateOptimisticBalance = useCallback((changeCents: number) => {
     console.log('[UsdBalanceContext] Optimistic balance update:', {
       changeCents,
@@ -323,7 +348,8 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
     getAvailableUsdFormatted,
     getAllocatedUsdFormatted,
     isFakeBalance,
-    hasActiveSubscription
+    hasActiveSubscription,
+    refreshFakeBalance
   };
 
   return (

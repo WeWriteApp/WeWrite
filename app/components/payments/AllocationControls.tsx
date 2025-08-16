@@ -53,7 +53,7 @@ export function AllocationControls({
   // Use our shared hooks
   const { allocationState, setOptimisticAllocation } = useAllocationState({
     pageId,
-    enabled: !isPageOwner && !!user?.uid
+    enabled: !isPageOwner // Enable for both logged-in and logged-out users
   });
 
   const { handleAllocationChange, isProcessing } = useAllocationActions({
