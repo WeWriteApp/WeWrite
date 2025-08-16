@@ -123,14 +123,10 @@ export default function PageFooter({
   if (!canEdit && !hasUnsavedChanges) return null;
 
   return (
-    <div className="mt-4 pb-6 px-4">
-      {/* Insert Link button moved to PageActions - no longer shown separately */}
-
-
-
+    <div className="pb-6 px-4">
       {/* Show PageActions only for existing pages (not for new pages or bios) */}
       {page && (
-        <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
+        <div className="flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
           <PageActions
             page={page}
             content={content}
@@ -149,7 +145,7 @@ export default function PageFooter({
 
       {/* Custom Date Field - show in both edit and view modes for existing pages only */}
       {page && (
-        <div className="mb-6">
+        <div className="mb-4">
           <CustomDateField
             customDate={page.customDate}
             canEdit={isOwner}
@@ -183,7 +179,7 @@ export default function PageFooter({
 
       {/* Location Field - show in both edit and view modes for existing pages only */}
       {page && (
-        <div className="mb-6">
+        <div className="mb-4">
           <LocationField
             location={page.location}
             canEdit={isOwner}
@@ -191,8 +187,6 @@ export default function PageFooter({
           />
         </div>
       )}
-
-
 
       {/* Page stats section - show in view mode OR for page owners (who are always in edit mode) - existing pages only */}
       {page && (!isEditing || isOwner) && (
