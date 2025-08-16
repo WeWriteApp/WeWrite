@@ -123,22 +123,8 @@ export default function PageFooter({
   if (!canEdit && !hasUnsavedChanges) return null;
 
   return (
-    <div className="mt-10 border-t-only pt-6 pb-6 px-4">
-      {/* Insert Link button - shown when editing */}
-      {canEdit && isEditing && onInsertLink && (
-        <div className="mb-4 w-full">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-2 justify-center"
-            onClick={onInsertLink}
-            disabled={isSaving}
-          >
-            <Link className="h-4 w-4" />
-            Insert Link
-          </Button>
-        </div>
-      )}
+    <div className="mt-4 pb-6 px-4">
+      {/* Insert Link button moved to PageActions - no longer shown separately */}
 
 
 
@@ -153,6 +139,8 @@ export default function PageFooter({
             setIsEditing={setIsEditing}
             className="action-buttons-container"
             showFollowButton={user && !isOwner}
+            onInsertLink={onInsertLink} // Pass insert link callback
+            isSaving={isSaving} // Pass saving state
           />
         </div>
       )}

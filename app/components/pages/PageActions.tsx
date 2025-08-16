@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
+import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X, Link } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
@@ -99,6 +99,8 @@ interface PageActionsProps {
   setIsEditing?: (value: boolean) => void;
   className?: string;
   showFollowButton?: boolean;
+  onInsertLink?: () => void; // Add insert link callback
+  isSaving?: boolean; // Add saving state
 }
 
 export function PageActions({
@@ -108,7 +110,9 @@ export function PageActions({
   isEditing = false,
   setIsEditing,
   className = "",
-  showFollowButton = false
+  showFollowButton = false,
+  onInsertLink,
+  isSaving = false
 }: PageActionsProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -349,19 +353,35 @@ export function PageActions({
             />
           )}
 
-          {/* Add to Page button - available to all users */}
-          <AddToPageButton page={page} />
+          {/* Insert Link button - shown when editing */}
+          {isEditing && onInsertLink && (
+            <Button
+              variant="default"
+              size="lg"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+              onClick={onInsertLink}
+              disabled={isSaving}
+            >
+              <Link className="h-5 w-5" />
+              <span>Insert Link</span>
+            </Button>
+          )}
 
-          {/* Reply button - available to all users */}
-          <Button
-            variant="default"
-            size="lg"
-            className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-            onClick={handleReply}
-          >
-            <Reply className="h-5 w-5" />
-            <span>Reply</span>
-          </Button>
+          {/* Add to Page button - available to all users when not editing */}
+          {!isEditing && <AddToPageButton page={page} />}
+
+          {/* Reply button - available to all users when not editing */}
+          {!isEditing && (
+            <Button
+              variant="default"
+              size="lg"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+              onClick={handleReply}
+            >
+              <Reply className="h-5 w-5" />
+              <span>Reply</span>
+            </Button>
+          )}
         </div>
 
         {/* REMOVED: Duplicate dense mode toggle - keeping only the one under page content */}
