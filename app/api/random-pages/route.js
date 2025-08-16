@@ -21,12 +21,16 @@ export async function GET(request) {
     console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages, 'Is shuffling:', isShuffling);
 
     // Import Firebase modules
-    const { initAdmin } = await import('../../firebase/admin.ts');
+    const { getFirebaseAdmin } = await import('../../firebase/firebaseAdmin.ts');
     const { getEffectiveTier } = await import('../../utils/subscriptionTiers');
     const { executeDeduplicatedOperation } = await import('../../utils/serverRequestDeduplication');
 
     // Initialize Firebase Admin
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
+    if (!adminApp) {
+      console.error('Random pages API: Firebase Admin initialization failed');
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500, headers });
+    }
     const db = adminApp.firestore();
 
     // Initialize RTDB if available

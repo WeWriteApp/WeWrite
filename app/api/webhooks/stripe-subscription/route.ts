@@ -17,7 +17,7 @@ import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
-import { fundTrackingService } from '../../../services/fundTrackingService';
+
 // Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
 import { parseStripeError, createDetailedErrorLog } from '../../../utils/stripeErrorMessages';
@@ -305,6 +305,19 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       await updateDoc(subscriptionRef, subscriptionData);
 
       console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}`);
+
+    // CRITICAL: Invalidate subscription cache after webhook update
+    try {
+      console.log(`[SUBSCRIPTION WEBHOOK] Invalidating subscription cache for user ${userId}`);
+
+      // Import and use the cache invalidation function
+      const { invalidateSubscriptionCaches } = await import('../../utils/cacheInvalidation');
+      await invalidateSubscriptionCaches(userId);
+
+      console.log(`[SUBSCRIPTION WEBHOOK] ✅ Successfully invalidated subscription caches for user ${userId}`);
+    } catch (cacheError) {
+      console.error(`[SUBSCRIPTION WEBHOOK] ❌ Error invalidating caches for user ${userId}:`, cacheError);
+    }
     } catch (error) {
       console.error(`[SUBSCRIPTION WEBHOOK] Failed to update subscription for user ${userId}:`, error);
       throw error;
@@ -353,26 +366,8 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     // Log that funds are being held for month-end processing
     console.log(`[PAYMENT SUCCEEDED] Payment funds held in platform account for month-end payout processing`);
 
-    // Track funds in the new fund holding model
-    const transferGroup = subscription.metadata?.transferGroup || `subscription_${userId}_${new Date().toISOString().slice(0, 7)}`;
-    const fundTrackingResult = await fundTrackingService.trackSubscriptionPayment(
-      userId,
-      subscription.id,
-      amount,
-      invoice.id,
-      transferGroup,
-      {
-        stripeCustomerId: subscription.customer as string,
-        tier: subscription.metadata?.tier,
-        priceId: price.id
-      }
-    );
-
-    if (fundTrackingResult.success) {
-      console.log(`[PAYMENT SUCCEEDED] Fund tracking successful: ${fundTrackingResult.trackingId}`);
-    } else {
-      console.error(`[PAYMENT SUCCEEDED] Fund tracking failed: ${fundTrackingResult.error}`);
-    }
+    // Funds are held in platform account for month-end payout processing
+    console.log(`[PAYMENT SUCCEEDED] Payment processed, funds held in platform account for allocation and payout processing`);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance
     // Reuse the correlationId from the sync operation above

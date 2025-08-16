@@ -693,6 +693,7 @@ export default function UserProfileTabs({ profile }) {
             <UserGraphTab
               userId={profile?.uid}
               username={profile?.username || 'this user'}
+              isOwnContent={isCurrentUser}
             />
           </TabsContent>
 
@@ -708,6 +709,7 @@ export default function UserProfileTabs({ profile }) {
                 <UserMapTab
                   userId={profile?.uid}
                   username={profile?.username || 'this user'}
+                  isOwnContent={isCurrentUser}
                 />
               </>
             )}

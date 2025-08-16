@@ -67,7 +67,7 @@ export function MultiSelect({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       <div
-        className="flex flex-wrap gap-1 p-2 border border-input rounded-md min-h-10 cursor-text"
+        className="flex flex-wrap gap-1 p-2 border-theme-strong rounded-md min-h-10 cursor-text"
         onClick={() => setIsOpen(true)}
       >
         {selectedItems.length === 0 && !isOpen && (

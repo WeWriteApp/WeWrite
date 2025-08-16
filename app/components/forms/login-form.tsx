@@ -35,10 +35,24 @@ export function LoginForm() {
     setError('');
 
     try {
-      await signIn(emailOrUsername, password);
+      // CRITICAL: Trim inputs to prevent whitespace issues on Android PWA
+      const trimmedEmailOrUsername = emailOrUsername.trim();
+      const trimmedPassword = password.trim();
+
+      console.log('[LoginForm] Submitting with trimmed inputs:', {
+        originalEmailLength: emailOrUsername.length,
+        trimmedEmailLength: trimmedEmailOrUsername.length,
+        hasEmailWhitespace: emailOrUsername !== trimmedEmailOrUsername,
+        originalPasswordLength: password.length,
+        trimmedPasswordLength: trimmedPassword.length,
+        hasPasswordWhitespace: password !== trimmedPassword
+      });
+
+      await signIn(trimmedEmailOrUsername, trimmedPassword);
       // Use window.location.href for reliable redirect after login
       window.location.href = '/';
     } catch (err: any) {
+      console.error('[LoginForm] Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -71,9 +85,14 @@ export function LoginForm() {
             type="text"
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
+            onBlur={(e) => setEmailOrUsername(e.target.value.trim())} // Trim on blur for Android PWA
             placeholder="Enter your email or username"
             required
             disabled={isLoading}
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck="false"
           />
         </div>
 
@@ -85,9 +104,14 @@ export function LoginForm() {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onBlur={(e) => setPassword(e.target.value.trim())} // Trim on blur for Android PWA
               placeholder="Enter your password"
               required
               disabled={isLoading}
+              autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
             />
             <Button
               type="button"

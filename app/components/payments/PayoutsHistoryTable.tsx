@@ -156,31 +156,31 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
     const statusConfig = {
       pending: {
         icon: Clock,
-        color: 'bg-yellow-100 text-yellow-800',
+        color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
         label: 'Pending',
         description: 'Payout is pending until submitted to bank'
       },
       in_transit: {
         icon: Loader2,
-        color: 'bg-blue-100 text-blue-800',
+        color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
         label: 'In Transit',
         description: 'Payout has been submitted to bank and is in transit'
       },
       paid: {
         icon: CheckCircle,
-        color: 'bg-green-100 text-green-800',
+        color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
         label: 'Paid',
         description: 'Payout completed successfully'
       },
       failed: {
         icon: XCircle,
-        color: 'bg-red-100 text-red-800',
+        color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         label: 'Failed',
         description: 'Payout failed to complete'
       },
       canceled: {
         icon: AlertTriangle,
-        color: 'bg-gray-100 text-gray-800',
+        color: 'bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300',
         label: 'Canceled',
         description: 'Payout was canceled'
       }
@@ -396,7 +396,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                       <TableCell>
                         {getStatusBadge(payout.status)}
                         {payout.failureReason && (
-                          <div className="text-sm text-red-600 mt-1">
+                          <div className="text-sm text-red-600 dark:text-red-400 mt-1">
                             {payout.failureReason}
                           </div>
                         )}
@@ -431,7 +431,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                             {new Date(payout.estimatedArrival).toLocaleDateString()}
                           </div>
                         ) : payout.completedAt ? (
-                          <div className="text-sm text-green-600">
+                          <div className="text-sm text-green-600 dark:text-green-400">
                             Completed {new Date(payout.completedAt).toLocaleDateString()}
                           </div>
                         ) : (
@@ -517,8 +517,8 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                     {/* Failure Reason */}
                     {payout.failureReason && (
                       <div className="flex items-start gap-2 text-sm">
-                        <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-red-600">{payout.failureReason}</span>
+                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                        <span className="text-red-600 dark:text-red-400">{payout.failureReason}</span>
                       </div>
                     )}
                   </div>
@@ -540,8 +540,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle>
               Payout History
             </CardTitle>
             <CardDescription>

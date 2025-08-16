@@ -29,6 +29,7 @@ export default function RandomPagesPage() {
   const { user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
+  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(() => {
     // Initialize from localStorage if available
     if (typeof window !== 'undefined') {
@@ -133,83 +134,117 @@ export default function RandomPagesPage() {
   // Render mobile filter menu
   const renderMobileFilterMenu = () => {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-2xl hover:bg-muted/80 transition-colors md:hidden"
-            aria-label="Random pages options"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80 p-2 min-w-80" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              handleExcludeOwnToggle();
-            }}
-            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
-          >
-            <div className="flex items-center gap-3 flex-1">
-              <div className="flex-shrink-0">
-                <UserX className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex flex-col flex-1">
-                <span className="font-medium text-sm whitespace-nowrap">Not mine</span>
-                <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
-                  Exclude pages you authored
-                </span>
-              </div>
-            </div>
-            <div className="flex-shrink-0 ml-3">
-              <Switch
-                checked={excludeOwnPages}
-                onCheckedChange={(checked) => {
-                  if (checked !== excludeOwnPages) {
-                    handleExcludeOwnToggle();
-                  }
-                }}
-                aria-label="Toggle exclude own pages"
-              />
-            </div>
-          </DropdownMenuItem>
+      <div className="relative md:hidden">
+        <button
+          className="h-8 w-8 rounded-2xl hover:bg-muted/80 transition-colors border border-border bg-background inline-flex items-center justify-center relative z-50"
+          aria-label="Random pages options"
+          onClick={(e) => {
+            console.log('🔍 Simple button clicked!', e);
+            e.stopPropagation();
+            setMobileDropdownOpen(!mobileDropdownOpen);
+          }}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <MoreHorizontal className="h-4 w-4 pointer-events-none" />
+        </button>
 
-          <DropdownMenuSeparator className="my-2" />
+        {mobileDropdownOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMobileDropdownOpen(false)}
+            />
 
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDenseModeToggle();
-            }}
-            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50 text-left"
-          >
-            <div className="flex items-center gap-3 flex-1">
-              <div className="flex-shrink-0">
-                <Grid3X3 className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex flex-col flex-1">
-                <span className="font-medium text-sm whitespace-nowrap">Dense Mode</span>
-                <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
-                  Show only page titles as pill links
-                </span>
-              </div>
-            </div>
-            <div className="flex-shrink-0 ml-3">
-              <Switch
-                checked={denseMode}
-                onCheckedChange={(checked) => {
-                  if (checked !== denseMode) {
-                    handleDenseModeToggle();
-                  }
+            {/* Dropdown content */}
+            <div className="absolute right-0 top-full mt-2 w-80 min-w-80 p-3 bg-card border border-border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto"
+                 style={{
+                   minWidth: '320px',
+                   maxWidth: '90vw',
+                   wordBreak: 'normal',
+                   overflowWrap: 'normal'
+                 }}>
+              <div
+                className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 text-left"
+                onClick={(e) => {
+                  console.log('🔍 Not mine item clicked!');
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleExcludeOwnToggle();
+                  // Don't close dropdown immediately to allow user to see the change
                 }}
-                aria-label="Toggle dense mode"
-              />
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex-shrink-0">
+                    <UserX className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium text-sm whitespace-nowrap">Not mine</span>
+                    <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                      Exclude pages you authored
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-shrink-0 ml-3">
+                  <Switch
+                    checked={excludeOwnPages}
+                    onCheckedChange={(checked) => {
+                      console.log('🔍 Switch toggled to:', checked);
+                      handleExcludeOwnToggle();
+                    }}
+                    onClick={(e) => {
+                      console.log('🔍 Switch clicked!');
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    aria-label="Toggle exclude own pages"
+                  />
+                </div>
+              </div>
+
+              <div className="h-px bg-border my-2" />
+
+              <div
+                className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 text-left"
+                onClick={(e) => {
+                  console.log('🔍 Dense mode item clicked!');
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDenseModeToggle();
+                  // Don't close dropdown immediately to allow user to see the change
+                }}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex-shrink-0">
+                    <Grid3X3 className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium text-sm whitespace-nowrap">Dense Mode</span>
+                    <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                      Show only page titles as pill links
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-shrink-0 ml-3">
+                  <Switch
+                    checked={denseMode}
+                    onCheckedChange={(checked) => {
+                      console.log('🔍 Dense mode switch toggled to:', checked);
+                      handleDenseModeToggle();
+                    }}
+                    onClick={(e) => {
+                      console.log('🔍 Dense mode switch clicked!');
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    aria-label="Toggle dense mode"
+                  />
+                </div>
+              </div>
             </div>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </>
+        )}
+      </div>
     );
   };
 

@@ -21,7 +21,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { getCollectionName } from '../utils/environmentConfig';
-import { fundTrackingService } from './fundTrackingService';
+
 import { formatUsdCents } from '../utils/formatCurrency';
 
 export interface AllocationLockStatus {
@@ -113,9 +113,8 @@ export class MonthlyAllocationLockService {
 
       await this.saveLockStatus(lockStatus);
 
-      // Get all fund tracking records for the month
-      const fundRecords = await this.getFundTrackingRecordsForMonth(month);
-      console.log(`🔒 [ALLOCATION LOCK] Found ${fundRecords.length} fund records for ${month}`);
+      // Process allocations for the month (simplified without fund tracking)
+      console.log(`🔒 [ALLOCATION LOCK] Processing allocations for ${month}`);
 
       const batch = writeBatch(db);
       const userSnapshots: UserAllocationSnapshot[] = [];
@@ -165,11 +164,7 @@ export class MonthlyAllocationLockService {
         }
       }
 
-      // Lock fund tracking records
-      const lockResult = await fundTrackingService.lockMonthlyAllocations(month);
-      if (!lockResult.success) {
-        errors.push(`Fund tracking lock failed: ${lockResult.error}`);
-      }
+      // Allocation locking completed (fund tracking removed for simplicity)
 
       // Commit batch operations
       await batch.commit();
@@ -353,32 +348,7 @@ export class MonthlyAllocationLockService {
   /**
    * Private helper methods
    */
-  private async getFundTrackingRecordsForMonth(month: string) {
-    const fundQuery = query(
-      collection(db, getCollectionName('fundTracking')),
-      where('month', '==', month),
-      where('status', 'in', ['collected', 'allocated'])
-    );
 
-    const fundSnapshot = await getDocs(fundQuery);
-    const records = [];
-
-    for (const doc of fundSnapshot.docs) {
-      const data = doc.data();
-      records.push({
-        ...data,
-        collectedAt: data.collectedAt?.toDate() || new Date(),
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        allocations: data.allocations?.map((alloc: any) => ({
-          ...alloc,
-          allocatedAt: alloc.allocatedAt?.toDate() || new Date()
-        })) || []
-      });
-    }
-
-    return records;
-  }
 
   private async saveLockStatus(status: AllocationLockStatus): Promise<void> {
     await setDoc(doc(db, getCollectionName('allocationLockStatus'), status.month), {

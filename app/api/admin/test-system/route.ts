@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { isAdminUser } from '../../../utils/adminUtils';
-import { fundTrackingService } from '../../../services/fundTrackingService';
+
 import { earningsCalculationEngine } from '../../../services/earningsCalculationEngine';
 import { monthlyAllocationLockService } from '../../../services/monthlyAllocationLockService';
 import { useItOrLoseItService } from '../../../services/useItOrLoseItService';
@@ -33,9 +33,6 @@ export async function POST(request: NextRequest) {
     console.log(`🧪 [ADMIN] System test request: ${action}`);
 
     switch (action) {
-      case 'test_fund_tracking':
-        return await testFundTracking();
-      
       case 'test_earnings_calculation':
         return await testEarningsCalculation();
       
@@ -69,53 +66,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function testFundTracking() {
-  try {
-    console.log(`🧪 [TEST] Testing fund tracking service`);
-    
-    const testUserId = 'test-user-' + Date.now();
-    const testMonth = new Date().toISOString().slice(0, 7);
-    
-    // Test recording subscription payment
-    const paymentResult = await fundTrackingService.recordSubscriptionPayment(
-      testUserId,
-      10.00, // $10 subscription
-      'test-subscription-id',
-      testMonth,
-      'test'
-    );
-    
-    // Test recording allocation
-    const allocationResult = await fundTrackingService.recordAllocation(
-      testUserId,
-      5.00, // $5 allocation
-      'test-page-id',
-      undefined,
-      testMonth
-    );
-    
-    // Test getting fund tracking
-    const fundTracking = await fundTrackingService.getUserFundTracking(testUserId, testMonth);
-    
-    return NextResponse.json({
-      success: true,
-      test: 'fund_tracking',
-      results: {
-        paymentRecorded: paymentResult.success,
-        allocationRecorded: allocationResult.success,
-        fundTrackingRetrieved: !!fundTracking,
-        fundTrackingData: fundTracking
-      }
-    });
-    
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      test: 'fund_tracking',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
+
 
 async function testEarningsCalculation() {
   try {
@@ -267,7 +218,6 @@ async function testAllSystems() {
     console.log(`🧪 [TEST] Testing all systems`);
     
     const results = {
-      fundTracking: await testFundTracking().then(r => r.json()),
       earningsCalculation: await testEarningsCalculation().then(r => r.json()),
       allocationLocking: await testAllocationLocking().then(r => r.json()),
       useItOrLoseIt: await testUseItOrLoseIt().then(r => r.json()),

@@ -39,7 +39,7 @@ export function UsdAllocationModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [incrementAmount, setIncrementAmount] = useState(0.25); // Default $0.25 increment
+  const [incrementAmount, setIncrementAmount] = useState(0.50); // Default $0.50 increment
 
   // Ensure we're mounted on the client side
   useEffect(() => {
@@ -58,7 +58,7 @@ export function UsdAllocationModal({
   const quickAmounts = [0.00, 0.01, 0.10, 1.00, 5.00, 10.00];
 
   // Increment amount options in dollars
-  const incrementOptions = [0.25, 0.50, 1.00, 2.50];
+  const incrementOptions = [0.10, 0.50, 1.00, 2.50];
 
   // Load saved increment amount from localStorage
   useEffect(() => {

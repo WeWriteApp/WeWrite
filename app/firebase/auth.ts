@@ -56,23 +56,33 @@ export const createUser = async (email: string, password: string): Promise<UserC
 
 export const loginUser = async (emailOrUsername: string, password: string): Promise<AuthResult> => {
   try {
-    console.log('[Firebase Auth] Starting login process for:', emailOrUsername);
+    // CRITICAL: Trim input to prevent whitespace issues on Android PWA
+    const trimmedInput = emailOrUsername?.trim() || '';
+    const trimmedPassword = password?.trim() || '';
+
+    console.log('[Firebase Auth] Starting login process for:', trimmedInput);
+    console.log('[Firebase Auth] Input validation:', {
+      originalLength: emailOrUsername?.length || 0,
+      trimmedLength: trimmedInput.length,
+      hasWhitespace: emailOrUsername !== trimmedInput,
+      inputType: trimmedInput.includes('@') ? 'email' : 'username'
+    });
     console.log('[Firebase Auth] Firebase config check:', {
       hasAuth: !!auth,
       hasFirestore: !!firestore,
       authCurrentUser: auth?.currentUser?.email || 'none'
     });
 
-    let email = emailOrUsername;
+    let email = trimmedInput;
 
     // Check if the input is a username (doesn't contain @)
-    if (!emailOrUsername.includes('@')) {
-      console.log('[Firebase Auth] Looking up email for username:', emailOrUsername);
+    if (!trimmedInput.includes('@')) {
+      console.log('[Firebase Auth] Looking up email for username:', trimmedInput);
       const usernameCollection = getCollectionName('usernames');
       console.log('[Firebase Auth] Username collection:', usernameCollection);
 
       // Look up the email by username
-      const usernameDoc = await getDoc(doc(firestore, usernameCollection, emailOrUsername.toLowerCase()));
+      const usernameDoc = await getDoc(doc(firestore, usernameCollection, trimmedInput.toLowerCase()));
 
       if (!usernameDoc.exists()) {
         console.log('[Firebase Auth] Username not found in collection:', usernameCollection);
@@ -101,8 +111,18 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
       console.log('[Firebase Auth] Resolved email for username:', email);
     }
 
-    console.log('[Firebase Auth] Attempting Firebase signInWithEmailAndPassword for:', email);
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    // CRITICAL: Final email validation before Firebase call
+    const finalEmail = email.trim();
+    console.log('[Firebase Auth] Final email validation:', {
+      email: finalEmail,
+      length: finalEmail.length,
+      hasAt: finalEmail.includes('@'),
+      hasDot: finalEmail.includes('.'),
+      isValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(finalEmail)
+    });
+
+    console.log('[Firebase Auth] Attempting Firebase signInWithEmailAndPassword for:', finalEmail);
+    const userCredential = await signInWithEmailAndPassword(auth, finalEmail, trimmedPassword);
     console.log('[Firebase Auth] Firebase login successful for:', userCredential.user.email);
     return { user: userCredential.user };
   } catch (error: any) {
@@ -110,7 +130,12 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
     console.error("[Firebase Auth] Error details:", {
       code: error.code,
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
+      // Additional debugging for Android PWA issues
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
+      platform: typeof navigator !== 'undefined' ? navigator.platform : 'server',
+      isAndroid: typeof navigator !== 'undefined' ? /Android/i.test(navigator.userAgent) : false,
+      isPWA: typeof window !== 'undefined' ? window.matchMedia('(display-mode: standalone)').matches : false
     });
 
     // Convert Firebase error codes to user-friendly messages
@@ -119,7 +144,8 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
     if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
       message = "Incorrect username/email or password. Please try again.";
     } else if (error.code === "auth/invalid-email") {
-      message = "Invalid email address format.";
+      // ENHANCED: Better error message for invalid email on Android PWA
+      message = "Please check your email address and try again. Make sure there are no extra spaces.";
     } else if (error.code === "auth/user-disabled") {
       message = "This account has been disabled.";
     } else if (error.code === "auth/too-many-requests") {

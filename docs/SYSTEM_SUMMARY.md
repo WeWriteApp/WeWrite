@@ -32,7 +32,7 @@ Month-End: Storage Balance → Creator Payouts
 - **Modified webhook handlers** to use Storage Balance system
 - **Added transfer_group tracking** for Stripe Connect compliance
 - **Platform account configured** with Storage Balance enabled
-- **Fund tracking service** moves allocations to Storage Balance
+- **USD allocation system** moves allocations to Storage Balance
 - **Updated balance calculations** to use Stripe's escrow system
 
 ### **Phase 2: Monthly Earnings Calculation** ✅
@@ -84,7 +84,7 @@ Month-End: Storage Balance → Creator Payouts
 ## 🔧 **Technical Implementation**
 
 ### **Core Services**
-- `fundTrackingService` - Moves allocations to Storage Balance
+- `usdService` - Manages USD allocations and balances
 - `stripeStorageBalanceService` - Manages Storage Balance operations
 - `monthlyAllocationLockService` - Handles month-end allocation locking
 - `earningsCalculationEngine` - Calculates creator earnings and platform revenue
@@ -94,7 +94,7 @@ Month-End: Storage Balance → Creator Payouts
 - `balanceMonitoringService` - Monitors Storage vs. Payments Balance
 
 ### **Key Features**
-- **Real-time Tracking**: All fund movements tracked in Firestore
+- **Real-time Tracking**: All USD allocations tracked in Firestore
 - **Automated Processing**: Month-end processing runs automatically
 - **Comprehensive Monitoring**: Balance alerts and risk assessment
 - **Audit Trail**: Complete history of all transactions

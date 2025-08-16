@@ -293,19 +293,42 @@ const readOptimizer = new ReadOptimizer();
  */
 export async function getOptimizedPageData(pageId: string, userId?: string) {
   const cacheKey = `page:${pageId}:${userId || 'anonymous'}`;
-  
+
   return readOptimizer.optimizedFetch(
     cacheKey,
     async () => {
       // Use API instead of direct Firebase calls
-      const response = await fetch(`/api/pages/${pageId}?userId=${userId || ''}`);
+      const url = userId
+        ? `/api/pages/${pageId}?userId=${encodeURIComponent(userId)}`
+        : `/api/pages/${pageId}`;
+
+      console.log('🔄 [ReadOptimizer] Fetching page data from:', url);
+
+      const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('🔄 [ReadOptimizer] API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText,
+          url
+        });
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
       }
-      return response.json();
+
+      const data = await response.json();
+      console.log('🔄 [ReadOptimizer] Page data fetched:', {
+        pageId,
+        hasData: !!data,
+        title: data?.title,
+        username: data?.username,
+        userId: data?.userId
+      });
+
+      return data;
     },
     {
-      cacheDuration: 5 * 60 * 1000, // 5 minutes
+      cacheDuration: 2 * 60 * 1000, // Reduced to 2 minutes for fresher data
       aggressive: true,
       priority: 'high'
     }

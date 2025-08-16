@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils';
 import { formatUsdCents, dollarsToCents } from '../../utils/formatCurrency';
 import { USD_UI_TEXT } from '../../utils/usdConstants';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { UsdAllocationModal } from './UsdAllocationModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { toast } from '../ui/use-toast';
@@ -128,8 +129,14 @@ export function UserUsdAllocationBar({
   const hasBalance = usdBalance && usdBalance.totalUsdCents > 0;
   const availableUsdCents = usdBalance?.availableUsdCents || 0;
 
-  // Quick allocation amounts in cents
-  const quickAmounts = [25, 50, 100, 250]; // $0.25, $0.50, $1.00, $2.50
+  // Quick allocation amounts in cents - use multiples of the current interval
+  const { allocationIntervalCents } = useAllocationInterval();
+  const quickAmounts = [
+    allocationIntervalCents,           // 1x interval (e.g., $0.50)
+    allocationIntervalCents * 2,       // 2x interval (e.g., $1.00)
+    allocationIntervalCents * 4,       // 4x interval (e.g., $2.00)
+    allocationIntervalCents * 10       // 10x interval (e.g., $5.00)
+  ];
 
   return (
     <>

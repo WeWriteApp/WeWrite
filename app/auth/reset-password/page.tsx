@@ -54,11 +54,23 @@ function CustomPasswordResetContent() {
       } catch (error: any) {
         console.error("Error verifying password reset code:", error);
 
+        // Enhanced error logging for debugging
+        console.error("🔐 [Reset Password Page] Detailed verification error:", {
+          message: error.message,
+          code: error.code,
+          stack: error.stack,
+          oobCode: oobCode?.substring(0, 10) + '...',
+          timestamp: new Date().toISOString()
+        });
+
         let errorMessage = "Invalid or expired password reset link";
         if (error.message.includes('invalid-action-code')) {
           errorMessage = "This password reset link is invalid or has already been used";
         } else if (error.message.includes('expired-action-code')) {
           errorMessage = "This password reset link has expired. Please request a new one";
+        } else if (error.message.includes('Failed to verify reset code:')) {
+          // Show the detailed error message from the API
+          errorMessage = error.message;
         } else if (error.message) {
           errorMessage = error.message;
         }
@@ -117,6 +129,15 @@ function CustomPasswordResetContent() {
     } catch (error: any) {
       console.error("Password reset error:", error);
 
+      // Enhanced error logging for debugging
+      console.error("🔐 [Reset Password Page] Detailed confirmation error:", {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        userEmail: userEmail,
+        timestamp: new Date().toISOString()
+      });
+
       let errorMessage = "Failed to reset password";
       if (error.message.includes('weak-password')) {
         errorMessage = "Password is too weak. Please choose a stronger password";
@@ -124,6 +145,9 @@ function CustomPasswordResetContent() {
         errorMessage = "This password reset link is invalid or has already been used";
       } else if (error.message.includes('expired-action-code')) {
         errorMessage = "This password reset link has expired. Please request a new one";
+      } else if (error.message.includes('Failed to reset password:')) {
+        // Show the detailed error message from the API
+        errorMessage = error.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -292,8 +316,15 @@ function CustomPasswordResetContent() {
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertTitle>Password Reset Error</AlertTitle>
+            <AlertDescription>
+              {error}
+              {error.includes('Technical details:') && (
+                <div className="text-xs text-destructive/70 mt-2">
+                  Please include these details when contacting support.
+                </div>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 

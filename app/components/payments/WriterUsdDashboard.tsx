@@ -20,7 +20,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, AreaChart, A
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../providers/AuthProvider';
 import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../utils/firebase-error-handler';
-import { UsdEarningsService } from '../../services/usdEarningsService';
+import { UnifiedEarningsService } from '../../services/unifiedEarningsService';
 import { WriterUsdBalance, WriterUsdEarnings } from '../../types/database';
 import { formatCurrency, centsToDollars } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
@@ -98,8 +98,8 @@ export default function WriterUsdDashboard({ className }: WriterUsdDashboardProp
     try {
       setLoading(true);
 
-      // Load complete writer earnings data using UsdEarningsService
-      const completeData = await UsdEarningsService.getCompleteWriterEarnings(user.uid);
+      // Load complete writer earnings data using UnifiedEarningsService
+      const completeData = await UnifiedEarningsService.getCompleteEarningsData(user.uid);
 
       console.log('[WriterUsdDashboard] Complete USD data received:', completeData);
 

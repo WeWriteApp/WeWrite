@@ -4,7 +4,7 @@
  * Provides subscription warning state and status information for UI components
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 
 
@@ -24,15 +24,13 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
 
 
 
-  useEffect(() => {
+  const checkSubscriptionStatus = useCallback(async () => {
     if (!user?.uid) {
       setIsLoading(false);
       setHasActiveSubscription(null);
       setSubscriptionStatus(null);
       return;
     }
-
-    const checkSubscriptionStatus = async () => {
       try {
         setIsLoading(true);
 
@@ -68,9 +66,29 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
       } finally {
         setIsLoading(false);
       }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    checkSubscriptionStatus();
+  }, [user?.uid, checkSubscriptionStatus]);
+
+  // Listen for cache invalidation events
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleSubscriptionCacheInvalidation = (event: CustomEvent) => {
+      const { userId, forceRefresh } = event.detail || {};
+      if (!userId || userId === user?.uid) {
+        console.log('[useSubscriptionWarning] Subscription cache invalidation event received, refreshing...', { forceRefresh });
+        checkSubscriptionStatus();
+      }
     };
 
-    checkSubscriptionStatus();
+    window.addEventListener('invalidate-subscription-cache', handleSubscriptionCacheInvalidation as EventListener);
+
+    return () => {
+      window.removeEventListener('invalidate-subscription-cache', handleSubscriptionCacheInvalidation as EventListener);
+    };
   }, [user?.uid]);
 
   // Determine if we should show a warning

@@ -272,8 +272,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
               {variant === 'simple' ? (
                 <div className="flex items-center justify-center">
                   <div className="flex items-center space-x-2">
-                    {/* Quick amount buttons */}
-                    {[25, 50, 100, 250].map((cents) => (
+                    {/* Quick amount buttons - use multiples of current interval */}
+                    {[
+                      allocationIntervalCents,           // 1x interval (e.g., $0.50)
+                      allocationIntervalCents * 2,       // 2x interval (e.g., $1.00)
+                      allocationIntervalCents * 4,       // 4x interval (e.g., $2.00)
+                      allocationIntervalCents * 10       // 10x interval (e.g., $5.00)
+                    ].map((cents) => (
                       <Button
                         key={cents}
                         variant="outline"

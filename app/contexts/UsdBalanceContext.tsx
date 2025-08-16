@@ -236,6 +236,11 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
       const newAllocatedCents = Math.max(0, prev.allocatedUsdCents + changeCents);
       const newAvailableCents = prev.totalUsdCents - newAllocatedCents;
 
+      // Simple validation: reject impossible states
+      if (newAllocatedCents > prev.totalUsdCents) {
+        return prev; // Return unchanged balance
+      }
+
       const newBalance = {
         ...prev,
         allocatedUsdCents: newAllocatedCents,
@@ -265,9 +270,18 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
         }
       }
 
+      // CRITICAL FIX: Force refresh from server after optimistic update to prevent stale data
+      // This ensures UI eventually matches database state
+      if (!isFakeBalance) {
+        setTimeout(() => {
+          console.log('[UsdBalanceContext] Force refreshing balance after optimistic update to ensure consistency');
+          fetchUsdBalance(true);
+        }, 1500); // Delay to allow server processing
+      }
+
       return newBalance;
     });
-  }, [isFakeBalance, user?.uid]);
+  }, [isFakeBalance, user?.uid, fetchUsdBalance]);
 
   // Helper methods for formatted display
   const getTotalUsdFormatted = useCallback(() => {

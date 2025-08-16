@@ -306,11 +306,17 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         }
 
         // ENHANCED: Search for individual words to support out-of-order matching
-        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+        // Include shorter words (2+ chars) to catch more matches like "to", "in", etc.
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(word => word.length >= 2);
         if (searchWords.length > 1) {
           console.log(`🔍 [SEARCH DEBUG] Adding individual word searches for: ${searchWords.join(', ')}`);
 
           for (const word of searchWords) {
+            // Skip very common words that would return too many results
+            if (['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'].includes(word)) {
+              continue;
+            }
+
             // Search for each word individually with case variations
             const wordVariations = new Set([
               word,
@@ -413,18 +419,21 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       // Continue with empty results rather than failing completely
     }
 
-    // FALLBACK: If we have few results and a search term, do a broader client-side search
-    if (!isEmptySearch && allResults.length < Math.min(finalMaxResults / 2, 20)) {
-      console.log(`⚡ [SEARCH DEBUG] Few results found (${allResults.length}), performing broader client-side search`);
+    // ENHANCED FALLBACK: Always perform broader client-side search for better word matching
+    // This ensures we find pages where search terms appear anywhere in the title, not just at the start
+    if (!isEmptySearch) {
+      console.log(`⚡ [SEARCH DEBUG] Performing comprehensive client-side search to catch missed matches`);
 
       try {
         // Get a broader set of pages for client-side filtering
+        // Increase limit to ensure we catch more potential matches
         const broadQuery = query(
           collection(db, getCollectionName('pages')),
-          limit(200)
+          limit(500)
         );
 
         const broadSnapshot = await getDocs(broadQuery);
+        let broadSearchMatches = 0;
 
         broadSnapshot.forEach(doc => {
           if (processedIds.has(doc.id) || doc.id === currentPageId) return;
@@ -433,12 +442,38 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           const data = doc.data();
           const pageTitle = data.title || '';
 
-          // Client-side case-insensitive matching
-          if (pageTitle.toLowerCase().includes(searchTermLower)) {
+          // Enhanced client-side matching: check for individual words and full term
+          const titleLower = pageTitle.toLowerCase();
+          const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
+
+          let hasMatch = false;
+
+          // Check if title contains the full search term
+          if (titleLower.includes(searchTermLower)) {
+            hasMatch = true;
+          }
+
+          // Check if title contains all individual search words (out-of-order matching)
+          if (!hasMatch && searchWords.length > 1) {
+            const allWordsFound = searchWords.every(word => titleLower.includes(word));
+            if (allWordsFound) {
+              hasMatch = true;
+            }
+          }
+
+          // Check if title contains any individual search word (for single word searches)
+          if (!hasMatch && searchWords.length === 1) {
+            if (titleLower.includes(searchWords[0])) {
+              hasMatch = true;
+            }
+          }
+
+          if (hasMatch) {
             const matchScore = calculateSearchScore(pageTitle, searchTerm, true, false);
 
             if (matchScore > 0) {
               processedIds.add(doc.id);
+              broadSearchMatches++;
 
               allResults.push({
                 id: doc.id,
@@ -458,9 +493,9 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           }
         });
 
-        console.log(`⚡ [SEARCH DEBUG] Broader search added ${allResults.length - processedIds.size + broadSnapshot.size} more results`);
+        console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches`);
       } catch (error) {
-        console.warn('Error in broader client-side search:', error);
+        console.warn('Error in comprehensive client-side search:', error);
       }
     }
 
@@ -607,9 +642,9 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
  * Main API route handler
  */
 export async function GET(request) {
+  const startTime = Date.now(); // Move this BEFORE everything
   let searchTerm = '';
   let userId = null;
-  const startTime = Date.now(); // Move this BEFORE the try block
 
   try {
     const { searchParams } = new URL(request.url);
@@ -630,14 +665,13 @@ export async function GET(request) {
     const cachedResult = getCachedResult(cacheKey);
 
     if (cachedResult) {
-      const responseTime = Date.now() - startTime;
-      console.log(`🚀 CACHE HIT: Search served from cache in ${responseTime}ms`);
+      console.log(`🚀 CACHE HIT: Search served from cache`);
 
       // Record cache hit for monitoring
       recordProductionRead('/api/search-unified', 'search-cached', 0, {
         userId,
         cacheStatus: 'HIT',
-        responseTime,
+        responseTime: 0, // Cache hit, no response time
         userAgent: request.headers.get('user-agent'),
         referer: request.headers.get('referer')
       });
@@ -658,8 +692,6 @@ export async function GET(request) {
       includeUsers,
       titleOnly
     });
-
-    const startTime = Date.now();
 
     // Handle empty search for authenticated users
     if (!searchTerm || searchTerm.trim().length === 0) {
@@ -731,20 +763,28 @@ export async function GET(request) {
       includeUsers ? searchUsersComprehensive(searchTerm, 10) : Promise.resolve([])
     ]);
 
-    // Fetch missing usernames for pages
+    // Fetch missing or invalid usernames for pages
     const pagesWithUsernames = await Promise.all((pages || []).map(async (page) => {
-      if (!page.username && page.userId) {
+      // Check if username is missing, null, or looks like a userId (long alphanumeric string)
+      const needsUsernameFetch = !page.username ||
+                                page.username === 'Anonymous' ||
+                                page.username === 'NULL' ||
+                                page.username === 'Missing username' ||
+                                (page.username && page.username.length > 20 && /^[a-zA-Z0-9]+$/.test(page.username));
+
+      if (needsUsernameFetch && page.userId) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', page.userId));
+          const userDoc = await getDoc(doc(db, getCollectionName('users'), page.userId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            page.username = userData.username || 'Anonymous';
+            page.username = userData.username || 'Missing Username';
+            console.log(`Fixed username for page ${page.id}: "${page.username}" (was: "${page.username || 'null'}")`);
           } else {
-            page.username = 'Anonymous';
+            page.username = 'Missing Username';
           }
         } catch (error) {
           console.error(`Error fetching username for user ${page.userId}:`, error);
-          page.username = 'Anonymous';
+          page.username = 'Missing Username';
         }
       }
       return page;

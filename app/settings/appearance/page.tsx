@@ -43,7 +43,7 @@ export default function AppearancePage() {
     <div className="p-6 lg:p-8">
       <div className="space-y-8">
         {/* Theme Selection */}
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="bg-card border-theme-strong rounded-lg p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Theme</h2>
             <p className="text-muted-foreground text-sm">
@@ -80,7 +80,7 @@ export default function AppearancePage() {
         </div>
 
         {/* Accent Color */}
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="bg-card border-theme-strong rounded-lg p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Accent Color</h2>
             <p className="text-muted-foreground text-sm">
@@ -92,7 +92,7 @@ export default function AppearancePage() {
         </div>
 
         {/* Pill Style */}
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="bg-card border-theme-strong rounded-lg p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Link Style</h2>
             <p className="text-muted-foreground text-sm">

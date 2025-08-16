@@ -12,6 +12,7 @@ import { useRelatedPages } from '../../hooks/useRelatedPages';
 import { graphDataCache } from '../../utils/graphDataCache';
 import GraphSettingsPanel from './GraphSettingsPanel';
 import { useAuth } from '../../providers/AuthProvider';
+import SubscriptionGate from '../subscription/SubscriptionGate';
 
 interface GraphNode {
   id: string;
@@ -811,7 +812,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         }}
       >
         {/* Header with controls */}
-        <div className="absolute top-0 left-0 right-0 z-10 bg-background border-b border-border p-4">
+        <div className="absolute top-0 left-0 right-0 z-20 bg-background border-b border-border p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <h3 className="text-lg font-semibold">Graph view</h3>
@@ -865,12 +866,15 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         </div>
 
         {/* Graph container */}
-        <div
-          ref={containerRef}
+        <SubscriptionGate
+          featureName="graph"
           className={`bg-background ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}
+          allowInteraction={true}
         >
-          <svg ref={svgRef} className="w-full h-full" />
-        </div>
+          <div ref={containerRef} className="w-full h-full">
+            <svg ref={svgRef} className="w-full h-full" />
+          </div>
+        </SubscriptionGate>
 
         {/* Settings panel (bottom half when open) */}
         {isViewSettingsOpen && (
@@ -954,7 +958,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         </div>
 
         {/* Graph container */}
-        <div className="relative">
+        <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
           <div
             ref={containerRef}
             className="bg-background h-96 transition-all duration-300"
@@ -976,7 +980,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
               </div>
             )}
           </div>
-        </div>
+        </SubscriptionGate>
       </div>
     </div>
   );

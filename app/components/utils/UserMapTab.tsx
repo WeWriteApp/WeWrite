@@ -7,6 +7,7 @@ import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
+import SubscriptionGate from '../subscription/SubscriptionGate';
 
 interface Location {
   lat: number;
@@ -25,6 +26,7 @@ interface PageWithLocation {
 interface UserMapTabProps {
   userId: string;
   username: string;
+  isOwnContent?: boolean;
 }
 
 interface MultiLocationMapProps {
@@ -363,7 +365,7 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
  * Shows a map of all pages created by a user that have location data.
  * Displays markers for each page and allows clicking to navigate to the page.
  */
-export default function UserMapTab({ userId, username }: UserMapTabProps) {
+export default function UserMapTab({ userId, username, isOwnContent = false }: UserMapTabProps) {
 
   const [pages, setPages] = useState<PageWithLocation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -596,7 +598,7 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
 
 
       {/* Map View */}
-      <div className="relative">
+      <SubscriptionGate featureName="map" className="relative" isOwnContent={isOwnContent} allowInteraction={true}>
         <div
           className="rounded-lg overflow-hidden border border-border"
           style={{
@@ -623,7 +625,7 @@ export default function UserMapTab({ userId, username }: UserMapTabProps) {
             </span>
           </div>
         </div>
-      </div>
+      </SubscriptionGate>
 
       {/* Pages List */}
       <div>

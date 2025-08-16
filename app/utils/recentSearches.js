@@ -6,8 +6,14 @@
 const MAX_RECENT_SEARCHES = 10;
 
 /**
+ * Debounce timeout for saving recent searches
+ */
+let saveSearchTimeout = null;
+
+/**
  * Add a search term to the recent searches list
  * OPTIMIZED: Primarily uses localStorage with periodic database sync to reduce reads
+ * SMART FILTERING: Only saves meaningful searches, not incremental typing
  *
  * @param {string} searchTerm - The search term to add
  * @param {string} userId - The user ID (required for database storage)
@@ -18,6 +24,14 @@ export const addRecentSearch = async (searchTerm, userId = null) => {
   // Trim the search term and ensure it's not empty
   const trimmedTerm = searchTerm.trim();
   if (!trimmedTerm) return;
+
+  // SMART FILTERING: Only save meaningful searches
+  // 1. Must be at least 2 characters (avoid single character searches)
+  if (trimmedTerm.length < 2) return;
+
+  // 2. Don't save if it's just a common word or very short
+  const commonWords = ['a', 'an', 'the', 'is', 'at', 'it', 'on', 'be', 'to', 'of', 'and', 'or'];
+  if (commonWords.includes(trimmedTerm.toLowerCase())) return;
 
   // OPTIMIZATION: Always save to localStorage first for instant response
   const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
@@ -32,10 +46,49 @@ export const addRecentSearch = async (searchTerm, userId = null) => {
       recentSearches = [];
     }
 
+    // 3. SMART FILTERING: Don't save if it's just an incremental search
+    // Check if this search term is a substring of a recent search or vice versa
+    const isIncrementalSearch = recentSearches.some(item => {
+      const existingTerm = item.term.toLowerCase();
+      const newTerm = trimmedTerm.toLowerCase();
+
+      // Don't save if the new term is a prefix of an existing term
+      // e.g., don't save "tes" if "test" already exists
+      if (existingTerm.startsWith(newTerm) && existingTerm.length > newTerm.length) {
+        return true;
+      }
+
+      // Don't save if it's exactly the same (case insensitive)
+      if (existingTerm === newTerm) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (isIncrementalSearch) {
+      console.log(`Skipping incremental search: "${trimmedTerm}"`);
+      return;
+    }
+
     // Remove this search term if it already exists (to avoid duplicates)
-    recentSearches = recentSearches.filter(item =>
-      item.term.toLowerCase() !== trimmedTerm.toLowerCase()
-    );
+    // Also remove any terms that are prefixes of the new term
+    recentSearches = recentSearches.filter(item => {
+      const existingTerm = item.term.toLowerCase();
+      const newTerm = trimmedTerm.toLowerCase();
+
+      // Remove exact matches
+      if (existingTerm === newTerm) return false;
+
+      // Remove shorter terms that are prefixes of the new term
+      // e.g., remove "tes" when adding "test"
+      if (newTerm.startsWith(existingTerm) && newTerm.length > existingTerm.length) {
+        console.log(`Removing prefix search: "${item.term}" (replaced by "${trimmedTerm}")`);
+        return false;
+      }
+
+      return true;
+    });
 
     // Add the new search term to the beginning with timestamp
     recentSearches.unshift({
@@ -104,6 +157,26 @@ export const addRecentSearch = async (searchTerm, userId = null) => {
   } catch (error) {
     console.error("Error adding recent search to localStorage:", error);
   }
+};
+
+/**
+ * Debounced version of addRecentSearch - only saves after user stops typing
+ * This prevents saving every keystroke as a separate search
+ *
+ * @param {string} searchTerm - The search term to add
+ * @param {string} userId - The user ID (required for database storage)
+ * @param {number} delay - Debounce delay in milliseconds (default: 1000ms)
+ */
+export const addRecentSearchDebounced = (searchTerm, userId = null, delay = 1000) => {
+  // Clear existing timeout
+  if (saveSearchTimeout) {
+    clearTimeout(saveSearchTimeout);
+  }
+
+  // Set new timeout
+  saveSearchTimeout = setTimeout(() => {
+    addRecentSearch(searchTerm, userId);
+  }, delay);
 };
 
 /**

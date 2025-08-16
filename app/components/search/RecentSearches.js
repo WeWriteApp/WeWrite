@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Clock, X, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, X } from 'lucide-react';
 import { getRecentSearches, clearRecentSearches, removeRecentSearch } from "../../utils/recentSearches";
 import { Button } from "../ui/button";
 import PillLink from "../utils/PillLink";
+import { UsernameBadge } from "../ui/UsernameBadge";
 
 /**
  * RecentSearches Component
@@ -17,77 +18,70 @@ import PillLink from "../utils/PillLink";
  */
 export default function RecentSearches({ onSelect, userId = null }) {
   const [recentSearches, setRecentSearches] = useState([]);
-  const [searchResults, setSearchResults] = useState({});
-  const [loadingResults, setLoadingResults] = useState({});
-  const [overflowStates, setOverflowStates] = useState({});
-  const scrollRefs = useRef({});
+  const [searchResults, setSearchResults] = useState({}); // Will store { pages: [], users: [] }
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load recent searches on mount
+  // Load recent searches and their results (simplified approach)
   useEffect(() => {
-    const loadRecentSearches = async () => {
+    const loadRecentSearchesWithResults = async () => {
       try {
-        const searches = await getRecentSearches(userId);
-        setRecentSearches(searches);
+        setIsLoading(true);
 
-        // Fetch search results for each recent search
-        searches.forEach(search => {
-          fetchSearchResults(search.term);
+        // Get recent searches from localStorage directly
+        const searches = await getRecentSearches(userId);
+        const limitedSearches = searches.slice(0, 3); // Limit to 3 most recent for performance
+        setRecentSearches(limitedSearches);
+
+        // Fetch search results for each recent search (simplified)
+        const resultsPromises = limitedSearches.map(async (search) => {
+          try {
+            const userIdParam = userId ? `&userId=${userId}` : '';
+            const response = await fetch(`/api/search-unified?q=${encodeURIComponent(search.term)}&maxResults=6&context=autocomplete&includeUsers=true${userIdParam}`);
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+              searchTerm: search.term,
+              results: {
+                pages: data.pages?.slice(0, 4) || [],
+                users: data.users?.slice(0, 2) || []
+              }
+            };
+          } catch (error) {
+            console.error(`Error fetching results for "${search.term}":`, error);
+            return {
+              searchTerm: search.term,
+              results: { pages: [], users: [] }
+            };
+          }
         });
+
+        // Wait for all results and update state
+        const allResults = await Promise.all(resultsPromises);
+        const resultsMap = {};
+        allResults.forEach(({ searchTerm, results }) => {
+          resultsMap[searchTerm] = results;
+        });
+
+        setSearchResults(resultsMap);
       } catch (error) {
         console.error('Error loading recent searches:', error);
         setRecentSearches([]);
+        setSearchResults({});
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadRecentSearches();
+    loadRecentSearchesWithResults();
   }, [userId]);
 
-  // Check overflow when search results change
-  useEffect(() => {
-    Object.keys(searchResults).forEach(searchTerm => {
-      if (searchResults[searchTerm]?.length > 0) {
-        // Use setTimeout to ensure DOM is updated
-        setTimeout(() => checkOverflow(searchTerm), 100);
-      }
-    });
-  }, [searchResults]);
 
-  // Function to fetch search results for a given search term
-  const fetchSearchResults = async (searchTerm) => {
-    if (loadingResults[searchTerm] || searchResults[searchTerm]) return;
 
-    setLoadingResults(prev => ({ ...prev, [searchTerm]: true }));
 
-    try {
-      const response = await fetch(`/api/search-unified?q=${encodeURIComponent(searchTerm)}&maxResults=6&context=autocomplete&includeUsers=false`);
-      const data = await response.json();
-
-      setSearchResults(prev => ({
-        ...prev,
-        [searchTerm]: data.pages || []
-      }));
-    } catch (error) {
-      console.error('Error fetching search results for', searchTerm, error);
-      setSearchResults(prev => ({
-        ...prev,
-        [searchTerm]: []
-      }));
-    } finally {
-      setLoadingResults(prev => ({ ...prev, [searchTerm]: false }));
-    }
-  };
-
-  // Check if carousel has overflow
-  const checkOverflow = (searchTerm) => {
-    const scrollContainer = scrollRefs.current[searchTerm];
-    if (scrollContainer) {
-      const hasOverflow = scrollContainer.scrollWidth > scrollContainer.clientWidth;
-      setOverflowStates(prev => ({
-        ...prev,
-        [searchTerm]: hasOverflow
-      }));
-    }
-  };
 
   // Handle clearing all recent searches
   const handleClearAll = async () => {
@@ -98,6 +92,25 @@ export default function RecentSearches({ onSelect, userId = null }) {
       console.error('Error clearing recent searches:', error);
     }
   };
+
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Recent Searches
+          </h3>
+        </div>
+        <div className="space-y-2">
+          {Array(3).fill(0).map((_, i) => (
+            <div key={i} className="h-4 w-32 bg-muted animate-pulse rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // If there are no recent searches, don't render anything
   if (!recentSearches.length) {
@@ -154,45 +167,46 @@ export default function RecentSearches({ onSelect, userId = null }) {
 
             {/* Horizontal carousel of results */}
             <div className="relative">
-              {loadingResults[search.term] ? (
+              {(searchResults[search.term]?.pages?.length > 0 || searchResults[search.term]?.users?.length > 0) ? (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {Array(4).fill(0).map((_, i) => (
-                    <div key={i} className="h-8 w-24 bg-muted animate-pulse rounded-full flex-shrink-0" />
+                  {/* Display pages first */}
+                  {searchResults[search.term]?.pages?.map((page) => (
+                    <div key={`page-${page.id}`} className="flex-shrink-0 flex flex-col items-start gap-1">
+                      <PillLink
+                        href={`/${page.id}`}
+                        isPublic={page.isPublic}
+                        className="text-xs"
+                      >
+                        <span className="truncate max-w-[120px]">
+                          {page.title || 'Untitled'}
+                        </span>
+                      </PillLink>
+                      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                        by {page.username || 'Unknown'}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Display users */}
+                  {searchResults[search.term]?.users?.map((user) => (
+                    <div key={`user-${user.id}`} className="flex-shrink-0 flex flex-col items-start gap-1">
+                      <UsernameBadge
+                        userId={user.id}
+                        username={user.username}
+                        tier={user.tier}
+                        subscriptionStatus={user.subscriptionStatus}
+                        subscriptionAmount={user.subscriptionAmount}
+                        size="sm"
+                        variant="pill"
+                        pillVariant="secondary"
+                        className="text-xs"
+                      />
+                      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                        User
+                      </span>
+                    </div>
                   ))}
                 </div>
-              ) : searchResults[search.term]?.length > 0 ? (
-                <>
-                  <div
-                    ref={el => scrollRefs.current[search.term] = el}
-                    className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-                  >
-                    {searchResults[search.term].slice(0, 6).map((page) => (
-                      <div key={page.id} className="flex-shrink-0 flex flex-col items-start gap-1">
-                        <PillLink
-                          href={`/${page.id}`}
-                          isPublic={page.isPublic}
-                          className="text-xs"
-                        >
-                          <span className="truncate max-w-[120px]">
-                            {page.title || 'Untitled'}
-                          </span>
-                        </PillLink>
-                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                          by {page.username || 'Unknown'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Floating chevron indicator for overflow */}
-                  {overflowStates[search.term] && (
-                    <div className="absolute right-0 top-0 bottom-2 flex items-center pointer-events-none">
-                      <div className="bg-gradient-to-l from-background via-background/80 to-transparent w-8 h-full flex items-center justify-end pr-1">
-                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    </div>
-                  )}
-                </>
               ) : (
                 <div className="text-xs text-muted-foreground">No results found</div>
               )}

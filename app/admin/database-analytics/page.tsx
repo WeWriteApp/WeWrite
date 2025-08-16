@@ -93,7 +93,7 @@ export default function DatabaseAnalyticsPage() {
           </p>
           
           {/* Crisis Alert Banner */}
-          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="mt-4 p-4 bg-destructive/10 border-theme-strong rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Database className="h-5 w-5 text-destructive" />
               <span className="font-semibold text-destructive">Database Read Crisis Active</span>

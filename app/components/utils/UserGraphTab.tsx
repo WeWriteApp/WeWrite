@@ -10,6 +10,7 @@ import { Button } from '../ui/button';
 import { graphDataCache } from '../../utils/graphDataCache';
 import GraphSettingsPanel from '../pages/GraphSettingsPanel';
 import { createPortal } from 'react-dom';
+import SubscriptionGate from '../subscription/SubscriptionGate';
 
 interface UserPage {
   id: string;
@@ -39,6 +40,7 @@ interface GraphLink {
 interface UserGraphTabProps {
   userId: string;
   username: string;
+  isOwnContent?: boolean;
 }
 
 /**
@@ -48,7 +50,7 @@ interface UserGraphTabProps {
  * Does not include related pages - only shows actual link connections.
  * All pages are treated equally (no center node concept).
  */
-export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
+export default function UserGraphTab({ userId, username, isOwnContent = false }: UserGraphTabProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
@@ -523,14 +525,14 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
       </div>
 
       {/* Graph container */}
-      <div className="relative">
+      <SubscriptionGate featureName="graph" className="relative" isOwnContent={isOwnContent} allowInteraction={true}>
         <div
           ref={containerRef}
           className="bg-background border border-border rounded-lg h-[500px] transition-all duration-300"
         >
           <svg ref={svgRef} className="w-full h-full" />
         </div>
-      </div>
+      </SubscriptionGate>
 
       {/* Fullscreen modal - rendered via portal to escape container constraints */}
       {mounted && isFullscreen && createPortal(
@@ -563,9 +565,16 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
           </div>
 
           {/* Graph container */}
-          <div className={`bg-background ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}>
-            <svg ref={svgRef} className="w-full h-full" />
-          </div>
+          <SubscriptionGate
+            featureName="graph"
+            className={`bg-background ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}
+            isOwnContent={isOwnContent}
+            allowInteraction={true}
+          >
+            <div className="w-full h-full">
+              <svg ref={svgRef} className="w-full h-full" />
+            </div>
+          </SubscriptionGate>
 
           {/* Settings panel (bottom half when open) */}
           {isViewSettingsOpen && (

@@ -281,7 +281,7 @@ export default function PaymentsAdminPage() {
 
       {/* Critical Alerts Banner */}
       {systemHealth.overall === 'critical' && (
-        <Card className="border-red-500 bg-red-50 dark:bg-red-950">
+        <Card className="border-theme-strong bg-destructive/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -294,7 +294,7 @@ export default function PaymentsAdminPage() {
                 error={`Critical Payment System Issues - ${new Date().toISOString()}\n\nAffected Systems:\n${systemHealth.payments === 'critical' ? '• Payment Processing: CRITICAL\n' : ''}${systemHealth.payouts === 'critical' ? '• Payout System: CRITICAL\n' : ''}${systemHealth.webhooks === 'critical' ? '• Webhook Processing: CRITICAL\n' : ''}\nLast Health Check: ${lastHealthCheck?.toISOString() || 'Never'}\nURL: ${window.location.href}`}
                 size="sm"
                 variant="outline"
-                className="text-red-700 dark:text-red-300 border-red-300"
+                className="text-destructive border-theme-strong"
               />
             </div>
             <div className="space-y-2">
@@ -317,7 +317,7 @@ export default function PaymentsAdminPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-xs h-7 text-red-700 dark:text-red-300 border-red-300 hover:bg-red-100 dark:hover:bg-red-900"
+                      className="text-xs h-7 text-destructive border-theme-strong hover:bg-destructive/10"
                       onClick={() => window.open('https://console.firebase.google.com/project/wewrite-ccd82/firestore/indexes', '_blank')}
                     >
                       Open Firebase Console

@@ -123,8 +123,9 @@ export const pageApi = {
   /**
    * Get page by ID
    */
-  async getPage(pageId: string): Promise<ApiResponse> {
-    return apiCall(`/api/pages/${pageId}`);
+  async getPage(pageId: string, userId?: string): Promise<ApiResponse> {
+    const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    return apiCall(`/api/pages/${pageId}${params}`);
   },
 
   /**
@@ -304,12 +305,12 @@ export async function appendPageReference(targetPageId: string, sourcePageData: 
 /**
  * Replace getPageById from firebase/database.ts
  */
-export async function getPageById(pageId: string) {
-  const response = await pageApi.getPage(pageId);
+export async function getPageById(pageId: string, userId?: string) {
+  const response = await pageApi.getPage(pageId, userId);
   if (response.success) {
     return { pageData: response.data };
   }
-  return { pageData: null };
+  return { pageData: null, error: response.error || 'Failed to load page' };
 }
 
 /**

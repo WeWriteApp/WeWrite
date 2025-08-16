@@ -49,18 +49,7 @@ const adminDb = getFirestore(globalRecentEditsApp);
  */
 
 export async function GET(request: NextRequest) {
-  // 🚨 EMERGENCY QUOTA BYPASS - More aggressive fallback
-  if (process.env.NEXT_PUBLIC_BYPASS_FIREBASE_QUOTA === 'true') {
-    console.log('🚧 [GLOBAL_RECENT_EDITS] EMERGENCY: Using quota bypass - returning mock data');
-    return NextResponse.json({
-      edits: [],
-      hasMore: false,
-      nextCursor: null,
-      message: 'Firebase quota exceeded - service temporarily limited to prevent cost overrun',
-      quotaBypass: true,
-      timestamp: new Date().toISOString()
-    });
-  }
+  // 🚨 NEVER RETURN MOCK DATA - ALWAYS USE REAL DATA
 
   try {
     const { searchParams } = new URL(request.url);

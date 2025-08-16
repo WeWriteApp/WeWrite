@@ -238,12 +238,36 @@ When reviewing code, check for:
 - [ ] Proper hover states for interactive elements
 - [ ] No dark mode specific border overrides
 
+## ✅ **Recent Fixes Applied (2024)**
+
+### Components Updated to Theme System
+The following components were recently updated to use proper theme-aware borders:
+
+- **PayoutCountdownTimer.tsx** - Fixed `border-current/20` → `border-border`
+- **FundingTransactionsTable.js** - Fixed `border-gray-400` → `border-theme-strong`
+- **SegmentedControl.tsx** - Fixed hardcoded gray borders → `border-theme-strong`
+- **PWANotificationsAnalyticsWidget.tsx** - Fixed `border-gray-200` → `border-theme-strong`
+- **PerformanceDashboard.tsx** - Fixed `border-gray-200` → `border-border`
+- **SimilarPages.js** - Removed redundant `dark:border-border` classes
+
+### Verification Commands
+```bash
+# Verify no hardcoded borders remain
+grep -r "border-gray\|border-neutral\|border-slate" app/ --include="*.tsx"
+# Should return no results
+
+# Verify no border-current patterns remain
+grep -r "border-current/" app/ --include="*.tsx"
+# Should return no results
+```
+
 ## 🔗 **Related Files**
 
 - `app/globals.css` - Border utility definitions
 - `app/providers/ThemeProvider.tsx` - Theme context
 - `app/lib/utils.ts` - Interactive card utility
 - `tailwind.config.ts` - Theme configuration
+- `docs/THEME_SYSTEM_ARCHITECTURE.md` - Complete theme system documentation
 
 ## 📞 **Support**
 

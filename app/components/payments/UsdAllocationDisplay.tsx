@@ -216,7 +216,7 @@ export default function UsdAllocationDisplay({
         )}
 
         {isOverspent && !hasNoSubscription && (
-          <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg p-3 space-y-2">
+          <div className="bg-destructive/10 border-theme-strong rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span className="font-medium text-sm">Overspent</span>

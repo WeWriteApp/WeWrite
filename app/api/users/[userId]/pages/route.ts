@@ -36,6 +36,10 @@ export async function GET(
     const startAfter = searchParams.get('startAfter') || undefined;
 
     const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.error('User pages API: Firebase Admin initialization failed');
+      return createErrorResponse('Firebase Admin not available', 'INTERNAL_ERROR');
+    }
     const db = admin.firestore();
 
     // Build query for user's pages

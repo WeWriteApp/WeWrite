@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import MapPicker from '../../../components/map/MapPicker';
+import SubscriptionGate from '../../../components/subscription/SubscriptionGate';
 
 interface Location {
   lat: number;
@@ -131,7 +132,7 @@ function LocationViewContent() {
       </div>
 
       {/* Map Container */}
-      <div className="flex-1 relative">
+      <SubscriptionGate featureName="map" className="flex-1 relative" allowInteraction={true}>
         <MapPicker
           location={location}
           height="100%"
@@ -140,7 +141,7 @@ function LocationViewContent() {
           initialZoom={location?.zoom || 10} // Use saved zoom level, fallback to moderate zoom
           allowPanning={true} // Allow panning for exploration
         />
-      </div>
+      </SubscriptionGate>
 
       {/* Footer with location info - removed coordinates display */}
     </div>

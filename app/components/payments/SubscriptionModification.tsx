@@ -193,6 +193,16 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
       setSelectedTier('');
       setProrationPreview(null);
 
+      // CRITICAL: Force refresh all subscription-related data
+      try {
+        // Import and call the force refresh function
+        const { forceRefreshSubscriptionData } = await import('../../utils/cacheInvalidation');
+        await forceRefreshSubscriptionData();
+        console.log('✅ Forced refresh of subscription data after update');
+      } catch (refreshError) {
+        console.error('❌ Error forcing refresh of subscription data:', refreshError);
+      }
+
       // Refresh USD balance to reflect new subscription amount
       await refreshUsdBalance();
 

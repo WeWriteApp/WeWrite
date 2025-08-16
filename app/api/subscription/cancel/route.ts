@@ -9,7 +9,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
-import { serverTimestamp } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       status: cancelledSubscription.status,
       cancelAtPeriodEnd: cancelledSubscription.cancel_at_period_end,
       canceledAt: cancelledSubscription.canceled_at ? new Date(cancelledSubscription.canceled_at * 1000) : null,
-      updatedAt: serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     };
 
     const { parentPath, subCollectionName } = getSubCollectionPath(

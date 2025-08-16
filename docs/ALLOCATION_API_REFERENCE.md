@@ -45,24 +45,47 @@ Handles allocation changes with intelligent batching and optimistic updates.
 ```typescript
 const { handleAllocationChange, isProcessing } = useAllocationActions('page-123');
 
-// Increase allocation by $1.00 (assuming $1.00 interval)
+// Increase allocation by $0.50 (using default $0.50 interval)
 await handleAllocationChange(1);
 
-// Decrease allocation by $0.50 (assuming $1.00 interval)
-await handleAllocationChange(-0.5);
+// Decrease allocation by $0.50 (using default $0.50 interval)
+await handleAllocationChange(-1);
+
+// Increase allocation by $1.00 (2x the default interval)
+await handleAllocationChange(2);
 ```
 
 ### `useAllocationInterval()`
 
-Manages user allocation interval preferences.
+Manages user allocation interval preferences. The allocation interval determines how much each plus/minus button click changes the allocation amount.
+
+**Default Interval:** $0.50 (50 cents)
+
+**Available Intervals:**
+- $0.01 (1 cent)
+- $0.10 (10 cents)
+- $0.50 (50 cents) - **Default**
+- $1.00 (100 cents)
+- $5.00 (500 cents)
+- $10.00 (1000 cents)
 
 **Returns:**
 ```typescript
 {
-  allocationIntervalCents: number;
+  allocationIntervalCents: number;  // Current interval in cents (default: 50)
   isLoading: boolean;
-  updateInterval: (cents: number) => Promise<void>;
+  setAllocationInterval: (cents: number) => Promise<void>;
 }
+```
+
+**Example:**
+```typescript
+const { allocationIntervalCents, setAllocationInterval } = useAllocationInterval();
+
+console.log(allocationIntervalCents); // 50 (= $0.50 default)
+
+// Change to $1.00 increments
+await setAllocationInterval(100);
 ```
 
 ## Core Components

@@ -33,9 +33,19 @@ export function getFirebaseAdmin(): typeof admin | null {
 
     // Check if Firebase Admin is already initialized
     if (admin.apps.length > 0) {
-      console.log('[Firebase Admin] Using existing Firebase Admin app');
+      console.log('[Firebase Admin] Found existing app, marking as initialized');
       firebaseAdminInstance = admin;
-      return firebaseAdminInstance;
+
+      // Verify the app is actually working by testing firestore access
+      try {
+        const testDb = admin.firestore();
+        console.log('[Firebase Admin] Verified existing app is functional');
+        return firebaseAdminInstance;
+      } catch (testError) {
+        console.error('[Firebase Admin] Existing app is not functional, reinitializing:', testError.message);
+        // Delete existing apps and reinitialize
+        admin.apps.forEach(app => app?.delete());
+      }
     }
 
     // Validate required environment variables

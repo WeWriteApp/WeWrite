@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { payoutService } from '../../../services/payoutService';
-import { UsdEarningsService } from '../../../services/usdEarningsService';
+import { SimplePayoutService } from '../../../services/simplePayoutService';
 import { db } from '../../../firebase/config';
 import {
   collection,
@@ -185,23 +185,20 @@ export async function POST(request: NextRequest) {
     const { action, period } = body;
 
     if (action === 'request_payout') {
-      // Use UsdEarningsService for payout request
-      const result = await UsdEarningsService.requestPayout(userId);
+      // Use SimplePayoutService for payout request
+      const result = await SimplePayoutService.requestPayout(userId);
 
       if (result.success) {
         return NextResponse.json({
           success: true,
           data: {
-            payoutId: result.data?.payoutId,
-            amountCents: result.data?.amountCents,
-            amountDollars: result.data?.amountCents ? centsToDollars(result.data.amountCents) : undefined
-          },
-          message: 'USD payout requested successfully'
+            payoutId: result.payoutId,
+            message: 'Payout requested successfully'
+          }
         });
       } else {
         return NextResponse.json({
-          error: result.error?.message || 'USD payout request failed',
-          code: result.error?.code
+          error: result.error || 'Payout request failed'
         }, { status: 400 });
       }
     }

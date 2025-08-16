@@ -11,7 +11,7 @@ import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
-import { addRecentSearch } from "../utils/recentSearches";
+import { addRecentSearch, addRecentSearchDebounced } from "../utils/recentSearches";
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 import RecentSearches from '../components/search/RecentSearches';
@@ -262,7 +262,33 @@ const SearchPage = React.memo(() => {
   const handleSearch = useCallback(async (searchTerm) => {
     performSearch(searchTerm);
 
-    // Save to recent searches if it's a valid search term
+    // For typing/debounced searches, use smart filtering and debounced saving
+    // This prevents saving every keystroke like "t", "te", "tes", "test"
+    if (searchTerm && searchTerm.trim()) {
+      try {
+        // Use debounced saving with smart filtering for typing
+        addRecentSearchDebounced(searchTerm.trim(), userId, 2000); // 2 second delay
+      } catch (error) {
+        console.error('Error saving recent search:', error);
+      }
+    }
+
+    // Update URL to reflect the search query
+    const url = new URL(window.location);
+    if (searchTerm && searchTerm.trim()) {
+      url.searchParams.set('q', searchTerm.trim());
+    } else {
+      url.searchParams.delete('q');
+    }
+    window.history.replaceState({}, '', url);
+  }, [performSearch, userId]);
+
+  // Handle recent search selection - this will update the input and perform search
+  const handleRecentSearchSelect = useCallback(async (searchTerm) => {
+    // Perform the search
+    performSearch(searchTerm);
+
+    // For recent search selection, always save immediately (intentional action)
     if (searchTerm && searchTerm.trim()) {
       try {
         await addRecentSearch(searchTerm.trim(), userId);
@@ -280,12 +306,6 @@ const SearchPage = React.memo(() => {
     }
     window.history.replaceState({}, '', url);
   }, [performSearch, userId]);
-
-  // Handle recent search selection - this will update the input and perform search
-  const handleRecentSearchSelect = useCallback((searchTerm) => {
-    // This will trigger both the input update and the search
-    handleSearch(searchTerm);
-  }, [handleSearch]);
 
   // Stable clear function
   const handleClear = useCallback(() => {
@@ -309,9 +329,19 @@ const SearchPage = React.memo(() => {
     }
   }, [userId]);
 
-  // Stable submit function
-  const handleSubmit = useCallback((searchTerm) => {
+  // Stable submit function - for intentional searches (Enter key)
+  const handleSubmit = useCallback(async (searchTerm) => {
     performSearch(searchTerm);
+
+    // For intentional searches (Enter key), always save immediately
+    // This bypasses the smart filtering since the user explicitly searched
+    if (searchTerm && searchTerm.trim()) {
+      try {
+        await addRecentSearch(searchTerm.trim(), userId);
+      } catch (error) {
+        console.error('Error saving recent search:', error);
+      }
+    }
 
     // Update URL to reflect the search query (client-side only)
     if (typeof window !== 'undefined') {
@@ -323,7 +353,7 @@ const SearchPage = React.memo(() => {
       }
       window.history.replaceState({}, '', url);
     }
-  }, [performSearch]);
+  }, [performSearch, userId]);
 
   // Stable helper function to copy to clipboard with toast notification
   const copyToClipboard = useCallback((textToCopy) => {

@@ -484,50 +484,17 @@ input[type="range"]::-moz-range-thumb,
     max-width: calc(100vw - 32px) !important;
   }
 
-  /* General Stripe Elements mobile optimization */
-  .__PrivateStripeElement,
-  .StripeElement {
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
-  }
 
-  /* FORCE Stripe Element to behave properly */
-  .StripeElement {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-  }
 
+  /* Stripe Elements - Simple responsive styling */
+  .StripeElement,
   .__PrivateStripeElement {
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-  }
-
-  .__PrivateStripeElement iframe {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     box-sizing: border-box !important;
-    transform: none !important;
   }
 
-  /* Nuclear option for Stripe iframes */
-  iframe[name*="__privateStripeFrame"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    transform: none !important;
-  }
+
 
   /* Ensure Stripe tabs don't overflow on mobile */
   .p-Tabs,

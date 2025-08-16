@@ -10,6 +10,7 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-12-18.acacia'
 });
 
+// Updated API route for embedded Stripe components
 export async function POST(request: NextRequest) {
   try {
     const admin = initAdmin();
@@ -24,13 +25,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { components } = await request.json();
+    const { components, email, businessUrl } = await request.json();
 
-    if (!components || typeof components !== 'object') {
-      return NextResponse.json({
-        error: 'Components configuration is required'
-      }, { status: 400 });
-    }
+    // Default components for bank account management if not provided
+    const defaultComponents = {
+      account_onboarding: {
+        enabled: true,
+        features: {
+          external_account_collection: true
+        }
+      },
+      account_management: {
+        enabled: true,
+        features: {
+          external_account_collection: true
+        }
+      }
+    };
+
+    const finalComponents = components || defaultComponents;
+
+    console.log('Creating account session with components:', JSON.stringify(finalComponents, null, 2));
 
     // Get user data to find their connected account ID
     const db = admin.firestore();
@@ -75,9 +90,9 @@ export async function POST(request: NextRequest) {
       // Note: Express accounts don't use controller parameters - they're mutually exclusive
       const account = await stripe.accounts.create({
         type: 'express',
-        email: userEmail,
+        email: email || userEmail, // Use provided email or fallback to user email
         business_profile: {
-          url: 'https://www.getwewrite.app/',
+          url: businessUrl || `https://www.getwewrite.app/user/${userId}`, // Use provided business URL or generate user URL
           mcc: '5815', // Digital goods/services
           product_description: 'Content creation and writing platform'
         },
@@ -100,7 +115,7 @@ export async function POST(request: NextRequest) {
     // Create Account Session for embedded components
     const accountSession = await stripe.accountSessions.create({
       account: stripeConnectedAccountId,
-      components: components
+      components: finalComponents
     });
 
     console.log(`Created Account Session for user ${userId}, account ${stripeConnectedAccountId}`);

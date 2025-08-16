@@ -1,5 +1,11 @@
 # WeWrite Payout System Documentation
 
+> **⚠️ IMPORTANT UPDATE**: This system has been **SIMPLIFIED** as of December 2024.
+> See [SIMPLIFIED_PAYOUT_SYSTEM.md](./SIMPLIFIED_PAYOUT_SYSTEM.md) for the current architecture.
+> This document is kept for historical reference.
+
+---
+
 ## Table of Contents
 
 1. [Overview](#overview)

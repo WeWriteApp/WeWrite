@@ -7,7 +7,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { UsdEarningsService } from '../../../services/usdEarningsService';
+// Use simple database queries instead of complex services
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { centsToDollars } from '../../../utils/formatCurrency';
 
 export async function GET(request: NextRequest) {
@@ -18,46 +20,60 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`[USD Earnings API] Loading earnings data for user: ${userId}`);
+    console.log(`[USD Earnings API] Loading simple earnings data for user: ${userId}`);
 
-    // Get complete USD earnings data
-    const completeData = await UsdEarningsService.getCompleteWriterEarnings(userId);
+    // Get earnings data using simple database queries
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
+    const db = admin.firestore();
+
+    // Get balance data directly from database
+    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES))
+      .doc(userId)
+      .get();
+
+    const balance = balanceDoc.exists ? balanceDoc.data() : null;
+
+    const completeData = {
+      balance: balance ? {
+        totalEarnings: balance.totalEarnedCents ? balance.totalEarnedCents / 100 : 0,
+        availableBalance: balance.availableCents ? balance.availableCents / 100 : 0,
+        pendingBalance: balance.pendingCents ? balance.pendingCents / 100 : 0,
+        paidOutBalance: balance.paidOutCents ? balance.paidOutCents / 100 : 0
+      } : null
+    };
 
     if (!completeData.balance) {
       return NextResponse.json({
         success: false,
-        error: 'No USD earnings data found'
+        error: 'No earnings data found'
       }, { status: 404 });
     }
 
-    // Format response data
+    // Format response data using unified service field names
     const responseData = {
-      totalEarnings: centsToDollars(completeData.balance.totalUsdCentsEarned),
-      availableBalance: centsToDollars(completeData.balance.availableUsdCents),
-      pendingBalance: centsToDollars(completeData.balance.pendingUsdCents),
-      paidOutBalance: centsToDollars(completeData.balance.paidOutUsdCents),
+      totalEarnings: centsToDollars(completeData.balance.totalEarnedCents),
+      availableBalance: centsToDollars(completeData.balance.availableCents),
+      pendingBalance: centsToDollars(completeData.balance.pendingCents),
+      paidOutBalance: centsToDollars(completeData.balance.paidOutCents),
       lastProcessedMonth: completeData.balance.lastProcessedMonth,
       earningsHistory: completeData.earnings.map(earning => ({
         id: earning.id,
         month: earning.month,
-        totalUsdAmount: centsToDollars(earning.totalUsdCentsReceived),
+        totalUsdAmount: centsToDollars(earning.totalCentsReceived),
         status: earning.status,
         allocations: earning.allocations,
-        processedAt: earning.processedAt,
         createdAt: earning.createdAt
       })),
-      unfundedEarnings: completeData.unfunded ? {
-        totalUnfundedUsdAmount: completeData.unfunded.totalUnfundedUsdAmount,
-        loggedOutUsdAmount: completeData.unfunded.loggedOutUsdAmount,
-        noSubscriptionUsdAmount: completeData.unfunded.noSubscriptionUsdAmount,
-        message: completeData.unfunded.message,
-        allocations: completeData.unfunded.allocations
-      } : null,
       pendingAllocations: completeData.pendingAllocations ? {
         totalPendingUsdAmount: completeData.pendingAllocations.totalPendingUsdAmount,
         allocations: completeData.pendingAllocations.allocations,
         timeUntilDeadline: completeData.pendingAllocations.timeUntilDeadline
-      } : null
+      } : null,
+      payoutHistory: completeData.payoutHistory
     };
 
     return NextResponse.json({

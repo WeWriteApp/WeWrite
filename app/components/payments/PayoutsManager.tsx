@@ -12,11 +12,12 @@ import { Wallet, DollarSign, Settings, AlertTriangle, CheckCircle, Clock, Trendi
 
 import { useToast } from '../ui/use-toast';
 import { Alert, AlertDescription } from '../ui/alert';
-import { TokenEarningsService } from '../../services/tokenEarningsService';
+// Use API calls instead of complex services
 import { TokenPayout } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { SimpleBankAccountManager } from './SimpleBankAccountManager';
 import { PayoutsHistoryTable } from './PayoutsHistoryTable';
+import PayoutCountdownTimer from './PayoutCountdownTimer';
 
 interface PayoutData {
   totalEarnings: number;
@@ -40,37 +41,14 @@ interface AutoPayoutSettings {
   frequency: 'daily' | 'weekly' | 'monthly';
 }
 
-// Bank Setup Component - Simple redirect-based implementation
+// Bank Setup Component - Embedded Stripe implementation
 function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   return (
     <SimpleBankAccountManager
       onUpdate={onSuccess}
-      showTitle={false}
     />
   );
 }
-
-  const updateAutoPayoutSettings = async (newSettings: AutoPayoutSettings) => {
-    setUpdatingSettings(true);
-    try {
-      localStorage.setItem(`autopayout_${user?.uid}`, JSON.stringify(newSettings));
-      setAutoPayoutSettings(newSettings);
-
-      toast({
-        title: "Settings Updated",
-        description: "Your automatic payout preferences have been saved."
-      });
-    } catch (error) {
-      console.error('Error updating auto payout settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update payout settings. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setUpdatingSettings(false);
-    }
-  };
 
 
 
@@ -123,16 +101,15 @@ export function PayoutsManager() {
     if (!user?.uid) return;
 
     try {
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
-      if (tokenBalance) {
-        setPayoutData({
-          totalEarnings: tokenBalance.totalUsdEarned,
-          availableBalance: tokenBalance.availableUsdValue,
-          pendingBalance: tokenBalance.pendingUsdValue,
-          lastPayoutAmount: payouts.length > 0 ? payouts[0].amount : undefined,
-          lastPayoutDate: payouts.length > 0 ? payouts[0].completedAt : undefined
-        });
-      }
+      const response = await fetch('/api/earnings/breakdown');
+      const earningsBreakdown = response.ok ? await response.json() : null;
+      setPayoutData({
+        totalEarnings: earningsBreakdown.totalEarnings,
+        availableBalance: earningsBreakdown.availableBalance,
+        pendingBalance: earningsBreakdown.pendingBalance,
+        lastPayoutAmount: payouts.length > 0 ? payouts[0].amount : undefined,
+        lastPayoutDate: payouts.length > 0 ? payouts[0].completedAt : undefined
+      });
     } catch (error) {
       console.error('Error loading payout data:', error);
     }
@@ -152,11 +129,11 @@ export function PayoutsManager() {
         const result = await response.json();
         const accountData = result.data;
         setBankAccountStatus({
-          isConnected: !!accountData?.bank_account,
+          isConnected: !!accountData?.bankAccount,
           isVerified: accountData?.payouts_enabled || false,
-          bankName: accountData?.bank_account?.bank_name,
-          last4: accountData?.bank_account?.last4,
-          accountType: accountData?.bank_account?.account_type
+          bankName: accountData?.bankAccount?.bankName,
+          last4: accountData?.bankAccount?.last4,
+          accountType: accountData?.bankAccount?.accountType
         });
       }
     } catch (error) {
@@ -233,9 +210,16 @@ export function PayoutsManager() {
           setPayouts([]);
         }
       } else {
-        // Fallback to token earnings service for backward compatibility
-        const payoutHistory = await TokenEarningsService.getPayoutHistory(user.uid, 10);
-        setPayouts(payoutHistory);
+        // Use simple API for payout history
+        const response = await fetch('/api/payouts/history');
+        const payoutHistory = response.ok ? await response.json() : [];
+        setPayouts(payoutHistory.map(payout => ({
+          id: payout.id,
+          amount: payout.amountCents / 100,
+          status: payout.status,
+          completedAt: payout.completedAt,
+          requestedAt: payout.requestedAt
+        })));
       }
     } catch (error) {
       console.error('Error loading payout history:', error);
@@ -354,10 +338,16 @@ export function PayoutsManager() {
 
         <SimpleBankAccountManager
           onUpdate={loadBankAccountStatus}
-          showTitle={false}
         />
       </div>
 
+      {/* Payout Countdown Timer */}
+      <div>
+        <PayoutCountdownTimer
+          showExplanation={true}
+          className="w-full"
+        />
+      </div>
 
       {/* Automatic Payout Settings */}
       {bankAccountStatus.isConnected && bankAccountStatus.isVerified && (

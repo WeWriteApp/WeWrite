@@ -175,14 +175,36 @@ class PayoutService {
       const recipientId = `recipient_${userId}`;
       const recipientDoc = await getDoc(doc(db, 'payoutRecipients', recipientId));
 
+      let currentRecipient: PayoutRecipient;
+
       if (!recipientDoc.exists()) {
-        return {
-          success: false,
-          error: 'Payout recipient not found'
+        // Create a basic payout recipient if one doesn't exist
+        const defaultRecipient: PayoutRecipient = {
+          id: recipientId,
+          userId,
+          stripeConnectedAccountId: '', // Will be set when bank account is connected
+          accountStatus: 'pending',
+          verificationStatus: 'unverified',
+          payoutPreferences: {
+            minimumThreshold: 25,
+            currency: 'usd',
+            schedule: 'monthly',
+            autoPayoutEnabled: true,
+            notificationsEnabled: true
+          },
+          createdAt: serverTimestamp() as Timestamp,
+          updatedAt: serverTimestamp() as Timestamp,
+          totalEarnings: 0,
+          availableBalance: 0,
+          pendingBalance: 0
         };
+
+        await setDoc(doc(db, 'payoutRecipients', recipientId), defaultRecipient);
+        currentRecipient = defaultRecipient;
+      } else {
+        currentRecipient = recipientDoc.data() as PayoutRecipient;
       }
 
-      const currentRecipient = recipientDoc.data() as PayoutRecipient;
       const updatedPreferences = {
         ...currentRecipient.payoutPreferences,
         ...preferences

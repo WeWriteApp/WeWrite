@@ -552,8 +552,7 @@ export default function AdminPage() {
           <ChevronLeft className="h-4 w-4 mr-2" />
           Back to Settings
         </Link>
-        <h1 className="text-3xl font-bold mt-4 mb-2 flex items-center gap-2">
-          <Shield className="h-6 w-6" />
+        <h1 className="text-3xl font-bold mt-4 mb-2">
           Admin Panel
         </h1>
         <p className="text-muted-foreground">
@@ -636,7 +635,7 @@ export default function AdminPage() {
                   {searchResults.map(user => (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-md border-theme-strong hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex flex-col">
                         <span className="font-medium">{user.username || 'No username'}</span>
@@ -674,7 +673,7 @@ export default function AdminPage() {
                   {adminUsers.map(admin => (
                     <div
                       key={admin.id}
-                      className="flex items-center justify-between p-3 rounded-md border border-border bg-primary/5 hover:bg-primary/10 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-md border-theme-strong bg-primary/5 hover:bg-primary/10 transition-colors"
                     >
                       <div className="flex flex-col">
                         <span className="font-medium">{admin.username || 'No username'}</span>
@@ -790,7 +789,7 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">PWA Testing</h3>
               </div>
@@ -813,7 +812,7 @@ export default function AdminPage() {
             {/* Feature Flags Sync Tool - Removed as feature flags have been eliminated */}
 
             {/* Admin Dashboard */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Admin Dashboard</h3>
               </div>
@@ -834,7 +833,7 @@ export default function AdminPage() {
             </div>
 
             {/* 🚨 EMERGENCY: Database Read Analytics Dashboard */}
-            <div className="flex flex-col p-4 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors">
+            <div className="flex flex-col p-4 rounded-lg border-theme-strong bg-destructive/5 hover:bg-destructive/10 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium text-destructive">🚨 Database Read Analytics</h3>
                 <Badge variant="destructive">EMERGENCY</Badge>
@@ -855,29 +854,10 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Design System */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Design System</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Comprehensive catalog of UI components with usage analytics, deduplication recommendations, and design system health metrics.
-              </span>
-              <div className="mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => router.push('/admin/design-system')}
-                >
-                  <Palette className="h-4 w-4" />
-                  Open Design System
-                </Button>
-              </div>
-            </div>
+
 
             {/* Testing Tools */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Testing Tools</h3>
               </div>
@@ -909,7 +889,7 @@ export default function AdminPage() {
             </div>
 
             {/* Payment Management */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Payment Management</h3>
               </div>
@@ -930,10 +910,10 @@ export default function AdminPage() {
                   variant="outline"
                   size="sm"
                   className="gap-2 w-full"
-                  onClick={() => window.open('/admin/tools', '_blank')}
+                  onClick={() => router.push('/admin/payout-validation')}
                 >
                   <Settings className="h-4 w-4" />
-                  Advanced Tools
+                  Payout Validation
                 </Button>
               </div>
             </div>

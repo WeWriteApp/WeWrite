@@ -155,6 +155,16 @@ export function SubscriptionUpgradeFlow({
       }
 
       toast.success('Subscription upgraded successfully!');
+
+      // CRITICAL: Force refresh all subscription-related data
+      try {
+        const { forceRefreshSubscriptionData } = await import('../../utils/cacheInvalidation');
+        await forceRefreshSubscriptionData();
+        console.log('✅ Forced refresh of subscription data after upgrade');
+      } catch (refreshError) {
+        console.error('❌ Error forcing refresh of subscription data:', refreshError);
+      }
+
       onSuccess();
     } catch (error) {
       console.error('Error upgrading subscription:', error);

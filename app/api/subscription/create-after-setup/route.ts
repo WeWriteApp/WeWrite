@@ -53,21 +53,19 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       items: [{ price: price.id }],
       default_payment_method: paymentMethodId,
-      // Add transfer_group to payment_intent_data for Stripe Connect tracking
-      payment_intent_data: {
-        transfer_group: transferGroup,
-        metadata: {
-          userId,
-          subscriptionType: 'monthly_funding',
-          fundHoldingModel: 'platform_account'
-        }
+      payment_behavior: 'default_incomplete',
+      payment_settings: {
+        payment_method_types: ['card', 'link'],
+        save_default_payment_method: 'on_subscription'
       },
       metadata: {
         userId: userId,
         amount: amount.toString(),
         transferGroup, // For tracking funds without immediate transfer
-        fundHoldingModel: 'platform_account' // Indicate new model
+        fundHoldingModel: 'platform_account', // Indicate new model
+        subscriptionType: 'monthly_funding'
       },
+      expand: ['latest_invoice.payment_intent']
     });
 
     // Save subscription to Firestore

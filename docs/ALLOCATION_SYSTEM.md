@@ -28,6 +28,8 @@ The WeWrite allocation system allows users to allocate USD funds to content page
 - All allocation logic centralized in shared hooks
 - No duplicated business logic across components
 - Consistent behavior across all allocation interfaces
+- Mathematical consistency: `Total = Allocated + Available` (always)
+- Calculate totals from individual allocations, never store aggregates
 
 ### 2. **Performance First**
 - Smart caching reduces API calls by ~40%
@@ -43,6 +45,12 @@ The WeWrite allocation system allows users to allocate USD funds to content page
 - Reusable hooks for easy component development
 - Clear separation of concerns
 - Comprehensive error handling
+
+### 5. **Mathematical Integrity**
+- Only count `status: 'active'` allocations in totals
+- Derive aggregates from individual records, never store them
+- Validate allocation changes before persisting
+- Reject impossible states (negative balances, over-allocation)
 
 ## Core Components
 
@@ -176,6 +184,83 @@ When working on allocation-related features:
 3. **Test thoroughly** - include unit and integration tests
 4. **Consider performance** - leverage caching and batching
 5. **Maintain consistency** - follow established UI patterns
+6. **Preserve mathematical integrity** - ensure `Total = Allocated + Available`
+7. **Calculate, don't store** - derive totals from individual allocations
+
+## Architectural Patterns
+
+### ✅ Correct Allocation Calculation
+```typescript
+// Calculate from active allocations only
+static async calculateActualAllocatedUsdCents(userId: string): Promise<number> {
+  const allocationsQuery = allocationsRef
+    .where('userId', '==', userId)
+    .where('month', '==', currentMonth)
+    .where('status', '==', 'active');
+
+  return allocationsSnapshot.reduce((total, doc) =>
+    total + (doc.data().usdCents || 0), 0
+  );
+}
+```
+
+### ✅ Correct Balance Update Pattern
+```typescript
+// Use calculated values, not stored aggregates
+const actualAllocatedCents = await this.calculateActualAllocatedUsdCents(userId);
+const newAllocatedCents = actualAllocatedCents + allocationDifference;
+const newAvailableCents = totalUsdCents - newAllocatedCents;
+
+// Validate before committing
+if (newAllocatedCents > totalUsdCents) {
+  throw new Error('Insufficient funds');
+}
+```
+
+### ✅ Simple Optimistic Updates
+```typescript
+const updateOptimisticBalance = useCallback((changeCents: number) => {
+  setUsdBalance(prev => {
+    if (!prev) return null;
+
+    const newAllocated = Math.max(0, prev.allocatedUsdCents + changeCents);
+    const newAvailable = prev.totalUsdCents - newAllocated;
+
+    // Reject invalid states
+    if (newAllocated > prev.totalUsdCents) return prev;
+
+    return {
+      ...prev,
+      allocatedUsdCents: newAllocated,
+      availableUsdCents: newAvailable
+    };
+  });
+}, []);
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Double-Counting
+```typescript
+// WRONG: Counting both pending and active allocations
+totalAllocatedCents += activeAllocations + pendingAllocations;
+```
+
+### ❌ Stored Aggregate Dependencies
+```typescript
+// WRONG: Using stored totals that can become stale
+const currentAllocatedCents = balanceData?.allocatedUsdCents || 0;
+```
+
+### ❌ Complex Optimistic Logic
+```typescript
+// WRONG: Complex validation and retry logic
+if (invalid) {
+  setTimeout(() => fetchUsdBalance(true), 100);
+  setTimeout(() => fetchUsdBalance(true), 1500);
+  // Multiple timers and complex state management
+}
+```
 
 ## Support
 

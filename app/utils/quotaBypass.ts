@@ -57,19 +57,7 @@ class QuotaBypassManager {
    * Check if quota bypass should be active
    */
   shouldBypassQuota(): boolean {
-    // Check environment variable for manual bypass
-    if (process.env.NEXT_PUBLIC_BYPASS_FIREBASE_QUOTA === 'true') {
-      this.quotaStatus.bypassActive = true;
-      return true;
-    }
-
-    // Check if we're over quota
-    if (this.quotaStatus.dailyReads > this.quotaStatus.quotaLimit) {
-      this.quotaStatus.isOverQuota = true;
-      this.quotaStatus.bypassActive = true;
-      return true;
-    }
-
+    // 🚨 NEVER RETURN MOCK DATA - ALWAYS USE REAL DATA
     return false;
   }
 

@@ -241,7 +241,7 @@ export function createDetailedErrorBoundary(componentName: string) {
     render() {
       if (this.state.hasError) {
         return React.createElement('div', {
-          className: 'p-4 border border-red-200 bg-red-50 rounded-lg'
+          className: 'p-4 border-theme-strong bg-destructive/10 rounded-lg'
         }, [
           React.createElement('h3', {
             key: 'title',

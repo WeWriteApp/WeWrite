@@ -419,25 +419,77 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           }
         }
 
-        // Get the version document
-        const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
-        const versionRef = doc(versionCollectionRef, currentVersionId);
-        const versionSnap = await getDoc(versionRef);
+        // CRITICAL FIX: Use content directly from page document first
+        // According to our version system, the page document should have the most recent content
+        let versionData = null;
+        let links = [];
 
-        if (versionSnap.exists()) {
-          const versionData = versionSnap.data();
+        if (pageData.content) {
+          // Use content directly from page document (most recent version)
+          console.log(`Using content directly from page document for ${pageId}`);
 
-          // Extract links
-          const links = extractLinksFromNodes(JSON.parse(versionData.content));
+          try {
+            // Parse content to extract links
+            const contentToParse = typeof pageData.content === 'string'
+              ? JSON.parse(pageData.content)
+              : pageData.content;
+            links = extractLinksFromNodes(contentToParse);
 
-          const result = { pageData, versionData, links };
-
-
-
-          return result;
-        } else {
-          return { pageData: null, error: "Version not found" };
+            // Create version data from page data for compatibility
+            versionData = {
+              content: pageData.content,
+              title: pageData.title,
+              createdAt: pageData.lastModified || pageData.createdAt,
+              userId: pageData.userId,
+              username: pageData.username
+            };
+          } catch (parseError) {
+            console.warn(`Failed to parse content from page document for ${pageId}:`, parseError);
+            // Continue to try version document as fallback
+          }
         }
+
+        // Fallback: Get content from version document if page content is missing or invalid
+        if (!versionData && currentVersionId) {
+          console.log(`Falling back to version document for ${pageId}, currentVersion: ${currentVersionId}`);
+
+          const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
+          const versionRef = doc(versionCollectionRef, currentVersionId);
+          const versionSnap = await getDoc(versionRef);
+
+          if (versionSnap.exists()) {
+            versionData = versionSnap.data();
+
+            try {
+              // Extract links from version content
+              const contentToParse = typeof versionData.content === 'string'
+                ? JSON.parse(versionData.content)
+                : versionData.content;
+              links = extractLinksFromNodes(contentToParse);
+            } catch (parseError) {
+              console.warn(`Failed to parse content from version document for ${pageId}:`, parseError);
+              links = [];
+            }
+          } else {
+            console.error(`Version document not found for ${pageId}, currentVersion: ${currentVersionId}`);
+            return { pageData: null, error: "Version not found" };
+          }
+        }
+
+        // If we still don't have version data, create a minimal one
+        if (!versionData) {
+          console.warn(`No content found for page ${pageId}, creating minimal version data`);
+          versionData = {
+            content: "[]", // Empty content
+            title: pageData.title || "Untitled",
+            createdAt: pageData.lastModified || pageData.createdAt || new Date().toISOString(),
+            userId: pageData.userId,
+            username: pageData.username || "Anonymous"
+          };
+        }
+
+        const result = { pageData, versionData, links };
+        return result;
       } else {
         return { pageData: null, error: "Page not found" };
       }

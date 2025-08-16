@@ -40,9 +40,13 @@ export async function GET(request: NextRequest) {
       return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'No active session');
     }
 
+    let sessionData;
+    let user: User;
+
     try {
-      const sessionData = JSON.parse(sessionCookie.value);
-      
+      // Try parsing as JSON first (new format)
+      sessionData = JSON.parse(sessionCookie.value);
+
       // Validate session data
       if (!sessionData.uid || !sessionData.email) {
         console.log('[Session] Invalid session data');
@@ -50,7 +54,7 @@ export async function GET(request: NextRequest) {
       }
 
       // SIMPLIFIED: Just trust the cookie data - no complex Firebase verification
-      const user: User = {
+      user = {
         uid: sessionData.uid,
         email: sessionData.email,
         username: sessionData.username || '',
@@ -60,16 +64,44 @@ export async function GET(request: NextRequest) {
         createdAt: sessionData.createdAt || new Date().toISOString(),
         lastLoginAt: sessionData.lastLoginAt || new Date().toISOString()
       };
-
-      console.log(`[Session] Simple session valid for: ${user.email}`);
-      return createSuccessResponse(user);
-
     } catch (parseError) {
-      console.log('[Session] Failed to parse session cookie:', parseError);
-      // Clear invalid session cookie
-      cookieStore.delete('simpleUserSession');
-      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
+      // If JSON parsing fails, check for legacy format (plain string for dev users)
+      const cookieValue = sessionCookie.value;
+      if (cookieValue === 'dev_admin_user' || cookieValue === 'dev_test_user_1') {
+        console.log('[Session] Using legacy session format:', cookieValue);
+
+        // Create user object for legacy dev users
+        if (cookieValue === 'dev_admin_user') {
+          user = {
+            uid: 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N',
+            email: 'jamie@wewrite.app',
+            username: 'jamie',
+            displayName: 'Jamie Gray',
+            photoURL: null,
+            emailVerified: true,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString()
+          };
+        } else { // dev_test_user_1
+          user = {
+            uid: 'dev_test_user_1',
+            email: 'dev_test_user_1@wewrite.dev',
+            username: 'dev_test_user_1',
+            displayName: 'Dev Test User 1',
+            photoURL: null,
+            emailVerified: true,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString()
+          };
+        }
+      } else {
+        console.log('[Session] Invalid session format');
+        return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
+      }
     }
+
+    console.log(`[Session] Simple session valid for: ${user.email}`);
+    return createSuccessResponse(user);
 
   } catch (error) {
     console.error('[Session] Session check error:', error);

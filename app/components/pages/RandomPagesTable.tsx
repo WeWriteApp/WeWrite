@@ -126,9 +126,9 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
           className={cn("hidden md:block relative", wewriteCard('default', 'p-0'))}
           style={{ minHeight }}
         >
-        {/* Loading overlay */}
+        {/* Loading overlay - higher z-index to blur all content including stars */}
         {loading && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-pulse text-muted-foreground">Shuffling pages...</div>
             </div>
@@ -206,9 +206,9 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
           className="md:hidden space-y-6 relative"
           style={{ minHeight }}
         >
-        {/* Loading overlay for mobile */}
+        {/* Loading overlay for mobile - higher z-index to blur all content including stars */}
         {loading && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
             <div className="text-center">
               <div className="animate-pulse text-muted-foreground">Shuffling pages...</div>
             </div>

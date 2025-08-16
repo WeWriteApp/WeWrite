@@ -227,12 +227,30 @@ export default function PageView({
   // API fallback function
   const tryApiFallback = useCallback(async () => {
     try {
-      pageLogger.debug('Trying API fallback for page load', { pageId });
+      pageLogger.debug('Trying API fallback for page load', { pageId, userId: user?.uid });
+      console.log('🔄 [PageView] API fallback: Calling getPageById with pageId:', pageId, 'userId:', user?.uid);
+
       const result = await getPageById(pageId, user?.uid);
+
+      console.log('🔄 [PageView] API fallback result:', {
+        hasPageData: !!result.pageData,
+        hasError: !!result.error,
+        error: result.error,
+        pageData: result.pageData ? {
+          id: result.pageData.id,
+          title: result.pageData.title,
+          userId: result.pageData.userId,
+          username: result.pageData.username,
+          hasContent: !!result.pageData.content
+        } : null
+      });
 
       if (result.error) {
         pageLogger.warn('API fallback failed', { error: result.error, pageId });
-        setError(result.error);
+        const errorMessage = result.error === 'Page not found'
+          ? `Page "${pageId}" was not found. It may have been deleted or you may not have permission to view it.`
+          : `Failed to load page: ${result.error}`;
+        setError(errorMessage);
         setIsLoading(false);
       } else if (result.pageData) {
         pageLogger.debug('API fallback successful', { pageId });
@@ -301,13 +319,18 @@ export default function PageView({
           setIsLoading(false);
         }
       } else {
-        pageLogger.warn('API fallback returned no data', { pageId });
-        setError('Page not found');
+        pageLogger.warn('API fallback returned no data', { pageId, result });
+        setError(`Page "${pageId}" was not found. It may have been deleted, moved, or you may not have permission to view it. Please check the URL and try again.`);
         setIsLoading(false);
       }
     } catch (error) {
-      pageLogger.error('API fallback error', { error, pageId });
-      setError('Failed to load page');
+      pageLogger.error('API fallback error', {
+        error,
+        pageId,
+        errorMessage: error?.message || 'Unknown error',
+        errorStack: error?.stack
+      });
+      setError(`Network error while loading page "${pageId}". Please check your internet connection and try again. If the problem persists, contact support.`);
       setIsLoading(false);
     }
   }, [pageId, user?.uid]);
@@ -484,47 +507,95 @@ export default function PageView({
         console.log('🔍 PageView: Optimized data received', {
           hasPageData: !!data.pageData,
           hasVersionData: !!data.versionData,
-          pageData: data.pageData,
-          content: data.pageData?.content,
-          contentType: typeof data.pageData?.content,
-          contentLength: data.pageData?.content?.length || 0
+          pageData: data.pageData ? {
+            id: data.pageData.id,
+            title: data.pageData.title || 'NO_TITLE',
+            userId: data.pageData.userId || 'NO_USER_ID',
+            username: data.pageData.username || 'NO_USERNAME',
+            hasContent: !!data.pageData.content,
+            contentType: typeof data.pageData.content,
+            contentLength: data.pageData?.content?.length || 0,
+            lastModified: data.pageData.lastModified,
+            createdAt: data.pageData.createdAt
+          } : 'NO_PAGE_DATA',
+          versionData: data.versionData ? {
+            hasContent: !!data.versionData.content,
+            title: data.versionData.title,
+            username: data.versionData.username
+          } : 'NO_VERSION_DATA'
         });
 
         let pageData = data.pageData;
         const versionData = data.versionData;
 
         if (!pageData) {
-          pageLogger.warn('Page data is undefined, attempting API fallback', { data, pageId });
+          pageLogger.warn('Page data is undefined, attempting API fallback', {
+            data,
+            pageId,
+            hasData: !!data,
+            dataKeys: data ? Object.keys(data) : [],
+            optimizedDataSource: 'getOptimizedPageData'
+          });
 
           // Try API fallback before giving up
           try {
+            console.log('🔄 [PageView] Primary data load failed, trying API fallback for page:', pageId);
             await tryApiFallback();
             return; // tryApiFallback handles loading state
           } catch (fallbackError) {
-            pageLogger.error('Both primary and API fallback failed', { fallbackError, pageId });
-            setError('Page not found or failed to load');
+            pageLogger.error('Both primary and API fallback failed', {
+              fallbackError,
+              pageId,
+              errorMessage: fallbackError?.message || 'Unknown error',
+              errorStack: fallbackError?.stack
+            });
+            setError(`Failed to load page "${pageId}". This page may not exist, may be private, or there may be a temporary issue. Please try refreshing the page or contact support if the problem persists.`);
             setIsLoading(false);
             return;
           }
         }
 
-        // If username is missing or potentially outdated, fetch it from user profile
-        if (pageData && pageData.userId) {
-          try {
-            console.log('Fetching username for user:', pageData.userId);
-            const userResponse = await fetch(`/api/users/profile?id=${encodeURIComponent(pageData.userId)}`);
-            if (userResponse.ok) {
-              const userResult = await userResponse.json();
-              if (userResult.success && userResult.data?.username) {
-                // Update username if it's missing, 'Anonymous', or different from the actual username
-                if (!pageData.username || pageData.username === 'Anonymous' || pageData.username !== userResult.data.username) {
+        // CRITICAL FIX: Handle missing or corrupted page data
+        if (pageData && (!pageData.title || pageData.title === 'Untitled' || !pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username')) {
+          console.log('🔧 [PageView] Detected missing page data, attempting to fix:', {
+            pageId,
+            title: pageData.title,
+            username: pageData.username,
+            userId: pageData.userId
+          });
+
+          // Try to fetch missing username from user profile
+          if (pageData.userId && (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username')) {
+            try {
+              console.log('🔧 [PageView] Fetching username for user:', pageData.userId);
+              const userResponse = await fetch(`/api/users/profile?id=${encodeURIComponent(pageData.userId)}`);
+              if (userResponse.ok) {
+                const userResult = await userResponse.json();
+                if (userResult.success && userResult.data?.username) {
                   pageData = { ...pageData, username: userResult.data.username };
-                  console.log('Updated page with username:', userResult.data.username);
+                  console.log('✅ [PageView] Fixed username:', userResult.data.username);
                 }
               }
+            } catch (userError) {
+              console.warn('❌ [PageView] Failed to fetch username:', userError);
             }
-          } catch (userError) {
-            console.warn('Failed to fetch username:', userError);
+          }
+
+          // If title is still missing or default, try to get it from version data
+          if ((!pageData.title || pageData.title === 'Untitled') && versionData?.title) {
+            pageData = { ...pageData, title: versionData.title };
+            console.log('✅ [PageView] Fixed title from version data:', versionData.title);
+          }
+
+          // If we still have missing data, show a helpful error
+          if (!pageData.title || pageData.title === 'Untitled') {
+            console.warn('⚠️ [PageView] Page still has missing title after fix attempts');
+            pageData = { ...pageData, title: `Page ${pageId.substring(0, 8)}...` };
+          }
+
+          if (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username') {
+            console.warn('⚠️ [PageView] Page still has missing username after fix attempts');
+            pageData = { ...pageData, username: 'Unknown Author' };
           }
         }
 
@@ -929,7 +1000,10 @@ export default function PageView({
           let errorMessage = `Failed to create page "${pageRef.title}"`;
           try {
             const errorData = await response.json();
-            if (errorData.message) {
+            // Check for error message in the correct field - API uses 'error' field, not 'message'
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (errorData.message) {
               errorMessage = errorData.message;
             }
           } catch (parseError) {
@@ -1164,7 +1238,8 @@ export default function PageView({
           return; // Don't throw, just show error message
         }
 
-        const errorMessage = errorData.message || `API request failed: ${response.status} ${response.statusText}`;
+        // Check for error message in the correct field - API uses 'error' field, not 'message'
+        const errorMessage = errorData.error || errorData.message || `API request failed: ${response.status} ${response.statusText}`;
         console.error('🔴 PAGE SAVE: Throwing error', errorMessage);
         throw new Error(errorMessage);
       }

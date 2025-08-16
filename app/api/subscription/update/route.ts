@@ -196,11 +196,32 @@ export async function POST(request: NextRequest) {
       isTestSubscription
     });
 
+    // CRITICAL: Invalidate all subscription-related caches immediately after update
+    try {
+      console.log(`[SUBSCRIPTION UPDATE] Invalidating caches for user ${userId}`);
+
+      // Invalidate server-side subscription cache
+      const cacheInvalidationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/account-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalidate-cache', userId })
+      });
+
+      if (cacheInvalidationResponse.ok) {
+        console.log(`[SUBSCRIPTION UPDATE] ✅ Successfully invalidated subscription cache for user ${userId}`);
+      } else {
+        console.warn(`[SUBSCRIPTION UPDATE] ⚠️ Failed to invalidate subscription cache for user ${userId}`);
+      }
+    } catch (cacheError) {
+      console.error(`[SUBSCRIPTION UPDATE] ❌ Error invalidating cache for user ${userId}:`, cacheError);
+    }
+
     console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription for user ${userId}`);
 
     return NextResponse.json({
       success: true,
-      subscription: subscriptionData
+      subscription: subscriptionData,
+      cacheInvalidated: true
     });
 
   } catch (error) {

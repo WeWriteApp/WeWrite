@@ -212,7 +212,7 @@ export function withProductionSafety<P extends object>(
     
     if (hasError) {
       return (
-        <div className="w-full p-4 border rounded-lg border-red-200 bg-red-50">
+        <div className="w-full p-4 border-theme-strong rounded-lg bg-destructive/10">
           <div className="text-center">
             <p className="text-red-600 mb-2">Component failed to load</p>
             <button 
@@ -231,7 +231,7 @@ export function withProductionSafety<P extends object>(
     } catch (error) {
       console.error('Component render error:', error);
       return fallback || (
-        <div className="w-full p-4 border rounded-lg border-red-200 bg-red-50">
+        <div className="w-full p-4 border-theme-strong rounded-lg bg-destructive/10">
           <p className="text-red-600 text-center">Failed to render component</p>
         </div>
       );

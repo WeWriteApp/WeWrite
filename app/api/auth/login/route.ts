@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
     // SECURITY: Use secure logging to prevent email exposure
     secureLogger.info('[Auth] Login attempt', {
       emailOrUsername: emailOrUsername.includes('@') ? maskEmail(emailOrUsername) : emailOrUsername,
-      hasPassword: password ? 'YES' : 'NO'
+      hasPassword: password ? 'YES' : 'NO',
+      inputType: emailOrUsername.includes('@') ? 'email' : 'username',
+      environment: getEnvironmentType()
     });
 
     // Validate required fields
@@ -134,20 +136,32 @@ export async function POST(request: NextRequest) {
     const isEmail = emailOrUsername.includes('@');
     let email = emailOrUsername;
 
-    // If username provided, look up email
+    // If username provided, look up email from usernames collection
     if (!isEmail) {
-      const usersCollection = getCollectionName('users');
-      const userQuery = await firestore
-        .collection(usersCollection)
-        .where('username', '==', emailOrUsername)
-        .limit(1)
+      console.log('[Auth] Looking up email for username:', emailOrUsername);
+      const usernamesCollection = getCollectionName('usernames');
+      console.log('[Auth] Username collection:', usernamesCollection);
+
+      // Look up the username in the usernames collection (matches client-side auth)
+      const usernameDoc = await firestore
+        .collection(usernamesCollection)
+        .doc(emailOrUsername.toLowerCase())
         .get();
 
-      if (userQuery.empty) {
+      if (!usernameDoc.exists) {
+        console.log('[Auth] Username not found in collection:', usernamesCollection);
         return createErrorResponse('User not found');
       }
 
-      email = userQuery.docs[0].data().email;
+      const usernameData = usernameDoc.data();
+      email = usernameData?.email;
+
+      if (!email) {
+        console.log('[Auth] No email found for username:', emailOrUsername);
+        return createErrorResponse('User not found');
+      }
+
+      console.log('[Auth] Resolved email for username:', email);
     }
 
     // Try to get user by email to verify they exist

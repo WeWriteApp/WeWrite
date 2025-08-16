@@ -12,7 +12,7 @@ import { getCurrentMonth } from '../utils/usdConstants';
 import { dollarsToCents, centsToDollars } from '../utils/formatCurrency';
 import type { UsdBalance, UsdAllocation } from '../types/database';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
-import { fundTrackingService } from './fundTrackingService';
+
 
 // Robust Firebase Admin initialization function - uses the same pattern as working endpoints
 function getFirebaseAdminAndDb() {
@@ -98,46 +98,80 @@ export class ServerUsdService {
   }
 
   /**
-   * Get user's current USD balance (server-side) - Updated for fund holding model
+   * Get user's current USD balance (server-side) - Simplified USD system
    */
   static async getUserUsdBalance(userId: string): Promise<UsdBalance | null> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
 
-      // Get fund balance from the new fund tracking service
-      const fundBalance = await fundTrackingService.getUserFundBalance(userId);
-
-      if (fundBalance) {
-        console.log(`[USD BALANCE] Using fund tracking balance for user ${userId}:`, {
-          totalSubscribed: fundBalance.totalSubscribed,
-          totalAllocated: fundBalance.totalAllocated,
-          availableToAllocate: fundBalance.availableToAllocate
-        });
-
-        // Convert fund balance to UsdBalance format
-        return {
-          userId,
-          totalUsdCents: Math.round(fundBalance.totalSubscribed * 100),
-          allocatedUsdCents: Math.round(fundBalance.totalAllocated * 100),
-          availableUsdCents: Math.round(fundBalance.availableToAllocate * 100),
-          monthlyAllocationCents: Math.round(fundBalance.totalSubscribed * 100),
-          lastAllocationDate: getCurrentMonth(),
-          createdAt: fundBalance.lastUpdated,
-          updatedAt: fundBalance.lastUpdated
-        };
+      // Use the subscription source to get current balance
+      let subscriptionData = null;
+      try {
+        const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
+        subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
+      } catch (error) {
+        console.warn(`[USD BALANCE] Could not fetch subscription for user ${userId}:`, error.message);
+        // Continue without subscription data - we'll check the account-subscription API instead
       }
-
-      // Fallback to legacy balance system if fund tracking not available
-      console.log(`[USD BALANCE] Fund tracking not available, falling back to legacy balance for user ${userId}`);
-
-      // Use the same subscription source as the sync logic
-      const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
-      const subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
 
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
+        // If subscription server failed, try to get subscription from account API
+        if (!subscriptionData) {
+          try {
+            // Make internal API call to get subscription
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            const response = await fetch(`${baseUrl}/api/account-subscription`, {
+              headers: {
+                'x-user-id': userId,
+                'x-internal-request': 'true'
+              }
+            });
+            if (response.ok) {
+              const accountData = await response.json();
+              if (accountData.hasSubscription && accountData.status === 'active' && accountData.amount) {
+                subscriptionData = {
+                  status: accountData.status,
+                  amount: accountData.amount
+                };
+                console.log(`[USD BALANCE] Retrieved subscription from account API: $${accountData.amount}/mo`);
+              }
+            }
+          } catch (error) {
+            console.warn(`[USD BALANCE] Could not fetch subscription from account API:`, error.message);
+          }
+        }
+
+        // If user has an active subscription but no balance record, create one automatically
+        if (subscriptionData && subscriptionData.status === 'active' && subscriptionData.amount) {
+          console.log(`[USD BALANCE] User ${userId} has active subscription ($${subscriptionData.amount}/mo) but no balance record. Creating balance automatically.`);
+
+          const expectedUsdCents = dollarsToCents(subscriptionData.amount);
+          const newBalance: UsdBalance = {
+            userId,
+            totalUsdCents: expectedUsdCents,
+            allocatedUsdCents: 0,
+            availableUsdCents: expectedUsdCents,
+            monthlyAllocationCents: expectedUsdCents,
+            lastUpdated: new Date(),
+            createdAt: new Date()
+          };
+
+          // Create the balance record
+          await balanceRef.set(newBalance);
+          console.log(`[USD BALANCE] Created balance record for user ${userId} with $${subscriptionData.amount}/mo subscription`);
+
+          // Return the newly created balance with actual timestamps
+          return {
+            ...newBalance,
+            lastUpdated: new Date(),
+            createdAt: new Date()
+          };
+        }
+
+        console.log(`[USD BALANCE] No balance record found for user ${userId} and no active subscription to auto-create`);
         return null;
       }
 
@@ -202,13 +236,18 @@ export class ServerUsdService {
 
   /**
    * Calculate actual allocated USD cents by summing all active allocations
+   *
+   * CRITICAL FIX: Only count active allocations to prevent double-counting
+   * Pending allocations should not be included as they may become active allocations
    */
   static async calculateActualAllocatedUsdCents(userId: string): Promise<number> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
 
-      // Get all active allocations for current month
+      console.log(`[USD CALCULATION] Calculating actual allocated cents for user ${userId}, month ${currentMonth}`);
+
+      // Get all active allocations for current month ONLY
       const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
       const allocationsQuery = allocationsRef
         .where('userId', '==', userId)
@@ -216,22 +255,27 @@ export class ServerUsdService {
         .where('status', '==', 'active');
 
       const allocationsSnapshot = await allocationsQuery.get();
-      
+
       let totalAllocatedCents = 0;
+      const allocationDetails = [];
+
       allocationsSnapshot.forEach(doc => {
         const allocation = doc.data();
-        totalAllocatedCents += allocation.usdCents || 0;
+        const allocationCents = allocation.usdCents || 0;
+        totalAllocatedCents += allocationCents;
+
+        allocationDetails.push({
+          id: doc.id,
+          resourceType: allocation.resourceType,
+          resourceId: allocation.resourceId,
+          usdCents: allocationCents
+        });
       });
 
-      // Also include pending allocations
-      const pendingAllocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.PENDING_USD_ALLOCATIONS));
-      const pendingQuery = pendingAllocationsRef.where('userId', '==', userId);
-      const pendingSnapshot = await pendingQuery.get();
+      console.log(`[USD CALCULATION] Found ${allocationsSnapshot.size} active allocations totaling ${totalAllocatedCents} cents:`, allocationDetails);
 
-      pendingSnapshot.forEach(doc => {
-        const pendingAllocation = doc.data();
-        totalAllocatedCents += pendingAllocation.usdCents || 0;
-      });
+      // REMOVED: Pending allocations counting to fix double-counting bug
+      // Pending allocations should not be included in the total as they may become active allocations
 
       return totalAllocatedCents;
     } catch (error) {
@@ -327,22 +371,7 @@ export class ServerUsdService {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       const usdDollarsChange = centsToDollars(usdCentsChange);
-      console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${usdDollarsChange} USD (fund holding model)`);
-
-      // Track allocation in fund tracking service for positive changes (no actual fund movement)
-      if (usdCentsChange > 0) {
-        const trackingResult = await fundTrackingService.trackUserAllocation(userId, {
-          pageId,
-          amount: usdDollarsChange
-        });
-
-        if (!trackingResult.success) {
-          console.error(`[USD ALLOCATION] [${correlationId}] Fund tracking failed: ${trackingResult.error}`);
-          // Continue with legacy system as fallback
-        } else {
-          console.log(`[USD ALLOCATION] [${correlationId}] Fund tracking successful for ${usdDollarsChange} USD to page ${pageId}`);
-        }
-      }
+      console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${usdDollarsChange} USD`);
 
       // Get current USD balance
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
@@ -412,10 +441,34 @@ export class ServerUsdService {
       // Use a batch to ensure atomicity
       const batch = db.batch();
 
-      // Update USD balance
-      const currentAllocatedCents = balanceData?.allocatedUsdCents || 0;
-      const newAllocatedCents = currentAllocatedCents + allocationDifference;
-      const newAvailableCents = (balanceData?.totalUsdCents || 0) - newAllocatedCents;
+      // CRITICAL FIX: Use calculated actual allocated cents instead of stored value
+      // This prevents compounding errors from incorrect stored values
+      const actualAllocatedCents = await this.calculateActualAllocatedUsdCents(userId);
+      const newAllocatedCents = actualAllocatedCents + allocationDifference;
+      const totalUsdCents = balanceData?.totalUsdCents || 0;
+      const newAvailableCents = totalUsdCents - newAllocatedCents;
+
+      console.log(`[USD ALLOCATION] Balance calculation for user ${userId}:`, {
+        actualAllocatedCents,
+        allocationDifference,
+        newAllocatedCents,
+        totalUsdCents,
+        newAvailableCents
+      });
+
+      // Validate allocation math to prevent impossible states
+      if (newAllocatedCents < 0) {
+        throw new Error(`Invalid allocation: would result in negative allocated amount (${newAllocatedCents} cents)`);
+      }
+
+      if (newAllocatedCents > totalUsdCents) {
+        throw new Error(`Insufficient funds: cannot allocate ${newAllocatedCents} cents when total budget is ${totalUsdCents} cents`);
+      }
+
+      if (newAvailableCents < 0) {
+        console.warn(`[USD ALLOCATION] Warning: allocation would result in negative available balance (${newAvailableCents} cents)`);
+        // Allow negative available for now, but log it for investigation
+      }
 
       batch.update(balanceRef, {
         allocatedUsdCents: newAllocatedCents,
@@ -532,22 +585,7 @@ export class ServerUsdService {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
       const usdDollarsChange = centsToDollars(usdCentsChange);
-      console.log(`[USD USER ALLOCATION] Starting allocation for user ${userId}, recipient ${recipientUserId}, change ${usdDollarsChange} USD (fund holding model)`);
-
-      // Track allocation in fund tracking service for positive changes (no actual fund movement)
-      if (usdCentsChange > 0) {
-        const trackingResult = await fundTrackingService.trackUserAllocation(userId, {
-          recipientUserId,
-          amount: usdDollarsChange
-        });
-
-        if (!trackingResult.success) {
-          console.error(`[USD USER ALLOCATION] Fund tracking failed: ${trackingResult.error}`);
-          // Continue with legacy system as fallback
-        } else {
-          console.log(`[USD USER ALLOCATION] Fund tracking successful for ${usdDollarsChange} USD to user ${recipientUserId}`);
-        }
-      }
+      console.log(`[USD USER ALLOCATION] Starting allocation for user ${userId}, recipient ${recipientUserId}, change ${usdDollarsChange} USD`);
 
       // Get current USD balance
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
@@ -567,10 +605,34 @@ export class ServerUsdService {
       // Use a batch to ensure atomicity
       const batch = db.batch();
 
-      // Update USD balance
-      const currentAllocatedCents = balanceData?.allocatedUsdCents || 0;
-      const newAllocatedCents = currentAllocatedCents + allocationDifference;
-      const newAvailableCents = (balanceData?.totalUsdCents || 0) - newAllocatedCents;
+      // CRITICAL FIX: Use calculated actual allocated cents instead of stored value
+      // This prevents compounding errors from incorrect stored values
+      const actualAllocatedCents = await this.calculateActualAllocatedUsdCents(userId);
+      const newAllocatedCents = actualAllocatedCents + allocationDifference;
+      const totalUsdCents = balanceData?.totalUsdCents || 0;
+      const newAvailableCents = totalUsdCents - newAllocatedCents;
+
+      console.log(`[USD USER ALLOCATION] Balance calculation for user ${userId}:`, {
+        actualAllocatedCents,
+        allocationDifference,
+        newAllocatedCents,
+        totalUsdCents,
+        newAvailableCents
+      });
+
+      // Validate allocation math to prevent impossible states
+      if (newAllocatedCents < 0) {
+        throw new Error(`Invalid user allocation: would result in negative allocated amount (${newAllocatedCents} cents)`);
+      }
+
+      if (newAllocatedCents > totalUsdCents) {
+        throw new Error(`Insufficient funds: cannot allocate ${newAllocatedCents} cents when total budget is ${totalUsdCents} cents`);
+      }
+
+      if (newAvailableCents < 0) {
+        console.warn(`[USD USER ALLOCATION] Warning: allocation would result in negative available balance (${newAvailableCents} cents)`);
+        // Allow negative available for now, but log it for investigation
+      }
 
       batch.update(balanceRef, {
         allocatedUsdCents: newAllocatedCents,

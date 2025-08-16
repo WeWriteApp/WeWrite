@@ -9,7 +9,7 @@ import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
-import { UsdEarningsService } from '../../services/usdEarningsService';
+import { UnifiedEarningsService } from '../../services/unifiedEarningsService';
 import {
   calculateFeeBreakdown,
   calculateFeeBreakdownAsync,
@@ -178,41 +178,39 @@ export default function PayoutDashboard() {
       // Load bank account status
       await loadBankAccountStatus();
 
-      // Load USD earnings data
-      const usdBalance = await UsdEarningsService.getWriterUsdBalance(user.uid);
-      if (usdBalance) {
-        const earnings = {
-          totalEarnings: usdBalance.totalUsdCentsEarned / 100, // Convert cents to dollars
-          availableBalance: usdBalance.availableUsdCents / 100, // Convert cents to dollars
-          pendingBalance: usdBalance.pendingUsdCents / 100, // Convert cents to dollars
-          totalPlatformFees: 0, // Platform fees handled at subscription level
-          currency: 'usd'
-        };
-        setUserEarnings(earnings);
+      // Load earnings data using unified service
+      const earningsBreakdown = await UnifiedEarningsService.getEarningsBreakdown(user.uid);
+      const earnings = {
+        totalEarnings: earningsBreakdown.totalEarnings,
+        availableBalance: earningsBreakdown.availableBalance,
+        pendingBalance: earningsBreakdown.pendingBalance,
+        totalPlatformFees: earningsBreakdown.platformFees,
+        currency: 'usd'
+      };
+      setUserEarnings(earnings);
 
-        // Calculate fee breakdown for available balance
-        updateFeeBreakdown(earnings.availableBalance);
-      }
+      // Calculate fee breakdown for available balance
+      updateFeeBreakdown(earnings.availableBalance);
 
-      // Load USD earnings history
-      const usdEarnings = await UsdEarningsService.getWriterEarningsHistory(user.uid);
-      setEarnings(usdEarnings.map(earning => ({
+      // Load earnings and payout history using unified service
+      const completeData = await UnifiedEarningsService.getCompleteEarningsData(user.uid);
+
+      setEarnings(completeData.earnings.map(earning => ({
         id: earning.id,
-        amount: earning.totalUsdCentsReceived / 100, // Convert cents to dollars
+        amount: earning.totalCentsReceived / 100, // Convert cents to dollars
         source: 'USD Allocation',
         date: earning.createdAt,
         type: 'usd' as any,
         status: earning.status === 'available' ? 'completed' : 'pending' as any,
-        pageId: earning.allocations?.[0]?.resourceId,
+        pageId: earning.allocations?.[0]?.toPagesIds?.[0],
         pageTitle: 'USD Earnings'
       })));
 
       // Recent transactions are now token allocations
       setRecentTransactions([]);
 
-      // Load USD payout history
-      const usdPayouts = await UsdEarningsService.getPayoutHistory(user.uid);
-      setPayouts(usdPayouts.map(payout => ({
+      // Load payout history
+      setPayouts(completeData.payoutHistory.map(payout => ({
         id: payout.id,
         amount: payout.amountCents / 100, // Convert cents to dollars
         status: payout.status,
@@ -304,8 +302,8 @@ export default function PayoutDashboard() {
         payoutAmount: userEarnings.availableBalance
       });
 
-      // Use UsdEarningsService to request payout
-      const result = await UsdEarningsService.requestPayout(
+      // Use UnifiedEarningsService to request payout
+      const result = await UnifiedEarningsService.requestPayout(
         user.uid,
         Math.round(userEarnings.availableBalance * 100) // Convert dollars to cents
       );

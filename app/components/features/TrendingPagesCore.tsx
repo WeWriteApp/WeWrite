@@ -286,7 +286,7 @@ export default function TrendingPages({ limit = 5 }) {
     );
   }
 
-  if (trendingPages.length === 0) {
+  if (trendingPages.length === 0 && !loading) {
     return (
       <EmptyState
         icon={Flame}

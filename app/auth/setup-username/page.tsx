@@ -253,7 +253,7 @@ function SetupUsernameContent() {
                         key={index}
                         type="button"
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="px-2 py-1 text-xs font-medium rounded-md bg-background border border-input hover:bg-accent hover:text-accent-foreground transition-colors"
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-background border-theme-strong hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         {suggestion}
                       </button>

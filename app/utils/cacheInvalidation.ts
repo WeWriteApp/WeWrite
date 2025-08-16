@@ -361,6 +361,120 @@ class EnhancedCacheInvalidation {
   }
 }
 
+/**
+ * Force refresh subscription data from frontend
+ * Call this after subscription changes to ensure UI shows latest data
+ */
+export const forceRefreshSubscriptionData = async (userId?: string): Promise<void> => {
+  console.log(`🔄 FORCE REFRESH: Starting subscription data refresh for user ${userId || 'current'}`);
+
+  try {
+    // Give webhooks a moment to process (2 seconds)
+    console.log('⏳ Waiting 2 seconds for webhooks to process...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    // 1. Invalidate server-side cache
+    if (userId) {
+      const response = await fetch('/api/account-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalidate-cache', userId })
+      });
+
+      if (response.ok) {
+        console.log(`✅ Server cache invalidated for user ${userId}`);
+      } else {
+        console.warn(`⚠️ Failed to invalidate server cache for user ${userId}`);
+      }
+    }
+
+    // 2. Dispatch frontend cache invalidation events
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('invalidate-subscription-cache', {
+        detail: { userId, forceRefresh: true }
+      }));
+      window.dispatchEvent(new CustomEvent('invalidate-earnings-cache', {
+        detail: { userId, forceRefresh: true }
+      }));
+      window.dispatchEvent(new CustomEvent('invalidate-usd-balance-cache', {
+        detail: { userId, forceRefresh: true }
+      }));
+      console.log(`✅ Frontend cache invalidation events dispatched`);
+    }
+
+    console.log(`🎉 FORCE REFRESH: Completed subscription data refresh`);
+  } catch (error) {
+    console.error(`❌ FORCE REFRESH: Error refreshing subscription data:`, error);
+  }
+};
+
+/**
+ * Invalidate subscription-related caches
+ * Call this after subscription updates, upgrades, cancellations, etc.
+ */
+export const invalidateSubscriptionCaches = async (userId: string): Promise<void> => {
+  console.log(`🔄 SUBSCRIPTION CACHE INVALIDATION: Starting for user ${userId}`);
+
+  try {
+    // 1. Clear server-side subscription cache
+    if (typeof window === 'undefined') {
+      // Server-side: Import and clear subscription cache
+      try {
+        const { subscriptionCache } = await import('../api/account-subscription/route');
+        const cacheKey = `subscription:${userId}`;
+        subscriptionCache.delete(cacheKey);
+        console.log(`✅ Cleared server subscription cache for ${userId}`);
+      } catch (error) {
+        console.warn('Could not clear server subscription cache:', error);
+      }
+
+      // Clear earnings cache (contains subscription data)
+      try {
+        const { earningsCache } = await import('../api/earnings/user/route');
+        const earningsCacheKey = `unified_earnings:${userId}:v1`;
+        earningsCache.delete(earningsCacheKey);
+        console.log(`✅ Cleared server earnings cache for ${userId}`);
+      } catch (error) {
+        console.warn('Could not clear server earnings cache:', error);
+      }
+
+      // Clear allocation bar cache (contains subscription data)
+      try {
+        const { allocationBarDataCache } = await import('../api/usd/pledge-bar-data/route');
+        const allocationCacheKey = `allocation_bar:${userId}`;
+        allocationBarDataCache.delete(allocationCacheKey);
+        console.log(`✅ Cleared server allocation bar cache for ${userId}`);
+      } catch (error) {
+        console.warn('Could not clear server allocation bar cache:', error);
+      }
+    }
+
+    // 2. Clear client-side caches
+    if (typeof window !== 'undefined') {
+      // Dispatch events to invalidate frontend caches
+      window.dispatchEvent(new CustomEvent('invalidate-subscription-cache', {
+        detail: { userId }
+      }));
+      window.dispatchEvent(new CustomEvent('invalidate-earnings-cache', {
+        detail: { userId }
+      }));
+      window.dispatchEvent(new CustomEvent('invalidate-usd-balance-cache', {
+        detail: { userId }
+      }));
+      console.log(`✅ Dispatched client-side subscription cache invalidation events`);
+    }
+
+    // 3. Clear any user-related caches that might contain subscription data
+    if (typeof userCache !== 'undefined') {
+      userCache.invalidate(userId);
+      console.log(`✅ Cleared user cache for ${userId}`);
+    }
+
+    console.log(`🎉 SUBSCRIPTION CACHE INVALIDATION: Completed for user ${userId}`);
+  } catch (error) {
+    console.error(`❌ SUBSCRIPTION CACHE INVALIDATION: Error for user ${userId}:`, error);
+  }
+};
+
 // Export enhanced invalidation functions
 export const {
   invalidatePageUpdate,

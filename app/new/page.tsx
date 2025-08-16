@@ -780,7 +780,10 @@ function NewPageContent() {
 
             try {
               const errorData = await response.json();
-              if (errorData.message) {
+              // Check for error message in the correct field - API uses 'error' field, not 'message'
+              if (errorData.error) {
+                errorMessage = errorData.error;
+              } else if (errorData.message) {
                 errorMessage = errorData.message;
               }
             } catch (parseError) {

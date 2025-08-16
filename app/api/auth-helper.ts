@@ -154,9 +154,14 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
     }
   } catch (error: any) {
     // If JSON parsing fails, treat as plain string (legacy format for dev)
-    if (simpleSessionCookie === 'dev_admin_user' || simpleSessionCookie === 'dev_test_user_1') {
+    if (simpleSessionCookie === 'dev_admin_user') {
       console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
-      return simpleSessionCookie;
+      // Return the proper user ID for dev_admin_user to match session API
+      return 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N';
+    } else if (simpleSessionCookie === 'dev_test_user_1') {
+      console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
+      // Return the proper user ID for dev_test_user_1 to match session API
+      return 'dev_test_user_1';
     }
 
     console.error('[AUTH DEBUG] Error parsing simpleUserSession cookie:', error);

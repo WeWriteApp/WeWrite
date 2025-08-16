@@ -27,12 +27,13 @@ interface AllocationIntervalProviderProps {
 export const ALLOCATION_INTERVAL_OPTIONS = [
   { label: '$0.01', cents: 1 },
   { label: '$0.10', cents: 10 },
+  { label: '$0.50', cents: 50 },
   { label: '$1.00', cents: 100 },
   { label: '$5.00', cents: 500 },
   { label: '$10.00', cents: 1000 },
 ] as const;
 
-export const DEFAULT_ALLOCATION_INTERVAL_CENTS = 10; // $0.10
+export const DEFAULT_ALLOCATION_INTERVAL_CENTS = 50; // $0.50
 
 export function AllocationIntervalProvider({ children }: AllocationIntervalProviderProps) {
   const { user } = useAuth();

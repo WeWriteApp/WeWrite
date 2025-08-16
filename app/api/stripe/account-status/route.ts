@@ -1,121 +1,135 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia'
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = initAdmin();
-    if (!admin) {
-      console.error('Firebase Admin initialization returned null');
-      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-    }
-
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { stripeConnectedAccountId: providedAccountId } = body;
+    console.log('[Account Status API] Checking bank account status for user:', userId);
 
-    // Get user data to find their connected account ID
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      throw new Error('Firebase Admin not available');
+    }
+
     const db = admin.firestore();
     const userDoc = await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).get();
     const userData = userDoc.data();
 
-    // Use provided account ID or get it from user data
-    const stripeConnectedAccountId = providedAccountId || userData?.stripeConnectedAccountId;
+    const stripeConnectedAccountId = userData?.stripeConnectedAccountId;
 
     if (!stripeConnectedAccountId) {
+      console.log('[Account Status API] No Stripe Connect account found');
       return NextResponse.json({
-        error: 'No Stripe connected account found. Please set up your bank account first.',
+        error: 'No bank account found. Please set up your bank account first.',
         needsSetup: true
       }, { status: 400 });
     }
 
-    // Verify the connected account belongs to this user (if account ID was provided)
-    if (providedAccountId && userData?.stripeConnectedAccountId !== providedAccountId) {
+    console.log('[Account Status API] Checking Stripe Connect account:', stripeConnectedAccountId);
+
+    // Get the Stripe Connect account details
+    const account = await stripe.accounts.retrieve(stripeConnectedAccountId);
+    console.log('[Account Status API] Account details:', {
+      id: account.id,
+      payouts_enabled: account.payouts_enabled,
+      charges_enabled: account.charges_enabled,
+      details_submitted: account.details_submitted,
+      requirements: account.requirements
+    });
+
+    // Get external accounts (bank accounts)
+    const externalAccounts = await stripe.accounts.listExternalAccounts(
+      stripeConnectedAccountId,
+      { object: 'bank_account', limit: 10 }
+    );
+
+    console.log('[Account Status API] External accounts found:', externalAccounts.data.length);
+
+    let bankStatus;
+    if (externalAccounts.data.length === 0) {
+      console.log('[Account Status API] No bank accounts found on Stripe Connect account');
+      bankStatus = {
+        isConnected: false,
+        isVerified: false
+      };
+    } else {
+      // Get the first (primary) bank account
+      const bankAccount = externalAccounts.data[0] as Stripe.BankAccount;
+      console.log('[Account Status API] Bank account details:', {
+        id: bankAccount.id,
+        bank_name: bankAccount.bank_name,
+        last4: bankAccount.last4,
+        status: bankAccount.status
+      });
+
+      bankStatus = {
+        isConnected: true,
+        isVerified: account.payouts_enabled && bankAccount.status === 'verified',
+        bankName: bankAccount.bank_name,
+        last4: bankAccount.last4,
+        accountType: bankAccount.account_type,
+        stripeAccountId: stripeConnectedAccountId,
+        account: account
+      };
+    }
+
+    if (!bankStatus.isConnected) {
+      console.log('[Account Status API] No bank account found, needs setup');
       return NextResponse.json({
-        error: 'Invalid connected account'
+        error: 'No bank account found. Please set up your bank account first.',
+        needsSetup: true
       }, { status: 400 });
     }
 
-    // Initialize Stripe
-    const stripe = new Stripe(getStripeSecretKey());
-
-    // Get account status from Stripe with error handling
-    let account;
-    try {
-      account = await stripe.accounts.retrieve(stripeConnectedAccountId);
-    } catch (stripeError: any) {
-      console.error('Error retrieving Stripe account:', stripeError);
-
-      // Handle specific Stripe errors
-      if (stripeError.code === 'account_invalid') {
-        // Account doesn't exist or access was revoked - clear it from user data
-        await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).update({
-          stripeConnectedAccountId: null,
-          payoutSetupComplete: false
-        });
-
-        return NextResponse.json({
-          error: 'Stripe account no longer accessible. Please set up your bank account again.',
-          needsSetup: true,
-          accountCleared: true
-        }, { status: 400 });
-      }
-
-      // Re-throw other errors
-      throw stripeError;
-    }
-
-    // Get bank account details from external accounts
-    let bankAccountDetails = null;
-    if (account.external_accounts?.data && account.external_accounts.data.length > 0) {
-      const bankAccount = account.external_accounts.data.find(
-        (account: any) => account.object === 'bank_account'
-      );
-
-      if (bankAccount) {
-        bankAccountDetails = {
-          last4: bankAccount.last4,
-          bank_name: bankAccount.bank_name,
-          account_holder_type: bankAccount.account_holder_type,
-          currency: bankAccount.currency,
-          country: bankAccount.country,
-          routing_number: bankAccount.routing_number ? `****${bankAccount.routing_number.slice(-4)}` : null
-        };
-      }
-    }
+    console.log('[Account Status API] Bank account found:', {
+      isConnected: bankStatus.isConnected,
+      isVerified: bankStatus.isVerified,
+      bankName: bankStatus.bankName,
+      last4: bankStatus.last4
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        id: account.id,
-        payouts_enabled: account.payouts_enabled,
-        charges_enabled: account.charges_enabled,
-        details_submitted: account.details_submitted,
-        requirements: {
-          currently_due: account.requirements?.currently_due || [],
-          eventually_due: account.requirements?.eventually_due || [],
-          past_due: account.requirements?.past_due || [],
-          pending_verification: account.requirements?.pending_verification || []
-        },
-        capabilities: account.capabilities,
-        country: account.country,
-        default_currency: account.default_currency,
-        bank_account: bankAccountDetails
+        id: bankStatus.stripeAccountId,
+        payouts_enabled: bankStatus.account.payouts_enabled,
+        charges_enabled: bankStatus.account.charges_enabled,
+        details_submitted: bankStatus.account.details_submitted,
+        requirements: bankStatus.account.requirements,
+        bankAccount: {
+          bankName: bankStatus.bankName,
+          last4: bankStatus.last4,
+          accountType: bankStatus.accountType
+        }
       }
     });
 
   } catch (error) {
-    console.error('Error checking Stripe account status:', error);
+    console.error('[Account Status API] Error checking account status:', error);
+
+    // If bank account service indicates setup needed, return appropriate response
+    if (error instanceof Error && error.message.includes('not found')) {
+      return NextResponse.json({
+        error: 'No bank account found. Please set up your bank account first.',
+        needsSetup: true
+      }, { status: 400 });
+    }
+
     return NextResponse.json({
-      error: 'Failed to check account status'
+      error: 'Failed to check account status',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

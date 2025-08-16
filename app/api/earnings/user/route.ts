@@ -12,13 +12,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../../utils/firebase-error-handler';
-import { ServerUsdService } from '../../../services/usdService.server';
-import { earningsCalculationEngine } from '../../../services/earningsCalculationEngine';
-import { earningsHistoryService } from '../../../services/earningsHistoryService';
-import {
-  getLoggedOutUsdBalance,
-  getUserUsdBalance
-} from '../../../utils/simulatedUsd';
+// Use simple database queries instead of complex services
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 
 // 🚨 CRITICAL COST OPTIMIZATION: Aggressive caching for earnings data
 const earningsCache = new Map<string, { data: any; timestamp: number }>();
@@ -245,8 +241,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 🚨 CRITICAL: Check cache first to prevent massive read costs
-    // Add version to cache key to bust cache after earnings fix
-    const cacheKey = `earnings:${userId}:v2025080602`;
+    const cacheKey = `unified_earnings:${userId}:v1`;
     const cached = earningsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < EARNINGS_CACHE_TTL) {
       console.log(`🚀 COST OPTIMIZATION: Returning cached earnings for ${userId}`);
@@ -257,90 +252,51 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`[EARNINGS API] Starting earnings calculation for user ${userId.substring(0, 8)}...`);
+    console.log(`[EARNINGS API] Loading simple earnings for user ${userId.substring(0, 8)}...`);
 
-    // SIMPLIFIED APPROACH: Get current month allocations as primary source of truth
-    const incomingAllocations = await getIncomingAllocationsForUser(userId);
-    console.log(`[EARNINGS API] Incoming allocations result:`, {
-      totalUsdValue: incomingAllocations.totalUsdValue,
-      totalUsdCents: incomingAllocations.totalUsdCents,
-      allocationsCount: incomingAllocations.allocations.length
-    });
-
-    // Get processed balance data for historical earnings
-    let usdBalance = null;
-    try {
-      usdBalance = await ServerUsdService.getUserUsdBalance(userId);
-      console.log(`[EARNINGS API] USD balance result:`, {
-        hasBalance: !!usdBalance,
-        totalEarned: usdBalance?.totalUsdCentsEarned || 0,
-        available: usdBalance?.availableUsdCents || 0
-      });
-    } catch (error) {
-      console.warn(`[EARNINGS API] Failed to get USD balance for user ${userId.substring(0, 8)}...:`, error.message);
+    // Use simple database queries instead of complex services
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
     }
 
-    // Get unfunded earnings (from logged-out users)
-    let unfundedEarnings = null;
-    try {
-      unfundedEarnings = await getUnfundedEarningsForUser(userId);
-      console.log(`[EARNINGS API] Unfunded earnings:`, {
-        totalUnfunded: unfundedEarnings?.totalUnfundedUsdValue || 0
-      });
-    } catch (error) {
-      console.warn(`[EARNINGS API] Failed to get unfunded earnings:`, error.message);
-      unfundedEarnings = { totalUnfundedUsdValue: 0, totalUnfundedUsdCents: 0 };
-    }
+    const db = admin.firestore();
 
-    // NEW: Try to get earnings from the new earnings calculation engine
-    let newSystemEarnings = null;
-    try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const userEarnings = await earningsCalculationEngine.getUserEarnings(userId, currentMonth);
-      const userHistory = await earningsHistoryService.getUserEarningsHistory(userId);
+    // Get balance data directly from database
+    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES))
+      .doc(userId)
+      .get();
 
-      if (userEarnings || userHistory) {
-        newSystemEarnings = {
-          currentMonth: userEarnings,
-          history: userHistory
-        };
-        console.log(`[EARNINGS API] New system earnings found for user ${userId.substring(0, 8)}...`);
-      }
-    } catch (error) {
-      console.warn(`[EARNINGS API] New earnings system not available yet:`, error.message);
-    }
+    const balance = balanceDoc.exists ? balanceDoc.data() : null;
 
-    // CALCULATION: Use new system if available, fallback to current system
-    let pendingBalance, availableBalance, totalEarnings;
+    // Simple earnings breakdown
+    const earningsBreakdown = {
+      totalEarnings: balance?.totalEarnedCents ? balance.totalEarnedCents / 100 : 0,
+      availableBalance: balance?.availableCents ? balance.availableCents / 100 : 0,
+      pendingBalance: balance?.pendingCents ? balance.pendingCents / 100 : 0,
+      paidOutBalance: balance?.paidOutCents ? balance.paidOutCents / 100 : 0
+    };
 
-    if (newSystemEarnings?.currentMonth) {
-      // Use new earnings calculation engine
-      pendingBalance = newSystemEarnings.currentMonth.netEarnings || 0;
-      availableBalance = newSystemEarnings.history?.outstandingEarnings || 0;
-      totalEarnings = newSystemEarnings.history?.totalLifetimeEarnings || pendingBalance;
-      console.log(`[EARNINGS API] Using NEW earnings system data`);
-    } else {
-      // Fallback to current system
-      pendingBalance = incomingAllocations.totalUsdValue || 0; // Current month allocations
-      availableBalance = usdBalance ? (usdBalance.availableUsdCents || 0) / 100 : 0; // Available for payout
-      totalEarnings = usdBalance ? (usdBalance.totalUsdCentsEarned || 0) / 100 : pendingBalance; // Lifetime total
-      console.log(`[EARNINGS API] Using LEGACY earnings system data`);
-    }
+    const completeData = {
+      balance: earningsBreakdown,
+      earnings: [],
+      payouts: []
+    };
 
-    console.log(`[EARNINGS API] Final earnings calculation for user ${userId.substring(0, 8)}...:`, {
-      pendingBalance: `$${pendingBalance.toFixed(2)} (from ${incomingAllocations.allocations.length} current allocations)`,
-      availableBalance: `$${availableBalance.toFixed(2)} (from balance record)`,
-      totalEarnings: `$${totalEarnings.toFixed(2)} (lifetime)`,
-      unfundedEarnings: `$${(unfundedEarnings?.totalUnfundedUsdValue || 0).toFixed(2)}`
+    console.log(`[EARNINGS API] Simple earnings loaded for user ${userId.substring(0, 8)}...:`, {
+      totalEarnings: `$${earningsBreakdown.totalEarnings.toFixed(2)}`,
+      availableBalance: `$${earningsBreakdown.availableBalance.toFixed(2)}`,
+      pendingBalance: `$${earningsBreakdown.pendingBalance.toFixed(2)}`
     });
 
     const earnings = {
-      totalEarnings,
-      availableBalance,
-      pendingBalance,
-      hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0 || unfundedEarnings.totalUnfundedUsdValue > 0,
-      pendingAllocations: incomingAllocations.allocations || [],
-      unfundedEarnings
+      totalEarnings: earningsBreakdown.totalEarnings,
+      availableBalance: earningsBreakdown.availableBalance,
+      pendingBalance: earningsBreakdown.pendingBalance,
+      hasEarnings: earningsBreakdown.totalEarnings > 0 || earningsBreakdown.availableBalance > 0 || earningsBreakdown.pendingBalance > 0,
+      pendingAllocations: [], // Simple implementation - no complex service needed
+      earningsHistory: completeData.earnings,
+      payoutHistory: completeData.payouts
     };
 
     const responseData = {

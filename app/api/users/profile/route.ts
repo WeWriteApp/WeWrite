@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { userCache } from '../../../utils/userCache';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
@@ -46,26 +46,15 @@ export async function GET(request: NextRequest) {
 
     console.log(`💸 [User Profile API] Cache miss for ${lookupValue} - fetching from database`);
 
-    let admin;
-    try {
-      console.log(`👤 [User Profile API] Initializing Firebase Admin for ${lookupValue}`);
-      admin = initAdmin();
+    console.log(`👤 [User Profile API] Initializing Firebase Admin for ${lookupValue}`);
+    const admin = getFirebaseAdmin();
 
-      if (!admin) {
-        console.error('👤 [User Profile API] Firebase Admin initialization returned null');
-        return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
-      }
-
-      console.log('👤 [User Profile API] Firebase Admin initialized successfully');
-    } catch (error) {
-      console.error('👤 [User Profile API] Error initializing Firebase Admin:', error);
-      console.error('👤 [User Profile API] Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n')
-      });
-      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin initialization failed');
+    if (!admin) {
+      console.error('👤 [User Profile API] Firebase Admin initialization returned null');
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
     }
+
+    console.log('👤 [User Profile API] Firebase Admin initialized successfully');
 
     const db = admin.firestore();
     const usersCollection = getCollectionName('users');

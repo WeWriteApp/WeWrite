@@ -159,7 +159,7 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
           </div>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+            <div className="mt-4 p-4 bg-destructive/10 border-theme-strong rounded-lg text-destructive text-sm">
               {error}
             </div>
           )}
@@ -167,7 +167,7 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
       </main>
 
       {/* Sticky Subscribe Button Footer */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 z-50">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border p-4 bg-background z-50">
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleSubmit}

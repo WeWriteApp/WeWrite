@@ -21,18 +21,35 @@ export function initializeErrorSuppression() {
   const originalFetch = window.fetch;
   window.fetch = async (...args) => {
     try {
-      return await originalFetch.apply(window, args);
+      const response = await originalFetch.apply(window, args);
+
+      // Only suppress Firebase installations errors, let all other errors through
+      if (!response.ok) {
+        const url = args[0]?.toString() || '';
+        if (url.includes('firebase') && url.includes('installations')) {
+          // Silently fail Firebase installations requests only
+          if (process.env.DEBUG_FIREBASE_ERRORS === 'true') {
+            originalConsoleLog('[SUPPRESSED FETCH ERROR] Firebase installations 400/500:', response.status);
+          }
+          // Return a fake successful response to prevent further errors
+          return new Response('{}', { status: 200, statusText: 'OK' });
+        }
+        // For all other failed requests, return the actual response so errors are visible
+      }
+
+      return response;
     } catch (error) {
       // Check if this is a Firebase installations request
       const url = args[0]?.toString() || '';
       if (url.includes('firebase') && url.includes('installations')) {
-        // Silently fail Firebase installations requests
+        // Silently fail Firebase installations requests only
         if (process.env.DEBUG_FIREBASE_ERRORS === 'true') {
           originalConsoleLog('[SUPPRESSED FETCH ERROR] Firebase installations:', error);
         }
         // Return a fake successful response to prevent further errors
         return new Response('{}', { status: 200, statusText: 'OK' });
       }
+      // For all other errors, let them bubble up normally
       throw error;
     }
   };

@@ -52,6 +52,22 @@ export function enhanceFirebaseError(error: any, context?: string): EnhancedErro
     return analyzeQuotaError(error, context);
   }
 
+  // Context-specific fallbacks before generic fallback
+  if (context?.includes('Password Reset')) {
+    return {
+      userMessage: `Password reset failed due to an unexpected error`,
+      technicalDetails: `Firebase Error [${errorCode}]: ${errorMessage}${contextInfo}`,
+      suggestedActions: [
+        'Check that your email address is correct',
+        'Try again in a few minutes',
+        'Check your spam folder for the reset email',
+        'Contact support with the error details if this persists'
+      ],
+      errorCategory: 'auth',
+      shouldRetry: true
+    };
+  }
+
   // Generic fallback
   return {
     userMessage: `An unexpected error occurred${contextInfo}`,

@@ -3,6 +3,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { DEFAULT_ALLOCATION_INTERVAL_CENTS } from '../../../contexts/AllocationIntervalContext';
 
 // Initialize Firebase Admin SDK
 let allocationIntervalApp;
@@ -48,14 +49,14 @@ export async function GET(request: NextRequest) {
     if (!preferencesDoc.exists) {
       // Return default interval if no preferences exist
       return NextResponse.json({
-        allocationIntervalCents: 10 // Default $0.10
+        allocationIntervalCents: DEFAULT_ALLOCATION_INTERVAL_CENTS
       });
     }
 
     const data = preferencesDoc.data();
     
     return NextResponse.json({
-      allocationIntervalCents: data?.allocationIntervalCents || 10
+      allocationIntervalCents: data?.allocationIntervalCents || DEFAULT_ALLOCATION_INTERVAL_CENTS
     });
 
   } catch (error) {

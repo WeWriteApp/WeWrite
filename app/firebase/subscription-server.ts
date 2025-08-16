@@ -161,6 +161,35 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     };
 
     // Apply validation logic to ensure consistent subscription states
+
+    // CRITICAL FIX: Handle incomplete subscriptions that have a valid Stripe subscription ID
+    // This happens when webhooks haven't updated the status yet, but the subscription exists in Stripe
+    if (subscriptionData.status === 'incomplete' && subscriptionData.stripeSubscriptionId) {
+      const createdAt = rawData.createdAt?.toDate?.() || rawData.createdAt;
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+      // If the subscription is older than 5 minutes and has a Stripe ID, treat it as active
+      // This handles cases where webhooks are delayed or failed to update the status
+      if (createdAt && createdAt < fiveMinutesAgo) {
+        if (verbose) {
+          console.log(`[getUserSubscriptionServer] 🔧 FIXING: Incomplete subscription with valid Stripe ID, treating as active for user ${userId} (created: ${createdAt}, age: ${Math.round((now.getTime() - createdAt.getTime()) / 60000)} minutes)`);
+        }
+
+        subscriptionData.status = 'active';
+
+        // Update the subscription in Firestore to fix the status
+        await updateSubscriptionServer(userId, {
+          status: 'active',
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        if (verbose) {
+          console.log(`[getUserSubscriptionServer] Incomplete subscription is recent (created: ${createdAt}). Waiting for webhook to process.`);
+        }
+      }
+    }
+
     // Only cancel subscriptions that are clearly invalid (older than 10 minutes without stripeSubscriptionId)
     if (subscriptionData.status === 'active' && !subscriptionData.stripeSubscriptionId) {
       const createdAt = rawData.createdAt?.toDate?.() || rawData.createdAt;

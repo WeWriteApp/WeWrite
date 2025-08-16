@@ -1,15 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import UsdFundingTierSlider from '../../components/payments/UsdFundingTierSlider';
+import SubscriptionHistory from '../../components/subscription/SubscriptionHistory';
 import { useAuth } from '../../providers/AuthProvider';
-import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '../../components/ui/alert';
+import { Loader2, CheckCircle } from 'lucide-react';
 
 export default function FundAccountPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check for success/cancellation messages
+  const cancelled = searchParams.get('cancelled') === 'true';
+  const success = searchParams.get('success') === 'true';
 
   // Load current subscription using the same API as settings page
   useEffect(() => {
@@ -81,13 +89,40 @@ export default function FundAccountPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
-      <UsdFundingTierSlider
-        selectedAmount={selectedAmount}
-        onAmountSelect={setSelectedAmount}
-        currentSubscription={currentSubscription}
-        showCurrentOption={true}
-      />
+    <div className="p-6 lg:p-8 space-y-8">
+      {/* Success/Cancellation Messages */}
+      {cancelled && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Your subscription has been successfully cancelled. It will remain active until the end of your current billing period.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Your subscription has been successfully updated!
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Current Subscription Management */}
+      <div>
+        <UsdFundingTierSlider
+          selectedAmount={selectedAmount}
+          onAmountSelect={setSelectedAmount}
+          currentSubscription={currentSubscription}
+          showCurrentOption={true}
+        />
+      </div>
+
+      {/* Subscription History */}
+      <div>
+        <SubscriptionHistory className="w-full" />
+      </div>
     </div>
   );
 }

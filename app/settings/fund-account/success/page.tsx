@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import NavPageLayout from '../../../components/layout/NavPageLayout';
 import { Button } from '../../../components/ui/button';
-import { CheckCircle, Home } from 'lucide-react';
+import { CheckCircle, Home, CreditCard } from 'lucide-react';
 import Confetti from 'react-confetti';
 
 export default function FundAccountSuccessPage() {
@@ -82,15 +82,27 @@ export default function FundAccountSuccessPage() {
             </p>
           </div>
 
-          {/* Go to home button */}
-          <Button
-            onClick={() => router.push('/')}
-            size="lg"
-            className="w-full max-w-xs mx-auto"
-          >
-            <Home className="h-5 w-5 mr-2" />
-            Go to Home Page
-          </Button>
+          {/* Action buttons */}
+          <div className="space-y-3">
+            <Button
+              onClick={() => router.push('/')}
+              size="lg"
+              className="w-full max-w-xs mx-auto"
+            >
+              <Home className="h-5 w-5 mr-2" />
+              Go Home
+            </Button>
+
+            <Button
+              onClick={() => router.push('/settings/fund-account')}
+              variant="outline"
+              size="lg"
+              className="w-full max-w-xs mx-auto"
+            >
+              <CreditCard className="h-5 w-5 mr-2" />
+              View Subscription
+            </Button>
+          </div>
         </div>
       </div>
     </NavPageLayout>

@@ -74,12 +74,12 @@ const AddFundingForm = () => {
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         placeholder="Amount"
-        className="border border-gray-400 p-2"
+        className="border-theme-strong p-2"
         autoComplete="off"
       />
       <select
         value={fundingSourceId}
-        className="border border-gray"
+        className="border-theme-strong"
         onChange={(e) => setFundingSourceId(e.target.value)}
       >
         <option value={0}>Select Funding Source</option>

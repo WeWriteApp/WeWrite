@@ -120,19 +120,24 @@ export function RandomPagesSkeleton({ limit = 10 }: { limit?: number }) {
       <div className="hidden md:block">
         <div className="border border-theme-medium rounded-2xl overflow-hidden">
           <div className="border-b border-theme-medium bg-muted/30 p-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4">
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
             </div>
           </div>
           <div className="divide-y divide-theme-medium">
             {Array.from({ length: limit }).map((_, index) => (
               <div key={index} className="p-4">
-                <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4 items-center">
                   <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-2/3" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                  </div>
                   <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-8 w-full rounded-full" />
                 </div>
               </div>
             ))}
@@ -141,13 +146,28 @@ export function RandomPagesSkeleton({ limit = 10 }: { limit?: number }) {
       </div>
 
       {/* Mobile card skeleton - visible on mobile */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-6">
         {Array.from({ length: limit }).map((_, index) => (
-          <div key={index} className="border border-theme-medium rounded-2xl p-4 space-y-3">
+          <div key={index} className="border border-theme-medium rounded-2xl p-4 space-y-4">
+            {/* Title */}
             <Skeleton className="h-6 w-3/4" />
+
+            {/* Author and Last Edited */}
             <div className="space-y-2">
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-4 w-2/3" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-3 rounded-full" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+
+            {/* Allocation Bar */}
+            <div className="pt-2 border-t border-border/20">
+              <Skeleton className="h-8 w-full rounded-full" />
             </div>
           </div>
         ))}

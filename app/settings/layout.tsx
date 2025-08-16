@@ -244,7 +244,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         className={cn(
                           "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none",
                           isActive
-                            ? "bg-primary/10 text-primary border border-primary/20"
+                            ? "bg-primary/10 text-primary border-theme-strong"
                             : "text-foreground hover:bg-muted"
                         )}
                       >

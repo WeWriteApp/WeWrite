@@ -75,7 +75,7 @@ const VersionItem = ({ version, isCurrent, confirm }) => {
         <button className="bg-background text-button-text px-4 py-2">Current version</button>
       ) : (
         <button
-          className="bg-background text-button-text border border-gray-500 rounded-lg text-black px-4 py-2 hover:bg-gray-200"
+          className="bg-background text-foreground border-theme-strong rounded-lg px-4 py-2 hover:bg-muted"
           onClick={handleSetCurrentVersion}
         >
           Set as current version

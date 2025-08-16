@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { CheckCircle, Home, Loader2 } from 'lucide-react';
+import { CheckCircle, Home, Loader2, CreditCard } from 'lucide-react';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
@@ -68,6 +68,11 @@ export function ConfirmationStep({
     router.push('/');
   };
 
+  const handleViewSubscription = () => {
+    setIsRedirecting(true);
+    router.push('/settings/fund-account');
+  };
+
   if (!selectedPlan) {
     return (
       <Card>
@@ -114,10 +119,21 @@ export function ConfirmationStep({
             <p className="text-sm text-muted-foreground mb-4">
               Don't worry - your subscription is active and you can access all features.
             </p>
-            <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full">
-              <Home className="w-4 h-4 mr-2" />
-              Go to Home Page
-            </Button>
+            <div className="space-y-3">
+              <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full">
+                <Home className="w-4 h-4 mr-2" />
+                Go Home
+              </Button>
+              <Button
+                onClick={handleViewSubscription}
+                disabled={isRedirecting}
+                variant="outline"
+                className="w-full"
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                View Subscription
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -138,10 +154,22 @@ export function ConfirmationStep({
           <p className="text-green-700 dark:text-green-300 mb-6">
             You can now start supporting creators with direct USD payments
           </p>
-          <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full" size="lg">
-            <Home className="w-4 h-4 mr-2" />
-            Go to Home Page
-          </Button>
+          <div className="space-y-3">
+            <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full" size="lg">
+              <Home className="w-4 h-4 mr-2" />
+              Go Home
+            </Button>
+            <Button
+              onClick={handleViewSubscription}
+              disabled={isRedirecting}
+              variant="outline"
+              size="lg"
+              className="w-full"
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              View Subscription
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

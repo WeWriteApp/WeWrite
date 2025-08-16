@@ -295,17 +295,14 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    // Don't close dropdown when clicking this item
+                    handleIncludeOwnChange(!includeOwn);
                   }}
-                  className="flex items-center justify-between px-2 py-1.5 cursor-default"
+                  className="flex items-center justify-between px-2 py-1.5 cursor-pointer"
                 >
                   <span className="text-sm">Include my edits</span>
                   <Switch
                     checked={includeOwn}
-                    onCheckedChange={(checked) => {
-                      handleIncludeOwnChange(checked);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={handleIncludeOwnChange}
                     size="sm"
                   />
                 </DropdownMenuItem>
@@ -314,17 +311,14 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    // Don't close dropdown when clicking this item
+                    handleFollowingOnlyChange(!followingOnly);
                   }}
-                  className="flex items-center justify-between px-2 py-1.5 cursor-default"
+                  className="flex items-center justify-between px-2 py-1.5 cursor-pointer"
                 >
                   <span className="text-sm">Following only</span>
                   <Switch
                     checked={followingOnly}
-                    onCheckedChange={(checked) => {
-                      handleFollowingOnlyChange(checked);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={handleFollowingOnlyChange}
                     size="sm"
                   />
                 </DropdownMenuItem>

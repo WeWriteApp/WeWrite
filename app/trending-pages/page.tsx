@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import TrendingPages from '../components/features/TrendingPages';
-import { TrendingUp, BarChart3, Flame } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { TrendingUp, Flame } from 'lucide-react';
 
 /**
  * Trending Pages Full Page Experience
@@ -24,12 +23,7 @@ export default function TrendingPagesPage() {
     setMounted(true);
   }, []);
 
-  // Handle refresh button click
-  const handleRefresh = () => {
-    // Trigger a refresh by dispatching a custom event
-    const refreshEvent = new CustomEvent('refreshTrendingPages');
-    window.dispatchEvent(refreshEvent);
-  };
+
 
   // Show progressive loading state during hydration
   if (!mounted) {
@@ -40,24 +34,8 @@ export default function TrendingPagesPage() {
     <NavPageLayout>
       {/* Page Header with Controls */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Trending Pages</h1>
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Refresh Button */}
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              className="flex items-center gap-2 rounded-2xl h-8 px-3"
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-          </div>
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold">Trending Pages</h1>
         </div>
 
         <p className="text-muted-foreground text-lg">

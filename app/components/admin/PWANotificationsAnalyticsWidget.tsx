@@ -49,7 +49,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
       try {
         const value = payload[0]?.value || 0;
         return (
-          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <div className="bg-background p-3 border-theme-strong rounded-lg shadow-lg">
             <p className="text-sm text-gray-600 mb-1">{label}</p>
             <p className="text-sm font-semibold text-gray-900">
               <span className="inline-flex items-center">
@@ -68,7 +68,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
 
   if (loading) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <Bell className="w-5 h-5 text-blue-600 mr-2" />
@@ -86,7 +86,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
 
   if (error) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <Bell className="w-5 h-5 text-red-600 mr-2" />
@@ -102,7 +102,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
   }
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
           <Bell className="w-5 h-5 text-blue-600 mr-2" />

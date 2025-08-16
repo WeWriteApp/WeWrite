@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from '../components/ui/segmented-control';
 import { Users, FileText, Heart, Lock, UserPlus } from 'lucide-react';
 import UserFollowingList from '../components/utils/UserFollowingList';
 import FollowedPages from '../components/pages/FollowedPages';
@@ -91,7 +91,6 @@ export default function FollowingPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Heart className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold">Following</h1>
           </div>
               
@@ -113,21 +112,21 @@ export default function FollowingPage() {
             </p>
       </div>
 
-      {/* Following Content with Tabs */}
+      {/* Following Content with Segmented Control */}
       <div className="min-h-[600px]">
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6 w-full max-w-md">
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
+        <SegmentedControl defaultValue="users" className="space-y-4 sm:space-y-6">
+          <SegmentedControlList className="grid w-full grid-cols-2 max-w-md">
+            <SegmentedControlTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Following Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="pages" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
+            </SegmentedControlTrigger>
+            <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Following Pages</span>
-            </TabsTrigger>
-          </TabsList>
+            </SegmentedControlTrigger>
+          </SegmentedControlList>
 
-          <TabsContent value="users" className="mt-0">
+          <SegmentedControlContent value="users" className="space-y-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Users You Follow</h2>
@@ -137,9 +136,9 @@ export default function FollowingPage() {
                 isCurrentUser={true}
               />
             </div>
-          </TabsContent>
+          </SegmentedControlContent>
 
-          <TabsContent value="pages" className="mt-0">
+          <SegmentedControlContent value="pages" className="space-y-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Pages You Follow</h2>
@@ -151,8 +150,8 @@ export default function FollowingPage() {
                 limit={100}
               />
             </div>
-          </TabsContent>
-        </Tabs>
+          </SegmentedControlContent>
+        </SegmentedControl>
       </div>
 
       {/* Additional Info */}

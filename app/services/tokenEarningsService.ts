@@ -1,8 +1,12 @@
 /**
  * Token Earnings Service for WeWrite Writers
- * 
- * Manages token earnings tracking, monthly processing, and payout functionality
- * for content creators who receive token allocations from subscribers.
+ *
+ * ⚠️ DEPRECATED: This service has been replaced by UnifiedEarningsService
+ *
+ * This service is no longer maintained and will be removed in a future version.
+ * All new code should use UnifiedEarningsService instead.
+ *
+ * @deprecated Use UnifiedEarningsService instead
  */
 
 import {

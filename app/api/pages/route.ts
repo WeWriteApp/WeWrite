@@ -39,14 +39,7 @@ interface PageQuery {
 
 // GET endpoint - Get pages with filtering and pagination (with server-side caching)
 export async function GET(request: NextRequest) {
-  // Temporary quota bypass for development
-  if (process.env.NEXT_PUBLIC_BYPASS_FIREBASE_QUOTA === 'true') {
-    console.log('🚧 [PAGES_API] Using quota bypass - returning mock data');
-    return NextResponse.json({
-      pages: [],
-      message: 'Firebase quota exceeded - using fallback'
-    });
-  }
+  // 🚨 NEVER RETURN MOCK DATA - ALWAYS USE REAL DATA
 
   try {
     const currentUserId = await getUserIdFromRequest(request);

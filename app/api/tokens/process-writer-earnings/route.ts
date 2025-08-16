@@ -12,7 +12,13 @@ import { FinancialUtils } from '../../../types/financial';
 
 // This endpoint should be protected by API key or admin auth in production
 export async function POST(request: NextRequest) {
-  const correlationId = FinancialUtils.generateCorrelationId();
+  // Return deprecation notice
+  return NextResponse.json({
+    error: 'This API endpoint has been deprecated',
+    message: 'Token-based earnings processing has been replaced with USD-based system',
+    deprecated: true,
+    replacement: '/api/usd/process-writer-earnings'
+  }, { status: 410 }); // 410 Gone status for deprecated endpoints
 
   try {
     // Verify admin access or API key

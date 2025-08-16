@@ -200,12 +200,21 @@ export async function POST(request: NextRequest) {
       console.error('🔐 [Password Reset API] Unexpected final error:', {
         error: error.message,
         code: error.code,
+        stack: error.stack,
         email: maskedEmail,
-        environment: envType
+        environment: envType,
+        timestamp: new Date().toISOString()
       });
 
+      // Provide more specific error information for debugging
+      const errorDetails = {
+        message: error.message || 'Unknown error',
+        code: error.code || 'unknown',
+        type: error.constructor?.name || 'Error'
+      };
+
       return createErrorResponse('INTERNAL_ERROR',
-        `Password reset system error: ${enhanced.userMessage}. Please try again in a few minutes or contact support.`
+        `Password reset failed: ${enhanced.userMessage}. Error details: ${errorDetails.type} - ${errorDetails.message}. Please try again or contact support with this information.`
       );
     }
 
@@ -217,13 +226,24 @@ export async function POST(request: NextRequest) {
     console.error('🔐 [Password Reset API] Outer catch error:', {
       error: error.message,
       code: error.code,
+      stack: error.stack,
       processingTime: `${processingTime}ms`,
-      environment: envType
+      environment: envType,
+      timestamp: new Date().toISOString()
     });
 
     const enhanced = enhanceFirebaseError(error, 'Password Reset System');
+
+    // Provide more detailed error information for users and debugging
+    const errorDetails = {
+      message: error.message || 'Unknown system error',
+      code: error.code || 'unknown',
+      type: error.constructor?.name || 'Error',
+      processingTime: `${processingTime}ms`
+    };
+
     return createErrorResponse('INTERNAL_ERROR',
-      `Password reset system error: ${enhanced.userMessage}. Please try again or contact support.`
+      `Password reset system error: ${enhanced.userMessage}. Technical details: ${errorDetails.type} - ${errorDetails.message} (${errorDetails.processingTime}). Please try again or contact support with this information.`
     );
   }
 }
@@ -333,7 +353,25 @@ export async function PUT(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Password reset confirmation error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to reset password');
+
+    // Enhanced error logging for debugging
+    console.error('🔐 [Password Reset Confirm] Detailed error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+
+    // Provide more specific error information
+    const errorDetails = {
+      message: error.message || 'Unknown error',
+      code: error.code || 'unknown',
+      type: error.constructor?.name || 'Error'
+    };
+
+    return createErrorResponse('INTERNAL_ERROR',
+      `Failed to reset password: ${errorDetails.type} - ${errorDetails.message}. Please try again or contact support.`
+    );
   }
 }
 
@@ -390,29 +428,60 @@ export async function GET(request: NextRequest) {
     } catch (verifyError: any) {
       console.error('Reset code verification failed:', verifyError);
 
+      // Enhanced error logging for debugging
+      console.error('🔐 [Password Reset Verify] Detailed error:', {
+        message: verifyError.message,
+        code: verifyError.code,
+        stack: verifyError.stack,
+        timestamp: new Date().toISOString()
+      });
+
       if (verifyError.message?.includes('EXPIRED_OOB_CODE')) {
         return createApiResponse({
           valid: false,
           error: 'Expired reset code',
-          message: 'The reset code has expired'
+          message: 'The reset code has expired. Please request a new password reset.'
         });
       } else if (verifyError.message?.includes('INVALID_OOB_CODE')) {
         return createApiResponse({
           valid: false,
           error: 'Invalid reset code',
-          message: 'The reset code is invalid or malformed'
+          message: 'The reset code is invalid or malformed. Please request a new password reset.'
         });
       } else {
+        const errorDetails = {
+          message: verifyError.message || 'Unknown error',
+          code: verifyError.code || 'unknown',
+          type: verifyError.constructor?.name || 'Error'
+        };
+
         return createApiResponse({
           valid: false,
           error: 'Verification failed',
-          message: 'Failed to verify reset code'
+          message: `Failed to verify reset code: ${errorDetails.type} - ${errorDetails.message}`
         });
       }
     }
 
   } catch (error: any) {
     console.error('Reset code verification error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to verify reset code');
+
+    // Enhanced error logging for debugging
+    console.error('🔐 [Password Reset Verify] Outer catch error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+
+    const errorDetails = {
+      message: error.message || 'Unknown error',
+      code: error.code || 'unknown',
+      type: error.constructor?.name || 'Error'
+    };
+
+    return createErrorResponse('INTERNAL_ERROR',
+      `Failed to verify reset code: ${errorDetails.type} - ${errorDetails.message}. Please try again or contact support.`
+    );
   }
 }

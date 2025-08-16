@@ -61,9 +61,9 @@ export function SaveButtonGroup({
   // Style configurations for different variants
   const variantStyles = {
     default: {
-      container: 'bg-background border border-border rounded-lg p-3',
+      container: 'bg-background border-theme-strong rounded-lg p-3',
       saveButton: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      revertButton: 'border border-border hover:bg-accent'
+      revertButton: 'border-theme-strong hover:bg-accent'
     },
     header: {
       container: 'bg-green-600 text-white',
@@ -78,7 +78,7 @@ export function SaveButtonGroup({
     modal: {
       container: 'bg-background',
       saveButton: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      revertButton: 'border border-border hover:bg-accent'
+      revertButton: 'border-theme-strong hover:bg-accent'
     }
   };
   

@@ -310,7 +310,7 @@ export const AccessibleErrorBoundary = ({
 }) => {
   if (error) {
     return (
-      <div role="alert" className="p-4 border border-destructive rounded-md">
+      <div role="alert" className="p-4 border-theme-strong rounded-md">
         <h2 className="text-lg font-semibold text-destructive mb-2">
           Something went wrong
         </h2>

@@ -98,7 +98,19 @@ export function ForgotPasswordForm({
         errorMessage = "Network error. Please check your internet connection and try again.";
       } else if (error.message.includes('JSON')) {
         errorMessage = "Server communication error. Please try again.";
+      } else if (error.message.includes('Password reset system error')) {
+        // For system errors, show the full message which now includes technical details
+        errorMessage = error.message;
       }
+
+      // Log additional error details for debugging
+      console.error("🔐 [Forgot Password Form] Detailed error info:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        email: email.substring(0, 3) + '***@' + email.split('@')[1],
+        timestamp: new Date().toISOString()
+      });
 
       setError(errorMessage);
     } finally {
@@ -147,8 +159,18 @@ export function ForgotPasswordForm({
           </div>
 
           {error && (
-            <div className="text-xs sm:text-sm font-medium text-destructive">
-              {error}
+            <div className="bg-destructive/10 p-3 rounded-md border border-destructive/20">
+              <div className="text-xs sm:text-sm font-medium text-destructive mb-1">
+                Password Reset Error
+              </div>
+              <div className="text-xs sm:text-sm text-destructive/90">
+                {error}
+              </div>
+              {error.includes('Technical details:') && (
+                <div className="text-xs text-destructive/70 mt-2">
+                  Please include these details when contacting support.
+                </div>
+              )}
             </div>
           )}
 

@@ -176,6 +176,35 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
     fetchEarnings();
   }, [user?.uid]);
 
+  // Listen for cache invalidation events
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleEarningsCacheInvalidation = (event: CustomEvent) => {
+      const { userId, forceRefresh } = event.detail || {};
+      if (!userId || userId === user?.uid) {
+        console.log('[useUserEarnings] Cache invalidation event received, refreshing...', { forceRefresh });
+        fetchEarnings(true); // Force refresh
+      }
+    };
+
+    const handleSubscriptionCacheInvalidation = (event: CustomEvent) => {
+      const { userId, forceRefresh } = event.detail || {};
+      if (!userId || userId === user?.uid) {
+        console.log('[useUserEarnings] Subscription cache invalidation event received, refreshing...', { forceRefresh });
+        fetchEarnings(true); // Force refresh
+      }
+    };
+
+    window.addEventListener('invalidate-earnings-cache', handleEarningsCacheInvalidation as EventListener);
+    window.addEventListener('invalidate-subscription-cache', handleSubscriptionCacheInvalidation as EventListener);
+
+    return () => {
+      window.removeEventListener('invalidate-earnings-cache', handleEarningsCacheInvalidation as EventListener);
+      window.removeEventListener('invalidate-subscription-cache', handleSubscriptionCacheInvalidation as EventListener);
+    };
+  }, [user?.uid, fetchEarnings]);
+
   const refresh = async () => {
     console.log('[useUserEarnings] Manual refresh triggered - clearing cache and fetching fresh data');
     // Clear cache for this user to force fresh fetch

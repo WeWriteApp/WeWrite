@@ -21,9 +21,9 @@ interface CircuitBreakerConfig {
 
 class EmergencyCircuitBreaker {
   private config: CircuitBreakerConfig = {
-    enabled: true,
-    emergencyMode: true, // 🚨 EMERGENCY MODE ACTIVE - 2.5M reads/60min crisis (300K/min spikes)
-    maxReadsPerMinute: 50, // 🚨 CRITICAL: Reduced to 50 due to 300K/min spikes
+    enabled: false, // 🚨 DISABLED - NEVER RETURN MOCK DATA
+    emergencyMode: false, // 🚨 DISABLED - NEVER RETURN MOCK DATA
+    maxReadsPerMinute: 50,
     currentReads: 0,
     lastResetTime: Date.now(),
 

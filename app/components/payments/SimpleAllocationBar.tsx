@@ -21,7 +21,7 @@ interface SimpleAllocationBarProps {
  * to provide the same functionality as the old UsdAllocationBar component.
  * 
  * Features:
- * - Quick amount buttons (+$0.25, +$0.50, +$1.00, +$2.50)
+ * - Quick amount buttons (1x, 2x, 4x, 10x current allocation interval)
  * - Simple minus button
  * - Works with both logged-in and logged-out users
  * - Uses the same shared hooks and logic as AllocationBar

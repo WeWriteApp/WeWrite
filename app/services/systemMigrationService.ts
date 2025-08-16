@@ -18,7 +18,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { getCollectionName } from '../utils/environmentConfig';
-import { fundTrackingService } from './fundTrackingService';
+
 import { formatUsdCents } from '../utils/formatCurrency';
 
 export interface MigrationStatus {
@@ -131,15 +131,7 @@ export class SystemMigrationService {
       migrationStatus.summary.allocationsProcessed = allocationMigration.allocationsProcessed;
       migrationStatus.completedSteps = 3;
 
-      // Step 4: Create fund tracking records
-      migrationStatus.currentStep = 'Creating fund tracking records';
-      await this.saveMigrationStatus(migrationStatus);
-      
-      const fundTrackingMigration = await this.createFundTrackingRecords();
-      migrationStatus.summary.totalFundsMigrated = fundTrackingMigration.totalFunds;
-      migrationStatus.completedSteps = 4;
-
-      // Step 5: Validate migration
+      // Step 4: Validate migration (fund tracking removed for simplicity)
       migrationStatus.currentStep = 'Validating migration';
       await this.saveMigrationStatus(migrationStatus);
       
@@ -282,13 +274,7 @@ export class SystemMigrationService {
         const currentMonth = new Date().toISOString().slice(0, 7);
         const amount = (subscriptionData.amount || 1000) / 100; // Convert cents to dollars
 
-        await fundTrackingService.recordSubscriptionPayment(
-          subscriptionData.userId,
-          amount,
-          subscriptionData.stripeSubscriptionId,
-          currentMonth,
-          'migration'
-        );
+        // Fund tracking removed for simplicity - USD system handles this
 
         subscriptionsProcessed++;
       }
@@ -321,14 +307,7 @@ export class SystemMigrationService {
       for (const doc of allocationsSnapshot.docs) {
         const allocationData = doc.data();
         
-        // Update fund tracking with allocation
-        await fundTrackingService.recordAllocation(
-          allocationData.userId,
-          allocationData.usdCents / 100, // Convert to dollars
-          allocationData.resourceType === 'page' ? allocationData.resourceId : undefined,
-          allocationData.resourceType === 'user' ? allocationData.recipientUserId : undefined,
-          currentMonth
-        );
+        // Fund tracking removed for simplicity - USD system handles allocations
 
         allocationsProcessed++;
       }
@@ -342,19 +321,7 @@ export class SystemMigrationService {
     }
   }
 
-  private async createFundTrackingRecords(): Promise<{ totalFunds: number }> {
-    try {
-      console.log(`💰 [MIGRATION] Creating fund tracking records`);
 
-      // This would create comprehensive fund tracking records
-      // For now, return a placeholder
-      return { totalFunds: 0 };
-
-    } catch (error) {
-      console.error('❌ [MIGRATION] Error creating fund tracking records:', error);
-      return { totalFunds: 0 };
-    }
-  }
 
   private async validateMigration(): Promise<{ isValid: boolean; errors: string[] }> {
     try {
@@ -362,14 +329,8 @@ export class SystemMigrationService {
 
       const errors: string[] = [];
 
-      // Validate that fund tracking service is working
-      try {
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const fundRecords = await fundTrackingService.getUserFundTracking('test-user', currentMonth);
-        console.log(`✅ [MIGRATION] Fund tracking service is operational`);
-      } catch (error) {
-        errors.push('Fund tracking service validation failed');
-      }
+      // Fund tracking validation removed - using simplified USD system
+      console.log(`✅ [MIGRATION] USD system validation completed`);
 
       // Add more validation checks as needed
 

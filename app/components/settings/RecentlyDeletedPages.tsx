@@ -309,7 +309,7 @@ export default function RecentlyDeletedPages() {
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="mb-4 p-3 sm:p-4 bg-destructive/10 border-theme-strong rounded-lg">
             <div className="flex items-start gap-2 text-destructive mb-3">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <span className="text-sm font-medium leading-relaxed">{error}</span>

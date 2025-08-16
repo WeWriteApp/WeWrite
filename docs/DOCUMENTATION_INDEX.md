@@ -44,7 +44,9 @@ This index provides a comprehensive overview of all WeWrite documentation, organ
 
 ### Core Payment Documentation
 - **[SUBSCRIPTION_SYSTEM](./SUBSCRIPTION_SYSTEM.md)** - Complete subscription architecture
-- **[PAYOUT_SYSTEM_DOCUMENTATION](./PAYOUT_SYSTEM_DOCUMENTATION.md)** - Writer compensation system
+- **[SIMPLIFIED_PAYOUT_SYSTEM](./SIMPLIFIED_PAYOUT_SYSTEM.md)** - ⭐ **Current** simplified payout architecture
+- **[PAYOUT_SIMPLIFICATION_SUMMARY](./PAYOUT_SIMPLIFICATION_SUMMARY.md)** - Simplification completion summary
+- **[PAYOUT_SYSTEM_DOCUMENTATION](./PAYOUT_SYSTEM_DOCUMENTATION.md)** - Legacy payout system (historical)
 - **[PAYOUT_SYSTEM_INDEX](./PAYOUT_SYSTEM_INDEX.md)** - Payout system navigation hub
 
 ### Payment Testing & Troubleshooting
