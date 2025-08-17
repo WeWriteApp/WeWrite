@@ -291,7 +291,7 @@ async function getUserStatsOptimized(userId: string): Promise<any> {
  * Batch fetch user subscription data (server-side optimized version)
  * Uses the same logic as the batch user API to ensure consistency
  */
-async function getBatchUserDataOptimized(userIds: string[]): Promise<Record<string, any>> {
+export async function getBatchUserDataOptimized(userIds: string[]): Promise<Record<string, any>> {
   try {
     if (!userIds || userIds.length === 0) {
       return {};
