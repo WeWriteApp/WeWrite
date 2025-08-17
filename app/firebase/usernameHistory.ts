@@ -8,6 +8,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   deleteDoc,
   setDoc,
   doc,
@@ -152,12 +153,27 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
         }
       }
 
-      // Add new username entry
-      await setDoc(doc(db, getCollectionName("usernames"), newUsername.toLowerCase()), {
-        userId,
-        username: newUsername,
-        createdAt: serverTimestamp()
-      });
+      // Add new username entry with email for login compatibility
+      const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
+      const userData = userDoc.data();
+      const userEmail = userData?.email;
+
+      if (userEmail) {
+        await setDoc(doc(db, getCollectionName("usernames"), newUsername.toLowerCase()), {
+          uid: userId, // Use 'uid' to match registration format
+          username: newUsername,
+          email: userEmail, // Include email for login compatibility
+          createdAt: serverTimestamp()
+        });
+      } else {
+        console.warn('Could not find user email for username mapping');
+        // Still create the entry without email as fallback
+        await setDoc(doc(db, getCollectionName("usernames"), newUsername.toLowerCase()), {
+          uid: userId,
+          username: newUsername,
+          createdAt: serverTimestamp()
+        });
+      }
 
       console.log("Username updated in Firestore usernames collection");
     } catch (firestoreError) {

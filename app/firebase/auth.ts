@@ -223,9 +223,20 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
     }
 
     // Reserve the username in the usernames collection
+    // CRITICAL: Include email field for login compatibility
+    const userDoc = await getDoc(doc(firestore, getCollectionName('users'), userId));
+    const userData = userDoc.data();
+    const userEmail = userData?.email;
+
+    if (!userEmail) {
+      throw new Error('User email not found - cannot create username mapping');
+    }
+
     const usernameDocRef = doc(firestore, getCollectionName('usernames'), username.toLowerCase());
     await setDoc(usernameDocRef, {
       uid: userId,
+      username: username,
+      email: userEmail, // Include email for login compatibility
       createdAt: new Date().toISOString()
     });
 

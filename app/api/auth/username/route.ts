@@ -130,11 +130,21 @@ export async function POST(request: NextRequest) {
 
     // Also add to usernames collection for faster lookups (if collection exists)
     try {
-      await db.collection(getCollectionName('usernames')).doc(username).set({
-        userId: currentUserId,
-        username: username,
-        createdAt: new Date().toISOString()
-      });
+      // Get user's email for login compatibility
+      const userDoc = await db.collection(getCollectionName('users')).doc(currentUserId).get();
+      const userData = userDoc.data();
+      const userEmail = userData?.email;
+
+      if (userEmail) {
+        await db.collection(getCollectionName('usernames')).doc(username.toLowerCase()).set({
+          uid: currentUserId, // Use 'uid' to match registration format
+          username: username,
+          email: userEmail, // Include email for login compatibility
+          createdAt: new Date().toISOString()
+        });
+      } else {
+        console.warn('Could not find user email for username mapping');
+      }
     } catch (error) {
       // Usernames collection might not exist, that's okay
       console.warn('Could not update usernames collection:', error);
