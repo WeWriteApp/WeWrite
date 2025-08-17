@@ -30,7 +30,7 @@ export default function SubscriptionGate({
   allowInteraction = false
 }: SubscriptionGateProps) {
   const router = useRouter();
-  const { hasActiveSubscription } = useSubscription();
+  const { hasActiveSubscription, isLoading } = useSubscription();
 
   // Show loading state while checking subscription
   if (isLoading) {
