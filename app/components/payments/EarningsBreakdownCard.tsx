@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card } from '../ui/card';
 import { DollarSign, TrendingUp, Calendar, Award } from 'lucide-react';
-import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { useEarnings } from '../../contexts/EarningsContext';
 import { formatUsdCents } from '../../utils/formatCurrency';
 
 
@@ -16,9 +16,9 @@ import { formatUsdCents } from '../../utils/formatCurrency';
  * - Lifetime earnings
  */
 export default function EarningsBreakdownCard() {
-  const { earnings, loading } = useUserEarnings();
+  const { earnings, isLoading } = useEarnings();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (

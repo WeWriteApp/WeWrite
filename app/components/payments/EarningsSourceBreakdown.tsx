@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { FileText, Users, TrendingUp, Copy } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
-import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { useEarnings } from '../../contexts/EarningsContext';
 import { toast } from '../ui/use-toast';
 import { PillLink } from '../utils/PillLink';
 
@@ -35,7 +35,7 @@ type BreakdownMode = 'pages' | 'sponsors';
  * - Sponsors: Shows which users are contributing the most
  */
 export default function EarningsSourceBreakdown() {
-  const { earnings, loading } = useUserEarnings();
+  const { earnings, loading } = useEarnings();
   const [mode, setMode] = useState<BreakdownMode>('pages');
   const [historicalEarnings, setHistoricalEarnings] = useState<any[]>([]);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
@@ -88,7 +88,9 @@ export default function EarningsSourceBreakdown() {
       pendingAllocationsLength: earnings?.pendingAllocations?.length,
       historicalEarnings: historicalEarnings.length,
       availableBalance: earnings?.availableBalance,
-      totalEarnings: earnings?.totalEarnings
+      totalEarnings: earnings?.totalEarnings,
+      hasEarnings: earnings?.hasEarnings,
+      earningsKeys: earnings ? Object.keys(earnings) : null
     });
 
     // Combine current pending allocations with historical earnings data

@@ -35,10 +35,10 @@ import { FinancialValidationService } from './financialValidationService';
 // Unified data types
 export interface WriterBalance {
   userId: string;
-  totalEarnedCents: number;        // Lifetime earnings in cents
-  availableCents: number;          // Available for payout in cents
-  pendingCents: number;            // Current month pending in cents
-  paidOutCents: number;            // Total paid out in cents
+  totalUsdCentsEarned: number;     // Lifetime earnings in cents
+  availableUsdCents: number;       // Available for payout in cents
+  pendingUsdCents: number;         // Current month pending in cents
+  paidOutUsdCents: number;         // Total paid out in cents
   lastProcessedMonth: string;      // YYYY-MM format
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -385,8 +385,8 @@ export class UnifiedEarningsService {
       const existingBalance = balanceDoc.data() as WriterBalance;
       const updatedBalance = {
         ...existingBalance,
-        totalEarnedCents: existingBalance.totalEarnedCents + additionalCents,
-        pendingCents: existingBalance.pendingCents + additionalCents,
+        totalUsdCentsEarned: existingBalance.totalUsdCentsEarned + additionalCents,
+        pendingUsdCents: existingBalance.pendingUsdCents + additionalCents,
         lastProcessedMonth: currentMonth,
         updatedAt: serverTimestamp()
       };
@@ -394,10 +394,10 @@ export class UnifiedEarningsService {
     } else {
       const newBalance: WriterBalance = {
         userId,
-        totalEarnedCents: additionalCents,
-        availableCents: 0,
-        pendingCents: additionalCents,
-        paidOutCents: 0,
+        totalUsdCentsEarned: additionalCents,
+        availableUsdCents: 0,
+        pendingUsdCents: additionalCents,
+        paidOutUsdCents: 0,
         lastProcessedMonth: currentMonth,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()

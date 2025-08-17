@@ -123,30 +123,25 @@ export default function PageFooter({
   if (!canEdit && !hasUnsavedChanges) return null;
 
   return (
-    <div className="pb-6 px-4">
+    <div className="pb-6 px-4 space-y-4">
       {/* Show PageActions only for existing pages (not for new pages or bios) */}
       {page && (
-        <div className="flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
-          <PageActions
-            page={page}
-            content={content}
-            isOwner={isOwner}
-            isEditing={isEditing} // Pass actual editing state for consistency
-            setIsEditing={setIsEditing}
-            className="action-buttons-container"
-            showFollowButton={user && !isOwner}
-            onInsertLink={onInsertLink} // Pass insert link callback
-            isSaving={isSaving} // Pass saving state
-          />
-        </div>
+        <PageActions
+          page={page}
+          content={content}
+          isOwner={isOwner}
+          isEditing={isEditing} // Pass actual editing state for consistency
+          setIsEditing={setIsEditing}
+          className="action-buttons-container"
+          showFollowButton={user && !isOwner}
+          onInsertLink={onInsertLink} // Pass insert link callback
+          isSaving={isSaving} // Pass saving state
+        />
       )}
-
-      {/* Similar pages section removed to conserve resources */}
 
       {/* Custom Date Field - show in both edit and view modes for existing pages only */}
       {page && (
-        <div className="mb-4">
-          <CustomDateField
+        <CustomDateField
             customDate={page.customDate}
             canEdit={isOwner}
             onCustomDateChange={async (newDate) => {
@@ -174,18 +169,15 @@ export default function PageFooter({
               }
             }}
           />
-        </div>
       )}
 
       {/* Location Field - show in both edit and view modes for existing pages only */}
       {page && (
-        <div className="mb-4">
-          <LocationField
-            location={page.location}
-            canEdit={isOwner}
-            onLocationChange={onLocationChange}
-          />
-        </div>
+        <LocationField
+          location={page.location}
+          canEdit={isOwner}
+          onLocationChange={onLocationChange}
+        />
       )}
 
       {/* Page stats section - show in view mode OR for page owners (who are always in edit mode) - existing pages only */}

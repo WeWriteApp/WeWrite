@@ -791,7 +791,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   if (nodes.length <= 1) {
     return (
-      <div className={`mt-8 ${className}`}>
+      <div className={className}>
         <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
           <h3 className="text-sm font-medium mb-4">Graph view</h3>
           <div className="flex items-center justify-center h-32 text-muted-foreground">
@@ -897,7 +897,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   }
 
   return (
-    <div className={`mt-8 ${className} animate-in fade-in-0 duration-300`}>
+    <div className={`${className} animate-in fade-in-0 duration-300`}>
       <div
         className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:shadow-md transition-all duration-200"
         onClick={() => setIsFullscreen(true)}

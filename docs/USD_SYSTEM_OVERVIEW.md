@@ -71,7 +71,10 @@ interface UsdBalance {
 - **`UsdService`** - Client-side USD operations
 - **`ServerUsdService`** - Server-side USD operations with admin permissions
 - **`UsdEarningsService`** - Creator earnings management
-- **`UsdBalanceContext`** - React context for USD balance state
+- **`UsdBalanceContext`** - React context for real USD balance state
+- **`SubscriptionContext`** - React context for subscription data
+- **`EarningsContext`** - React context for earnings data
+- **`FakeBalanceContext`** - React context for demo/trial balance
 
 ## 🔄 Data Conversion
 

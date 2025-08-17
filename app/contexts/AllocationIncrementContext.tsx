@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface TokenIncrementContextType {
+interface AllocationIncrementContextType {
   incrementAmount: number;
   customAmount: string;
   setIncrementAmount: (amount: number) => void;
@@ -10,15 +10,15 @@ interface TokenIncrementContextType {
   handleIncrementChange: (amount: number | 'custom') => void;
 }
 
-const TokenIncrementContext = createContext<TokenIncrementContextType | undefined>(undefined);
+const AllocationIncrementContext = createContext<AllocationIncrementContextType | undefined>(undefined);
 
-export function TokenIncrementProvider({ children }: { children: React.ReactNode }) {
+export function AllocationIncrementProvider({ children }: { children: React.ReactNode }) {
   const [incrementAmount, setIncrementAmount] = useState(1);
   const [customAmount, setCustomAmount] = useState('');
 
   // Load saved increment amount from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('tokenIncrementAmount');
+    const saved = localStorage.getItem('allocationIncrementAmount');
     if (saved) {
       const amount = parseInt(saved);
       if (amount > 0) {
@@ -29,7 +29,7 @@ export function TokenIncrementProvider({ children }: { children: React.ReactNode
 
   // Save increment amount to localStorage when it changes
   useEffect(() => {
-    localStorage.setItem('tokenIncrementAmount', incrementAmount.toString());
+    localStorage.setItem('allocationIncrementAmount', incrementAmount.toString());
   }, [incrementAmount]);
 
   const handleIncrementChange = (amount: number | 'custom') => {
@@ -43,7 +43,7 @@ export function TokenIncrementProvider({ children }: { children: React.ReactNode
   };
 
   return (
-    <TokenIncrementContext.Provider
+    <AllocationIncrementContext.Provider
       value={{
         incrementAmount,
         customAmount,
@@ -53,14 +53,25 @@ export function TokenIncrementProvider({ children }: { children: React.ReactNode
       }}
     >
       {children}
-    </TokenIncrementContext.Provider>
+    </AllocationIncrementContext.Provider>
   );
 }
 
-export function useTokenIncrement() {
-  const context = useContext(TokenIncrementContext);
+export function useAllocationIncrement() {
+  const context = useContext(AllocationIncrementContext);
   if (context === undefined) {
-    throw new Error('useTokenIncrement must be used within a TokenIncrementProvider');
+    throw new Error('useAllocationIncrement must be used within an AllocationIncrementProvider');
   }
   return context;
 }
+
+// Legacy export for backward compatibility during migration
+/**
+ * @deprecated Use AllocationIncrementProvider instead
+ */
+export const TokenIncrementProvider = AllocationIncrementProvider;
+
+/**
+ * @deprecated Use useAllocationIncrement instead
+ */
+export const useTokenIncrement = useAllocationIncrement;

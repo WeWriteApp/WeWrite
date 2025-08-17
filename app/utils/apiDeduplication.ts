@@ -115,12 +115,12 @@ export const searchPages = withDeduplication(
 export const getSubscriptionData = withDeduplication(
   async (userId: string): Promise<any> => {
     return apiCall(`/api/subscription/${userId}`, {
-      cacheTTL: 5 * 60 * 1000 // 5 minutes cache for subscription data
+      cacheTTL: 2 * 60 * 1000 // Reduced to 2 minutes for faster updates
     });
   },
   {
     keyGenerator: (userId: string) => `subscription:${userId}`,
-    cacheTTL: 5 * 60 * 1000,
+    cacheTTL: 2 * 60 * 1000, // Reduced to 2 minutes for faster updates
     dedupWindow: 3000
   }
 );

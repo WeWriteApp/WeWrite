@@ -54,13 +54,17 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ## 📚 Documentation
 
-**📋 [COMPLETE DOCUMENTATION INDEX](docs/DOCUMENTATION_INDEX.md)** - **🗂️ NAVIGATION HUB**: Complete guide to all WeWrite documentation
+### 🎯 Essential Documentation (Start Here)
 
-### 🆕 Recent Changes (Start Here for 2025 Updates)
+#### Core System Understanding
+- **[Current Architecture](docs/CURRENT_ARCHITECTURE.md)** - ⭐ **ESSENTIAL** - Complete system overview and architecture principles
+- **[Payment System Guide](docs/PAYMENT_SYSTEM_GUIDE.md)** - ⭐ **ESSENTIAL** - Complete USD payment system documentation
+- **[Performance Optimization Guide](docs/PERFORMANCE_OPTIMIZATION_GUIDE.md)** - ⭐ **ESSENTIAL** - Optimization strategies (90% cost reduction achieved)
 
-- **[SAVE_SYSTEM_RELIABILITY_ARCHITECTURE](docs/SAVE_SYSTEM_RELIABILITY_ARCHITECTURE.md)** - **🆕 2025**: Critical save system fixes, caching overhaul, and PWA update system
-- **[RECENT_CHANGES_SUMMARY](docs/RECENT_CHANGES_SUMMARY.md)** - **🆕 2025**: Quick overview of major changes and what patterns to avoid
-- **[EMERGENCY_COST_OPTIMIZATION_SUMMARY](EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - **🚨 CRITICAL**: Firebase cost optimization and real-time listener cleanup
+#### Quick Start Guides
+- **[Environment Quick Reference](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Development environment setup
+- **[Subscription Quick Reference](docs/SUBSCRIPTION_QUICK_REFERENCE.md)** - Subscription system overview
+- **[Stripe Dashboard Quick Reference](docs/STRIPE_DASHBOARD_QUICK_REFERENCE.md)** - Stripe dashboard navigation
 
 ### 🔒 Security & Core Systems (Essential Reading)
 
@@ -69,77 +73,96 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **[AUTHENTICATION_ARCHITECTURE](docs/AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
 - **[USER_DATA_FETCHING_PATTERNS](docs/USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for secure user data handling
 
-### 💰 Storage Balance Payout System
+### 💰 Financial System
 
-WeWrite uses **Stripe's Storage Balance** system combined with the innovative **"Use It or Lose It"** model for perfect fund separation and enhanced auditability.
+#### Payment & Subscription
+- **[Subscription System](docs/SUBSCRIPTION_SYSTEM.md)** - Subscription management and Stripe integration
+- **[Simplified Payout System](docs/SIMPLIFIED_PAYOUT_SYSTEM.md)** - Current payout architecture
+- **[Platform Fee Management System](docs/PLATFORM_FEE_MANAGEMENT_SYSTEM.md)** - Fee configuration and management
+- **[USD System Overview](docs/USD_SYSTEM_OVERVIEW.md)** - Overview of the USD-based system
 
-#### **How It Works:**
-- **Payments Balance** = Platform Revenue (yours to keep)
-- **Storage Balance** = Creator Obligations (escrowed by Stripe)
-- **"Use It or Lose It"** = Unallocated funds become platform revenue
+#### Allocation & Earnings
+- **[Allocation System](docs/ALLOCATION_SYSTEM.md)** - USD allocation system
+- **[Storage Balance Guide](docs/STORAGE_BALANCE_GUIDE.md)** - Storage balance functionality
+- **[Payout System Index](docs/PAYOUT_SYSTEM_INDEX.md)** - Payout system documentation index
 
-#### **Key Benefits:**
-- ✅ **Perfect Fund Separation** in Stripe dashboard
-- ✅ **Stripe-Managed Auditability** for regulatory compliance
-- ✅ **Enhanced Creator Trust** through visible escrow
-- ✅ **Automated Monthly Payouts** from Storage Balance
-- ✅ **Maintained Innovation** with "use it or lose it" engagement
+#### Testing & Troubleshooting
+- **[Payout Testing Infrastructure](docs/PAYOUT_TESTING_INFRASTRUCTURE.md)** - Comprehensive payout testing
+- **[Payment Flow Testing Guide](docs/PAYMENT_FLOW_TESTING_GUIDE.md)** - Payment system testing procedures
+- **[Payout Troubleshooting Guide](docs/PAYOUT_TROUBLESHOOTING_GUIDE.md)** - Payout system troubleshooting
+- **[Subscription Troubleshooting](docs/SUBSCRIPTION_TROUBLESHOOTING.md)** - Common payment issues and solutions
+- **[Payment Failure Tracking](docs/PAYMENT_FAILURE_TRACKING.md)** - Payment error tracking
+- **[Webhook Setup Guide](docs/WEBHOOK_SETUP_GUIDE.md)** - Stripe webhook configuration
 
-#### **Documentation:**
-- **[STORAGE_BALANCE_GUIDE](docs/STORAGE_BALANCE_GUIDE.md)** - **🆕 CURRENT**: Complete Storage Balance system guide
-- **[STRIPE_DASHBOARD_QUICK_REFERENCE](docs/STRIPE_DASHBOARD_QUICK_REFERENCE.md)** - **🆕 CURRENT**: Quick reference for Stripe dashboard
-- **[PAYOUT_SYSTEM_DOCUMENTATION](docs/PAYOUT_SYSTEM_DOCUMENTATION.md)** - Complete payout system documentation
-- **[USD_MIGRATION_GUIDE](docs/USD_MIGRATION_GUIDE.md)** - USD migration guide and architecture
-- **[SUBSCRIPTION_SYSTEM](docs/SUBSCRIPTION_SYSTEM.md)** - Complete subscription architecture and implementation
-- **[PAYMENT_FLOW_TESTING_GUIDE](docs/PAYMENT_FLOW_TESTING_GUIDE.md)** - Comprehensive payment testing procedures
-- **[ENHANCED_PAYMENT_ERROR_MESSAGING](docs/ENHANCED_PAYMENT_ERROR_MESSAGING.md)** - User-friendly payment error handling
-- **[PAYMENT_FAILURE_TRACKING](docs/PAYMENT_FAILURE_TRACKING.md)** - Payment failure audit and tracking system
-- **[SUBSCRIPTION_TROUBLESHOOTING](docs/SUBSCRIPTION_TROUBLESHOOTING.md)** - Common payment issues and solutions
-- **[PLATFORM_FEE_MANAGEMENT_SYSTEM](docs/PLATFORM_FEE_MANAGEMENT_SYSTEM.md)** - Platform fee configuration and management
-- **[EMBEDDED_BANK_ACCOUNT_MANAGEMENT](docs/EMBEDDED_BANK_ACCOUNT_MANAGEMENT.md)** - Bank account setup and management
-- **[PAYOUT_TROUBLESHOOTING_GUIDE](docs/PAYOUT_TROUBLESHOOTING_GUIDE.md)** - Payout system troubleshooting
-- **[WEBHOOK_SETUP_GUIDE](docs/WEBHOOK_SETUP_GUIDE.md)** - Stripe webhook configuration
+### 🏗️ System Architecture
 
-### 🏗️ Architecture & Environment
+#### Core Architecture
+- **[Financial Data Architecture](docs/FINANCIAL_DATA_ARCHITECTURE.md)** - Separated financial contexts architecture
+- **[Content Display Architecture](docs/CONTENT_DISPLAY_ARCHITECTURE.md)** - Content rendering and display
+- **[Environment Architecture](docs/ENVIRONMENT_ARCHITECTURE.md)** - Development vs production environments
+- **[Session Management Architecture](docs/SESSION_MANAGEMENT_ARCHITECTURE.md)** - Session handling and device management
 
-- **[CONTENT_DISPLAY_ARCHITECTURE](docs/CONTENT_DISPLAY_ARCHITECTURE.md)** - **🆕 2025**: Unified content display system architecture
-- **[CONTENT_DISPLAY_MIGRATION_GUIDE](docs/CONTENT_DISPLAY_MIGRATION_GUIDE.md)** - **🆕 2025**: Migration guide for content display refactoring
-- **[CONTENT_DISPLAY_REFACTORING_SUMMARY](docs/CONTENT_DISPLAY_REFACTORING_SUMMARY.md)** - **🆕 2025**: Complete refactoring summary and benefits
-- **[ENVIRONMENT_ARCHITECTURE](docs/ENVIRONMENT_ARCHITECTURE.md)** - Multi-environment setup and configuration
-- **[ENVIRONMENT_QUICK_REFERENCE](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Quick environment configuration reference
-- **[FIREBASE_MIGRATION_ARCHITECTURE](docs/FIREBASE_MIGRATION_ARCHITECTURE.md)** - Firebase project migration architecture
-- **[SIMPLIFIED_ACTIVITY_SYSTEM](docs/SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Activity tracking using recent pages
-- **[SESSION_MANAGEMENT_ARCHITECTURE](docs/SESSION_MANAGEMENT_ARCHITECTURE.md)** - Session management and authentication
-- **[DEPENDENCY_MANAGEMENT_STANDARDS](docs/DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
-- **[ARCHITECTURE_SIMPLIFICATION](docs/ARCHITECTURE_SIMPLIFICATION.md)** - System architecture improvements
+#### Specialized Systems
+- **[Header System](docs/HEADER_SYSTEM.md)** - Navigation header architecture
+- **[Theme System Architecture](docs/THEME_SYSTEM_ARCHITECTURE.md)** - Theme and styling system
+- **[Save System Reliability Architecture](docs/SAVE_SYSTEM_RELIABILITY_ARCHITECTURE.md)** - Save system design
+- **[Simplified Activity System](docs/SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Activity tracking using recent pages
 
-### 🎨 User Interface & Experience
+### 🔧 Development & Operations
 
-- **[SETTINGS_NAVIGATION_SYSTEM](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - User settings navigation and organization
-- **[SETTINGS_PAYMENT_REORGANIZATION](docs/SETTINGS_PAYMENT_REORGANIZATION.md)** - Payment settings UI improvements
-- **[BORDER_STYLING_GUIDELINES](docs/BORDER_STYLING_GUIDELINES.md)** - UI border styling standards
-- **[DOM_ELEMENT_IDENTIFIERS](docs/DOM_ELEMENT_IDENTIFIERS.md)** - Standardized DOM element identification
-- **[LINE_BASED_EDITOR](docs/LINE_BASED_EDITOR.md)** - Rich text editor implementation
-- **[LINK_CURSOR_BEHAVIOR](docs/LINK_CURSOR_BEHAVIOR.md)** - Link interaction and cursor behavior
-- **[SEARCH_SYSTEM](docs/SEARCH_SYSTEM.md)** - Search functionality and implementation
+#### Development Workflow
+- **[Branch Aware Development](docs/BRANCH_AWARE_DEVELOPMENT.md)** - Development workflow and environment switching
+- **[Development Auth Guide](docs/DEVELOPMENT_AUTH_GUIDE.md)** - Development authentication setup
+- **[Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - Deployment procedures and best practices
+
+#### Standards & Guidelines
+- **[Collection Naming Standards](docs/COLLECTION_NAMING_STANDARDS.md)** - Database collection naming
+- **[Dependency Management Standards](docs/DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
+- **[Border Styling Guidelines](docs/BORDER_STYLING_GUIDELINES.md)** - UI styling standards
+- **[DOM Element Identifiers](docs/DOM_ELEMENT_IDENTIFIERS.md)** - DOM element naming conventions
+
+### 📱 Features & User Experience
+
+#### Content Features
+- **[Editor Viewer Separation](docs/EDITOR_VIEWER_SEPARATION.md)** - Editor/viewer architecture
+- **[Line Based Editor](docs/LINE_BASED_EDITOR.md)** - Editor implementation details
+- **[Recent Edits System](docs/RECENT_EDITS_SYSTEM.md)** - Recent edits functionality
+- **[Search System](docs/SEARCH_SYSTEM.md)** - Search implementation and features
+- **[Writing Suggestions System](docs/WRITING_SUGGESTIONS_SYSTEM.md)** - Writing suggestion features
+- **[Link Suggestion System](docs/LINK_SUGGESTION_SYSTEM.md)** - Link suggestion functionality
+
+#### User Interface
+- **[Settings Navigation System](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - Settings page navigation
+- **[Version System](docs/VERSION_SYSTEM.md)** - Version management system
 
 ### ⚡ Performance & Optimization
 
-- **[EMERGENCY_COST_OPTIMIZATION_SUMMARY](EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - **🚨 CRITICAL**: Firebase cost optimization and real-time listener cleanup
-- **[PERFORMANCE_OPTIMIZATION_SUMMARY](docs/PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance improvements
-- **[DATABASE_SCHEMA_OPTIMIZATION_GUIDE](docs/DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization strategies
-- **[FIREBASE_INDEX_OPTIMIZATION](docs/FIREBASE_INDEX_OPTIMIZATION.md)** - Firestore index optimization
+- **[Firebase Cost Optimization Summary](docs/FIREBASE_COST_OPTIMIZATION_SUMMARY.md)** - Cost optimization results and strategies
+- **[Database Schema Optimization Guide](docs/DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization techniques
+- **[Search Performance Optimizations](docs/SEARCH_PERFORMANCE_OPTIMIZATIONS.md)** - Search system optimization
+- **[Navigation Caching Optimization](docs/NAVIGATION_CACHING_OPTIMIZATION.md)** - Navigation performance optimization
 
-### 🛠️ Development & Maintenance
+### 🚨 Troubleshooting & Support
 
-- **[LEGACY_CODE_CLEANUP_GUIDE](docs/LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Identifying and removing deprecated patterns
-- **[DEPRECATED_UI_PATTERNS](docs/DEPRECATED_UI_PATTERNS.md)** - **🆕 2025**: UI patterns that must be removed during cleanup
-- **[AUTH_CLEANUP_GUIDE](docs/AUTH_CLEANUP_GUIDE.md)** - Authentication system cleanup procedures
-- **[DEVELOPMENT_AUTH_GUIDE](docs/DEVELOPMENT_AUTH_GUIDE.md)** - Development authentication setup
-- **[PRODUCTION_DEPLOYMENT_GUIDE](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - Production deployment procedures
-- **[AUTOMATED_ROUTE_TESTING](docs/AUTOMATED_ROUTE_TESTING.md)** - Automated testing procedures
-- **[ADMIN_ACCOUNT_SETUP](docs/ADMIN_ACCOUNT_SETUP.md)** - Admin account configuration
-- **[SUBSCRIPTION_QUICK_REFERENCE](docs/SUBSCRIPTION_QUICK_REFERENCE.md)** - Quick reference for subscription system
+#### Issue Resolution
+- **[Username Issue Analysis and Solution](docs/USERNAME_ISSUE_ANALYSIS_AND_SOLUTION.md)** - Username-related issues
+- **[Production Error Analysis](docs/PRODUCTION_ERROR_ANALYSIS.md)** - Production error patterns
+- **[Critical Production Fixes](docs/CRITICAL_PRODUCTION_FIXES.md)** - Critical issue resolutions
+
+#### Maintenance & Cleanup
+- **[Legacy Code Cleanup Guide](docs/LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Identifying and removing deprecated patterns
+- **[Auth Cleanup Guide](docs/AUTH_CLEANUP_GUIDE.md)** - Authentication cleanup procedures
+
+### 📦 Archive & Historical
+
+#### Completed Work
+- **[Archive](docs/archive/README.md)** - ⭐ **REFERENCE** - Completed migrations, optimization summaries, and historical documentation
+- **[USD Migration Guide](docs/USD_MIGRATION_GUIDE.md)** - ✅ **COMPLETED** - USD system migration documentation
+
+#### Deprecated (Reference Only)
+- **[Deprecated API Endpoints](docs/DEPRECATED_API_ENDPOINTS.md)** - ⚠️ **REFERENCE** - Deprecated API documentation
+- **[Deprecated Components](docs/DEPRECATED_COMPONENTS.md)** - ⚠️ **REFERENCE** - Deprecated component documentation
+- **[Deprecated UI Patterns](docs/DEPRECATED_UI_PATTERNS.md)** - ⚠️ **REFERENCE** - Deprecated UI pattern documentation
 
 ## 🛠️ Technology Stack
 

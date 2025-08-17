@@ -62,6 +62,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [autoLoadCount, setAutoLoadCount] = useState(0);
   // Initialize filter state from localStorage immediately
   const [includeOwn, setIncludeOwn] = useState(() => {
     // Force true for development environment to show own edits when testing with single user
@@ -166,8 +167,10 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
 
       if (append) {
         setEdits(prev => [...prev, ...(data.edits || [])]);
+        setAutoLoadCount(prev => prev + 1);
       } else {
         setEdits(data.edits || []);
+        setAutoLoadCount(0);
       }
 
       setHasMore(data.hasMore || false);
@@ -210,11 +213,16 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
     fetchEdits();
   }, [fetchEdits]);
 
-  // Infinite scroll
-  const { loadMore, targetRef } = useInfiniteScrollWithLoadMore({
-    hasMore,
+  // Infinite scroll - only auto-load for first 3 times, then show button
+  const { loadMore, targetRef, loadingMore } = useInfiniteScrollWithLoadMore({
+    hasMore: hasMore && autoLoadCount < 3,
     onLoadMore: () => fetchEdits(true, nextCursor || undefined),
   });
+
+  // Manual load more function for button
+  const handleManualLoadMore = () => {
+    fetchEdits(true, nextCursor || undefined);
+  };
 
   const handleIncludeOwnChange = (checked: boolean) => {
     setIncludeOwn(checked);
@@ -388,22 +396,22 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
           })}
           
           {/* Infinite scroll loading indicator */}
-          {loadingMoreState && (
+          {(loadingMoreState || loadingMore) && (
             <div className="flex justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           )}
 
-          {/* Infinite scroll target */}
-          <div ref={targetRef} className="h-4" />
+          {/* Infinite scroll target - only active for first 3 loads */}
+          {autoLoadCount < 3 && <div ref={targetRef} className="h-4" />}
 
-          {/* Manual load more button as fallback */}
-          {hasMore && !loadingMoreState && (
+          {/* Manual load more button - shows after 3 auto-loads */}
+          {hasMore && !loadingMoreState && !loadingMore && autoLoadCount >= 3 && (
             <div className="flex justify-center pt-4">
               <Button
-                onClick={loadMore}
+                onClick={handleManualLoadMore}
                 variant="outline"
-                disabled={loadingMoreState}
+                disabled={loadingMoreState || loadingMore}
               >
                 Load More
               </Button>
@@ -411,7 +419,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
           )}
 
           {/* End of list indicator */}
-          {!hasMore && !loadingMore && edits.length > 0 && (
+          {!hasMore && !loadingMoreState && !loadingMore && edits.length > 0 && (
             <div className="flex justify-center py-6">
               <div className="text-center text-muted-foreground">
                 <div className="w-12 h-px bg-border mx-auto mb-2"></div>

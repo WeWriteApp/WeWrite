@@ -28,10 +28,13 @@ import AllocationBar from "../components/payments/AllocationBar";
 
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
+import { Button } from "../components/ui/button";
+import { Link } from "lucide-react";
 import { toast } from "../components/ui/use-toast";
 import CustomDateField from "../components/pages/CustomDateField";
 import { useLogRocket } from "../providers/LogRocketProvider";
 import LocationField from "../components/pages/LocationField";
+import { WritingIdeasBanner } from "../components/writing/WritingIdeasBanner";
 
 
 // Duplicate title checking is now handled in PageHeader
@@ -140,6 +143,7 @@ function NewPageContent() {
 
   // Focus state management - coordinate with title focus
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [ignoreFocusChanges, setIgnoreFocusChanges] = useState(false);
 
   // Groups functionality removed - but keep selectedGroupId for compatibility
   const selectedGroupId = null;
@@ -153,9 +157,20 @@ function NewPageContent() {
   // Track intended custom date from daily notes carousel
   const [intendedCustomDate, setIntendedCustomDate] = useState<string | null>(null);
 
+  // Track custom placeholder text for writing ideas
+  const [customPlaceholder, setCustomPlaceholder] = useState<string>("Start typing...");
+
+  // Track selected writing idea
+  const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
+
   // Listen for focus changes to coordinate with title focus
   useEffect(() => {
     const handleFocusChange = () => {
+      // PREVENT FLICKER: Ignore focus changes during suggestion clicks
+      if (ignoreFocusChanges) {
+        return;
+      }
+
       const activeElement = document.activeElement;
 
       // Check if the editor or content area is focused
@@ -182,7 +197,7 @@ function NewPageContent() {
       document.removeEventListener('focusin', handleFocusChange);
       document.removeEventListener('focusout', handleFocusChange);
     };
-  }, []);
+  }, [ignoreFocusChanges]);
 
   // REMOVED: This was causing the component to get stuck in loading state
   // The early return prevented useEffect from running to set isInitializing to false
@@ -370,6 +385,11 @@ function NewPageContent() {
     setTitle(newTitle);
     setHasTitleChanged(newTitle !== "");
 
+    // Clear selected idea if title is manually changed
+    if (selectedIdea && newTitle !== selectedIdea) {
+      setSelectedIdea(null);
+    }
+
     // Clear title error when user starts typing
     if (titleError && newTitle && newTitle.trim() !== '') {
       setTitleError(false);
@@ -386,6 +406,19 @@ function NewPageContent() {
   const handleCustomDateChange = (newDate: string | null) => {
     setIntendedCustomDate(newDate);
   };
+
+  // Handle writing idea selection
+  const handleIdeaSelect = useCallback((ideaTitle: string, ideaPlaceholder: string) => {
+    setTitle(ideaTitle);
+    setHasTitleChanged(true);
+    setSelectedIdea(ideaTitle);
+    setCustomPlaceholder(ideaPlaceholder); // Just fucking update it, flicker be damned
+
+    if (titleError) {
+      setTitleError(null);
+      setError(null);
+    }
+  }, [titleError]);
 
 
 
@@ -1215,23 +1248,26 @@ function NewPageContent() {
           isReply={isReply} // Pass reply status for contextual text
         />
 
-        {/* Title validation is now handled directly in PageHeader */}
-        {/* Full-width header area */}
-        <div
-          className="w-full"
-          style={{
-            paddingTop: '0', // Edit mode: header is static, no padding needed
-            transition: 'padding-top 300ms ease-in-out'
-          }}
-        >
-          {/* Content container with title-like styling */}
-          <div className="px-4 pb-32">
+        {/* Simplified layout container - single consistent padding for all elements */}
+        <div className="px-4 pb-32">
+          {/* Content editor */}
+          {isEditing && (
             <div
-              className={`bg-background/80 border rounded-lg px-4 py-4 outline-none transition-all duration-200 ${
+              className={`bg-background/80 border rounded-lg px-4 py-4 outline-none ${
                 isEditorFocused
-                  ? "border-primary/50 ring-2 ring-primary/20"
+                  ? "border-primary/50"
                   : "border-muted-foreground/30"
-              } min-h-[200px] w-full max-w-none`}
+              } w-full max-w-none`}
+              style={{
+                minHeight: '200px',
+                height: 'auto',
+                contain: 'layout style paint',
+                willChange: 'auto',
+                transition: 'none',
+                boxShadow: isEditorFocused
+                  ? '0 0 0 2px rgba(59, 130, 246, 0.2)'
+                  : 'none'
+              }}
               onClick={() => {
                 // Focus the editor when clicking the container
                 const editorElement = document.querySelector('[contenteditable="true"]');
@@ -1240,9 +1276,10 @@ function NewPageContent() {
                 }
               }}
             >
-
-            {isEditing ? (
-              <div className="animate-in fade-in-0 duration-300">
+              <div
+                className="animate-in fade-in-0 duration-300"
+                style={{ contain: 'layout style paint' }}
+              >
                 <PageProvider>
                   <ContentDisplay
                     content={editorState}
@@ -1251,42 +1288,68 @@ function NewPageContent() {
                     isSaving={isSaving}
                     error={error || ""}
                     isNewPage={true}
-                    placeholder="Start typing..."
+                    placeholder={customPlaceholder}
                     showToolbar={false}
                     onInsertLinkRequest={handleInsertLinkRequest}
-                    // Remove onSave and onCancel - handled by bottom save bar
-                    // Remove location props - handled outside ContentDisplay
                   />
-
-                  {/* Unsaved changes now use system dialog - no custom modal needed */}
                 </PageProvider>
               </div>
-            ) : null}
-            </div> {/* Close content container */}
+            </div>
+          )}
 
-            {/* Custom Date Field - moved outside content container */}
-            {isEditing && (
-              <div className="px-4 mt-6">
-                <CustomDateField
-                  customDate={intendedCustomDate}
-                  canEdit={true}
-                  onCustomDateChange={handleCustomDateChange}
-                />
-              </div>
-            )}
+          {/* Insert Link Button */}
+          {isEditing && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="default"
+                size="lg"
+                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+                onClick={() => {
+                  if (linkInsertionTrigger) {
+                    linkInsertionTrigger();
+                  }
+                }}
+              >
+                <Link className="h-5 w-5" />
+                <span>Insert Link</span>
+              </Button>
+            </div>
+          )}
 
-            {/* Location Field - moved outside content container */}
-            {isEditing && (
-              <div className="px-4 mt-6">
-                <LocationField
-                  location={location}
-                  canEdit={true}
-                  onLocationChange={setLocation}
-                />
-              </div>
-            )}
+          {/* Writing Ideas Banner */}
+          {isEditing && (
+            <div className="mt-4">
+              <WritingIdeasBanner
+                onIdeaSelect={handleIdeaSelect}
+                selectedTitle={selectedIdea}
+              />
+            </div>
+          )}
 
-            {/* Page Footer with bottom save bar - moved outside content container */}
+          {/* Custom Date Field */}
+          {isEditing && (
+            <div className="mt-6">
+              <CustomDateField
+                customDate={intendedCustomDate}
+                canEdit={true}
+                onCustomDateChange={handleCustomDateChange}
+              />
+            </div>
+          )}
+
+          {/* Location Field */}
+          {isEditing && (
+            <div className="mt-6">
+              <LocationField
+                location={location}
+                canEdit={true}
+                onLocationChange={setLocation}
+              />
+            </div>
+          )}
+        </div> {/* Close simplified layout container */}
+
+        {/* Page Footer with bottom save bar - moved outside content container */}
             {isEditing && (
               <PageFooter
                 page={null} // New page doesn't have existing page data
@@ -1314,8 +1377,6 @@ function NewPageContent() {
                 hasUnsavedChanges={hasUnsavedChanges}
               />
             )}
-          </div> {/* Close full-width header area */}
-        </div>
         {!isEditing && (
           <AllocationBar
             pageId="new-page"

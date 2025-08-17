@@ -155,7 +155,8 @@ export default function UserProfileTabs({ profile }) {
     fetchWithSort,
     hasMore,
     loadingMore,
-    loadMore
+    loadMore,
+    totalPageCount
   } = useSimplePages(profile?.uid, user?.uid, true, sortBy, sortDirection);
 
   // 🚨 CRITICAL FIX: No local sorting needed - pages come pre-sorted from database
@@ -572,7 +573,7 @@ export default function UserProfileTabs({ profile }) {
             {/* Sort dropdown */}
             <div className="flex justify-between items-center mb-4">
               <div className="text-sm text-muted-foreground">
-                {sortedPages?.length || 0} page{(sortedPages?.length || 0) !== 1 ? 's' : ''}
+                {totalPageCount || 0} page{(totalPageCount || 0) !== 1 ? 's' : ''}
               </div>
               <div className="flex items-center gap-2">
                 {/* Automatic change detection enabled - no manual refresh needed */}

@@ -195,7 +195,13 @@ export default function UsdFundingTierSlider({
               type="range"
               min="0"
               max={sliderNodes.length - 1}
-              value={sliderNodes.findIndex(amount => amount === selectedAmount)}
+              value={(() => {
+                // If selected amount is above $100, show slider at $100 position
+                if (selectedAmount > 100) {
+                  return sliderNodes.findIndex(amount => amount === 100);
+                }
+                return sliderNodes.findIndex(amount => amount === selectedAmount);
+              })()}
               onChange={(e) => {
                 const nodeIndex = parseInt(e.target.value);
                 const amount = sliderNodes[nodeIndex];
@@ -211,7 +217,18 @@ export default function UsdFundingTierSlider({
               }}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
               style={{
-                background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${(sliderNodes.findIndex(amount => amount === selectedAmount) / (sliderNodes.length - 1)) * 100}%, hsl(var(--muted)) ${(sliderNodes.findIndex(amount => amount === selectedAmount) / (sliderNodes.length - 1)) * 100}%, hsl(var(--muted)) 100%)`
+                background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${(() => {
+                  // If selected amount is above $100, show slider filled to $100 position
+                  const displayIndex = selectedAmount > 100
+                    ? sliderNodes.findIndex(amount => amount === 100)
+                    : sliderNodes.findIndex(amount => amount === selectedAmount);
+                  return (displayIndex / (sliderNodes.length - 1)) * 100;
+                })()}%, hsl(var(--muted)) ${(() => {
+                  const displayIndex = selectedAmount > 100
+                    ? sliderNodes.findIndex(amount => amount === 100)
+                    : sliderNodes.findIndex(amount => amount === selectedAmount);
+                  return (displayIndex / (sliderNodes.length - 1)) * 100;
+                })()}%, hsl(var(--muted)) 100%)`
               }}
             />
           </div>
@@ -233,7 +250,20 @@ export default function UsdFundingTierSlider({
               onClick={() => {
                 const newAmount = selectedAmount + 10;
 
-                // Extend slider nodes if needed
+                // Check maximum limit
+                if (newAmount > 1000) {
+                  return; // Don't allow going over $1000
+                }
+
+                // If we're at $100 or above, switch to custom input mode and update custom amount
+                if (selectedAmount >= 100) {
+                  setShowCustomInput(true);
+                  setCustomAmount(newAmount.toString());
+                  onAmountSelect(newAmount);
+                  return;
+                }
+
+                // For amounts under $100, extend slider nodes if needed
                 if (!sliderNodes.includes(newAmount)) {
                   const newNodes = [...sliderNodes];
 
@@ -251,11 +281,11 @@ export default function UsdFundingTierSlider({
 
                 onAmountSelect(newAmount);
               }}
-              disabled={selectedAmount >= 100}
-              className={`flex items-center gap-2 transition-all duration-200 ${
-                selectedAmount >= 100
-                  ? 'opacity-50 cursor-not-allowed bg-muted text-muted-foreground'
-                  : 'hover:bg-primary hover:text-primary-foreground'
+              disabled={selectedAmount >= 1000}
+              className={`flex items-center gap-2 h-9 ${
+                selectedAmount >= 1000
+                  ? 'opacity-50 cursor-not-allowed'
+                  : ''
               }`}
             >
               <Plus className="h-4 w-4" />
@@ -263,9 +293,14 @@ export default function UsdFundingTierSlider({
             </Button>
 
             <Button
-              variant={showCustomInput ? "default" : "outline"}
+              variant="outline"
+              size="sm"
               onClick={handleCustomInputToggle}
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 h-9 ${
+                showCustomInput
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : ''
+              }`}
             >
               <DollarSign className="h-4 w-4" />
               Custom Amount

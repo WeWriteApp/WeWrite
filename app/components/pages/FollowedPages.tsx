@@ -149,8 +149,12 @@ export default function FollowedPages({
     try {
       setUnfollowingId(pageToUnfollow.id);
 
-      // Call the unfollow function
-      await unfollowPage(user?.uid || '', pageToUnfollow.id);
+      // Call the unfollow function using the API
+      const response = await followsApi.unfollowPage(pageToUnfollow.id);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to unfollow page');
+      }
 
       // Update the local state
       setPages(prev => prev.filter(p => p.id !== pageToUnfollow.id));

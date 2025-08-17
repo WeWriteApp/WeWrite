@@ -23,9 +23,8 @@ import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage } from "../../utils/randomPageNavigation"
 import { WarningDot } from '../ui/warning-dot';
 import { StatusIcon } from '../ui/status-icon';
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
-import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { useSubscription, useEarnings } from '../../contexts/UsdBalanceContext';
 import ConfirmationModal from '../utils/ConfirmationModal';
 
 interface SidebarProps {
@@ -57,9 +56,12 @@ export function MobileOverflowSidebar({ isOpen, onClose, onDragStart, editorProp
   const touchEndX = useRef<number>(0)
 
   const { user, signOut } = useAuth();
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
+  const { hasActiveSubscription } = useSubscription();
   const bankSetupStatus = useBankSetupStatus();
-  const { earnings } = useUserEarnings();
+  const { earnings } = useEarnings();
+
+  // Derive subscription warning state
+  const shouldShowSubscriptionWarning = hasActiveSubscription === false;
   const { sidebarOrder, reorderSidebarItem, swapBetweenMobileAndSidebar, mobileOrder } = useNavigationOrder();
 
   // Reset to page 0 when mobile order changes to avoid being stuck on non-existent pages

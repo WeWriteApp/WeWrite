@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCurrentMonth } from '../../../utils/usdConstants';
 
 /**
  * API endpoint to get user's pledges with metadata
@@ -15,10 +17,13 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Get user's pledges from token allocations
-    const allocationsQuery = db.collection('tokenAllocations')
+    // Get user's pledges from USD allocations (current month)
+    const currentMonth = getCurrentMonth();
+    const allocationsQuery = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS))
       .where('userId', '==', userId)
-      .where('resourceType', '==', 'page');
+      .where('resourceType', '==', 'page')
+      .where('month', '==', currentMonth)
+      .where('status', '==', 'active');
 
     const allocationsSnapshot = await allocationsQuery.get();
     const pledges: any[] = [];
@@ -57,13 +62,13 @@ export async function GET(request: NextRequest) {
         pageTitle,
         authorId: data.recipientUserId || '',
         authorUsername,
-        amount: data.tokens || 0,
+        amount: Math.round((data.usdCents || 0) / 10), // Convert USD cents to token equivalent for backward compatibility
+        usdCents: data.usdCents || 0,
         status: data.status || 'active',
-        originalAmount: data.originalAmount || data.tokens || 0,
+        originalAmount: Math.round((data.usdCents || 0) / 10), // Convert USD cents to token equivalent
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
-        suspendedAt: data.suspendedAt,
-        suspensionReason: data.suspensionReason
+        month: data.month
       });
     }
 

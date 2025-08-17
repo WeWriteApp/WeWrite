@@ -18,7 +18,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { getCollectionName } from '../utils/environmentConfig';
+import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
 import { FinancialLogger } from '../types/financial';
 import type { Payout, PayoutRecipient } from '../types/payout';
 
@@ -194,7 +194,7 @@ export class PayoutNotificationService {
       const payout = payoutDoc.data() as Payout;
 
       // Get recipient data
-      const recipientDoc = await getDoc(doc(db, getCollectionName('payoutRecipients'), payout.recipientId));
+      const recipientDoc = await getDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), payout.recipientId));
       if (!recipientDoc.exists()) {
         throw new Error(`Recipient ${payout.recipientId} not found`);
       }

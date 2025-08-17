@@ -20,8 +20,11 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 // LoggingProvider removed - using unified logger from init-logger.ts
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
-import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
+import { AllocationIncrementProvider } from "./contexts/AllocationIncrementContext"
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
+import { SubscriptionProvider } from "./contexts/SubscriptionContext"
+import { EarningsProvider } from "./contexts/EarningsContext"
+import { FakeBalanceProvider } from "./contexts/FakeBalanceContext"
 import { AllocationIntervalProvider } from "./contexts/AllocationIntervalContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 // import SimpleNavigationOptimizer from "./components/navigation/SimpleNavigationOptimizer" // Temporarily disabled
@@ -87,9 +90,12 @@ export default function RootLayout({
                             <PillStyleProvider>
                               <LineSettingsProvider>
                                 <RecentPagesProvider>
-                                  <TokenIncrementProvider>
-                                    <UsdBalanceProvider>
-                                      <AllocationIntervalProvider>
+                                  <AllocationIncrementProvider>
+                                    <SubscriptionProvider>
+                                      <FakeBalanceProvider>
+                                        <UsdBalanceProvider>
+                                          <EarningsProvider>
+                                            <AllocationIntervalProvider>
                                         <NavigationOrderProvider>
                                             <SessionAuthInitializer>
                                               <SessionMonitor />
@@ -98,10 +104,13 @@ export default function RootLayout({
                                                 {children}
                                               </GlobalNavigation>
                                             </SessionAuthInitializer>
-                                        </NavigationOrderProvider>
-                                      </AllocationIntervalProvider>
-                                    </UsdBalanceProvider>
-                                  </TokenIncrementProvider>
+                                          </NavigationOrderProvider>
+                                            </AllocationIntervalProvider>
+                                          </EarningsProvider>
+                                        </UsdBalanceProvider>
+                                      </FakeBalanceProvider>
+                                    </SubscriptionProvider>
+                                  </AllocationIncrementProvider>
                                 </RecentPagesProvider>
                               </LineSettingsProvider>
                             </PillStyleProvider>

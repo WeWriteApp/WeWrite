@@ -8,10 +8,11 @@ import { ChevronLeft, DollarSign, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { Logo } from "../ui/Logo";
 import { useAuth } from '../../providers/AuthProvider';
-import { useUserEarnings } from '../../hooks/useUserEarnings';
 import { RemainingFundsDisplay, OverspendWarningDisplay } from "../ui/RemainingUsdCounter";
 import { useUsdBalance } from "../../contexts/UsdBalanceContext";
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { useEarnings } from "../../contexts/EarningsContext";
+import { useSubscription } from "../../contexts/SubscriptionContext";
+import { useFakeBalance, useShouldUseFakeBalance } from "../../contexts/FakeBalanceContext";
 import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
 import { useSidebarContext } from './UnifiedSidebar';
@@ -37,8 +38,10 @@ export default function NavHeader({
   const router = useRouter();
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
-  const { earnings, loading: earningsLoading, refresh: refreshEarnings } = useUserEarnings();
-  const { hasActiveSubscription } = useSubscriptionWarning();
+  const { hasActiveSubscription } = useSubscription();
+  const { earnings, isLoading: earningsLoading } = useEarnings();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const { fakeBalance } = useFakeBalance();
   const { sidebarWidth, isExpanded } = useSidebarContext();
 
   // Calculate header positioning width - should match PageHeader.tsx and SidebarLayout.tsx
@@ -141,8 +144,12 @@ export default function NavHeader({
       return null;
     }
 
-    // Show loading state while USD balance is being fetched
-    if (usdLoading) {
+    // Determine which balance to use
+    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+    const isLoading = shouldUseFakeBalance ? false : usdLoading;
+
+    // Show loading state while USD balance is being fetched (only for real balance)
+    if (isLoading) {
       return (
         <Badge
           variant="secondary"
@@ -157,9 +164,9 @@ export default function NavHeader({
     }
 
     // Show "Add Funds" badge if user has no active subscription or zero USD
-    const shouldShowAddFunds = hasActiveSubscription === false ||
-      (usdBalance && usdBalance.totalUsdCents === 0) ||
-      (!usdBalance && !usdLoading);
+    const shouldShowAddFunds = !hasActiveSubscription ||
+      (currentBalance && currentBalance.totalUsdCents === 0) ||
+      (!currentBalance && !isLoading);
 
     if (shouldShowAddFunds) {
       return (
@@ -176,9 +183,9 @@ export default function NavHeader({
     }
 
     // Show spend/overspend display for users with USD balance
-    if (usdBalance) {
-      const isOverspending = usdBalance.allocatedUsdCents > usdBalance.totalUsdCents;
-      const overspendingAmount = isOverspending ? usdBalance.allocatedUsdCents - usdBalance.totalUsdCents : 0;
+    if (currentBalance) {
+      const isOverspending = currentBalance.allocatedUsdCents > currentBalance.totalUsdCents;
+      const overspendingAmount = isOverspending ? currentBalance.allocatedUsdCents - currentBalance.totalUsdCents : 0;
 
       // Business logic: Show EITHER remaining funds with pie chart OR overspend warning with icon
       if (isOverspending) {
@@ -195,16 +202,16 @@ export default function NavHeader({
             }
             content={
               <SpendBreakdown
-                totalUsdCents={usdBalance.totalUsdCents}
-                allocatedUsdCents={usdBalance.allocatedUsdCents}
-                availableUsdCents={Math.max(0, usdBalance.totalUsdCents - usdBalance.allocatedUsdCents)}
+                totalUsdCents={currentBalance.totalUsdCents}
+                allocatedUsdCents={currentBalance.allocatedUsdCents}
+                availableUsdCents={Math.max(0, currentBalance.totalUsdCents - currentBalance.allocatedUsdCents)}
               />
             }
           />
         );
       } else {
         // Show pie chart of remaining funds and amount left to spend
-        const availableUsdCents = Math.max(0, usdBalance.totalUsdCents - usdBalance.allocatedUsdCents);
+        const availableUsdCents = Math.max(0, currentBalance.totalUsdCents - currentBalance.allocatedUsdCents);
 
         return (
           <FinancialDropdown
@@ -213,14 +220,14 @@ export default function NavHeader({
             direction="southeast"
             trigger={
               <RemainingFundsDisplay
-                allocatedUsdCents={usdBalance.allocatedUsdCents || 0}
-                totalUsdCents={usdBalance.totalUsdCents || 0}
+                allocatedUsdCents={currentBalance.allocatedUsdCents || 0}
+                totalUsdCents={currentBalance.totalUsdCents || 0}
               />
             }
             content={
               <SpendBreakdown
-                totalUsdCents={usdBalance.totalUsdCents}
-                allocatedUsdCents={usdBalance.allocatedUsdCents}
+                totalUsdCents={currentBalance.totalUsdCents}
+                allocatedUsdCents={currentBalance.allocatedUsdCents}
                 availableUsdCents={availableUsdCents}
               />
             }

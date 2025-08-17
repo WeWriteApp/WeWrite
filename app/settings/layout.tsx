@@ -16,7 +16,8 @@ import {
   ShoppingCart,
   Coins,
   Palette,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 import SettingsHeader from '../components/settings/SettingsHeader';
@@ -26,8 +27,10 @@ import { cn } from '../lib/utils';
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
-import { useUserEarnings } from '../hooks/useUserEarnings';
+import { useEarnings } from '../contexts/EarningsContext';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextPayoutCountdown';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
 import { UsdPieChart } from '../components/ui/UsdPieChart';
 
@@ -56,8 +59,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   // Get bank setup status, user earnings, and USD balance
   const bankSetupStatus = useBankSetupStatus();
-  const { earnings } = useUserEarnings();
+  const { earnings } = useEarnings();
   const { usdBalance } = useUsdBalance();
+  const payoutCountdown = useNextPayoutCountdown();
 
   useEffect(() => {
     console.log('🎯 Settings Layout: Auth check', {
@@ -108,10 +112,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
           setHasActiveSubscription(isActive);
           setSubscriptionStatusInfo(statusInfo);
 
-          // Get subscription amount from price data
-          const amount = subscription.items?.data?.[0]?.price?.unit_amount
-            ? subscription.items.data[0].price.unit_amount / 100
-            : 0;
+          // Get subscription amount directly from the subscription data
+          const amount = subscription.amount || 0;
           setSubscriptionAmount(amount);
         } else {
           setHasActiveSubscription(false);
@@ -266,6 +268,15 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         {section.id === 'earnings' && (() => {
                           // Only show bank setup notices if user has earnings to pay out
                           if (earnings?.hasEarnings) {
+                            // Show loading state while checking bank status
+                            if (bankSetupStatus.loading) {
+                              return (
+                                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Loading...
+                                </span>
+                              );
+                            }
                             // Show "Set up bank" if bank isn't set up but user has earnings
                             if (!bankSetupStatus.isSetup) {
                               return (
@@ -274,9 +285,16 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                                 </span>
                               );
                             }
-                            // Show success if bank is set up properly
+                            // Show success with countdown if bank is set up properly
                             if (bankSetupStatus.isSetup) {
-                              return <StatusIcon status="success" size="sm" position="static" />;
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <StatusIcon status="success" size="sm" position="static" />
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatPayoutCountdown(payoutCountdown)}
+                                  </span>
+                                </div>
+                              );
                             }
                           }
                           return null;

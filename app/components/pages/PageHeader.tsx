@@ -258,13 +258,13 @@ export default function PageHeader({
     }
   }, [isNewPage, isEditing, canEdit]);
 
-  // Auto-resize textarea when editing title starts
-  React.useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.style.height = 'auto';
-      titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
-    }
-  }, [isEditingTitle]);
+  // Auto-resize textarea when editing title starts - DISABLED to prevent layout shifts
+  // React.useEffect(() => {
+  //   if (isEditingTitle && titleInputRef.current) {
+  //     titleInputRef.current.style.height = 'auto';
+  //     titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
+  //   }
+  // }, [isEditingTitle]);
 
   // Listen for focus changes to coordinate focus rings
   React.useEffect(() => {
@@ -405,11 +405,11 @@ export default function PageHeader({
   const handleTitleFocus = () => {
     setIsTitleFocused(true);
     setIsEditorFocused(false);
-    // Auto-resize textarea to fit content
-    if (titleInputRef.current) {
-      titleInputRef.current.style.height = 'auto';
-      titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
-    }
+    // Auto-resize textarea to fit content - DISABLED to prevent layout shifts
+    // if (titleInputRef.current) {
+    //   titleInputRef.current.style.height = 'auto';
+    //   titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
+    // }
   };
 
   // Check for duplicate titles
@@ -468,9 +468,9 @@ export default function PageHeader({
     const newTitle = e.target.value;
     setEditingTitle(newTitle);
 
-    // Auto-resize textarea to fit content
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
+    // Auto-resize textarea to fit content - DISABLED to prevent layout shifts
+    // e.target.style.height = 'auto';
+    // e.target.style.height = e.target.scrollHeight + 'px';
 
     // Check for duplicates with debouncing as user types (real-time validation)
     if (newTitle.trim() !== '' && newTitle.trim() !== title?.trim()) {
@@ -944,17 +944,26 @@ export default function PageHeader({
                                 onBlur={handleTitleBlur}
                                 onFocus={handleTitleFocus}
                                 tabIndex={isNewPage ? 1 : undefined}
-                                className={`bg-background/80 border rounded-lg px-4 py-2 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
+                                className={`bg-background/80 border rounded-lg py-2 outline-none font-semibold text-center resize-none overflow-hidden ${
                                   titleError || isTitleDuplicate
-                                    ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
+                                    ? "border-destructive focus:border-destructive"
                                     : isTitleFocused
-                                    ? "border-primary/50 ring-2 ring-primary/20"
+                                    ? "border-primary/50"
                                     : "border-muted-foreground/30"
                                 } text-2xl`}
                                 style={{
                                   width: "100%",
+                                  height: "2.5rem",
                                   minHeight: "2.5rem",
-                                  lineHeight: "1.3"
+                                  maxHeight: "2.5rem",
+                                  lineHeight: "1.3",
+                                  transition: 'none',
+                                  fontSize: '1.5rem', // Force text-2xl size to prevent shrinking on focus
+                                  boxShadow: titleError || isTitleDuplicate
+                                    ? '0 0 0 2px rgba(239, 68, 68, 0.2)'
+                                    : isTitleFocused
+                                    ? '0 0 0 2px rgba(59, 130, 246, 0.2)'
+                                    : 'none'
                                 }}
                                 placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                                 rows={1}

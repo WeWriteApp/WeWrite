@@ -21,7 +21,7 @@ import {
   increment
 } from 'firebase/firestore';
 
-import { getCollectionName } from "../utils/environmentConfig";
+import { getCollectionName, USD_COLLECTIONS } from "../utils/environmentConfig";
 import { payoutStatusService } from './payoutStatusService';
 import { payoutRetryService } from './payoutRetryService';
 import { payoutErrorLogger, PayoutErrorCategory, PayoutErrorSeverity } from './payoutErrorLogger';
@@ -62,7 +62,7 @@ class StripePayoutService {
       const payout = payoutDoc.data() as Payout;
 
       // Get recipient details
-      const recipientDoc = await getDoc(doc(db, 'payoutRecipients', payout.recipientId));
+      const recipientDoc = await getDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), payout.recipientId));
       if (!recipientDoc.exists()) {
         return {
           success: false,
@@ -122,7 +122,7 @@ class StripePayoutService {
       });
 
       // Update recipient balance - use environment-aware collection
-      await updateDoc(doc(db, getCollectionName('payoutRecipients'), payout.recipientId), {
+      await updateDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), payout.recipientId), {
         availableBalance: increment(-payout.amount),
         pendingBalance: increment(payout.amount),
         lastPayoutAt: serverTimestamp(),
@@ -533,7 +533,7 @@ class StripePayoutService {
 
       // Update recipient verification status based on account changes
       const recipientQuery = query(
-        collection(db, getCollectionName('payoutRecipients')),
+        collection(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS)),
         where('stripeConnectedAccountId', '==', account.id)
       );
 

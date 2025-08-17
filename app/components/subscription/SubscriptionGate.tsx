@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { Loader2, Lock } from 'lucide-react';
 
 interface SubscriptionGateProps {
@@ -30,7 +30,7 @@ export default function SubscriptionGate({
   allowInteraction = false
 }: SubscriptionGateProps) {
   const router = useRouter();
-  const { hasActiveSubscription, isLoading } = useSubscriptionWarning();
+  const { hasActiveSubscription } = useSubscription();
 
   // Show loading state while checking subscription
   if (isLoading) {

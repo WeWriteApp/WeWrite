@@ -69,6 +69,11 @@ function shouldShowFABOnRoute(pathname: string, user: any): boolean {
     return false;
   }
 
+  // Hide on /new page (user is already creating a page)
+  if (pathname === '/new') {
+    return false;
+  }
+
   // Show FAB everywhere except content pages
   return !isContentPageRoute(pathname, user);
 }

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       const userFollowingRef = db.collection(getCollectionName('userFollowing')).doc(userId);
       const userFollowingDoc = await userFollowingRef.get();
 
-      if (userFollowingDoc.exists()) {
+      if (userFollowingDoc.exists) {
         const data = userFollowingDoc.data();
         const followingUserIds = data?.following || [];
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         if (followingUserIds.length > 0) {
           const userPromises = followingUserIds.map(async (followedUserId: string) => {
             const userDoc = await db.collection(getCollectionName('users')).doc(followedUserId).get();
-            if (userDoc.exists()) {
+            if (userDoc.exists) {
               const userData = userDoc.data();
               return {
                 id: userDoc.id,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       const userFollowersRef = db.collection(getCollectionName('userFollowers')).doc(userId);
       const userFollowersDoc = await userFollowersRef.get();
 
-      if (userFollowersDoc.exists()) {
+      if (userFollowersDoc.exists) {
         const data = userFollowersDoc.data();
         const followerIds = data?.followers || [];
 
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         if (followerIds.length > 0) {
           const userPromises = followerIds.map(async (followerId: string) => {
             const userDoc = await db.collection(getCollectionName('users')).doc(followerId).get();
-            if (userDoc.exists()) {
+            if (userDoc.exists) {
               const userData = userDoc.data();
               return {
                 id: userDoc.id,
@@ -159,9 +159,9 @@ export async function POST(request: NextRequest) {
     console.log('[FOLLOWS API] Using users collection:', getCollectionName('users'));
 
     const targetUserDoc = await db.collection(getCollectionName('users')).doc(targetUserId).get();
-    console.log('[FOLLOWS API] Target user exists:', targetUserDoc.exists());
+    console.log('[FOLLOWS API] Target user exists:', targetUserDoc.exists);
 
-    if (!targetUserDoc.exists()) {
+    if (!targetUserDoc.exists) {
       console.log('[FOLLOWS API] Target user not found');
       return createErrorResponse('User not found', 'NOT_FOUND');
     }
@@ -172,9 +172,9 @@ export async function POST(request: NextRequest) {
 
     const userFollowingRef = db.collection(getCollectionName('userFollowing')).doc(currentUserId);
     const userFollowingDoc = await userFollowingRef.get();
-    console.log('[FOLLOWS API] User following doc exists:', userFollowingDoc.exists());
+    console.log('[FOLLOWS API] User following doc exists:', userFollowingDoc.exists);
 
-    if (userFollowingDoc.exists()) {
+    if (userFollowingDoc.exists) {
       // Update existing document
       console.log('[FOLLOWS API] Updating existing following document');
       await userFollowingRef.update({
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
     const userFollowersRef = db.collection(getCollectionName('userFollowers')).doc(targetUserId);
     const userFollowersDoc = await userFollowersRef.get();
 
-    if (userFollowersDoc.exists()) {
+    if (userFollowersDoc.exists) {
       // Update existing document
       await userFollowersRef.update({
         followers: admin.firestore.FieldValue.arrayUnion(currentUserId),

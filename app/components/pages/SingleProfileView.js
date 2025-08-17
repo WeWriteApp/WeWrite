@@ -85,30 +85,32 @@ const SingleProfileView = ({ profile }) => {
             />
           </div>
 
-          {/* Follow button - only show for other users */}
-          {!isCurrentUser && (
-            <div className="mb-3">
-              <UserFollowButton
-                userId={profile.uid}
-                username={profile.username}
-                size="md"
-                variant="outline"
-              />
-            </div>
-          )}
-
-          {/* Share button */}
+          {/* Action buttons - responsive horizontal/vertical layout */}
           <div className="mb-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShareProfile}
-              className="flex items-center gap-2"
-              title="Share profile"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>Share Profile</span>
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-2">
+              {/* Follow button - only show for other users */}
+              {!isCurrentUser && (
+                <UserFollowButton
+                  userId={profile.uid}
+                  username={profile.username}
+                  size="md"
+                  variant="outline"
+                  className="w-full sm:w-auto min-w-[140px] h-10"
+                />
+              )}
+
+              {/* Share button */}
+              <Button
+                variant="outline"
+                size="md"
+                onClick={handleShareProfile}
+                className="flex items-center gap-2 w-full sm:w-auto min-w-[140px] h-10"
+                title="Share profile"
+              >
+                <Share2 className="h-4 w-4" />
+                <span>Share Profile</span>
+              </Button>
+            </div>
           </div>
 
           {/* UsernameBadge handles all subscription display automatically */}

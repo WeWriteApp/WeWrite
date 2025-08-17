@@ -9,7 +9,7 @@ import { db } from '../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from 'firebase/firestore';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../utils/stripeConfig';
-import { TokenEarningsService } from './tokenEarningsService';
+import { UsdEarningsService } from './usdEarningsService';
 import {
   FinancialOperationResult,
   FinancialError,
@@ -243,8 +243,8 @@ export class FinancialReconciliationService {
         const expectedUsdEarnings = FinancialUtils.tokensToUsd(totalAllocatedTokens);
         
         // Get actual earnings for this user
-        const balance = await TokenEarningsService.getWriterTokenBalance(recipientUserId);
-        const actualEarnings = balance?.totalUsdEarned || 0;
+        const balance = await UsdEarningsService.getCompleteWriterEarnings(recipientUserId);
+        const actualEarnings = balance?.balance?.totalUsdEarned || 0;
         
         const difference = Math.abs(expectedUsdEarnings - actualEarnings);
         

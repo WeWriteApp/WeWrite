@@ -101,17 +101,34 @@ export function PayoutsManager() {
     if (!user?.uid) return;
 
     try {
-      const response = await fetch('/api/earnings/breakdown');
-      const earningsBreakdown = response.ok ? await response.json() : null;
-      setPayoutData({
-        totalEarnings: earningsBreakdown.totalEarnings,
-        availableBalance: earningsBreakdown.availableBalance,
-        pendingBalance: earningsBreakdown.pendingBalance,
-        lastPayoutAmount: payouts.length > 0 ? payouts[0].amount : undefined,
-        lastPayoutDate: payouts.length > 0 ? payouts[0].completedAt : undefined
-      });
+      // Use the correct earnings API endpoint
+      const response = await fetch('/api/earnings/user');
+      if (response.ok) {
+        const data = await response.json();
+        const earnings = data.earnings || {};
+        setPayoutData({
+          totalEarnings: earnings.totalEarnings || 0,
+          availableBalance: earnings.availableBalance || 0,
+          pendingBalance: earnings.pendingBalance || 0,
+          lastPayoutAmount: payouts.length > 0 ? payouts[0].amount : undefined,
+          lastPayoutDate: payouts.length > 0 ? payouts[0].completedAt : undefined
+        });
+      } else {
+        // Set default values if API fails
+        setPayoutData({
+          totalEarnings: 0,
+          availableBalance: 0,
+          pendingBalance: 0
+        });
+      }
     } catch (error) {
       console.error('Error loading payout data:', error);
+      // Set default values on error
+      setPayoutData({
+        totalEarnings: 0,
+        availableBalance: 0,
+        pendingBalance: 0
+      });
     }
   };
 

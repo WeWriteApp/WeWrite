@@ -76,7 +76,7 @@ export default function SimpleEarningsDashboard() {
 
       // Load all data in parallel - SIMPLE API approach
       const [earningsResponse, bankResponse, payoutsResponse] = await Promise.all([
-        fetch('/api/earnings/breakdown'),
+        fetch('/api/earnings/user'),
         fetch('/api/bank-account/status'),
         fetch('/api/payouts/history')
       ]);

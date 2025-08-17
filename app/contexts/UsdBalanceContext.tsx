@@ -2,119 +2,63 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { centsToDollars, formatUsdCents } from '../utils/formatCurrency';
-import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
-import {
-  getLoggedOutUsdBalance,
-  getUserUsdBalance,
-  allocateLoggedOutUsd,
-  allocateUserUsd,
-  type SimulatedUsdBalance
-} from '../utils/simulatedUsd';
+import { formatUsdCents } from '../utils/formatCurrency';
+import { UsdDataService, type UsdBalance } from '../services/usdDataService';
+import { usdBalanceCache } from '../utils/simplifiedCache';
+import { useSubscription } from './SubscriptionContext';
+import { useShouldUseFakeBalance } from './FakeBalanceContext';
 
-interface UsdBalance {
-  totalUsdCents: number;
-  allocatedUsdCents: number;
-  availableUsdCents: number;
-}
-
-interface CachedUsdBalance {
-  data: UsdBalance;
-  timestamp: number;
-  userId: string;
-}
-
-// Global cache for USD balance data - shared across all components
-const usdBalanceCache = new Map<string, CachedUsdBalance>();
-const CACHE_DURATION = 30 * 60 * 1000; // 🚨 EMERGENCY: 30 minutes (was 5 minutes) to reduce financial API reads by 80%
-const STALE_WHILE_REVALIDATE_DURATION = 5 * 60 * 1000; // 🚨 EMERGENCY: 5 minutes (was 30 seconds) for background refresh
+/**
+ * Simplified USD Balance Context
+ *
+ * Now focuses only on USD balance data, with subscription and earnings
+ * handled by their dedicated contexts.
+ */
 
 interface UsdBalanceContextType {
+  // Balance data (real balance only - fake balance handled by FakeBalanceContext)
   usdBalance: UsdBalance | null;
   isLoading: boolean;
+  lastUpdated: Date | null;
+
+  // Actions
   refreshUsdBalance: () => Promise<void>;
   updateOptimisticBalance: (changeCents: number) => void;
-  lastUpdated: Date | null;
+
   // Helper methods for display
   getTotalUsdFormatted: () => string;
   getAvailableUsdFormatted: () => string;
   getAllocatedUsdFormatted: () => string;
-  // New properties for fake balance system
-  isFakeBalance: boolean;
-  hasActiveSubscription: boolean;
-  // Method to refresh fake balance from localStorage
-  refreshFakeBalance: () => void;
 }
 
 const UsdBalanceContext = createContext<UsdBalanceContextType | undefined>(undefined);
 
 export function UsdBalanceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+
   const [usdBalance, setUsdBalance] = useState<UsdBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isFakeBalance, setIsFakeBalance] = useState(false);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const fetchingRef = useRef<Promise<void> | null>(null);
 
   const fetchUsdBalance = useCallback(async (forceRefresh = false): Promise<void> => {
-    // Handle logged out users with fake $10/mo balance
-    if (!user?.uid) {
-      console.log('[UsdBalanceContext] Providing fake balance for logged out user');
-      const fakeBalance = getLoggedOutUsdBalance();
-      setUsdBalance({
-        totalUsdCents: fakeBalance.totalUsdCents,
-        allocatedUsdCents: fakeBalance.allocatedUsdCents,
-        availableUsdCents: fakeBalance.availableUsdCents
-      });
-      setIsFakeBalance(true);
-      setHasActiveSubscription(false);
+    // Only fetch real balance for authenticated users with subscriptions
+    if (!user?.uid || shouldUseFakeBalance) {
+      // Clear any existing real balance data
+      setUsdBalance(null);
       setLastUpdated(new Date());
       return;
     }
 
-    // Check cache first
-    const cached = usdBalanceCache.get(user.uid);
-    const now = Date.now();
-
-    if (!forceRefresh && cached && cached.userId === user.uid) {
-      const age = now - cached.timestamp;
-
-      // If cache is fresh, use it immediately
-      if (age < CACHE_DURATION) {
-        console.log('[UsdBalanceContext] ✅ Using fresh cached data (age: ' + Math.round(age / 1000) + 's)');
-        setUsdBalance(cached.data);
-        setLastUpdated(new Date(cached.timestamp));
-        setIsLoading(false);
-        return;
-      }
-
-      // If cache is stale but not too old, use it while revalidating
-      if (age < CACHE_DURATION + STALE_WHILE_REVALIDATE_DURATION) {
-        console.log('[UsdBalanceContext] 🔄 Using stale cached data while revalidating (age: ' + Math.round(age / 1000) + 's)');
-        setUsdBalance(cached.data);
-        setLastUpdated(new Date(cached.timestamp));
-        setIsLoading(false);
-        // Continue to fetch fresh data in background
-      }
-    }
-
-    // 🚨 EMERGENCY: Check persistent cache if no memory cache (survives page refreshes)
-    if (!forceRefresh && !cached) {
-      const persistentCacheKey = generateCacheKey('usd_balance', user.uid);
-      const persistentCached = getCacheItem<UsdBalance>(persistentCacheKey);
-      if (persistentCached) {
-        console.log('[UsdBalanceContext] 💾 Using persistent cached USD balance');
-        setUsdBalance(persistentCached);
-        setIsLoading(false);
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cached = usdBalanceCache.get(user.uid);
+      if (cached) {
+        setUsdBalance(cached);
         setLastUpdated(new Date());
-
-        // Also update memory cache
-        usdBalanceCache.set(user.uid, {
-          data: persistentCached,
-          timestamp: Date.now(),
-          userId: user.uid
-        });
+        console.log('[UsdBalanceContext] Using cached balance data');
         return;
       }
     }
@@ -126,89 +70,36 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
     const fetchPromise = (async () => {
       try {
-        if (!cached || forceRefresh) {
-          setIsLoading(true);
-        }
+        setIsLoading(true);
 
-        console.log('[UsdBalanceContext] Fetching fresh USD balance for user:', user.uid);
 
-        const response = await fetch('/api/usd/balance', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const result = await UsdDataService.fetchBalance();
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            console.log('[UsdBalanceContext] User not authenticated');
+        if (!result.success) {
+          if (UsdDataService.isAuthenticationError(result.status)) {
+
             setUsdBalance(null);
             return;
           }
-          throw new Error(`HTTP error! status: ${response.status}`);
+
+
+          // Don't clear existing data on API errors, just log the warning
+          return;
         }
 
-        const data = await response.json();
-        console.log('[UsdBalanceContext] Received USD balance data:', data);
+        const balanceData = result.data;
+        setUsdBalance(balanceData);
+        setLastUpdated(new Date());
 
-        if (data.balance) {
-          const balance: UsdBalance = {
-            totalUsdCents: data.balance.totalUsdCents || 0,
-            allocatedUsdCents: data.balance.allocatedUsdCents || 0,
-            availableUsdCents: data.balance.availableUsdCents || 0,
-          };
-
-          setUsdBalance(balance);
-          setIsFakeBalance(false);
-          setHasActiveSubscription(true);
-          setLastUpdated(new Date());
-
-          // Cache the result in memory
-          usdBalanceCache.set(user.uid, {
-            data: balance,
-            timestamp: now,
-            userId: user.uid
-          });
-
-          // 🚨 EMERGENCY: Also save to persistent cache (survives page refreshes)
-          const persistentCacheKey = generateCacheKey('usd_balance', user.uid);
-          setCacheItem(persistentCacheKey, balance, CACHE_DURATION);
-
-          console.log('[UsdBalanceContext] Updated USD balance:', {
-            total: formatUsdCents(balance.totalUsdCents),
-            allocated: formatUsdCents(balance.allocatedUsdCents),
-            available: formatUsdCents(balance.availableUsdCents)
-          });
-        } else {
-          console.log('[UsdBalanceContext] No USD balance found - providing fake $10/mo balance');
-
-          // User has account but no subscription - provide fake balance
-          const fakeBalance = getUserUsdBalance(user.uid);
-          setUsdBalance({
-            totalUsdCents: fakeBalance.totalUsdCents,
-            allocatedUsdCents: fakeBalance.allocatedUsdCents,
-            availableUsdCents: fakeBalance.availableUsdCents
-          });
-          setIsFakeBalance(true);
-          setHasActiveSubscription(false);
-          setLastUpdated(new Date());
+        // Cache the result
+        if (balanceData) {
+          usdBalanceCache.set(user.uid, balanceData);
         }
+
+
+
       } catch (error) {
-        console.error('[UsdBalanceContext] Error fetching USD balance:', error);
 
-        // If we have cached data, keep using it on error
-        if (!cached) {
-          // On error, provide fake balance for logged in users
-          console.log('[UsdBalanceContext] Error occurred - providing fake balance');
-          const fakeBalance = getUserUsdBalance(user.uid);
-          setUsdBalance({
-            totalUsdCents: fakeBalance.totalUsdCents,
-            allocatedUsdCents: fakeBalance.allocatedUsdCents,
-            availableUsdCents: fakeBalance.availableUsdCents
-          });
-          setIsFakeBalance(true);
-          setHasActiveSubscription(false);
-        }
       } finally {
         setIsLoading(false);
         fetchingRef.current = null;
@@ -217,43 +108,26 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
     fetchingRef.current = fetchPromise;
     return fetchPromise;
-  }, [user?.uid]);
+  }, [user?.uid, shouldUseFakeBalance]);
 
-  const refreshUsdBalance = useCallback(async () => {
-    console.log('[UsdBalanceContext] Force refreshing USD balance');
-    await fetchUsdBalance(true);
+  /**
+   * Refresh USD balance (force refresh from API)
+   */
+  const refreshUsdBalance = useCallback(async (): Promise<void> => {
+    return fetchUsdBalance(true);
   }, [fetchUsdBalance]);
 
-  // Method to refresh fake balance from localStorage (for logged-out users)
-  const refreshFakeBalance = useCallback(() => {
-    if (!user?.uid) {
-      console.log('[UsdBalanceContext] Refreshing fake balance from localStorage');
-      const fakeBalance = getLoggedOutUsdBalance();
-      setUsdBalance({
-        totalUsdCents: fakeBalance.totalUsdCents,
-        allocatedUsdCents: fakeBalance.allocatedUsdCents,
-        availableUsdCents: fakeBalance.availableUsdCents
-      });
-      setLastUpdated(new Date());
-    } else {
-      // For logged-in users without subscriptions, refresh their fake balance
-      const fakeBalance = getUserUsdBalance(user.uid);
-      setUsdBalance({
-        totalUsdCents: fakeBalance.totalUsdCents,
-        allocatedUsdCents: fakeBalance.allocatedUsdCents,
-        availableUsdCents: fakeBalance.availableUsdCents
-      });
-      setLastUpdated(new Date());
-    }
-  }, [user?.uid]);
-
+  /**
+   * Update balance optimistically (for real balances only)
+   * Fake balance optimistic updates are handled by FakeBalanceContext
+   */
   const updateOptimisticBalance = useCallback((changeCents: number) => {
-    console.log('[UsdBalanceContext] Optimistic balance update:', {
-      changeCents,
-      changeFormatted: formatUsdCents(Math.abs(changeCents)),
-      direction: changeCents > 0 ? 'increase' : 'decrease',
-      isFakeBalance
-    });
+    // Only handle optimistic updates for real balances
+    if (shouldUseFakeBalance) {
+      return;
+    }
+
+
 
     setUsdBalance(prev => {
       if (!prev) return null;
@@ -272,41 +146,14 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
         availableUsdCents: newAvailableCents
       };
 
-      // If this is a fake balance, update localStorage
-      if (isFakeBalance) {
-        if (!user?.uid) {
-          // Update logged out balance in localStorage
-          const currentFakeBalance = getLoggedOutUsdBalance();
-          const updatedFakeBalance = {
-            ...currentFakeBalance,
-            allocatedUsdCents: newAllocatedCents,
-            availableUsdCents: newAvailableCents
-          };
-          localStorage.setItem('wewrite_logged_out_usd', JSON.stringify(updatedFakeBalance));
-        } else {
-          // Update user fake balance in localStorage
-          const currentFakeBalance = getUserUsdBalance(user.uid);
-          const updatedFakeBalance = {
-            ...currentFakeBalance,
-            allocatedUsdCents: newAllocatedCents,
-            availableUsdCents: newAvailableCents
-          };
-          localStorage.setItem(`wewrite_user_usd_${user.uid}`, JSON.stringify(updatedFakeBalance));
-        }
-      }
-
-      // CRITICAL FIX: Force refresh from server after optimistic update to prevent stale data
-      // This ensures UI eventually matches database state
-      if (!isFakeBalance) {
-        setTimeout(() => {
-          console.log('[UsdBalanceContext] Force refreshing balance after optimistic update to ensure consistency');
-          fetchUsdBalance(true);
-        }, 1500); // Delay to allow server processing
-      }
+      // Force refresh from server after optimistic update to prevent stale data
+      setTimeout(() => {
+        fetchUsdBalance(true);
+      }, 1500); // Delay to allow server processing
 
       return newBalance;
     });
-  }, [isFakeBalance, user?.uid, fetchUsdBalance]);
+  }, [shouldUseFakeBalance, fetchUsdBalance]);
 
   // Helper methods for formatted display
   const getTotalUsdFormatted = useCallback(() => {
@@ -321,35 +168,20 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
     return usdBalance ? formatUsdCents(usdBalance.allocatedUsdCents) : '$0.00';
   }, [usdBalance]);
 
-  // Fetch balance when user changes
+  // Fetch balance when user or subscription status changes
   useEffect(() => {
     fetchUsdBalance();
   }, [fetchUsdBalance]);
 
-  // Auto-refresh every 5 minutes
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const interval = setInterval(() => {
-      console.log('[UsdBalanceContext] Auto-refreshing USD balance');
-      fetchUsdBalance();
-    }, 5 * 60 * 1000); // 5 minutes
-
-    return () => clearInterval(interval);
-  }, [user?.uid, fetchUsdBalance]);
-
   const contextValue: UsdBalanceContextType = {
     usdBalance,
     isLoading,
+    lastUpdated,
     refreshUsdBalance,
     updateOptimisticBalance,
-    lastUpdated,
     getTotalUsdFormatted,
     getAvailableUsdFormatted,
-    getAllocatedUsdFormatted,
-    isFakeBalance,
-    hasActiveSubscription,
-    refreshFakeBalance
+    getAllocatedUsdFormatted
   };
 
   return (
@@ -365,31 +197,4 @@ export function useUsdBalance() {
     throw new Error('useUsdBalance must be used within a UsdBalanceProvider');
   }
   return context;
-}
-
-// Legacy hook for backward compatibility during migration
-/**
- * @deprecated Use useUsdBalance instead
- */
-export function useTokenBalance() {
-  const usdContext = useUsdBalance();
-  
-  // Convert USD balance to token format for backward compatibility
-  const tokenBalance = usdContext.usdBalance ? {
-    totalTokens: Math.floor(centsToDollars(usdContext.usdBalance.totalUsdCents) * 10),
-    allocatedTokens: Math.floor(centsToDollars(usdContext.usdBalance.allocatedUsdCents) * 10),
-    availableTokens: Math.floor(centsToDollars(usdContext.usdBalance.availableUsdCents) * 10)
-  } : null;
-
-  return {
-    tokenBalance,
-    isLoading: usdContext.isLoading,
-    refreshTokenBalance: usdContext.refreshUsdBalance,
-    updateOptimisticBalance: (tokenChange: number) => {
-      // Convert token change to USD cents change
-      const usdCentsChange = Math.floor(tokenChange / 10 * 100);
-      usdContext.updateOptimisticBalance(usdCentsChange);
-    },
-    lastUpdated: usdContext.lastUpdated
-  };
 }

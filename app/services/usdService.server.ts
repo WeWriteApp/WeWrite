@@ -123,6 +123,7 @@ export class ServerUsdService {
           try {
             // Make internal API call to get subscription
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            console.log(`[USD BALANCE] Attempting to fetch subscription from account API for user ${userId}`);
             const response = await fetch(`${baseUrl}/api/account-subscription`, {
               headers: {
                 'x-user-id': userId,
@@ -131,6 +132,11 @@ export class ServerUsdService {
             });
             if (response.ok) {
               const accountData = await response.json();
+              console.log(`[USD BALANCE] Account API response:`, {
+                hasSubscription: accountData.hasSubscription,
+                status: accountData.status,
+                amount: accountData.amount
+              });
               if (accountData.hasSubscription && accountData.status === 'active' && accountData.amount) {
                 subscriptionData = {
                   status: accountData.status,
@@ -138,6 +144,8 @@ export class ServerUsdService {
                 };
                 console.log(`[USD BALANCE] Retrieved subscription from account API: $${accountData.amount}/mo`);
               }
+            } else {
+              console.warn(`[USD BALANCE] Account API returned status ${response.status}`);
             }
           } catch (error) {
             console.warn(`[USD BALANCE] Could not fetch subscription from account API:`, error.message);
@@ -148,27 +156,31 @@ export class ServerUsdService {
         if (subscriptionData && subscriptionData.status === 'active' && subscriptionData.amount) {
           console.log(`[USD BALANCE] User ${userId} has active subscription ($${subscriptionData.amount}/mo) but no balance record. Creating balance automatically.`);
 
-          const expectedUsdCents = dollarsToCents(subscriptionData.amount);
-          const newBalance: UsdBalance = {
-            userId,
-            totalUsdCents: expectedUsdCents,
-            allocatedUsdCents: 0,
-            availableUsdCents: expectedUsdCents,
-            monthlyAllocationCents: expectedUsdCents,
-            lastUpdated: new Date(),
-            createdAt: new Date()
-          };
+          try {
+            // Use the proper service method to create the balance
+            await this.updateMonthlyUsdAllocation(userId, subscriptionData.amount);
+            console.log(`[USD BALANCE] Successfully created balance record for user ${userId} with $${subscriptionData.amount}/mo subscription`);
 
-          // Create the balance record
-          await balanceRef.set(newBalance);
-          console.log(`[USD BALANCE] Created balance record for user ${userId} with $${subscriptionData.amount}/mo subscription`);
+            // Fetch the newly created balance
+            const newBalanceDoc = await balanceRef.get();
+            if (newBalanceDoc.exists) {
+              const balanceData = newBalanceDoc.data();
+              const actualAllocatedUsdCents = await this.calculateActualAllocatedUsdCents(userId);
 
-          // Return the newly created balance with actual timestamps
-          return {
-            ...newBalance,
-            lastUpdated: new Date(),
-            createdAt: new Date()
-          };
+              return {
+                userId,
+                totalUsdCents: balanceData?.totalUsdCents || 0,
+                allocatedUsdCents: actualAllocatedUsdCents,
+                availableUsdCents: (balanceData?.totalUsdCents || 0) - actualAllocatedUsdCents,
+                monthlyAllocationCents: balanceData?.monthlyAllocationCents || 0,
+                lastAllocationDate: balanceData?.lastAllocationDate || getCurrentMonth(),
+                createdAt: balanceData?.createdAt,
+                updatedAt: balanceData?.updatedAt
+              };
+            }
+          } catch (error) {
+            console.error(`[USD BALANCE] Failed to auto-create balance for user ${userId}:`, error);
+          }
         }
 
         console.log(`[USD BALANCE] No balance record found for user ${userId} and no active subscription to auto-create`);

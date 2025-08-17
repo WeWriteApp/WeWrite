@@ -2,17 +2,17 @@
 
 ## Overview
 
-WeWrite's payout system enables content creators to convert earned USD into real money through secure bank transfers. The system integrates with Stripe Connect to provide transparent fee structures, reliable transfers, and comprehensive testing capabilities.
+WeWrite's payout system enables content creators to convert earned USD into real money through secure bank transfers. The system uses a **simplified USD-based architecture** with Stripe Connect integration for transparent fee structures, reliable transfers, and comprehensive testing capabilities.
 
-**🎉 IMPLEMENTATION COMPLETE**: The payout system is now fully implemented and production-ready, including automatic payout scheduling, real-time status updates, and comprehensive cron job automation.
+**🎉 IMPLEMENTATION COMPLETE**: The simplified payout system is production-ready with automatic monthly processing, real-time status updates, and streamlined architecture.
 
 ## Core Documentation
 
 ### System Architecture
-- **[Payouts Architecture](./PAYOUTS_ARCHITECTURE.md)**: Complete system overview and money flow ✅ **PRODUCTION READY**
-- **[Cron Job Setup](./CRON_JOB_SETUP.md)**: Automated processing configuration ✅ **NEW**
-- **[Payout System Documentation](./PAYOUT_SYSTEM_DOCUMENTATION.md)**: Complete technical documentation covering architecture, APIs, configuration, and deployment
-- **[Payout Troubleshooting Guide](./PAYOUT_TROUBLESHOOTING_GUIDE.md)**: Comprehensive troubleshooting procedures and diagnostic tools
+- **[Payment System Guide](./PAYMENT_SYSTEM_GUIDE.md)**: ⭐ **CURRENT** - Complete USD system overview and money flow
+- **[Simplified Payout System](./SIMPLIFIED_PAYOUT_SYSTEM.md)**: Current simplified architecture
+- **[Cron Job Setup](./CRON_JOB_SETUP.md)**: Automated monthly processing configuration
+- **[Payout Troubleshooting Guide](./PAYOUT_TROUBLESHOOTING_GUIDE.md)**: Troubleshooting procedures and diagnostic tools
 
 ### Testing Infrastructure
 - **[Payout Testing Infrastructure](./PAYOUT_TESTING_INFRASTRUCTURE.md)**: Complete overview of testing components, validation tools, and test scenarios
@@ -31,14 +31,14 @@ WeWrite's payout system enables content creators to convert earned USD into real
 ### Key Components
 
 **Core Services**:
-- `StripePayoutService`: Handles transfer execution and Stripe integration
+- `UsdEarningsService`: Manages USD earnings tracking and processing
 - `PayoutFlowValidator`: Admin testing interface for comprehensive validation
 - `EmbeddedBankAccountSetup`: Stripe Connect onboarding components
-- `TokenEarningsService`: Manages token-to-earnings conversion
+- `ServerUsdService`: Handles USD allocations and balance management
 
 **API Endpoints**:
-- `/api/payouts/earnings`: Earnings management and payout requests
-- `/api/payouts/calculate-fees`: Fee calculation and breakdown
+- `/api/earnings/user`: Get creator earnings and request payouts
+- `/api/usd/process-writer-earnings`: Monthly earnings processing
 - `/api/admin/test-payout-flow`: Comprehensive payout flow testing
 - `/api/stripe/account-session`: Stripe Connect session management
 
@@ -49,7 +49,7 @@ WeWrite's payout system enables content creators to convert earned USD into real
 
 ### Fee Structure
 
-**WeWrite Platform Fee**: 7% of gross earnings
+**WeWrite Platform Fee**: 10% of gross earnings (updated August 2025)
 **Stripe Payout Fees**:
 - Standard: $0.25 per transfer
 - Instant: 1.5% + $0.25 per transfer

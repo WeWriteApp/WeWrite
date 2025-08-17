@@ -66,7 +66,7 @@ export function SubscriptionTierBadge({
       case 'tier1':
         return {
           icon: <Star size={config.icon} className="text-yellow-400/70 fill-yellow-400/70" />,
-          tooltip: 'Supporter - $5/mo',
+          tooltip: 'Supporter - $10/mo',
           color: 'text-yellow-400/70'
         };
       case 'tier2':
@@ -136,7 +136,7 @@ export function SubscriptionTierBadge({
               <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.4s' }} />
             </div>
           ),
-          tooltip: 'Champion - $50/mo',
+          tooltip: 'Champion - $30+/mo',
           color: 'text-yellow-400'
         };
       default:

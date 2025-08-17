@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       const userFollowsRef = db.collection(getCollectionName('userFollows')).doc(userId);
       const userFollowsDoc = await userFollowsRef.get();
 
-      if (userFollowsDoc.exists()) {
+      if (userFollowsDoc.exists) {
         const data = userFollowsDoc.data();
         const followedPageIds = data?.followedPages || [];
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         if (followedPageIds.length > 0) {
           const pagePromises = followedPageIds.map(async (pageId: string) => {
             const pageDoc = await db.collection(getCollectionName('pages')).doc(pageId).get();
-            if (pageDoc.exists()) {
+            if (pageDoc.exists) {
               return { id: pageDoc.id, ...pageDoc.data() };
             }
             return null;
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       if (followerIds.length > 0) {
         const userPromises = followerIds.map(async (userId: string) => {
           const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-          if (userDoc.exists()) {
+          if (userDoc.exists) {
             const userData = userDoc.data();
             return {
               id: userDoc.id,
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     // Check if page exists
     const pageDoc = await db.collection(getCollectionName('pages')).doc(pageId).get();
-    if (!pageDoc.exists()) {
+    if (!pageDoc.exists) {
       return createErrorResponse('Page not found', 'NOT_FOUND');
     }
 
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     const userFollowsRef = db.collection(getCollectionName('userFollows')).doc(currentUserId);
     const userFollowsDoc = await userFollowsRef.get();
 
-    if (userFollowsDoc.exists()) {
+    if (userFollowsDoc.exists) {
       // Update existing document
       await userFollowsRef.update({
         followedPages: admin.firestore.FieldValue.arrayUnion(pageId),

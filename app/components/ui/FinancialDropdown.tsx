@@ -95,20 +95,8 @@ export function FinancialDropdown({
 
         <DropdownMenuSeparator />
 
-        {/* Buttons - Always horizontal layout */}
-        <div className="flex gap-2 mt-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Close the dropdown by setting isOpen to false
-              setIsOpen(false);
-              if (onClose) onClose();
-            }}
-            className="flex-1 whitespace-nowrap"
-          >
-            Close
-          </Button>
+        {/* Navigation button - Full width */}
+        <div className="mt-3">
           <Button
             size="sm"
             onClick={() => {
@@ -116,7 +104,7 @@ export function FinancialDropdown({
               setIsOpen(false);
               onNavigate();
             }}
-            className="flex-1 whitespace-nowrap"
+            className="w-full whitespace-nowrap"
           >
             {title === 'Spending' ? 'Go to spend' : 'Go to earnings'}
           </Button>

@@ -30,43 +30,20 @@ interface DateRange {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const cumulative = searchParams.get('cumulative') === 'true';
-
-    if (!cumulative && (!startDate || !endDate)) {
-      return createErrorResponse('BAD_REQUEST', 'startDate and endDate are required for period analysis');
+  // DEPRECATED: Token analytics have been migrated to USD system
+  return NextResponse.json({
+    deprecated: true,
+    message: 'Token analytics have been migrated to USD system. Use USD-based analytics endpoints instead.',
+    replacement: '/api/admin/usd-analytics',
+    data: {
+      unfundedLoggedOut: { totalTokens: 0, totalUsdValue: 0, allocations: 0 },
+      unfundedLoggedIn: { totalTokens: 0, totalUsdValue: 0, allocations: 0 },
+      funded: { totalTokens: 0, totalUsdValue: 0, allocations: 0 },
+      totalSubscriptionRevenue: 0,
+      totalWriterPayouts: 0,
+      platformFeeRevenue: 0
     }
-
-    const dateRange: DateRange = cumulative ? {
-      startDate: new Date('2020-01-01'), // Use a very early date for cumulative
-      endDate: new Date()
-    } : {
-      startDate: new Date(startDate!),
-      endDate: new Date(endDate!)
-    };
-
-    console.log('🔍 [Token Analytics] Fetching token analytics data...', { dateRange, cumulative });
-
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
-    const analytics = await getTokenAnalytics(db, dateRange, cumulative);
-
-    return createApiResponse({
-      success: true,
-      data: analytics,
-      dateRange: {
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Error fetching token analytics:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch token analytics');
-  }
+  });
 }
 
 async function getTokenAnalytics(db: any, dateRange: DateRange, cumulative: boolean = false): Promise<TokenAnalyticsData> {

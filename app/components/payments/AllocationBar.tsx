@@ -12,7 +12,8 @@ import { UsdAllocationModal } from './UsdAllocationModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
@@ -48,8 +49,10 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const pathname = usePathname();
   const router = useRouter();
   const { triggerDelayedBanner } = useDelayedLoginBanner();
-  const { usdBalance, isFakeBalance } = useUsdBalance();
-  const { hasActiveSubscription } = useSubscriptionWarning();
+  const { usdBalance } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscription();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const { fakeBalance, isFakeBalance } = useFakeBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
 
   // Flash animation state
@@ -144,7 +147,10 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
   // Calculate composition bar data
   const getCompositionData = (): CompositionBarData => {
-    if (!usdBalance) {
+    // Use appropriate balance based on subscription status
+    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+
+    if (!currentBalance) {
       return {
         otherPagesPercentage: 0,
         currentPagePercentage: 0,
@@ -153,9 +159,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       };
     }
 
-    const totalCents = usdBalance.totalUsdCents;
-    const allocatedCents = usdBalance.allocatedUsdCents;
-    const availableCents = usdBalance.availableUsdCents;
+    const totalCents = currentBalance.totalUsdCents;
+    const allocatedCents = currentBalance.allocatedUsdCents;
+    const availableCents = currentBalance.availableUsdCents;
 
     const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
     const isOutOfFunds = availableCents <= 0 && totalCents > 0;

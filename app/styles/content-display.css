@@ -89,19 +89,24 @@
  */
 .wewrite-slate-editable {
   @apply min-h-[200px] focus:outline-none max-w-none;
-  
+
   /* Typography */
   line-height: 1.5;
   font-size: 1rem;
   font-family: inherit;
-  
+
   /* Ensure proper text color */
   color: inherit;
-  
+
   /* Clean appearance */
   background: transparent;
   border: none;
   outline: none;
+
+  /* PREVENT FLICKER: Stable height and containment */
+  contain: layout style paint;
+  will-change: auto;
+  height: auto;
 }
 
 /* ============================================================================

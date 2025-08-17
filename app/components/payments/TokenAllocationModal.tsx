@@ -17,7 +17,7 @@ import { ArrowRight, DollarSign, Users, LogIn, CreditCard, ExternalLink, Plus, M
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '../../lib/utils';
-import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
+import { useTokenIncrement } from '../../contexts/AllocationIncrementContext';
 import { useLogRocket } from '../../providers/LogRocketProvider';
 import { toast } from '../ui/use-toast';
 import { getNextMonthlyProcessingDate } from '../../utils/subscriptionTiers';

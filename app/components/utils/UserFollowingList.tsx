@@ -51,10 +51,20 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
 
       setError(null);
 
-      // Get the IDs of users the profile user follows
-      const followedUserIds = await getFollowedUsers(userId);
+      // Get the users that the profile user follows using the API
+      const response = await followsApi.getFollowedUsers(userId);
 
-      if (followedUserIds.length === 0) {
+      if (!response.success || !response.data?.following) {
+        setFollowedUsers([]);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      const followedUsersData = response.data.following;
+
+      if (followedUsersData.length === 0) {
         setFollowedUsers([]);
         setHasMore(false);
         setLoading(false);
@@ -66,42 +76,42 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
       const currentPage = loadMore ? page + 1 : 1;
       const startIndex = 0;
       const endIndex = currentPage * limit;
-      const paginatedIds = followedUserIds.slice(startIndex, endIndex);
+      const paginatedUsers = followedUsersData.slice(startIndex, endIndex);
 
       // Check if there are more users to load
-      setHasMore(followedUserIds.length > endIndex);
+      setHasMore(followedUsersData.length > endIndex);
 
-      // Fetch user details for each followed user
-      const userPromises = paginatedIds.map(async (followedId) => {
+      // Fetch additional user details for each followed user (tier, subscription info)
+      const userPromises = paginatedUsers.map(async (followedUser) => {
         try {
-          const response = await fetch(`/api/users/profile?id=${encodeURIComponent(followedId)}`);
+          const response = await fetch(`/api/users/profile?id=${encodeURIComponent(followedUser.id)}`);
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.data) {
               return {
-                id: followedId,
-                ...result.data,
+                ...followedUser,
                 tier: result.data.tier,
                 subscriptionStatus: result.data.subscriptionStatus,
                 subscriptionAmount: result.data.subscriptionAmount
               };
             }
           }
-          return null;
+          // Fallback to basic user data from follows API
+          return followedUser;
         } catch (err) {
-          console.error(`Error fetching user ${followedId}:`, err);
-          return null;
+          console.error(`Error fetching additional user details for ${followedUser.id}:`, err);
+          // Fallback to basic user data from follows API
+          return followedUser;
         }
       });
 
       const userResults = await Promise.all(userPromises);
-      const validUsers = userResults.filter(user => user !== null);
 
       if (loadMore) {
-        setFollowedUsers(prev => [...prev, ...validUsers]);
+        setFollowedUsers(prev => [...prev, ...userResults]);
         setPage(currentPage);
       } else {
-        setFollowedUsers(validUsers);
+        setFollowedUsers(userResults);
       }
     } catch (err) {
       console.error('Error loading followed users:', err);
@@ -118,8 +128,12 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
     try {
       setUnfollowingId(followedId);
 
-      // Call the unfollow function
-      await unfollowUser(user.uid, followedId);
+      // Call the unfollow function using the API
+      const response = await followsApi.unfollowUser(followedId);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to unfollow user');
+      }
 
       // Update the local state
       setFollowedUsers(prev => prev.filter(u => u.id !== followedId));

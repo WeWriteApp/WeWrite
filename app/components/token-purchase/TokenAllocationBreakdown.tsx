@@ -19,7 +19,7 @@ import { TokenBalance } from '../../types/database';
 import { useAuth } from '../../providers/AuthProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
-import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
+import { useTokenIncrement } from '../../contexts/AllocationIncrementContext';
 // Note: triggerTokenBalanceRefresh is deprecated - use UsdBalanceContext refresh instead
 
 // Custom Zero with diagonal line icon component

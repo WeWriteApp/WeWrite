@@ -24,12 +24,6 @@ export function useBankSetupStatus(): BankSetupStatus {
         return;
       }
 
-      // If no stripe connected account ID, bank is not set up
-      if (!user.stripeConnectedAccountId) {
-        setStatus({ isSetup: false, loading: false, error: null });
-        return;
-      }
-
       try {
         setStatus(prev => ({ ...prev, loading: true, error: null }));
 
@@ -37,7 +31,7 @@ export function useBankSetupStatus(): BankSetupStatus {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            stripeConnectedAccountId: user.stripeConnectedAccountId
+            userId: user.uid
           })
         });
 
@@ -46,7 +40,8 @@ export function useBankSetupStatus(): BankSetupStatus {
           const isSetup = result.data?.payouts_enabled || false;
           setStatus({ isSetup, loading: false, error: null });
         } else {
-          setStatus({ isSetup: false, loading: false, error: 'Failed to check bank status' });
+          // If the API returns an error (like no bank account found), that means not set up
+          setStatus({ isSetup: false, loading: false, error: null });
         }
       } catch (error) {
         console.error('Error checking bank setup status:', error);
@@ -55,7 +50,7 @@ export function useBankSetupStatus(): BankSetupStatus {
     };
 
     checkBankSetupStatus();
-  }, [user?.uid, user?.stripeConnectedAccountId]);
+  }, [user?.uid]);
 
   return status;
 }

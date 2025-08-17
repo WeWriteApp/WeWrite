@@ -2,6 +2,13 @@
 
 This document lists all API endpoints that have been deprecated as part of the migration from the token-based system to the USD-based system.
 
+## ✅ Migration Status: COMPLETE
+
+**Migration completed**: January 2025
+**Token collections**: All empty (verified)
+**USD collections**: Active with 133+ documents
+**Legacy code cleanup**: Complete
+
 ## ⚠️ Deprecated Token API Endpoints
 
 ### Core Token Operations
@@ -78,24 +85,24 @@ This document lists all API endpoints that have been deprecated as part of the m
 - **Description**: Fast data endpoint for PledgeBar component
 - **Migration**: Use USD pledge bar data endpoint for UsdPledgeBar component
 
-## 🗑️ Legacy Migration Endpoints (To Be Removed)
+## 🗑️ Legacy Migration Endpoints (REMOVED)
 
-These endpoints were used for the token-to-USD migration and should be removed after migration is complete:
+These endpoints were used for the token-to-USD migration and have been removed after migration completion:
 
-#### `POST /api/tokens/migrate-unfunded`
-- **Status**: Legacy - Remove after migration
-- **Description**: Migrate unfunded token allocations to funded subscription
-- **Action**: Remove after all users have been migrated
+#### `POST /api/tokens/migrate-unfunded` ✅ REMOVED
+- **Status**: Removed - Migration complete
+- **Description**: Migrated unfunded token allocations to funded subscription
+- **Action**: ✅ Removed after all users were migrated
 
-#### `POST /api/tokens/convert-unfunded`
-- **Status**: Legacy - Remove after migration
-- **Description**: Convert unfunded tokens when subscription becomes active
-- **Action**: Remove after all users have been migrated
+#### `POST /api/tokens/convert-unfunded` ✅ REMOVED
+- **Status**: Removed - Migration complete
+- **Description**: Converted unfunded tokens when subscription became active
+- **Action**: ✅ Removed after all users were migrated
 
-#### `POST /api/tokens/process-monthly`
-- **Status**: Legacy - Remove after migration
-- **Description**: Process monthly token distribution (cron job)
-- **Action**: Remove after USD system is fully operational
+#### `POST /api/tokens/process-monthly` ✅ REMOVED
+- **Status**: Removed - Migration complete
+- **Description**: Processed monthly token distribution (cron job)
+- **Action**: ✅ Removed after USD system became fully operational
 
 ## 📋 API Migration Mapping
 
@@ -124,6 +131,18 @@ These endpoints were used for the token-to-USD migration and should be removed a
 - **Balance objects**: USD cents instead of token amounts
 - **Allocation objects**: USD cents instead of token amounts
 - **Earnings objects**: USD cents instead of token amounts
+
+## 🧹 Cleanup Summary (January 2025)
+
+### Removed Legacy Code
+- **Services**: `tokenService.ts`, `pendingTokenAllocationService.ts`, `tokenEarningsService.ts`
+- **API Endpoints**: `debug-token-balance`, `verify-token-data`, `page-stats` (token-based)
+- **Scripts**: Migration scripts moved to `scripts/archived-migrations/`
+- **Firestore Rules**: All token collection rules removed
+- **Database Queries**: All hardcoded `tokenAllocations`, `tokenBalances` queries replaced
+
+### Deprecated API Endpoints
+All token-based API endpoints now return HTTP 410 (Gone) with proper deprecation notices pointing to USD equivalents.
 
 ### Example Migration
 ```javascript

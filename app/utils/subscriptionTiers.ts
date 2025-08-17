@@ -33,12 +33,12 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'tier1',
     name: 'Supporter',
     description: 'Support creators with monthly funding',
-    amount: 5,
+    amount: 10,
     stripePriceId: process.env.NODE_ENV === 'production'
       ? 'price_1RoEIjI0PN4TYfxoS4aYAjAH'
       : 'price_1RoEIjI0PN4TYfxoS4aYAjAH',
     features: [
-      '$5/month to support creators',
+      '$10/month to support creators',
       'Allocate funds to your favorite pages',
       'Support the WeWrite community'
     ]
@@ -63,12 +63,12 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'tier3',
     name: 'Champion',
     description: 'Maximum support for the creator economy',
-    amount: 50,
+    amount: 30,
     stripePriceId: process.env.NODE_ENV === 'production'
       ? 'price_1RoEIjI0PN4TYfxoS4aYAjAH'
       : 'price_1RoEIjI0PN4TYfxoS4aYAjAH',
     features: [
-      '$50/month to support creators',
+      '$30+/month to support creators',
       'Allocate funds to your favorite pages',
       'Maximum impact on creator earnings',
       'Priority support for the WeWrite community'

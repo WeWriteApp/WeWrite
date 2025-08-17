@@ -86,45 +86,34 @@ export async function GET(request: NextRequest) {
 
       case 'token-balances':
         {
-          const balancesSnapshot = await adminDb.collection('tokenBalances')
-            .limit(limit)
-            .get();
-          
-          data = balancesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          // DEPRECATED: Token balances have been migrated to USD system
+          data = {
+            deprecated: true,
+            message: 'Token balances have been migrated to USD system. Use usd-balances instead.',
+            replacement: 'usd-balances'
+          };
         }
         break;
 
       case 'token-allocations':
         {
-          const allocationsSnapshot = await adminDb.collection('tokenAllocations')
-            .orderBy('createdAt', 'desc')
-            .limit(limit)
-            .get();
-          
-          data = allocationsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          // DEPRECATED: Token allocations have been migrated to USD system
+          data = {
+            deprecated: true,
+            message: 'Token allocations have been migrated to USD system. Use usd-allocations instead.',
+            replacement: 'usd-allocations'
+          };
         }
         break;
 
       case 'recent-token-allocations':
         {
-          const cutoffDate = new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - days);
-          
-          const recentSnapshot = await adminDb.collection('tokenAllocations')
-            .where('createdAt', '>=', cutoffDate)
-            .orderBy('createdAt', 'desc')
-            .get();
-          
-          data = recentSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          // DEPRECATED: Token allocations have been migrated to USD system
+          data = {
+            deprecated: true,
+            message: 'Token allocations have been migrated to USD system. Use recent-usd-allocations instead.',
+            replacement: 'recent-usd-allocations'
+          };
         }
         break;
 

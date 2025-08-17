@@ -1582,7 +1582,7 @@ export default function PageView({
             }}
           >
             {/* Content container with title-like styling */}
-            <div className="px-4 pb-32">
+            <div className="px-4">
               <div
                 className={`px-4 py-4 outline-none transition-all duration-200 ${
                   isEditing && canEdit
@@ -1672,8 +1672,9 @@ export default function PageView({
               </div>
             </div>
 
-            {/* Page Footer with actions */}
-            <PageFooter
+            {/* Page Footer with actions - tight spacing */}
+            <div className="mt-4">
+              <PageFooter
               page={memoizedPage}
               content={editorState}
               linkedPageIds={memoizedLinkedPageIds}
@@ -1696,6 +1697,7 @@ export default function PageView({
               titleError={titleError}
               hasUnsavedChanges={hasUnsavedChanges}
             />
+            </div>
 
             {/* Page Actions - Reply and Add to Page buttons for other users' pages */}
             {page && !canEdit && (
@@ -1706,38 +1708,34 @@ export default function PageView({
 
             {/* Page Connections and Related Pages - show for all pages */}
             {page && (
-              <>
+              <div className="px-4 space-y-4">
                 {/* Page Graph View */}
-                <div className="px-4">
-                  <PageGraphView
-                    pageId={page.id}
-                    pageTitle={page.title}
-                    onRefreshReady={handleGraphRefreshReady}
-                  />
-                </div>
+                <PageGraphView
+                  pageId={page.id}
+                  pageTitle={page.title}
+                  onRefreshReady={handleGraphRefreshReady}
+                />
 
-                <div className="px-4">
-                  <RelatedPagesSection
-                    page={page}
-                    linkedPageIds={memoizedLinkedPageIds}
-                  />
-                </div>
+                <RelatedPagesSection
+                  page={page}
+                  linkedPageIds={memoizedLinkedPageIds}
+                />
+              </div>
+            )}
 
-                {/* Delete button - positioned at the very bottom for page owners */}
-                {canEdit && (
-                  <div className="mt-8 mb-6 px-4">
-                    <Button
-                      variant="destructive"
-                      size="lg"
-                      className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
-                      onClick={handleDelete}
-                    >
-                      <Trash2 className="h-5 w-5" />
-                      <span>Delete</span>
-                    </Button>
-                  </div>
-                )}
-              </>
+            {/* Delete button - positioned at the very bottom for page owners */}
+            {page && canEdit && (
+              <div className="mt-8 mb-6 px-4">
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="h-5 w-5" />
+                  <span>Delete</span>
+                </Button>
+              </div>
             )}
           </div>
 

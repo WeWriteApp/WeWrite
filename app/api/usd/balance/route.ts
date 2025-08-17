@@ -8,8 +8,12 @@ import { ServerUsdService } from '../../../services/usdService.server';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Debug: Log all cookies received
+    console.log('🔍 USD Balance API: Cookies received:', request.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`));
+
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
+      console.log('🔍 USD Balance API: No userId found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -87,7 +87,6 @@ function SimpleMap({ pages }: { pages: any[] }) {
         pages.forEach(page => {
           if (page.location?.lat && page.location?.lng) {
             leaflet.default.marker([page.location.lat, page.location.lng])
-              .bindPopup(page.title)
               .addTo(map);
           }
         });
@@ -233,19 +232,6 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
         pages.forEach((page, index) => {
           if (page.location?.lat && page.location?.lng) {
             const marker = leaflet.default.marker([page.location.lat, page.location.lng])
-              .bindPopup(`
-                <div style="font-family: system-ui, -apple-system, sans-serif;">
-                  <div style="font-weight: 600; margin-bottom: 4px; color: ${isDarkMode ? '#fff' : '#000'};">
-                    ${page.title}
-                  </div>
-                  <div style="font-size: 12px; color: ${isDarkMode ? '#ccc' : '#666'}; margin-bottom: 8px;">
-                    ${page.location.lat.toFixed(4)}, ${page.location.lng.toFixed(4)}
-                  </div>
-                  <div style="font-size: 11px; color: ${isDarkMode ? '#999' : '#888'};">
-                    Click marker to view page
-                  </div>
-                </div>
-              `)
               .on('click', () => {
                 onPageClick(page);
               })

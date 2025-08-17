@@ -1,11 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
+import { getUserIdFromRequest } from '../auth-helper';
 
 
 
 // Initialize Firebase Admin lazily
 let adminDb;
+
+/**
+ * Server-side function to get user page count
+ * @param userId - The user whose pages to count
+ * @param viewerUserId - The user viewing the profile (null if not authenticated)
+ * @returns Promise<number> - The page count
+ */
+async function getUserPageCountServer(userId: string, viewerUserId: string | null = null): Promise<number> {
+  if (!userId) return 0;
+
+  try {
+    if (!adminDb) {
+      const admin = getFirebaseAdmin();
+      adminDb = admin.firestore();
+    }
+
+    // Determine if the viewer is the owner
+    const isOwner = viewerUserId && userId === viewerUserId;
+
+    if (isOwner) {
+      // Owner can see all their pages (including private)
+      // First try to get from counter document
+      const counterDocRef = adminDb.collection(getCollectionName('counters')).doc(`user_${userId}`);
+      const counterDoc = await counterDocRef.get();
+
+      if (counterDoc.exists && counterDoc.data().pageCount !== undefined) {
+        return counterDoc.data().pageCount;
+      }
+
+      // No counter, count manually
+      const pagesQuery = adminDb.collection(getCollectionName('pages'))
+        .where('userId', '==', userId)
+        .where('deleted', '==', false);
+
+      const pagesSnapshot = await pagesQuery.get();
+      const count = pagesSnapshot.size;
+
+      // Store the count for future use
+      await counterDocRef.set({
+        pageCount: count,
+        lastUpdated: new Date()
+      }, { merge: true });
+
+      return count;
+    } else {
+      // Visitor can only see public pages
+      // First try to get from public counter document
+      const publicCounterDocRef = adminDb.collection(getCollectionName('counters')).doc(`user_${userId}_public`);
+      const publicCounterDoc = await publicCounterDocRef.get();
+
+      if (publicCounterDoc.exists && publicCounterDoc.data().pageCount !== undefined) {
+        return publicCounterDoc.data().pageCount;
+      }
+
+      // No counter, count manually
+      const pagesQuery = adminDb.collection(getCollectionName('pages'))
+        .where('userId', '==', userId)
+        .where('isPublic', '==', true)
+        .where('deleted', '==', false);
+
+      const pagesSnapshot = await pagesQuery.get();
+      const count = pagesSnapshot.size;
+
+      // Store the count for future use
+      await publicCounterDocRef.set({
+        pageCount: count,
+        lastUpdated: new Date()
+      }, { merge: true });
+
+      return count;
+    }
+  } catch (error) {
+    console.error('Error getting user page count (server):', error);
+    return 0;
+  }
+}
 
 function initializeFirebase() {
   if (adminDb) return { adminDb }; // Already initialized
@@ -282,9 +359,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total page count for the user (for display purposes)
+    let totalPageCount = 0;
+    try {
+      if (userId) {
+        // Get the current user from the request to determine if they're viewing their own pages
+        const currentUserId = await getUserIdFromRequest(request);
+        totalPageCount = await getUserPageCountServer(userId, currentUserId);
+      }
+    } catch (error) {
+      console.warn('[my-pages API] Failed to get total page count:', error);
+      // Don't fail the request if page count fails, just use 0
+    }
+
     return NextResponse.json({
       pages: limitedPages,
       totalFound: pagesSnapshot.docs.length,
+      totalPageCount, // Total count of ALL pages for this user
       hasMore,
       nextCursor,
       sortBy,

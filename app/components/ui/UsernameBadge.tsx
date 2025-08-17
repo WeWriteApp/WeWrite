@@ -217,9 +217,12 @@ export function UsernameBadge({
       title={getTooltipText()}
     >
       <span className={cn(
-        isInactive
-          ? "text-muted-foreground"
-          : "text-primary"
+        // Only apply text color when not in pill variant - let PillLink handle text color for pills
+        variant !== 'pill' && (
+          isInactive
+            ? "text-muted-foreground"
+            : "text-primary"
+        )
       )}>
         {isLoadingUsername ? 'Loading...' : displayUsername}
       </span>

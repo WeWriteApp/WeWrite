@@ -61,7 +61,9 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
   const loadTokenData = async () => {
     try {
       // Use USD balance API instead of deprecated token API
-      const response = await fetch('/api/usd/balance');
+      const response = await fetch('/api/usd/balance', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         // Convert USD data to token format for backward compatibility

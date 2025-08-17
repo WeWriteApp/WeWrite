@@ -136,7 +136,7 @@ class PayoutService {
         pendingBalance: 0
       };
 
-      await setDoc(doc(db, 'payoutRecipients', recipientId), recipient);
+      await setDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), recipientId), recipient);
       
       return {
         success: true,
@@ -155,7 +155,7 @@ class PayoutService {
   async getPayoutRecipient(userId: string): Promise<PayoutRecipient | null> {
     try {
       const recipientId = `recipient_${userId}`;
-      const recipientDoc = await getDoc(doc(db, 'payoutRecipients', recipientId));
+      const recipientDoc = await getDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), recipientId));
 
       if (recipientDoc.exists()) {
         return recipientDoc.data() as PayoutRecipient;
@@ -173,7 +173,7 @@ class PayoutService {
   ): Promise<PayoutApiResponse<PayoutRecipient>> {
     try {
       const recipientId = `recipient_${userId}`;
-      const recipientDoc = await getDoc(doc(db, 'payoutRecipients', recipientId));
+      const recipientDoc = await getDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), recipientId));
 
       let currentRecipient: PayoutRecipient;
 
@@ -199,7 +199,7 @@ class PayoutService {
           pendingBalance: 0
         };
 
-        await setDoc(doc(db, 'payoutRecipients', recipientId), defaultRecipient);
+        await setDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), recipientId), defaultRecipient);
         currentRecipient = defaultRecipient;
       } else {
         currentRecipient = recipientDoc.data() as PayoutRecipient;
@@ -210,7 +210,7 @@ class PayoutService {
         ...preferences
       };
 
-      await updateDoc(doc(db, 'payoutRecipients', recipientId), {
+      await updateDoc(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), recipientId), {
         payoutPreferences: updatedPreferences,
         updatedAt: serverTimestamp()
       });
@@ -412,7 +412,7 @@ class PayoutService {
       batch.set(doc(db, 'earnings', earning.id), earning);
       
       // Update recipient balance
-      batch.update(doc(db, 'payoutRecipients', split.recipientId), {
+      batch.update(doc(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS), split.recipientId), {
         availableBalance: increment(earning.netAmount),
         totalEarnings: increment(earning.netAmount),
         updatedAt: serverTimestamp()

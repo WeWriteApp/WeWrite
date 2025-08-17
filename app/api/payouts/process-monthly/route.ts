@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { payoutService } from '../../../services/payoutService';
 import { stripePayoutService } from '../../../services/stripePayoutService';
 import { db } from '../../../firebase/config';
-import { getCollectionName } from "../../../utils/environmentConfig";
+import { getCollectionName, USD_COLLECTIONS } from "../../../utils/environmentConfig";
 import {
   collection,
   query,
@@ -189,7 +189,7 @@ async function createMonthlyPayouts(period: string, dryRun: boolean) {
   console.log(`Creating payouts for period: ${period}`);
   
   // Get all recipients with available balance above threshold
-  const recipientsQuery = query(collection(db, 'payoutRecipients'));
+  const recipientsQuery = query(collection(db, getCollectionName(USD_COLLECTIONS.PAYOUT_RECIPIENTS)));
   const recipientsSnapshot = await getDocs(recipientsQuery);
   
   let payoutCount = 0;

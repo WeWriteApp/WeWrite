@@ -269,17 +269,21 @@ export async function GET(request: NextRequest) {
 
     const balance = balanceDoc.exists ? balanceDoc.data() : null;
 
-    // Simple earnings breakdown
+    // Simple earnings breakdown - use the correct field names from the database
     const earningsBreakdown = {
-      totalEarnings: balance?.totalEarnedCents ? balance.totalEarnedCents / 100 : 0,
-      availableBalance: balance?.availableCents ? balance.availableCents / 100 : 0,
-      pendingBalance: balance?.pendingCents ? balance.pendingCents / 100 : 0,
-      paidOutBalance: balance?.paidOutCents ? balance.paidOutCents / 100 : 0
+      totalEarnings: balance?.totalUsdCentsEarned ? balance.totalUsdCentsEarned / 100 : 0,
+      availableBalance: balance?.availableUsdCents ? balance.availableUsdCents / 100 : 0,
+      pendingBalance: balance?.pendingUsdCents ? balance.pendingUsdCents / 100 : 0,
+      paidOutBalance: balance?.paidOutUsdCents ? balance.paidOutUsdCents / 100 : 0
     };
+
+    // Get earnings sources (incoming allocations)
+    const incomingAllocations = await getIncomingAllocationsForUser(userId);
 
     const completeData = {
       balance: earningsBreakdown,
-      earnings: [],
+      earnings: incomingAllocations.allocations || [],
+      pendingAllocations: incomingAllocations.allocations || [], // For compatibility with EarningsSourceBreakdown
       payouts: []
     };
 
@@ -289,12 +293,16 @@ export async function GET(request: NextRequest) {
       pendingBalance: `$${earningsBreakdown.pendingBalance.toFixed(2)}`
     });
 
+    // Use the allocations data we already fetched from getIncomingAllocationsForUser
+    const pendingAllocations = incomingAllocations.allocations || [];
+    console.log(`[EARNINGS API] Using ${pendingAllocations.length} pending allocations from getIncomingAllocationsForUser`);
+
     const earnings = {
       totalEarnings: earningsBreakdown.totalEarnings,
       availableBalance: earningsBreakdown.availableBalance,
       pendingBalance: earningsBreakdown.pendingBalance,
       hasEarnings: earningsBreakdown.totalEarnings > 0 || earningsBreakdown.availableBalance > 0 || earningsBreakdown.pendingBalance > 0,
-      pendingAllocations: [], // Simple implementation - no complex service needed
+      pendingAllocations: pendingAllocations,
       earningsHistory: completeData.earnings,
       payoutHistory: completeData.payouts
     };

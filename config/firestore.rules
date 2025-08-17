@@ -252,14 +252,7 @@ service cloud.firestore {
                         (isOwner(userId) || isAdmin());
       }
 
-      // User token allocation subcollection - Token economy data
-      match /tokens/{tokenDoc} {
-        // Only allow users to read their own token data or admins
-        allow read: if isOwner(userId) || isAdmin();
 
-        // Only allow users to write their own token data or admins
-        allow write: if isOwner(userId) || isAdmin();
-      }
 
       // User pledges subcollection - User's pledges to pages
       match /pledges/{pageId} {
@@ -496,128 +489,33 @@ service cloud.firestore {
       allow write: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Token Balances - User token allocation tracking
-    match /tokenBalances/{userId} {
-      // Users can only read their own token balance or admins
-      allow read: if isOwner(userId) || isAdmin();
 
-      // Users can write their own token balance or admins
-      allow write: if isOwner(userId) || isAdmin();
-    }
 
-    // Token Allocations - Track token allocations to pages/creators
-    match /tokenAllocations/{allocationId} {
-      // Users can read allocations they made or received, admins can read all
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.recipientUserId == request.auth.uid ||
-        isAdmin()
-      );
 
-      // Users can only create/update their own allocations
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
-    }
 
-    // Writer Token Balances - Track current token balances for writers
-    match /writerTokenBalances/{balanceId} {
-      // Users can only read their own balance or admins
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
 
-      // Only system/admin can write balances (automated process)
-      allow write: if isAdmin();
-    }
 
-    // Environment-specific token balances (DEV_tokenBalances, PREVIEW_tokenBalances, etc.)
-    match /{envTokenBalances}/{userId} {
-      // Users can only read their own token balance or admins
-      allow read: if (envTokenBalances.matches('.*tokenBalances') || envTokenBalances == 'tokenBalances') && (isOwner(userId) || isAdmin());
-
-      // Users can write their own token balance or admins
-      allow write: if (envTokenBalances.matches('.*tokenBalances') || envTokenBalances == 'tokenBalances') && (isOwner(userId) || isAdmin());
-    }
-
-    // Environment-specific token allocations (DEV_tokenAllocations, PREVIEW_tokenAllocations, etc.)
-    match /{envTokenAllocations}/{allocationId} {
-      // Users can read allocations they made or received, admins can read all
-      allow read: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.recipientUserId == request.auth.uid ||
-        isAdmin()
-      );
-
-      // Users can only create/update their own allocations
-      allow create: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow delete: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && resource.data.userId == request.auth.uid;
-    }
-
-    // Environment-specific writer token balances (DEV_writerTokenBalances, PREVIEW_writerTokenBalances, etc.)
-    match /{envWriterTokenBalances}/{balanceId} {
-      // Users can only read their own balance or admins
-      allow read: if (envWriterTokenBalances.matches('.*writerTokenBalances') || envWriterTokenBalances == 'writerTokenBalances') && isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-
-      // Only system/admin can write balances (automated process)
-      allow write: if (envWriterTokenBalances.matches('.*writerTokenBalances') || envWriterTokenBalances == 'writerTokenBalances') && isAdmin();
-    }
-
-    // Writer Token Earnings - Track earnings from token allocations
-    match /writerTokenEarnings/{earningsId} {
-      // Users can only read their own earnings or admins
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-
-      // Only system/admin can write earnings (automated process)
-      allow write: if isAdmin();
-    }
-
-    // Token Payouts - Payout requests and processing
-    match /tokenPayouts/{payoutId} {
-      // Users can only read their own payouts or admins
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-
-      // Users can create payout requests, admins can update status
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin() || (
-        isAuthenticated() &&
-        resource.data.userId == request.auth.uid &&
-        resource.data.status == 'pending'
-      );
-    }
-
-    // Payout Recipients - Creator payout account information
-    match /payoutRecipients/{recipientId} {
+    // Payout Recipients - Creator payout account information (environment-aware)
+    match /{envPayoutRecipients}/{recipientId} {
       // Only allow users to read their own payout recipient data or admins
-      allow read: if isAuthenticated() && (
+      allow read: if (envPayoutRecipients.matches('.*payoutRecipients') || envPayoutRecipients == 'payoutRecipients') && isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
         isAdmin()
       );
 
       // Only allow users to create/update their own payout recipient or admins
-      allow create: if isAuthenticated() && (
+      allow create: if (envPayoutRecipients.matches('.*payoutRecipients') || envPayoutRecipients == 'payoutRecipients') && isAuthenticated() && (
         request.resource.data.userId == request.auth.uid ||
         isAdmin()
       );
 
-      allow update: if isAuthenticated() && (
+      allow update: if (envPayoutRecipients.matches('.*payoutRecipients') || envPayoutRecipients == 'payoutRecipients') && isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
         isAdmin()
       );
 
       // Only allow admins to delete payout recipients
-      allow delete: if isAdmin();
+      allow delete: if (envPayoutRecipients.matches('.*payoutRecipients') || envPayoutRecipients == 'payoutRecipients') && isAdmin();
     }
 
     // Revenue Splits - Earnings distribution configuration
@@ -933,16 +831,7 @@ service cloud.firestore {
                         (isOwner(userId) || isAdmin());
       }
 
-      // Environment-specific token subcollections
-      match /{envTokens}/{tokenDoc} {
-        // Only allow users to read their own token data or admins
-        allow read: if (envTokens.matches('.*tokens') || envTokens == 'tokens') &&
-                       (isOwner(userId) || isAdmin());
 
-        // Only allow users to write their own token data or admins
-        allow write: if (envTokens.matches('.*tokens') || envTokens == 'tokens') &&
-                        (isOwner(userId) || isAdmin());
-      }
     }
 
     // SECURITY: All collections must have explicit rules defined above

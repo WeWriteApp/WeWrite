@@ -23,10 +23,10 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
     },
     {
       name: "Supporter",
-      amount: 5,
+      amount: 10,
       tier: "tier1",
       status: "active",
-      description: "$5/month"
+      description: "$10/month"
     },
     {
       name: "Advocate",
@@ -37,10 +37,10 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
     },
     {
       name: "Champion",
-      amount: 50,
+      amount: 30,
       tier: "tier3",
       status: "active",
-      description: "$50/month"
+      description: "$30+/month"
     }
   ];
 

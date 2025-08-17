@@ -22,10 +22,10 @@ import MapEditor from "../editor/MapEditor";
 import { cn } from "../../lib/utils";
 import { WarningDot } from '../ui/warning-dot';
 import { StatusIcon } from '../ui/status-icon';
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { CheckCircle } from 'lucide-react';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
-import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useEarnings } from '../../contexts/EarningsContext';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 
@@ -175,9 +175,12 @@ function UnifiedSidebarContent({
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
   const { sidebarOrder, reorderSidebarItem, setSidebarOrder, resetSidebarOrder } = useNavigationOrder();
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
+  const { hasActiveSubscription } = useSubscription();
   const bankSetupStatus = useBankSetupStatus();
-  const { earnings } = useUserEarnings();
+  const { earnings } = useEarnings();
+
+  // Derive subscription warning state
+  const shouldShowSubscriptionWarning = hasActiveSubscription === false;
 
   // Calculate the most critical status from all settings sections
   const getMostCriticalSettingsStatus = () => {
@@ -185,8 +188,8 @@ function UnifiedSidebarContent({
 
     // Check for warnings first (most critical)
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
-    // Only show bank setup warning if user has funds but bank isn't set up
-    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.isSetup;
+    // Only show bank setup warning if user has funds but bank isn't set up (and not loading)
+    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.loading && !bankSetupStatus.isSetup;
 
     if (hasSubscriptionWarning || hasBankSetupWarning) {
       return 'warning';
@@ -208,12 +211,11 @@ function UnifiedSidebarContent({
       console.log('[UnifiedSidebar] Subscription status:', {
         hasActiveSubscription,
         shouldShowSubscriptionWarning,
-        warningVariant,
-        bankSetupStatus: bankSetupStatus.isSetup,
+        bankSetupStatus: { isSetup: bankSetupStatus.isSetup, loading: bankSetupStatus.loading },
         criticalSettingsStatus
       });
     }
-  }, [hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
+  }, [hasActiveSubscription, shouldShowSubscriptionWarning, bankSetupStatus.isSetup, criticalSettingsStatus]);
 
   // Map feature is now always enabled
   const mapFeatureEnabled = true;

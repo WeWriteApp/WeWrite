@@ -1090,7 +1090,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             style={{
               lineHeight: '1.5',
               fontSize: '1rem',
-              fontFamily: 'inherit'
+              fontFamily: 'inherit',
+              transform: 'translateZ(0)' // Hardware acceleration to reduce flicker
             }}
           />
 

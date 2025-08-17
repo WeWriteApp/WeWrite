@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
 
     if (subscriptionDoc.exists) {
       const subData = subscriptionDoc.data();
-      // Convert subscription amount (dollars) to tokens (1 dollar = 10 tokens)
-      subscriptionBudget = (subData?.amount || 0) * 10;
+      // Convert subscription amount (dollars) to USD cents for comparison
+      subscriptionBudget = (subData?.amount || 0) * 100;
       subscriptionStatus = subData?.status || 'none';
       cancelAtPeriodEnd = subData?.cancelAtPeriodEnd || false;
       currentPeriodEnd = subData?.currentPeriodEnd || null;
@@ -48,10 +48,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get user's pledges
-    const allocationsQuery = db.collection('tokenAllocations')
+    // Get user's pledges from USD allocations
+    const { getCurrentMonth } = await import('../../../utils/usdConstants');
+    const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
+
+    const currentMonth = getCurrentMonth();
+    const allocationsQuery = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS))
       .where('userId', '==', userId)
-      .where('resourceType', '==', 'page');
+      .where('resourceType', '==', 'page')
+      .where('month', '==', currentMonth)
+      .where('status', '==', 'active');
 
     const allocationsSnapshot = await allocationsQuery.get();
     const pledges: any[] = [];
@@ -125,13 +131,12 @@ export async function GET(request: NextRequest) {
         pageTitle,
         authorId: data.recipientUserId || '',
         authorUsername,
-        amount: data.tokens || 0,
+        amount: data.usdCents || 0, // Use USD cents directly
         status: data.status || 'active',
-        originalAmount: data.originalAmount || data.tokens || 0,
+        originalAmount: data.usdCents || 0, // Use USD cents directly
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
-        suspendedAt: data.suspendedAt,
-        suspensionReason: data.suspensionReason
+        month: data.month
       });
     }
 

@@ -11,10 +11,20 @@ import { getDocumentOptimized, trackFirestoreRead } from '../../utils/firestoreO
 
 // EMERGENCY COST OPTIMIZATION: Aggressive subscription caching
 const subscriptionCache = new Map<string, { data: any; timestamp: number }>();
-const SUBSCRIPTION_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
+const SUBSCRIPTION_CACHE_TTL = 2 * 60 * 1000; // Reduced to 2 minutes for faster updates
 
 // Export cache for invalidation from other modules
 export { subscriptionCache };
+
+/**
+ * Invalidate subscription cache for a specific user
+ * Call this after subscription updates to ensure fresh data
+ */
+export const invalidateSubscriptionCache = (userId: string): void => {
+  const cacheKey = `subscription:${userId}`;
+  subscriptionCache.delete(cacheKey);
+  console.log(`🔄 Invalidated subscription cache for user: ${userId}`);
+};
 
 export async function GET(request: NextRequest) {
   try {

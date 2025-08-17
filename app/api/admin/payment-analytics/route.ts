@@ -414,114 +414,15 @@ export async function GET(request: NextRequest) {
       }
 
     } else if (type === 'token-allocation') {
-      // Get token allocation metrics
-      try {
-        const timeConfig = getTimeIntervals(dateRange, granularity ? parseInt(granularity) : undefined);
+      // DEPRECATED: Token allocation analytics have been migrated to USD system
+      return NextResponse.json({
+        deprecated: true,
+        message: 'Token allocation analytics have been migrated to USD system. Use usd-allocation analytics instead.',
+        replacement: 'usd-allocation',
+        data: []
+      });
 
-        // Query token balances and allocations
-        const tokenBalancesQuery = db.collection('tokenBalances')
-          .where('lastAllocationDate', '>=', dateRange.startDate.toISOString())
-          .where('lastAllocationDate', '<=', dateRange.endDate.toISOString());
 
-        const tokenAllocationsQuery = db.collection('tokenAllocations')
-          .where('createdAt', '>=', Timestamp.fromDate(dateRange.startDate))
-          .where('createdAt', '<=', Timestamp.fromDate(dateRange.endDate))
-          .orderBy('createdAt', 'asc');
-
-        const [balancesSnapshot, allocationsSnapshot] = await Promise.all([
-          tokenBalancesQuery.get(),
-          tokenAllocationsQuery.get()
-        ]);
-
-        const balances = balancesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        const allocations = allocationsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Create date buckets for allocation tracking
-        const dateMap = new Map();
-
-        // Initialize all time buckets
-        for (const bucket of timeConfig.buckets) {
-          dateMap.set(bucket, {
-            totalSubscribers: new Set(),
-            subscribersWithAllocations: new Set(),
-            totalTokensAllocated: 0,
-            totalTokensAvailable: 0
-          });
-        }
-
-        // Process token balances by date bucket
-        balances.forEach(balance => {
-          if (!balance.lastAllocationDate) return;
-
-          let balanceDate;
-          try {
-            balanceDate = new Date(balance.lastAllocationDate);
-            if (isNaN(balanceDate.getTime())) return;
-          } catch (error) {
-            return;
-          }
-
-          const dateKey = timeConfig.formatKey(balanceDate);
-
-          if (dateMap.has(dateKey)) {
-            const current = dateMap.get(dateKey);
-            current.totalSubscribers.add(balance.userId);
-            current.totalTokensAvailable += balance.totalTokens || 0;
-          }
-        });
-
-        // Process token allocations by date bucket
-        allocations.forEach(allocation => {
-          const allocationDate = allocation.createdAt?.toDate() || new Date();
-          const dateKey = timeConfig.formatKey(allocationDate);
-
-          if (dateMap.has(dateKey)) {
-            const current = dateMap.get(dateKey);
-            current.subscribersWithAllocations.add(allocation.userId);
-            current.totalTokensAllocated += allocation.tokens || 0;
-          }
-        });
-
-        // Convert to chart data format
-        const result = Array.from(dateMap.entries()).map(([dateKey, metrics]) => {
-          const totalSubscribers = metrics.totalSubscribers.size;
-          const subscribersWithAllocations = metrics.subscribersWithAllocations.size;
-          const allocationPercentage = totalSubscribers > 0 ? (subscribersWithAllocations / totalSubscribers) * 100 : 0;
-          const averageAllocationPercentage = metrics.totalTokensAvailable > 0 ? (metrics.totalTokensAllocated / metrics.totalTokensAvailable) * 100 : 0;
-
-          const date = safeParseDateKey(dateKey, timeConfig.granularity);
-          let label;
-          try {
-            label = timeConfig.formatLabel(date);
-          } catch (error) {
-            label = dateKey;
-          }
-
-          return {
-            date: dateKey,
-            totalSubscribers,
-            subscribersWithAllocations,
-            allocationPercentage,
-            averageAllocationPercentage,
-            totalTokensAllocated: metrics.totalTokensAllocated,
-            totalTokensAvailable: metrics.totalTokensAvailable,
-            label
-          };
-        });
-
-        return NextResponse.json(result);
-
-      } catch (error) {
-        console.error('Error fetching token allocation metrics:', error);
-        return NextResponse.json([]);
-      }
     }
 
     return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });

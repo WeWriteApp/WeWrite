@@ -29,8 +29,8 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
   const { user } = useAuth();
   const pathname = usePathname();
 
-  // Don't show footer on settings pages or settings subpages
-  if (pathname.startsWith('/settings/')) {
+  // Don't show footer on settings pages, settings subpages, or home page
+  if (pathname.startsWith('/settings/') || pathname === '/') {
     return null;
   }
 

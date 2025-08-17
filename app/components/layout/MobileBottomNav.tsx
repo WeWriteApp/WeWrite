@@ -23,8 +23,8 @@ import { trackPWAStatus } from '../../utils/pwaAnalytics';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
-import { useUserEarnings } from '../../hooks/useUserEarnings';
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useEarnings } from '../../contexts/EarningsContext';
 import { WarningDot } from '../ui/warning-dot';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 
@@ -91,8 +91,8 @@ export default function MobileBottomNav() {
   const safeMobileOrder = mobileOrder.length === 4 ? mobileOrder : ['home', 'search', 'notifications', 'profile'];
 
   const bankSetupStatus = useBankSetupStatus();
-  const { earnings } = useUserEarnings();
-  const { hasActiveSubscription } = useSubscriptionWarning();
+  const { earnings } = useEarnings();
+  const { hasActiveSubscription } = useSubscription();
 
   // Navigation optimization temporarily disabled
   const shouldRender = true;

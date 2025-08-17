@@ -22,12 +22,13 @@ import { StatusIcon } from '../components/ui/status-icon';
 // Removed old optimized subscription import - using API-first approach
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
-import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
-import { useUserEarnings } from '../hooks/useUserEarnings';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { useEarnings } from '../contexts/EarningsContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { UsdPieChart } from '../components/ui/UsdPieChart';
 import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
+import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextPayoutCountdown';
 
 
 interface SettingsSection {
@@ -44,12 +45,14 @@ export default function SettingsIndexPage() {
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionAmount, setSubscriptionAmount] = useState<number | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState<boolean>(true);
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
-
-  // Get bank setup status, earnings, and balances
+  // Get bank setup status, earnings, and balances from consolidated context
   const bankSetupStatus = useBankSetupStatus();
-  const { earnings } = useUserEarnings();
-  const { usdBalance } = useUsdBalance();
+  const { usdBalance, hasActiveSubscription: contextHasActiveSubscription } = useUsdBalance();
+  const { earnings } = useEarnings();
+  const payoutCountdown = useNextPayoutCountdown();
+
+  // Derive subscription warning state from consolidated context
+  const shouldShowSubscriptionWarning = contextHasActiveSubscription === false;
 
   const settingsSections: SettingsSection[] = [
     {
@@ -284,8 +287,18 @@ export default function SettingsIndexPage() {
                     )}
 
                     {section.id === 'earnings' && earnings?.hasEarnings && (
-                      bankSetupStatus.isSetup ? (
-                        <StatusIcon status="success" size="sm" position="static" />
+                      bankSetupStatus.loading ? (
+                        <span className="text-sm bg-muted text-muted-foreground px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading...
+                        </span>
+                      ) : bankSetupStatus.isSetup ? (
+                        <div className="flex items-center gap-2">
+                          <StatusIcon status="success" size="sm" position="static" />
+                          <span className="text-sm text-muted-foreground">
+                            {formatPayoutCountdown(payoutCountdown)}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-sm bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full font-medium">
                           Set up bank

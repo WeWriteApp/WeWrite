@@ -9,6 +9,8 @@ import { Label } from '../ui/label';
 import { formatUsdCents, dollarsToCents, centsToDollars, parseDollarInputToCents } from '../../utils/formatCurrency';
 import { USD_UI_TEXT } from '../../utils/usdConstants';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBalanceContext';
 import { toast } from '../ui/use-toast';
 
 interface UsdAllocationModalProps {
@@ -34,7 +36,10 @@ export function UsdAllocationModal({
   isUserAllocation = false,
   username
 }: UsdAllocationModalProps) {
-  const { usdBalance, isFakeBalance, hasActiveSubscription } = useUsdBalance();
+  const { usdBalance } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscription();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const { fakeBalance, isFakeBalance } = useFakeBalance();
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,9 +121,10 @@ export function UsdAllocationModal({
     }
 
     // Check if user has enough available funds
-    const availableUsdCents = usdBalance?.availableUsdCents || 0;
+    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+    const availableUsdCents = currentBalance?.availableUsdCents || 0;
     const allocationDifference = newAllocationCents - currentAllocation;
-    
+
     if (allocationDifference > availableUsdCents) {
       setError(`Insufficient funds. You have ${formatUsdCents(availableUsdCents)} available.`);
       return;
@@ -169,8 +175,9 @@ export function UsdAllocationModal({
 
   if (!isOpen || !mounted) return null;
 
-  const availableUsdCents = usdBalance?.availableUsdCents || 0;
-  const totalUsdCents = usdBalance?.totalUsdCents || 0;
+  const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+  const availableUsdCents = currentBalance?.availableUsdCents || 0;
+  const totalUsdCents = currentBalance?.totalUsdCents || 0;
 
   const modalContent = (
     <div

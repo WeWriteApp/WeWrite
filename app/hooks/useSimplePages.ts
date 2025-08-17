@@ -26,6 +26,8 @@ interface UseSimplePagesReturn {
   hasMore?: boolean;
   loadingMore?: boolean;
   loadMore?: () => void;
+  // Total page count for the user
+  totalPageCount?: number;
 }
 
 // Cache to reduce query volumes
@@ -50,6 +52,7 @@ const useSimplePages = (
   const [error, setError] = useState<string | null>(null);
   const [currentSort, setCurrentSort] = useState({ sortBy: initialSortBy, sortDirection: initialSortDirection });
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [totalPageCount, setTotalPageCount] = useState<number>(0);
 
   // Infinite scroll state
   const [hasMore, setHasMore] = useState<boolean>(false);
@@ -127,6 +130,11 @@ const useSimplePages = (
       // Update pagination state
       setHasMore(data.hasMore || false);
       setNextCursor(data.nextCursor || null);
+
+      // Update total page count if available
+      if (typeof data.totalPageCount === 'number') {
+        setTotalPageCount(data.totalPageCount);
+      }
 
       if (append) {
         setPages(prev => [...prev, ...pagesArray]);
@@ -298,7 +306,8 @@ const useSimplePages = (
     fetchWithSort,
     hasMore,
     loadingMore,
-    loadMore
+    loadMore,
+    totalPageCount
   };
 };
 
