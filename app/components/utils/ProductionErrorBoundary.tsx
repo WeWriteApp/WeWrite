@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import FullPageError from '../ui/FullPageError';
 
 interface Props {
   children: React.ReactNode;
@@ -115,75 +116,17 @@ export class ProductionErrorBoundary extends React.Component<Props, State> {
         return <FallbackComponent error={this.state.error} resetError={this.resetError} />;
       }
 
-      // Default fallback UI
+      // Use unified error component
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-4">
-          <div className="text-center max-w-md">
-            <div className="mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
-                <svg 
-                  className="w-8 h-8 text-destructive" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" 
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Something went wrong
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                We're sorry, but something unexpected happened. The error has been reported and we're working to fix it.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={this.resetError}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-              >
-                Try Again
-              </button>
-              
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-              >
-                Refresh Page
-              </button>
-
-              <button
-                onClick={() => window.location.href = '/'}
-                className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Go to Home
-              </button>
-            </div>
-
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-6 text-left">
-                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                  Error Details (Development Only)
-                </summary>
-                <pre className="mt-2 p-3 bg-muted rounded-md text-xs overflow-auto max-h-40">
-                  {this.state.error.stack}
-                </pre>
-              </details>
-            )}
-
-            {this.state.errorId && (
-              <p className="mt-4 text-xs text-muted-foreground">
-                Error ID: {this.state.errorId}
-              </p>
-            )}
-          </div>
-        </div>
+        <FullPageError
+          error={this.state.error}
+          title="Something went wrong"
+          message="We're sorry, but something unexpected happened. The error has been reported and we're working to fix it."
+          onRetry={this.resetError}
+          showGoHome={true}
+          showGoBack={false}
+          showTryAgain={true}
+        />
       );
     }
 

@@ -73,29 +73,15 @@ class PageViewErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
-          <div className="text-center max-w-md">
-            <h2 className="text-xl font-bold mb-4">Page Loading Error</h2>
-            <p className="text-muted-foreground mb-4">
-              There was an error loading this page. This might be due to a temporary issue.
-            </p>
-            <div className="space-y-2">
-              <Button
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                Refresh Page
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => window.history.back()}
-                className="w-full"
-              >
-                Go Back
-              </Button>
-            </div>
-          </div>
-        </div>
+        <FullPageError
+          error={this.state.error}
+          title="Page Loading Error"
+          message="There was an error loading this page. This might be due to a temporary issue."
+          onRetry={() => window.location.reload()}
+          showGoHome={true}
+          showGoBack={true}
+          showTryAgain={true}
+        />
       );
     }
 
@@ -105,6 +91,7 @@ class PageViewErrorBoundary extends React.Component<
 import UnifiedLoader from '../components/ui/unified-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
+import FullPageError from '../components/ui/FullPageError';
 import { useAuth } from '../providers/AuthProvider';
 import { startPageLoadTracking, recordPageError, finishPageLoadTracking } from '../utils/pageLoadPerformance';
 

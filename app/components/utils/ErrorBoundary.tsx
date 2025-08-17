@@ -1,8 +1,7 @@
 'use client';
 
 import React, { Component, ReactNode } from 'react';
-import { Button } from '../ui/button';
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import FullPageError from '../ui/FullPageError';
 // Removed circuit breaker complexity
 
 interface ErrorBoundaryState {
@@ -163,63 +162,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         return this.props.fallback;
       }
 
-      // Default error UI
+      // Use unified error component
       return (
-        <div className="min-h-[400px] flex items-center justify-center p-6">
-          <div className="max-w-md w-full text-center space-y-6">
-            <div className="flex justify-center">
-              <AlertCircle className="h-16 w-16 text-red-500" />
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">
-                Something went wrong
-              </h2>
-              <p className="text-muted-foreground">
-                We encountered an unexpected error. This has been reported and we're working to fix it.
-              </p>
-            </div>
-
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="text-left bg-muted p-4 rounded-lg">
-                <summary className="cursor-pointer font-medium">Error Details</summary>
-                <pre className="mt-2 text-xs overflow-auto">
-                  {this.state.error.message}
-                  {'\n\n'}
-                  {this.state.error.stack}
-                </pre>
-              </details>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                onClick={this.handleRetry}
-                variant="default"
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Try Again
-              </Button>
-
-              <Button
-                onClick={this.handleGoHome}
-                variant="outline"
-                className="gap-2"
-              >
-                <Home className="h-4 w-4" />
-                Go Home
-              </Button>
-
-              <Button
-                onClick={this.handleRefreshPage}
-                variant="ghost"
-                className="text-muted-foreground"
-              >
-                Refresh Page
-              </Button>
-            </div>
-          </div>
-        </div>
+        <FullPageError
+          error={this.state.error}
+          title="Something went wrong"
+          message="We encountered an unexpected error. This has been reported and we're working to fix it."
+          onRetry={this.handleRetry}
+          showGoHome={true}
+          showGoBack={true}
+          showTryAgain={true}
+        />
       );
     }
 
