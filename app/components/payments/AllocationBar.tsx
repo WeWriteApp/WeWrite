@@ -17,6 +17,7 @@ import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBala
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
+import { logAllocationEvent, logComponentRender } from '../../utils/debugStateChanges';
 import {
   FloatingAllocationBarProps,
   PageStats,
@@ -331,7 +332,15 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={(e) => handleAllocationChange(-1, e)}
+                    onClick={(e) => {
+                      logAllocationEvent('FloatingBar_MinusButton_Click', {
+                        pageId,
+                        authorId,
+                        currentAllocation: allocationState.currentAllocationCents,
+                        isProcessing
+                      });
+                      handleAllocationChange(-1, e);
+                    }}
                     className={cn(
                       "h-8 w-8 p-0",
                       allocationState.currentAllocationCents <= 0 && "opacity-50",
@@ -379,10 +388,24 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     size="sm"
                     variant="outline"
                     onClick={(e) => {
+                      logAllocationEvent('FloatingBar_PlusButton_Click', {
+                        pageId,
+                        authorId,
+                        isOutOfFunds: compositionData.isOutOfFunds,
+                        isProcessing,
+                        currentAllocation: allocationState.currentAllocationCents
+                      });
+
                       e.stopPropagation();
                       if (compositionData.isOutOfFunds) {
+                        logAllocationEvent('FloatingBar_RedirectToFunding', { pageId });
                         router.push('/settings/fund-account');
                       } else {
+                        logAllocationEvent('FloatingBar_HandleAllocationChange', {
+                          pageId,
+                          direction: 1,
+                          currentAllocation: allocationState.currentAllocationCents
+                        });
                         handleAllocationChange(1, e);
                       }
                     }}

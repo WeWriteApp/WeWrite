@@ -86,9 +86,24 @@ export function useAllocationActions({
   // Process batched allocation change using enhanced batching system
   const processBatchedChange = useCallback(async () => {
     const changeCents = pendingChangeCents.current;
-    if (changeCents === 0) return;
+    console.log('[AllocationActions] processBatchedChange called:', {
+      changeCents,
+      pageId,
+      authorId,
+      pageTitle,
+      currentAllocationCents,
+      isFakeBalance,
+      userId: user?.uid,
+      timestamp: new Date().toISOString()
+    });
+
+    if (changeCents === 0) {
+      console.log('[AllocationActions] No pending changes, skipping batch processing');
+      return;
+    }
 
     // Clear the batch
+    console.log('[AllocationActions] Clearing batch');
     clearBatch();
     setError(null);
 
@@ -138,16 +153,20 @@ export function useAllocationActions({
       }
 
       // Real allocation for users with subscriptions
+      console.log('[AllocationActions] Processing real allocation for subscribed user');
       const request: AllocationRequest = {
         pageId,
         changeCents,
         source
       };
 
+      console.log('[AllocationActions] Making API request:', request);
       // Use enhanced batcher for intelligent request batching
       const result = await allocationBatcher.batchRequest(request, 'normal');
 
+      console.log('[AllocationActions] API response:', result);
       if (result.success) {
+        console.log('[AllocationActions] Real allocation successful');
         // Update the actual allocation
         onAllocationChange?.(result.currentAllocation);
 
@@ -158,6 +177,7 @@ export function useAllocationActions({
           result.currentAllocation
         );
       } else {
+        console.error('[AllocationActions] Real allocation failed:', result.error);
         throw new AllocationError(
           result.error || 'Allocation failed',
           ALLOCATION_ERROR_CODES.NETWORK_ERROR
@@ -205,18 +225,35 @@ export function useAllocationActions({
 
   // Handle allocation change with direction
   const handleAllocationChange = useCallback((
-    direction: AllocationDirection, 
+    direction: AllocationDirection,
     event: React.MouseEvent
   ) => {
+    console.log('[AllocationActions] handleAllocationChange called:', {
+      direction,
+      pageId,
+      authorId,
+      currentAllocationCents,
+      allocationIntervalCents,
+      source,
+      userId: user?.uid,
+      hasUsdBalance: !!usdBalance,
+      isFakeBalance,
+      timestamp: new Date().toISOString()
+    });
+
     // Prevent event propagation
     event.stopPropagation();
     event.preventDefault();
     event.nativeEvent.stopImmediatePropagation();
 
-    if (!user || !pageId) return;
+    if (!user || !pageId) {
+      console.error('[AllocationActions] Missing user or pageId:', { user: !!user, pageId });
+      return;
+    }
 
     // Check if user is trying to allocate to their own page
     if (user.uid === authorId) {
+      console.log('[AllocationActions] User trying to allocate to own page');
       toast({
         title: "Cannot allocate to your own page",
         description: "You cannot allocate funds to pages you created.",
@@ -228,9 +265,24 @@ export function useAllocationActions({
     const changeCents = direction * allocationIntervalCents;
     const newAllocationCents = Math.max(0, currentAllocationCents + changeCents);
 
+    console.log('[AllocationActions] Calculated allocation change:', {
+      changeCents,
+      newAllocationCents,
+      currentAllocationCents,
+      direction,
+      allocationIntervalCents
+    });
+
     // Check for sufficient funds (for positive allocations)
     if (changeCents > 0 && usdBalance) {
+      console.log('[AllocationActions] Checking funds:', {
+        changeCents,
+        availableUsdCents: usdBalance.availableUsdCents,
+        hasSufficientFunds: changeCents <= usdBalance.availableUsdCents
+      });
+
       if (changeCents > usdBalance.availableUsdCents) {
+        console.log('[AllocationActions] Insufficient funds');
         toast({
           title: "Insufficient funds",
           description: "You don't have enough available funds for this allocation.",
@@ -240,29 +292,48 @@ export function useAllocationActions({
       }
     }
 
-    // Immediate optimistic updates
-    if (isFakeBalance) {
-      // For fake balance, we'll refresh after the allocation is saved
-      onOptimisticUpdate?.(newAllocationCents);
-    } else {
-      // For real balance, use optimistic updates
-      updateOptimisticBalance(changeCents);
-      onOptimisticUpdate?.(newAllocationCents);
+    try {
+      console.log('[AllocationActions] Applying optimistic updates:', {
+        isFakeBalance,
+        newAllocationCents
+      });
+
+      // Immediate optimistic updates
+      if (isFakeBalance) {
+        // For fake balance, we'll refresh after the allocation is saved
+        console.log('[AllocationActions] Applying fake balance optimistic update');
+        onOptimisticUpdate?.(newAllocationCents);
+      } else {
+        // For real balance, use optimistic updates
+        console.log('[AllocationActions] Applying real balance optimistic update');
+        updateOptimisticBalance(changeCents);
+        onOptimisticUpdate?.(newAllocationCents);
+      }
+
+      // Add to pending batch
+      pendingChangeCents.current += changeCents;
+      console.log('[AllocationActions] Updated pending changes:', pendingChangeCents.current);
+
+      // Clear existing timeout and set new one
+      if (batchTimeoutRef.current) {
+        console.log('[AllocationActions] Clearing existing batch timeout');
+        clearTimeout(batchTimeoutRef.current);
+      }
+
+      console.log('[AllocationActions] Setting batch timeout for', batchDelayMs, 'ms');
+      batchTimeoutRef.current = setTimeout(() => {
+        console.log('[AllocationActions] Batch timeout triggered, processing changes');
+        processBatchedChange();
+      }, batchDelayMs);
+
+      setError(null);
+      console.log('[AllocationActions] handleAllocationChange completed successfully');
+    } catch (error) {
+      console.error('[AllocationActions] Error in handleAllocationChange:', error);
+      setError('Failed to process allocation change');
+      // Rollback optimistic update
+      onOptimisticUpdate?.(currentAllocationCents);
     }
-
-    // Add to pending batch
-    pendingChangeCents.current += changeCents;
-
-    // Clear existing timeout and set new one
-    if (batchTimeoutRef.current) {
-      clearTimeout(batchTimeoutRef.current);
-    }
-
-    batchTimeoutRef.current = setTimeout(() => {
-      processBatchedChange();
-    }, batchDelayMs);
-
-    setError(null);
   }, [
     user, 
     pageId, 
