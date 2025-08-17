@@ -170,14 +170,8 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
   // Fetch balance when user or subscription status changes
   useEffect(() => {
-    console.log('[UsdBalanceContext] useEffect triggered:', {
-      userId: user?.uid,
-      hasActiveSubscription,
-      timestamp: new Date().toISOString(),
-      stackTrace: new Error().stack?.split('\n').slice(0, 5).join('\n')
-    });
     fetchUsdBalance();
-  }, [fetchUsdBalance, user?.uid, hasActiveSubscription]);
+  }, [fetchUsdBalance]);
 
   const contextValue: UsdBalanceContextType = {
     usdBalance,

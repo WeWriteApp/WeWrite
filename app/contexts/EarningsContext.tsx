@@ -175,20 +175,11 @@ export function EarningsProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch earnings when user changes
   useEffect(() => {
-    console.log('[EarningsContext] useEffect triggered:', {
-      userId: user?.uid,
-      userExists: !!user,
-      timestamp: new Date().toISOString(),
-      stackTrace: new Error().stack
-    });
-
+    console.log('[EarningsContext] useEffect triggered, user:', user?.uid);
     // Clear cache and force refresh to get fresh data
     if (user?.uid) {
-      console.log('[EarningsContext] Clearing cache for user:', user.uid);
       earningsCache.clear(user.uid);
     }
-
-    console.log('[EarningsContext] Calling fetchEarnings with forceRefresh=true');
     fetchEarnings(true);
   }, [fetchEarnings]);
 

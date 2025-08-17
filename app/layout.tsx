@@ -58,37 +58,6 @@ export default function RootLayout({
   children}: {
   children: React.ReactNode
 }) {
-  // Add global error handlers for debugging
-  React.useEffect(() => {
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('🚨 [Global] Unhandled Promise Rejection:', {
-        reason: event.reason,
-        promise: event.promise,
-        timestamp: new Date().toISOString(),
-        url: window.location.href
-      });
-    };
-
-    const handleError = (event: ErrorEvent) => {
-      console.error('🚨 [Global] Unhandled Error:', {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error,
-        timestamp: new Date().toISOString(),
-        url: window.location.href
-      });
-    };
-
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    window.addEventListener('error', handleError);
-
-    return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('error', handleError);
-    };
-  }, []);
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

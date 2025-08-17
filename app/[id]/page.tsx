@@ -67,42 +67,7 @@ class PageViewErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('🚨 [PageErrorBoundary] CRITICAL ERROR CAUGHT:', {
-      error: {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      },
-      errorInfo: {
-        componentStack: errorInfo.componentStack
-      },
-      timestamp: new Date().toISOString(),
-      url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown'
-    });
-
-    // Try to report to backend
-    try {
-      fetch('/api/errors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: {
-            message: error.message,
-            stack: error.stack,
-            componentStack: errorInfo.componentStack,
-            errorBoundary: 'PageErrorBoundary',
-            timestamp: new Date().toISOString(),
-            url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-            userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown'
-          }
-        })
-      }).catch(reportError => {
-        console.error('Failed to report PageErrorBoundary error:', reportError);
-      });
-    } catch (reportError) {
-      console.error('Error reporting PageErrorBoundary error:', reportError);
-    }
+    console.error('PageView Error Boundary caught error:', error, errorInfo);
   }
 
   render() {

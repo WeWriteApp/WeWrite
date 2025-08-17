@@ -31,7 +31,6 @@ import { AllocationIntervalModal } from './AllocationIntervalModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
-import { logAllocationEvent } from '../../utils/debugStateChanges';
 import { EmbeddedAllocationBarProps, CompositionBarData } from '../../types/allocation';
 
 export function EmbeddedAllocationBar({
@@ -105,35 +104,17 @@ export function EmbeddedAllocationBar({
   const compositionData = getCompositionData();
 
   const handleButtonClick = (direction: number, e: React.MouseEvent) => {
-    logAllocationEvent('EmbeddedBar_ButtonClick', {
-      pageId,
-      authorId,
-      direction,
-      isPageOwner,
-      hasUser: !!user,
-      currentAllocation: allocationState.currentAllocationCents
-    });
-
     e.preventDefault();
     e.stopPropagation();
 
     if (!user) {
-      logAllocationEvent('EmbeddedBar_RedirectToLogin', { pageId });
       router.push('/auth/login');
       return;
     }
 
-    if (isPageOwner) {
-      logAllocationEvent('EmbeddedBar_PageOwnerBlocked', { pageId, authorId });
-      return;
-    }
+    if (isPageOwner) return;
 
     // Use our shared allocation change handler
-    logAllocationEvent('EmbeddedBar_HandleAllocationChange', {
-      pageId,
-      direction,
-      currentAllocation: allocationState.currentAllocationCents
-    });
     handleAllocationChange(direction as 1 | -1, e);
   };
 

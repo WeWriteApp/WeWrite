@@ -60,13 +60,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Set user state
   const setUser = useCallback((user: User | null) => {
-    console.log('🔄 [AuthProvider] setUser called:', {
-      newUser: user ? { uid: user.uid, email: user.email, username: user.username } : null,
-      previousUser: authState.user ? { uid: authState.user.uid, email: authState.user.email, username: authState.user.username } : null,
-      timestamp: new Date().toISOString(),
-      stackTrace: new Error().stack?.split('\n').slice(0, 5).join('\n')
-    });
-
     setAuthState(prev => ({
       ...prev,
       user,
@@ -100,7 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } else {
       console.log('🔍 AuthProvider: User is null, skipping LogRocket identification');
     }
-  }, [authState.user]);
+  }, []);
 
   // Check current session
   const checkSession = useCallback(async () => {
