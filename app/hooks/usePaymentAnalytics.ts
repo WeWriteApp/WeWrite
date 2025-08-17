@@ -356,3 +356,240 @@ export function useTokenAllocationSummaryStats(dateRange: DateRange) {
 
   return { stats, loading, error, refetch: fetchData };
 }
+
+/**
+ * Hook for platform fee metrics
+ */
+export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number, cumulative: boolean = false) {
+  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    averageFee: 0,
+    totalPayouts: 0,
+    feePercentage: 10
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        type: 'platform-fees',
+        cumulative: cumulative.toString()
+      });
+
+      if (granularity) {
+        params.append('granularity', granularity.toString());
+      }
+
+      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch platform fee metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result.data || []);
+      setStats(result.stats || { totalRevenue: 0, averageFee: 0, totalPayouts: 0, feePercentage: 10 });
+    } catch (err) {
+      console.error('Error fetching platform fee metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch platform fee data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, stats, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for writer payouts metrics
+ */
+export function useWriterPayouts(dateRange: DateRange, cumulative: boolean = false) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        type: 'writer-payouts',
+        cumulative: cumulative.toString()
+      });
+
+      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch writer payouts: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching writer payouts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch writer payouts data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for USD allocations metrics
+ */
+export function useUsdAllocations(dateRange: DateRange, granularity?: number, cumulative: boolean = false) {
+  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalAllocated: 0,
+    totalPageAllocations: 0,
+    totalUserAllocations: 0,
+    totalUnallocated: 0,
+    activeAllocators: 0,
+    allocationRate: 0,
+    averageAllocation: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        type: 'usd-allocations',
+        cumulative: cumulative.toString()
+      });
+
+      if (granularity) {
+        params.append('granularity', granularity.toString());
+      }
+
+      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch USD allocations: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result.data || []);
+      setStats(result.stats || {
+        totalAllocated: 0,
+        totalPageAllocations: 0,
+        totalUserAllocations: 0,
+        totalUnallocated: 0,
+        activeAllocators: 0,
+        allocationRate: 0,
+        averageAllocation: 0
+      });
+    } catch (err) {
+      console.error('Error fetching USD allocations:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch USD allocations data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, stats, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for writer earnings metrics
+ */
+export function useWriterEarnings(dateRange: DateRange, cumulative: boolean = false) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        type: 'writer-earnings',
+        cumulative: cumulative.toString()
+      });
+
+      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch writer earnings: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching writer earnings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch writer earnings data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}

@@ -163,15 +163,9 @@ export function PlatformFeeRevenueWidget({
               
               <div style={{ height: chartConfig.height }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
-                      </linearGradient>
-                    </defs>
+                  <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis 
+                    <XAxis
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
@@ -179,7 +173,7 @@ export function PlatformFeeRevenueWidget({
                       tick={{ fontSize: 10 }}
                       interval={chartConfig.tickInterval}
                     />
-                    <YAxis 
+                    <YAxis
                       axisLine={false}
                       tickLine={false}
                       className="text-xs"
@@ -187,7 +181,7 @@ export function PlatformFeeRevenueWidget({
                       width={50}
                       tickFormatter={(value) => `$${value}`}
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number, name: string) => [
                         name === 'revenue' ? formatCurrency(value) : value,
                         name === 'revenue' ? 'Revenue' : 'Payouts'
@@ -200,14 +194,12 @@ export function PlatformFeeRevenueWidget({
                         fontSize: '12px'
                       }}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="#10b981" 
-                      strokeWidth={2}
-                      fill="url(#revenueGradient)"
+                    <Bar
+                      dataKey="revenue"
+                      fill="#10b981"
+                      radius={[2, 2, 0, 0]}
                     />
-                  </AreaChart>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
               

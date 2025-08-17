@@ -187,13 +187,11 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
                 // Make deleted values negative for display
                 transform="scale(1, -1)"
               />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="netChange"
-                stroke="#3b82f6"
-                strokeWidth={2}
+                fill="#3b82f6"
                 name="Net Change"
-                dot={{ r: 3 }}
+                radius={[2, 2, 0, 0]}
               />
             </ComposedChart>
           </ResponsiveContainer>

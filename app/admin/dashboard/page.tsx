@@ -30,29 +30,22 @@ import { PageViewsAnalyticsWidget } from "../../components/admin/PageViewsAnalyt
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
 import { DesktopOptimizedDashboard } from "../../components/admin/DesktopOptimizedDashboard";
-import {
-  UnfundedLoggedOutTokensWidget,
-  UnfundedLoggedInTokensWidget
-} from "../../components/admin/UnfundedTokensWidget";
-import {
-  FundedTokensWidget,
-  SubscriptionRevenueWidget as TotalSubscriptionRevenueWidget,
-  WriterPayoutsWidget
-} from "../../components/admin/FundedTokensWidget";
+
 import {
   WriterEarningsWidget,
   WriterPayoutsWidget as NewWriterPayoutsWidget
 } from "../../components/admin/WriterEarningsPayoutsWidget";
 import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
+import { UsdPaymentsOverviewWidget } from "../../components/admin/UsdPaymentsOverviewWidget";
+import { UsdAllocationsWidget } from "../../components/admin/UsdAllocationsWidget";
 
 // 🚨 CRITICAL: Database Reads Crisis Monitoring
-import { DatabaseReadsWidget } from "../../components/admin/DatabaseReadsWidget";
+
 
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
 import { SubscriptionsOverTimeWidget } from "../../components/admin/SubscriptionsOverTimeWidget";
 import { SubscriptionRevenueWidget } from "../../components/admin/SubscriptionRevenueWidget";
-import { TokenAllocationWidget } from "../../components/admin/TokenAllocationWidget";
 
 import { DashboardErrorBoundary, WidgetErrorBoundary } from "../../components/admin/DashboardErrorBoundary";
 import { DashboardGridSkeleton, DateRangeFilterSkeleton } from "../../components/admin/DashboardSkeleton";
@@ -115,8 +108,6 @@ const DraggableWidget = ({ id, index, moveWidget, children }: any) => {
 };
 
 const initialWidgets = [
-  // 🚨 CRITICAL: Database reads monitoring at the top for visibility
-  { id: 'database-reads-crisis', component: DatabaseReadsWidget },
   { id: 'live-visitors', component: LiveVisitorsWidget },
   { id: 'new-accounts', component: NewAccountsWidget },
   { id: 'new-pages', component: NewPagesWidget },
@@ -130,17 +121,14 @@ const initialWidgets = [
   { id: 'subscription-conversion-funnel', component: SubscriptionConversionFunnelWidget },
   { id: 'subscriptions-over-time', component: SubscriptionsOverTimeWidget },
   { id: 'subscription-revenue', component: SubscriptionRevenueWidget },
-  { id: 'token-allocation', component: TokenAllocationWidget },
+
 
   // Payment Analytics Widgets
-  { id: 'unfunded-logged-out-tokens', component: UnfundedLoggedOutTokensWidget },
-  { id: 'unfunded-logged-in-tokens', component: UnfundedLoggedInTokensWidget },
-  { id: 'funded-tokens', component: FundedTokensWidget },
-  { id: 'total-subscription-revenue', component: TotalSubscriptionRevenueWidget },
-  { id: 'total-writer-payouts', component: WriterPayoutsWidget },
+  { id: 'usd-payments-overview', component: UsdPaymentsOverviewWidget },
+  { id: 'usd-allocations', component: UsdAllocationsWidget },
   { id: 'platform-fee-revenue', component: PlatformFeeRevenueWidget },
 
-  // New Writer Analytics Widgets
+  // Writer Analytics Widgets
   { id: 'writer-earnings', component: WriterEarningsWidget },
   { id: 'writer-payouts-new', component: NewWriterPayoutsWidget },
 ];
@@ -182,11 +170,11 @@ export default function AdminDashboardPage() {
     localStorage.setItem('adminDashboardLayout', JSON.stringify(newWidgets.map(w => w.id)));
   };
 
-  // Date range state - default to last 24 hours
+  // Date range state - default to last 6 months
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 1);
+    startDate.setMonth(startDate.getMonth() - 6);
 
     console.log('🗓️ [Admin Dashboard] Initial date range:', { startDate, endDate });
     return { startDate, endDate };

@@ -36,8 +36,7 @@ import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
-// 🚨 CRITICAL: Database Reads Crisis Monitoring
-import { DatabaseReadsWidget } from './DatabaseReadsWidget';
+
 
 // Import all the analytics hooks
 import {
@@ -175,16 +174,16 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis 
+            <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
               className="text-xs"
               tick={{ fontSize: 10 }}
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
               className="text-xs"
@@ -192,14 +191,12 @@ export function DesktopOptimizedDashboard({
               width={40}
             />
             <Tooltip content={<SafeTooltip />} />
-            <Line 
-              type="monotone" 
-              dataKey="count" 
-              stroke="#3b82f6" 
-              strokeWidth={2}
-              dot={{ r: 3 }}
+            <Bar
+              dataKey="count"
+              fill="#3b82f6"
+              radius={[2, 2, 0, 0]}
             />
-          </LineChart>
+          </BarChart>
         </ResponsiveContainer>
       )
     },
@@ -272,7 +269,7 @@ export function DesktopOptimizedDashboard({
             <Tooltip content={<SafeTooltip />} />
             <Bar dataKey="charactersAdded" stackId="changes" fill="#10b981" />
             <Bar dataKey="charactersDeleted" stackId="changes" fill="#ef4444" />
-            <Line type="monotone" dataKey="netChange" stroke="#f59e0b" strokeWidth={2} />
+            <Bar dataKey="netChange" fill="#f59e0b" />
           </ComposedChart>
         </ResponsiveContainer>
       )
@@ -338,16 +335,16 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis 
+            <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
               className="text-xs"
               tick={{ fontSize: 10 }}
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
               className="text-xs"
@@ -355,14 +352,12 @@ export function DesktopOptimizedDashboard({
               width={40}
             />
             <Tooltip content={<SafeTooltip />} />
-            <Line
-              type="monotone" 
-              dataKey="value" 
-              stroke="#06b6d4" 
-              strokeWidth={2}
-              dot={{ r: 3 }}
+            <Bar
+              dataKey="value"
+              fill="#06b6d4"
+              radius={[2, 2, 0, 0]}
             />
-          </LineChart>
+          </BarChart>
         </ResponsiveContainer>
       )
     },
@@ -424,13 +419,7 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="platformFeeGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
-              </linearGradient>
-            </defs>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
             <XAxis
               dataKey="label"
@@ -456,14 +445,12 @@ export function DesktopOptimizedDashboard({
                 'Revenue'
               ]}
             />
-            <Area
-              type="monotone"
+            <Bar
               dataKey="revenue"
-              stroke="#10b981"
-              strokeWidth={2}
-              fill="url(#platformFeeGradient)"
+              fill="#10b981"
+              radius={[2, 2, 0, 0]}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       )
     },
@@ -479,13 +466,7 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="followedUsersGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
             <XAxis
               dataKey="label"
@@ -507,14 +488,12 @@ export function DesktopOptimizedDashboard({
                 (value: number) => [value.toLocaleString(), 'User Follows']
               ]}
             />
-            <Area
-              type="monotone"
+            <Bar
               dataKey="count"
-              stroke="#8b5cf6"
-              strokeWidth={2}
-              fill="url(#followedUsersGradient)"
+              fill="#8b5cf6"
+              radius={[2, 2, 0, 0]}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       )
     }
@@ -522,11 +501,6 @@ export function DesktopOptimizedDashboard({
 
   return (
     <div className="desktop-optimized-dashboard">
-      {/* 🚨 CRITICAL: Database Reads Crisis Monitor - Always Visible */}
-      <div className="mb-6">
-        <DatabaseReadsWidget />
-      </div>
-
       {/* Instructions */}
       <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
         💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights. On mobile, pinch vertically to resize.

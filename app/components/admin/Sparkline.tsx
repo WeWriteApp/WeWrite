@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
+import { BarChart, Bar, ResponsiveContainer, YAxis } from 'recharts';
 
 interface SparklineProps {
   data: Array<{
@@ -79,20 +79,16 @@ export function Sparkline({
   return (
     <div className={`relative ${className}`} style={{ height, width }}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={validData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+        <BarChart data={validData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
           <YAxis hide domain={['dataMin', 'dataMax']} />
-          <Line
-            type="monotone"
+          <Bar
             dataKey="value"
-            stroke={lineColor}
-            strokeWidth={strokeWidth}
-            dot={showDots ? { r: 1, fill: lineColor } : false}
-            activeDot={false}
-            isAnimationActive={false}
+            fill={lineColor}
+            radius={[1, 1, 0, 0]}
           />
-        </LineChart>
+        </BarChart>
       </ResponsiveContainer>
-      
+
       {/* Trend indicator */}
       {calculatedTrend && (
         <div className="absolute top-0 right-0 w-2 h-2 rounded-full" style={{

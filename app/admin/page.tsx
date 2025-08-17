@@ -18,8 +18,8 @@ import { useToast } from '../components/ui/use-toast';
 import { usePWA } from '../providers/PWAProvider';
 import Link from 'next/link';
 import { UserManagement } from '../components/admin/UserManagement';
-import { PayoutFlowValidator } from '../components/admin/PayoutFlowValidator';
-import ReadOptimizationDashboard from '../components/admin/ReadOptimizationDashboard';
+
+
 import { isAdmin } from '../utils/isAdmin';
 
 interface User {
@@ -53,7 +53,6 @@ export default function AdminPage() {
   const [hideGloballyEnabled, setHideGloballyEnabled] = useState(false);
 
   // Testing tools state
-  const [payoutTestLoading, setPayoutTestLoading] = useState(false);
   const [statusCheckLoading, setStatusCheckLoading] = useState(false);
   const [distributionMonth, setDistributionMonth] = useState(new Date().toISOString().slice(0, 7));
 
@@ -341,65 +340,7 @@ export default function AdminPage() {
   // Testing tools handlers
 
 
-  const handleTestPayoutFlow = async () => {
-    console.log('[Admin Testing] Starting payout flow test...');
-    console.log('[Admin Testing] Current user:', user);
 
-    if (!user?.email) {
-      console.error('[Admin Testing] User not found or no email for payout test:', user);
-      toast({
-        title: "User Not Found",
-        description: "Unable to identify current user",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setPayoutTestLoading(true);
-    try {
-      const requestBody = { userEmail: user.email };
-      console.log('[Admin Testing] Sending payout flow test request with body:', requestBody);
-
-      const response = await fetch('/api/admin/test-payout-flow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'},
-        body: JSON.stringify(requestBody)
-      });
-
-      console.log('[Admin Testing] Payout flow test response status:', response.status);
-      console.log('[Admin Testing] Payout flow test response headers:', Object.fromEntries(response.headers.entries()));
-
-      const result = await response.json();
-      console.log('[Admin Testing] Payout flow test response body:', result);
-
-      if (result.success) {
-        console.log('[Admin Testing] Payout flow test completed successfully');
-        console.log('[Admin Testing] Test results:', result.data);
-        toast({
-          title: "Payout Flow Test Complete",
-          description: "Test completed for your account. Check console for details."});
-      } else {
-        console.error('[Admin Testing] Payout flow test failed:', result);
-        toast({
-          title: "Payout Flow Test Failed",
-          description: result.error || "An error occurred",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('[Admin Testing] Exception in payout flow test:', error);
-      console.error('[Admin Testing] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      toast({
-        title: "Error",
-        description: "Failed to test payout flow - check console for details",
-        variant: "destructive"
-      });
-    } finally {
-      console.log('[Admin Testing] Payout flow test completed, setting loading to false');
-      setPayoutTestLoading(false);
-    }
-  };
 
   const handleCheckPayoutStatus = async () => {
     console.log('[Admin Testing] Starting payout status check...');
@@ -832,27 +773,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* 🚨 EMERGENCY: Database Read Analytics Dashboard */}
-            <div className="flex flex-col p-4 rounded-lg border-theme-strong bg-destructive/5 hover:bg-destructive/10 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium text-destructive">🚨 Database Read Analytics</h3>
-                <Badge variant="destructive">EMERGENCY</Badge>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Real-time monitoring of database read patterns, cost projections, and optimization effectiveness. Critical for managing the 2.5M reads/60min crisis.
-              </span>
-              <div className="mt-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => router.push('/admin/database-analytics')}
-                >
-                  <Database className="h-4 w-4" />
-                  Open Read Analytics
-                </Button>
-              </div>
-            </div>
+
 
 
 
@@ -881,10 +802,7 @@ export default function AdminPage() {
                   Test Monthly Distribution
                 </Button>
 
-                {/* Payout Flow Validator */}
-                <div className="border-t pt-4">
-                  <PayoutFlowValidator />
-                </div>
+
               </div>
             </div>
 
