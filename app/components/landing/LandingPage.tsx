@@ -708,7 +708,7 @@ const LandingPage = () => {
               <DynamicPagePreviewCard
                 pageId="zRNwhNgIEfLFo050nyAT"
                 customTitle="WeWrite Feature Roadmap"
-                buttonText="View Full Roadmap"
+                buttonText="Read full page"
                 maxLines={5}
                 className="shadow-lg"
               />
@@ -734,7 +734,7 @@ const LandingPage = () => {
               <DynamicPagePreviewCard
                 pageId="AXjA19RQnFLhIIfuncBb"
                 customTitle="WeWrite Use Cases"
-                buttonText="View All Use Cases"
+                buttonText="Read full page"
                 maxLines={5}
                 className="shadow-lg"
               />

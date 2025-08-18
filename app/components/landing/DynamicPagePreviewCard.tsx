@@ -46,7 +46,7 @@ interface DynamicPagePreviewCardProps {
 export function DynamicPagePreviewCard({
   pageId,
   customTitle,
-  buttonText = "View Full Page",
+  buttonText = "Read full page",
   maxLines = 5,
   className = "",
   showLoading = true
@@ -66,8 +66,8 @@ export function DynamicPagePreviewCard({
         setError(null);
         
         // Use production data fetch (automatically uses production data for logged-out users)
-        const pageData = await fetchJson(`/api/pages/${pageId}`);
-        setPage(pageData);
+        const response = await fetchJson(`/api/pages/${pageId}`);
+        setPage(response.pageData);
       } catch (err) {
         console.error(`Failed to fetch page ${pageId}:`, err);
         setError(err instanceof Error ? err.message : 'Failed to load page');
