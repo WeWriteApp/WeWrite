@@ -14,7 +14,6 @@ import { useTheme } from "next-themes";
 import PillLink from "../utils/PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getPageById } from '../../utils/apiClient';
 // Import server components for activity and trending data
 import dynamic from 'next/dynamic';
 // Import analytics hooks and constants
@@ -28,7 +27,7 @@ import ActivityCarousel from './ActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import HeroSection from './HeroSection';
 
-import { FilterableFeatureList } from './FilterableFeatureList';
+import { DynamicPagePreviewCard } from './DynamicPagePreviewCard';
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 import { WeWriteLogo } from '../ui/WeWriteLogo';
 
@@ -38,7 +37,6 @@ const LandingPage = () => {
   const [isMobileView, setIsMobileView] = useState(false);
 
   const { setTheme, theme } = useTheme();
-  const [pageContents, setPageContents] = useState<Record<string, any>>({});
   const [session, setUser] = useState<any>(null);
 
   // Authentication state
@@ -160,71 +158,7 @@ const LandingPage = () => {
     // if (setTheme) setTheme('light');
   }, [setTheme]);
 
-  // Fetch page content for feature roadmap cards
-  useEffect(() => {
-    const fetchPageContents = async () => {
-      // Page IDs to fetch
-      const pageIds = [
-        'RFsPq1tbcOMtljwHyIMT', // Every Page is a Fundraiser
-        'aJFMqTEKuNEHvOrYE9c2', // No ads
-        'ou1LPmpynpoirLrv99fq', // Multiple view modes
-        'o71h6Lg1wjGSC1pYaKXz', // Recurring donations
-        '4jw8FdMJHGofMc4G2QTw', // Collaborative pages
-        'N7Pg3iJ0OQhkpw16MTZW', // Map view
-        '0krXqAU748w43YnWJwE2'  // Calendar view
-      ];
 
-      const contents: Record<string, any> = {};
-
-      for (const pageId of pageIds) {
-        try {
-          const { pageData, versionData } = await getPageById(pageId);
-
-          if (pageData && versionData) {
-            // Parse content from version data
-            let body = '';
-            try {
-              const contentObj = JSON.parse(versionData.content);
-              // Extract text content from nodes, properly handling links
-              body = contentObj.map((node: any) => {
-                if (node.type === 'paragraph' && node.children) {
-                  return node.children.map((child: any) => {
-                    // Handle link nodes by extracting their text content
-                    if (child.type === 'link' && child.children) {
-                      return child.children.map((linkChild: any) => linkChild.text || '').join('');
-                    }
-                    // Handle regular text nodes
-                    return child.text || '';
-                  }).join('');
-                }
-                return '';
-              }).join('\n\n');
-            } catch (err) {
-              console.error(`Error parsing content for page ${pageId}:`, err);
-            }
-
-            contents[pageId] = {
-              title: pageData.title || 'Untitled',
-              body: body || pageData.body || '',
-              isPublic: pageData.isPublic || false
-            };
-          }
-        } catch (err) {
-          console.error(`Error fetching page ${pageId}:`, err);
-          // Provide fallback content
-          contents[pageId] = {
-            title: 'Error loading page',
-            body: 'Content could not be loaded.',
-            isPublic: false
-          };
-        }
-      }
-
-      setPageContents(contents);
-    };
-
-    fetchPageContents();
-  }, []);
 
   // Removed lightbox keyboard navigation - not needed in this component
 
@@ -331,61 +265,7 @@ const LandingPage = () => {
     }
   };
 
-  // Features data
-  const builtFeatures = [
-    {
-      title: "Every Page is a Fundraiser",
-      description: "On every page, there's a Pledge bar floating at the bottom. Users set their Budget (subscription) and donate to their favorite pages.",
-      status: "in-progress",
-      image: "/images/feature-fundraiser.png",
-      pageId: "RFsPq1tbcOMtljwHyIMT"
-    },
-    {
-      title: "No ads",
-      description: "Since each page on WeWrite is a fundraiser, we won't need to sell ad space to companies.",
-      status: "done",
-      image: "/images/feature-no-ads.png",
-      pageId: "aJFMqTEKuNEHvOrYE9c2"
-    },
-    {
-      title: "Multiple View Modes",
-      description: "Choose between Wrapped, Default, and Spaced reading modes to customize your reading experience.",
-      status: "done",
-      image: "/images/feature-1.png",
-      pageId: "ou1LPmpynpoirLrv99fq"
-    }
-  ];
 
-  const comingSoonFeatures = [
-    {
-      title: "Recurring donations",
-      description: "Support your favorite writers with monthly donations that help them continue creating great content.",
-      status: "coming-soon",
-      image: "/images/feature-donations.png",
-      pageId: "o71h6Lg1wjGSC1pYaKXz"
-    },
-    {
-      title: "Collaborative pages",
-      description: "Work together with others on shared documents with real-time collaboration features.",
-      status: "coming-soon",
-      image: "/images/feature-collaboration.png",
-      pageId: "4jw8FdMJHGofMc4G2QTw"
-    },
-    {
-      title: "Map view",
-      description: "Visualize your content and connections in an interactive map interface.",
-      status: "coming-soon",
-      image: "/images/feature-map-view.png",
-      pageId: "N7Pg3iJ0OQhkpw16MTZW"
-    },
-    {
-      title: "Calendar view",
-      description: "Organize and view your content in a calendar interface.",
-      status: "coming-soon",
-      image: "/images/feature-calendar.png",
-      pageId: "0krXqAU748w43YnWJwE2"
-    }
-  ];
 
   // Tech stack data
   const techStack = [
@@ -794,9 +674,9 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Features Kanban Section */}
-        <section id="features" className="py-20 md:py-24 bg-background overflow-visible">
-          <div className="container mx-auto px-6 sm:px-8 max-w-6xl overflow-visible">
+        {/* Roadmap Preview Section */}
+        <section id="features" className="py-20 md:py-24 bg-background">
+          <div className="container mx-auto px-6 sm:px-8 max-w-4xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
                 <FileText className="h-7 w-7" />
@@ -807,23 +687,15 @@ const LandingPage = () => {
               </p>
             </div>
 
-            {/* Filterable Feature List */}
-            <div className="container mx-auto max-w-5xl filter-chips-parent overflow-visible">
-              <FilterableFeatureList
-                inProgressFeatures={builtFeatures.filter(f => f.status === 'in-progress')}
-                comingSoonFeatures={comingSoonFeatures}
-                availableFeatures={builtFeatures.filter(f => f.status === 'done')}
-                fadeInClass={fadeInClass}
+            {/* Roadmap Preview Card */}
+            <div className="max-w-2xl mx-auto">
+              <DynamicPagePreviewCard
+                pageId="zRNwhNgIEfLFo050nyAT"
+                customTitle="WeWrite Feature Roadmap"
+                buttonText="View Full Roadmap"
+                maxLines={5}
+                className="shadow-lg"
               />
-            </div>
-
-            {/* Feature Roadmap Button - Moved to bottom */}
-            <div className="text-center mt-12">
-              <Button variant="default" size="lg" className="gap-2 mx-auto bg-[#1768FF] hover:bg-[#1768FF]/90 text-white" asChild>
-                <Link href="/zRNwhNgIEfLFo050nyAT">
-                  View Full Feature Roadmap <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
             </div>
           </div>
         </section>
