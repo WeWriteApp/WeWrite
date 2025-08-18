@@ -578,25 +578,24 @@ const LandingPage = () => {
 
         {/* Hero Carousel - Paginated cards with hero, roadmap, and use cases */}
         <section id="hero" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6 max-w-6xl">
-            <PaginatedCarousel
-              autoPlay={true}
-              autoPlayInterval={8000}
-              showArrows={true}
-              showDots={true}
-              className="min-h-[600px]"
-            >
-              <HeroCard
-                fadeInClass={fadeInClass}
-                platformOptions={platformOptions}
-                platformIndex={platformIndex}
-                handlePlatformClick={handlePlatformClick}
-                platformRef={platformRef}
-              />
-              <FeatureRoadmapCard fadeInClass={fadeInClass} />
-              <UseCasesCard fadeInClass={fadeInClass} />
-            </PaginatedCarousel>
-          </div>
+          {/* Allow carousel to extend to screen edges for proper overflow visibility */}
+          <PaginatedCarousel
+            autoPlay={true}
+            autoPlayInterval={8000}
+            showArrows={true}
+            showDots={true}
+            className="min-h-[600px]"
+          >
+            <HeroCard
+              fadeInClass={fadeInClass}
+              platformOptions={platformOptions}
+              platformIndex={platformIndex}
+              handlePlatformClick={handlePlatformClick}
+              platformRef={platformRef}
+            />
+            <FeatureRoadmapCard fadeInClass={fadeInClass} />
+            <UseCasesCard fadeInClass={fadeInClass} />
+          </PaginatedCarousel>
         </section>
 
         {/* Recent Edits Carousel - Lazy loaded */}

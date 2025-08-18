@@ -115,11 +115,8 @@ export function EmbeddedAllocationBar({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-
+    // Allow both logged-in and logged-out users to use allocation system
+    // Logged-out users will use the demo/fake balance system
     if (isPageOwner) return;
 
     // Use our shared allocation change handler

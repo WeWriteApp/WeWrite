@@ -98,8 +98,15 @@ export function LoggedOutFinancialHeader() {
 
   // Helper function to render fake earnings display
   const renderEarningsDisplay = () => {
-    // Show fake earnings to get users excited
-    const fakeEarnings = 0; // Start with $0 to encourage sign up
+    // Show demo earnings to get users excited about the earning potential
+    const fakePendingEarningsCents = 1234; // $12.34 in cents
+    const fakeLastMonthEarningsCents = 567; // $5.67 in cents
+    const fakeLifetimeEarningsCents = 9012; // $90.12 in cents
+
+    // Convert to dollars for EarningsBreakdown component (it multiplies by 100)
+    const fakePendingEarnings = fakePendingEarningsCents / 100; // 12.34
+    const fakeLastMonthEarnings = fakeLastMonthEarningsCents / 100; // 5.67
+    const fakeLifetimeEarnings = fakeLifetimeEarningsCents / 100; // 90.12
 
     return (
       <FinancialDropdown
@@ -110,17 +117,17 @@ export function LoggedOutFinancialHeader() {
         trigger={
           <Badge
             variant="secondary"
-            className="cursor-pointer hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
+            className="cursor-pointer transition-colors text-sm text-green-600 bg-green-50 border-green-200 hover:bg-green-100 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:bg-green-900"
           >
-            {formatUsdCents(fakeEarnings)}
+            {formatUsdCents(fakePendingEarningsCents)}
           </Badge>
         }
         content={
           <div className="p-4 space-y-3">
             <EarningsBreakdown
-              totalEarnings={fakeEarnings}
-              pendingEarnings={fakeEarnings}
-              lastMonthEarnings={0}
+              totalEarnings={fakeLifetimeEarnings}
+              pendingEarnings={fakePendingEarnings}
+              lastMonthEarnings={fakeLastMonthEarnings}
               monthlyChange={0}
             />
             <div className="text-xs text-muted-foreground bg-green-50 dark:bg-green-950/50 p-2 rounded">

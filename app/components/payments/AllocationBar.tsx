@@ -416,7 +416,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
             }}
           >
             <p className="text-sm font-medium text-center">
-              Try allocating with fake $10/mo • Log in to make it real
+              Demo mode: Log in to allocate real funds to writers!
             </p>
           </div>
         )}

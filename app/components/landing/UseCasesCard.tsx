@@ -1,9 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Heart } from 'lucide-react';
-import DynamicPagePreviewCard from './DynamicPagePreviewCard';
+import UnifiedPagePreviewCard from './UnifiedPagePreviewCard';
 
 interface UseCasesCardProps {
   fadeInClass?: string;
@@ -11,14 +9,14 @@ interface UseCasesCardProps {
 
 export default function UseCasesCard({ fadeInClass = '' }: UseCasesCardProps) {
   return (
-    <DynamicPagePreviewCard
+    <UnifiedPagePreviewCard
       pageId="AXjA19RQnFLhIIfuncBb"
-      customTitle="WeWrite Use Cases"
-      buttonText="Explore use cases"
-      maxLines={12}
+      title="WeWrite Use Cases"
+      buttonText="Read more..."
+      maxLines={8}
       className="shadow-lg h-full border-theme-medium"
       showAllocationBar={true}
-      authorId="system"
+      authorId="demo-author"
       allocationSource="LandingPageCard"
     />
   );

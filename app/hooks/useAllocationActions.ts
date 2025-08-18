@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { useFakeBalance, useShouldUseFakeBalance } from '../contexts/FakeBalanceContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { useAllocationInterval } from '../contexts/AllocationIntervalContext';
 import { useToast } from '../components/ui/use-toast';
 import {
@@ -61,7 +63,10 @@ export function useAllocationActions({
   maxRetries = DEFAULT_MAX_RETRIES
 }: UseAllocationActionsOptions): UseAllocationActionsReturn {
   const { user } = useAuth();
-  const { usdBalance, updateOptimisticBalance, isFakeBalance, hasActiveSubscription, refreshFakeBalance } = useUsdBalance();
+  const { usdBalance, updateOptimisticBalance } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscription();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const { fakeBalance, refreshFakeBalance } = useFakeBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const { toast } = useToast();
 
@@ -94,7 +99,7 @@ export function useAllocationActions({
 
     try {
       // Handle fake balance allocations
-      if (isFakeBalance) {
+      if (shouldUseFakeBalance) {
         console.log('[AllocationActions] Processing fake balance allocation:', {
           changeCents,
           pageId,
@@ -213,10 +218,10 @@ export function useAllocationActions({
     event.preventDefault();
     event.nativeEvent.stopImmediatePropagation();
 
-    if (!user || !pageId) return;
+    if (!pageId) return;
 
-    // Check if user is trying to allocate to their own page
-    if (user.uid === authorId) {
+    // Check if user is trying to allocate to their own page (only for logged-in users)
+    if (user?.uid === authorId) {
       toast({
         title: "Cannot allocate to your own page",
         description: "You cannot allocate funds to pages you created.",
@@ -229,8 +234,9 @@ export function useAllocationActions({
     const newAllocationCents = Math.max(0, currentAllocationCents + changeCents);
 
     // Check for sufficient funds (for positive allocations)
-    if (changeCents > 0 && usdBalance) {
-      if (changeCents > usdBalance.availableUsdCents) {
+    if (changeCents > 0) {
+      const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+      if (currentBalance && changeCents > currentBalance.availableUsdCents) {
         toast({
           title: "Insufficient funds",
           description: "You don't have enough available funds for this allocation.",
@@ -241,7 +247,7 @@ export function useAllocationActions({
     }
 
     // Immediate optimistic updates
-    if (isFakeBalance) {
+    if (shouldUseFakeBalance) {
       // For fake balance, we'll refresh after the allocation is saved
       onOptimisticUpdate?.(newAllocationCents);
     } else {
