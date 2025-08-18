@@ -156,10 +156,40 @@ NODE_ENV=production
 - **Server**: `app/utils/environmentConfig.ts`
 - **Debug**: `app/api/debug/auth-environment/route.ts`
 
+## Development Guide
+
+### Firebase Auth Features
+- **Provider**: Firebase Authentication
+- **Features**: Email/password, user registration, password reset
+- **Session Management**: Firebase Auth tokens with session cookies
+- **Environment**: Uses standard Firebase project configuration
+
+### Recent Simplifications
+- **Payment Feature Flags Removed** (2025-01-24): All payment functionality is now always available to authenticated users
+- **Authentication Simplified**: Removed complex auth patterns in favor of simple Firebase Auth
+- **Dev Auth Wrapper Removed**: Now uses standard Firebase Auth for better maintainability
+
+### Authentication Flow
+1. **User Registration**: Email/password via Firebase Auth
+2. **Login**: Email/password authentication
+3. **Session**: Managed via Firebase Auth tokens
+4. **Logout**: Clear Firebase session and redirect
+
+### Best Practices
+- Use `useAuth()` hook from `AuthProvider` for authentication state
+- Always check `isAuthenticated` before accessing protected features
+- Handle loading states with `isLoading` from auth context
+- Use environment-appropriate collections after authentication
+
 ## Summary
 
 **Remember: Preview environments are for testing with production data using real credentials, NOT for using test accounts with production data.**
 
 - **Local**: Dev auth + dev data + test credentials
-- **Preview**: Firebase auth + production data + real credentials  
+- **Preview**: Firebase auth + production data + real credentials
 - **Production**: Firebase auth + production data + real credentials
+
+## Related Documentation
+
+- [LOGGED_OUT_USER_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) - Production data for logged-out users
+- [ENVIRONMENT_QUICK_REFERENCE.md](./ENVIRONMENT_QUICK_REFERENCE.md) - Environment behavior matrix

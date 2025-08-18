@@ -36,16 +36,30 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 
 ## Documentation Index
 
-### Core Architecture
+### 🏗️ Core Architecture
 - **[Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md)** - Environment configuration and data separation
-- **[Landing Page Production Data](./LANDING_PAGE_PRODUCTION_DATA.md)** - Special production data system for logged-out users
-- **[Allocation System](./ALLOCATION_SYSTEM.md)** - USD allocation and payment architecture
+- **[Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md)** - Quick environment behavior matrix
+- **[Logged-Out User Production Data](./LANDING_PAGE_PRODUCTION_DATA.md)** - Production data system for logged-out users
 - **[Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md)** - User authentication and session management
+- **[Landing Page Architecture](./LANDING_PAGE_ARCHITECTURE.md)** - Landing page components and structure
 
-### Development Guides
+### 💰 Payment & Financial Systems
+- **[USD Payment System](./USD_PAYMENT_SYSTEM.md)** - Comprehensive USD payment architecture
+- **[Allocation System](./ALLOCATION_SYSTEM.md)** - Fund allocation mechanics and API
+- **[Subscription System](./SUBSCRIPTION_SYSTEM.md)** - Subscription management and billing
+- **[Payout System Index](./PAYOUT_SYSTEM_INDEX.md)** - Creator payout processes
+- **[Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md)** - Financial data structure
+
+### 🚀 Performance & Optimization
+- **[Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md)** - Comprehensive Firebase cost and performance optimization
+- **[Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - General performance tuning
+- **[Environment Aware API Architecture](./ENVIRONMENT_AWARE_API_ARCHITECTURE.md)** - API architecture and optimization
+
+### 🔧 Development Guides
 - **[Dependency Management Standards](./DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management best practices
-- **[Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - Performance tuning and optimization
-- **[Security Guidelines](./USERNAME_SECURITY_GUIDELINES.md)** - Security best practices and guidelines
+- **[Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md)** - Authentication system cleanup reference
+- **[Security Guidelines](./USERNAME_SECURITY_GUIDELINES.md)** - Security best practices
+- **[Recent Changes Summary](./RECENT_CHANGES_SUMMARY.md)** - Major changes and improvements
 
 ## Key Features
 
@@ -272,6 +286,17 @@ The new allocation system provides significant improvements:
 - Advanced analytics
 - Accessibility improvements
 - Performance monitoring
+
+### 📄 Legal Documents
+- **[Privacy Policy](./legal/PRIVACY_POLICY.md)** - User privacy and data protection
+- **[Terms of Service](./legal/TERMS_OF_SERVICE.md)** - Platform terms and conditions
+
+### 📦 Archived Documentation
+Historical documentation for completed migrations and deprecated systems is available in the `archive/` directory:
+- Firebase optimization implementation plans
+- USD migration guides
+- Deprecated API endpoint references
+- Completed refactoring documentation
 
 ## License
 
