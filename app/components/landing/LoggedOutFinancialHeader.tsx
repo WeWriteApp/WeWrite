@@ -61,9 +61,6 @@ export function LoggedOutFinancialHeader() {
                 allocatedUsdCents={fakeBalance.allocatedUsdCents}
                 availableUsdCents={Math.max(0, fakeBalance.totalUsdCents - fakeBalance.allocatedUsdCents)}
               />
-              <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/50 p-2 rounded">
-                <strong>Demo Mode:</strong> Sign up to start allocating real funds to support writers!
-              </div>
             </div>
           }
         />
@@ -90,9 +87,6 @@ export function LoggedOutFinancialHeader() {
                 allocatedUsdCents={fakeBalance.allocatedUsdCents}
                 availableUsdCents={availableUsdCents}
               />
-              <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/50 p-2 rounded">
-                <strong>Demo Mode:</strong> Sign up to start allocating real funds to support writers!
-              </div>
             </div>
           }
         />
