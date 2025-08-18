@@ -15,6 +15,7 @@
 3. **Cost Optimization:** Aggressive caching, polling instead of real-time listeners, batch operations
 4. **Unified Error Handling:** Consistent error responses across all API endpoints
 5. **Performance Monitoring:** Built-in logging and performance tracking
+6. **Landing Page Production Data:** Special header-based override for logged-out landing page to always use production data (see [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md))
 
 ### Architecture Layers
 ```

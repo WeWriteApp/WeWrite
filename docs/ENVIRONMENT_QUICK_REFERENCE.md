@@ -1,5 +1,9 @@
 # Environment Quick Reference
 
+## ⚠️ Special Case: Landing Page Production Data
+
+**Important**: The logged-out landing page ALWAYS uses production data regardless of environment. See [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) for details.
+
 ## 🚀 TL;DR
 
 | Environment | URL | Data | Stripe | Collections |

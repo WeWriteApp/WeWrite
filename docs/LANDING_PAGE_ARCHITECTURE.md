@@ -4,6 +4,12 @@
 
 The WeWrite landing page system provides a comprehensive logged-out experience that showcases the platform's features, displays live content, and guides users toward registration. The architecture is designed for performance, analytics tracking, and user engagement.
 
+## ⚠️ Special Production Data Behavior
+
+**Critical**: The landing page has special behavior where it ALWAYS uses production data for logged-out users, regardless of the development environment. This ensures potential users see real, engaging content.
+
+📖 **See [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) for complete technical details.**
+
 ## Core Architecture
 
 ### Entry Point: `app/page.tsx`
@@ -25,7 +31,8 @@ return isAuthenticated ? (
 - Platform animation cycling
 - Analytics tracking integration
 - Theme management (forces blue accent)
-- Content fetching for feature roadmap
+- Production data fetching for logged-out users (via special header system)
+- Dynamic page preview cards for roadmap and use cases
 - Scroll-based section highlighting
 - Mobile/desktop responsive behavior
 
@@ -34,13 +41,18 @@ return isAuthenticated ? (
 ```
 LandingPage
 ├── Header (Navigation & Auth Buttons)
+│   ├── WeWriteLogo (Theme-aware logo + text)
+│   └── LoggedOutFinancialHeader (Fake balance display)
 ├── HeroSection (Main visual showcase)
 │   ├── ProgressiveHeroText (Animated text)
 │   ├── SparkleBackground (Visual effects)
 │   └── Image Carousel with Lightbox
-├── ActivityCarousel (Live user activity)
-├── SimpleTrendingCarousel (Trending content)
-├── Feature Roadmap Section
+├── ActivityCarousel (Live user activity - production data)
+├── SimpleTrendingCarousel (Trending content - production data)
+├── Roadmap Preview Section
+│   └── DynamicPagePreviewCard (zRNwhNgIEfLFo050nyAT)
+├── Use Cases Preview Section
+│   └── DynamicPagePreviewCard (AXjA19RQnFLhIIfuncBb)
 ├── About Section
 └── Footer
 ```
@@ -143,6 +155,38 @@ const platformOptions = [
 - **Expanded Content**: More detailed descriptions
 - **Advanced Interactions**: Keyboard navigation support
 - **Lightbox**: Full-screen image viewing
+
+### 6. DynamicPagePreviewCard (`app/components/landing/DynamicPagePreviewCard.tsx`)
+**Purpose**: Fetches and displays page previews for roadmap and use cases
+**Features**:
+- **Dynamic Fetching**: Uses production data fetch hook for logged-out users
+- **Content Processing**: Extracts plain text from complex editor content
+- **Configurable Display**: Customizable title, button text, and content length
+- **Error Handling**: Proper loading, error, and empty states
+- **Responsive Design**: Mobile-friendly card layout
+
+**Key Props**:
+```typescript
+interface DynamicPagePreviewCardProps {
+  pageId: string;
+  customTitle?: string;
+  buttonText?: string;
+  maxLines?: number;
+  className?: string;
+}
+```
+
+**Usage**:
+- **Roadmap Preview**: Points to `zRNwhNgIEfLFo050nyAT`
+- **Use Cases Preview**: Points to `AXjA19RQnFLhIIfuncBb`
+
+### 7. LoggedOutFinancialHeader (`app/components/landing/LoggedOutFinancialHeader.tsx`)
+**Purpose**: Shows fake financial balance to logged-out users
+**Features**:
+- **Fake Balance Integration**: Uses fake balance context for demo data
+- **Interactive Dropdowns**: Spend and earnings breakdowns with CTAs
+- **Demo Mode Indicator**: Clear indication this is demo data
+- **Sign-up CTAs**: Encourages user registration throughout
 
 ## Performance Considerations
 
