@@ -423,7 +423,7 @@ const LandingPage = () => {
                 onClick={(e) => scrollToSection(e, '#features')}
                 className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
-                <FileText className="h-4 w-4" />
+                <Wrench className="h-4 w-4" />
                 Feature Roadmap
               </a>
               <a
@@ -580,7 +580,7 @@ const LandingPage = () => {
                 onClick={(e) => scrollToSection(e, '#features')}
                 className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
-                <FileText className="h-3 w-3" />
+                <Wrench className="h-3 w-3" />
                 Feature Roadmap
               </a>
               <a
@@ -710,7 +710,7 @@ const LandingPage = () => {
           <div className="container mx-auto px-6 sm:px-8 max-w-4xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <FileText className="h-7 w-7" />
+                <Wrench className="h-7 w-7" />
                 Feature Roadmap
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
