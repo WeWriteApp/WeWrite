@@ -1,8 +1,8 @@
 # Environment Quick Reference
 
-## ⚠️ Special Case: Landing Page Production Data
+## ⚠️ Special Case: Logged-Out User Production Data
 
-**Important**: The logged-out landing page ALWAYS uses production data regardless of environment. See [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) for details.
+**Important**: ALL logged-out users ALWAYS use production data regardless of environment. This includes landing page, auth pages, and any logged-out interactions. See [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) for details.
 
 ## 🚀 TL;DR
 

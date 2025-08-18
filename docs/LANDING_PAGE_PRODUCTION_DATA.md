@@ -1,8 +1,15 @@
-# Landing Page Production Data System
+# Logged-Out User Production Data System
 
 ## Overview
 
-The WeWrite landing page has a special requirement: **it must ALWAYS display production data to logged-out users**, regardless of the development environment. This ensures that potential users see an accurate representation of the platform with real content, even when developers are working in local development environments.
+WeWrite has a special requirement: **ALL logged-out users must ALWAYS see production data**, regardless of the development environment. This ensures that potential users see an accurate representation of the platform with real content, whether they're on the landing page, auth pages, or any other logged-out experience.
+
+This applies to:
+- **Landing page** - Shows real trending content and activity
+- **Auth pages** - Any content displayed during login/signup flows
+- **Any logged-out user interactions** - Read-only operations use production data
+
+Only after successful authentication do users switch to environment-appropriate collections (DEV_ collections in development).
 
 ## Architecture
 
@@ -12,7 +19,7 @@ In development environments, WeWrite uses prefixed collections (e.g., `DEV_pages
 
 ### The Solution: Request Header Override
 
-We implemented a **request header-based system** that allows the landing page to force the use of production collections without affecting any other part of the application.
+We implemented a **request header-based system** that allows ANY logged-out user to automatically use production collections for read-only operations without affecting authenticated users or write operations.
 
 ## How It Works
 
@@ -20,7 +27,7 @@ We implemented a **request header-based system** that allows the landing page to
 
 **File**: `app/hooks/useProductionDataFetch.ts`
 
-This hook provides a custom fetch function that automatically adds the `X-Force-Production-Data: true` header for logged-out users:
+This hook provides a custom fetch function that automatically adds the `X-Force-Production-Data: true` header for ALL logged-out users throughout the app:
 
 ```typescript
 const fetchJson = useProductionDataFetchJson();
@@ -48,23 +55,25 @@ export const getCollectionName = (baseName: string): string => {
 
 ### 3. Landing Page Components
 
-**Files**: 
+**Files**:
 - `app/components/landing/ActivityCarousel.tsx`
 - `app/components/landing/SimpleTrendingCarousel.tsx`
+- `app/components/landing/DynamicPagePreviewCard.tsx`
+- Any component that fetches data for logged-out users
 
 These components use the production data fetch hook to automatically request production data for logged-out users.
 
 ## Data Flow
 
-### For Logged-Out Users (Landing Page)
+### For Logged-Out Users (Anywhere in App)
 
-1. **User visits landing page** (not authenticated)
-2. **Landing page components** use `useProductionDataFetchJson()` hook
+1. **User visits any page** while not authenticated (landing, auth, etc.)
+2. **Any component** uses `useProductionDataFetchJson()` hook for data fetching
 3. **Hook detects logged-out state** and adds `X-Force-Production-Data: true` header
 4. **API request sent** with the special header
 5. **API routes** use `getCollectionName()` as normal
 6. **Environment config** detects the header and returns production collection names
-7. **Production data returned** to landing page components
+7. **Production data returned** to logged-out user components
 
 ### For Logged-In Users (All Pages)
 
@@ -90,7 +99,7 @@ These components use the production data fetch hook to automatically request pro
 ### Header Name
 - **Header**: `X-Force-Production-Data`
 - **Value**: `true`
-- **Scope**: Only added for logged-out users by landing page components
+- **Scope**: Automatically added for ALL logged-out users throughout the app
 
 ### Affected APIs
 The header override works automatically with **any API** that uses `getCollectionName()`:
@@ -100,19 +109,23 @@ The header override works automatically with **any API** that uses `getCollectio
 - Any future APIs that use the standard collection naming
 
 ### Security Considerations
-- **Safe**: Only affects data reading, not writing
-- **Isolated**: Only triggered by logged-out users on landing page
+- **Safe**: Only affects data reading, not writing operations
+- **Read-only**: Only triggered by logged-out users (no write permissions)
 - **Auditable**: Header presence is logged for debugging
 - **No authentication bypass**: Doesn't affect user authentication or permissions
+- **Automatic**: Works seamlessly across all logged-out user interactions
 
 ## Benefits
 
 1. **Zero API Changes**: No need to modify individual API endpoints
 2. **Automatic**: Works with any new APIs that use `getCollectionName()`
-3. **Safe**: Only affects logged-out users viewing the landing page
-4. **Maintainable**: Single point of control in environment configuration
-5. **Auditable**: Easy to track which requests use production data
-6. **Future-proof**: Will work seamlessly with separate Firebase projects
+3. **Comprehensive Coverage**: Affects ALL logged-out users throughout the app
+4. **Safe by Design**: Read-only operations only, no risk to production data
+5. **Authentic Experience**: Logged-out users see real, engaging content
+6. **Environment Isolation**: Developers work with DEV_ collections after authentication
+7. **Maintainable**: Single point of control in environment configuration
+8. **Auditable**: Easy to track which requests use production data
+9. **Future-proof**: Will work seamlessly with separate Firebase projects
 
 ## Testing
 
@@ -133,10 +146,11 @@ The header override works automatically with **any API** that uses `getCollectio
 
 ## Troubleshooting
 
-### Landing Page Shows Development Data
+### Logged-Out User Shows Development Data
 - Check that user is logged out
-- Verify `useProductionDataFetchJson()` is being used in landing page components
+- Verify `useProductionDataFetchJson()` is being used in components
 - Check browser network tab for `X-Force-Production-Data` header
+- Ensure component is using the production data fetch hook
 
 ### Logged-In Users See Production Data in Development
 - This should not happen - verify user authentication state

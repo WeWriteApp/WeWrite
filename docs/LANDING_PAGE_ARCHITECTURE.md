@@ -6,7 +6,7 @@ The WeWrite landing page system provides a comprehensive logged-out experience t
 
 ## ⚠️ Special Production Data Behavior
 
-**Critical**: The landing page has special behavior where it ALWAYS uses production data for logged-out users, regardless of the development environment. This ensures potential users see real, engaging content.
+**Critical**: ALL logged-out users have special behavior where they ALWAYS use production data, regardless of the development environment. This includes the landing page, auth pages, and any other logged-out interactions. This ensures potential users see real, engaging content.
 
 📖 **See [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) for complete technical details.**
 
