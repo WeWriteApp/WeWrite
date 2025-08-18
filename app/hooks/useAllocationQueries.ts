@@ -251,17 +251,14 @@ export function useAllocationMutation() {
         data.currentAllocation
       );
 
-      // Invalidate related queries to ensure consistency
-      queryClient.invalidateQueries({ 
-        queryKey: allocationQueryKeys.user(user?.uid || '') 
+      // Only invalidate user-level queries for balance updates
+      // DO NOT invalidate the page allocation query to prevent refetch/loading states
+      queryClient.invalidateQueries({
+        queryKey: allocationQueryKeys.user(user?.uid || '')
       });
     },
-    onSettled: (data, error, request) => {
-      // Always refetch after error or success to ensure consistency
-      queryClient.invalidateQueries({ 
-        queryKey: allocationQueryKeys.page(request.pageId, user?.uid) 
-      });
-    },
+    // REMOVED onSettled to prevent automatic refetches that cause layout shifts
+    // The optimistic update is the source of truth, backend should follow UI
   });
 }
 

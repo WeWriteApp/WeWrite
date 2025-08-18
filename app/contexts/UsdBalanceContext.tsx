@@ -146,10 +146,9 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
         availableUsdCents: newAvailableCents
       };
 
-      // Force refresh from server after optimistic update to prevent stale data
-      setTimeout(() => {
-        fetchUsdBalance(true);
-      }, 1500); // Delay to allow server processing
+      // REMOVED: Force refresh that was causing layout shifts
+      // The optimistic update is the source of truth, backend should follow UI
+      // Only refresh on explicit user action or error recovery
 
       return newBalance;
     });
