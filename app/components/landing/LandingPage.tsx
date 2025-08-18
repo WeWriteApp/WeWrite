@@ -25,7 +25,10 @@ import { useAuth } from '../../providers/AuthProvider';
 // Import client-side components instead of server components
 import ActivityCarousel from './ActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
-import HeroSection from './HeroSection';
+import PaginatedCarousel from './PaginatedCarousel';
+import HeroCard from './HeroCard';
+import FeatureRoadmapCard from './FeatureRoadmapCard';
+import UseCasesCard from './UseCasesCard';
 
 import { DynamicPagePreviewCard } from './DynamicPagePreviewCard';
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
@@ -100,7 +103,7 @@ const LandingPage = () => {
 
 
       // Determine which section is currently in view
-      const sections = ['activity', 'trending', 'features', 'use-cases', 'about'];
+      const sections = ['hero', 'activity', 'trending', 'about'];
       const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px, Desktop: 60px
 
       // Find the section that is currently in view
@@ -419,20 +422,12 @@ const LandingPage = () => {
                 Trending
               </a>
               <a
-                href="#features"
-                onClick={(e) => scrollToSection(e, '#features')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
+                href="#hero"
+                onClick={(e) => scrollToSection(e, '#hero')}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'hero' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 <Wrench className="h-4 w-4" />
-                Feature Roadmap
-              </a>
-              <a
-                href="#use-cases"
-                onClick={(e) => scrollToSection(e, '#use-cases')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'use-cases' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Heart className="h-4 w-4" />
-                Use Cases
+                Features & Use Cases
               </a>
 
             </nav>
@@ -584,20 +579,12 @@ const LandingPage = () => {
                 Trending
               </a>
               <a
-                href="#features"
-                onClick={(e) => scrollToSection(e, '#features')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
+                href="#hero"
+                onClick={(e) => scrollToSection(e, '#hero')}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'hero' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 <Wrench className="h-3 w-3" />
-                Feature Roadmap
-              </a>
-              <a
-                href="#use-cases"
-                onClick={(e) => scrollToSection(e, '#use-cases')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'use-cases' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Heart className="h-3 w-3" />
-                Use Cases
+                Features
               </a>
 
             </div>
@@ -646,15 +633,28 @@ const LandingPage = () => {
 
 
 
-        {/* Hero Section - Isolated to prevent re-renders affecting other components */}
-        <HeroSection
-          fadeInClass={fadeInClass}
-          platformOptions={platformOptions}
-          platformIndex={platformIndex}
-          isAnimatingPlatform={isAnimatingPlatform}
-          handlePlatformClick={handlePlatformClick}
-          platformRef={platformRef}
-        />
+        {/* Hero Carousel - Paginated cards with hero, roadmap, and use cases */}
+        <section id="hero" className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-6 max-w-6xl">
+            <PaginatedCarousel
+              autoPlay={true}
+              autoPlayInterval={8000}
+              showArrows={true}
+              showDots={true}
+              className="min-h-[600px]"
+            >
+              <HeroCard
+                fadeInClass={fadeInClass}
+                platformOptions={platformOptions}
+                platformIndex={platformIndex}
+                handlePlatformClick={handlePlatformClick}
+                platformRef={platformRef}
+              />
+              <FeatureRoadmapCard fadeInClass={fadeInClass} />
+              <UseCasesCard fadeInClass={fadeInClass} />
+            </PaginatedCarousel>
+          </div>
+        </section>
 
         {/* Recent Edits Carousel - Lazy loaded */}
         <section id="activity" ref={activityRef} className="py-16 md:py-20 bg-muted/30">
@@ -706,57 +706,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Roadmap Preview Section */}
-        <section id="features" className="py-20 md:py-24 bg-background">
-          <div className="container mx-auto px-6 sm:px-8 max-w-4xl">
-            <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <Wrench className="h-7 w-7" />
-                Feature Roadmap
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Discover what makes WeWrite special and what's coming next.
-              </p>
-            </div>
 
-            {/* Roadmap Preview Card */}
-            <div className="max-w-2xl mx-auto">
-              <DynamicPagePreviewCard
-                pageId="zRNwhNgIEfLFo050nyAT"
-                customTitle="WeWrite Feature Roadmap"
-                buttonText="Read full page"
-                maxLines={5}
-                className="shadow-lg"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Use Cases Preview Section */}
-        <section id="use-cases" className="py-20 md:py-24 bg-muted/30">
-          <div className="container mx-auto px-6 sm:px-8 max-w-4xl">
-            <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <Heart className="h-7 w-7" />
-                Use Cases
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Discover how writers, creators, and teams are using WeWrite to build amazing content.
-              </p>
-            </div>
-
-            {/* Use Cases Preview Card */}
-            <div className="max-w-2xl mx-auto">
-              <DynamicPagePreviewCard
-                pageId="AXjA19RQnFLhIIfuncBb"
-                customTitle="WeWrite Use Cases"
-                buttonText="Read full page"
-                maxLines={5}
-                className="shadow-lg"
-              />
-            </div>
-          </div>
-        </section>
 
         {/* Bottom spacing for footer visibility */}
         <div className="pb-32 md:pb-24"></div>
