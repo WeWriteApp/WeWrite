@@ -30,6 +30,7 @@ import HeroSection from './HeroSection';
 
 import { FilterableFeatureList } from './FilterableFeatureList';
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
+import { WeWriteLogo } from '../ui/WeWriteLogo';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -499,8 +500,12 @@ const LandingPage = () => {
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md py-3`}>
         <div className="container mx-auto flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
-            <h1
-              className="text-2xl font-bold cursor-pointer dark:text-white text-primary"
+            <WeWriteLogo
+              size="lg"
+              styled={true}
+              clickable={true}
+              showText={true}
+              priority={true}
               onClick={() => {
                 // Track logo click in Google Analytics
                 analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
@@ -512,9 +517,7 @@ const LandingPage = () => {
                 // Navigate to home page instead of scrolling to top
                 window.location.href = '/';
               }}
-            >
-              WeWrite
-            </h1>
+            />
 
             <nav className="flex space-x-6">
               <a
@@ -592,8 +595,12 @@ const LandingPage = () => {
         {/* Title and buttons */}
         <div className="w-full bg-background/90 backdrop-blur-xl shadow-sm py-2">
           <div className="container mx-auto flex justify-between items-center px-4">
-            <h1
-              className="text-xl font-bold cursor-pointer text-foreground"
+            <WeWriteLogo
+              size="md"
+              styled={true}
+              clickable={true}
+              showText={true}
+              priority={true}
               onClick={() => {
                 // Track mobile logo click in Google Analytics
                 analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
@@ -605,9 +612,7 @@ const LandingPage = () => {
                 });
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-            >
-              WeWrite
-            </h1>
+            />
 
             <div className="flex items-center space-x-2">
               {!isAuthenticated ? (

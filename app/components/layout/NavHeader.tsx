@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { ChevronLeft, DollarSign, Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { Logo } from "../ui/Logo";
+import { WeWriteLogo } from "../ui/WeWriteLogo";
 import { useAuth } from '../../providers/AuthProvider';
 import { RemainingFundsDisplay, OverspendWarningDisplay } from "../ui/RemainingUsdCounter";
 import { useUsdBalance } from "../../contexts/UsdBalanceContext";
@@ -260,12 +260,13 @@ export default function NavHeader({
 
             {/* Logo/Title (absolutely centered) - clickable to go home */}
             <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
-              <div
-                className="cursor-pointer transition-transform hover:scale-105"
-                onClick={() => router.push('/')}
-              >
-                <Logo size="md" priority={true} styled={true} clickable={true} />
-              </div>
+              <WeWriteLogo
+                size="md"
+                styled={true}
+                clickable={true}
+                showText={false}
+                priority={true}
+              />
             </div>
 
             {/* Earnings Display (right side) */}
