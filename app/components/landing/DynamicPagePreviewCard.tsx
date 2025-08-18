@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import type { Page } from '../../types/database';
+import { PillLink } from '../utils/PillLink';
 
 interface DynamicPagePreviewCardProps {
   /** The page ID to fetch and display */
@@ -107,23 +108,17 @@ export function DynamicPagePreviewCard({
             // Handle link elements
             if (child.type === 'link' && child.url) {
               const linkText = child.children?.map((c: any) => c.text || '').join('') || child.url;
-              const displayText = (() => {
-                try {
-                  const url = new URL(child.url);
-                  return url.hostname.replace('www.', '');
-                } catch {
-                  return linkText.length > 15 ? linkText.substring(0, 15) + '...' : linkText;
-                }
-              })();
 
               nodeElements.push(
-                <span
+                <PillLink
                   key={`link-${nodeElements.length}`}
-                  className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                  href={child.url}
+                  isPublic={true}
+                  className="mx-0.5 text-xs scale-90"
+                  clickable={false}
                 >
-                  <ExternalLink className="h-2.5 w-2.5 mr-1" />
-                  {displayText}
-                </span>
+                  {linkText}
+                </PillLink>
               );
             }
             // Handle regular text
@@ -135,23 +130,17 @@ export function DynamicPagePreviewCard({
               for (const nestedChild of child.children) {
                 if (nestedChild.type === 'link' && nestedChild.url) {
                   const linkText = nestedChild.children?.map((c: any) => c.text || '').join('') || nestedChild.url;
-                  const displayText = (() => {
-                    try {
-                      const url = new URL(nestedChild.url);
-                      return url.hostname.replace('www.', '');
-                    } catch {
-                      return linkText.length > 15 ? linkText.substring(0, 15) + '...' : linkText;
-                    }
-                  })();
 
                   nodeElements.push(
-                    <span
+                    <PillLink
                       key={`nested-link-${nodeElements.length}`}
-                      className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                      href={nestedChild.url}
+                      isPublic={true}
+                      className="mx-0.5 text-xs scale-90"
+                      clickable={false}
                     >
-                      <ExternalLink className="h-2.5 w-2.5 mr-1" />
-                      {displayText}
-                    </span>
+                      {linkText}
+                    </PillLink>
                   );
                 } else if (nestedChild.text) {
                   nodeElements.push(nestedChild.text);
