@@ -478,6 +478,7 @@ const LandingPage = () => {
             )}
           </div>
         </div>
+        </div>
 
         {/* Row 2: Allocation Bar */}
         <div className="py-2 bg-background/95">
