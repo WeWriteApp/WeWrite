@@ -81,25 +81,39 @@ export function DynamicPagePreviewCard({
     }
   }, [pageId, fetchJson]);
 
-  // Extract plain text content from page content
-  const extractPlainText = (content: any): string => {
-    if (!content) return '';
-    
+  // Extract plain text content and links from page content
+  const extractContentData = (content: any): { text: string; links: string[] } => {
+    if (!content) return { text: '', links: [] };
+
+    const links: string[] = [];
+
     // Handle string content
     if (typeof content === 'string') {
-      return content;
+      return { text: content, links: [] };
     }
-    
+
     // Handle editor content (array of nodes)
     if (Array.isArray(content)) {
-      return content
+      const text = content
         .map(node => {
           if (node.children) {
             return node.children
               .map((child: any) => {
+                // Extract links
+                if (child.type === 'link' && child.url) {
+                  links.push(child.url);
+                  return child.children?.map((c: any) => c.text || '').join('') || child.url;
+                }
                 if (child.text) return child.text;
                 if (child.children) {
-                  return child.children.map((c: any) => c.text || '').join('');
+                  return child.children.map((c: any) => {
+                    // Extract nested links
+                    if (c.type === 'link' && c.url) {
+                      links.push(c.url);
+                      return c.children?.map((cc: any) => cc.text || '').join('') || c.url;
+                    }
+                    return c.text || '';
+                  }).join('');
                 }
                 return '';
               })
@@ -108,22 +122,24 @@ export function DynamicPagePreviewCard({
           return '';
         })
         .join('\n');
+
+      return { text, links: [...new Set(links)] }; // Remove duplicates
     }
-    
+
     // Handle object content
     if (typeof content === 'object' && content.children) {
-      return extractPlainText(content.children);
+      return extractContentData(content.children);
     }
-    
-    return '';
+
+    return { text: '', links: [] };
   };
 
-  // Get first N lines of content
-  const getPreviewContent = (content: any, maxLines: number): string => {
-    const plainText = extractPlainText(content);
-    const lines = plainText.split('\n').filter(line => line.trim().length > 0);
+  // Get first N lines of content and extract links
+  const getPreviewData = (content: any, maxLines: number): { text: string; links: string[] } => {
+    const { text, links } = extractContentData(content);
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
     const previewLines = lines.slice(0, maxLines);
-    return previewLines.join('\n');
+    return { text: previewLines.join('\n'), links };
   };
 
   // Handle navigation to full page
@@ -174,7 +190,7 @@ export function DynamicPagePreviewCard({
   }
 
   const title = customTitle || page.title || 'Untitled';
-  const previewContent = getPreviewContent(page.content, maxLines);
+  const { text: previewContent, links } = getPreviewData(page.content, maxLines);
 
   return (
     <Card className={`h-full border-theme-medium hover:shadow-lg transition-all duration-200 ${className}`}>
@@ -183,7 +199,7 @@ export function DynamicPagePreviewCard({
           {title}
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="pt-0 flex flex-col h-full">
         {/* Preview content */}
         <div className="flex-1 mb-4">
@@ -197,7 +213,41 @@ export function DynamicPagePreviewCard({
             </p>
           )}
         </div>
-        
+
+        {/* Links pills */}
+        {links.length > 0 && (
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2">
+              {links.slice(0, 3).map((link, index) => {
+                // Extract domain from URL for display
+                const displayText = (() => {
+                  try {
+                    const url = new URL(link);
+                    return url.hostname.replace('www.', '');
+                  } catch {
+                    return link.length > 20 ? link.substring(0, 20) + '...' : link;
+                  }
+                })();
+
+                return (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    {displayText}
+                  </span>
+                );
+              })}
+              {links.length > 3 && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                  +{links.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* View full page button */}
         <div className="mt-auto">
           <Button

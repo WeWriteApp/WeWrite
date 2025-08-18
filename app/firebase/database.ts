@@ -181,7 +181,9 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
  */
 export const getPageMetadata = async (pageId: string): Promise<any> => {
   try {
-    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const { getCollectionNameAsync } = require("../utils/environmentConfig");
+    const collectionName = await getCollectionNameAsync("pages");
+    const pageRef = doc(db, collectionName, pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {
@@ -226,7 +228,9 @@ export const getCachedPageTitle = async (pageId: string): Promise<string> => {
  */
 export const getPageStats = async (pageId: string): Promise<any> => {
   try {
-    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const { getCollectionNameAsync } = require("../utils/environmentConfig");
+    const collectionName = await getCollectionNameAsync("pages");
+    const pageRef = doc(db, collectionName, pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {
