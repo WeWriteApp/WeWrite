@@ -21,6 +21,8 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../ui/use-toast';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { AllocationIntervalModal } from './AllocationIntervalModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
@@ -37,6 +39,9 @@ export function AllocationControls({
 }: AllocationControlsProps) {
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscription();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const { fakeBalance } = useFakeBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
   const router = useRouter();
   const { toast } = useToast();
@@ -67,7 +72,10 @@ export function AllocationControls({
 
   // Calculate composition bar data
   const getCompositionData = (): CompositionBarData => {
-    if (!usdBalance) {
+    // Use fake balance for logged-out users or users without subscriptions
+    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+
+    if (!currentBalance) {
       return {
         otherPagesPercentage: 0,
         currentPagePercentage: 0,
@@ -76,9 +84,9 @@ export function AllocationControls({
       };
     }
 
-    const totalCents = usdBalance.totalUsdCents;
-    const allocatedCents = usdBalance.allocatedUsdCents;
-    const availableCents = usdBalance.availableUsdCents;
+    const totalCents = currentBalance.totalUsdCents;
+    const allocatedCents = currentBalance.allocatedUsdCents;
+    const availableCents = currentBalance.availableUsdCents;
 
     const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
     const isOutOfFunds = availableCents <= 0 && totalCents > 0;
@@ -152,7 +160,9 @@ export function AllocationControls({
   }
 
   // Show loading state while data loads
-  if (allocationState.isLoading || usdLoading || intervalLoading) {
+  // For fake balance users, don't wait for USD balance loading
+  const isLoadingCriticalData = allocationState.isLoading || (shouldUseFakeBalance ? false : usdLoading) || intervalLoading;
+  if (isLoadingCriticalData) {
     return (
       <div className={cn("flex items-center gap-3", className)}>
         <div className="h-8 w-8 bg-muted rounded animate-pulse" />
@@ -162,8 +172,9 @@ export function AllocationControls({
     );
   }
 
-  // Show login prompt if not authenticated
-  if (!user) {
+  // For logged-out users, we now allow them to use fake balance
+  // Only show login prompt if fake balance is not available
+  if (!user && !shouldUseFakeBalance) {
     return (
       <div className={cn("flex items-center gap-3", className)}>
         <Button
@@ -183,7 +194,7 @@ export function AllocationControls({
       {/* Allocation amount display above the controls */}
       <AllocationAmountDisplay
         allocationCents={allocationState.currentAllocationCents}
-        availableBalanceCents={usdBalance?.availableUsdCents || 0}
+        availableBalanceCents={(shouldUseFakeBalance ? fakeBalance : usdBalance)?.availableUsdCents || 0}
         variant="page"
       />
 
