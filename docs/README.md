@@ -34,6 +34,19 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Documentation Index
+
+### Core Architecture
+- **[Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md)** - Environment configuration and data separation
+- **[Landing Page Production Data](./LANDING_PAGE_PRODUCTION_DATA.md)** - Special production data system for logged-out users
+- **[Allocation System](./ALLOCATION_SYSTEM.md)** - USD allocation and payment architecture
+- **[Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md)** - User authentication and session management
+
+### Development Guides
+- **[Dependency Management Standards](./DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management best practices
+- **[Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - Performance tuning and optimization
+- **[Security Guidelines](./USERNAME_SECURITY_GUIDELINES.md)** - Security best practices and guidelines
+
 ## Key Features
 
 ### Allocation System

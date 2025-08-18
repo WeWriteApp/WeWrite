@@ -3,6 +3,7 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
+import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import ContentCarousel from './ContentCarousel';
 import ActivityCard from '../activity/ActivityCard';
 // Removed complex unified activity system
@@ -13,18 +14,17 @@ import ActivityCard from '../activity/ActivityCard';
  */
 export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
   const { user } = useAuth();
+  const fetchJson = useProductionDataFetchJson();
   const [activities, setActivities] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fetch recent edits using simple API
+  // Fetch recent edits using production data fetch (automatically uses production data for logged-out users)
   React.useEffect(() => {
     const fetchEdits = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/recent-edits/global?limit=${limit}&includeOwn=true`);
-        if (!response.ok) throw new Error('Failed to fetch');
-        const data = await response.json();
+        const data = await fetchJson(`/api/recent-edits/global?limit=${limit}&includeOwn=true`);
         setActivities(data.edits || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch');
@@ -34,7 +34,7 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
     };
 
     fetchEdits();
-  }, [limit]);
+  }, [limit, fetchJson]);
 
   // Removed console logs for better performance
 

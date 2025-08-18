@@ -104,11 +104,37 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
 };
 
 /**
+ * Check if the current request should use production collections
+ * This is determined by the presence of the X-Force-Production-Data header
+ * which is sent by the logged-out landing page components.
+ */
+const shouldUseProductionCollections = (): boolean => {
+  // Check if we're in a server context with headers available
+  if (typeof window === 'undefined') {
+    try {
+      // Try to access headers from the current request context
+      // This works in API routes and server components
+      const { headers } = require('next/headers');
+      const headersList = headers();
+      return headersList.get('x-force-production-data') === 'true';
+    } catch (error) {
+      // Headers not available in this context, use normal environment detection
+      return false;
+    }
+  }
+  return false;
+};
+
+/**
  * Get environment-specific collection name
  *
  * This is the primary function for getting collection names throughout the app.
  * It handles the current single-project architecture with prefixed collections
  * and is designed to easily support future migration to separate Firebase projects.
+ *
+ * Special behavior for logged-out landing page:
+ * - When X-Force-Production-Data header is present, always returns production collections
+ * - This ensures the landing page shows real production data to potential users
  *
  * @param baseName - The base collection name (e.g., 'users', 'pages', 'subscriptions')
  * @returns Environment-specific collection name
@@ -117,6 +143,7 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  * - Production: 'users' -> 'users' (base collection names)
  * - Preview: 'users' -> 'users' (production data for testing)
  * - Development: 'users' -> 'DEV_users' (isolated dev data with DEV_ prefix)
+ * - Development + X-Force-Production-Data header: 'users' -> 'users' (production data for landing page)
  *
  * Future behavior (separate Firebase projects):
  * - Production: 'users' -> 'users' (in production Firebase project)
@@ -124,6 +151,12 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  * - Development: 'users' -> 'users' (in development Firebase project)
  */
 export const getCollectionName = (baseName: string): string => {
+  // Check if we should force production collections via header
+  if (shouldUseProductionCollections()) {
+    console.log(`[Environment Config] Using production collection for ${baseName} due to X-Force-Production-Data header`);
+    return baseName; // Return base collection name (production data)
+  }
+
   const prefix = getEnvironmentPrefix();
   return `${prefix}${baseName}`;
 };

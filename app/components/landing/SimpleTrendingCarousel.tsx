@@ -8,6 +8,7 @@ import Link from 'next/link';
 import ContentCarousel from './ContentCarousel';
 import { Loader } from 'lucide-react';
 import { UsernameBadge } from '../ui/UsernameBadge';
+import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import { getBatchUserData } from '../../firebase/batchUserData';
 // import { getTrendingPages } from '../../firebase/pageViews';
 
@@ -29,6 +30,7 @@ interface TrendingPage {
 export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number }) {
   // Empty array for trending pages - we'll fetch real data
   const fallbackPages: TrendingPage[] = [];
+  const fetchJson = useProductionDataFetchJson();
 
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,12 +78,8 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
         setLoading(true);
         console.log('SimpleTrendingCarousel: Fetching trending pages with limit', limit);
 
-        // Use the API endpoint to get REAL trending pages
-        const apiResponse = await fetch(`/api/trending?limit=${limit}`);
-        if (!apiResponse.ok) {
-          throw new Error(`API request failed: ${apiResponse.status}`);
-        }
-        const response = await apiResponse.json();
+        // Use the API endpoint to get REAL trending pages (automatically uses production data for logged-out users)
+        const response = await fetchJson(`/api/trending?limit=${limit}`);
 
         // Check for API error
         if (!response.success) {
@@ -120,7 +118,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
     };
 
     fetchTrendingPages();
-  }, [limit]);
+  }, [limit, fetchJson]);
 
   return (
     <ContentCarousel

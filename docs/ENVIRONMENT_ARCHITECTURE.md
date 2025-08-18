@@ -2,6 +2,12 @@
 
 This document provides a comprehensive overview of WeWrite's environment configuration, data separation strategy, and deployment architecture.
 
+## 🎯 Special Case: Landing Page Production Data
+
+**⚠️ Important**: The logged-out landing page has special behavior - it ALWAYS uses production data regardless of environment. This ensures potential users see real content and get an accurate representation of the platform.
+
+📖 **See [LANDING_PAGE_PRODUCTION_DATA.md](./LANDING_PAGE_PRODUCTION_DATA.md) for complete technical details and implementation.**
+
 ## ⚠️ CRITICAL: Old Patterns That Must Be Deleted
 
 ### 🚨 Dangerous Legacy Code - DELETE IMMEDIATELY
