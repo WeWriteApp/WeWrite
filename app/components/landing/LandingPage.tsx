@@ -379,7 +379,7 @@ const LandingPage = () => {
       {/* Desktop Navigation - Always sticky at the top */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md`}>
         {/* Row 1: Logo + Navigation + Auth */}
-        <div className="border-b border-border/20 py-3">
+        <div className="border-b border-border/20 py-2">
           <div className="container mx-auto flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
             <WeWriteLogo
@@ -481,7 +481,7 @@ const LandingPage = () => {
         </div>
 
         {/* Row 2: Allocation Bar */}
-        <div className="py-2 bg-background/95">
+        <div className="py-1.5 bg-background/95">
           <div className="container mx-auto px-6">
             <LoggedOutFinancialHeader />
           </div>
@@ -557,15 +557,15 @@ const LandingPage = () => {
         </div>
 
         {/* Row 2: Allocation Bar */}
-        <div className="w-full bg-background/95 py-2 border-t border-border/20">
+        <div className="w-full bg-background/95 py-1.5 border-t border-border/20">
           <div className="container mx-auto px-4">
             <LoggedOutFinancialHeader />
           </div>
         </div>
 
         {/* Row 3: Mobile Navigation - Horizontally scrollable */}
-        <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 pt-3 shadow-sm">
-          <div className="overflow-x-auto scrollbar-hide pb-3">
+        <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 py-2 shadow-sm">
+          <div className="overflow-x-auto scrollbar-hide">
             <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6 justify-center mobile-nav-links">
               <a
                 href="#activity"

@@ -130,26 +130,15 @@ export function LoggedOutFinancialHeader() {
   };
 
   return (
-    <div className="w-full bg-background/95 backdrop-blur-sm border-b border-border/50 py-3 mt-16 md:mt-20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Spend Display (left side) */}
-          <div className="flex items-center min-w-0 flex-shrink-0">
-            {renderSpendDisplay()}
-          </div>
+    <div className="flex items-center justify-between">
+      {/* Spend Display (left side) */}
+      <div className="flex items-center min-w-0 flex-shrink-0">
+        {renderSpendDisplay()}
+      </div>
 
-          {/* Demo Mode Indicator (center) */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <DollarSign className="h-4 w-4" />
-            <span className="hidden sm:inline">Try allocating demo funds below!</span>
-            <span className="sm:hidden">Demo Mode</span>
-          </div>
-
-          {/* Earnings Display (right side) */}
-          <div className="flex items-center min-w-0 flex-shrink-0">
-            {renderEarningsDisplay()}
-          </div>
-        </div>
+      {/* Earnings Display (right side) */}
+      <div className="flex items-center min-w-0 flex-shrink-0">
+        {renderEarningsDisplay()}
       </div>
     </div>
   );
