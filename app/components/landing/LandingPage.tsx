@@ -100,7 +100,7 @@ const LandingPage = () => {
 
 
       // Determine which section is currently in view
-      const sections = ['activity', 'trending', 'features', 'about'];
+      const sections = ['activity', 'trending', 'features', 'use-cases', 'about'];
       const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px, Desktop: 60px
 
       // Find the section that is currently in view
@@ -424,6 +424,14 @@ const LandingPage = () => {
                 <FileText className="h-4 w-4" />
                 Feature Roadmap
               </a>
+              <a
+                href="#use-cases"
+                onClick={(e) => scrollToSection(e, '#use-cases')}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'use-cases' ? 'text-blue-600 font-semibold' : ''}`}
+              >
+                <Heart className="h-4 w-4" />
+                Use Cases
+              </a>
 
             </nav>
           </div>
@@ -566,6 +574,14 @@ const LandingPage = () => {
                 <FileText className="h-3 w-3" />
                 Feature Roadmap
               </a>
+              <a
+                href="#use-cases"
+                onClick={(e) => scrollToSection(e, '#use-cases')}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'use-cases' ? 'text-blue-600 font-semibold' : ''}`}
+              >
+                <Heart className="h-3 w-3" />
+                Use Cases
+              </a>
 
             </div>
           </div>
@@ -693,6 +709,32 @@ const LandingPage = () => {
                 pageId="zRNwhNgIEfLFo050nyAT"
                 customTitle="WeWrite Feature Roadmap"
                 buttonText="View Full Roadmap"
+                maxLines={5}
+                className="shadow-lg"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Use Cases Preview Section */}
+        <section id="use-cases" className="py-20 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-6 sm:px-8 max-w-4xl">
+            <div className={`text-center mb-16 ${fadeInClass}`}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                <Heart className="h-7 w-7" />
+                Use Cases
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Discover how writers, creators, and teams are using WeWrite to build amazing content.
+              </p>
+            </div>
+
+            {/* Use Cases Preview Card */}
+            <div className="max-w-2xl mx-auto">
+              <DynamicPagePreviewCard
+                pageId="AXjA19RQnFLhIIfuncBb"
+                customTitle="WeWrite Use Cases"
+                buttonText="View All Use Cases"
                 maxLines={5}
                 className="shadow-lg"
               />
