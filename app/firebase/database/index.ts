@@ -43,7 +43,7 @@ export * from './analytics';
 import { db, updateDoc, getDoc, doc } from './core';
 import { getPageById } from './pages';
 import { createLogger } from '../utils/logger';
-import { getCollectionName } from "../../utils/environmentConfig";
+import { getCollectionName, getCollectionNameAsync } from "../../utils/environmentConfig";
 
 const logger = createLogger('Database');
 
@@ -176,7 +176,8 @@ export const appendPageReference = async (
  */
 export const getPageMetadata = async (pageId: string): Promise<any> => {
   try {
-    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const collectionName = await getCollectionNameAsync("pages");
+    const pageRef = doc(db, collectionName, pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {

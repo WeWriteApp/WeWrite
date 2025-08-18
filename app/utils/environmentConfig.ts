@@ -126,6 +126,26 @@ const shouldUseProductionCollections = (): boolean => {
 };
 
 /**
+ * Async version for use in server components that can await headers
+ */
+const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
+  // Check if we're in a server context with headers available
+  if (typeof window === 'undefined') {
+    try {
+      // Try to access headers from the current request context
+      // This works in API routes and server components
+      const { headers } = require('next/headers');
+      const headersList = await headers();
+      return headersList.get('x-force-production-data') === 'true';
+    } catch (error) {
+      // Headers not available in this context, use normal environment detection
+      return false;
+    }
+  }
+  return false;
+};
+
+/**
  * Get environment-specific collection name
  *
  * This is the primary function for getting collection names throughout the app.
@@ -155,6 +175,20 @@ const shouldUseProductionCollections = (): boolean => {
 export const getCollectionName = (baseName: string): string => {
   // Check if we should force production collections via header
   if (shouldUseProductionCollections()) {
+    console.log(`[Environment Config] Using production collection for ${baseName} due to X-Force-Production-Data header`);
+    return baseName; // Return base collection name (production data)
+  }
+
+  const prefix = getEnvironmentPrefix();
+  return `${prefix}${baseName}`;
+};
+
+/**
+ * Async version for use in server components that need to await headers
+ */
+export const getCollectionNameAsync = async (baseName: string): Promise<string> => {
+  // Check if we should force production collections via header
+  if (await shouldUseProductionCollectionsAsync()) {
     console.log(`[Environment Config] Using production collection for ${baseName} due to X-Force-Production-Data header`);
     return baseName; // Return base collection name (production data)
   }
