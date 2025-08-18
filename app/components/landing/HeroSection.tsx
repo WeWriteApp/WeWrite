@@ -105,20 +105,17 @@ export default function HeroSection({
 
       <div className="container mx-auto px-2 sm:px-4 md:px-6 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-12">
-          {/* Mobile containerization - enhanced card styling on mobile with increased outer margins and reduced inner padding */}
+          {/* Mobile CTA Card - simplified structure with proper margins */}
           {isMobile ? (
-            <div className="w-full mx-12 px-6 py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300 mb-6">
-              <div className="text-center">
-                <ProgressiveHeroText
-                  fadeInClass={fadeInClass}
-                  platformOptions={platformOptions}
-                  platformIndex={platformIndex}
-                  handlePlatformClick={handlePlatformClick}
-                  platformRef={platformRef}
-                  analytics={analytics}
-                />
-
-              </div>
+            <div className="w-full max-w-sm mx-auto px-6 py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300 mb-6">
+              <ProgressiveHeroText
+                fadeInClass={fadeInClass}
+                platformOptions={platformOptions}
+                platformIndex={platformIndex}
+                handlePlatformClick={handlePlatformClick}
+                platformRef={platformRef}
+                analytics={analytics}
+              />
             </div>
           ) : (
             /* Desktop layout - unchanged */
