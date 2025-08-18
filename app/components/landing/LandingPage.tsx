@@ -29,6 +29,7 @@ import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import HeroSection from './HeroSection';
 
 import { FilterableFeatureList } from './FilterableFeatureList';
+import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -724,6 +725,9 @@ const LandingPage = () => {
             an ad-free environment focused on authentic content and meaningful connections.
           </p>
         </div>
+
+        {/* Logged-Out Financial Header - Show fake balance to get users excited */}
+        <LoggedOutFinancialHeader />
 
         {/* Hero Section - Isolated to prevent re-renders affecting other components */}
         <HeroSection

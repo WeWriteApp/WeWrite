@@ -140,10 +140,11 @@ export function useAllocationMutation() {
     mutationFn: async (request: AllocationRequest): Promise<AllocationResponse> => {
       if (!user?.uid) {
         // Handle logged-out users with simulated allocation
-        const newAllocation = allocateLoggedOutUsd(request.pageId, request.changeCents);
+        const result = allocateLoggedOutUsd(request.pageId, request.pageTitle || 'Unknown Page', request.changeCents);
         return {
-          success: true,
-          currentAllocation: newAllocation
+          success: result.success,
+          currentAllocation: result.success ? request.changeCents : 0,
+          error: result.error
         };
       }
 

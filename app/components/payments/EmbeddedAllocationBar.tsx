@@ -23,6 +23,8 @@ import { Button } from '../ui/button';
 import { Plus, Minus } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../ui/use-toast';
@@ -42,6 +44,9 @@ export function EmbeddedAllocationBar({
 }: EmbeddedAllocationBarProps) {
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscription();
+  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const { fakeBalance } = useFakeBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
   const router = useRouter();
   const { toast } = useToast();
@@ -72,7 +77,10 @@ export function EmbeddedAllocationBar({
 
   // Calculate composition bar data
   const getCompositionData = (): CompositionBarData => {
-    if (!usdBalance) {
+    // Use fake balance for logged-out users or users without subscriptions
+    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+
+    if (!currentBalance) {
       return {
         otherPagesPercentage: 0,
         currentPagePercentage: 0,
@@ -81,9 +89,9 @@ export function EmbeddedAllocationBar({
       };
     }
 
-    const totalCents = usdBalance.totalUsdCents;
-    const allocatedCents = usdBalance.allocatedUsdCents;
-    const availableCents = usdBalance.availableUsdCents;
+    const totalCents = currentBalance.totalUsdCents;
+    const allocatedCents = currentBalance.allocatedUsdCents;
+    const availableCents = currentBalance.availableUsdCents;
 
     const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
     const isOutOfFunds = availableCents <= 0 && totalCents > 0;
@@ -159,7 +167,9 @@ export function EmbeddedAllocationBar({
   }, []);
 
   // Don't render for page owners or when loading critical data
-  if (isPageOwner || (usdLoading && intervalLoading)) {
+  // For fake balance users, don't wait for USD balance loading
+  const isLoadingCriticalData = shouldUseFakeBalance ? intervalLoading : (usdLoading && intervalLoading);
+  if (isPageOwner || isLoadingCriticalData) {
     return null;
   }
 
@@ -195,7 +205,7 @@ export function EmbeddedAllocationBar({
       {/* Allocation amount display above the controls */}
       <AllocationAmountDisplay
         allocationCents={allocationState.currentAllocationCents}
-        availableBalanceCents={usdBalance?.availableUsdCents || 0}
+        availableBalanceCents={(shouldUseFakeBalance ? fakeBalance : usdBalance)?.availableUsdCents || 0}
         variant="page"
       />
 
