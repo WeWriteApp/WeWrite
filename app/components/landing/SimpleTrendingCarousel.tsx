@@ -10,6 +10,8 @@ import { Loader } from 'lucide-react';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import { getBatchUserData } from '../../firebase/batchUserData';
+import { AllocationControls } from '../payments/AllocationControls';
+import { useAuth } from '../../providers/AuthProvider';
 // import { getTrendingPages } from '../../firebase/pageViews';
 
 interface TrendingPage {
@@ -31,6 +33,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
   // Empty array for trending pages - we'll fetch real data
   const fallbackPages: TrendingPage[] = [];
   const fetchJson = useProductionDataFetchJson();
+  const { user } = useAuth();
 
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,19 +173,32 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
                     )}
                   </CardDescription>
                 </CardHeader>
-                <div className="px-3 pb-3 pt-0 mt-auto">
+                <div className="px-3 pb-3 pt-0 mt-auto space-y-2">
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-sm font-medium">{page.views} views</span>
                     <span className="text-sm text-muted-foreground">last 24h</span>
                   </div>
-                  <div className="h-10 w-full">
+                  <div className="h-8 w-full">
                     <Sparkline
                       data={page.hourlyViews}
-                      height={36}
+                      height={32}
                       strokeWidth={0.8}
                       fillOpacity={0.08}
                     />
                   </div>
+
+                  {/* Allocation controls - show for all users' pages when not viewing your own */}
+                  {page.userId && page.id && (!user || user.uid !== page.userId) && (
+                    <div className="pt-2 border-t border-border/20" onClick={(e) => e.stopPropagation()}>
+                      <AllocationControls
+                        pageId={page.id}
+                        authorId={page.userId}
+                        pageTitle={page.title || 'Untitled'}
+                        variant="embedded"
+                        size="sm"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

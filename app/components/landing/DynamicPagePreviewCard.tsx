@@ -81,66 +81,108 @@ export function DynamicPagePreviewCard({
     }
   }, [pageId, fetchJson]);
 
-  // Extract plain text content and links from page content
-  const extractContentData = (content: any): { text: string; links: string[] } => {
-    if (!content) return { text: '', links: [] };
-
-    const links: string[] = [];
+  // Render content with inline links as JSX elements
+  const renderContentWithInlineLinks = (content: any, maxLines: number): React.ReactNode => {
+    if (!content) return null;
 
     // Handle string content
     if (typeof content === 'string') {
-      return { text: content, links: [] };
+      const lines = content.split('\n').filter(line => line.trim().length > 0);
+      const previewLines = lines.slice(0, maxLines);
+      return previewLines.join('\n');
     }
 
     // Handle editor content (array of nodes)
     if (Array.isArray(content)) {
-      const text = content
-        .map(node => {
-          if (node.children) {
-            return node.children
-              .map((child: any) => {
-                // Extract links
-                if (child.type === 'link' && child.url) {
-                  links.push(child.url);
-                  return child.children?.map((c: any) => c.text || '').join('') || child.url;
-                }
-                if (child.text) return child.text;
-                if (child.children) {
-                  return child.children.map((c: any) => {
-                    // Extract nested links
-                    if (c.type === 'link' && c.url) {
-                      links.push(c.url);
-                      return c.children?.map((cc: any) => cc.text || '').join('') || c.url;
-                    }
-                    return c.text || '';
-                  }).join('');
-                }
-                return '';
-              })
-              .join('');
-          }
-          return '';
-        })
-        .join('\n');
+      let lineCount = 0;
+      const elements: React.ReactNode[] = [];
 
-      return { text, links: [...new Set(links)] }; // Remove duplicates
+      for (const node of content) {
+        if (lineCount >= maxLines) break;
+
+        if (node.children) {
+          const nodeElements: React.ReactNode[] = [];
+
+          for (const child of node.children) {
+            // Handle link elements
+            if (child.type === 'link' && child.url) {
+              const linkText = child.children?.map((c: any) => c.text || '').join('') || child.url;
+              const displayText = (() => {
+                try {
+                  const url = new URL(child.url);
+                  return url.hostname.replace('www.', '');
+                } catch {
+                  return linkText.length > 15 ? linkText.substring(0, 15) + '...' : linkText;
+                }
+              })();
+
+              nodeElements.push(
+                <span
+                  key={`link-${nodeElements.length}`}
+                  className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                >
+                  <ExternalLink className="h-2.5 w-2.5 mr-1" />
+                  {displayText}
+                </span>
+              );
+            }
+            // Handle regular text
+            else if (child.text) {
+              nodeElements.push(child.text);
+            }
+            // Handle nested children
+            else if (child.children) {
+              for (const nestedChild of child.children) {
+                if (nestedChild.type === 'link' && nestedChild.url) {
+                  const linkText = nestedChild.children?.map((c: any) => c.text || '').join('') || nestedChild.url;
+                  const displayText = (() => {
+                    try {
+                      const url = new URL(nestedChild.url);
+                      return url.hostname.replace('www.', '');
+                    } catch {
+                      return linkText.length > 15 ? linkText.substring(0, 15) + '...' : linkText;
+                    }
+                  })();
+
+                  nodeElements.push(
+                    <span
+                      key={`nested-link-${nodeElements.length}`}
+                      className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                    >
+                      <ExternalLink className="h-2.5 w-2.5 mr-1" />
+                      {displayText}
+                    </span>
+                  );
+                } else if (nestedChild.text) {
+                  nodeElements.push(nestedChild.text);
+                }
+              }
+            }
+          }
+
+          if (nodeElements.length > 0) {
+            elements.push(
+              <span key={`node-${lineCount}`} className="block">
+                {nodeElements}
+              </span>
+            );
+            lineCount++;
+          }
+        }
+      }
+
+      return elements;
     }
 
     // Handle object content
     if (typeof content === 'object' && content.children) {
-      return extractContentData(content.children);
+      return renderContentWithInlineLinks(content.children, maxLines);
     }
 
-    return { text: '', links: [] };
+    return null;
   };
 
-  // Get first N lines of content and extract links
-  const getPreviewData = (content: any, maxLines: number): { text: string; links: string[] } => {
-    const { text, links } = extractContentData(content);
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
-    const previewLines = lines.slice(0, maxLines);
-    return { text: previewLines.join('\n'), links };
-  };
+
 
   // Handle navigation to full page
   const handleViewFullPage = () => {
@@ -190,7 +232,7 @@ export function DynamicPagePreviewCard({
   }
 
   const title = customTitle || page.title || 'Untitled';
-  const { text: previewContent, links } = getPreviewData(page.content, maxLines);
+  const renderedContent = renderContentWithInlineLinks(page.content, maxLines);
 
   return (
     <Card className={`h-full border-theme-medium hover:shadow-lg transition-all duration-200 ${className}`}>
@@ -201,52 +243,18 @@ export function DynamicPagePreviewCard({
       </CardHeader>
 
       <CardContent className="pt-0 flex flex-col h-full">
-        {/* Preview content */}
+        {/* Preview content with inline links */}
         <div className="flex-1 mb-4">
-          {previewContent ? (
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-              {previewContent}
-            </p>
+          {renderedContent ? (
+            <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
+              {renderedContent}
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">
               No content preview available
             </p>
           )}
         </div>
-
-        {/* Links pills */}
-        {links.length > 0 && (
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-2">
-              {links.slice(0, 3).map((link, index) => {
-                // Extract domain from URL for display
-                const displayText = (() => {
-                  try {
-                    const url = new URL(link);
-                    return url.hostname.replace('www.', '');
-                  } catch {
-                    return link.length > 20 ? link.substring(0, 20) + '...' : link;
-                  }
-                })();
-
-                return (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    {displayText}
-                  </span>
-                );
-              })}
-              {links.length > 3 && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
-                  +{links.length - 3} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* View full page button */}
         <div className="mt-auto">
