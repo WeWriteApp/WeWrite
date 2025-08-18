@@ -7,9 +7,7 @@ import { DollarSign, Loader2 } from 'lucide-react';
 import { useFakeBalance } from '../../contexts/FakeBalanceContext';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { RemainingFundsDisplay, OverspendWarningDisplay } from '../ui/RemainingUsdCounter';
-import { FinancialDropdown } from '../ui/FinancialDropdown';
-import { SpendBreakdown } from '../ui/SpendBreakdown';
-import { EarningsBreakdown } from '../ui/EarningsBreakdown';
+import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from '../ui/FinancialDropdown';
 
 /**
  * LoggedOutFinancialHeader Component
