@@ -106,7 +106,7 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
 /**
  * Check if the current request should use production collections
  * This is determined by the presence of the X-Force-Production-Data header
- * which is sent by the logged-out landing page components.
+ * which is sent by ANY logged-out user components throughout the app.
  */
 const shouldUseProductionCollections = (): boolean => {
   // Check if we're in a server context with headers available
@@ -132,9 +132,11 @@ const shouldUseProductionCollections = (): boolean => {
  * It handles the current single-project architecture with prefixed collections
  * and is designed to easily support future migration to separate Firebase projects.
  *
- * Special behavior for logged-out landing page:
+ * Special behavior for logged-out users:
  * - When X-Force-Production-Data header is present, always returns production collections
- * - This ensures the landing page shows real production data to potential users
+ * - This ensures ALL logged-out users see real production data for read-only operations
+ * - Applies to landing page, auth pages, and any other logged-out user interactions
+ * - Only after authentication do users switch to environment-appropriate collections
  *
  * @param baseName - The base collection name (e.g., 'users', 'pages', 'subscriptions')
  * @returns Environment-specific collection name
@@ -143,7 +145,7 @@ const shouldUseProductionCollections = (): boolean => {
  * - Production: 'users' -> 'users' (base collection names)
  * - Preview: 'users' -> 'users' (production data for testing)
  * - Development: 'users' -> 'DEV_users' (isolated dev data with DEV_ prefix)
- * - Development + X-Force-Production-Data header: 'users' -> 'users' (production data for landing page)
+ * - Development + X-Force-Production-Data header: 'users' -> 'users' (production data for logged-out users)
  *
  * Future behavior (separate Firebase projects):
  * - Production: 'users' -> 'users' (in production Firebase project)

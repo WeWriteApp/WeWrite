@@ -5,23 +5,25 @@ import { useAuth } from '../providers/AuthProvider';
 
 /**
  * Production Data Fetch Hook
- * 
+ *
  * This hook provides a fetch function that automatically adds the
- * X-Force-Production-Data header for logged-out users on the landing page.
- * 
- * This ensures that the logged-out landing page always shows production data
- * to give potential users an accurate representation of the platform,
- * regardless of the development environment.
- * 
+ * X-Force-Production-Data header for logged-out users anywhere in the app.
+ *
+ * This ensures that logged-out users (including on auth pages) always see
+ * production data for read-only operations, giving them an accurate
+ * representation of the platform regardless of the development environment.
+ *
+ * Only after authentication do users switch to environment-appropriate collections.
+ *
  * Usage:
  * ```typescript
  * const productionFetch = useProductionDataFetch();
  * const response = await productionFetch('/api/trending?limit=20');
  * ```
- * 
+ *
  * The hook automatically:
  * - Detects if the user is logged out
- * - Adds X-Force-Production-Data: true header for logged-out users
+ * - Adds X-Force-Production-Data: true header for ALL logged-out users
  * - Uses normal fetch behavior for logged-in users
  * - Preserves all other fetch options and behavior
  */
@@ -33,12 +35,12 @@ export function useProductionDataFetch() {
     init?: RequestInit
   ): Promise<Response> => {
     // Determine if we should force production data
-    const shouldForceProduction = !user; // Force production data for logged-out users
-    
+    const shouldForceProduction = !user; // Force production data for ALL logged-out users
+
     // Prepare headers
     const headers = new Headers(init?.headers);
-    
-    // Add production data header for logged-out users
+
+    // Add production data header for logged-out users (anywhere in the app)
     if (shouldForceProduction) {
       headers.set('X-Force-Production-Data', 'true');
       console.log('[Production Data Fetch] Adding X-Force-Production-Data header for logged-out user');
