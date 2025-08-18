@@ -10,6 +10,9 @@ import type { Page } from '../../types/database';
 import { PillLink } from '../utils/PillLink';
 import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
 
+// Simple cache for page data to prevent reloading
+const pageCache = new Map<string, Page>();
+
 interface DynamicPagePreviewCardProps {
   /** The page ID to fetch and display */
   pageId: string;
@@ -69,16 +72,32 @@ export function DynamicPagePreviewCard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch page data
+  // Fetch page data with caching
   useEffect(() => {
     const fetchPage = async () => {
       try {
+        // Check cache first
+        const cachedPage = pageCache.get(pageId);
+        if (cachedPage) {
+          setPage(cachedPage);
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
         setError(null);
-        
+
         // Use production data fetch (automatically uses production data for logged-out users)
+        console.log(`Fetching page data for pageId: ${pageId}`);
         const response = await fetchJson(`/api/pages/${pageId}`);
-        setPage(response.pageData);
+        console.log(`Response for ${pageId}:`, response);
+
+        const pageData = response.pageData || response; // Handle different response structures
+        console.log(`Page data for ${pageId}:`, pageData);
+
+        // Cache the result
+        pageCache.set(pageId, pageData);
+        setPage(pageData);
       } catch (err) {
         console.error(`Failed to fetch page ${pageId}:`, err);
         setError(err instanceof Error ? err.message : 'Failed to load page');
@@ -235,21 +254,21 @@ export function DynamicPagePreviewCard({
 
   return (
     <Card className={`h-full border-theme-medium hover:shadow-lg transition-all duration-200 ${className}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold line-clamp-2">
+      <CardHeader className="pb-6">
+        <CardTitle className="text-4xl md:text-5xl lg:text-6xl font-bold text-center line-clamp-2">
           {title}
         </CardTitle>
       </CardHeader>
 
       <CardContent className="pt-0 flex flex-col h-full">
         {/* Preview content with inline links */}
-        <div className="flex-1 mb-4">
+        <div className="flex-1 mb-6">
           {renderedContent ? (
-            <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
+            <div className="text-base text-muted-foreground leading-relaxed space-y-2 text-left">
               {renderedContent}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground italic">
+            <p className="text-base text-muted-foreground italic text-center">
               No content preview available
             </p>
           )}

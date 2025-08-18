@@ -184,21 +184,7 @@ export function EmbeddedAllocationBar({
     );
   }
 
-  // Show login prompt if not authenticated
-  if (!user) {
-    return (
-      <div className={cn("flex items-center gap-3", className)}>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 px-3 text-xs"
-          onClick={() => router.push('/auth/login')}
-        >
-          Login to allocate funds
-        </Button>
-      </div>
-    );
-  }
+  // For logged-out users, we'll use fake balance - no need to show login prompt
 
   return (
     <div className={cn("w-full", className)}>

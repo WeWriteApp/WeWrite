@@ -74,6 +74,26 @@ export default function PaginatedCarousel({
 
   return (
     <div className={`relative w-full ${className}`}>
+      {/* Pagination numbers above cards */}
+      {showDots && totalSlides > 1 && (
+        <div className="flex justify-center mb-8 space-x-4">
+          {children.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`text-2xl font-bold transition-all duration-200 ${
+                index === currentIndex
+                  ? 'text-primary scale-110'
+                  : 'text-muted-foreground/50 hover:text-muted-foreground/80'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Main carousel container */}
       <div className="relative overflow-hidden">
         {/* Peek cards on sides */}
@@ -118,44 +138,10 @@ export default function PaginatedCarousel({
           )}
         </div>
 
-        {/* Navigation arrows */}
-        {showArrows && totalSlides > 1 && (
-          <>
-            <button
-              onClick={goToPrevious}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-background/80 hover:bg-background/90 rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-110"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-background/80 hover:bg-background/90 rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-110"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
+
       </div>
 
-      {/* Pagination dots */}
-      {showDots && totalSlides > 1 && (
-        <div className="flex justify-center mt-6 space-x-2">
-          {children.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                index === currentIndex
-                  ? 'bg-primary scale-110'
-                  : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-        </div>
-      )}
+
     </div>
   );
 }
