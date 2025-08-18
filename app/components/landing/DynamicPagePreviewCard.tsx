@@ -8,6 +8,7 @@ import { ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import type { Page } from '../../types/database';
 import { PillLink } from '../utils/PillLink';
+import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
 
 interface DynamicPagePreviewCardProps {
   /** The page ID to fetch and display */
@@ -22,6 +23,12 @@ interface DynamicPagePreviewCardProps {
   className?: string;
   /** Whether to show loading state */
   showLoading?: boolean;
+  /** Whether to show embedded allocation bar */
+  showAllocationBar?: boolean;
+  /** Author ID for allocation bar */
+  authorId?: string;
+  /** Source identifier for allocation bar */
+  allocationSource?: string;
 }
 
 /**
@@ -50,7 +57,10 @@ export function DynamicPagePreviewCard({
   buttonText = "Read full page",
   maxLines = 5,
   className = "",
-  showLoading = true
+  showLoading = true,
+  showAllocationBar = false,
+  authorId = "system",
+  allocationSource = "PreviewCard"
 }: DynamicPagePreviewCardProps) {
   const router = useRouter();
   const fetchJson = useProductionDataFetchJson();
@@ -244,6 +254,18 @@ export function DynamicPagePreviewCard({
             </p>
           )}
         </div>
+
+        {/* Embedded Allocation Bar */}
+        {showAllocationBar && (
+          <div className="mt-4 pt-3 border-t border-border/20">
+            <EmbeddedAllocationBar
+              pageId={pageId}
+              authorId={authorId}
+              pageTitle={title}
+              source={allocationSource}
+            />
+          </div>
+        )}
 
         {/* View full page button */}
         <div className="mt-auto">

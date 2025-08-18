@@ -404,33 +404,7 @@ const LandingPage = () => {
               }}
             />
 
-            <nav className="flex space-x-6">
-              <a
-                href="#activity"
-                onClick={(e) => scrollToSection(e, '#activity')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Activity className="h-4 w-4" />
-                Recent Activity
-              </a>
-              <a
-                href="#trending"
-                onClick={(e) => scrollToSection(e, '#trending')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Flame className="h-4 w-4" />
-                Trending
-              </a>
-              <a
-                href="#hero"
-                onClick={(e) => scrollToSection(e, '#hero')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'hero' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Wrench className="h-4 w-4" />
-                Features & Use Cases
-              </a>
 
-            </nav>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -558,41 +532,10 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Row 3: Mobile Navigation - Horizontally scrollable */}
-        <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 py-2 shadow-sm">
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6 justify-center mobile-nav-links">
-              <a
-                href="#activity"
-                onClick={(e) => scrollToSection(e, '#activity')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Activity className="h-3 w-3" />
-                Activity
-              </a>
-              <a
-                href="#trending"
-                onClick={(e) => scrollToSection(e, '#trending')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Flame className="h-3 w-3" />
-                Trending
-              </a>
-              <a
-                href="#hero"
-                onClick={(e) => scrollToSection(e, '#hero')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'hero' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Wrench className="h-3 w-3" />
-                Features
-              </a>
 
-            </div>
-          </div>
-        </div>
       </div>
 
-      <main className={`${isMobileView ? 'pt-32' : 'pt-28'}`}>
+      <main className={`${isMobileView ? 'pt-20' : 'pt-16'}`}>
         {/* SEO Content - Hidden but accessible to search engines */}
         <div className="sr-only">
           <h1>WeWrite - The Social Wiki Where Every Page is a Fundraiser</h1>

@@ -77,10 +77,10 @@ export default function PaginatedCarousel({
       {/* Main carousel container */}
       <div className="relative overflow-hidden">
         {/* Peek cards on sides */}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center relative overflow-visible">
           {/* Previous card peek */}
           {totalSlides > 1 && (
-            <div className="hidden md:block w-16 opacity-30 transform scale-75 -mr-8 z-0">
+            <div className="hidden md:block w-32 opacity-50 transform scale-90 -mr-16 z-0 cursor-pointer" onClick={goToPrevious}>
               <div className="pointer-events-none">
                 {children[(currentIndex - 1 + totalSlides) % totalSlides]}
               </div>
@@ -88,7 +88,7 @@ export default function PaginatedCarousel({
           )}
 
           {/* Current card */}
-          <div className="flex-1 max-w-4xl mx-auto relative">
+          <div className="flex-1 max-w-4xl mx-auto relative z-10">
             <AnimatePresence initial={false} custom={direction} mode="wait">
               <motion.div
                 key={currentIndex}
@@ -110,7 +110,7 @@ export default function PaginatedCarousel({
 
           {/* Next card peek */}
           {totalSlides > 1 && (
-            <div className="hidden md:block w-16 opacity-30 transform scale-75 -ml-8 z-0">
+            <div className="hidden md:block w-32 opacity-50 transform scale-90 -ml-16 z-0 cursor-pointer" onClick={goToNext}>
               <div className="pointer-events-none">
                 {children[(currentIndex + 1) % totalSlides]}
               </div>
