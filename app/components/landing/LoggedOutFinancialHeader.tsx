@@ -49,6 +49,7 @@ export function LoggedOutFinancialHeader() {
           title="Demo Spending"
           onNavigate={() => router.push('/auth/register')}
           direction="southeast"
+          showNavigationButton={false}
           trigger={
             <OverspendWarningDisplay
               overspendUsdCents={overspendingAmount}
@@ -74,6 +75,7 @@ export function LoggedOutFinancialHeader() {
           title="Demo Spending"
           onNavigate={() => router.push('/auth/register')}
           direction="southeast"
+          showNavigationButton={false}
           trigger={
             <RemainingFundsDisplay
               allocatedUsdCents={fakeBalance.allocatedUsdCents || 0}
@@ -104,6 +106,7 @@ export function LoggedOutFinancialHeader() {
         title="Demo Earnings"
         onNavigate={() => router.push('/auth/register')}
         direction="southwest"
+        showNavigationButton={false}
         trigger={
           <Badge
             variant="secondary"

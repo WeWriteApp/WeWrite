@@ -19,6 +19,7 @@ interface FinancialDropdownProps {
   onClose?: () => void;
   direction?: 'southeast' | 'southwest';
   className?: string;
+  showNavigationButton?: boolean;
 }
 
 interface SpendBreakdownProps {
@@ -46,7 +47,8 @@ export function FinancialDropdown({
   onNavigate,
   onClose,
   direction = 'southeast',
-  className = ''
+  className = '',
+  showNavigationButton = true
 }: FinancialDropdownProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -93,22 +95,26 @@ export function FinancialDropdown({
           {content}
         </div>
 
-        <DropdownMenuSeparator />
+        {showNavigationButton && (
+          <>
+            <DropdownMenuSeparator />
 
-        {/* Navigation button - Full width */}
-        <div className="mt-3">
-          <Button
-            size="sm"
-            onClick={() => {
-              // Close dropdown before navigating
-              setIsOpen(false);
-              onNavigate();
-            }}
-            className="w-full whitespace-nowrap"
-          >
-            {title === 'Spending' ? 'Go to spend' : 'Go to earnings'}
-          </Button>
-        </div>
+            {/* Navigation button - Full width */}
+            <div className="mt-3">
+              <Button
+                size="sm"
+                onClick={() => {
+                  // Close dropdown before navigating
+                  setIsOpen(false);
+                  onNavigate();
+                }}
+                className="w-full whitespace-nowrap"
+              >
+                {title === 'Spending' ? 'Go to spend' : 'Go to earnings'}
+              </Button>
+            </div>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

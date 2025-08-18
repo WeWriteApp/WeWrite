@@ -81,10 +81,10 @@ export default function PaginatedCarousel({
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`text-2xl font-bold transition-all duration-200 ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all duration-200 ${
                 index === currentIndex
-                  ? 'text-primary scale-110'
-                  : 'text-muted-foreground/50 hover:text-muted-foreground/80'
+                  ? 'bg-primary text-primary-foreground scale-110'
+                  : 'border-2 border-muted-foreground/30 text-muted-foreground/70 hover:border-muted-foreground/50 hover:text-muted-foreground/90'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             >
