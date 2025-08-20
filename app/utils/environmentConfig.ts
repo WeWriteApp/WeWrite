@@ -107,6 +107,9 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  * Check if the current request should use production collections
  * This is determined by the presence of the X-Force-Production-Data header
  * which is sent by ANY logged-out user components throughout the app.
+ *
+ * Note: In Next.js 15+, headers() must be awaited. This function handles both
+ * sync and async contexts gracefully.
  */
 const shouldUseProductionCollections = (): boolean => {
   // Check if we're in a server context with headers available
@@ -116,9 +119,31 @@ const shouldUseProductionCollections = (): boolean => {
       // This works in API routes and server components
       const { headers } = require('next/headers');
       const headersList = headers();
-      return headersList.get('x-force-production-data') === 'true';
-    } catch (error) {
-      // Headers not available in this context, use normal environment detection
+
+      // In Next.js 15+, headers() returns a promise, but we can't await here
+      // For synchronous contexts, we'll catch the error and fall back to normal environment detection
+      // The async version (getCollectionNameAsync) should be used in API routes for proper header support
+      if (headersList && typeof headersList.get === 'function') {
+        try {
+          return headersList.get('x-force-production-data') === 'true';
+        } catch (syncError) {
+          // Next.js 15+ async headers - silently fall back
+          return false;
+        }
+      }
+
+      return false;
+    } catch (error: any) {
+      // Silently handle Next.js 15+ async headers requirement
+      // This prevents console spam while maintaining functionality
+      if (error.message && error.message.includes('headers()')) {
+        // This is the expected Next.js 15+ async headers error
+        // Fall back to normal environment detection without logging
+        return false;
+      }
+
+      // Log other unexpected errors for debugging
+      console.warn('[Environment Config] Unexpected error accessing headers:', error.message);
       return false;
     }
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { Button } from './button';
@@ -53,6 +54,7 @@ export function FinancialDropdown({
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Detect mobile vs desktop
   useEffect(() => {
@@ -70,7 +72,7 @@ export function FinancialDropdown({
       <DropdownMenuTrigger asChild>
         <div
           ref={triggerRef}
-          className={cn("cursor-pointer", className)}
+          className={cn("cursor-pointer flex items-center", className)}
           data-dropdown-trigger="true"
           data-dropdown-id={`financial-${title.toLowerCase()}`}
           aria-expanded={isOpen}
@@ -84,6 +86,7 @@ export function FinancialDropdown({
       <DropdownMenuContent
         align={direction === 'southeast' ? 'start' : 'end'}
         className="w-auto min-w-[200px] max-w-[280px] p-3"
+        sideOffset={12}
       >
         {/* Title */}
         <div className="text-sm font-medium text-foreground mb-3 text-center">
@@ -99,10 +102,11 @@ export function FinancialDropdown({
           <>
             <DropdownMenuSeparator />
 
-            {/* Navigation button - Full width */}
-            <div className="mt-3">
+            {/* Navigation buttons */}
+            <div className="mt-3 space-y-2">
               <Button
                 size="sm"
+                variant="outline"
                 onClick={() => {
                   // Close dropdown before navigating
                   setIsOpen(false);
@@ -110,8 +114,23 @@ export function FinancialDropdown({
                 }}
                 className="w-full whitespace-nowrap"
               >
-                {title === 'Spending' ? 'Go to spend' : 'Go to earnings'}
+                {title === 'Spending' ? 'Spend breakdown' : 'Go to earnings'}
               </Button>
+
+              {title === 'Spending' && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    // Close dropdown before navigating
+                    setIsOpen(false);
+                    // Navigate to fund account page
+                    router.push('/settings/fund-account');
+                  }}
+                  className="w-full whitespace-nowrap"
+                >
+                  Top off account
+                </Button>
+              )}
             </div>
           </>
         )}
@@ -128,6 +147,9 @@ export function SpendBreakdown({
   allocatedUsdCents,
   availableUsdCents
 }: SpendBreakdownProps) {
+  // Determine if user is out of funds (available is $0.00)
+  const isOutOfFunds = availableUsdCents === 0;
+
   return (
     <div className="space-y-2 text-sm">
       <div className="flex justify-between">
@@ -136,11 +158,15 @@ export function SpendBreakdown({
       </div>
       <div className="flex justify-between">
         <span className="text-muted-foreground">Allocated:</span>
-        <span className="font-medium text-primary">{formatUsdCents(allocatedUsdCents)}</span>
+        <span className={`font-medium ${isOutOfFunds ? 'text-orange-600' : 'text-primary'}`}>
+          {formatUsdCents(allocatedUsdCents)}
+        </span>
       </div>
       <div className="flex justify-between">
         <span className="text-muted-foreground">Available:</span>
-        <span className="font-medium text-green-600">{formatUsdCents(availableUsdCents)}</span>
+        <span className={`font-medium ${isOutOfFunds ? 'text-orange-600' : 'text-green-600'}`}>
+          {isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents)}
+        </span>
       </div>
       
       {/* Visual bar */}
@@ -150,14 +176,14 @@ export function SpendBreakdown({
             {/* Allocated portion */}
             {allocatedUsdCents > 0 && (
               <div
-                className="bg-primary"
+                className={isOutOfFunds ? "bg-orange-500" : "bg-primary"}
                 style={{ width: `${Math.min((allocatedUsdCents / totalUsdCents) * 100, 100)}%` }}
               />
             )}
             {/* Available portion */}
             {availableUsdCents > 0 && (
               <div
-                className="bg-green-500"
+                className={isOutOfFunds ? "bg-orange-500" : "bg-green-500"}
                 style={{ width: `${Math.min((availableUsdCents / totalUsdCents) * 100, 100)}%` }}
               />
             )}

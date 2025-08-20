@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentConfig';
+import { getCollectionNameAsync, COLLECTIONS } from '../../../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { trackFirebaseRead } from '../../../../utils/costMonitor';
 import { userCache } from '../../../../utils/userCache';
 import { recordProductionRead } from '../../../../utils/productionReadMonitor';
+import { getDocWithTimeout } from '../../../../utils/firebaseTimeout';
 
 /**
  * Optimized User Data API
@@ -97,11 +98,11 @@ export async function GET(
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Fetch user document
-    const userDoc = await db
-      .collection(getCollectionName(COLLECTIONS.USERS))
-      .doc(userId)
-      .get();
+    // Fetch user document with timeout
+    const userDoc = await getDocWithTimeout(
+      db.collection(await getCollectionNameAsync(COLLECTIONS.USERS)).doc(userId),
+      6000 // 6 second timeout
+    );
 
     if (!userDoc.exists) {
       return NextResponse.json(
@@ -157,11 +158,24 @@ export async function GET(
 
     return response;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[User API] Error fetching user:', error);
-    
+
+    // Handle timeout errors specifically
+    if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+      console.error('🚨 User profile-data API timeout:', error.message);
+      return NextResponse.json(
+        {
+          error: 'Request timeout',
+          message: 'The request took too long to complete. Please try again.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
+        { status: 408 } // Request Timeout
+      );
+    }
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },

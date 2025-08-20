@@ -1,0 +1,140 @@
+/**
+ * WeWrite Card Theme CSS
+ * 
+ * This file contains the CSS custom properties and classes for our
+ * centralized card theme system. It provides consistent styling for
+ * all card components across the application.
+ * 
+ * Based on Radix Colors design principles with semantic color tokens.
+ */
+
+/* ===== CARD THEME CSS VARIABLES ===== */
+
+:root {
+  /* Light theme card variables - more subtle and transparent */
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-bg-hover: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --card-border-hover: rgba(0, 0, 0, 0.12);
+  --card-text: hsl(210, 24%, 16%);
+  --card-text-muted: hsl(210, 16%, 46%);
+}
+
+.dark {
+  /* Dark theme card variables - completely neutral grey (zero saturation) */
+  --card-bg: rgba(20, 20, 20, 0.7);
+  --card-bg-hover: rgba(20, 20, 20, 0.85);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-hover: rgba(255, 255, 255, 0.12);
+  --card-text: hsl(0, 0%, 98%);
+  --card-text-muted: hsl(0, 0%, 65%);
+}
+
+/* ===== UNIVERSAL CARD SYSTEM ===== */
+
+/**
+ * Universal WeWrite Card
+ *
+ * ONE card class for ALL components. This provides:
+ * - Consistent background and borders across light/dark themes
+ * - Subtle transparency for modern look
+ * - Backdrop blur for glassmorphism effect
+ * - Responsive hover states
+ * - Accessibility support
+ *
+ * Use this class for ALL cards: daily notes, recent edits, content cards, etc.
+ */
+.wewrite-card {
+  /* Background with subtle transparency and glassmorphism */
+  background-color: var(--card-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+
+  /* Subtle, theme-aware borders */
+  border: 1px solid var(--card-border);
+
+  /* Text color */
+  color: var(--card-text);
+
+  /* Standard styling */
+  border-radius: 1rem;
+  padding: 1rem;
+  transition: all 0.2s ease-in-out;
+
+  /* Subtle shadow */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.wewrite-card:hover {
+  background-color: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+}
+
+.dark .wewrite-card {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.dark .wewrite-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== TEXT UTILITY CLASSES ===== */
+
+.wewrite-card-text {
+  color: var(--card-text);
+}
+
+.wewrite-card-text-muted {
+  color: var(--card-text-muted);
+}
+
+/* ===== CARD VARIANTS ===== */
+
+/**
+ * Card variants for specific use cases
+ * All inherit from .wewrite-card base styling
+ */
+
+/* Daily notes cards - flex layout for proper content centering */
+.wewrite-card.wewrite-daily-notes {
+  display: flex;
+  flex-direction: column;
+  min-height: 16rem; /* h-64 */
+}
+
+/* Floating cards - enhanced blur and shadow for overlays */
+.wewrite-card.wewrite-floating {
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark .wewrite-card.wewrite-floating {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 768px) {
+  .wewrite-card {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wewrite-card:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* ===== HIGH CONTRAST MODE SUPPORT ===== */
+
+html[data-high-contrast="true"] .wewrite-card {
+  border-width: 2px;
+  border-color: var(--card-text);
+}
+
+html[data-high-contrast="true"] .wewrite-card-text-muted {
+  color: var(--card-text);
+}

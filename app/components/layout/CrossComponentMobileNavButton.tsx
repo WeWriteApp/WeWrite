@@ -130,7 +130,7 @@ export default function CrossComponentMobileNavButton({
       onMouseEnter={handleMouseEnter}
       onTouchStart={handleTouchStart}
       className={cn(
-        "flex flex-col items-center justify-center h-16 flex-1 rounded-lg py-2 px-1 relative gap-1 group",
+        "flex flex-col items-center justify-center h-11 flex-1 rounded-lg py-0.5 px-1 relative gap-0.5 group",
         "transition-all duration-75 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
@@ -140,9 +140,9 @@ export default function CrossComponentMobileNavButton({
         isPressed && "scale-95 bg-primary/20",
         // Base states with enhanced contrast
         "hover:bg-primary/10 active:bg-primary/20",
-        // Active state styling - use accent colors consistently
+        // Active state styling - use semi-transparent colors for glassmorphism
         isActive
-          ? "bg-accent text-accent-foreground"
+          ? "bg-accent/20 text-accent-foreground dark:bg-white/20 dark:text-white"
           : [
               "text-slate-600 hover:text-slate-900",
               "dark:text-muted-foreground dark:hover:text-foreground"
@@ -162,7 +162,7 @@ export default function CrossComponentMobileNavButton({
     >
       <div className="relative">
         <Icon className={cn(
-          "h-6 w-6 flex-shrink-0 transition-transform duration-75",
+          "h-7 w-7 flex-shrink-0 transition-transform duration-75",
           isPressed && "scale-110",
           isDragging && "scale-90"
         )} />

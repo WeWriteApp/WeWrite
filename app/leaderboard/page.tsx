@@ -227,9 +227,11 @@ export default function LeaderboardPage() {
 
       <div className="border-theme-medium rounded-lg overflow-hidden">
         {loading ? (
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="ml-2">Loading users...</span>
+          <div className="flex justify-center items-center p-8 min-h-[300px]">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span>Loading users...</span>
+            </div>
           </div>
         ) : error && !user ? (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">

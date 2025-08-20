@@ -29,7 +29,7 @@ import DeletedPageBanner from "../utils/DeletedPageBanner";
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
-import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
+import { UnifiedErrorBoundary } from "../utils/UnifiedErrorBoundary";
 import TextView from "../editor/TextView";
 
 import DenseModeToggle from "../viewer/DenseModeToggle";
@@ -481,6 +481,8 @@ export default function PageView({
       console.log('📄 PageView: Skipping data loading - just saved, using current editor state');
       return;
     }
+
+    // SIMPLIFIED: No complex timing logic needed with unified cache
 
     pageLogger.debug('Starting page load', { pageId, userId: user?.uid });
     setIsLoading(true);
@@ -1283,36 +1285,25 @@ export default function PageView({
         console.log('✅ EDITOR FIX: Editor state updated with saved content');
       }
 
-      // COMPREHENSIVE CLIENT-SIDE CACHE INVALIDATION
+      // SIMPLIFIED CLIENT-SIDE CACHE INVALIDATION
       try {
-        console.log('🗑️ CLIENT CACHE: Comprehensive cache clearing for saved page:', pageId);
+        console.log('🗑️ UNIFIED CACHE: Client-side cache invalidation for saved page:', pageId);
 
-        // 1. Clear read optimizer cache
-        const { clearOptimizedCache } = await import('../../utils/readOptimizer');
-        clearOptimizedCache(`page:${pageId}:`);
+        // Single unified cache invalidation
+        const { invalidatePageData } = await import('../../utils/unifiedCache');
+        invalidatePageData(pageId, user?.uid);
 
-        // 2. Clear page cache
-        const { pageCache } = await import('../../utils/pageCache');
-        pageCache.invalidate(pageId);
+        // Dispatch refresh event for components
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('refresh-recent-edits', {
+            detail: { pageId, userId: user?.uid }
+          }));
+          console.log('✅ UNIFIED CACHE: Dispatched refresh-recent-edits event');
+        }
 
-        // 3. Clear batch page cache
-        const { clearBatchCache } = await import('../../utils/batchPageLoader');
-        clearBatchCache();
-
-        // 4. Clear global cache entries for this page
-        const { invalidateCache } = await import('../../utils/globalCache');
-        invalidateCache(`page:${pageId}`);
-        invalidateCache(`pageData:${pageId}`);
-
-        // NOTE: We don't need to fetch fresh data from server here because:
-        // 1. We already updated page state and editor state with the saved content above
-        // 2. The saved content IS the fresh content (we just saved it)
-        // 3. Fetching again creates a race condition that can show stale cached content
-        console.log('✅ CLIENT CACHE: Skipping server fetch - using saved content as fresh content');
-
-        console.log('✅ CLIENT CACHE: Comprehensive cache clearing completed');
+        console.log('✅ UNIFIED CACHE: Client-side invalidation completed');
       } catch (cacheError) {
-        console.warn('⚠️ CLIENT CACHE: Error clearing caches (non-fatal):', cacheError);
+        console.warn('⚠️ UNIFIED CACHE: Error clearing caches (non-fatal):', cacheError);
       }
 
       // Emit page save event for real-time updates
@@ -1611,12 +1602,15 @@ export default function PageView({
                   username={user?.username}
                 >
                   <div ref={contentRef}>
-                    <TextViewErrorBoundary fallbackContent={
+                    <UnifiedErrorBoundary fallback={({ error, resetError }) => (
                       <div className="p-4 text-muted-foreground">
                         <p>Unable to display page content. The page may have formatting issues.</p>
                         <p className="text-sm mt-2">Page ID: {page.id}</p>
+                        <button onClick={resetError} className="mt-2 text-sm underline">
+                          Try again
+                        </button>
                       </div>
-                    }>
+                    )}>
 
                       {/* Unified content display system */}
                       {(() => {
@@ -1658,7 +1652,7 @@ export default function PageView({
                           </div>
                         );
                       })()}
-                    </TextViewErrorBoundary>
+                    </UnifiedErrorBoundary>
 
                     {/* Custom Date Field and Location Field are now handled by PageFooter */}
 

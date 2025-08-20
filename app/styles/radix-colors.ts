@@ -96,13 +96,13 @@ export const darkModeColors = {
   '--primary': blueDark.blue9,
   '--primary-foreground': 'white',
   
-  // Secondary colors
-  '--secondary': slateDark.slate3,
-  '--secondary-foreground': slateDark.slate11,
-  
-  // Muted colors
-  '--muted': slateDark.slate3,
-  '--muted-foreground': slateDark.slate11,
+  // Secondary colors - using neutral grey instead of slate
+  '--secondary': grayDark.gray3,
+  '--secondary-foreground': grayDark.gray11,
+
+  // Muted colors - using neutral grey instead of slate
+  '--muted': grayDark.gray3,
+  '--muted-foreground': grayDark.gray11,
   
   // Accent colors
   '--accent': blueDark.blue3,
@@ -112,9 +112,9 @@ export const darkModeColors = {
   '--destructive': redDark.red9,
   '--destructive-foreground': 'white',
   
-  // Border colors
-  '--border': slateDark.slate6,
-  '--input': slateDark.slate7,
+  // Border colors - using neutral grey instead of slate
+  '--border': grayDark.gray6,
+  '--input': grayDark.gray7,
   '--ring': blueDark.blue7};
 
 // Helper function to convert Radix color to HSL format for Tailwind

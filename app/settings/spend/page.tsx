@@ -179,7 +179,7 @@ export default function SpendPage() {
     // Optimistic update - update UI immediately
     setAllocations(prev => prev.map(a =>
       a.id === allocation.id
-        ? { ...a, usdCents: a.usdCents + 100 }
+        ? { ...a, usdCents: a.usdCents + allocationIntervalCents }
         : a
     ));
 
@@ -190,8 +190,8 @@ export default function SpendPage() {
     try {
       const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
       const body = allocation.resourceType === 'user'
-        ? { recipientUserId: allocation.resourceId, usdCentsChange: 100 }
-        : { pageId: allocation.resourceId, usdCentsChange: 100 };
+        ? { recipientUserId: allocation.resourceId, usdCentsChange: allocationIntervalCents }
+        : { pageId: allocation.resourceId, usdCentsChange: allocationIntervalCents };
 
       fetch(endpoint, {
         method: 'POST',
@@ -213,7 +213,7 @@ export default function SpendPage() {
     // Optimistic update - update UI immediately
     setAllocations(prev => prev.map(a =>
       a.id === allocation.id
-        ? { ...a, usdCents: Math.max(0, a.usdCents - 100) }
+        ? { ...a, usdCents: Math.max(0, a.usdCents - allocationIntervalCents) }
         : a
     ));
 
@@ -224,8 +224,8 @@ export default function SpendPage() {
     try {
       const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
       const body = allocation.resourceType === 'user'
-        ? { recipientUserId: allocation.resourceId, usdCentsChange: -100 }
-        : { pageId: allocation.resourceId, usdCentsChange: -100 };
+        ? { recipientUserId: allocation.resourceId, usdCentsChange: -allocationIntervalCents }
+        : { pageId: allocation.resourceId, usdCentsChange: -allocationIntervalCents };
 
       fetch(endpoint, {
         method: 'POST',

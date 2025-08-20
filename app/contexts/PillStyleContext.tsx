@@ -83,7 +83,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         float-none
         leading-tight
         w-auto
-        max-w-full
+        max-w-[200px]
         my-0.5
         vertical-align-baseline
       `.trim().replace(/\s+/g, ' ');

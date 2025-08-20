@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../utils/environmentConfig';
+import { getCollectionNameAsync } from '../../utils/environmentConfig';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
     const adminDb = admin.firestore();
 
     // Get users who are not the current user and have recent activity
-    const usersQuery = adminDb.collection(getCollectionName('users'))
+    const usersCollectionName = await getCollectionNameAsync('users');
+    const usersQuery = adminDb.collection(usersCollectionName)
       .where('id', '!=', currentUserId)
       .limit(20);
 
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
       if (!userData.username) continue;
 
       // Get recent pages by this user
-      const pagesQuery = adminDb.collection(getCollectionName('pages'))
+      const pagesCollectionName = await getCollectionNameAsync('pages');
+      const pagesQuery = adminDb.collection(pagesCollectionName)
         .where('userId', '==', userData.id)
         .where('isPublic', '==', true)
         .orderBy('lastModified', 'desc')

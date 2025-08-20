@@ -238,6 +238,42 @@ const updateOptimisticBalance = useCallback((changeCents: number) => {
 }, []);
 ```
 
+## Page Allocation Detail Modal
+
+### Overview
+The Page Allocation Detail Modal provides users with a detailed view of their fund allocation for a specific page, featuring the four-section composition bar system.
+
+**File**: `app/components/payments/UsdAllocationModal.tsx`
+
+### Key Features
+
+#### Four-Section Composition Bar
+The modal displays fund allocation using a visual composition bar with four distinct sections:
+
+1. **OTHER** (Grey, leftmost): Funds allocated to other pages
+2. **CURRENT** (Accent color): Funds allocated to the current page (within budget)
+3. **OVERSPENT** (Orange): Current page allocation that exceeds available funds
+4. **AVAILABLE** (Empty, rightmost): Remaining unallocated funds
+
+#### Simplified Interface
+- **No top summary section**: Removed redundant balance information
+- **No quick amounts**: Streamlined to focus on custom amount input
+- **Clean allocation overview**: Four-section bar with legend showing exact amounts
+- **Real-time preview**: Shows allocation changes as user types
+
+#### Mathematical Logic
+```typescript
+// Calculate four-section breakdown
+const otherPagesCents = Math.max(0, originalAllocatedCents - currentAllocation);
+const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
+const newPageFundedCents = Math.min(newAllocationCents, availableFundsForCurrentPage);
+const newPageOverfundedCents = Math.max(0, newAllocationCents - availableFundsForCurrentPage);
+const newAvailableCents = Math.max(0, totalCents - otherPagesCents - newPageFundedCents);
+```
+
+### Usage
+The modal is triggered from allocation bars and provides detailed allocation management for individual pages. It integrates with the existing allocation system hooks and maintains consistency with the overall allocation architecture.
+
 ## Anti-Patterns to Avoid
 
 ### ❌ Double-Counting

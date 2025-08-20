@@ -60,6 +60,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **[Current Architecture](docs/CURRENT_ARCHITECTURE.md)** - ⭐ **ESSENTIAL** - Complete system overview and architecture principles
 - **[Payment System Guide](docs/PAYMENT_SYSTEM_GUIDE.md)** - ⭐ **ESSENTIAL** - Complete USD payment system documentation
 - **[Performance Optimization Guide](docs/PERFORMANCE_OPTIMIZATION_GUIDE.md)** - ⭐ **ESSENTIAL** - Optimization strategies (90% cost reduction achieved)
+- **[Design System](docs/design-system.md)** - ⭐ **ESSENTIAL** - FloatingCard component system and glassmorphism guidelines
 
 #### Quick Start Guides
 - **[Environment Quick Reference](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Development environment setup

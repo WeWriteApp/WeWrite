@@ -9,11 +9,13 @@ import { cn } from "../../lib/utils";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocationModal } from './UsdAllocationModal';
+import { FloatingPledge } from '../ui/FloatingCard';
+
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
-import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBalanceContext';
+import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
@@ -51,8 +53,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const { triggerDelayedBanner } = useDelayedLoginBanner();
   const { usdBalance } = useUsdBalance();
   const { hasActiveSubscription } = useSubscription();
-  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
-  const { fakeBalance, isFakeBalance } = useFakeBalance();
+  const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
+  const { demoBalance, isDemoBalance } = useDemoBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
 
   // Flash animation state
@@ -86,7 +88,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     enabled: !isPageOwner && !!pageId
   });
 
-  const { handleAllocationChange: originalHandleAllocationChange, isProcessing } = useAllocationActions({
+  // Use allocation actions hook
+  const {
+    handleAllocationChange: originalHandleAllocationChange,
+    isProcessing,
+    error,
+    clearError
+  } = useAllocationActions({
     pageId,
     authorId: authorId || '',
     pageTitle: pageTitle || '',
@@ -145,35 +153,57 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
 
 
-  // Calculate composition bar data
+  // Calculate composition bar data with optimistic updates
   const getCompositionData = (): CompositionBarData => {
     // Use appropriate balance based on subscription status
-    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+    const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
 
     if (!currentBalance) {
       return {
         otherPagesPercentage: 0,
-        currentPagePercentage: 0,
+        currentPageFundedPercentage: 0,
+        currentPageOverfundedPercentage: 0,
         availablePercentage: 100,
         isOutOfFunds: false
       };
     }
 
     const totalCents = currentBalance.totalUsdCents;
-    const allocatedCents = currentBalance.allocatedUsdCents;
-    const availableCents = currentBalance.availableUsdCents;
+    const originalAllocatedCents = currentBalance.allocatedUsdCents;
+    const originalAvailableCents = currentBalance.availableUsdCents;
 
-    const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
-    const isOutOfFunds = availableCents <= 0 && totalCents > 0;
+    // Use optimistic allocation for current page (if available)
+    const currentPageCents = allocationState.optimisticAllocation ?? allocationState.currentAllocationCents;
 
-    // Calculate percentages for composition bar
-    const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
-    const currentPagePercentage = totalCents > 0 ? (allocationState.currentAllocationCents / totalCents) * 100 : 0;
-    const availablePercentage = totalCents > 0 ? Math.max(0, (availableCents / totalCents) * 100) : 0;
+    // Calculate other pages allocation - this should remain constant during optimistic updates
+    // We use the original allocation state to avoid the squeeze effect
+    const otherPagesCents = Math.max(0, originalAllocatedCents - allocationState.currentAllocationCents);
+
+    // Calculate optimistic available by subtracting the allocation difference from original available
+    const allocationDifference = currentPageCents - allocationState.currentAllocationCents;
+    const optimisticAvailableCents = Math.max(0, originalAvailableCents - allocationDifference);
+
+    const isOutOfFunds = optimisticAvailableCents <= 0 && totalCents > 0;
+
+    // Calculate total allocated including current page
+    const totalAllocatedCents = otherPagesCents + currentPageCents;
+
+    // Split current page allocation into funded and overfunded portions
+    const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
+    const currentPageFundedCents = Math.min(currentPageCents, availableFundsForCurrentPage);
+    const currentPageOverfundedCents = Math.max(0, currentPageCents - availableFundsForCurrentPage);
+
+    // Calculate percentages for composition bar based on total allocated (which may exceed totalCents)
+    const displayTotal = Math.max(totalCents, totalAllocatedCents);
+    const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
+    const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
+    const currentPageOverfundedPercentage = displayTotal > 0 ? (currentPageOverfundedCents / displayTotal) * 100 : 0;
+    const availablePercentage = displayTotal > 0 ? Math.max(0, (optimisticAvailableCents / displayTotal) * 100) : 0;
 
     return {
       otherPagesPercentage,
-      currentPagePercentage,
+      currentPageFundedPercentage,
+      currentPageOverfundedPercentage,
       availablePercentage,
       isOutOfFunds
     };
@@ -196,7 +226,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   if (isPageOwner) return null;
 
   // User state checks - use the correct subscription state from UsdBalance context
-  const showSubscriptionNotice = user && !hasActiveSubscription && !isPageOwner && isFakeBalance;
+  const showSubscriptionNotice = user && !hasActiveSubscription && !isPageOwner && isDemoBalance;
   const showLoginNotice = !user && !isPageOwner;
 
   return createPortal(
@@ -207,19 +237,20 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         isHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
       )}
     >
-      <div
-        ref={ref}
+      <FloatingPledge
         className={cn(
-          "relative w-full max-w-md shadow-2xl overflow-hidden rounded-2xl",
-          "bg-background/90 backdrop-blur-xl border border-white/20",
+          "relative w-full max-w-md overflow-hidden",
           "transition-all duration-300 ease-in-out", // Ensure smooth transitions
           flashType === 'accent' && "animate-flash-bar-accent",
           flashType === 'red' && "animate-flash-bar-red",
           className
         )}
-        data-allocation-bar
-        onClick={handleAllocationBarClick}
       >
+        <div
+          ref={ref}
+          data-allocation-bar
+          onClick={handleAllocationBarClick}
+        >
         {/* Main Content */}
         <div className={cn(
           "space-y-2",
@@ -291,7 +322,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAllocationChange(cents / allocationIntervalCents, e);
+                          handleAllocationChange(cents, e);
                         }}
                         disabled={isProcessing || cents > (usdBalance?.availableUsdCents || 0)}
                         className="h-8 px-2 text-xs"
@@ -308,10 +339,10 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                         onClick={(e) => {
                           e.stopPropagation();
                           const decreaseAmount = Math.min(allocationState.currentAllocationCents, 25);
-                          handleAllocationChange(-decreaseAmount / allocationIntervalCents, e);
+                          handleAllocationChange(-decreaseAmount, e);
                         }}
                         disabled={isProcessing}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -331,9 +362,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={(e) => handleAllocationChange(-1, e)}
+                    onClick={(e) => handleAllocationChange(-allocationIntervalCents, e)}
                     className={cn(
-                      "h-8 w-8 p-0",
+                      "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80",
                       allocationState.currentAllocationCents <= 0 && "opacity-50",
                       isProcessing && "opacity-75"
                     )}
@@ -354,14 +385,19 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                         />
                       )}
 
-                      {/* Current page */}
-                      {compositionData.currentPagePercentage > 0 && (
+                      {/* Current page - funded portion */}
+                      {compositionData.currentPageFundedPercentage > 0 && (
                         <div
-                          className={cn(
-                            "h-full rounded-md transition-all duration-300 ease-out",
-                            compositionData.isOutOfFunds ? "bg-orange-500" : "bg-primary"
-                          )}
-                          style={{ width: `${compositionData.currentPagePercentage}%` }}
+                          className="h-full bg-primary rounded-md transition-all duration-300 ease-out"
+                          style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
+                        />
+                      )}
+
+                      {/* Current page - overfunded portion */}
+                      {compositionData.currentPageOverfundedPercentage > 0 && (
+                        <div
+                          className="h-full bg-orange-500 rounded-md transition-all duration-300 ease-out"
+                          style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
                         />
                       )}
 
@@ -380,14 +416,11 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (compositionData.isOutOfFunds) {
-                        router.push('/settings/fund-account');
-                      } else {
-                        handleAllocationChange(1, e);
-                      }
+                      // Always try to allocate - if out of funds, the modal will show
+                      handleAllocationChange(allocationIntervalCents, e);
                     }}
                     className={cn(
-                      "h-8 w-8 p-0",
+                      "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80",
                       compositionData.isOutOfFunds && "opacity-50",
                       isProcessing && "opacity-75"
                     )}
@@ -416,7 +449,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
             }}
           >
             <p className="text-sm font-medium text-center">
-              Try allocating with fake $10/mo • Log in to make it real
+              Demo funds: Log in to start donating to writers
             </p>
           </div>
         )}
@@ -435,7 +468,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
             </p>
           </div>
         )}
-      </div>
+        </div>
+      </FloatingPledge>
 
       {/* USD Allocation Modal */}
       <UsdAllocationModal
@@ -449,6 +483,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
           setOptimisticAllocation(newAllocationCents);
         }}
       />
+
+
+
     </div>,
     document.body
   );

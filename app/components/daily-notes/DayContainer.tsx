@@ -75,14 +75,15 @@ const DayContainer = React.memo(function DayContainer({
     <div className="flex flex-col items-center">
       <div
         className={cn(
+          // Use universal card system with daily notes variant
+          "wewrite-card wewrite-daily-notes",
           // Different sizing for full page vs card view
           isFullPage
-            ? "flex-shrink-0 w-80 min-h-[400px] max-h-[80vh] rounded-xl border-theme-strong bg-card text-card-foreground shadow-sm"
-            : "flex-shrink-0 w-48 h-64 rounded-xl border-theme-strong bg-card text-card-foreground shadow-sm",
-          "dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden hover:bg-muted/30",
-          "transition-all duration-200 p-4 flex flex-col",
+            ? "flex-shrink-0 w-80 min-h-[400px] max-h-[80vh]"
+            : "flex-shrink-0 w-48 h-64",
+          "rounded-xl overflow-hidden",
           // Add accent border for today's card
-          isToday && "border-2",
+          isToday && "border-2 border-primary",
           className
         )}
         style={isToday ? { borderColor: accentColor } : undefined}
@@ -90,13 +91,18 @@ const DayContainer = React.memo(function DayContainer({
         {/* Date Header - Centered and clickable if not in full page */}
         <div
           className={cn(
-            "mb-3 text-center flex-shrink-0",
-            !isFullPage && "cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+            "mb-3 flex-shrink-0 flex justify-center",
+            !isFullPage && "cursor-pointer transition-colors"
           )}
           onClick={handleHeaderClick}
           data-date={format(date, 'yyyy-MM-dd')}
         >
-          <div className="text-lg font-semibold text-foreground">
+          <div
+            className={cn(
+              "text-lg font-semibold text-foreground text-center",
+              !isFullPage && "hover:bg-muted/50 rounded-lg px-2 py-1"
+            )}
+          >
             {dayName} {monthDay}
           </div>
         </div>
@@ -108,7 +114,9 @@ const DayContainer = React.memo(function DayContainer({
             "flex flex-wrap gap-2 items-start flex-1",
             isFullPage
               ? "overflow-y-auto" // Allow scrolling in full page view
-              : "overflow-hidden max-h-[4.5rem]" // Restrict height in card view
+              : "overflow-hidden max-h-[4.5rem]", // Restrict height in card view
+            // Center empty state content vertically and horizontally
+            notes.length === 0 && "items-center justify-center"
           )}>
             {visibleNotes.map((note) => (
               <PillLink
@@ -123,8 +131,26 @@ const DayContainer = React.memo(function DayContainer({
 
             {/* Show message when no notes for this date and no add button */}
             {notes.length === 0 && !onAddNewClick && (
-              <div className="text-sm text-muted-foreground italic">
+              <div className="text-sm wewrite-card-text-muted text-center">
                 No pages created on this date
+              </div>
+            )}
+
+            {/* Show encouraging message for today's empty daily notes */}
+            {notes.length === 0 && onAddNewClick && isToday && (
+              <div className="text-sm text-center space-y-1">
+                <div className="wewrite-card-text-muted">You haven't written anything today!</div>
+                <button
+                  onClick={() => {
+                    // Navigate to /new with ideas banner expanded
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/new?ideas=true';
+                    }
+                  }}
+                  className="text-primary hover:text-primary/80 underline transition-colors"
+                >
+                  Need ideas?
+                </button>
               </div>
             )}
           </div>

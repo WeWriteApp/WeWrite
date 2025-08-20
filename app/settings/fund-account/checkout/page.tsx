@@ -10,7 +10,7 @@ import { useTheme } from '../../../providers/ThemeProvider';
 import { Button } from '../../../components/ui/button';
 import { Loader2, ChevronLeft } from 'lucide-react';
 import { Logo } from '../../../components/ui/Logo';
-import NavHeader from '../../../components/layout/NavHeader';
+
 
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
@@ -124,10 +124,7 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
 
   return (
     <>
-      {/* NavHeader for mobile navigation */}
-      <div className="md:hidden">
-        <NavHeader />
-      </div>
+
 
       {/* Main Content */}
       <main className="flex-1 p-4 pb-24 overflow-hidden">

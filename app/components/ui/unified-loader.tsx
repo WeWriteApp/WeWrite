@@ -139,7 +139,7 @@ export function UnifiedLoader({
       className={cn(
         "flex flex-col items-center justify-center",
         fullScreen
-          ? "fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+          ? "fixed bg-background/80 backdrop-blur-sm z-50"
           : "min-h-[50vh] w-full py-8",
         className
       )}
@@ -152,16 +152,13 @@ export function UnifiedLoader({
       style={{
         // For fullScreen loaders, use viewport centering that ignores layout shifts
         // This ensures the loader is always perfectly centered regardless of sidebar/layout
-        position: fullScreen ? 'fixed' : 'relative',
         ...(fullScreen ? {
-          // Use viewport units for true centering
+          position: 'fixed',
           left: '50vw',
           top: '50vh',
           transform: 'translate(-50%, -50%)',
           width: 'auto',
-          height: 'auto',
-          // Remove inset-0 positioning conflicts
-          inset: 'unset'
+          height: 'auto'
         } : {
           minHeight: '50vh',
           display: 'flex',

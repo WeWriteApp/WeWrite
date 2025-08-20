@@ -9,9 +9,10 @@ import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
 import Header from '../marketing/Header';
-import { PagePreviewCard } from './PagePreviewCard';
 import { useTheme } from "next-themes";
 import PillLink from "../utils/PillLink";
+import ActivityCarousel from './ActivityCarousel';
+import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 // Import server components for activity and trending data
@@ -22,17 +23,14 @@ import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-ev
 import { openExternalLink } from '../../utils/pwa-detection';
 import { useAuth } from '../../providers/AuthProvider';
 
-// Import client-side components instead of server components
-import ActivityCarousel from './ActivityCarousel';
-import SimpleTrendingCarousel from './SimpleTrendingCarousel';
-import PaginatedCarousel from './PaginatedCarousel';
+// Import client-side components for simplified stacked layout
 import HeroCard from './HeroCard';
-import FeatureRoadmapCard from './FeatureRoadmapCard';
-import UseCasesCard from './UseCasesCard';
 
 import { DynamicPagePreviewCard } from './DynamicPagePreviewCard';
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 import { WeWriteLogo } from '../ui/WeWriteLogo';
+import SiteFooter from '../layout/SiteFooter';
+import { fetchLandingPageCards, type LandingPageCardConfig } from '../../config/landingPageCards';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,49 +46,31 @@ const LandingPage = () => {
   // Analytics hook for tracking
   const analytics = useWeWriteAnalytics();
 
-  // Lazy loading for carousels
-  const [activityVisible, setActivityVisible] = useState(false);
-  const [trendingVisible, setTrendingVisible] = useState(false);
-  const activityRef = useRef<HTMLDivElement>(null);
-  const trendingRef = useRef<HTMLDivElement>(null);
-
-  // Interactive fundraiser platform text
-  const [platformIndex, setPlatformIndex] = useState(0);
-  const [isAnimatingPlatform, setIsAnimatingPlatform] = useState(false);
-  const platformRef = useRef<HTMLSpanElement>(null);
-  const platformOptions = ["Kickstarters", "GoFundMes", "Patreons", "OpenCollectives", "Memberfuls"];
+  // Landing page cards state
+  const [landingPageCards, setLandingPageCards] = useState<LandingPageCardConfig[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
 
   // Animation classes
   const fadeInClass = "animate-fadeIn";
 
-  // Set up intersection observer for lazy loading
+  // Fetch landing page cards configuration
   useEffect(() => {
-    // Create an observer for lazy loading
-    const observerOptions = {
-      root: null, // Use viewport as root
-      rootMargin: '100px', // Load when within 100px of viewport
-      threshold: 0.1 // Trigger when 10% visible
+    const loadCards = async () => {
+      try {
+        setCardsLoading(true);
+        const cards = await fetchLandingPageCards();
+        setLandingPageCards(cards);
+      } catch (error) {
+        console.error('Failed to load landing page cards:', error);
+        // Fallback to static configuration
+        const { getEnabledLandingPageCards } = await import('../../config/landingPageCards');
+        setLandingPageCards(getEnabledLandingPageCards());
+      } finally {
+        setCardsLoading(false);
+      }
     };
 
-    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach(entry => {
-        if (entry.target.id === 'activity' && entry.isIntersecting) {
-          setActivityVisible(true);
-        } else if (entry.target.id === 'trending' && entry.isIntersecting) {
-          setTrendingVisible(true);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(handleIntersection, observerOptions);
-
-    // Observe sections for lazy loading
-    if (activityRef.current) observer.observe(activityRef.current);
-    if (trendingRef.current) observer.observe(trendingRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
+    loadCards();
   }, []);
 
   useEffect(() => {
@@ -102,22 +82,7 @@ const LandingPage = () => {
 
 
 
-      // Determine which section is currently in view
-      const sections = ['hero', 'activity', 'trending', 'about'];
-      const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px, Desktop: 60px
-
-      // Find the section that is currently in view
-      for (const sectionId of sections) {
-        const section = document.getElementById(sectionId);
-        if (section) {
-          const rect = section.getBoundingClientRect();
-          // Check if the section is in view (accounting for header height)
-          if (rect.top <= headerHeight + 100 && rect.bottom >= headerHeight) {
-            setActiveSection(sectionId);
-            break;
-          }
-        }
-      }
+      // Simplified - no section navigation needed for stacked layout
 
       // If we're at the top of the page, clear the active section
       if (window.scrollY < 100) {
@@ -300,90 +265,17 @@ const LandingPage = () => {
     }
   };
 
-  // Animation function for text cycling
-  const animateTextChange = (element: HTMLElement | null, newText: string, callback: () => void) => {
-    if (!element) return;
-
-    const originalText = element.innerText;
-    const frames = 10; // Number of animation frames
-    let frame = 0;
-
-    const animate = () => {
-      if (frame < frames) {
-        // During first half, scramble the text
-        if (frame < frames / 2) {
-          const progress = frame / (frames / 2);
-          const scrambleLength = Math.floor(originalText.length * progress);
-          const keepLength = originalText.length - scrambleLength;
-
-          let scrambledText = originalText.substring(0, keepLength);
-          for (let i = 0; i < scrambleLength; i++) {
-            scrambledText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
-          }
-
-          element.innerText = scrambledText;
-        }
-        // During second half, reveal the new text
-        else {
-          const progress = (frame - frames / 2) / (frames / 2);
-          const revealLength = Math.floor(newText.length * progress);
-
-          let revealedText = newText.substring(0, revealLength);
-          for (let i = 0; i < newText.length - revealLength; i++) {
-            revealedText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
-          }
-
-          element.innerText = revealedText;
-        }
-
-        frame++;
-        requestAnimationFrame(animate);
-      } else {
-        // Animation complete
-        element.innerText = newText;
-        callback();
-      }
-    };
-
-    animate();
-  };
-
-  // No longer need roadmap scroll navigation since we're using a filterable list
-
-  // Handle platform text click
-  const handlePlatformClick = () => {
-    if (isAnimatingPlatform) return;
-
-    // Track platform text click in Google Analytics
-    analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-      label: `Platform text click: ${platformOptions[platformIndex]} → ${platformOptions[(platformIndex + 1) % platformOptions.length]}`,
-      link_type: 'interactive_text',
-      link_text: platformOptions[platformIndex],
-      next_text: platformOptions[(platformIndex + 1) % platformOptions.length]
-    });
-
-    setIsAnimatingPlatform(true);
-    const nextIndex = (platformIndex + 1) % platformOptions.length;
-
-    animateTextChange(
-      platformRef.current,
-      platformOptions[nextIndex],
-      () => {
-        setPlatformIndex(nextIndex);
-        setIsAnimatingPlatform(false);
-      }
-    );
-  };
+  // Simplified - no animation functions needed
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark:bg-background">
 
 
       {/* Desktop Navigation - Always sticky at the top */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md`}>
         {/* Row 1: Logo + Navigation + Auth */}
         <div className="border-b border-border/20 py-2">
-          <div className="container mx-auto flex justify-between items-center px-6">
+          <div className="container mx-auto max-w-4xl flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
             <WeWriteLogo
               size="lg"
@@ -449,19 +341,15 @@ const LandingPage = () => {
         </div>
         </div>
 
-        {/* Row 2: Allocation Bar */}
-        <div className="py-1.5 bg-background/95">
-          <div className="container mx-auto px-6">
-            <LoggedOutFinancialHeader />
-          </div>
-        </div>
+        {/* Bottom gradient for smooth content transition */}
+        <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none" />
       </header>
 
       {/* Mobile Navigation - Always sticky at the top */}
       <div className={`${isMobileView ? 'block' : 'hidden'} fixed top-0 left-0 right-0 z-50 flex flex-col w-full`}>
         {/* Title and buttons */}
         <div className="w-full bg-background/90 backdrop-blur-xl shadow-sm py-2">
-          <div className="container mx-auto flex justify-between items-center px-4">
+          <div className="container mx-auto max-w-4xl flex justify-between items-center px-4">
             <WeWriteLogo
               size="md"
               styled={true}
@@ -525,17 +413,14 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Row 2: Allocation Bar */}
-        <div className="w-full bg-background/95 py-1.5 border-t border-border/20">
-          <div className="container mx-auto px-4">
-            <LoggedOutFinancialHeader />
-          </div>
-        </div>
-
-
+        {/* Bottom gradient for smooth content transition */}
+        <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none" />
       </div>
 
       <main className={`${isMobileView ? 'pt-20' : 'pt-16'}`}>
+        {/* Floating Financial Header */}
+        <LoggedOutFinancialHeader />
+
         {/* SEO Content - Hidden but accessible to search engines */}
         <div className="sr-only">
           <h1>WeWrite - The Social Wiki Where Every Page is a Fundraiser</h1>
@@ -545,7 +430,7 @@ const LandingPage = () => {
             Our platform enables real-time collaborative editing, allowing multiple users to work together seamlessly on documents, articles, stories, and any type of written content.
           </p>
           <p>
-            Join thousands of writers, readers, and content creators who are building the future of collaborative content creation.
+            Join writers, readers, and content creators who are building the future of collaborative content creation.
             Whether you're writing fiction, non-fiction, technical documentation, creative content, blog posts, research papers, or educational materials,
             WeWrite provides the comprehensive tools and supportive community you need to succeed in your writing journey.
           </p>
@@ -576,85 +461,79 @@ const LandingPage = () => {
 
 
 
-        {/* Hero Carousel - Paginated cards with hero, roadmap, and use cases */}
-        <section id="hero" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6 max-w-6xl">
-            <PaginatedCarousel
-              autoPlay={true}
-              autoPlayInterval={8000}
-              showArrows={true}
-              showDots={true}
-              className="min-h-[600px]"
-            >
-              <HeroCard
-                fadeInClass={fadeInClass}
-                platformOptions={platformOptions}
-                platformIndex={platformIndex}
-                handlePlatformClick={handlePlatformClick}
-                platformRef={platformRef}
-              />
-              <FeatureRoadmapCard fadeInClass={fadeInClass} />
-              <UseCasesCard fadeInClass={fadeInClass} />
-            </PaginatedCarousel>
+        {/* Simplified Stacked Cards Layout */}
+        <section className="py-8 md:py-12 pt-24 md:pt-28">
+          <div className="container mx-auto px-6 max-w-4xl space-y-8">
+
+            {/* Write Share Earn Card */}
+            <HeroCard
+              fadeInClass={fadeInClass}
+              platformOptions={[]} // Remove swappable text
+              platformIndex={0}
+              handlePlatformClick={() => {}} // No-op
+              platformRef={React.createRef()}
+            />
+
+            {/* Dynamic Page Preview Cards */}
+            {cardsLoading ? (
+              // Loading skeleton for cards
+              <div className="space-y-8">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="min-h-[500px] bg-muted/50 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              landingPageCards.map((cardConfig) => (
+                <DynamicPagePreviewCard
+                  key={cardConfig.id}
+                  pageId={cardConfig.pageId}
+                  customTitle={cardConfig.customTitle}
+                  buttonText={cardConfig.buttonText}
+                  maxLines={cardConfig.maxLines}
+                  showAllocationBar={cardConfig.showAllocationBar}
+                  authorId={cardConfig.authorId}
+                  allocationSource={cardConfig.allocationSource}
+                  className={cardConfig.className}
+                />
+              ))
+            )}
+
           </div>
         </section>
 
-        {/* Recent Edits Carousel - Lazy loaded */}
-        <section id="activity" ref={activityRef} className="py-16 md:py-20 bg-muted/30">
-          <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-8 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <Activity className="h-7 w-7" />
-                Recent Edits
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                See what's happening on WeWrite right now
+        {/* Recent Activity Carousel */}
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent Activity</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                See what the WeWrite community is creating and editing right now
               </p>
             </div>
-          </div>
-          <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-            {/* Only render carousel when section is visible */}
-            {activityVisible ? (
-              <ActivityCarousel />
-            ) : (
-              <div style={{ height: '220px' }} className="flex items-center justify-center">
-                <p className="text-muted-foreground">Loading activity...</p>
-              </div>
-            )}
+            <ActivityCarousel limit={30} />
           </div>
         </section>
 
-        {/* Trending Pages Section - Lazy loaded */}
-        <section id="trending" ref={trendingRef} className="py-16 md:py-20 bg-muted/30">
-          <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-8 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <Flame className="h-7 w-7" />
-                Trending Pages
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+        {/* Trending Pages Carousel */}
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 Discover the most popular content on WeWrite
               </p>
             </div>
-          </div>
-          <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-            {/* Only render carousel when section is visible */}
-            {trendingVisible ? (
-              <SimpleTrendingCarousel limit={20} />
-            ) : (
-              <div style={{ height: '240px' }} className="flex items-center justify-center">
-                <p className="text-muted-foreground">Loading trending pages...</p>
-              </div>
-            )}
+            <SimpleTrendingCarousel limit={20} />
           </div>
         </section>
-
-
 
         {/* Bottom spacing for footer visibility */}
         <div className="pb-32 md:pb-24"></div>
 
       </main>
+
+      {/* Global Footer */}
+      <SiteFooter />
     </div>
   );
 };

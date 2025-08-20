@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
+import { useDemoBalance } from '../contexts/DemoBalanceContext';
 import { useAllocationInterval } from '../contexts/AllocationIntervalContext';
 import { useToast } from '../components/ui/use-toast';
 import {
@@ -61,11 +62,16 @@ export function useAllocationActions({
   maxRetries = DEFAULT_MAX_RETRIES
 }: UseAllocationActionsOptions): UseAllocationActionsReturn {
   const { user } = useAuth();
-  const { usdBalance, updateOptimisticBalance, isFakeBalance, hasActiveSubscription, refreshFakeBalance } = useUsdBalance();
+  const { usdBalance, updateOptimisticBalance, hasActiveSubscription } = useUsdBalance();
+  const { isDemoBalance, demoBalance, refreshDemoBalance } = useDemoBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const { toast } = useToast();
 
   const [error, setError] = useState<string | null>(null);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   // Batching state
   const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,46 +99,21 @@ export function useAllocationActions({
     setError(null);
 
     try {
-      // Handle fake balance allocations
-      if (isFakeBalance) {
-        console.log('[AllocationActions] Processing fake balance allocation:', {
-          changeCents,
-          pageId,
-          pageTitle,
-          isLoggedOut: !user?.uid
-        });
-
+      // Handle demo balance allocations
+      if (isDemoBalance) {
         // Use simulated USD allocation functions
-        if (!user?.uid) {
-          // Logged out user
-          const result = allocateLoggedOutUsd(pageId, pageTitle, currentAllocationCents + changeCents);
-          if (result.success) {
-            // Refresh the fake balance from localStorage to update the context
-            refreshFakeBalance();
-            onAllocationChange?.(currentAllocationCents + changeCents);
-            showUsdAllocationNotification(
-              changeCents,
-              pageTitle,
-              currentAllocationCents + changeCents
-            );
-          } else {
-            throw new Error(result.error || 'Fake allocation failed');
-          }
+        const newAllocationCents = currentAllocationCents + changeCents;
+        const result = !user?.uid
+          ? allocateLoggedOutUsd(pageId, pageTitle, newAllocationCents)
+          : allocateUserUsd(user.uid, pageId, pageTitle, newAllocationCents);
+
+        if (result.success) {
+          // Refresh the demo balance from localStorage to update the context
+          refreshDemoBalance();
+          onAllocationChange?.(newAllocationCents);
+          showUsdAllocationNotification(changeCents, pageTitle, newAllocationCents);
         } else {
-          // Logged in user without subscription
-          const result = allocateUserUsd(user.uid, pageId, pageTitle, currentAllocationCents + changeCents);
-          if (result.success) {
-            // Refresh the fake balance from localStorage to update the context
-            refreshFakeBalance();
-            onAllocationChange?.(currentAllocationCents + changeCents);
-            showUsdAllocationNotification(
-              changeCents,
-              pageTitle,
-              currentAllocationCents + changeCents
-            );
-          } else {
-            throw new Error(result.error || 'Fake allocation failed');
-          }
+          throw new Error(result.error || 'Demo allocation failed');
         }
         return;
       }
@@ -190,7 +171,6 @@ export function useAllocationActions({
       // Report to analytics if needed
       if (errorResult.reportToAnalytics) {
         const analyticsData = allocationErrorHandler.createErrorAnalytics(error as Error, errorContext);
-        // TODO: Send to analytics service
         console.log('Error analytics:', analyticsData);
       }
     }
@@ -203,20 +183,24 @@ export function useAllocationActions({
     toast
   ]);
 
-  // Handle allocation change with direction
-  const handleAllocationChange = useCallback((
-    direction: AllocationDirection, 
-    event: React.MouseEvent
+  // Handle allocation change with amount
+  const handleAllocationChange = useCallback(async (
+    amount: number,
+    event?: React.MouseEvent
   ) => {
-    // Prevent event propagation
-    event.stopPropagation();
-    event.preventDefault();
-    event.nativeEvent.stopImmediatePropagation();
+    // Prevent event propagation if event is provided
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+      event.nativeEvent.stopImmediatePropagation();
+    }
 
-    if (!user || !pageId) return;
+    // For demo balance, allow logged-out users. For real balance, require user.
+    if (!pageId) return;
+    if (!isDemoBalance && !user) return;
 
-    // Check if user is trying to allocate to their own page
-    if (user.uid === authorId) {
+    // Check if user is trying to allocate to their own page (only for logged-in users)
+    if (user && user.uid === authorId) {
       toast({
         title: "Cannot allocate to your own page",
         description: "You cannot allocate funds to pages you created.",
@@ -225,24 +209,16 @@ export function useAllocationActions({
       return;
     }
 
-    const changeCents = direction * allocationIntervalCents;
-    const newAllocationCents = Math.max(0, currentAllocationCents + changeCents);
+    // Use the amount directly (can be positive or negative)
+    const newAllocationCents = Math.max(0, currentAllocationCents + amount);
+    const changeCents = amount; // The amount parameter is the change in cents
 
-    // Check for sufficient funds (for positive allocations)
-    if (changeCents > 0 && usdBalance) {
-      if (changeCents > usdBalance.availableUsdCents) {
-        toast({
-          title: "Insufficient funds",
-          description: "You don't have enough available funds for this allocation.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+    // Allow over-allocation - the server will handle budget checks and show modal if needed
 
-    // Immediate optimistic updates
-    if (isFakeBalance) {
-      // For fake balance, we'll refresh after the allocation is saved
+    // Immediate optimistic updates for both demo and real balance
+    if (isDemoBalance) {
+      // For demo balance, call the optimistic update callback directly
+      // since we don't have a central balance state to update
       onOptimisticUpdate?.(newAllocationCents);
     } else {
       // For real balance, use optimistic updates
@@ -294,17 +270,7 @@ export function useAllocationActions({
     
     if (changeCents === 0) return;
 
-    // Check for sufficient funds
-    if (changeCents > 0 && usdBalance) {
-      if (changeCents > usdBalance.availableUsdCents) {
-        toast({
-          title: "Insufficient funds",
-          description: "You don't have enough available funds for this allocation.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+    // Allow over-allocation - the server will handle budget checks and show modal if needed
 
     // Immediate optimistic updates
     updateOptimisticBalance(changeCents);
@@ -358,7 +324,6 @@ export function useAllocationActions({
       // Report to analytics if needed
       if (errorResult.reportToAnalytics) {
         const analyticsData = allocationErrorHandler.createErrorAnalytics(error as Error, errorContext);
-        // TODO: Send to analytics service
         console.log('Error analytics:', analyticsData);
       }
     });
@@ -388,8 +353,8 @@ export function useAllocationActions({
 
   return {
     handleAllocationChange,
-    handleDirectAllocation,
     isProcessing: allocationMutation.isPending,
-    error
+    error,
+    clearError
   };
 }

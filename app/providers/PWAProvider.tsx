@@ -31,78 +31,33 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Initialize PWA detection on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const pwaStatus = isPWA();
-      setIsPWAApp(pwaStatus);
+    const initializePWA = async () => {
+      if (typeof window !== 'undefined') {
+        const pwaStatus = isPWA();
+        setIsPWAApp(pwaStatus);
 
-      // Only check banner visibility if not in PWA mode
-      if (!pwaStatus) {
-        setShowBanner(shouldShowPWABanner());
-      }
+        // Only check banner visibility if not in PWA mode AND on mobile device
+        if (!pwaStatus) {
+          // Simple mobile detection without dynamic import
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-      // Initialize PWA installation tracking with user context
-      try {
-        PWAInstallTrackingService.initialize(user?.uid, user?.username);
-        console.log('PWA installation tracking initialized', user ? `for user: ${user.username}` : 'anonymously');
-      } catch (error) {
-        console.error('Error initializing PWA installation tracking:', error);
-      }
-
-      // Track PWA status in analytics
-      try {
-        const analyticsService = getAnalyticsService();
-        analyticsService.trackEvent({
-          category: EVENT_CATEGORIES.APP,
-          action: ANALYTICS_EVENTS.PWA_STATUS,
-          label: pwaStatus ? 'PWA' : 'Browser',
-          value: pwaStatus ? 1 : 0});
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`PWA status tracked: ${pwaStatus ? 'PWA' : 'Browser'}`);
+          if (isMobile) {
+            setShowBanner(shouldShowPWABanner());
+          }
         }
-      } catch (error) {
-        console.error('Error tracking PWA status:', error);
-      }
 
-      // Listen for display mode changes
-      const mediaQuery = window.matchMedia('(display-mode: standalone)');
-
-      const handleChange = (e: MediaQueryListEvent) => {
-        const newPWAStatus = e.matches;
-        setIsPWAApp(newPWAStatus);
-
-        // Track change in analytics
+        // Initialize PWA installation tracking with user context
         try {
-          const analyticsService = getAnalyticsService();
-          analyticsService.trackEvent({
-            category: EVENT_CATEGORIES.APP,
-            action: ANALYTICS_EVENTS.PWA_STATUS_CHANGED,
-            label: newPWAStatus ? 'PWA' : 'Browser',
-            value: newPWAStatus ? 1 : 0});
+          PWAInstallTrackingService.initialize(user?.uid, user?.username);
+          console.log('PWA installation tracking initialized', user ? `for user: ${user.username}` : 'anonymously');
         } catch (error) {
-          console.error('Error tracking PWA status change:', error);
+          console.error('Error initializing PWA installation tracking:', error);
         }
-      };
-
-      // Add event listener for display mode changes
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', handleChange);
-      } else {
-        // Fallback for older browsers
-        mediaQuery.addListener(handleChange);
       }
+    };
 
-      // Cleanup
-      return () => {
-        if (mediaQuery.removeEventListener) {
-          mediaQuery.removeEventListener('change', handleChange);
-        } else {
-          // Fallback for older browsers
-          mediaQuery.removeListener(handleChange);
-        }
-      };
-    }
-  }, []);
+    initializePWA();
+  }, [user]);
 
   // Reinitialize PWA tracking when user changes
   useEffect(() => {

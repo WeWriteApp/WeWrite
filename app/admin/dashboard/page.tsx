@@ -47,7 +47,7 @@ import { SubscriptionConversionFunnelWidget } from "../../components/admin/Subsc
 import { SubscriptionsOverTimeWidget } from "../../components/admin/SubscriptionsOverTimeWidget";
 import { SubscriptionRevenueWidget } from "../../components/admin/SubscriptionRevenueWidget";
 
-import { DashboardErrorBoundary, WidgetErrorBoundary } from "../../components/admin/DashboardErrorBoundary";
+import { UnifiedErrorBoundary } from "../../components/utils/UnifiedErrorBoundary";
 import { DashboardGridSkeleton, DateRangeFilterSkeleton } from "../../components/admin/DashboardSkeleton";
 import './dashboard.css';
 
@@ -379,7 +379,7 @@ export default function AdminDashboardPage() {
 
         {/* Dashboard Content */}
         <div className="py-6 px-6">
-          <DashboardErrorBoundary>
+          <UnifiedErrorBoundary>
             {(() => {
               if (dashboardLoading) {
                 console.log('🔄🔄🔄 Dashboard is loading, showing skeleton 🔄🔄🔄');
@@ -396,13 +396,13 @@ export default function AdminDashboardPage() {
                   <>
                     {/* Desktop-Optimized Dashboard - Full Width */}
                     <div className="w-full">
-                      <DashboardErrorBoundary>
+                      <UnifiedErrorBoundary>
                         <DesktopOptimizedDashboard
                           dateRange={dateRange}
                           granularity={granularity}
                           globalFilters={globalFilters}
                         />
-                      </DashboardErrorBoundary>
+                      </UnifiedErrorBoundary>
                     </div>
                   </>
                 );
@@ -417,13 +417,13 @@ export default function AdminDashboardPage() {
                           const WidgetComponent = widget.component;
                           return (
                             <DraggableWidget key={widget.id} id={widget.id} index={index} moveWidget={moveWidget}>
-                              <WidgetErrorBoundary widgetName={widget.id}>
+                              <UnifiedErrorBoundary>
                                 <WidgetComponent
                                   dateRange={dateRange}
                                   granularity={granularity}
                                   globalFilters={globalFilters}
                                 />
-                              </WidgetErrorBoundary>
+                              </UnifiedErrorBoundary>
                             </DraggableWidget>
                           );
                         })}
@@ -433,7 +433,7 @@ export default function AdminDashboardPage() {
                 }
               }
             })()}
-          </DashboardErrorBoundary>
+          </UnifiedErrorBoundary>
         </div>
       </div>
     </DndProvider>

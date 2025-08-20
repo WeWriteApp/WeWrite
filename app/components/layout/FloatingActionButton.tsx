@@ -78,13 +78,14 @@ export default function FloatingActionButton() {
       return '32px'; // 8 * 4 = 32px (bottom-8)
     }
 
-    // On mobile, position above mobile nav when visible
-    // FAB is positioned right-4 (16px from right), so use same 16px gap from mobile nav
+    // On mobile, position above floating mobile nav when visible
+    // Mobile nav is now floating with bottom-4 (16px) + nav height + extra gap
     if (shouldShowMobileNav) {
-      const baseOffset = 80; // Height of mobile nav
-      const gapFromNav = 16; // Same as right-4 gap
+      const navBottomMargin = 16; // bottom-4 from mobile nav
+      const navHeight = 80; // Height of mobile nav content
+      const extraGap = 24; // Additional gap between FAB and nav for better spacing
       const pwaPadding = isPWAMode && isIOSDevice() ? 20 : 0;
-      return `${baseOffset + gapFromNav + pwaPadding}px`;
+      return `${navBottomMargin + navHeight + extraGap + pwaPadding}px`;
     }
 
     // When mobile nav is hidden, use bottom padding

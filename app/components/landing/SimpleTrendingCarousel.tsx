@@ -128,8 +128,8 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
       loading={loading}
       error={error}
       emptyMessage="No trending pages available yet. Check back soon!"
-      height={240}
-      scrollSpeed={0.25}
+      height={280}
+      scrollSpeed={0.5}
       reverseDirection={true}
       fullWidth={true}
     >
@@ -140,7 +140,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
             className="trending-page-item flex-shrink-0"
             style={{
               width: '280px',
-              height: '220px',
+              height: '260px',
               marginRight: '8px'
             }}
           >
@@ -194,8 +194,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
                         pageId={page.id}
                         authorId={page.userId}
                         pageTitle={page.title || 'Untitled'}
-                        variant="embedded"
-                        size="sm"
+                        source="TrendingCarousel"
                       />
                     </div>
                   )}

@@ -320,7 +320,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 no-underline bg-card overflow-hidden",
+        // Use universal card system
+        "wewrite-card",
+        "w-full overflow-hidden",
         "flex flex-col",
         // Reduced padding for better screen real estate
         "p-3 md:p-3",

@@ -38,17 +38,19 @@ interface AllocationBarBaseProps extends BaseAllocationProps {
   onLongPress?: () => void;
 }
 
-// Hook for composition bar calculations
+// Hook for composition bar calculations with optimistic updates
 function useCompositionBar(
   currentAllocationCents: number,
-  usdBalance: any
+  usdBalance: any,
+  optimisticAllocation?: number | null
 ): UseCompositionBarReturn {
   return useMemo(() => {
     if (!usdBalance) {
       return {
         compositionData: {
           otherPagesPercentage: 0,
-          currentPagePercentage: 0,
+          currentPageFundedPercentage: 0,
+          currentPageOverfundedPercentage: 0,
           availablePercentage: 100,
           isOutOfFunds: false
         },
@@ -58,28 +60,58 @@ function useCompositionBar(
     }
 
     const totalCents = usdBalance.totalUsdCents;
-    const allocatedCents = usdBalance.allocatedUsdCents;
-    const availableCents = usdBalance.availableUsdCents;
-    
-    const otherPagesCents = Math.max(0, allocatedCents - currentAllocationCents);
-    const isOutOfFunds = availableCents <= 0 && totalCents > 0;
 
-    // Calculate percentages for composition bar
-    const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
-    const currentPagePercentage = totalCents > 0 ? (currentAllocationCents / totalCents) * 100 : 0;
-    const availablePercentage = totalCents > 0 ? Math.max(0, (availableCents / totalCents) * 100) : 0;
+    // CRITICAL FIX: Avoid double-counting optimistic updates
+    // The global balance might already include optimistic updates, so we need to work backwards
+    // to get the original state and then apply only the page-specific optimistic allocation
+
+    // Use optimistic allocation for current page (if available)
+    const currentPageCents = optimisticAllocation ?? currentAllocationCents;
+    const originalCurrentPageCents = currentAllocationCents; // Original page allocation before optimistic updates
+
+    // Calculate the change in current page allocation
+    const pageAllocationChange = currentPageCents - originalCurrentPageCents;
+
+    // Calculate other pages allocation from the current global state
+    // If we have an optimistic page allocation, we need to account for it
+    const currentGlobalAllocatedCents = usdBalance.allocatedUsdCents;
+    const otherPagesCents = Math.max(0, currentGlobalAllocatedCents - originalCurrentPageCents);
+
+    // Calculate available funds for current page (funds not allocated to other pages)
+    const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
+
+    // Split current page allocation into funded and overfunded portions
+    // The funded portion cannot exceed available funds for this page
+    const currentPageFundedCents = Math.min(currentPageCents, availableFundsForCurrentPage);
+    const currentPageOverfundedCents = Math.max(0, currentPageCents - availableFundsForCurrentPage);
+
+    // Calculate available funds correctly with optimistic updates:
+    // Available = Total - Other Pages - Current Page Funded
+    // Note: overfunded amounts don't consume available funds (they're "borrowed" from future budget)
+    const optimisticAvailableCents = Math.max(0, totalCents - otherPagesCents - currentPageFundedCents);
+    const isOutOfFunds = optimisticAvailableCents <= 0 && totalCents > 0;
+
+    // For display purposes, show all sections proportionally
+    // The display total should be the subscription amount plus any overspent amount
+    const displayTotal = totalCents + currentPageOverfundedCents;
+
+    const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
+    const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
+    const currentPageOverfundedPercentage = displayTotal > 0 ? (currentPageOverfundedCents / displayTotal) * 100 : 0;
+    const availablePercentage = displayTotal > 0 ? (optimisticAvailableCents / displayTotal) * 100 : 0;
 
     return {
       compositionData: {
         otherPagesPercentage,
-        currentPagePercentage,
+        currentPageFundedPercentage,
+        currentPageOverfundedPercentage,
         availablePercentage,
         isOutOfFunds
       },
       isOutOfFunds,
       hasBalance: totalCents > 0
     };
-  }, [currentAllocationCents, usdBalance]);
+  }, [currentAllocationCents, usdBalance, optimisticAllocation]);
 }
 
 export function AllocationBarBase({
@@ -112,7 +144,12 @@ export function AllocationBarBase({
   });
 
   // Use allocation actions hook
-  const { handleAllocationChange, isProcessing, error } = useAllocationActions({
+  const {
+    handleAllocationChange,
+    isProcessing,
+    error,
+    clearError
+  } = useAllocationActions({
     pageId,
     authorId,
     pageTitle,
@@ -121,10 +158,11 @@ export function AllocationBarBase({
     onOptimisticUpdate: setOptimisticAllocation
   });
 
-  // Use composition bar hook
+  // Use composition bar hook with optimistic allocation
   const { compositionData, isOutOfFunds, hasBalance } = useCompositionBar(
     allocationState.currentAllocationCents,
-    usdBalance
+    usdBalance,
+    allocationState.isOptimistic ? allocationState.currentAllocationCents : null
   );
 
   // Don't render for page owners or when loading critical data
@@ -185,7 +223,7 @@ export function AllocationBarBase({
             size={buttonSize}
             variant={buttonVariant}
             className={cn(
-              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0",
+              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary/50 hover:bg-secondary/80",
               buttonVariant === 'ghost' && "hover:bg-destructive/20"
             )}
             onClick={(e) => handleAllocationChange(-1, e)}
@@ -206,14 +244,19 @@ export function AllocationBarBase({
                   />
                 )}
 
-                {/* Current page (spent here) */}
-                {compositionData.currentPagePercentage > 0 && (
+                {/* Current page - funded portion */}
+                {compositionData.currentPageFundedPercentage > 0 && (
                   <div
-                    className={cn(
-                      "rounded-md transition-all duration-300 ease-out",
-                      isOutOfFunds ? "bg-orange-500" : "bg-primary"
-                    )}
-                    style={{ width: `${compositionData.currentPagePercentage}%` }}
+                    className="bg-primary rounded-md transition-all duration-300 ease-out"
+                    style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
+                  />
+                )}
+
+                {/* Current page - overfunded portion */}
+                {compositionData.currentPageOverfundedPercentage > 0 && (
+                  <div
+                    className="bg-orange-500 rounded-md transition-all duration-300 ease-out"
+                    style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
                   />
                 )}
 
@@ -232,8 +275,8 @@ export function AllocationBarBase({
           <Button
             size={buttonSize}
             variant={buttonVariant}
-            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0"
-            onClick={(e) => isOutOfFunds ? handleOutOfFunds(e) : handleAllocationChange(1, e)}
+            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary/50 hover:bg-secondary/80"
+            onClick={(e) => handleAllocationChange(allocationIntervalCents, e)}
             disabled={disabled || isProcessing}
             onContextMenu={onLongPress ? (e) => {
               e.preventDefault();
@@ -251,13 +294,7 @@ export function AllocationBarBase({
           {error}
         </div>
       )}
+
     </div>
   );
-
-  // Handle out of funds click
-  function handleOutOfFunds(e: React.MouseEvent) {
-    e.stopPropagation();
-    e.preventDefault();
-    router.push('/settings/fund-account');
-  }
 }

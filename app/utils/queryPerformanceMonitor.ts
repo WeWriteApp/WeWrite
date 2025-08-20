@@ -6,7 +6,7 @@
  */
 
 import { QueryConstraint } from 'firebase/firestore';
-import { estimateQueryCost } from './batchQueryOptimizer';
+// Note: estimateQueryCost functionality moved to unifiedApiClient
 
 interface QueryExecution {
   id: string;

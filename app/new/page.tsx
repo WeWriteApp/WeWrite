@@ -1316,12 +1316,13 @@ function NewPageContent() {
             </div>
           )}
 
-          {/* Writing Ideas Banner */}
-          {isEditing && (
+          {/* Writing Ideas Banner - hide when content is provided via URL (e.g., from highlight text -> add to page) */}
+          {isEditing && !searchParams?.get('content') && (
             <div className="mt-4">
               <WritingIdeasBanner
                 onIdeaSelect={handleIdeaSelect}
                 selectedTitle={selectedIdea}
+                initialExpanded={searchParams?.get('ideas') === 'true'}
               />
             </div>
           )}

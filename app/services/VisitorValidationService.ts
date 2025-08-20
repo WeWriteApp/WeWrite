@@ -90,10 +90,13 @@ export class VisitorValidationService {
           confidence -= 0.15;
         }
       }
-        return s.pageViews > this.VALIDATION_THRESHOLDS.MAX_PAGE_VIEWS_PER_SESSION ||
-               s.sessionDuration < this.VALIDATION_THRESHOLDS.MIN_SESSION_DURATION ||
-               (s.userAgent && s.userAgent.length > this.VALIDATION_THRESHOLDS.SUSPICIOUS_USER_AGENT_LENGTH);
-      });
+
+      // Check for suspicious session patterns
+      const suspiciousSessions = sessions.filter(s =>
+        s.pageViews > this.VALIDATION_THRESHOLDS.MAX_PAGE_VIEWS_PER_SESSION ||
+        s.sessionDuration < this.VALIDATION_THRESHOLDS.MIN_SESSION_DURATION ||
+        (s.userAgent && s.userAgent.length > this.VALIDATION_THRESHOLDS.SUSPICIOUS_USER_AGENT_LENGTH)
+      );
 
       if (suspiciousSessions.length > 0) {
         issues.push(`${suspiciousSessions.length} sessions with suspicious patterns`);

@@ -187,7 +187,7 @@ export function UserUsdAllocationBar({
                       size="sm"
                       onClick={() => handleUsdAllocation(-Math.min(currentUsdAllocation, 25))}
                       disabled={isLoading}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80"
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
@@ -207,12 +207,9 @@ export function UserUsdAllocationBar({
 
               {/* Available balance */}
               <div className="text-xs text-muted-foreground text-center">
-                Available: {formatUsdCents(availableUsdCents)}
-                {availableUsdCents <= 0 && (
-                  <span className="text-destructive ml-1">
-                    • {USD_UI_TEXT.OUT_OF_FUNDS}
-                  </span>
-                )}
+                Available: <span className={availableUsdCents <= 0 ? 'text-orange-600 font-medium' : ''}>
+                  {availableUsdCents <= 0 ? 'Out' : formatUsdCents(availableUsdCents)}
+                </span>
               </div>
             </div>
           ) : (

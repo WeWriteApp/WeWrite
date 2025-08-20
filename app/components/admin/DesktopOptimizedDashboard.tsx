@@ -49,6 +49,7 @@ import {
   usePlatformFeeMetrics,
   useFollowedUsersMetrics
 } from '../../hooks/useDashboardAnalytics';
+import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
 
 interface DesktopOptimizedDashboardProps {
   dateRange: DateRange;
@@ -62,7 +63,7 @@ interface DashboardRow {
   icon: React.ReactNode;
   color: string;
   hook: any;
-  valueFormatter: (data: any[], stats?: any) => string;
+  valueFormatter: (data: any[], stats?: any, metadata?: any) => string;
   chartComponent: React.ComponentType<any>;
 }
 
@@ -167,7 +168,7 @@ export function DesktopOptimizedDashboard({
       title: 'New Accounts Created',
       icon: <Users className="h-5 w-5" />,
       color: '#3b82f6',
-      hook: useAccountsMetrics,
+      hook: (dateRange: DateRange, granularity: number) => useAccountsMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
@@ -205,7 +206,7 @@ export function DesktopOptimizedDashboard({
       title: 'Pages Created & Deleted',
       icon: <FileText className="h-5 w-5" />,
       color: '#10b981',
-      hook: usePagesMetrics,
+      hook: (dateRange: DateRange, granularity: number) => usePagesMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.totalPages || 0), 0);
         return total.toLocaleString();
@@ -243,7 +244,7 @@ export function DesktopOptimizedDashboard({
       title: 'Content Changes',
       icon: <Edit3 className="h-5 w-5" />,
       color: '#f59e0b',
-      hook: useContentChangesMetrics,
+      hook: (dateRange: DateRange, granularity: number) => useContentChangesMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.charactersAdded || 0) + (item.charactersDeleted || 0), 0);
         return total.toLocaleString();
@@ -279,7 +280,7 @@ export function DesktopOptimizedDashboard({
       title: 'Content Shares',
       icon: <Share2 className="h-5 w-5" />,
       color: '#8b5cf6',
-      hook: useSharesMetrics,
+      hook: (dateRange: DateRange, granularity: number) => useSharesMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.successful || 0), 0);
         return total.toLocaleString();
@@ -328,7 +329,7 @@ export function DesktopOptimizedDashboard({
       title: 'PWA Installs',
       icon: <Smartphone className="h-5 w-5" />,
       color: '#06b6d4',
-      hook: usePWAInstallsMetrics,
+      hook: (dateRange: DateRange, granularity: number) => usePWAInstallsMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
         return total.toLocaleString();
@@ -366,7 +367,7 @@ export function DesktopOptimizedDashboard({
       title: 'Visitors',
       icon: <Eye className="h-5 w-5" />,
       color: '#84cc16',
-      hook: useVisitorMetrics,
+      hook: (dateRange: DateRange, granularity: number) => useVisitorMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
         return total.toLocaleString();
@@ -406,7 +407,7 @@ export function DesktopOptimizedDashboard({
       title: 'Platform Fee Revenue',
       icon: <DollarSign className="h-5 w-5" />,
       color: '#10b981',
-      hook: usePlatformFeeMetrics,
+      hook: (dateRange: DateRange, granularity: number) => usePlatformFeeMetrics(dateRange, granularity),
       valueFormatter: (data, stats) => {
         // Use stats if available, otherwise calculate from data
         const totalRevenue = stats?.totalRevenue || data.reduce((sum, item) => sum + (item.revenue || 0), 0);
@@ -459,7 +460,7 @@ export function DesktopOptimizedDashboard({
       title: 'User Follows',
       icon: <Users className="h-5 w-5" />,
       color: '#8b5cf6',
-      hook: useFollowedUsersMetrics,
+      hook: (dateRange: DateRange, granularity: number) => useFollowedUsersMetrics(dateRange, granularity),
       valueFormatter: (data) => {
         const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
@@ -496,6 +497,96 @@ export function DesktopOptimizedDashboard({
           </BarChart>
         </ResponsiveContainer>
       )
+    },
+    {
+      id: 'payout-analytics',
+      title: 'Writer Payouts',
+      icon: <DollarSign className="h-5 w-5" />,
+      color: '#059669',
+      hook: (dateRange: DateRange, granularity: number, globalFilters?: any) => {
+        const cumulative = globalFilters?.timeDisplayMode === 'cumulative';
+        return usePayoutAnalytics(dateRange, cumulative);
+      },
+      valueFormatter: (data, stats, metadata) => {
+        const totalPayouts = metadata?.totalPayouts || 0;
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(totalPayouts);
+      },
+      chartComponent: ({ data, height, globalFilters }) => {
+        const cumulative = globalFilters?.timeDisplayMode === 'cumulative';
+
+        if (cumulative) {
+          return (
+            <ResponsiveContainer width="100%" height={height}>
+              <AreaChart data={data}>
+                <defs>
+                  <linearGradient id="payoutGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#059669" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                  width={60}
+                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                />
+                <Tooltip content={<SafeTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="payouts"
+                  stroke="#059669"
+                  fill="url(#payoutGradient)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          );
+        } else {
+          return (
+            <ResponsiveContainer width="100%" height={height}>
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                  width={60}
+                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                />
+                <Tooltip content={<SafeTooltip />} />
+                <Bar
+                  dataKey="payouts"
+                  fill="#059669"
+                  radius={[2, 2, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          );
+        }
+      }
     }
   ];
 
@@ -538,12 +629,13 @@ function DashboardRow({
   height: number;
 }) {
   // Use the hook for this row
-  const hookResult = row.hook(dateRange, granularity);
+  const hookResult = row.hook(dateRange, granularity, globalFilters);
   const { data, loading, error } = hookResult;
   const stats = hookResult.stats; // For platform fee metrics
+  const metadata = hookResult.metadata; // For payout analytics
 
   // Calculate current value
-  const currentValue = data && data.length > 0 ? row.valueFormatter(data, stats) : '0';
+  const currentValue = data && data.length > 0 ? row.valueFormatter(data, stats, metadata) : '0';
   
   // Calculate trend
   const trend = calculateTrend(data);
@@ -597,7 +689,7 @@ function DashboardRow({
             No data available
           </div>
         ) : (
-          <row.chartComponent data={data} height={height} />
+          <row.chartComponent data={data} height={height} globalFilters={globalFilters} />
         )}
       </div>
     </div>

@@ -1,13 +1,55 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../../providers/AuthProvider';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
-import ProgressiveHeroText from './ProgressiveHeroText';
+
+// Client-side cache for platform statistics (5 minute cache)
+interface PlatformStatsCache {
+  data: { totalUsers: number; totalPayouts: number };
+  timestamp: number;
+}
+
+let platformStatsCache: PlatformStatsCache | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Preload function to start fetching stats early
+const preloadPlatformStats = async () => {
+  try {
+    const now = Date.now();
+    if (platformStatsCache && (now - platformStatsCache.timestamp) < CACHE_DURATION) {
+      return; // Already cached
+    }
+
+    const response = await fetch('/api/public/platform-stats');
+    if (response.ok) {
+      const data = await response.json();
+      const statsData = data.data || data;
+
+      const userCount = Number(statsData.totalUsers);
+      const payoutTotal = Number(statsData.totalPayouts);
+
+      if (!isNaN(userCount) && !isNaN(payoutTotal) && userCount >= 0 && payoutTotal >= 0) {
+        platformStatsCache = {
+          data: {
+            totalUsers: userCount,
+            totalPayouts: payoutTotal
+          },
+          timestamp: now
+        };
+        console.log('📦 Preloaded platform stats successfully');
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to preload platform stats:', error);
+  }
+};
 
 interface HeroCardProps {
   fadeInClass: string;
@@ -24,55 +66,148 @@ export default function HeroCard({
   handlePlatformClick,
   platformRef
 }: HeroCardProps) {
+  console.log('🎯🎯🎯 HeroCard: COMPONENT FUNCTION CALLED!');
+  console.log('🎯 HeroCard: Component is rendering!');
+
   const { user } = useAuth();
   const analytics = useWeWriteAnalytics();
   const isAuthenticated = !!user;
+  const [writerCount, setWriterCount] = useState<number | null>(null);
+  const [totalPayouts, setTotalPayouts] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Start preloading stats immediately when component mounts
+  useEffect(() => {
+    preloadPlatformStats();
+  }, []);
+
+  // Fetch accurate writer count and total payouts from production collections
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        console.log('🚀 HeroCard: Starting to fetch platform stats...');
+
+        // Check client-side cache first
+        const now = Date.now();
+        if (platformStatsCache && (now - platformStatsCache.timestamp) < CACHE_DURATION) {
+          console.log('📦 HeroCard: Using cached platform stats');
+          setWriterCount(platformStatsCache.data.totalUsers);
+          setTotalPayouts(platformStatsCache.data.totalPayouts);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch('/api/public/platform-stats');
+        console.log('🌐 HeroCard: API response status:', response.status, response.ok);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📊 HeroCard: Platform stats received:', data);
+
+          // Extract the actual data from the API response structure
+          const statsData = data.data || data;
+          console.log('📈 HeroCard: Extracted stats data:', statsData);
+
+          // Validate and set user count
+          const userCount = Number(statsData.totalUsers);
+          if (!isNaN(userCount) && userCount >= 0) {
+            console.log('✅ HeroCard: Setting writer count to:', userCount);
+            setWriterCount(userCount);
+          } else {
+            console.error('❌ HeroCard: Invalid user count:', statsData.totalUsers);
+            setError(`Invalid user count received: ${statsData.totalUsers}`);
+            return;
+          }
+
+          // Validate and set payout total
+          const payoutTotal = Number(statsData.totalPayouts);
+          if (!isNaN(payoutTotal) && payoutTotal >= 0) {
+            console.log('✅ HeroCard: Setting total payouts to:', payoutTotal);
+            setTotalPayouts(payoutTotal);
+          } else {
+            console.error('❌ HeroCard: Invalid payout total:', statsData.totalPayouts);
+            setError(`Invalid payout total received: ${statsData.totalPayouts}`);
+            return;
+          }
+
+          // Cache the results for faster subsequent loads
+          platformStatsCache = {
+            data: {
+              totalUsers: userCount,
+              totalPayouts: payoutTotal
+            },
+            timestamp: now
+          };
+
+          console.log('🎉 HeroCard: Successfully set both values and cached!');
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          setError(`Failed to fetch stats: ${errorData.error || response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch platform stats:', error);
+        setError('Unable to load platform statistics');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   return (
-    <Card className="h-full border-theme-medium bg-gradient-to-br from-background via-background to-muted/20">
-      <CardContent className="p-8 md:p-12 flex flex-col justify-center min-h-[500px]">
+    <Card className="h-full">
+      <CardContent className="p-6 md:p-8 flex flex-col justify-center min-h-[500px]">
         <div className="text-center max-w-4xl mx-auto">
           {/* Hero Text */}
           <div className={`mb-8 ${fadeInClass}`}>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
               Write, share, earn.
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              WeWrite is a free speech platform and social wiki where every page is a{' '}
-              <span
-                className="cursor-pointer relative group"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Track fundraiser text click in Google Analytics
-                  analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                    label: 'Fundraiser text click: scroll to features',
-                    link_type: 'text',
-                    link_text: 'fundraiser',
-                    link_url: '#features'
-                  });
-                  // Scroll to features section
-                  const featuresSection = document.getElementById('features');
-                  if (featuresSection) {
-                    featuresSection.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-              >
-                fundraiser
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs bg-black/80 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                  Coming soon
-                </span>
-              </span>
-              . Write a hundred pages, you've just written a hundred{' '}
-              <span
-                ref={platformRef}
-                onClick={handlePlatformClick}
-                className="cursor-pointer hover:text-primary transition-colors select-none"
-                title="Click me!"
-              >
-                {platformOptions[platformIndex]}
-              </span>
-              .
+            <p className="text-xl md:text-2xl text-muted-foreground mb-6 max-w-3xl mx-auto">
+              WeWrite is a free speech social writing app where every page is a fundraiser.
             </p>
+
+            {/* Platform Statistics */}
+            <div className="mb-8 max-w-3xl mx-auto">
+              {error ? (
+                <p className="text-lg text-red-600 dark:text-red-400">
+                  Unable to load platform statistics: {error}
+                </p>
+              ) : (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="text-lg md:text-xl text-muted-foreground text-center">
+                    Join{' '}
+                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-muted-foreground bg-muted">
+                      {isLoading || writerCount === null ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          writers
+                        </span>
+                      ) : (
+                        `${writerCount.toLocaleString()} writers`
+                      )}
+                    </Badge>
+                    {' '}who've made{' '}
+                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800">
+                      {isLoading || totalPayouts === null ? (
+                        <span className="flex items-center gap-1">
+                          $<Loader2 className="h-4 w-4 animate-spin" />
+                          USD
+                        </span>
+                      ) : (
+                        `$${totalPayouts.toFixed(2)}`
+                      )}
+                    </Badge>
+                    {' '}helping to build the future of humanity's shared knowledge.
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -132,10 +267,7 @@ export default function HeroCard({
             )}
           </div>
 
-          {/* Additional info */}
-          <div className={`mt-8 text-sm text-muted-foreground ${fadeInClass}`}>
-            <p>Join thousands of writers building the future of collaborative content</p>
-          </div>
+
         </div>
       </CardContent>
     </Card>

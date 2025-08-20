@@ -2,29 +2,34 @@
 
 ## Overview
 
-WeWrite uses a standardized two-header system to provide consistent navigation and user experience across the application.
+WeWrite uses a three-header system to provide consistent navigation and user experience across the application, with different headers for different page types.
 
 ## Header Types
 
-### 1. NavHeader - Navigation Pages
-**Purpose**: For navigation pages, settings, search, timeline, etc.
-**File**: `app/components/layout/NavHeader.tsx`
+### 1. FloatingFinancialHeader - Navigation Pages Only
+**Purpose**: Floating financial header for logged-in users on navigation pages
+**File**: `app/components/layout/FloatingFinancialHeader.tsx`
 
 **Design Specifications**:
-- **Position**: Below status bar on second row
-- **Left**: Spend/balance display (same as homepage)
-- **Center**: WeWrite logo (clickable to go home)
-- **Right**: Earnings display (same as homepage)
-- **No title text** - logo serves as the identifier
-- **No back button** - use sidebar navigation instead
-- **Consistent financial info** - users always see their money status
+- **Position**: Floating at top with translucency and blur
+- **Left**: Spend/balance display with hover tooltips (desktop) or tap dropdowns (mobile)
+- **Center**: WeWrite logo (clickable to home)
+- **Right**: Earnings display with hover tooltips (desktop) or tap dropdowns (mobile)
+- **Visibility**: Only shows on NavPages, automatically hidden on content pages
+- **Responsive**: Respects sidebar positioning on desktop
 
 **Layout Structure**:
 ```
 [Spend/Balance]     [WeWrite Logo]     [Earnings]
 ```
 
-### 2. ContentPageHeader - Content Pages
+**Visibility Logic**:
+- ✅ Shows on navigation pages (/, /trending, /search, /settings, etc.)
+- 🚫 Hidden on content pages (/[id]/ pages)
+- 🚫 Hidden on settings and admin pages
+- 🚫 Hidden when user is editing content (contenteditable detection)
+
+### 2. ContentPageHeader - Content Pages Only
 **Purpose**: For individual pages, posts, articles with content
 **File**: `app/components/pages/ContentPageHeader.tsx`
 
@@ -34,29 +39,50 @@ WeWrite uses a standardized two-header system to provide consistent navigation a
 - **View mode**: Sticky header that can collapse on scroll
 - **Contains**: Page title, author info, page actions
 - **Logo placement**: In mobile view for home navigation
+- **Financial header**: FloatingFinancialHeader is automatically hidden on these pages
 
 **Related Components** (kept separate):
 - **StickySaveHeader**: Appears above ContentPageHeader when editing
 - **PageFooter**: Contains bottom save actions
 
+### 3. SettingsHeader - Settings Pages
+**Purpose**: For settings and administrative pages
+**File**: `app/components/layout/SettingsHeader.tsx`
+
+**Design Specifications**:
+- **Purpose-built** for settings navigation
+- **Contains**: Settings-specific navigation and controls
+- **Financial header**: FloatingFinancialHeader is automatically hidden on these pages
+
 ## Usage Guidelines
 
-### When to Use NavHeader
+### When FloatingFinancialHeader Shows (NavPages)
+- ✅ Home page (`/`)
 - ✅ Timeline page (`/timeline`)
 - ✅ Search page (`/search`)
-- ✅ Settings pages (`/settings/*`)
+- ✅ Trending pages (`/trending`, `/trending-pages`)
+- ✅ Activity page (`/activity`)
 - ✅ Notifications page (`/notifications`)
-- ✅ Admin pages (`/admin/*`)
-- ✅ Home page (`/`)
+- ✅ User pages (`/user/*`)
+- ✅ Group pages (`/group/*`)
 - ✅ Any navigation or utility page
+
+### When FloatingFinancialHeader is Hidden
+- 🚫 Individual content pages (`/[id]`) - use ContentPageHeader instead
+- 🚫 Settings pages (`/settings/*`) - use SettingsHeader instead
+- 🚫 Admin pages (`/admin/*`) - use SettingsHeader instead
+- 🚫 When user is editing content (contenteditable detection)
 
 ### When to Use ContentPageHeader
 - ✅ Individual ContentPages (`/[id]`)
-- ✅ User profile pages (`/user/*`)
-- ✅ Group pages (`/group/*`)
 - ✅ New page creation (`/new`)
 - ✅ Page editing interfaces
 - ✅ Any page with user-generated content
+
+### When to Use SettingsHeader
+- ✅ Settings pages (`/settings/*`)
+- ✅ Admin pages (`/admin/*`)
+- ✅ Any administrative interface
 
 ## Component APIs
 

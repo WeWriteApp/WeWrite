@@ -292,9 +292,10 @@ const readOptimizer = new ReadOptimizer();
  * Optimized wrapper for page data fetching
  */
 export async function getOptimizedPageData(pageId: string, userId?: string) {
+  const { cachedFetch } = await import('./unifiedCache');
   const cacheKey = `page:${pageId}:${userId || 'anonymous'}`;
 
-  return readOptimizer.optimizedFetch(
+  return cachedFetch(
     cacheKey,
     async () => {
       // Use API instead of direct Firebase calls
@@ -328,9 +329,7 @@ export async function getOptimizedPageData(pageId: string, userId?: string) {
       return data;
     },
     {
-      cacheDuration: 2 * 60 * 1000, // Reduced to 2 minutes for fresher data
-      aggressive: true,
-      priority: 'high'
+      tags: [`page:${pageId}`, 'pages']
     }
   );
 }

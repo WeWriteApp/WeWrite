@@ -6,8 +6,8 @@ import "./utils/errorSuppression" // Initialize error suppression early
 import "./utils/detailedErrorLogging" // Initialize detailed error logging
 import "./utils/developmentErrorOverride" // Initialize enhanced React error messages
 import Script from 'next/script'
-import ErrorBoundary from "./components/utils/ErrorBoundary"
-import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
+import { UnifiedErrorBoundary } from "./components/utils/UnifiedErrorBoundary"
+import { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 
 import SessionAuthInitializer from "./components/auth/SessionAuthInitializer"
 import SessionMonitor from "./components/auth/SessionMonitor"
@@ -24,7 +24,7 @@ import { AllocationIncrementProvider } from "./contexts/AllocationIncrementConte
 import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
 import { SubscriptionProvider } from "./contexts/SubscriptionContext"
 import { EarningsProvider } from "./contexts/EarningsContext"
-import { FakeBalanceProvider } from "./contexts/FakeBalanceContext"
+import { DemoBalanceProvider } from "./contexts/DemoBalanceContext"
 import { AllocationIntervalProvider } from "./contexts/AllocationIntervalContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
 // import SimpleNavigationOptimizer from "./components/navigation/SimpleNavigationOptimizer" // Temporarily disabled
@@ -35,6 +35,7 @@ import { ReactQueryProvider } from "./providers/ReactQueryProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
+import { PWAProvider } from "./providers/PWAProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
@@ -75,15 +76,15 @@ export default function RootLayout({
           strategy="beforeInteractive"
           priority
         />
-        <NextJSErrorBoundary>
-          <ErrorBoundary name="root">
-            <GlobalErrorHandler />
-            <ThemeProvider>
+        <UnifiedErrorBoundary>
+          <GlobalErrorHandler />
+          <ThemeProvider>
               <ReactQueryProvider>
                 <AuthProvider>
                   <LogRocketProvider>
-                    <NotificationProvider>
-                    <MobileProvider>
+                    <PWAProvider>
+                      <NotificationProvider>
+                      <MobileProvider>
                       <DataProvider>
                         <DateFormatProvider>
                           <AccentColorProvider>
@@ -92,7 +93,7 @@ export default function RootLayout({
                                 <RecentPagesProvider>
                                   <AllocationIncrementProvider>
                                     <SubscriptionProvider>
-                                      <FakeBalanceProvider>
+                                      <DemoBalanceProvider>
                                         <UsdBalanceProvider>
                                           <EarningsProvider>
                                             <AllocationIntervalProvider>
@@ -108,7 +109,7 @@ export default function RootLayout({
                                             </AllocationIntervalProvider>
                                           </EarningsProvider>
                                         </UsdBalanceProvider>
-                                      </FakeBalanceProvider>
+                                      </DemoBalanceProvider>
                                     </SubscriptionProvider>
                                   </AllocationIncrementProvider>
                                 </RecentPagesProvider>
@@ -118,13 +119,13 @@ export default function RootLayout({
                         </DateFormatProvider>
                       </DataProvider>
                     </MobileProvider>
-                  </NotificationProvider>
+                    </NotificationProvider>
+                    </PWAProvider>
                   </LogRocketProvider>
                 </AuthProvider>
               </ReactQueryProvider>
             </ThemeProvider>
-          </ErrorBoundary>
-        </NextJSErrorBoundary>
+        </UnifiedErrorBoundary>
         <SpeedInsights />
       </body>
     </html>

@@ -1,343 +1,195 @@
 /**
- * Unified Caching Configuration
- * 
- * Consolidates all caching strategies across WeWrite into a single,
- * consistent configuration system. Replaces scattered cache TTLs
- * and provides centralized cache management.
+ * Unified Cache System
+ *
+ * Single source of truth for all caching in WeWrite.
+ * Replaces the complex multi-layer cache system with a simple, reliable solution.
+ *
+ * Key principles:
+ * 1. Single cache instance
+ * 2. Automatic invalidation
+ * 3. Simple API
+ * 4. Reliable fallbacks
  */
 
-// Unified TTL Configuration - Single source of truth for all cache durations
-export const UNIFIED_CACHE_TTL = {
-  // Static data that rarely changes (24 hours - increased for cost optimization)
-  STATIC_DATA: 24 * 60 * 60 * 1000,
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  tags: string[];
+}
 
-  // User data (profiles, settings) (12 hours - increased for cost optimization)
-  USER_DATA: 12 * 60 * 60 * 1000,
+interface CacheOptions {
+  ttl?: number; // Time to live in milliseconds
+  tags?: string[]; // Tags for bulk invalidation
+}
 
-  // Page content and metadata (8 hours - increased for cost optimization)
-  PAGE_DATA: 8 * 60 * 60 * 1000,
-
-  // Analytics and statistics (6 hours - increased for cost optimization)
-  ANALYTICS_DATA: 6 * 60 * 60 * 1000,
-
-  // Search results (4 hours - increased for cost optimization)
-  SEARCH_DATA: 4 * 60 * 60 * 1000,
-  
-  // Session data (8 hours - increased for cost optimization)
-  SESSION_DATA: 8 * 60 * 60 * 1000,
-
-  // Real-time data (2 hours - increased for cost optimization)
-  REALTIME_DATA: 2 * 60 * 60 * 1000,
-
-  // Live stats (15 minutes - increased for cost optimization)
-  LIVE_STATS: 15 * 60 * 1000,
-
-  // Activity feeds (10 minutes - increased for cost optimization)
-  ACTIVITY_DATA: 10 * 60 * 1000,
-
-  // Default fallback (4 hours - increased for cost optimization)
-  DEFAULT: 4 * 60 * 60 * 1000
+// Simplified TTL - just two tiers for reliability
+const CACHE_TTL = {
+  FAST: process.env.NODE_ENV === 'development' ? 30 * 1000 : 60 * 1000, // 30s dev, 1min prod
+  SLOW: process.env.NODE_ENV === 'development' ? 60 * 1000 : 5 * 60 * 1000, // 1min dev, 5min prod
 } as const;
 
-// Cache type definitions for type safety
-export type CacheType = keyof typeof UNIFIED_CACHE_TTL;
+class UnifiedCache {
+  private cache = new Map<string, CacheEntry>();
+  private maxSize = 1000; // Prevent memory leaks
 
-// Cache configuration for different data types
-export interface CacheConfig {
-  ttl: number;
-  maxSize?: number;
-  enableCompression?: boolean;
-  enablePersistence?: boolean;
+  /**
+   * Get data from cache
+   */
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+
+    if (!entry) {
+      return null;
+    }
+
+    // Check if expired (using FAST TTL by default)
+    if (Date.now() - entry.timestamp > CACHE_TTL.FAST) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data as T;
+  }
+
+  /**
+   * Set data in cache
+   */
+  set(key: string, data: any, options: CacheOptions = {}): void {
+    // Prevent memory leaks
+    if (this.cache.size >= this.maxSize) {
+      this.evictOldest();
+    }
+
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      tags: options.tags || []
+    });
+  }
+
+  /**
+   * Invalidate by key
+   */
+  invalidate(key: string): void {
+    this.cache.delete(key);
+  }
+
+  /**
+   * Invalidate by tag (bulk invalidation)
+   */
+  invalidateByTag(tag: string): void {
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.tags.includes(tag)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Clear all cache
+   */
+  clear(): void {
+    this.cache.clear();
+  }
+
+  private evictOldest(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.cache.delete(oldestKey);
+    }
+  }
 }
 
-export const CACHE_CONFIGS: Record<string, CacheConfig> = {
-  // Static data - long TTL, large cache, persistent
-  static: {
-    ttl: UNIFIED_CACHE_TTL.STATIC_DATA,
-    maxSize: 1000,
-    enableCompression: true,
-    enablePersistence: true
-  },
-  
-  // User data - long TTL, medium cache, persistent
-  user: {
-    ttl: UNIFIED_CACHE_TTL.USER_DATA,
-    maxSize: 500,
-    enableCompression: false,
-    enablePersistence: true
-  },
-  
-  // Page data - medium TTL, large cache, persistent
-  page: {
-    ttl: UNIFIED_CACHE_TTL.PAGE_DATA,
-    maxSize: 2000,
-    enableCompression: true,
-    enablePersistence: true
-  },
-  
-  // Analytics - medium TTL, medium cache, not persistent
-  analytics: {
-    ttl: UNIFIED_CACHE_TTL.ANALYTICS_DATA,
-    maxSize: 500,
-    enableCompression: false,
-    enablePersistence: false
-  },
-  
-  // Search results - medium TTL, large cache, not persistent
-  search: {
-    ttl: UNIFIED_CACHE_TTL.SEARCH_DATA,
-    maxSize: 1000,
-    enableCompression: false,
-    enablePersistence: false
-  },
-  
-  // Session data - long TTL, small cache, persistent
-  session: {
-    ttl: UNIFIED_CACHE_TTL.SESSION_DATA,
-    maxSize: 100,
-    enableCompression: false,
-    enablePersistence: true
-  },
-  
-  // Real-time data - short TTL, small cache, not persistent
-  realtime: {
-    ttl: UNIFIED_CACHE_TTL.REALTIME_DATA,
-    maxSize: 200,
-    enableCompression: false,
-    enablePersistence: false
-  },
-  
-  // Live stats - very short TTL, small cache, not persistent
-  stats: {
-    ttl: UNIFIED_CACHE_TTL.LIVE_STATS,
-    maxSize: 100,
-    enableCompression: false,
-    enablePersistence: false
-  },
-  
-  // Activity data - very short TTL, medium cache, not persistent
-  activity: {
-    ttl: UNIFIED_CACHE_TTL.ACTIVITY_DATA,
-    maxSize: 300,
-    enableCompression: false,
-    enablePersistence: false
-  },
-  
-  // Default configuration
-  default: {
-    ttl: UNIFIED_CACHE_TTL.DEFAULT,
-    maxSize: 500,
-    enableCompression: false,
-    enablePersistence: false
+// Singleton instance
+export const unifiedCache = new UnifiedCache();
+
+/**
+ * Simplified cache wrapper for API calls
+ */
+export async function cachedFetch<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  options: CacheOptions = {}
+): Promise<T> {
+  // Try cache first
+  const cached = unifiedCache.get<T>(key);
+  if (cached !== null) {
+    console.log(`🚀 CACHE HIT: ${key}`);
+    return cached;
   }
+
+  // Fetch fresh data
+  console.log(`🔄 CACHE MISS: ${key}`);
+  try {
+    const data = await fetcher();
+    unifiedCache.set(key, data, options);
+    return data;
+  } catch (error) {
+    console.error(`❌ CACHE FETCH ERROR: ${key}`, error);
+    throw error;
+  }
+}
+
+/**
+ * Simple invalidation for page saves
+ * This replaces all the complex cache clearing logic
+ */
+export function invalidatePageData(pageId: string, userId?: string): void {
+  console.log(`🗑️ UNIFIED CACHE: Invalidating all data for page ${pageId}`);
+
+  // Invalidate all page-related data with one call
+  unifiedCache.invalidateByTag(`page:${pageId}`);
+  unifiedCache.invalidateByTag('recent-edits');
+  unifiedCache.invalidateByTag('versions');
+  if (userId) {
+    unifiedCache.invalidateByTag(`user:${userId}`);
+  }
+
+  console.log(`✅ UNIFIED CACHE: Page ${pageId} invalidation complete`);
+}
+
+// Auto-cleanup expired entries every 5 minutes
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    const cache = (unifiedCache as any).cache;
+
+    for (const [key, entry] of cache.entries()) {
+      if (now - entry.timestamp > CACHE_TTL.FAST) {
+        cache.delete(key);
+      }
+    }
+  }, 5 * 60 * 1000);
+}
+
+// Backward compatibility exports for existing code
+export const UNIFIED_CACHE_TTL = {
+  STATIC_DATA: CACHE_TTL.SLOW,
+  USER_DATA: CACHE_TTL.SLOW,
+  PAGE_DATA: CACHE_TTL.FAST,
+  ANALYTICS_DATA: CACHE_TTL.FAST,
+  SEARCH_DATA: CACHE_TTL.FAST,
+  SESSION_DATA: CACHE_TTL.SLOW,
+  REALTIME_DATA: CACHE_TTL.FAST,
+  LIVE_STATS: CACHE_TTL.FAST,
+  ACTIVITY_DATA: CACHE_TTL.FAST,
+  DEFAULT: CACHE_TTL.FAST
 };
 
-/**
- * Get cache configuration for a specific data type
- */
-export function getCacheConfig(dataType: string): CacheConfig {
-  // Normalize data type
-  const normalizedType = dataType.toLowerCase();
-  
-  // Map common aliases to standard types
-  const typeMapping: Record<string, string> = {
-    'profile': 'user',
-    'subscription': 'user',
-    'content': 'page',
-    'metadata': 'page',
-    'stats': 'analytics',
-    'counters': 'analytics',
-    'results': 'search',
-    'live': 'realtime',
-    'recent': 'activity'
-  };
-  
-  const mappedType = typeMapping[normalizedType] || normalizedType;
-  return CACHE_CONFIGS[mappedType] || CACHE_CONFIGS.default;
-}
-
-/**
- * Get TTL for a specific cache type
- */
-export function getCacheTTL(cacheType: CacheType | string): number {
-  if (typeof cacheType === 'string') {
-    const config = getCacheConfig(cacheType);
-    return config.ttl;
-  }
-  return UNIFIED_CACHE_TTL[cacheType] || UNIFIED_CACHE_TTL.DEFAULT;
-}
-
-/**
- * React Query cache configuration generator
- */
 export function getReactQueryConfig(queryType: string) {
-  const config = getCacheConfig(queryType);
-  
   return {
-    staleTime: config.ttl,
-    gcTime: config.ttl * 2, // Garbage collection time is 2x stale time
-    retry: (failureCount: number, error: any) => {
-      // EMERGENCY FIX: Disable all retries to prevent Firebase quota abuse
-      // When billing fails, retries create exponential Firebase read costs
-      return false;
-    },
+    staleTime: CACHE_TTL.FAST,
+    gcTime: CACHE_TTL.FAST * 2,
+    retry: false, // Disable retries to prevent Firebase quota abuse
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000)
   };
 }
-
-/**
- * Server cache configuration generator
- */
-export function getServerCacheConfig(dataType: string) {
-  const config = getCacheConfig(dataType);
-  
-  return {
-    ttl: config.ttl,
-    maxSize: config.maxSize || 500,
-    enableCompression: config.enableCompression || false
-  };
-}
-
-/**
- * Cache invalidation patterns
- */
-export const CACHE_INVALIDATION_PATTERNS = {
-  // When user data changes
-  USER_UPDATE: ['user', 'session', 'analytics'],
-  
-  // When page data changes
-  PAGE_UPDATE: ['page', 'search', 'activity', 'analytics'],
-  
-  // When activity occurs
-  ACTIVITY_UPDATE: ['activity', 'realtime', 'analytics'],
-  
-  // When stats need refresh
-  STATS_UPDATE: ['stats', 'analytics'],
-  
-  // Global cache clear
-  GLOBAL_CLEAR: ['user', 'page', 'search', 'activity', 'stats', 'analytics']
-} as const;
-
-/**
- * Get cache types to invalidate for a specific event
- */
-export function getCacheInvalidationTypes(event: keyof typeof CACHE_INVALIDATION_PATTERNS): string[] {
-  return CACHE_INVALIDATION_PATTERNS[event] || [];
-}
-
-/**
- * Unified cache key generator
- */
-export function generateUnifiedCacheKey(
-  namespace: string,
-  identifier: string,
-  params?: Record<string, any>
-): string {
-  const baseKey = `${namespace}:${identifier}`;
-  
-  if (!params || Object.keys(params).length === 0) {
-    return baseKey;
-  }
-  
-  // Sort params for consistent key generation
-  const sortedParams = Object.keys(params)
-    .sort()
-    .map(key => `${key}=${params[key]}`)
-    .join('&');
-    
-  return `${baseKey}?${sortedParams}`;
-}
-
-/**
- * Cache statistics interface
- */
-export interface CacheStats {
-  hits: number;
-  misses: number;
-  evictions: number;
-  size: number;
-  hitRate: number;
-  memoryUsage?: number;
-}
-
-/**
- * Unified cache interface for all cache implementations
- */
-export interface UnifiedCacheInterface<T = any> {
-  get(key: string): T | null;
-  set(key: string, value: T, ttl?: number): void;
-  delete(key: string): boolean;
-  clear(): void;
-  has(key: string): boolean;
-  size(): number;
-  getStats(): CacheStats;
-  cleanup(): void;
-}
-
-/**
- * Cache performance monitoring
- */
-export class CachePerformanceMonitor {
-  private stats = new Map<string, CacheStats>();
-  
-  recordHit(cacheType: string): void {
-    const stats = this.getOrCreateStats(cacheType);
-    stats.hits++;
-    this.updateHitRate(stats);
-  }
-  
-  recordMiss(cacheType: string): void {
-    const stats = this.getOrCreateStats(cacheType);
-    stats.misses++;
-    this.updateHitRate(stats);
-  }
-  
-  recordEviction(cacheType: string): void {
-    const stats = this.getOrCreateStats(cacheType);
-    stats.evictions++;
-  }
-  
-  updateSize(cacheType: string, size: number): void {
-    const stats = this.getOrCreateStats(cacheType);
-    stats.size = size;
-  }
-  
-  getStats(cacheType: string): CacheStats | null {
-    return this.stats.get(cacheType) || null;
-  }
-  
-  getAllStats(): Record<string, CacheStats> {
-    const result: Record<string, CacheStats> = {};
-    for (const [type, stats] of this.stats.entries()) {
-      result[type] = { ...stats };
-    }
-    return result;
-  }
-  
-  private getOrCreateStats(cacheType: string): CacheStats {
-    if (!this.stats.has(cacheType)) {
-      this.stats.set(cacheType, {
-        hits: 0,
-        misses: 0,
-        evictions: 0,
-        size: 0,
-        hitRate: 0
-      });
-    }
-    return this.stats.get(cacheType)!;
-  }
-  
-  private updateHitRate(stats: CacheStats): void {
-    const total = stats.hits + stats.misses;
-    stats.hitRate = total > 0 ? stats.hits / total : 0;
-  }
-}
-
-// Global cache performance monitor
-export const cachePerformanceMonitor = new CachePerformanceMonitor();
-
-/**
- * Export unified cache configuration for backward compatibility
- */
-export const CACHE_TTL = UNIFIED_CACHE_TTL;
-export const CACHE_CONFIG = CACHE_CONFIGS;

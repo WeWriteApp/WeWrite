@@ -11,7 +11,8 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getCurrentMonth } from '../utils/usdConstants';
 import { dollarsToCents, centsToDollars } from '../utils/formatCurrency';
 import type { UsdBalance, UsdAllocation } from '../types/database';
-import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
+import { getCollectionNameAsync, USD_COLLECTIONS } from '../utils/environmentConfig';
+import { AllocationError, ALLOCATION_ERROR_CODES } from '../types/allocation';
 
 
 // Robust Firebase Admin initialization function - uses the same pattern as working endpoints
@@ -63,7 +64,8 @@ export class ServerUsdService {
       const usdCents = dollarsToCents(subscriptionAmountDollars);
       const currentMonth = getCurrentMonth();
 
-      const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
+      const balanceCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
+      const balanceRef = db.collection(balanceCollectionName).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (balanceDoc.exists) {
@@ -114,7 +116,7 @@ export class ServerUsdService {
         // Continue without subscription data - we'll check the account-subscription API instead
       }
 
-      const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
+      const balanceRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
@@ -260,7 +262,7 @@ export class ServerUsdService {
       console.log(`[USD CALCULATION] Calculating actual allocated cents for user ${userId}, month ${currentMonth}`);
 
       // Get all active allocations for current month ONLY
-      const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+      const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
       const allocationsQuery = allocationsRef
         .where('userId', '==', userId)
         .where('month', '==', currentMonth)
@@ -304,7 +306,8 @@ export class ServerUsdService {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
 
-      const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+      const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+      const allocationsRef = db.collection(allocationsCollectionName);
       const allocationQuery = allocationsRef
         .where('userId', '==', userId)
         .where('resourceId', '==', pageId)
@@ -335,7 +338,7 @@ export class ServerUsdService {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
 
-      const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+      const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
       const allocationsQuery = allocationsRef
         .where('userId', '==', userId)
         .where('month', '==', currentMonth)
@@ -386,7 +389,7 @@ export class ServerUsdService {
       console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${usdDollarsChange} USD`);
 
       // Get current USD balance
-      const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
+      const balanceRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
@@ -431,7 +434,7 @@ export class ServerUsdService {
       let recipientUserId = '';
       if (newPageAllocationCents > 0) {
         try {
-          const pageRef = db.collection(getCollectionName('pages')).doc(pageId);
+          const pageRef = db.collection(await getCollectionNameAsync('pages')).doc(pageId);
           const pageDoc = await pageRef.get();
 
           if (pageDoc.exists) {
@@ -473,9 +476,7 @@ export class ServerUsdService {
         throw new Error(`Invalid allocation: would result in negative allocated amount (${newAllocatedCents} cents)`);
       }
 
-      if (newAllocatedCents > totalUsdCents) {
-        throw new Error(`Insufficient funds: cannot allocate ${newAllocatedCents} cents when total budget is ${totalUsdCents} cents`);
-      }
+      // Allow over-budget allocations (users can top off their account later)
 
       if (newAvailableCents < 0) {
         console.warn(`[USD ALLOCATION] Warning: allocation would result in negative available balance (${newAvailableCents} cents)`);
@@ -491,7 +492,7 @@ export class ServerUsdService {
       // Handle allocation record
       if (newPageAllocationCents > 0) {
         // Create or update allocation
-        const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
         const existingAllocationQuery = allocationsRef
           .where('userId', '==', userId)
           .where('resourceId', '==', pageId)
@@ -526,7 +527,7 @@ export class ServerUsdService {
         }
       } else {
         // Remove allocation if USD amount is 0
-        const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
         const existingAllocationQuery = allocationsRef
           .where('userId', '==', userId)
           .where('resourceId', '==', pageId)
@@ -600,7 +601,7 @@ export class ServerUsdService {
       console.log(`[USD USER ALLOCATION] Starting allocation for user ${userId}, recipient ${recipientUserId}, change ${usdDollarsChange} USD`);
 
       // Get current USD balance
-      const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
+      const balanceRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
@@ -638,7 +639,10 @@ export class ServerUsdService {
       }
 
       if (newAllocatedCents > totalUsdCents) {
-        throw new Error(`Insufficient funds: cannot allocate ${newAllocatedCents} cents when total budget is ${totalUsdCents} cents`);
+        throw new AllocationError(
+          `Cannot allocate ${centsToDollars(newAllocatedCents)} when total budget is ${centsToDollars(totalUsdCents)}`,
+          ALLOCATION_ERROR_CODES.INSUFFICIENT_FUNDS
+        );
       }
 
       if (newAvailableCents < 0) {
@@ -655,7 +659,7 @@ export class ServerUsdService {
       // Handle allocation record
       if (newUserAllocationCents > 0) {
         // Create or update allocation
-        const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
         const existingAllocationQuery = allocationsRef
           .where('userId', '==', userId)
           .where('resourceId', '==', recipientUserId)
@@ -690,7 +694,7 @@ export class ServerUsdService {
         }
       } else {
         // Remove allocation if USD amount is 0
-        const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
         const existingAllocationQuery = allocationsRef
           .where('userId', '==', userId)
           .where('resourceId', '==', recipientUserId)
@@ -747,7 +751,7 @@ export class ServerUsdService {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
 
-      const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+      const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
       const allocationQuery = allocationsRef
         .where('userId', '==', userId)
         .where('resourceId', '==', recipientUserId)

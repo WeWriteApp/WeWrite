@@ -7,8 +7,10 @@ import { Button } from '../ui/button';
 import { ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import type { Page } from '../../types/database';
-import { PillLink } from '../utils/PillLink';
 import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
+import ViewableContent from '../content/ViewableContent';
+import { LINE_MODES } from '../../contexts/LineSettingsContext';
+import { PageProvider } from '../../contexts/PageContext';
 
 // Simple cache for page data to prevent reloading
 const pageCache = new Map<string, Page>();
@@ -32,6 +34,8 @@ interface DynamicPagePreviewCardProps {
   authorId?: string;
   /** Source identifier for allocation bar */
   allocationSource?: string;
+  /** Whether the card is disabled (no interactions) */
+  disabled?: boolean;
 }
 
 /**
@@ -63,7 +67,8 @@ export function DynamicPagePreviewCard({
   showLoading = true,
   showAllocationBar = false,
   authorId = "system",
-  allocationSource = "PreviewCard"
+  allocationSource = "PreviewCard",
+  disabled = false
 }: DynamicPagePreviewCardProps) {
   const router = useRouter();
   const fetchJson = useProductionDataFetchJson();
@@ -111,93 +116,32 @@ export function DynamicPagePreviewCard({
     }
   }, [pageId, fetchJson]);
 
-  // Render content with inline links as JSX elements
-  const renderContentWithInlineLinks = (content: any, maxLines: number): React.ReactNode => {
+  // Use the exact same content rendering system as the rest of the app
+  // This ensures 100% consistency with how content appears on actual pages
+  const renderContentPreview = (content: any, maxLines: number): React.ReactNode => {
     if (!content) return null;
 
-    // Handle string content
-    if (typeof content === 'string') {
-      const lines = content.split('\n').filter(line => line.trim().length > 0);
-      const previewLines = lines.slice(0, maxLines);
-      return previewLines.join('\n');
-    }
-
-    // Handle editor content (array of nodes)
+    // Limit content to maxLines paragraphs for preview
+    let limitedContent = content;
     if (Array.isArray(content)) {
-      let lineCount = 0;
-      const elements: React.ReactNode[] = [];
-
-      for (const node of content) {
-        if (lineCount >= maxLines) break;
-
-        if (node.children) {
-          const nodeElements: React.ReactNode[] = [];
-
-          for (const child of node.children) {
-            // Handle link elements
-            if (child.type === 'link' && child.url) {
-              const linkText = child.children?.map((c: any) => c.text || '').join('') || child.url;
-
-              nodeElements.push(
-                <PillLink
-                  key={`link-${nodeElements.length}`}
-                  href={child.url}
-                  isPublic={true}
-                  className="mx-0.5 text-xs scale-90"
-                  clickable={false}
-                >
-                  {linkText}
-                </PillLink>
-              );
-            }
-            // Handle regular text
-            else if (child.text) {
-              nodeElements.push(child.text);
-            }
-            // Handle nested children
-            else if (child.children) {
-              for (const nestedChild of child.children) {
-                if (nestedChild.type === 'link' && nestedChild.url) {
-                  const linkText = nestedChild.children?.map((c: any) => c.text || '').join('') || nestedChild.url;
-
-                  nodeElements.push(
-                    <PillLink
-                      key={`nested-link-${nodeElements.length}`}
-                      href={nestedChild.url}
-                      isPublic={true}
-                      className="mx-0.5 text-xs scale-90"
-                      clickable={false}
-                    >
-                      {linkText}
-                    </PillLink>
-                  );
-                } else if (nestedChild.text) {
-                  nodeElements.push(nestedChild.text);
-                }
-              }
-            }
-          }
-
-          if (nodeElements.length > 0) {
-            elements.push(
-              <span key={`node-${lineCount}`} className="block">
-                {nodeElements}
-              </span>
-            );
-            lineCount++;
-          }
-        }
-      }
-
-      return elements;
+      const paragraphs = content.filter(node => node.type === 'paragraph');
+      limitedContent = paragraphs.slice(0, maxLines);
     }
 
-    // Handle object content
-    if (typeof content === 'object' && content.children) {
-      return renderContentWithInlineLinks(content.children, maxLines);
-    }
-
-    return null;
+    return (
+      <div className="preview-content-container">
+        <PageProvider>
+          <ViewableContent
+            content={limitedContent}
+            showDiff={false}
+            showLineNumbers={false} // Hide line numbers in preview
+            isSearch={false}
+            lineMode={LINE_MODES.NORMAL}
+            className="text-sm md:text-base text-muted-foreground leading-relaxed"
+          />
+        </PageProvider>
+      </div>
+    );
   };
 
 
@@ -211,7 +155,7 @@ export function DynamicPagePreviewCard({
   if (loading && showLoading) {
     return (
       <Card className={`h-full border-theme-medium ${className}`}>
-        <CardContent className="p-6">
+        <CardContent className="p-6 flex items-center justify-center min-h-[200px]">
           <div className="flex items-center justify-center space-x-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Loading preview...</span>
@@ -250,33 +194,63 @@ export function DynamicPagePreviewCard({
   }
 
   const title = customTitle || page.title || 'Untitled';
-  const renderedContent = renderContentWithInlineLinks(page.content, maxLines);
+  const renderedContent = renderContentPreview(page.content, maxLines);
 
   return (
-    <Card className={`h-full border-theme-medium hover:shadow-lg transition-all duration-200 ${className}`}>
-      <CardHeader className="pb-6">
-        <CardTitle className="text-4xl md:text-5xl lg:text-6xl font-bold text-center line-clamp-2">
+    <Card
+      className={`min-h-[500px] h-full p-0 cursor-pointer hover:shadow-lg transition-shadow duration-200 ${className}`}
+      onClick={handleViewFullPage}
+    >
+      <CardHeader className="p-4 pb-3 md:p-6 md:pb-4">
+        <CardTitle className="text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center line-clamp-2">
           {title}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="pt-0 flex flex-col h-full">
-        {/* Preview content with inline links */}
-        <div className="flex-1 mb-6">
+      <CardContent className="px-4 pb-4 pt-0 md:px-6 md:pb-6 flex flex-col flex-1 relative">
+        {/* Preview content with 8 rendered lines limit and gradient fade */}
+        <div className="flex-1 mb-4 md:mb-6 overflow-hidden relative min-h-[120px] bg-transparent">
           {renderedContent ? (
-            <div className="text-base text-muted-foreground leading-relaxed space-y-2 text-left">
+            <div
+              className="text-sm md:text-base text-card-foreground leading-relaxed text-left overflow-hidden [&_p]:!bg-transparent [&_div:not(.pill-link)]:!bg-transparent [&_span:not(.pill-link)]:!bg-transparent"
+              style={{
+                lineHeight: '1.4rem',
+                maxHeight: `${maxLines * 1.4}rem`,
+                background: 'transparent !important'
+              }}
+            >
               {renderedContent}
             </div>
           ) : (
-            <p className="text-base text-muted-foreground italic text-center">
+            <p className="text-base text-card-foreground italic text-center bg-transparent">
               No content preview available
             </p>
           )}
+
+          {/* Gradient fade overlay */}
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none" />
         </div>
 
-        {/* Embedded Allocation Bar */}
-        {showAllocationBar && (
-          <div className="mt-4 pt-3 border-t border-border/20">
+        {/* Ghost "Read more" button blending with gradient */}
+        {!disabled && (
+          <div className="mb-3 md:mb-4 relative z-10">
+            <Button
+              onClick={handleViewFullPage}
+              variant="ghost"
+              className="w-full text-muted-foreground hover:text-foreground hover:bg-transparent border-none shadow-none"
+              size="sm"
+            >
+              Read more...
+            </Button>
+          </div>
+        )}
+
+        {/* Floating Embedded Allocation Bar */}
+        {showAllocationBar && pageId && (
+          <div
+            className="relative z-20 bg-card/95 backdrop-blur-sm rounded-lg border border-border/50 p-2 md:p-3 shadow-lg mt-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <EmbeddedAllocationBar
               pageId={pageId}
               authorId={authorId}
@@ -285,19 +259,6 @@ export function DynamicPagePreviewCard({
             />
           </div>
         )}
-
-        {/* View full page button */}
-        <div className="mt-auto">
-          <Button
-            onClick={handleViewFullPage}
-            variant="outline"
-            className="w-full"
-            size="sm"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            {buttonText}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

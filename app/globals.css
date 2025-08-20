@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import our centralized card theme system */
+@import './styles/card-theme.css';
+
 /* Import allocation bar animations */
 @import './styles/allocation-bar-animations.css';
 
@@ -1002,24 +1005,24 @@ input[type="range"]::-moz-range-thumb,
     --background: 0 0% 0%;
     --foreground: 210 40% 98%;
 
-    /* Brighter card background in dark mode */
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
+    /* Brighter card background in dark mode - completely neutral grey */
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 222 47% 5%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: var(--accent-h) var(--accent-s) var(--accent-l);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 217 33% 18%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -1027,8 +1030,8 @@ input[type="range"]::-moz-range-thumb,
     --success: 142 73% 42%;
     --success-foreground: 0 0% 100%;
 
-    --border: 217 33% 25%;
-    --input: 217 33% 18%;
+    --border: 0 0% 25%;
+    --input: 0 0% 18%;
     --ring: var(--accent-h) 76% 48%;
     --radius: 0.5rem;
 
@@ -1155,40 +1158,9 @@ iframe[src*="js.stripe.com"] {
   width: 100%;
 }
 
-/* Standard card styling for consistent appearance across the app */
-.wewrite-card {
-  background-color: hsl(var(--card));
-  color: hsl(var(--card-foreground));
-  border-radius: 0.75rem; /* rounded-xl */
-  border: 1px solid hsl(var(--border) / 0.6); /* border-theme-strong equivalent */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-  overflow: hidden;
-  /* Mobile-first padding with better spacing */
-  padding: 1.25rem; /* p-5 on mobile */
-  /* Ensure proper spacing between cards on mobile */
-  margin-bottom: 1.5rem; /* mb-6 on mobile */
-}
+/* Legacy card styles removed - now using centralized card theme system */
 
-/* Desktop card styling adjustments */
-@media (min-width: 768px) {
-  .wewrite-card {
-    padding: 1rem; /* p-4 on desktop */
-    margin-bottom: 0; /* Remove bottom margin on desktop (handled by grid gap) */
-  }
-}
-
-/* Dark mode adjustments for cards */
-.dark .wewrite-card {
-  background-color: hsl(var(--card) / 0.9); /* dark:bg-card/90 */
-  border-color: hsl(var(--border) / 0.6); /* border-theme-strong equivalent */
-}
-
-/* Hover state for cards - shadow extension effect instead of background change */
-.wewrite-card:hover {
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1), 0 2px 4px 0 rgba(0, 0, 0, 0.06); /* Enhanced shadow on hover */
-  transform: translateY(-1px); /* Subtle lift effect */
-  transition: all 0.2s ease-in-out;
-}
+/* Remove hover states - cards stay static */
 
 /* Dark mode hover state for cards - enhanced shadow for dark mode */
 .dark .wewrite-card:hover {
@@ -1210,7 +1182,7 @@ html[data-high-contrast="true"] .wewrite-card,
 html[data-high-contrast="true"] .glass-card,
 html[data-high-contrast="true"] .glass-panel {
   border-color: hsl(var(--border)) !important;
-  border-width: 1px !important;
+  border-width: 2px !important;
 }
 
 /* High contrast mode for specific card-like elements */
@@ -2103,7 +2075,7 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   /* top will be set to main header height via JavaScript */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   background-color: hsl(var(--background)) !important;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
   /* z-index will be set dynamically via JavaScript - should be 60 (below main header z-70) */
   z-index: 60 !important;
   /* Ensure complete coverage */
@@ -2293,10 +2265,10 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   padding-left: 0;
 }
 
-/* Enhanced shadow and backdrop when sticky */
+/* Enhanced shadow and backdrop when sticky - Reduced blur for subtlety */
 .section-header-enhanced {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
   background-color: hsl(var(--background) / 0.95);
 }
 
@@ -2372,16 +2344,20 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Ensure content doesn't get hidden behind bottom nav on mobile */
+/* Ensure content doesn't get hidden behind floating header and bottom nav */
 @media (max-width: 767px) {
   body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Add bottom spacing to page content to account for mobile bottom nav */
+  /* Add top spacing for floating financial header */
   main {
+    padding-top: 72px; /* Space for floating financial header (reduced from 88px) */
     padding-bottom: 140px; /* Space for larger bottom nav with text labels + safe area */
+    transition: padding-top 300ms ease-in-out; /* Smooth transition when PWA banner appears/disappears */
   }
+
+
 
   /* Specific spacing for page content containers */
   .page-content,
@@ -2389,6 +2365,35 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
     margin-bottom: 20px;
   }
 }
+
+/* Desktop spacing for floating financial header */
+@media (min-width: 768px) {
+  main {
+    padding-top: 72px; /* Space for floating financial header on desktop (reduced from 88px) */
+    transition: padding-top 300ms ease-in-out;
+  }
+
+
+}
+
+/* Consistent page max-width for all pages */
+.page-container {
+  max-width: 1024px; /* 4xl equivalent */
+  margin: 0 auto;
+  width: 100%;
+}
+
+/*
+ * LEGACY GLASSMORPHISM CLASSES - DEPRECATED
+ *
+ * These classes have been replaced by the FloatingCard component system.
+ * Use FloatingCard variants instead:
+ * - FloatingHeader (replaces liquid-glass)
+ * - FloatingOverlay (replaces glass-overlay)
+ * - FloatingPledge (replaces glass-pledge)
+ *
+ * TODO: Remove these classes after confirming no remaining usage
+ */
 
 /* Desktop Sidebar Navigation Alignment */
 @media (min-width: 768px) {
@@ -2411,23 +2416,20 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
     text-align: center;
   }
 
-  /* Remove all sidebar shadows on mobile to prevent left edge artifacts */
+  /* Remove shadows only from specific sidebar elements - preserve all floating card shadows */
   .sidebar-hover-overlay,
   .sidebar-smooth-transition {
-    box-shadow: none !important;
+    box-shadow: none;
   }
 
-  /* Ensure no shadows leak from any sidebar-related elements */
-  [class*="sidebar"],
-  .fixed.left-0,
-  .fixed[class*="left-"] {
-    box-shadow: none !important;
+  /* Only target actual sidebar components, never floating cards */
+  [data-component="sidebar"]:not([data-floating-card]) {
+    box-shadow: none;
   }
 
-  /* Remove shadows from any elements that might be positioned on the left edge */
-  .fixed.z-\[100\],
-  .fixed[class*="z-"] {
-    box-shadow: none !important;
+  /* Remove shadows only from actual sidebar elements, not floating cards */
+  .fixed.z-\[100\].left-0:not([data-floating-card]) {
+    box-shadow: none;
   }
 }
 

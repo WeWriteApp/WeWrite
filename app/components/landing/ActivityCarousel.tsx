@@ -51,8 +51,8 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
       loading={loading}
       error={errorMessage}
       emptyMessage="No recent activity to display"
-      height={220}
-      scrollSpeed={0.25}
+      height={200}
+      scrollSpeed={0.5}
       fullWidth={true}
     >
       {activities && activities.length > 0 && activities.map((edit, index) => {
@@ -76,14 +76,16 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
         return (
           <div
             key={`${edit.id}-${index}`}
-            className="activity-card-item flex-shrink-0"
+            className="activity-card-item flex-shrink-0 overflow-hidden"
             style={{
               width: '300px',
               height: '180px',
               position: 'relative'
             }}
           >
-            <ActivityCard activity={activityCardData} isCarousel={true} compactLayout={true} />
+            <div className="h-full overflow-hidden">
+              <ActivityCard activity={activityCardData} isCarousel={true} compactLayout={true} />
+            </div>
           </div>
         );
       })}

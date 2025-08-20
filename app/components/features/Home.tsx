@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import NavHeader from "../layout/NavHeader";
+
 // Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Activity } from "lucide-react";
 import GlobalRecentEdits from "./GlobalRecentEdits";
@@ -11,6 +11,7 @@ import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
 import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
+import PWABanner from "../utils/PWABanner";
 
 
 
@@ -32,7 +33,7 @@ const Home: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <NavHeader />
+
 
         {/* Show page structure immediately */}
         <div className="container max-w-4xl mx-auto px-4 pt-20 py-6">
@@ -66,10 +67,12 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <NavHeader />
       {/* Main content area with proper sidebar spacing */}
       <main className="transition-all duration-300 ease-in-out">
-          <div className="container mx-auto px-4 pt-20 py-4 space-y-6">
+          <div className="container max-w-4xl mx-auto px-4 py-4 space-y-6">
+            {/* PWA Banner - only on logged-in homepage */}
+            <PWABanner />
+
             {/* Email Verification Alert */}
             <EmailVerificationAlert className="max-w-2xl mx-auto" />
 

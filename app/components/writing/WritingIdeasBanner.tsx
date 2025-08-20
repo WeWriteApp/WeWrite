@@ -9,6 +9,7 @@ import { writingIdeas, type WritingIdea } from '../../data/writingIdeas';
 interface WritingIdeasBannerProps {
   onIdeaSelect: (title: string, placeholder: string) => void;
   selectedTitle?: string; // Track which idea is currently selected
+  initialExpanded?: boolean; // Control initial expansion state
 }
 
 // Memoized idea button for performance
@@ -33,8 +34,8 @@ const IdeaButton = React.memo(({
   </button>
 ));
 
-export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIdeaSelect, selectedTitle }: WritingIdeasBannerProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIdeaSelect, selectedTitle, initialExpanded = false }: WritingIdeasBannerProps) {
+  const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [displayedIdeas, setDisplayedIdeas] = useState<WritingIdea[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);

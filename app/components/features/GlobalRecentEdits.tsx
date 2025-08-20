@@ -213,6 +213,26 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
     fetchEdits();
   }, [fetchEdits]);
 
+  // Listen for refresh events from page saves
+  useEffect(() => {
+    const handleRefreshRecentEdits = (event: CustomEvent) => {
+      console.log('🔄 GlobalRecentEdits: Received refresh event, refetching data');
+      // Reset data and fetch fresh
+      setEdits([]);
+      setNextCursor(null);
+      setAutoLoadCount(0);
+      fetchEdits();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('refresh-recent-edits', handleRefreshRecentEdits as EventListener);
+
+      return () => {
+        window.removeEventListener('refresh-recent-edits', handleRefreshRecentEdits as EventListener);
+      };
+    }
+  }, [fetchEdits]);
+
   // Infinite scroll - only auto-load for first 3 times, then show button
   const { loadMore, targetRef, loadingMore } = useInfiniteScrollWithLoadMore({
     hasMore: hasMore && autoLoadCount < 3,

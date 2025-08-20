@@ -85,7 +85,7 @@ const DropdownMenuTrigger = ({ children, className, asChild, ...props }: any) =>
   );
 };
 
-const DropdownMenuContent = ({ children, className, align = "end", ...props }: any) => {
+const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 4, ...props }: any) => {
   const { open, triggerRef } = React.useContext(DropdownContext);
   const [triggerRect, setTriggerRect] = React.useState<DOMRect | null>(null);
   const [mounted, setMounted] = React.useState(false);
@@ -145,7 +145,7 @@ const DropdownMenuContent = ({ children, className, align = "end", ...props }: a
 
   // Calculate position based on alignment
   const calculatePosition = () => {
-    const gap = 4;
+    const gap = sideOffset;
     const viewportPadding = 8; // Padding from viewport edges
     let left: number;
     let transformOrigin: string;
@@ -234,8 +234,10 @@ const DropdownMenuContent = ({ children, className, align = "end", ...props }: a
     <div
       ref={contentRef}
       className={cn(
-        "min-w-[8rem] overflow-hidden rounded-xl border-theme-strong bg-card text-card-foreground shadow-lg",
-        "dark:bg-card/95 dark:backdrop-blur-sm",
+        // Use universal card system with floating variant
+        "wewrite-card wewrite-floating",
+        "min-w-[8rem] overflow-hidden rounded-2xl",
+        "shadow-[0_12px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)]",
         "p-2",
         getAnimationClasses(),
         className

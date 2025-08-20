@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../../utils/environmentConfig';
+import { getCollectionNameAsync } from '../../../../utils/environmentConfig';
+import { queryWithTimeout } from '../../../../utils/firebaseTimeout';
 
 /**
  * GET /api/users/[userId]/pages
@@ -43,7 +44,7 @@ export async function GET(
     const db = admin.firestore();
 
     // Build query for user's pages
-    let query = db.collection(getCollectionName('pages'))
+    let query = db.collection(await getCollectionNameAsync('pages'))
       .where('userId', '==', userId);
 
     // Add ordering
@@ -64,7 +65,7 @@ export async function GET(
     // Apply limit
     query = query.limit(Math.min(limit, 100)); // Cap at 100
 
-    const snapshot = await query.get();
+    const snapshot = await queryWithTimeout(query, 6000); // 6 second timeout
     const pages: any[] = [];
 
     snapshot.forEach(doc => {
@@ -90,8 +91,15 @@ export async function GET(
       total: snapshot.size
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching user pages:', error);
+
+    // Handle timeout errors specifically
+    if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+      console.error('🚨 User pages API timeout:', error.message);
+      return createErrorResponse('Request timed out - please try again', 'TIMEOUT');
+    }
+
     return createErrorResponse('Internal server error', 'INTERNAL_ERROR');
   }
 }

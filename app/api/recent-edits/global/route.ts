@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackQuery } from '../../../utils/costOptimizationMonitor';
@@ -75,25 +75,17 @@ export async function GET(request: NextRequest) {
 
     // Debug: Log collection names being used
     console.log('🔍 DEBUG: Collection names being used:', {
-      users: getCollectionName('users'),
-      subscriptions: getCollectionName('subscriptions')
+      users: await getCollectionNameAsync('users'),
+      subscriptions: await getCollectionNameAsync('subscriptions')
     });
 
-    // 🚨 EMERGENCY COST OPTIMIZATION: ULTRA AGGRESSIVE CACHING
-    // Include cursor in cache key to avoid returning cached first page for paginated requests
-    const cacheKey = `global-recent-edits:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${cursor || 'first'}`;
-    const CACHE_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 5 * 60 * 1000; // 30 seconds in dev, 5 minutes in prod (reduced for better UX)
+    // SIMPLIFIED CACHING: Use unified cache system
+    const { cachedFetch } = await import('../../../utils/unifiedCache');
+    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${cursor || 'first'}`;
 
-    // Check cache first
-    const cached = globalRecentEditsCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log('🚀 EMERGENCY COST OPTIMIZATION: Returning cached global recent edits');
-      return NextResponse.json({
-        ...cached.data,
-        cached: true,
-        cacheAge: Date.now() - cached.timestamp
-      });
-    }
+    return NextResponse.json(await cachedFetch(
+      cacheKey,
+      async () => {
 
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;
@@ -105,12 +97,14 @@ export async function GET(request: NextRequest) {
 
     let pagesQuery;
 
+    const pagesCollectionName = await getCollectionNameAsync('pages');
+
     if (userId) {
       // For logged-in users, get recent pages (last 30 days) and filter deleted ones in code
       // Increased from 7 to 30 days to ensure enough content for pagination
       const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
 
-      pagesQuery = db.collection(getCollectionName('pages'))
+      pagesQuery = db.collection(pagesCollectionName)
         .where('lastModified', '>=', thirtyDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
 
@@ -127,7 +121,7 @@ export async function GET(request: NextRequest) {
       // For anonymous users, only public pages from last 30 days
       const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
 
-      pagesQuery = db.collection(getCollectionName('pages'))
+      pagesQuery = db.collection(pagesCollectionName)
         .where('isPublic', '==', true)
         .where('lastModified', '>=', thirtyDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
@@ -262,13 +256,12 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    // EMERGENCY COST OPTIMIZATION: Cache the response
-    globalRecentEditsCache.set(cacheKey, {
-      data: responseData,
-      timestamp: Date.now()
-    });
-
-    return NextResponse.json(responseData);
+        return responseData;
+      },
+      {
+        tags: ['recent-edits', 'global']
+      }
+    ));
 
   } catch (error) {
     console.error('Error fetching global recent edits:', error);
@@ -299,7 +292,8 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
 
       try {
         // FIXED: Use environment-aware collection names
-        const usersQuery = db.collection(getCollectionName('users')).where('__name__', 'in', batch);
+        const usersCollectionName = await getCollectionNameAsync('users');
+        const usersQuery = db.collection(usersCollectionName).where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
         // Fetch subscription data in parallel using environment-aware paths

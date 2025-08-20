@@ -40,7 +40,7 @@ export interface BaseAllocationProps {
   authorId: string;
   pageTitle: string;
   className?: string;
-  source?: string;
+  source?: AllocationSource;
 }
 
 /**
@@ -83,6 +83,7 @@ export interface AllocationControlsProps extends BaseAllocationProps {
  */
 export interface AllocationState {
   currentAllocationCents: number;
+  optimisticAllocation?: number | null;
   isLoading: boolean;
   isOptimistic: boolean;
   lastUpdated: Date | null;
@@ -102,7 +103,8 @@ export interface BatchingState {
  */
 export interface CompositionBarData {
   otherPagesPercentage: number;
-  currentPagePercentage: number;
+  currentPageFundedPercentage: number;
+  currentPageOverfundedPercentage: number;
   availablePercentage: number;
   isOutOfFunds: boolean;
 }
@@ -124,10 +126,10 @@ export interface UseAllocationStateReturn {
  * Return type for useAllocationActions hook
  */
 export interface UseAllocationActionsReturn {
-  handleAllocationChange: (direction: 1 | -1, event: React.MouseEvent) => void;
-  handleDirectAllocation: (cents: number) => void;
+  handleAllocationChange: (amount: number, event?: React.MouseEvent) => Promise<void>;
   isProcessing: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 /**

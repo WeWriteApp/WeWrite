@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { useDemoBalance } from '../contexts/DemoBalanceContext';
 import {
   AllocationState,
   UseAllocationStateReturn
@@ -30,6 +31,7 @@ export function useAllocationState({
   enabled = true
 }: UseAllocationStateOptions): UseAllocationStateReturn {
   const { user } = useAuth();
+  const { demoBalance } = useDemoBalance(); // Listen to demo balance changes
 
   // State for optimistic updates
   const [optimisticAllocation, setOptimisticAllocation] = useState<number | null>(null);
@@ -43,25 +45,25 @@ export function useAllocationState({
     refetch
   } = usePageAllocation(pageId, enabled);
 
-  // Calculate current allocation (optimistic, server, or fake value)
+  // Calculate current allocation (optimistic, server, or demo value)
   const currentAllocationCents = useMemo(() => {
     if (optimisticAllocation !== null) {
       return optimisticAllocation;
     }
 
-    // If user is not logged in, get fake allocation from localStorage
+    // If user is not logged in, get demo allocation from localStorage
     if (!user?.uid) {
       return getLoggedOutPageAllocation(pageId);
     }
 
-    // For logged in users, try server allocation first, then fake allocation
+    // For logged in users, try server allocation first, then demo allocation
     if (serverAllocation > 0) {
       return serverAllocation;
     }
 
-    // Check for fake allocation for logged in users without subscriptions
+    // Check for demo allocation for logged in users without subscriptions
     return getUserPageAllocation(user.uid, pageId);
-  }, [optimisticAllocation, serverAllocation, user?.uid, pageId]);
+  }, [optimisticAllocation, serverAllocation, user?.uid, pageId, demoBalance]); // Add demoBalance as dependency
 
   // Create allocation state object
   const allocationState = useMemo((): AllocationState => ({

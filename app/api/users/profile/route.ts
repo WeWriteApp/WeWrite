@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { userCache } from '../../../utils/userCache';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
+import { getDocWithTimeout, queryWithTimeout } from '../../../utils/firebaseTimeout';
 
 /**
  * GET /api/users/profile?id=userId&username=username
@@ -57,14 +58,17 @@ export async function GET(request: NextRequest) {
     console.log('👤 [User Profile API] Firebase Admin initialized successfully');
 
     const db = admin.firestore();
-    const usersCollection = getCollectionName('users');
+    const usersCollection = await getCollectionNameAsync('users');
 
     let userData = null;
     let userId = null;
 
     // First, try to get user by ID directly
     if (id) {
-      const userDoc = await db.collection(usersCollection).doc(id).get();
+      const userDoc = await getDocWithTimeout(
+        db.collection(usersCollection).doc(id),
+        6000 // 6 second timeout for document get
+      );
 
       if (userDoc.exists) {
         userData = { id: userDoc.id, ...userDoc.data() };
@@ -77,7 +81,10 @@ export async function GET(request: NextRequest) {
       const searchUsername = username || id;
 
       const usernameQuery = db.collection(usersCollection).where('username', '==', searchUsername);
-      const usernameSnapshot = await usernameQuery.get();
+      const usernameSnapshot = await queryWithTimeout(
+        usernameQuery,
+        6000 // 6 second timeout for query
+      );
 
       if (!usernameSnapshot.empty) {
         const userDoc = usernameSnapshot.docs[0];
@@ -128,8 +135,15 @@ export async function GET(request: NextRequest) {
 
     return response;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching user profile:', error);
+
+    // Handle timeout errors specifically
+    if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+      console.error('🚨 User profile API timeout:', error.message);
+      return createErrorResponse('TIMEOUT', 'Request timed out - please try again');
+    }
+
     return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch user profile');
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { ServerUsdService } from '../../../services/usdService.server';
 import { dollarsToCents, centsToDollars, formatUsdCents } from '../../../utils/formatCurrency';
+import { AllocationError, ALLOCATION_ERROR_CODES } from '../../../types/allocation';
 
 /**
  * POST /api/usd/allocate
@@ -57,10 +58,22 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('USD Allocation API: Error allocating USD:', error);
-    
-    // Return user-friendly error messages
+
+    // Handle AllocationError with proper error codes
+    if (error instanceof AllocationError) {
+      return NextResponse.json({
+        error: error.message,
+        errorCode: error.code,
+        details: error.message
+      }, { status: 400 });
+    }
+
+    // Handle other specific error types
     let errorMessage = 'Failed to allocate USD';
-    if (error.message.includes('balance not found')) {
+    if (error.message.includes('Insufficient funds')) {
+      // Fallback for generic insufficient funds errors
+      errorMessage = error.message;
+    } else if (error.message.includes('balance not found')) {
       errorMessage = 'USD balance not found. Please check your subscription status.';
     } else if (error.message.includes('subscription')) {
       errorMessage = 'Please check your subscription status and try again.';

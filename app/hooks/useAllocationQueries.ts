@@ -172,9 +172,9 @@ export function useAllocationMutation() {
           }
           if (response.status === 400) {
             const errorData = await response.json().catch(() => ({}));
-            if (errorData.code === 'INSUFFICIENT_FUNDS') {
+            if (errorData.errorCode === ALLOCATION_ERROR_CODES.INSUFFICIENT_FUNDS) {
               throw new AllocationError(
-                'Insufficient funds',
+                errorData.error || 'Insufficient funds',
                 ALLOCATION_ERROR_CODES.INSUFFICIENT_FUNDS
               );
             }
@@ -187,6 +187,21 @@ export function useAllocationMutation() {
             throw new AllocationError(
               'Too many requests',
               ALLOCATION_ERROR_CODES.RATE_LIMITED,
+              true
+            );
+          }
+          if (response.status === 500) {
+            const errorData = await response.json().catch(() => ({}));
+            // Check if this is an insufficient funds error
+            if (errorData.error && errorData.error.includes('Insufficient funds')) {
+              throw new AllocationError(
+                errorData.error,
+                ALLOCATION_ERROR_CODES.INSUFFICIENT_FUNDS
+              );
+            }
+            throw new AllocationError(
+              errorData.error || 'Server error',
+              ALLOCATION_ERROR_CODES.NETWORK_ERROR,
               true
             );
           }

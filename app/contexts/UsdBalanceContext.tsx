@@ -6,7 +6,7 @@ import { formatUsdCents } from '../utils/formatCurrency';
 import { UsdDataService, type UsdBalance } from '../services/usdDataService';
 import { usdBalanceCache } from '../utils/simplifiedCache';
 import { useSubscription } from './SubscriptionContext';
-import { useShouldUseFakeBalance } from './FakeBalanceContext';
+import { useShouldUseDemoBalance } from './DemoBalanceContext';
 
 /**
  * Simplified USD Balance Context
@@ -16,7 +16,7 @@ import { useShouldUseFakeBalance } from './FakeBalanceContext';
  */
 
 interface UsdBalanceContextType {
-  // Balance data (real balance only - fake balance handled by FakeBalanceContext)
+  // Balance data (real balance only - demo balance handled by DemoBalanceContext)
   usdBalance: UsdBalance | null;
   isLoading: boolean;
   lastUpdated: Date | null;
@@ -36,7 +36,7 @@ const UsdBalanceContext = createContext<UsdBalanceContextType | undefined>(undef
 export function UsdBalanceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { hasActiveSubscription } = useSubscription();
-  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+  const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
 
   const [usdBalance, setUsdBalance] = useState<UsdBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +45,7 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
   const fetchUsdBalance = useCallback(async (forceRefresh = false): Promise<void> => {
     // Only fetch real balance for authenticated users with subscriptions
-    if (!user?.uid || shouldUseFakeBalance) {
+    if (!user?.uid || shouldUseDemoBalance) {
       // Clear any existing real balance data
       setUsdBalance(null);
       setLastUpdated(new Date());
@@ -108,7 +108,7 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
     fetchingRef.current = fetchPromise;
     return fetchPromise;
-  }, [user?.uid, shouldUseFakeBalance]);
+  }, [user?.uid, shouldUseDemoBalance]);
 
   /**
    * Refresh USD balance (force refresh from API)
@@ -119,11 +119,11 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
   /**
    * Update balance optimistically (for real balances only)
-   * Fake balance optimistic updates are handled by FakeBalanceContext
+   * Demo balance optimistic updates are handled by DemoBalanceContext
    */
   const updateOptimisticBalance = useCallback((changeCents: number) => {
     // Only handle optimistic updates for real balances
-    if (shouldUseFakeBalance) {
+    if (shouldUseDemoBalance) {
       return;
     }
 
@@ -135,9 +135,12 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
       const newAllocatedCents = Math.max(0, prev.allocatedUsdCents + changeCents);
       const newAvailableCents = prev.totalUsdCents - newAllocatedCents;
 
-      // Simple validation: reject impossible states
-      if (newAllocatedCents > prev.totalUsdCents) {
-        return prev; // Return unchanged balance
+      // CRITICAL FIX: Allow over-allocation (overspending)
+      // The system is designed to allow users to allocate more than their budget
+      // Overspent amounts will be shown as orange "overspent" sections in allocation bars
+      // Only reject truly impossible states (negative allocations)
+      if (newAllocatedCents < 0) {
+        return prev; // Return unchanged balance - can't have negative allocations
       }
 
       const newBalance = {
@@ -152,7 +155,7 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
 
       return newBalance;
     });
-  }, [shouldUseFakeBalance, fetchUsdBalance]);
+  }, [shouldUseDemoBalance, fetchUsdBalance]);
 
   // Helper methods for formatted display
   const getTotalUsdFormatted = useCallback(() => {
@@ -160,7 +163,8 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
   }, [usdBalance]);
 
   const getAvailableUsdFormatted = useCallback(() => {
-    return usdBalance ? formatUsdCents(usdBalance.availableUsdCents) : '$0.00';
+    if (!usdBalance) return '$0.00';
+    return usdBalance.availableUsdCents <= 0 ? 'Out' : formatUsdCents(usdBalance.availableUsdCents);
   }, [usdBalance]);
 
   const getAllocatedUsdFormatted = useCallback(() => {

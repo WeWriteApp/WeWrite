@@ -24,7 +24,7 @@ import { Plus, Minus } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
-import { useFakeBalance, useShouldUseFakeBalance } from '../../contexts/FakeBalanceContext';
+import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../ui/use-toast';
@@ -34,6 +34,7 @@ import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { EmbeddedAllocationBarProps, CompositionBarData } from '../../types/allocation';
+import { getLoggedOutPageAllocation, getUserPageAllocation } from '../../utils/simulatedUsd';
 
 export function EmbeddedAllocationBar({
   pageId,
@@ -45,8 +46,8 @@ export function EmbeddedAllocationBar({
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
   const { hasActiveSubscription } = useSubscription();
-  const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
-  const { fakeBalance } = useFakeBalance();
+  const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
+  const { demoBalance } = useDemoBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
   const router = useRouter();
   const { toast } = useToast();
@@ -61,69 +62,137 @@ export function EmbeddedAllocationBar({
   const isPageOwner = user?.uid === authorId;
 
   // Use our shared hooks
-  const { allocationState, setOptimisticAllocation } = useAllocationState({
+  const { allocationState, refreshAllocation, setOptimisticAllocation } = useAllocationState({
     pageId,
     enabled: !isPageOwner // Enable for both logged-in and logged-out users
   });
 
-  const { handleAllocationChange, isProcessing } = useAllocationActions({
+  const {
+    handleAllocationChange,
+    isProcessing,
+    error,
+    clearError
+  } = useAllocationActions({
     pageId,
     authorId,
     pageTitle,
     currentAllocationCents: allocationState.currentAllocationCents,
     source,
+    onAllocationChange: (newAllocationCents) => {
+      // Refresh the allocation state when allocation changes
+      refreshAllocation();
+    },
     onOptimisticUpdate: setOptimisticAllocation
   });
 
-  // Calculate composition bar data
+  // Calculate composition bar data with optimistic updates
   const getCompositionData = (): CompositionBarData => {
-    // Use fake balance for logged-out users or users without subscriptions
-    const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+    // Use demo balance for logged-out users or users without subscriptions
+    const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
 
     if (!currentBalance) {
       return {
         otherPagesPercentage: 0,
-        currentPagePercentage: 0,
+        currentPageFundedPercentage: 0,
+        currentPageOverfundedPercentage: 0,
         availablePercentage: 100,
         isOutOfFunds: false
       };
     }
 
     const totalCents = currentBalance.totalUsdCents;
-    const allocatedCents = currentBalance.allocatedUsdCents;
-    const availableCents = currentBalance.availableUsdCents;
+    const currentPageCents = allocationState.currentAllocationCents;
 
-    const otherPagesCents = Math.max(0, allocatedCents - allocationState.currentAllocationCents);
-    const isOutOfFunds = availableCents <= 0 && totalCents > 0;
+    if (shouldUseDemoBalance) {
+      // For demo balance: balance data is NOT optimistically updated
+      // So we need to calculate optimistic values manually
+      const originalAllocatedCents = currentBalance.allocatedUsdCents;
+      const originalAvailableCents = currentBalance.availableUsdCents;
 
-    // Calculate percentages for composition bar
-    const otherPagesPercentage = totalCents > 0 ? (otherPagesCents / totalCents) * 100 : 0;
-    const currentPagePercentage = totalCents > 0 ? (allocationState.currentAllocationCents / totalCents) * 100 : 0;
-    const availablePercentage = totalCents > 0 ? Math.max(0, (availableCents / totalCents) * 100) : 0;
+      // Calculate what the original allocation for this page was
+      // We can get this from the demo balance localStorage
+      const originalCurrentPageCents = !user?.uid ?
+        getLoggedOutPageAllocation(pageId) :
+        getUserPageAllocation(user.uid, pageId);
 
-    return {
-      otherPagesPercentage,
-      currentPagePercentage,
-      availablePercentage,
-      isOutOfFunds
-    };
+      const otherPagesCents = Math.max(0, originalAllocatedCents - originalCurrentPageCents);
+
+      // Split current page allocation into funded and overfunded portions
+      const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
+      const currentPageFundedCents = Math.min(currentPageCents, availableFundsForCurrentPage);
+      const currentPageOverfundedCents = Math.max(0, currentPageCents - availableFundsForCurrentPage);
+
+      // Calculate available funds correctly:
+      // Available = Total - Other Pages - Current Page Funded (overfunded doesn't consume available funds)
+      const optimisticAvailableCents = Math.max(0, totalCents - otherPagesCents - currentPageFundedCents);
+      const isOutOfFunds = optimisticAvailableCents <= 0 && totalCents > 0;
+
+      // For display purposes, show all sections proportionally
+      // The display total should be the subscription amount plus any overspent amount
+      const displayTotal = totalCents + currentPageOverfundedCents;
+
+      const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
+      const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
+      const currentPageOverfundedPercentage = displayTotal > 0 ? (currentPageOverfundedCents / displayTotal) * 100 : 0;
+      const availablePercentage = displayTotal > 0 ? (optimisticAvailableCents / displayTotal) * 100 : 0;
+
+      return {
+        otherPagesPercentage,
+        currentPageFundedPercentage,
+        currentPageOverfundedPercentage,
+        availablePercentage,
+        isOutOfFunds
+      };
+    } else {
+      // For real balance: balance data IS optimistically updated
+      // So we can use the balance data directly
+      const allocatedCents = currentBalance.allocatedUsdCents;
+      const availableCents = currentBalance.availableUsdCents;
+
+      const otherPagesCents = Math.max(0, allocatedCents - currentPageCents);
+
+      // Split current page allocation into funded and overfunded portions
+      const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
+      const currentPageFundedCents = Math.min(currentPageCents, availableFundsForCurrentPage);
+      const currentPageOverfundedCents = Math.max(0, currentPageCents - availableFundsForCurrentPage);
+
+      // Calculate available funds correctly:
+      // Available = Total - Other Pages - Current Page Funded (overfunded doesn't consume available funds)
+      const recalculatedAvailableCents = Math.max(0, totalCents - otherPagesCents - currentPageFundedCents);
+      const isOutOfFunds = recalculatedAvailableCents <= 0 && totalCents > 0;
+
+      // For display purposes, show all sections proportionally
+      // The display total should be the subscription amount plus any overspent amount
+      const displayTotal = totalCents + currentPageOverfundedCents;
+
+      const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
+      const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
+      const currentPageOverfundedPercentage = displayTotal > 0 ? (currentPageOverfundedCents / displayTotal) * 100 : 0;
+      const availablePercentage = displayTotal > 0 ? (recalculatedAvailableCents / displayTotal) * 100 : 0;
+
+      return {
+        otherPagesPercentage,
+        currentPageFundedPercentage,
+        currentPageOverfundedPercentage,
+        availablePercentage,
+        isOutOfFunds
+      };
+    }
   };
 
   const compositionData = getCompositionData();
 
   const handleButtonClick = (direction: number, e: React.MouseEvent) => {
+    console.log('🔵 EmbeddedAllocationBar: Button clicked!', { direction, pageId, authorId });
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (isPageOwner) return;
-
-    // Use our shared allocation change handler
-    handleAllocationChange(direction as 1 | -1, e);
+    // Allow all users (including page owners) to allocate
+    // Use our shared allocation change handler - it handles both logged-in and logged-out users
+    // Use the user's configured increment amount
+    const changeAmount = direction * allocationIntervalCents;
+    console.log('🔵 EmbeddedAllocationBar: Calling handleAllocationChange', { changeAmount, pageId });
+    handleAllocationChange(changeAmount, e);
   };
 
   // Long press handlers
@@ -154,7 +223,9 @@ export function EmbeddedAllocationBar({
   const handleOutOfFunds = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    router.push('/settings/fund-account');
+    // Trigger the insufficient funds modal by attempting an allocation
+    const changeAmount = allocationIntervalCents;
+    handleAllocationChange(changeAmount, e);
   };
 
   // Cleanup timeouts
@@ -167,8 +238,8 @@ export function EmbeddedAllocationBar({
   }, []);
 
   // Don't render for page owners or when loading critical data
-  // For fake balance users, don't wait for USD balance loading
-  const isLoadingCriticalData = shouldUseFakeBalance ? intervalLoading : (usdLoading && intervalLoading);
+  // For demo balance users, don't wait for USD balance loading
+  const isLoadingCriticalData = shouldUseDemoBalance ? intervalLoading : (usdLoading && intervalLoading);
   if (isPageOwner || isLoadingCriticalData) {
     return null;
   }
@@ -184,23 +255,23 @@ export function EmbeddedAllocationBar({
     );
   }
 
-  // For logged-out users, we'll use fake balance - no need to show login prompt
+  // For logged-out users, we'll use demo balance - no need to show login prompt
 
   return (
     <div className={cn("w-full", className)}>
       {/* Allocation amount display above the controls */}
       <AllocationAmountDisplay
         allocationCents={allocationState.currentAllocationCents}
-        availableBalanceCents={(shouldUseFakeBalance ? fakeBalance : usdBalance)?.availableUsdCents || 0}
+        availableBalanceCents={(shouldUseDemoBalance ? demoBalance : usdBalance)?.availableUsdCents || 0}
         variant="page"
       />
 
       <div className="flex items-center gap-3">
-        {/* Minus button on left */}
+        {/* Minus button on left - now outline for consistency */}
         <Button
           size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-destructive/20 active:scale-95 transition-all duration-150 flex-shrink-0"
+          variant="outline"
+          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0"
           onClick={(e) => handleButtonClick(-1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -228,14 +299,19 @@ export function EmbeddedAllocationBar({
               />
             )}
 
-            {/* Current page (spent here) - center, primary color */}
-            {compositionData.currentPagePercentage > 0 && (
+            {/* Current page - funded portion */}
+            {compositionData.currentPageFundedPercentage > 0 && (
               <div
-                className={cn(
-                  "rounded-md transition-all duration-300 ease-out",
-                  compositionData.isOutOfFunds ? "bg-orange-500" : "bg-primary"
-                )}
-                style={{ width: `${compositionData.currentPagePercentage}%` }}
+                className="bg-primary rounded-md transition-all duration-300 ease-out"
+                style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
+              />
+            )}
+
+            {/* Current page - overfunded portion */}
+            {compositionData.currentPageOverfundedPercentage > 0 && (
+              <div
+                className="bg-orange-500 rounded-md transition-all duration-300 ease-out"
+                style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
               />
             )}
 
@@ -253,7 +329,7 @@ export function EmbeddedAllocationBar({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0"
+          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0"
           onClick={(e) => compositionData.isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -269,6 +345,8 @@ export function EmbeddedAllocationBar({
         isOpen={showIntervalModal}
         onClose={() => setShowIntervalModal(false)}
       />
+
+
     </div>
   );
 }

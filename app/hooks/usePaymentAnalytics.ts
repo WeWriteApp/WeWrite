@@ -593,3 +593,55 @@ export function useWriterEarnings(dateRange: DateRange, cumulative: boolean = fa
 
   return { data, loading, error, refetch: fetchData };
 }
+
+/**
+ * Hook for payout analytics with time-series data
+ */
+export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = false) {
+  const [data, setData] = useState<any[]>([]);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        cumulative: cumulative.toString()
+      });
+
+      const response = await fetch(`/api/admin/payout-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch payout analytics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result.data || []);
+      setMetadata(result.metadata || null);
+    } catch (err) {
+      console.error('Error fetching payout analytics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch payout analytics data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, metadata, loading, error, refetch: fetchData };
+}

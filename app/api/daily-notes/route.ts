@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../utils/environmentConfig';
+import { getCollectionNameAsync } from '../../utils/environmentConfig';
 
 // EMERGENCY COST OPTIMIZATION: Daily notes cache
 const dailyNotesCache = new Map<string, { data: any; timestamp: number }>();
@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
     // Build query to get ALL pages for the user first, then filter by creation date
     // This ensures we get all pages and can group them by their creation date
     // OPTIMIZATION: Remove deleted filter from query to avoid index requirement, filter in code instead
-    let pagesQuery = adminDb.collection(getCollectionName('pages'))
+    const collectionName = await getCollectionNameAsync('pages');
+    let pagesQuery = adminDb.collection(collectionName)
       .where('userId', '==', userId);
 
     // If we have date range, we'll filter after getting the results
@@ -184,7 +185,8 @@ export async function GET(request: NextRequest) {
       console.log('[daily-notes API] No pages found with valid creation dates');
 
       // Debug: Show what we got from the raw query
-      const pagesSnapshot = await adminDb.collection(getCollectionName('pages'))
+      const debugCollectionName = await getCollectionNameAsync('pages');
+      const pagesSnapshot = await adminDb.collection(debugCollectionName)
         .where('userId', '==', userId)
         .limit(5)
         .get();

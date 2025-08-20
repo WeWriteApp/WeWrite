@@ -146,6 +146,26 @@ export default function UserRecentEdits({
     }
   }, [fetchUserEdits, userId]);
 
+  // Listen for refresh events from page saves
+  useEffect(() => {
+    const handleRefreshRecentEdits = (event: CustomEvent) => {
+      const { userId: eventUserId } = event.detail || {};
+      // Only refresh if this is for the same user or no specific user
+      if (!eventUserId || eventUserId === userId) {
+        console.log('🔄 UserRecentEdits: Received refresh event, refetching data');
+        fetchUserEdits();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('refresh-recent-edits', handleRefreshRecentEdits as EventListener);
+
+      return () => {
+        window.removeEventListener('refresh-recent-edits', handleRefreshRecentEdits as EventListener);
+      };
+    }
+  }, [fetchUserEdits, userId]);
+
   if (loading) {
     return (
       <div className="space-y-4">

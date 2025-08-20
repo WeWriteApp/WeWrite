@@ -28,26 +28,18 @@ export function useNavigationPreloader() {
   // Preload user profile data with deduplication
   const preloadUserProfile = useCallback(async (userId: string) => {
     try {
-      // OPTIMIZATION: Use deduplication to prevent duplicate requests
-      const { deduplicatedFetch } = await import('../utils/requestDeduplication');
+      // OPTIMIZATION: Use unified API client to prevent duplicate requests
+      const { apiClient } = await import('../utils/unifiedApiClient');
 
       // Preload user profile API with extended cache
-      deduplicatedFetch(`/api/users/profile?id=${encodeURIComponent(userId)}`, {
-        headers: {
-          'Cache-Control': 'max-age=1800', // 30 minutes browser cache
-        },
-        estimatedReads: 1,
-        userId: user?.uid
+      apiClient.get(`/api/users/profile?id=${encodeURIComponent(userId)}`, {
+        cacheTTL: 30 * 60 * 1000 // 30 minutes cache
       });
 
       // Only preload user's pages if it's the current user (to reduce reads)
       if (userId === user?.uid) {
-        deduplicatedFetch(`/api/users/${userId}/pages?limit=10`, {
-          headers: {
-            'Cache-Control': 'max-age=900', // 15 minutes browser cache
-          },
-          estimatedReads: 1,
-          userId: user?.uid
+        apiClient.get(`/api/users/${userId}/pages?limit=10`, {
+          cacheTTL: 15 * 60 * 1000, // 15 minutes cache
         });
       }
 
@@ -62,10 +54,13 @@ export function useNavigationPreloader() {
     if (!user?.uid) return;
 
     try {
+      // Fire and forget preload - catch any errors to prevent unhandled rejections
       fetch(`/api/home?userId=${user.uid}`, {
         headers: {
           'Cache-Control': 'max-age=300', // 5 minutes browser cache
         },
+      }).catch(error => {
+        console.warn('Navigation preloader: Home data preload failed:', error);
       });
 
       console.log('🚀 Navigation preloader: Preloaded home data');
@@ -79,10 +74,13 @@ export function useNavigationPreloader() {
     if (!user?.uid) return;
 
     try {
+      // Fire and forget preload - catch any errors to prevent unhandled rejections
       fetch(`/api/notifications?userId=${user.uid}&limit=20`, {
         headers: {
           'Cache-Control': 'max-age=60', // 1 minute browser cache
         },
+      }).catch(error => {
+        console.warn('Navigation preloader: Notifications preload failed:', error);
       });
 
       console.log('🚀 Navigation preloader: Preloaded notifications');
@@ -94,10 +92,13 @@ export function useNavigationPreloader() {
   // Preload recent pages
   const preloadRecentPages = useCallback(async () => {
     try {
+      // Fire and forget preload - catch any errors to prevent unhandled rejections
       fetch('/api/recent-edits/global?limit=20', {
         headers: {
           'Cache-Control': 'max-age=300', // 5 minutes browser cache
         },
+      }).catch(error => {
+        console.warn('Navigation preloader: Recent pages preload failed:', error);
       });
 
       console.log('🚀 Navigation preloader: Preloaded recent pages');
@@ -109,10 +110,13 @@ export function useNavigationPreloader() {
   // Preload trending pages
   const preloadTrendingPages = useCallback(async () => {
     try {
+      // Fire and forget preload - catch any errors to prevent unhandled rejections
       fetch('/api/trending?limit=20', {
         headers: {
           'Cache-Control': 'max-age=600', // 10 minutes browser cache
         },
+      }).catch(error => {
+        console.warn('Navigation preloader: Trending pages preload failed:', error);
       });
 
       console.log('🚀 Navigation preloader: Preloaded trending pages');
@@ -126,11 +130,13 @@ export function useNavigationPreloader() {
     if (!user?.uid) return;
 
     try {
-      // Preload empty search (recent searches, suggestions)
+      // Fire and forget preload - catch any errors to prevent unhandled rejections
       fetch(`/api/search-unified?q=&userId=${user.uid}&context=navigation`, {
         headers: {
           'Cache-Control': 'max-age=300', // 5 minutes browser cache
         },
+      }).catch(error => {
+        console.warn('Navigation preloader: Search data preload failed:', error);
       });
 
       console.log('🚀 Navigation preloader: Preloaded search data');

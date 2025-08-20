@@ -16,7 +16,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
+import { cache, cacheKey } from '../utils/simpleCache';
 
 interface AllocationData {
   pageId: string;
@@ -83,9 +83,9 @@ export function AllocationStateProvider({ children }: AllocationStateProviderPro
     });
 
     // Save to persistent cache
-    const cacheKey = generateCacheKey('allocations', user.uid);
+    const key = cacheKey('allocations', user.uid);
     const allAllocations = Object.fromEntries(userAllocations.entries());
-    setCacheItem(cacheKey, allAllocations, CACHE_DURATION);
+    cache.set(key, allAllocations, CACHE_DURATION);
     
     setLastUpdated(new Date());
   }, [user?.uid]);
@@ -203,9 +203,9 @@ export function AllocationStateProvider({ children }: AllocationStateProviderPro
           allocationCache.set(user.uid, userAllocations);
           
           // Save to persistent cache
-          const cacheKey = generateCacheKey('allocations', user.uid);
+          const key = cacheKey('allocations', user.uid);
           const allAllocations = Object.fromEntries(userAllocations.entries());
-          setCacheItem(cacheKey, allAllocations, CACHE_DURATION);
+          cache.set(key, allAllocations, CACHE_DURATION);
           
           setLastUpdated(new Date());
           console.log(`[AllocationState] Refreshed ${userAllocations.size} allocations`);
@@ -232,8 +232,8 @@ export function AllocationStateProvider({ children }: AllocationStateProviderPro
     }
     
     // Check persistent cache first
-    const cacheKey = generateCacheKey('allocations', user.uid);
-    const cachedAllocations = getCacheItem<Record<string, AllocationData>>(cacheKey);
+    const key = cacheKey('allocations', user.uid);
+    const cachedAllocations = cache.get<Record<string, AllocationData>>(key);
     
     if (cachedAllocations) {
       const userAllocations = new Map(Object.entries(cachedAllocations));

@@ -27,6 +27,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { WarningDot } from '../ui/warning-dot';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
+import { FloatingToolbar } from '../ui/FloatingCard';
 
 /**
  * MobileBottomNav Component
@@ -63,15 +64,11 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
 /**
  * MobileBottomNav Component
  *
- * A unified mobile navigation component that can expand and collapse to show additional navigation options.
- * Features:
- * - Fixed bottom toolbar with 5 draggable navigation buttons + "More" button
- * - Expandable drawer that shows overflow navigation items
- * - Drag and drop reordering between toolbar and overflow sections
- * - Proper z-index management to appear above all content including headers
- * - Click-outside-to-collapse functionality
- * - Smooth expand/collapse animations
- * - Always visible (no scroll-based hiding for simplified UX)
+ * Simplified mobile navigation component with:
+ * - Fixed bottom toolbar with core navigation buttons
+ * - Expandable "More" section for additional options
+ * - Clean, maintainable code without complex drag-and-drop
+ * - Consistent shadow styling with FloatingFinancialHeader
  */
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -524,7 +521,7 @@ export default function MobileBottomNav() {
         onMouseEnter={onHover}
         onTouchStart={onHover} // Preload on touch start for mobile
         className={cn(
-          "flex flex-col items-center justify-center h-16 flex-1 rounded-lg py-2 px-1 relative gap-1 group",
+          "flex flex-col items-center justify-center h-11 flex-1 rounded-lg py-0.5 px-1 relative gap-0.5 group",
           "transition-all duration-75 ease-out", // Faster transitions for responsiveness
           "flex-shrink-0 min-w-0",
           // Enhanced touch feedback
@@ -533,9 +530,9 @@ export default function MobileBottomNav() {
           isPressed && "scale-95 bg-primary/20",
           // Base states with enhanced contrast
           "hover:bg-primary/10 active:bg-primary/20",
-          // Active state styling - use accent colors consistently
+          // Active state styling - use semi-transparent colors for glassmorphism
           isActive
-            ? "bg-accent text-accent-foreground"
+            ? "bg-accent/20 text-accent-foreground dark:bg-white/20 dark:text-white"
             : [
                 "text-slate-600 hover:text-slate-900",
                 "dark:text-muted-foreground dark:hover:text-foreground"
@@ -549,7 +546,7 @@ export default function MobileBottomNav() {
       >
         <div className="relative">
           <Icon className={cn(
-            "h-6 w-6 flex-shrink-0 transition-transform duration-75",
+            "h-7 w-7 flex-shrink-0 transition-transform duration-75",
             isPressed && "scale-110" // Slight scale on press for immediate feedback
           )} />
           {children}
@@ -607,17 +604,19 @@ export default function MobileBottomNav() {
         />
       )}
 
-      {/* Single bottom navigation component that expands upward */}
-      <div
+      {/* Bottom navigation using FloatingToolbar for consistency */}
+      <FloatingToolbar
         className={cn(
-          "md:hidden fixed left-0 right-0 bottom-0 z-[80] bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
+          "md:hidden fixed left-4 right-4 bottom-4 z-[80]",
           "transition-all duration-300 ease-in-out",
-          !shouldHideNav ? "translate-y-0" : "translate-y-full", // SIMPLIFIED: Always visible when not hidden by route
+          !shouldHideNav ? "translate-y-0" : "translate-y-full",
           "touch-manipulation"
         )}
         style={{
-          paddingBottom: getPWABottomSpacing(isPWAMode)
+          marginBottom: getPWABottomSpacing(isPWAMode)
         }}
+        isExpanded={isExpanded}
+        size="xs"
       >
         {/* Navigation progress indicator */}
         {isNavigating && (
@@ -638,7 +637,7 @@ export default function MobileBottomNav() {
             <div className="overflow-y-auto max-h-[60vh]">
               {/* Account info at top */}
               {user && (
-                <div className="p-4 border-b border-border bg-background/50">
+                <div className="p-3 border-b border-border/30">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <div className="text-sm font-medium text-foreground truncate">
@@ -675,7 +674,7 @@ export default function MobileBottomNav() {
               )}
 
               {/* Grid of navigation items */}
-              <div className="p-4">
+              <div className="p-3">
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="text-sm font-medium text-foreground">
@@ -745,8 +744,8 @@ export default function MobileBottomNav() {
           )}
         </div>
 
-        {/* Bottom toolbar - always present with consistent padding */}
-        <div className="flex items-center justify-around px-2 py-3 gap-1">
+        {/* Bottom toolbar - always present with reduced padding */}
+        <div className="flex items-center justify-around px-2 py-1 gap-1">
           {/* More Button - Fixed position, not draggable */}
           <NavButton
             id="more"
@@ -795,7 +794,7 @@ export default function MobileBottomNav() {
             );
           })}
         </div>
-      </div>
+      </FloatingToolbar>
 
       {/* Logout confirmation now uses system dialog - no custom modal needed */}
     </DndProvider>

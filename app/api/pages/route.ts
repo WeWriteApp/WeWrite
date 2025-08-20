@@ -871,34 +871,14 @@ export async function PUT(request: NextRequest) {
       updateFields: Object.keys(updateData)
     }, 'PAGE_SAVE');
 
-    // COMPREHENSIVE CACHE INVALIDATION: Clear all relevant caches after page save
+    // SIMPLIFIED CACHE INVALIDATION: Single function call
     try {
-      console.log('🗑️ COMPREHENSIVE CACHE: Clearing all caches for saved page:', id);
-
-      // 1. Clear read optimizer cache
-      const { clearOptimizedCache } = await import('../../utils/readOptimizer');
-      clearOptimizedCache(`page:${id}:`);
-
-      // 2. Clear page cache
-      const { pageCache } = await import('../../utils/pageCache');
-      pageCache.invalidate(id);
-
-      // 3. Clear batch page cache
-      const { clearBatchCache } = await import('../../utils/batchPageLoader');
-      clearBatchCache();
-
-      // 4. Clear global cache entries for this page
-      const { invalidateCache } = await import('../../utils/globalCache');
-      invalidateCache(`page:${id}`);
-      invalidateCache(`pageData:${id}`);
-
-      // 5. Clear version cache for this page
-      const { clearPageVersionCache } = await import('../../services/versionService');
-      clearPageVersionCache(id);
-
-      console.log('✅ COMPREHENSIVE CACHE: All cache clearing completed');
+      console.log('🗑️ UNIFIED CACHE: Invalidating page data for:', id);
+      const { invalidatePageData } = await import('../../utils/unifiedCache');
+      invalidatePageData(id, currentUserId);
+      console.log('✅ UNIFIED CACHE: Page invalidation completed');
     } catch (cacheError) {
-      console.warn('⚠️ COMPREHENSIVE CACHE: Error clearing caches (non-fatal):', cacheError);
+      console.warn('⚠️ UNIFIED CACHE: Error clearing caches (non-fatal):', cacheError);
       // Don't fail the save if cache invalidation fails
     }
 

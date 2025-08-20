@@ -540,7 +540,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
   if (loading) {
     console.log('🗺️ CRITICAL: Showing loading state');
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-12 min-h-[400px]">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Loading pages with locations...</span>

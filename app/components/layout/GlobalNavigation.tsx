@@ -7,6 +7,7 @@ import MobileBottomNav from './MobileBottomNav';
 import FloatingActionButton from './FloatingActionButton';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
+import FloatingFinancialHeader from './FloatingFinancialHeader';
 
 
 /**
@@ -28,6 +29,8 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <SidebarProvider>
+      {/* Floating financial header - shows on all logged-in pages */}
+      <FloatingFinancialHeader />
       <SidebarLayout>
         {children}
       </SidebarLayout>
