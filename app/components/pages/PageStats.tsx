@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Eye, Clock, Heart, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
-import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 
 interface PageStatsData {
@@ -38,7 +37,6 @@ export default function PageStats({
   showSparklines = true,
 }: PageStatsProps) {
   const router = useRouter();
-  const { accentColor, customColors } = useAccentColor();
   const { formatDateString } = useDateFormat();
 
   const [stats, setStats] = useState<PageStatsData | null>(null);
@@ -95,15 +93,11 @@ export default function PageStats({
     fetchPageStats();
   }, [pageId]);
 
-  // Get the actual color value based on the selected accent color
-  const getAccentColorValue = () => {
-    if (accentColor.startsWith('custom')) {
-      return customColors[accentColor];
-    }
-    return ACCENT_COLOR_VALUES[accentColor] || "#1768FF";
-  };
+  // Use CSS variable for accent color instead of hardcoded values
+  const accentColorValue = 'oklch(var(--primary))';
 
-  const accentColorValue = getAccentColorValue();
+  // Use CSS variable for pill text color that automatically adjusts based on accent lightness
+  const pillTextColor = 'oklch(var(--primary-foreground))';
 
   const handleViewActivity = () => {
     router.push(`/${pageId}/versions`);
@@ -160,14 +154,24 @@ export default function PageStats({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
-              {showSparklines && stats.viewData.length > 0 && (
-                <SimpleSparkline data={stats.viewData} height={30} color={accentColorValue} />
+              {showSparklines && (
+                <SimpleSparkline
+                  data={stats.viewData.length > 0 ? stats.viewData : Array(24).fill(0)}
+                  height={30}
+                  color={accentColorValue}
+                />
               )}
             </div>
             <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
           </div>
 
-          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+          <div
+            className="text-sm font-medium px-2 py-1 rounded-md"
+            style={{
+              backgroundColor: accentColorValue,
+              color: pillTextColor
+            }}
+          >
             {stats.totalViews.toLocaleString()}
           </div>
         </div>
@@ -186,14 +190,24 @@ export default function PageStats({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
-              {showSparklines && stats.changeData.length > 0 && (
-                <SimpleSparkline data={stats.changeData} height={30} color={accentColorValue} />
+              {showSparklines && (
+                <SimpleSparkline
+                  data={stats.changeData.length > 0 ? stats.changeData : Array(24).fill(0)}
+                  height={30}
+                  color={accentColorValue}
+                />
               )}
             </div>
             <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
           </div>
 
-          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+          <div
+            className="text-sm font-medium px-2 py-1 rounded-md"
+            style={{
+              backgroundColor: accentColorValue,
+              color: pillTextColor
+            }}
+          >
             {stats.recentChanges.toLocaleString()}
           </div>
         </div>
@@ -210,14 +224,24 @@ export default function PageStats({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <div className="h-8 w-16 relative">
-                {showSparklines && stats.supporterData.length > 0 && (
-                  <SimpleSparkline data={stats.supporterData} height={30} color={accentColorValue} />
+                {showSparklines && (
+                  <SimpleSparkline
+                    data={stats.supporterData.length > 0 ? stats.supporterData : Array(24).fill(0)}
+                    height={30}
+                    color={accentColorValue}
+                  />
                 )}
               </div>
               <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
             </div>
 
-            <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+            <div
+              className="text-sm font-medium px-2 py-1 rounded-md"
+              style={{
+                backgroundColor: accentColorValue,
+                color: pillTextColor
+              }}
+            >
               {stats.supporterCount.toLocaleString()}
             </div>
           </div>

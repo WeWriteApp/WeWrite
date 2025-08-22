@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield } from 'lucide-react';
 import { DndProvider } from 'react-dnd';
+import FixedPortal from "../utils/FixedPortal";
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { Button } from '../ui/button';
@@ -579,6 +580,8 @@ export default function MobileBottomNav() {
 
   return (
     <DndProvider backend={dndBackend}>
+      {/* Render into fixed portal to avoid ancestor stacking contexts */}
+      <FixedPortal>
       {/* Backdrop - only shows when expanded, positioned behind the expanded toolbar */}
       {isExpanded && (
         <div
@@ -607,13 +610,14 @@ export default function MobileBottomNav() {
       {/* Bottom navigation using FloatingToolbar for consistency */}
       <FloatingToolbar
         className={cn(
-          "md:hidden fixed left-4 right-4 bottom-4 z-[80]",
+          "md:hidden fixed-layer fixed-bottom z-fixed-toolbar pointer-events-auto left-4 right-4",
           "transition-all duration-300 ease-in-out",
           !shouldHideNav ? "translate-y-0" : "translate-y-full",
           "touch-manipulation"
         )}
         style={{
-          marginBottom: getPWABottomSpacing(isPWAMode)
+          // Use CSS custom property for PWA spacing, but let fixed-bottom handle base positioning
+          paddingBottom: getPWABottomSpacing(isPWAMode),
         }}
         isExpanded={isExpanded}
         size="xs"
@@ -637,7 +641,7 @@ export default function MobileBottomNav() {
             <div className="overflow-y-auto max-h-[60vh]">
               {/* Account info at top */}
               {user && (
-                <div className="p-3 border-b border-border/30">
+                <div className="p-3 border-b border-neutral-20">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <div className="text-sm font-medium text-foreground truncate">
@@ -665,7 +669,7 @@ export default function MobileBottomNav() {
                           // Note: No finally block needed since signOut() triggers page refresh
                         }
                       }}
-                      className="text-xs bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20 dark:bg-destructive/10 dark:border-destructive/30 dark:text-destructive dark:hover:bg-destructive/20"
+                      className="text-xs bg-error-10 border-error-70 text-error-100 hover:bg-error-20"
                     >
                       Log out
                     </Button>
@@ -797,6 +801,7 @@ export default function MobileBottomNav() {
       </FloatingToolbar>
 
       {/* Logout confirmation now uses system dialog - no custom modal needed */}
+        </FixedPortal>
     </DndProvider>
   );
 }

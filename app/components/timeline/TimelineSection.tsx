@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Clock, Calendar, List } from 'lucide-react';
-import { Button } from '../ui/button';
+import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger } from '../ui/segmented-control';
 import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import TimelineCarousel from './TimelineCarousel';
@@ -130,26 +130,18 @@ export default function TimelineSection({}: TimelineSectionProps) {
       >
         {/* View Mode Toggle */}
         <div className="flex justify-center mb-6">
-          <div className="flex items-center border border-border rounded-lg p-1 w-full max-w-sm">
-            <Button
-              variant={viewMode === 'timeline' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('timeline')}
-              className="h-8 px-3 rounded-md flex-1"
-            >
-              <List className="h-4 w-4 mr-2" />
-              Timeline
-            </Button>
-            <Button
-              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('calendar')}
-              className="h-8 px-3 rounded-md flex-1"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Calendar
-            </Button>
-          </div>
+          <SegmentedControl value={viewMode} onValueChange={setViewMode}>
+            <SegmentedControlList className="grid w-full grid-cols-2 max-w-sm">
+              <SegmentedControlTrigger value="timeline" className="flex items-center gap-2">
+                <List className="h-4 w-4" />
+                Timeline
+              </SegmentedControlTrigger>
+              <SegmentedControlTrigger value="calendar" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Calendar
+              </SegmentedControlTrigger>
+            </SegmentedControlList>
+          </SegmentedControl>
         </div>
 
         {/* Content based on view mode */}

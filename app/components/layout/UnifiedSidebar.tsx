@@ -337,7 +337,7 @@ function UnifiedSidebarContent({
       {/* Desktop Sidebar - Hidden on mobile */}
       <div
         className={cn(
-          "hidden md:flex fixed left-0 top-0 h-screen z-[200] flex-col",
+          "hidden md:flex fixed left-0 top-0 h-screen z-fixed-toolbar flex-col",
           // Use full wewrite-card system (includes glassmorphism backdrop blur)
           "wewrite-card border-r border-[var(--card-border)]",
           // Remove rounded corners for sidebar

@@ -30,20 +30,18 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <>
+      {/* Floating elements - render outside SidebarLayout to ensure proper viewport positioning */}
+      <FloatingFinancialHeader />
+      <MobileBottomNav />
+      <FloatingActionButton />
+
       <SidebarProvider>
-        {/* Floating financial header - shows on all logged-in pages */}
-        <FloatingFinancialHeader />
         <SidebarLayout>
           {children}
         </SidebarLayout>
-        {/* Mobile bottom navigation - properly implemented */}
-        <MobileBottomNav />
-        {/* Floating action button - shows on appropriate pages */}
-        <FloatingActionButton />
         {/* Username enforcement modal - shows when user needs to set username */}
         <UsernameEnforcementModal />
       </SidebarProvider>
-
     </>
   );
 }

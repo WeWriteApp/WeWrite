@@ -129,7 +129,7 @@ export default function LocationField({
   return (
     <div className={`w-full ${className}`}>
       <div
-        className={`w-full rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm overflow-hidden ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+        className={`wewrite-card w-full overflow-hidden ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''}`}
         onClick={canEdit ? handleLocationClick : undefined}
       >
         {/* Header */}
@@ -141,7 +141,7 @@ export default function LocationField({
 
           <div className="flex items-center gap-2">
             {!normalizedLocation && (
-              <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-border">
+              <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
                 {canEdit ? 'Click to set location' : 'No location set'}
               </div>
             )}
@@ -150,7 +150,7 @@ export default function LocationField({
 
         {/* Map below header - only show if location exists */}
         {normalizedLocation && (
-            <div className="h-40 md:h-48 border-t border-border/40">
+            <div className="h-40 md:h-48 border-t border-theme-light">
               <MapPicker
                 location={normalizedLocation}
                 readOnly={true}

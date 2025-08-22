@@ -95,6 +95,9 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
     const baseAccent = `${(oklchValues.l * 100).toFixed(2)}% ${oklchValues.c.toFixed(4)} ${oklchValues.h.toFixed(1)}`;
     document.documentElement.style.setProperty('--accent-base', baseAccent);
 
+    // Set primary color to use the accent color
+    document.documentElement.style.setProperty('--primary', baseAccent);
+
     // Set neutral base color (same hue as accent, reduced chroma for subtle appearance)
     const neutralChroma = Math.min(oklchValues.c * 0.3, 0.05); // Reduce chroma to 30% of accent, max 0.05
     const baseNeutral = `${(oklchValues.l * 100).toFixed(2)}% ${neutralChroma.toFixed(4)} ${oklchValues.h.toFixed(1)}`;

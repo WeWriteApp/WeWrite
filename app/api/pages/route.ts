@@ -290,50 +290,6 @@ export async function POST(request: NextRequest) {
 
     const trimmedTitle = title.trim();
 
-    // Check for duplicate titles by the same user
-    console.log('🔍 PAGE_CREATION_API: Checking for duplicate title', {
-      userId: currentUserId,
-      title: trimmedTitle
-    });
-
-    const pagesCollectionName = getCollectionName('pages');
-    const duplicateQuery = await db.collection(pagesCollectionName)
-      .where('userId', '==', currentUserId)
-      .where('title', '==', trimmedTitle)
-      .limit(5) // Get a few more to filter client-side
-      .get();
-
-    // Filter out deleted pages client-side
-    const nonDeletedPages = duplicateQuery.docs.filter(doc => {
-      const data = doc.data();
-      return data.deleted !== true;
-    });
-
-    if (nonDeletedPages.length > 0) {
-      const existingPage = nonDeletedPages[0];
-      const existingPageData = existingPage.data();
-
-      console.log('🔴 PAGE_CREATION_API: Duplicate title detected', {
-        existingPageId: existingPage.id,
-        existingTitle: existingPageData.title,
-        userId: currentUserId
-      });
-
-      return createApiResponse(
-        {
-          isDuplicate: true,
-          existingPage: {
-            id: existingPage.id,
-            title: existingPageData.title,
-            lastModified: existingPageData.lastModified,
-            createdAt: existingPageData.createdAt
-          }
-        },
-        `You already have a page titled "${trimmedTitle}"`,
-        400
-      );
-    }
-
     // Get user information - handle development vs production
     const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
     let username = 'Anonymous';
@@ -608,54 +564,6 @@ export async function PUT(request: NextRequest) {
       }
 
       const trimmedTitle = title.trim();
-      const currentTitle = pageData?.title;
-
-      // Check for duplicate titles only if title is changing
-      if (trimmedTitle !== currentTitle) {
-        console.log('🔍 PAGE_EDIT_API: Checking for duplicate title', {
-          userId: currentUserId,
-          newTitle: trimmedTitle,
-          currentTitle: currentTitle,
-          pageId: id
-        });
-
-        const pagesCollectionName = getCollectionName('pages');
-        const duplicateQuery = await db.collection(pagesCollectionName)
-          .where('userId', '==', currentUserId)
-          .where('title', '==', trimmedTitle)
-          .where('deleted', '!=', true)
-          .limit(1)
-          .get();
-
-        // Check if we found any duplicates (excluding current page)
-        for (const doc of duplicateQuery.docs) {
-          if (doc.id !== id) { // Exclude current page from duplicate check
-            const existingPageData = doc.data();
-
-            console.log('🔴 PAGE_EDIT_API: Duplicate title detected', {
-              existingPageId: doc.id,
-              existingTitle: existingPageData.title,
-              currentPageId: id,
-              userId: currentUserId
-            });
-
-            return createApiResponse(
-              {
-                isDuplicate: true,
-                existingPage: {
-                  id: doc.id,
-                  title: existingPageData.title,
-                  lastModified: existingPageData.lastModified,
-                  createdAt: existingPageData.createdAt
-                }
-              },
-              `You already have a page titled "${trimmedTitle}"`,
-              400
-            );
-          }
-        }
-      }
-
       updateData.title = trimmedTitle;
     }
 

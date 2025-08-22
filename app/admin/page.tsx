@@ -42,7 +42,9 @@ export default function AdminPage() {
 
   // Testing tools state
   const [statusCheckLoading, setStatusCheckLoading] = useState(false);
-  const [distributionMonth, setDistributionMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  const [showPWABanner, setShowPWABanner] = useState(false);
+  const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(false);
 
   // Platform fee revenue state
   const [platformFeeData, setPlatformFeeData] = useState<any[]>([]);
@@ -52,7 +54,7 @@ export default function AdminPage() {
     platformFeeGrowth: 0,
     averageFeePerPayout: 0
   });
-  const [distributionLoading, setDistributionLoading] = useState(false);
+
 
   // Feature flags have been removed - all features are now always enabled
 
@@ -142,64 +144,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleMonthlyDistribution = async () => {
-    console.log('[Admin Testing] Starting monthly distribution...');
-    console.log('[Admin Testing] Distribution month:', distributionMonth);
 
-    if (!distributionMonth) {
-      console.error('[Admin Testing] Missing distribution month');
-      toast({
-        title: "Missing Information",
-        description: "Please provide a month in YYYY-MM format",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setDistributionLoading(true);
-    try {
-      const requestBody = { month: distributionMonth };
-      console.log('[Admin Testing] Sending monthly distribution request with body:', requestBody);
-
-      const response = await fetch('/api/admin/monthly-distribution', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'},
-        body: JSON.stringify(requestBody)
-      });
-
-      console.log('[Admin Testing] Monthly distribution response status:', response.status);
-      console.log('[Admin Testing] Monthly distribution response headers:', Object.fromEntries(response.headers.entries()));
-
-      const result = await response.json();
-      console.log('[Admin Testing] Monthly distribution response body:', result);
-
-      if (result.success) {
-        console.log('[Admin Testing] Monthly distribution completed successfully');
-        toast({
-          title: "Monthly Distribution Complete",
-          description: `Successfully processed distribution for ${distributionMonth}`});
-      } else {
-        console.error('[Admin Testing] Monthly distribution failed:', result);
-        toast({
-          title: "Distribution Failed",
-          description: result.error || "An error occurred",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('[Admin Testing] Exception in monthly distribution:', error);
-      console.error('[Admin Testing] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      toast({
-        title: "Error",
-        description: "Failed to process monthly distribution - check console for details",
-        variant: "destructive"
-      });
-    } finally {
-      console.log('[Admin Testing] Monthly distribution completed, setting loading to false');
-      setDistributionLoading(false);
-    }
-  };
 
 
 
@@ -295,18 +240,36 @@ export default function AdminPage() {
                 <h3 className="font-medium">PWA Testing</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
-                Test the PWA installation banner by forcing it to appear.
+                Control PWA installation banner visibility for testing.
               </span>
-              <div className="mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleTriggerPWAAlert}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Trigger PWA Alert
-                </Button>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Show PWA banner</span>
+                <Switch
+                  checked={showPWABanner}
+                  onCheckedChange={(checked) => {
+                    setShowPWABanner(checked);
+                    if (checked) {
+                      handleTriggerPWAAlert();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Email Banner Testing */}
+            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Email Banner Testing</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Control unverified email banner visibility for testing.
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Show unverified email banner</span>
+                <Switch
+                  checked={showUnverifiedEmailBanner}
+                  onCheckedChange={setShowUnverifiedEmailBanner}
+                />
               </div>
             </div>
 
@@ -323,23 +286,7 @@ export default function AdminPage() {
                 Test payout systems, token earnings, and subscription states
               </span>
               <div className="mt-2 space-y-4">
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={handleMonthlyDistribution}
-                  disabled={distributionLoading}
-                >
-                  {distributionLoading ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Test Monthly Distribution
-                </Button>
-
-
+                <p className="text-sm text-muted-foreground">Testing tools have been moved to the main admin dashboard.</p>
               </div>
             </div>
 
@@ -364,35 +311,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Payment Management */}
-            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Payment Management</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Monitor and manage financial operations and payouts
-              </span>
-              <div className="mt-2 space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => router.push('/admin/payments')}
-                >
-                  <DollarSign className="h-4 w-4" />
-                  Payment Dashboard
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => router.push('/admin/payout-validation')}
-                >
-                  <Settings className="h-4 w-4" />
-                  Payout Validation
-                </Button>
-              </div>
-            </div>
+
 
           </div>
         </div>

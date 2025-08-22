@@ -1,0 +1,46 @@
+/* Fixed Layer System - Viewport-fixed UI elements */
+
+:root {
+  /* Z-index scale */
+  --z-fixed-header: 80;
+  --z-fixed-toolbar: 80;
+  --z-fixed-fab: 90;
+  --z-overlay: 100;
+
+  /* Safe positioning */
+  --fixed-safe-top: 16px;
+  --fixed-safe-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+/* FixedPortal root container */
+#wewrite-fixed-layer-root {
+  position: static;
+  pointer-events: none;
+}
+
+/* Fixed element utilities */
+.fixed-layer { position: fixed; pointer-events: auto; }
+.fixed-top { top: var(--fixed-safe-top); left: 0; right: 0; }
+.fixed-bottom { bottom: var(--fixed-safe-bottom); left: 0; right: 0; }
+
+.z-fixed-header { z-index: var(--z-fixed-header); }
+.z-fixed-toolbar { z-index: var(--z-fixed-toolbar); }
+.z-fixed-fab { z-index: var(--z-fixed-fab); }
+.z-overlay { z-index: var(--z-overlay); }
+
+/* Main content spacing */
+@media (max-width: 767px) {
+  main {
+    padding-top: 72px;
+    padding-bottom: 140px;
+    transition: padding-top 300ms ease-in-out;
+  }
+}
+
+@media (min-width: 768px) {
+  main {
+    padding-top: 72px;
+    transition: padding-top 300ms ease-in-out;
+  }
+}
+

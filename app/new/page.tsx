@@ -37,7 +37,7 @@ import LocationField from "../components/pages/LocationField";
 import { WritingIdeasBanner } from "../components/writing/WritingIdeasBanner";
 
 
-// Duplicate title checking is now handled in PageHeader
+
 
 /**
  * Loading state component for new page creation
@@ -139,7 +139,6 @@ function NewPageContent() {
 
   // Title validation state
   const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
-  const [isTitleDuplicate, setIsTitleDuplicate] = useState<boolean>(false);
 
   // Focus state management - coordinate with title focus
   const [isEditorFocused, setIsEditorFocused] = useState(false);
@@ -397,10 +396,7 @@ function NewPageContent() {
     }
   };
 
-  // Handle duplicate validation changes from PageHeader
-  const handleDuplicateValidationChange = (isDuplicate: boolean) => {
-    setIsTitleDuplicate(isDuplicate);
-  };
+
 
   // Handle custom date changes
   const handleCustomDateChange = (newDate: string | null) => {
@@ -543,20 +539,7 @@ function NewPageContent() {
       return false;
     }
 
-    // Check for duplicate titles before saving
-    if (isTitleDuplicate) {
-      console.log('🔴 NEW_PAGE: Cannot save - duplicate title detected');
-      const errorMsg = "Cannot save page with duplicate title. Please choose a different title or go to the existing page.";
-      setError(errorMsg);
-      setTitleError(true);
-      toast({
-        title: "Duplicate Title",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      setIsSaving(false);
-      return false;
-    }
+
 
     // Clear title error if title is valid
     setTitleError(false);
@@ -893,13 +876,8 @@ function NewPageContent() {
           const errorMsg = apiError instanceof Error ? apiError.message : "Failed to create page via API. Please try again.";
           setError(errorMsg);
 
-          // Set title error if it's a duplicate title error
-          if (errorMsg.includes("already have a page titled")) {
-            setTitleError(true);
-          }
-
           toast({
-            title: errorMsg.includes("already have a page titled") ? "Duplicate Title" : "Creation Failed",
+            title: "Creation Failed",
             description: errorMsg,
             variant: "destructive"
           });
@@ -1241,8 +1219,7 @@ function NewPageContent() {
           isEditing={isEditing}
           setIsEditing={handleSetIsEditing}
           onTitleChange={handleTitleChange}
-          onDuplicateValidationChange={handleDuplicateValidationChange}
-          titleError={titleError || isTitleDuplicate}
+          titleError={titleError}
           canEdit={true} // User can always edit their new page
           isNewPage={true} // Enable auto-focus for new pages
           isReply={isReply} // Pass reply status for contextual text
@@ -1253,20 +1230,17 @@ function NewPageContent() {
           {/* Content editor */}
           {isEditing && (
             <div
-              className={`bg-background/80 border rounded-lg px-4 py-4 outline-none ${
+              className={`wewrite-card px-4 py-4 outline-none ${
                 isEditorFocused
-                  ? "border-primary/50"
-                  : "border-muted-foreground/30"
+                  ? "wewrite-active-card"
+                  : ""
               } w-full max-w-none`}
               style={{
                 minHeight: '200px',
                 height: 'auto',
                 contain: 'layout style paint',
                 willChange: 'auto',
-                transition: 'none',
-                boxShadow: isEditorFocused
-                  ? '0 0 0 2px rgba(59, 130, 246, 0.2)'
-                  : 'none'
+                transition: 'all 200ms ease-in-out'
               }}
               onClick={() => {
                 // Focus the editor when clicking the container

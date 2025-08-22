@@ -7,8 +7,9 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, ReactNode } from 'react';
 import { logRocketService, trackEvent, captureMessage, getSessionURL } from '../utils/logrocket';
+import { useRunOnce } from '../utils/strictModeSafety';
 
 // Context type definition
 interface LogRocketContextType {
@@ -87,8 +88,8 @@ interface LogRocketProviderProps {
 }
 
 export function LogRocketProvider({ children }: LogRocketProviderProps) {
-  // Initialize LogRocket on mount (client-side only)
-  useEffect(() => {
+  // Initialize LogRocket on mount (client-side only, Strict Mode safe)
+  useRunOnce('logrocket-provider', () => {
     console.log('🔍 LogRocketProvider: Initializing LogRocket...');
 
     // Initialize LogRocket if we're on the client side

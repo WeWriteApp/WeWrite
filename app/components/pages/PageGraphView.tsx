@@ -583,9 +583,9 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .data(links)
       .enter().append("line")
       .attr("stroke", d => {
-        if (d.type === 'bidirectional') return "hsl(var(--primary) / 0.9)"; // Strong primary for bidirectional
-        if (d.type === 'outgoing') return "hsl(var(--primary))"; // Primary for outgoing (to the right)
-        if (d.type === 'incoming') return "hsl(var(--secondary))"; // Secondary for incoming (to the left)
+        if (d.type === 'bidirectional') return "oklch(var(--primary) / 0.9)"; // Strong primary for bidirectional
+        if (d.type === 'outgoing') return "oklch(var(--primary))"; // Primary for outgoing (to the right)
+        if (d.type === 'incoming') return "oklch(var(--secondary))"; // Secondary for incoming (to the left)
         return "#999";
       })
       .attr("stroke-opacity", 0.7)
@@ -639,26 +639,26 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         return 6;
       })
       .attr("fill", d => {
-        if (d.isCenter) return "hsl(var(--primary))";
+        if (d.isCenter) return "oklch(var(--primary))";
         if (d.nodeType === 'connected') {
-          if (d.level === 1) return "hsl(var(--primary) / 0.8)";
-          if (d.level === 2) return "hsl(var(--primary) / 0.6)";
-          if (d.level === 3) return "hsl(var(--primary) / 0.4)";
+          if (d.level === 1) return "oklch(var(--primary) / 0.8)";
+          if (d.level === 2) return "oklch(var(--primary) / 0.6)";
+          if (d.level === 3) return "oklch(var(--primary) / 0.4)";
         }
-        if (d.nodeType === 'related') return "hsl(var(--muted-foreground) / 0.3)"; // Grey for related pages
-        return "hsl(var(--primary) / 0.4)";
+        if (d.nodeType === 'related') return "oklch(var(--muted-foreground) / 0.3)"; // Grey for related pages
+        return "oklch(var(--primary) / 0.4)";
       })
       .attr("stroke", d => {
-        if (d.nodeType === 'related') return "hsl(var(--muted-foreground) / 0.5)";
+        if (d.nodeType === 'related') return "oklch(var(--muted-foreground) / 0.5)";
         if (d.level === 1) {
           // Add directional indicators for first-level nodes
           const isOutgoing = outgoing.some(conn => conn.id === d.id);
           const isIncoming = incoming.some(conn => conn.id === d.id);
           const isBidirectional = bidirectional.some(conn => conn.id === d.id);
 
-          if (isBidirectional) return "hsl(var(--primary))"; // Primary border for bidirectional
-          if (isOutgoing) return "hsl(var(--primary) / 0.8)"; // Lighter primary for outgoing
-          if (isIncoming) return "hsl(var(--secondary))"; // Secondary for incoming
+          if (isBidirectional) return "oklch(var(--primary))"; // Primary border for bidirectional
+          if (isOutgoing) return "oklch(var(--primary) / 0.8)"; // Lighter primary for outgoing
+          if (isIncoming) return "oklch(var(--secondary))"; // Secondary for incoming
         }
         return "#fff";
       })
@@ -813,35 +813,9 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       >
         {/* Header with controls */}
         <div className="absolute top-0 left-0 right-0 z-20 wewrite-card wewrite-floating border-b border-neutral-15 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <h3 className="text-lg font-semibold">Graph view</h3>
-
-              {/* Graph Key/Legend */}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-primary"></div>
-                  <span>Current page</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2.5 h-2.5 rounded-full bg-primary/80"></div>
-                  <span>1 hop</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-primary/60"></div>
-                  <span>2 hops</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-                  <span>3 hops</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
-                  <span>Related</span>
-                </div>
-              </div>
-            </div>
-
+          {/* Top row: Title and controls */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">Graph view</h3>
             <div className="flex items-center gap-2">
               <Button
                 variant={isViewSettingsOpen ? "default" : "outline"}
@@ -863,12 +837,36 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
               </Button>
             </div>
           </div>
+
+          {/* Bottom row: Legend - responsive layout */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-primary"></div>
+              <span className="whitespace-nowrap">Current page</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-primary/80"></div>
+              <span className="whitespace-nowrap">1 hop</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-primary/60"></div>
+              <span className="whitespace-nowrap">2 hops</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
+              <span className="whitespace-nowrap">3 hops</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
+              <span className="whitespace-nowrap">Related</span>
+            </div>
+          </div>
         </div>
 
         {/* Graph container */}
         <SubscriptionGate
           featureName="graph"
-          className={`wewrite-card ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}
+          className={`wewrite-card ${isViewSettingsOpen ? 'h-1/2 mt-20' : 'h-full pt-20'} transition-all duration-300`}
           allowInteraction={true}
         >
           <div ref={containerRef} className="w-full h-full">

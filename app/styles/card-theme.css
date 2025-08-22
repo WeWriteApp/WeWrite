@@ -244,7 +244,7 @@
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */
 
 html[data-high-contrast="true"] .wewrite-card {
-  border-width: 2px;
+  border-width: 1px;
   border-color: var(--card-text);
 }
 

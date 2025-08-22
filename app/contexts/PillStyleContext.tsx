@@ -105,7 +105,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       if (pillStyle === PILL_STYLES.OUTLINE) {
         styleClasses = `
           bg-transparent text-accent-100
-          border-[1.5px] border-accent-70
+          border border-accent-70
           hover:shadow-sm pill-outline-style
           px-2 py-0.5
         `;
@@ -133,7 +133,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         const textColor = getFilledTextColor();
         styleClasses = `
           bg-accent-100
-          border-[1.5px] border-accent-100
+          border border-accent-100
           hover:shadow-md
           ${textColor} !important
           px-2 py-0.5

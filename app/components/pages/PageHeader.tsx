@@ -93,8 +93,7 @@ export interface PageHeaderProps {
   setIsEditing?: (value: boolean) => void;
   /** Callback when title changes during editing */
   onTitleChange?: (newTitle: string) => void;
-  /** Callback when duplicate validation state changes */
-  onDuplicateValidationChange?: (isDuplicate: boolean) => void;
+
   /** Whether the current user can edit this page */
   canEdit?: boolean;
   /** Whether there's an error with the title */
@@ -124,7 +123,7 @@ export default function PageHeader({
   isEditing = true, // ALWAYS edit mode
   setIsEditing,
   onTitleChange,
-  onDuplicateValidationChange,
+
   canEdit: propCanEdit = false,
   titleError = false,
   pageId: propPageId = null,
@@ -190,10 +189,7 @@ export default function PageHeader({
   const [isTitleFocused, setIsTitleFocused] = React.useState<boolean>(false);
   const [isEditorFocused, setIsEditorFocused] = React.useState<boolean>(false);
 
-  // Title validation state
-  const [isTitleDuplicate, setIsTitleDuplicate] = React.useState<boolean>(false);
-  const [isCheckingTitle, setIsCheckingTitle] = React.useState<boolean>(false);
-  const [duplicatePageId, setDuplicatePageId] = React.useState<string | null>(null);
+
 
   // Date formatting context
   const { formatDate } = useDateFormat();
@@ -412,56 +408,7 @@ export default function PageHeader({
     // }
   };
 
-  // Check for duplicate titles
-  const checkTitleDuplicate = React.useCallback(async (titleToCheck: string) => {
-    if (!titleToCheck.trim() || !userId) return;
 
-    setIsCheckingTitle(true);
-    try {
-      const params = new URLSearchParams({
-        title: titleToCheck.trim(),
-      });
-
-      // Only exclude current page if we have a pageId
-      if (pageId) {
-        params.append('excludePageId', pageId);
-      }
-
-      const response = await fetch(`/api/pages/check-duplicate?${params}`);
-      const data = await response.json();
-
-      setIsTitleDuplicate(data.isDuplicate);
-      setDuplicatePageId(data.existingPage?.id || null);
-
-      // Notify parent component of duplicate validation state
-      if (onDuplicateValidationChange) {
-        onDuplicateValidationChange(data.isDuplicate);
-      }
-    } catch (error) {
-      console.error('Error checking title duplicate:', error);
-      setIsTitleDuplicate(false);
-      setDuplicatePageId(null);
-    } finally {
-      setIsCheckingTitle(false);
-    }
-  }, [userId, pageId, onDuplicateValidationChange]);
-
-  // Debounced version for real-time checking
-  const debouncedCheckTitleDuplicate = React.useCallback(
-    React.useMemo(
-      () => {
-        let timeoutId: NodeJS.Timeout;
-        return (titleToCheck: string) => {
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            checkTitleDuplicate(titleToCheck);
-          }, 300); // 300ms debounce for responsive feedback
-        };
-      },
-      [checkTitleDuplicate]
-    ),
-    [checkTitleDuplicate]
-  );
 
   // Auto-resize textarea when content changes
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -472,19 +419,7 @@ export default function PageHeader({
     // e.target.style.height = 'auto';
     // e.target.style.height = e.target.scrollHeight + 'px';
 
-    // Check for duplicates with debouncing as user types (real-time validation)
-    if (newTitle.trim() !== '' && newTitle.trim() !== title?.trim()) {
-      debouncedCheckTitleDuplicate(newTitle);
-    } else {
-      // Reset validation state if title is empty or matches original
-      setIsTitleDuplicate(false);
-      setDuplicatePageId(null);
 
-      // Notify parent component that duplicate state is cleared
-      if (onDuplicateValidationChange) {
-        onDuplicateValidationChange(false);
-      }
-    }
 
     // Also call the parent's onTitleChange for real-time updates
     if (onTitleChange) {
@@ -944,12 +879,14 @@ export default function PageHeader({
                                 onBlur={handleTitleBlur}
                                 onFocus={handleTitleFocus}
                                 tabIndex={isNewPage ? 1 : undefined}
-                                className={`bg-background/80 border rounded-lg py-2 outline-none font-semibold text-center resize-none overflow-hidden ${
-                                  titleError || isTitleDuplicate
+                                className={`wewrite-title-input wewrite-card py-2 outline-none font-semibold text-center resize-none overflow-hidden ${
+                                  isTitleFocused
+                                    ? "wewrite-active-card"
+                                    : ""
+                                } ${
+                                  titleError
                                     ? "border-destructive focus:border-destructive"
-                                    : isTitleFocused
-                                    ? "border-primary/50"
-                                    : "border-muted-foreground/30"
+                                    : ""
                                 } text-2xl`}
                                 style={{
                                   width: "100%",
@@ -957,27 +894,12 @@ export default function PageHeader({
                                   minHeight: "2.5rem",
                                   maxHeight: "2.5rem",
                                   lineHeight: "1.3",
-                                  transition: 'none',
-                                  fontSize: '1.5rem', // Force text-2xl size to prevent shrinking on focus
-                                  boxShadow: titleError || isTitleDuplicate
-                                    ? '0 0 0 2px rgba(239, 68, 68, 0.2)'
-                                    : isTitleFocused
-                                    ? '0 0 0 2px rgba(59, 130, 246, 0.2)'
-                                    : 'none'
+                                  fontSize: '1.5rem' // Force text-2xl size to prevent shrinking on focus
                                 }}
                                 placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                                 rows={1}
                               />
-                              {/* Validation Icon */}
-                              {editingTitle.trim() && (
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                  {isCheckingTitle ? (
-                                    <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
-                                  ) : isTitleDuplicate ? (
-                                    <X className="h-4 w-4 text-destructive" />
-                                  ) : null}
-                                </div>
-                              )}
+
                             </>
                           ) : (
                             <span
@@ -1014,9 +936,12 @@ export default function PageHeader({
                                   : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
                               }
                             >
-                              <span className={!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}>
+                              <span
+                                className={!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}
+                                suppressHydrationWarning={isExactDateFormat(title || "") && title !== "Daily note"}
+                              >
                                 {(isExactDateFormat(title || "") && title !== "Daily note") && title
-                                  ? formatDate(title)
+                                  ? (typeof window !== 'undefined' ? formatDate(title) : title)
                                   : title
                                   ? title
                                   : isNewPage
@@ -1059,26 +984,7 @@ export default function PageHeader({
                   </div>
                 )}
 
-                {/* Duplicate Title Error Message - Show immediately when typing */}
-                {isTitleDuplicate && editingTitle.trim() !== '' && !isDailyNote && (
-                  <div className="flex justify-center mt-2">
-                    <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg max-w-md">
-                      <p className="text-sm text-red-800 dark:text-red-200 font-medium text-center">
-                        You already have a page called "{editingTitle.trim()}"!
-                      </p>
-                      {duplicatePageId && (
-                        <div className="text-center mt-2">
-                          <Link
-                            href={`/${duplicatePageId}`}
-                            className="text-sm text-red-700 dark:text-red-300 underline hover:no-underline"
-                          >
-                            Go to existing page
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Row 3: Byline */}
                 <div className="flex items-center justify-center">

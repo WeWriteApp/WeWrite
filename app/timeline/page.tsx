@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, List, Clock } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../components/ui/segmented-control';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { useAuth } from '../providers/AuthProvider';
 import { useAccentColor } from '../contexts/AccentColorContext';
@@ -158,26 +158,18 @@ function TimelineContent() {
         {/* View Mode Toggle - only for daily notes, in body section */}
         {type === 'daily-notes' && (
           <div className="flex justify-center mb-6">
-            <div className="flex items-center border border-border rounded-lg p-1 w-full max-w-sm">
-              <Button
-                variant={viewMode === 'timeline' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleViewModeChange('timeline')}
-                className="h-8 px-3 rounded-md flex-1"
-              >
-                <List className="h-4 w-4 mr-2" />
-                Timeline
-              </Button>
-              <Button
-                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleViewModeChange('calendar')}
-                className="h-8 px-3 rounded-md flex-1"
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Calendar
-              </Button>
-            </div>
+            <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
+              <SegmentedControlList className="grid w-full grid-cols-2 max-w-sm">
+                <SegmentedControlTrigger value="timeline" className="flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  Timeline
+                </SegmentedControlTrigger>
+                <SegmentedControlTrigger value="calendar" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Calendar
+                </SegmentedControlTrigger>
+              </SegmentedControlList>
+            </SegmentedControl>
           </div>
         )}
 

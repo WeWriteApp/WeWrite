@@ -134,6 +134,8 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! ðŸ
 - **[Writing Suggestions System](docs/WRITING_SUGGESTIONS_SYSTEM.md)** - Writing suggestion features
 - **[Link Suggestion System](docs/LINK_SUGGESTION_SYSTEM.md)** - Link suggestion functionality
 
+> **Note**: As of August 2025, duplicate title prevention has been removed to allow for a more forgiving approach. Future implementations will include merging of detected duplicates or construction of timelines of ordered duplicates.
+
 #### User Interface
 - **[Settings Navigation System](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - Settings page navigation
 - **[Version System](docs/VERSION_SYSTEM.md)** - Version management system

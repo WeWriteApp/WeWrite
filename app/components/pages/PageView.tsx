@@ -38,8 +38,7 @@ import { ErrorDisplay } from "../ui/error-display";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 import StickySaveHeader from "../layout/StickySaveHeader";
 
-// Duplicate title checking imports
-import { TitleValidationInput } from "../forms/TitleValidationInput";
+
 
 // Content Display Components - Unified system with preloading
 const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
@@ -161,8 +160,6 @@ export default function PageView({
 
   // Title validation state
   const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
-  const [isTitleDuplicate, setIsTitleDuplicate] = useState<boolean>(false);
-  const [originalTitle, setOriginalTitle] = useState<string>('');
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -279,7 +276,6 @@ export default function PageView({
 
         setPage(pageData);
         setTitle(pageData.title || '');
-        setOriginalTitle(pageData.title || '');
         setCustomDate(pageData.customDate || null);
         setLocation(pageData.location || null);
 
@@ -610,7 +606,6 @@ export default function PageView({
         }
 
         setTitle(pageData.title || '');
-        setOriginalTitle(pageData.title || '');
         setCustomDate(pageData.customDate || null);
         setLocation(pageData.location || null);
 
@@ -897,12 +892,7 @@ export default function PageView({
     setTitleError(null);
   }, [title, page?.title, pageLogger]);
 
-  // Handle title validation changes from the validation component
-  const handleTitleValidationChange = useCallback((isValid: boolean, isDuplicate: boolean) => {
-    console.log('🔍 PAGEVIEW_VALIDATION: Title validation changed:', { isValid, isDuplicate, title });
-    setIsTitleValid(isValid);
-    setIsTitleDuplicate(isDuplicate);
-  }, [title]);
+
 
 
 
@@ -1045,14 +1035,7 @@ export default function PageView({
       return;
     }
 
-    // Check for duplicate titles before saving
-    if (isTitleDuplicate) {
-      console.log('🔴 PAGE_EDIT: Cannot save - duplicate title detected');
-      setTitleError("Cannot save page with duplicate title. Please choose a different title or go to the existing page.");
-      setError("Cannot save page with duplicate title. Please choose a different title or go to the existing page.");
-      setIsSaving(false);
-      return;
-    }
+
 
     console.log('🔵 PAGE SAVE: Starting page save process', {
       pageId,
@@ -1551,7 +1534,7 @@ export default function PageView({
             isEditing={isEditing}
             onTitleChange={handleTitleChange}
             canEdit={canEdit}
-            titleError={!!titleError || isTitleDuplicate}
+            titleError={!!titleError}
             pageId={pageId}
           />
 
@@ -1577,10 +1560,10 @@ export default function PageView({
               <div
                 className={`px-4 py-4 outline-none transition-all duration-200 ${
                   isEditing && canEdit
-                    ? `bg-background/80 border rounded-lg ${
+                    ? `wewrite-card ${
                         isEditorFocused
-                          ? "border-primary/50 ring-2 ring-primary/20"
-                          : "border-muted-foreground/30"
+                          ? "wewrite-active-card"
+                          : ""
                       }`
                     : "bg-transparent border-none"
                 } min-h-[200px] w-full max-w-none`}

@@ -16,59 +16,40 @@ export default function PillStyleToggle() {
   // Get dynamic text color for filled pills based on accent lightness
   const getFilledTextColor = () => {
     const oklch = hexToOklch(accentColor);
-    if (oklch && oklch.l > 0.70) {
-      return 'black'; // Use black text for light backgrounds (>70% lightness)
+    if (oklch && oklch.l >= 0.80) {
+      return 'black'; // Use black text for light backgrounds (≥80% lightness)
     }
-    return 'white'; // Use white text for dark backgrounds (≤70% lightness)
+    return 'white'; // Use white text for dark backgrounds (<80% lightness)
   };
 
-  // Simple preview component that's completely isolated
+  // Simple preview component that uses Tailwind classes with systematic color naming
   const PillPreview = ({ style, label }) => {
-    const baseStyle = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      fontSize: '0.875rem',
-      fontWeight: '500',
-      borderRadius: '0.5rem',
-      padding: '0.125rem 0.5rem',
-      cursor: 'pointer',
-      transition: 'all 150ms ease-out'
+    // Base classes that apply to all pill styles
+    const baseClasses = "inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out cursor-pointer";
+
+    // Get dynamic text color class for filled pills
+    const getFilledTextColorClass = () => {
+      const oklch = hexToOklch(accentColor);
+      if (oklch && oklch.l >= 0.80) {
+        return 'text-black'; // Use black text for light backgrounds (≥80% lightness)
+      }
+      return 'text-white'; // Use white text for dark backgrounds (<80% lightness)
     };
 
-    let specificStyle = {};
+    let styleClasses = '';
     if (style === PILL_STYLES.FILLED) {
-      specificStyle = {
-        backgroundColor: 'oklch(var(--primary))',
-        color: getFilledTextColor(),
-        border: '1.5px solid oklch(var(--primary))'
-      };
+      const textColorClass = getFilledTextColorClass();
+      styleClasses = `bg-accent-100 border border-accent-100 ${textColorClass} px-2 py-0.5`;
     } else if (style === PILL_STYLES.OUTLINE) {
-      specificStyle = {
-        backgroundColor: 'transparent',
-        color: 'oklch(var(--primary))',
-        border: '1.5px solid oklch(var(--primary))'
-      };
+      styleClasses = `bg-transparent text-accent-100 border border-accent-70 px-2 py-0.5`;
     } else if (style === PILL_STYLES.TEXT_ONLY) {
-      specificStyle = {
-        backgroundColor: 'transparent',
-        color: 'oklch(var(--primary))',
-        border: 'none',
-        fontWeight: 'bold',
-        padding: '0 0.25rem'
-      };
+      styleClasses = `bg-transparent text-accent-100 border-none font-bold px-1`;
     } else if (style === PILL_STYLES.UNDERLINED) {
-      specificStyle = {
-        backgroundColor: 'transparent',
-        color: 'oklch(var(--primary))',
-        border: 'none',
-        fontWeight: 'bold',
-        textDecoration: 'underline',
-        padding: '0 0.25rem'
-      };
+      styleClasses = `bg-transparent text-accent-100 border-none font-bold underline px-1`;
     }
 
     return (
-      <span style={{ ...baseStyle, ...specificStyle }}>
+      <span className={`${baseClasses} ${styleClasses}`}>
         {label}
       </span>
     );

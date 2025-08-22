@@ -179,45 +179,66 @@ export default function NotificationSettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {NOTIFICATION_TYPES.map((type, index) => (
-                    <div key={type.id}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{type.title}</h4>
-                          <p className="text-sm text-muted-foreground">{type.description}</p>
-                        </div>
-                        <div className="flex items-center gap-6 ml-4">
-                          {/* Push Notifications Toggle */}
-                          <div className="flex items-center gap-2">
-                            <Smartphone className="h-4 w-4 text-muted-foreground" />
-                            <Switch
-                              checked={preferences[type.id]?.push || false}
-                              onCheckedChange={(checked) => 
-                                handlePreferenceChange(type.id, 'push', checked)
-                              }
-                              aria-label={`${type.title} push notifications`}
-                            />
-                          </div>
-                          
-                          {/* In-App Alerts Toggle */}
-                          <div className="flex items-center gap-2">
-                            <Monitor className="h-4 w-4 text-muted-foreground" />
-                            <Switch
-                              checked={preferences[type.id]?.inApp || false}
-                              onCheckedChange={(checked) => 
-                                handlePreferenceChange(type.id, 'inApp', checked)
-                              }
-                              aria-label={`${type.title} in-app alerts`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      {index < NOTIFICATION_TYPES.length - 1 && (
-                        <Separator className="mt-4" />
-                      )}
+                <div className="space-y-4">
+                  {/* Column Headers */}
+                  <div className="flex items-center justify-between pb-2 border-b border-border">
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-muted-foreground">Notification Type</span>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-6 ml-4">
+                      {/* Push Notifications Header */}
+                      <div className="flex items-center gap-2 w-16 justify-center">
+                        <Smartphone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">Push</span>
+                      </div>
+
+                      {/* In-App Alerts Header */}
+                      <div className="flex items-center gap-2 w-16 justify-center">
+                        <Monitor className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">In-App</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notification Rows */}
+                  <div className="space-y-4">
+                    {NOTIFICATION_TYPES.map((type, index) => (
+                      <div key={type.id}>
+                        <div className="flex items-start justify-between py-2">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{type.title}</h4>
+                            <p className="text-sm text-muted-foreground">{type.description}</p>
+                          </div>
+                          <div className="flex items-center gap-6 ml-4">
+                            {/* Push Notifications Toggle */}
+                            <div className="flex items-center justify-center w-16">
+                              <Switch
+                                checked={preferences[type.id]?.push || false}
+                                onCheckedChange={(checked) =>
+                                  handlePreferenceChange(type.id, 'push', checked)
+                                }
+                                aria-label={`${type.title} push notifications`}
+                              />
+                            </div>
+
+                            {/* In-App Alerts Toggle */}
+                            <div className="flex items-center justify-center w-16">
+                              <Switch
+                                checked={preferences[type.id]?.inApp || false}
+                                onCheckedChange={(checked) =>
+                                  handlePreferenceChange(type.id, 'inApp', checked)
+                                }
+                                aria-label={`${type.title} in-app alerts`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        {index < NOTIFICATION_TYPES.length - 1 && (
+                          <Separator className="mt-2" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>

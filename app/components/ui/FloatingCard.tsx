@@ -66,9 +66,8 @@ export function FloatingCard({
     // CRITICAL: Shadows - conditional for noShadowAtTop
     noShadowAtTop && !isScrolled
       ? "shadow-none" // No shadow when at top
-      : "", // Default shadow from wewrite-card
-    // Positioning
-    "relative"
+      : "" // Default shadow from wewrite-card
+    // NO POSITIONING - let parent control this completely
   );
 
   // Variant-specific modifications using new theme system

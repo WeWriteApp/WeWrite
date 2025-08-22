@@ -33,6 +33,8 @@ export interface FloatingFinancialHeaderProps {
  * - Respects sidebar positioning on desktop
  * - Consistent styling with logged-out financial header
  */
+import FixedPortal from "../utils/FixedPortal";
+
 export default function FloatingFinancialHeader({
   className = ""
 }: FloatingFinancialHeaderProps) {
@@ -344,11 +346,12 @@ export default function FloatingFinancialHeader({
 
 
   return (
-    <div className="fixed top-4 left-0 right-0 z-[70] mb-6">
+    <FixedPortal>
       {/* Mobile: Standard centered layout */}
-      <div className="md:hidden mx-auto px-4 max-w-4xl transition-all duration-300 ease-in-out">
-        <FloatingHeader size="md" noShadowAtTop={true}>
-          <div className="relative flex items-center justify-between h-10">
+      <div className="md:hidden fixed-layer fixed-top z-fixed-header pointer-events-none">
+        <div className="mx-auto px-4 max-w-4xl transition-all duration-300 ease-in-out pointer-events-auto">
+          <FloatingHeader size="md" noShadowAtTop={true}>
+            <div className="relative flex items-center justify-between h-10">
             {/* Spend/Overspend Display (left side) */}
             <div className="flex items-center min-w-0 flex-shrink-0 h-full">
               {renderSpendDisplay()}
@@ -369,48 +372,53 @@ export default function FloatingFinancialHeader({
             <div className="flex items-center min-w-0 flex-shrink-0 h-full">
               {renderEarningsDisplay()}
             </div>
-          </div>
-        </FloatingHeader>
+            </div>
+          </FloatingHeader>
+        </div>
       </div>
 
       {/* Desktop: Respect sidebar positioning */}
       <div
-        className="hidden md:block mx-auto px-6 transition-all duration-300 ease-in-out"
-        style={{
-          ...(headerSidebarWidth > 0 ? {
-            marginLeft: `${headerSidebarWidth + 16}px`, // Add padding offset
-            marginRight: '16px',
-            maxWidth: `calc(100vw - ${headerSidebarWidth + 32}px)` // Account for both sides
-          } : {
-            maxWidth: '1024px' // Standard page max-width when no sidebar
-          }),
-        }}
+        className="hidden md:block fixed-layer fixed-top z-fixed-header pointer-events-none"
       >
-        <FloatingHeader size="lg" noShadowAtTop={true}>
-          <div className="relative flex items-center justify-between h-12">
-            {/* Spend/Overspend Display (left side) */}
-            <div className="flex items-center min-w-0 flex-shrink-0 h-full">
-              {renderSpendDisplay()}
-            </div>
+        <div
+          className="mx-auto px-6 transition-all duration-300 ease-in-out pointer-events-auto"
+          style={{
+            ...(headerSidebarWidth > 0 ? {
+              marginLeft: `${headerSidebarWidth + 16}px`, // Add padding offset
+              marginRight: '16px',
+              maxWidth: `calc(100vw - ${headerSidebarWidth + 32}px)` // Account for both sides
+            } : {
+              maxWidth: '1024px' // Standard page max-width when no sidebar
+            }),
+          }}
+        >
+          <FloatingHeader size="lg" noShadowAtTop={true}>
+            <div className="relative flex items-center justify-between h-12">
+              {/* Spend/Overspend Display (left side) */}
+              <div className="flex items-center min-w-0 flex-shrink-0 h-full">
+                {renderSpendDisplay()}
+              </div>
 
-            {/* Logo/Title (absolutely centered) - clickable to go home */}
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
-              <WeWriteLogo
-                size="md"
-                styled={true}
-                clickable={true}
-                showText={false}
-                priority={true}
-              />
-            </div>
+              {/* Logo/Title (absolutely centered) - clickable to go home */}
+              <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
+                <WeWriteLogo
+                  size="md"
+                  styled={true}
+                  clickable={true}
+                  showText={false}
+                  priority={true}
+                />
+              </div>
 
-            {/* Earnings Display (right side) */}
-            <div className="flex items-center min-w-0 flex-shrink-0 h-full">
-              {renderEarningsDisplay()}
+              {/* Earnings Display (right side) */}
+              <div className="flex items-center min-w-0 flex-shrink-0 h-full">
+                {renderEarningsDisplay()}
+              </div>
             </div>
-          </div>
-        </FloatingHeader>
+          </FloatingHeader>
+        </div>
       </div>
-    </div>
+    </FixedPortal>
   );
 }

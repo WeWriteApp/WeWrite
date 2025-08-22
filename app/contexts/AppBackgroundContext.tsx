@@ -488,6 +488,9 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
     root.style.setProperty('--background', oklchValue);
     root.style.setProperty('--background-image', 'none');
     root.style.setProperty('--background-overlay', 'none');
+
+    // Remove class from body to restore normal page container backgrounds
+    document.body.classList.remove('has-background-image');
   } else if (background.type === 'image') {
     // For images, set background image and overlay
     if (!background.url) {
@@ -543,6 +546,9 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
     // Set immediately (optimistic)
     root.style.setProperty('--background-image', `url("${background.url}")`);
     root.style.setProperty('--background-overlay', `oklch(${overlayColor} / ${overlayOpacity})`);
+
+    // Add class to body to make page containers transparent
+    document.body.classList.add('has-background-image');
 
     // Set fallback to theme-appropriate neutral color
     const fallbackColor = isDark ? '0.00% 0.0000 0.0' : '98.22% 0.0061 255.5';

@@ -27,9 +27,13 @@ const isFullErrorsEnabled = () => {
   return hasFullErrors;
 };
 
-// Initialize on module load
+import { runOnce } from './strictModeSafety';
+
+// Initialize on module load (Strict Mode safe)
 if (typeof window !== 'undefined') {
-  isFullErrorsEnabled();
+  runOnce('detailed-error-logging', () => {
+    isFullErrorsEnabled();
+  });
 }
 
 interface ReactErrorDetails {
@@ -280,10 +284,12 @@ export function useDetailedErrorLogging(componentName: string) {
 }
 
 /**
- * Global error handler setup
+ * Global error handler setup (Strict Mode safe)
  */
 export function setupDetailedErrorLogging(): void {
   if (typeof window === 'undefined') return;
+
+  runOnce('global-error-handler', () => {
 
   // Handle unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
@@ -303,7 +309,8 @@ export function setupDetailedErrorLogging(): void {
     });
   });
 
-  console.log('🔍 Detailed error logging system initialized');
+    console.log('🔍 Detailed error logging system initialized');
+  });
 }
 
 // Auto-setup when module loads

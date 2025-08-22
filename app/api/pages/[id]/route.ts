@@ -37,7 +37,30 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
     const isOwner = userId && pageData?.userId === userId;
     const isPublic = pageData?.isPublic === true;
 
-    if (!isOwner && !isPublic) {
+    // Allow development access for debugging
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development';
+
+    // Check if user is admin (for debugging and admin access)
+    const isAdmin = userId && (
+      userId === 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L' || // Your user ID
+      userId === 'jamie' ||
+      userId === 'jamiegray2234@gmail.com'
+    );
+
+    const canView = isPublic || isOwner || isAdmin || isDevelopment;
+
+    console.log(`📄 [Page API] Permission check for ${pageId}:`, {
+      userId,
+      pageUserId: pageData?.userId,
+      isOwner,
+      isPublic,
+      isAdmin,
+      isDevelopment,
+      canView,
+      pageTitle: pageData?.title
+    });
+
+    if (!canView) {
       return { error: 'Access denied - page is private' };
     }
 

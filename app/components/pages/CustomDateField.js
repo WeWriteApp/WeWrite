@@ -223,7 +223,7 @@ export default function CustomDateField({
   return (
     <div className={`w-full ${className}`}>
       <div
-        className={`w-full flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm ${canEdit ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+        className={`wewrite-card w-full flex items-center justify-between p-4 ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''}`}
         onClick={handleDateClick}
       >
         <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export default function CustomDateField({
               {formatCustomDate(customDate) || customDate}
             </div>
           ) : (
-            <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-border">
+            <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
               {canEdit ? 'Click to set date' : 'No custom date'}
             </div>
           )}
@@ -288,7 +288,7 @@ export default function CustomDateField({
                   type="date"
                   value={customDate || ''}
                   onChange={handleDateChange}
-                  className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="wewrite-input w-full px-3 py-2 rounded-md"
                 />
               </div>
 

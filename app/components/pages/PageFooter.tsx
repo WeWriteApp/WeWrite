@@ -180,8 +180,8 @@ export default function PageFooter({
         />
       )}
 
-      {/* Page stats section - show in view mode OR for page owners (who are always in edit mode) - existing pages only */}
-      {page && (!isEditing || isOwner) && (
+      {/* Page stats section - show for all existing pages */}
+      {page && (
         <PageStats
           pageId={page.id}
           realTime={true}

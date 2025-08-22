@@ -81,7 +81,7 @@ export function RemainingFundsDisplay({
             fill="none"
             stroke="currentColor"
             strokeWidth={strokeWidth}
-            className="text-neutral-20"
+            className="text-neutral-15"
           />
 
           {/* Progress circle */}
@@ -186,29 +186,8 @@ export function OverspendWarningDisplay({
   );
 }
 
-/**
- * Legacy RemainingUsdCounter component for backward compatibility
- * @deprecated Use RemainingFundsDisplay instead
- */
-export function RemainingUsdCounter({
-  allocatedUsdCents,
-  totalUsdCents,
-  size = 28,
-  strokeWidth = 2.5,
-  className = '',
-  onClick
-}: RemainingFundsDisplayProps) {
-  return (
-    <RemainingFundsDisplay
-      allocatedUsdCents={allocatedUsdCents}
-      totalUsdCents={totalUsdCents}
-      size={size}
-      strokeWidth={strokeWidth}
-      className={className}
-      onClick={onClick}
-    />
-  );
-}
+// Legacy export for backward compatibility
+export { RemainingFundsDisplay as RemainingUsdCounter };
 
 /**
  * Legacy TokensCounter component for backward compatibility

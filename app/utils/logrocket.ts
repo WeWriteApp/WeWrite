@@ -91,9 +91,12 @@ class LogRocketService {
     // - Running on server-side
     // - No app ID configured
     if (this.isInitialized) {
-      console.log('⏭️ LogRocket already initialized, skipping');
+      console.log('⏭️ LogRocket already initialized, skipping (Strict Mode safe)');
       return;
     }
+
+    // Set flag immediately to prevent double initialization in Strict Mode
+    this.isInitialized = true;
 
     if (!this.isProduction) {
       console.log('⏭️ LogRocket skipped: Not in actual production environment (only enabled on wewrite.app domain)');

@@ -8,17 +8,15 @@
 /* Import allocation bar animations */
 @import './styles/allocation-bar-animations.css';
 
+/* Fixed layer tokens and utilities */
+@import './styles/fixed-layer.css';
+
 /* Import unified content display styles */
 @import './styles/content-display.css';
 
-/* ===== LEGACY CONTENT VIEWER STYLES (REMOVED) ===== */
-/* Use wewrite-* classes from content-display.css instead */
-
-/* REMOVED: Old content-viewer classes - use wewrite-viewer-content instead */
-
+/* Clean paragraph styling for viewer content */
 .viewer-paragraph {
   @apply flex items-start gap-3 py-2;
-  /* Clean paragraph styling without hover effects */
 }
 
 .viewer-paragraph.dense-paragraph {
@@ -843,12 +841,10 @@ input[type="range"]::-moz-range-thumb,
 
 /* Slide-up page animation improvements */
 .slide-up-page {
-  /* Ensure smooth rendering during animation */
-  will-change: transform, opacity;
   /* Allow text selection during animation - users should be able to select text immediately */
   user-select: auto;
-  /* Ensure proper layering */
-  isolation: isolate;
+  /* REMOVED: isolation: isolate - this creates stacking context that breaks fixed positioning */
+  /* REMOVED: will-change: transform, opacity - only set during actual animation */
 }
 
 .slide-up-page.animation-complete {
@@ -871,8 +867,8 @@ input[type="range"]::-moz-range-thumb,
 /* Prevent layout shift during edit mode transitions */
 .edit-mode-container {
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  transform: translateZ(0); /* Force hardware acceleration */
-  will-change: border-color, box-shadow;
+  /* REMOVED: transform: translateZ(0) - this creates stacking context that breaks fixed positioning */
+  /* REMOVED: will-change - only set during actual transitions */
   /* Avoid transitioning layout properties to prevent flickering */
 }
 
@@ -892,27 +888,27 @@ input[type="range"]::-moz-range-thumb,
 
 /* New page creation layout stability */
 .new-page-container {
-  contain: layout style;
-  transform: translateZ(0);
+  /* REMOVED: contain: layout style - this creates stacking context that breaks fixed positioning */
+  /* REMOVED: transform: translateZ(0) - this creates stacking context that breaks fixed positioning */
 }
 
 .new-page-header {
   height: 64px;
   min-height: 64px;
   max-height: 64px;
-  contain: layout;
+  /* REMOVED: contain: layout - this creates stacking context that breaks fixed positioning */
 }
 
 .new-page-content {
   min-height: calc(100vh - 64px);
   padding-top: 64px;
-  contain: layout;
+  /* REMOVED: contain: layout - this creates stacking context that breaks fixed positioning */
 }
 
 .page-editor-stable {
-  contain: layout style;
-  transform: translateZ(0);
-  will-change: auto;
+  /* REMOVED: contain: layout style - this creates stacking context that breaks fixed positioning */
+  /* REMOVED: transform: translateZ(0) - this creates stacking context that breaks fixed positioning */
+  /* REMOVED: will-change: auto - not needed */
 }
 
 /* Prevent layout shift in editor loading states */
@@ -921,7 +917,7 @@ input[type="range"]::-moz-range-thumb,
   display: flex;
   align-items: center;
   justify-content: center;
-  contain: layout;
+  /* REMOVED: contain: layout - this creates stacking context that breaks fixed positioning */
 }
 
 /* PWA Interface Improvements */
@@ -965,8 +961,8 @@ input[type="range"]::-moz-range-thumb,
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: var(--accent-h) var(--accent-s) var(--accent-l);
-    --primary-foreground: 0 0% 100%;
+    --primary: var(--accent-base);
+    --primary-foreground: 100.00% 0.0000 158.2;
 
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -991,17 +987,17 @@ input[type="range"]::-moz-range-thumb,
     --error-base: 0.55 0.15 28; /* Red */
 
     /* Focus indicator variables */
-    --focus-ring-color: var(--accent-h) var(--accent-s) var(--accent-l);
+    --focus-ring-color: var(--accent-base);
     --focus-ring-width: 2px;
     --focus-ring-offset: 2px;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: var(--accent-h) var(--accent-s) var(--accent-l);
+    --ring: var(--accent-base);
     --radius: 0.5rem;
 
     /* Active line highlight in editor */
-    --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
+    --active-line-highlight: oklch(var(--accent-base) / 0.1);
 
     /* Paragraph numbering opacity - subtle grey appearance */
     --paragraph-number-opacity: 0.4;
@@ -1019,8 +1015,8 @@ input[type="range"]::-moz-range-thumb,
     --popover: 0 0% 5%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: var(--accent-h) var(--accent-s) var(--accent-l);
-    --primary-foreground: 0 0% 100%;
+    --primary: var(--accent-base);
+    --primary-foreground: 100.00% 0.0000 158.2;
 
     --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
@@ -1039,16 +1035,16 @@ input[type="range"]::-moz-range-thumb,
 
     --border: 0 0% 25%;
     --input: 0 0% 18%;
-    --ring: var(--accent-h) 76% 48%;
+    --ring: var(--accent-base);
     --radius: 0.5rem;
 
     /* Focus indicator variables - higher contrast in dark mode */
-    --focus-ring-color: var(--accent-h) 100% 70%;
+    --focus-ring-color: var(--accent-base);
     --focus-ring-width: 2px;
     --focus-ring-offset: 2px;
 
     /* Active line highlight in editor - darker in dark mode */
-    --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
+    --active-line-highlight: oklch(var(--accent-base) / 0.15);
 
     /* Paragraph numbering opacity - subtle appearance (same as light mode) */
     --paragraph-number-opacity: 0.4;
@@ -1180,33 +1176,134 @@ iframe[src*="js.stripe.com"] {
   transition: all 0.2s ease-in-out;
 }
 
-/* High contrast mode card styling - maximum contrast borders for all card components */
-html[data-high-contrast="true"] .border-theme-light,
-html[data-high-contrast="true"] .border-theme-medium,
-html[data-high-contrast="true"] .border-theme-strong,
-html[data-high-contrast="true"] .border-theme-solid,
+/* Active state styling for theme and link style selectors */
+.wewrite-active-state {
+  border: 1px solid oklch(var(--accent-80)) !important;
+  background-color: oklch(var(--accent-15)) !important;
+}
+
+/* Active card styling for focused inputs and selected elements */
+.wewrite-active-card {
+  border: 1px solid oklch(var(--accent-70)) !important;
+  background-color: oklch(var(--accent-10)) !important;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Interactive card styling */
+.wewrite-interactive-card {
+  transition: all 0.2s ease-in-out;
+  border: 1px solid hsl(var(--border) / 0.4);
+}
+
+.wewrite-interactive-card:hover {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+/* Base styling for WeWrite inputs */
+.wewrite-input {
+  border: 1px solid hsl(var(--border) / 0.4);
+  transition: all 0.2s ease-in-out;
+}
+
+.wewrite-input:hover {
+  border-color: hsl(var(--border) / 0.6);
+}
+
+/* Focus states for inputs using active card style */
+.wewrite-input:focus,
+.wewrite-input:focus-within {
+  border: 1px solid oklch(var(--accent-70)) !important;
+  background-color: oklch(var(--accent-10)) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px oklch(var(--accent-70) / 0.1);
+}
+
+/* Override wewrite-input styles for elements that use wewrite-card */
+.wewrite-card.wewrite-input,
+.wewrite-card:not(.wewrite-input) {
+  /* Let wewrite-card handle all styling - don't apply wewrite-input styles */
+  border: 1px solid var(--card-border) !important;
+  background-color: var(--card-bg) !important;
+}
+
+.wewrite-card.wewrite-input:hover,
+.wewrite-card:not(.wewrite-input):hover {
+  border-color: var(--card-border-hover) !important;
+  background-color: var(--card-bg-hover) !important;
+}
+
+/* Title input specific styling - override ALL default textarea styles */
+.wewrite-title-input {
+  /* Reset all default textarea/input styling */
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  /* Override Tailwind base styles completely */
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  /* Let wewrite-card handle all visual styling */
+  padding: 0 !important;
+  margin: 0 !important;
+
+  /* Ensure proper text rendering */
+  font-family: inherit !important;
+  color: inherit !important;
+
+  /* Remove any default focus styles */
+  ring: none !important;
+  ring-offset: none !important;
+
+  /* Override any Tailwind utilities that might interfere */
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Ensure wewrite-card styles take precedence for title input - maximum specificity */
+textarea.wewrite-title-input.wewrite-card,
+div textarea.wewrite-title-input.wewrite-card,
+h1 textarea.wewrite-title-input.wewrite-card {
+  /* Force card styling to override everything */
+  border: 1px solid var(--card-border) !important;
+  background-color: var(--card-bg) !important;
+  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1)) !important;
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1)) !important;
+  border-radius: 1rem !important;
+  padding: 0.5rem 1rem !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Active state for title input - maximum specificity */
+textarea.wewrite-title-input.wewrite-card.wewrite-active-card,
+div textarea.wewrite-title-input.wewrite-card.wewrite-active-card,
+h1 textarea.wewrite-title-input.wewrite-card.wewrite-active-card {
+  border: 1px solid oklch(var(--accent-70)) !important;
+  background-color: oklch(var(--accent-10)) !important;
+  box-shadow: 0 0 0 3px oklch(var(--accent-70) / 0.1) !important;
+}
+
+/* Hover state for title input */
+textarea.wewrite-title-input.wewrite-card:hover:not(.wewrite-active-card),
+div textarea.wewrite-title-input.wewrite-card:hover:not(.wewrite-active-card),
+h1 textarea.wewrite-title-input.wewrite-card:hover:not(.wewrite-active-card) {
+  border-color: var(--card-border-hover) !important;
+  background-color: var(--card-bg-hover) !important;
+}
+
+/* High contrast mode styling */
 html[data-high-contrast="true"] .wewrite-card,
-html[data-high-contrast="true"] .glass-card,
-html[data-high-contrast="true"] .glass-panel {
-  border-color: hsl(var(--border)) !important;
-  border-width: 2px !important;
-}
-
-/* High contrast mode for specific card-like elements */
 html[data-high-contrast="true"] [class*="border-theme-"],
-html[data-high-contrast="true"] [class*="rounded-2xl"][class*="border"],
-html[data-high-contrast="true"] [class*="rounded-xl"][class*="border"],
-html[data-high-contrast="true"] [class*="rounded-lg"][class*="border"],
-html[data-high-contrast="true"] .card,
-html[data-high-contrast="true"] [class*="shadow-md"][class*="border"],
-html[data-high-contrast="true"] [class*="shadow-sm"][class*="border"] {
+html[data-high-contrast="true"] [class*="border"] {
   border-color: hsl(var(--border)) !important;
-}
-
-/* High contrast mode for table borders */
-html[data-high-contrast="true"] .border-b,
-html[data-high-contrast="true"] .border-border {
-  border-color: hsl(var(--border)) !important;
+  border-width: 1px !important;
 }
 
 /* Mobile-specific card grid improvements */
@@ -1265,27 +1362,6 @@ html[data-high-contrast="true"] .border-border {
     }
   }
 
-  /* Ensure consistent mobile navigation page layout - only for pages with mobile nav */
-  [data-has-mobile-nav="true"] {
-    padding-bottom: 8rem !important; /* 128px - consistent bottom padding for mobile nav */
-  }
-
-  /* Desktop override - remove mobile-specific padding */
-  @media (min-width: 768px) {
-    [data-has-mobile-nav="true"] {
-      padding-bottom: 2rem !important; /* 32px - standard desktop bottom padding */
-    }
-  }
-
-  /* Standardized bottom margin for individual cards */
-  .mobile-card-spacing {
-    margin-bottom: 1.5rem !important; /* 24px bottom margin */
-  }
-}
-
-/* Utility class for consistent mobile card spacing */
-.mobile-card-consistent {
-  /* Apply consistent spacing on mobile */
 }
 
 @media (max-width: 767px) {
@@ -1529,6 +1605,49 @@ body {
   background-color: hsl(var(--background));
 }
 
+/* Make page containers transparent when background image is present */
+body.has-background-image .bg-background,
+body.has-background-image .min-h-screen.bg-background {
+  background-color: transparent !important;
+}
+
+/* Background image system */
+body {
+  /* Overlay for background images */
+  position: relative;
+}
+
+/* Background image layer with blur */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--background-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  filter: blur(var(--background-blur, 0px));
+  pointer-events: none;
+  z-index: -3; /* Behind overlay */
+}
+
+/* Background overlay for images */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--background-overlay, transparent);
+  pointer-events: none;
+  z-index: -2; /* Above background image, below content */
+}
+
 /**
  * WeWrite Border Styling System
  *
@@ -1593,7 +1712,7 @@ body {
 }
 
 :root[data-accent-color="high-contrast"] .border-theme-solid {
-  border: 2px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border));
 }
 
 /* Border direction utilities */
@@ -1660,17 +1779,17 @@ body {
 /* Smooth header height transitions */
 .header-smooth-transition {
   transition: height 300ms ease-in-out, padding 300ms ease-in-out;
-  transform: translateZ(0); /* Force GPU acceleration */
+  /* REMOVED: transform: translateZ(0) - creates stacking context that breaks fixed positioning */
   will-change: height, padding;
-  contain: layout style;
+  /* REMOVED: contain: layout style - creates stacking context that breaks fixed positioning */
 }
 
 /* Header spacer smooth transitions */
 .header-spacer-smooth {
   transition: height 300ms ease-in-out;
-  transform: translateZ(0); /* Force GPU acceleration */
+  /* REMOVED: transform: translateZ(0) - creates stacking context that breaks fixed positioning */
   will-change: height;
-  contain: layout;
+  /* REMOVED: contain: layout - creates stacking context that breaks fixed positioning */
 }
 
 /* Mobile header optimizations */
@@ -1772,7 +1891,7 @@ body {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 40; /* Below the notification but above most content */
+  z-index: var(--z-fixed-header); /* Use centralized token */
   background-color: rgba(0, 0, 0, 0.5); /* Darken the entire screen */
 }
 
@@ -1800,7 +1919,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 100; /* Above everything else */
+  z-index: var(--z-overlay); /* Use centralized token */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2062,6 +2181,8 @@ button.bg-transparent[type] {
 .text-accent-100 { color: oklch(var(--accent-base)) !important; }
 .text-accent-70 { color: oklch(var(--accent-base) / 0.7) !important; }
 .text-neutral { color: oklch(var(--neutral-base)) !important; }
+.text-neutral-15 { color: oklch(var(--neutral-base) / 0.15) !important; }
+.text-neutral-20 { color: oklch(var(--neutral-base) / 0.20) !important; }
 .text-success { color: oklch(var(--success-base)) !important; }
 .text-warn { color: oklch(var(--warn-base)) !important; }
 .text-error { color: oklch(var(--error-base)) !important; }
@@ -2104,7 +2225,7 @@ button.bg-transparent[type] {
 /* Sticky tabs styling */
 #profile-tabs-header {
   position: relative;
-  z-index: 50;
+  z-index: var(--z-fixed-header);
   transition: all 0.2s ease-in-out;
 }
 
@@ -2116,60 +2237,46 @@ button.bg-transparent[type] {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background-color: hsl(var(--background));
   animation: slideDown 0.2s ease-out;
+  z-index: var(--z-fixed-header);
 }
 
 .dark .sticky-tabs {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Group tabs header styling - using transform instead of position:fixed */
 .group-tabs-header-sticky {
   position: relative !important;
-  transform: translateY(0);
   top: 0;
   left: 0;
   right: 0;
   width: 100%;
   background-color: hsl(var(--background));
-  z-index: 50;
-  transition: transform 0.2s ease-out;
+  z-index: var(--z-fixed-header);
+  transition: opacity 0.2s ease-out;
 }
 
-/* Section header base styling with smooth transitions */
+/* Section header styling */
 .section-header {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-property: transform, box-shadow, background-color, backdrop-filter;
-  will-change: transform, box-shadow;
-  transform: translateZ(0); /* Force GPU acceleration */
-  /* Ensure headers are always visible and properly positioned */
+  transition-property: box-shadow, background-color, backdrop-filter;
   visibility: visible !important;
   opacity: 1 !important;
   position: relative;
 }
 
-/* Section header sticky styling - enhanced when sticky */
 .section-header-sticky {
   position: fixed !important;
-  /* top, left, right, and width will be set dynamically via JavaScript to respect sidebar and main header */
-  /* top will be set to main header height via JavaScript */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   background-color: hsl(var(--background)) !important;
   backdrop-filter: blur(8px);
-  /* z-index will be set dynamically via JavaScript - should be 60 (below main header z-70) */
-  z-index: 60 !important;
-  /* Ensure complete coverage */
+  z-index: var(--z-fixed-header) !important;
   margin: 0 !important;
   padding-left: 1.5rem !important;
   padding-right: 1.5rem !important;
-  /* Prevent any content bleed-through */
   border-bottom: 1px solid hsl(var(--border)) !important;
-  /* Smooth fade transition when becoming sticky */
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              left 0.3s ease-in-out,
-              width 0.3s ease-in-out;
+              background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
 }
 
@@ -2259,14 +2366,13 @@ button.bg-transparent[type] {
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateZ(0); /* Force hardware acceleration */
+  /* REMOVED: transform: translateZ(0) - creates stacking context that breaks fixed positioning */
   will-change: width, transform, box-shadow;
   /* Ensure sidebar doesn't create shadows outside its boundaries */
   overflow: visible;
-  contain: layout;
-  /* Prevent any layout shifts during expansion */
-  backface-visibility: hidden;
-  perspective: 1000px;
+  /* REMOVED: contain: layout - creates stacking context that breaks fixed positioning */
+  /* REMOVED: backface-visibility: hidden - creates stacking context that breaks fixed positioning */
+  /* REMOVED: perspective: 1000px - creates stacking context that breaks fixed positioning */
 }
 
 /* Sidebar hover state improvements */
@@ -2381,10 +2487,9 @@ button.bg-transparent[type] {
   }
 }
 
-/* Leaflet map theme-aware styling */
+/* Leaflet map styling */
 .leaflet-container {
   background-color: hsl(var(--background)) !important;
-  /* Ensure maps don't override sidebar z-index */
   z-index: 1 !important;
 }
 
@@ -2392,7 +2497,6 @@ button.bg-transparent[type] {
   background-color: hsl(var(--background)) !important;
 }
 
-/* Ensure all leaflet elements stay below sidebar */
 .leaflet-pane,
 .leaflet-map-pane,
 .leaflet-tile-pane,
@@ -2404,10 +2508,9 @@ button.bg-transparent[type] {
   z-index: auto !important;
 }
 
-/* Ensure leaflet controls don't override sidebar */
 .leaflet-control-container,
 .leaflet-control {
-  z-index: 50 !important;
+  z-index: 10 !important;
 }
 
 /* Enable text selection on mobile devices while disabling native context menu */
@@ -2423,36 +2526,25 @@ button.bg-transparent[type] {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Ensure content doesn't get hidden behind floating header and bottom nav */
+/*
+ * MAIN CONTENT SPACING - MOVED TO fixed-layer.css
+ *
+ * Main content padding for floating elements is now centralized in:
+ * app/styles/fixed-layer.css
+ *
+ * This ensures consistent spacing and avoids duplicate rules.
+ */
+
+/* Specific spacing for page content containers */
 @media (max-width: 767px) {
   body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Add top spacing for floating financial header */
-  main {
-    padding-top: 72px; /* Space for floating financial header (reduced from 88px) */
-    padding-bottom: 140px; /* Space for larger bottom nav with text labels + safe area */
-    transition: padding-top 300ms ease-in-out; /* Smooth transition when PWA banner appears/disappears */
-  }
-
-
-
-  /* Specific spacing for page content containers */
   .page-content,
   #combined-links-section {
     margin-bottom: 20px;
   }
-}
-
-/* Desktop spacing for floating financial header */
-@media (min-width: 768px) {
-  main {
-    padding-top: 72px; /* Space for floating financial header on desktop (reduced from 88px) */
-    transition: padding-top 300ms ease-in-out;
-  }
-
-
 }
 
 /* Consistent page max-width for all pages */

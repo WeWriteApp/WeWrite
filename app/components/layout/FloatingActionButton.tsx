@@ -26,6 +26,8 @@ const isIOSDevice = (): boolean => {
  * - Responsive positioning for mobile and desktop
  * - Simplified and reliable behavior
  */
+import FixedPortal from "../utils/FixedPortal";
+
 export default function FloatingActionButton() {
   const router = useRouter();
   const { user } = useAuth();
@@ -75,23 +77,19 @@ export default function FloatingActionButton() {
   const bottomPosition = React.useMemo(() => {
     // On desktop, use fixed bottom position
     if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-      return '32px'; // 8 * 4 = 32px (bottom-8)
+      return 'calc(var(--fixed-safe-bottom) + 16px)'; // Use fixed-layer system + extra spacing
     }
 
     // On mobile, position above floating mobile nav when visible
-    // Mobile nav is now floating with bottom-4 (16px) + nav height + extra gap
     if (shouldShowMobileNav) {
-      const navBottomMargin = 16; // bottom-4 from mobile nav
       const navHeight = 80; // Height of mobile nav content
       const extraGap = 24; // Additional gap between FAB and nav for better spacing
-      const pwaPadding = isPWAMode && isIOSDevice() ? 20 : 0;
-      return `${navBottomMargin + navHeight + extraGap + pwaPadding}px`;
+      return `calc(var(--fixed-safe-bottom) + ${navHeight + extraGap}px)`;
     }
 
-    // When mobile nav is hidden, use bottom padding
-    const pwaPadding = isPWAMode && isIOSDevice() ? 20 : 0;
-    return `${20 + pwaPadding}px`;
-  }, [shouldShowMobileNav, isPWAMode]);
+    // When mobile nav is hidden, use fixed-layer system
+    return 'var(--fixed-safe-bottom)';
+  }, [shouldShowMobileNav]);
 
   // Don't render if conditions not met
   if (!shouldShowFAB) {
@@ -99,25 +97,25 @@ export default function FloatingActionButton() {
   }
 
   return (
-    <Button
-      onClick={handleNewPageClick}
-      size="icon"
-      className={cn(
-        "fixed right-4 z-[70] h-14 w-14 rounded-full shadow-lg",
-        "bg-primary hover:bg-primary/90 text-primary-foreground",
-        "transition-all duration-300 ease-in-out",
-        "hover:scale-110 active:scale-95"
-        // Show on both mobile and desktop
-      )}
-      style={{
-        // Dynamic bottom positioning based on mobile toolbar visibility and PWA padding
-        bottom: bottomPosition,
-        transition: 'bottom 300ms ease-in-out'
-      }}
-      aria-label="Create new page"
-    >
-      <Plus className="h-6 w-6" />
-    </Button>
+    <FixedPortal>
+      <Button
+        onClick={handleNewPageClick}
+        size="icon"
+        className={cn(
+          "fixed-layer z-fixed-fab right-4 h-14 w-14 rounded-full shadow-lg pointer-events-auto",
+          "bg-primary hover:bg-primary/90 text-primary-foreground",
+          "transition-all duration-300 ease-in-out",
+          "hover:scale-110 active:scale-95"
+        )}
+        style={{
+          bottom: bottomPosition,
+          transition: 'bottom 300ms ease-in-out'
+        }}
+        aria-label="Create new page"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
+    </FixedPortal>
   );
 }
 

@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
 import { Link, ExternalLink, Users, FileText } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
@@ -230,19 +230,19 @@ export default function LinkEditorModal({
           )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+        <SegmentedControl value={activeTab} onValueChange={handleTabChange}>
+          <SegmentedControlList className="grid w-full grid-cols-2">
+            <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">WeWrite </span>Pages
-            </TabsTrigger>
-            <TabsTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            </SegmentedControlTrigger>
+            <SegmentedControlTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
               External<span className="hidden sm:inline"> Link</span>
-            </TabsTrigger>
-          </TabsList>
+            </SegmentedControlTrigger>
+          </SegmentedControlList>
 
-          <TabsContent value="pages" className="space-y-4">
+          <SegmentedControlContent value="pages" className="space-y-4">
             {/* Show Author Toggle */}
             <div className="flex items-center justify-between">
               <Label htmlFor="show-author" className="text-sm font-medium">
@@ -268,9 +268,9 @@ export default function LinkEditorModal({
                 linkedPageIds={linkedPageIds}
               />
             </div>
-          </TabsContent>
+          </SegmentedControlContent>
 
-          <TabsContent value="external" className="space-y-4">
+          <SegmentedControlContent value="external" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="external-url">URL</Label>
               <Input
@@ -286,8 +286,8 @@ export default function LinkEditorModal({
                 autoFocus={activeTab === 'external'}
               />
             </div>
-          </TabsContent>
-        </Tabs>
+          </SegmentedControlContent>
+        </SegmentedControl>
 
         {/* Footer Buttons */}
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
