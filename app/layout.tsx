@@ -38,6 +38,7 @@ import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
 import { PWAProvider } from "./providers/PWAProvider"
+import { BannerProvider } from "./providers/BannerProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
@@ -85,47 +86,49 @@ export default function RootLayout({
                 <AuthProvider>
                   <LogRocketProvider>
                     <PWAProvider>
-                      <NotificationProvider>
+                      <BannerProvider>
+                        <NotificationProvider>
                       <MobileProvider>
                       <DataProvider>
                         <DateFormatProvider>
                           <AccentColorProvider>
                             <NeutralColorProvider>
-                              <AppBackgroundProvider>
-                                <PillStyleProvider>
-                              <LineSettingsProvider>
-                                <RecentPagesProvider>
-                                  <AllocationIncrementProvider>
-                                    <SubscriptionProvider>
-                                      <DemoBalanceProvider>
-                                        <UsdBalanceProvider>
-                                          <EarningsProvider>
-                                            <AllocationIntervalProvider>
-                                        <NavigationOrderProvider>
-                                            <SessionAuthInitializer>
-                                              <SessionMonitor />
-                                              <AutomaticUpdateManager />
-                                              <GlobalNavigation>
-                                                {children}
-                                              </GlobalNavigation>
-                                            </SessionAuthInitializer>
-                                          </NavigationOrderProvider>
-                                            </AllocationIntervalProvider>
-                                          </EarningsProvider>
-                                        </UsdBalanceProvider>
-                                      </DemoBalanceProvider>
-                                    </SubscriptionProvider>
-                                  </AllocationIncrementProvider>
-                                </RecentPagesProvider>
-                              </LineSettingsProvider>
-                                </PillStyleProvider>
-                              </AppBackgroundProvider>
+                              <SubscriptionProvider>
+                                <AppBackgroundProvider>
+                                  <PillStyleProvider>
+                                <LineSettingsProvider>
+                                  <RecentPagesProvider>
+                                    <AllocationIncrementProvider>
+                                        <DemoBalanceProvider>
+                                          <UsdBalanceProvider>
+                                            <EarningsProvider>
+                                              <AllocationIntervalProvider>
+                                          <NavigationOrderProvider>
+                                              <SessionAuthInitializer>
+                                                <SessionMonitor />
+                                                <AutomaticUpdateManager />
+                                                <GlobalNavigation>
+                                                  {children}
+                                                </GlobalNavigation>
+                                              </SessionAuthInitializer>
+                                            </NavigationOrderProvider>
+                                              </AllocationIntervalProvider>
+                                            </EarningsProvider>
+                                          </UsdBalanceProvider>
+                                        </DemoBalanceProvider>
+                                    </AllocationIncrementProvider>
+                                  </RecentPagesProvider>
+                                </LineSettingsProvider>
+                                  </PillStyleProvider>
+                                </AppBackgroundProvider>
+                              </SubscriptionProvider>
                             </NeutralColorProvider>
                           </AccentColorProvider>
                         </DateFormatProvider>
                       </DataProvider>
                     </MobileProvider>
                     </NotificationProvider>
+                      </BannerProvider>
                     </PWAProvider>
                   </LogRocketProvider>
                 </AuthProvider>

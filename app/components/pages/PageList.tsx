@@ -147,7 +147,7 @@ export default function PageList({
               <Input
                 type="search"
                 placeholder="Search pages..."
-                className="pl-9"
+                className="wewrite-input-with-left-icon"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />

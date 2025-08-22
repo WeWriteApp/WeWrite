@@ -370,6 +370,7 @@ export default function ComprehensiveFeeManagement() {
                     id="calcMethod"
                     value={calculatorMethod}
                     onChange={(e) => setCalculatorMethod(e.target.value as 'standard' | 'instant')}
+                    className="wewrite-input"
                     className="w-full p-2 border rounded-md"
                   >
                     <option value="standard">Standard (2-5 days)</option>

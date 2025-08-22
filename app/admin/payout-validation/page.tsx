@@ -205,6 +205,7 @@ export default function PayoutValidationPage() {
                 id="method"
                 value={payoutMethod}
                 onChange={(e) => setPayoutMethod(e.target.value as 'standard' | 'instant')}
+                className="wewrite-input"
                 className="mt-1 w-full px-3 py-2 border-theme-strong bg-background rounded-md"
               >
                 <option value="standard">Standard (2-5 days, free)</option>

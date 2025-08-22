@@ -165,8 +165,36 @@ Tracking: Stripe-managed escrow system
 **Q: Storage Balance didn't clear after payouts**
 - **A:** Some creators may not be eligible - check payout logs
 
+**Q: What happens to funds when creators haven't set up bank accounts?**
+- **A:** Funds remain in Storage Balance indefinitely until bank account is connected. No automatic cleanup or timeout mechanisms exist.
+
+**Q: Do unpaid funds ever move back to Payments Balance?**
+- **A:** No. Only unallocated subscription funds move to Payments Balance via "use it or lose it". Allocated funds stay in Storage Balance until paid out.
+
 **Q: Balances don't match internal tracking**
 - **A:** Storage Balance is now the source of truth - update internal systems
+
+---
+
+## 💰 **Fund Retention Policy**
+
+### **Unpaid Creator Funds**
+When creators have valid earnings but haven't set up bank accounts:
+
+- **✅ Funds Remain Safe**: All allocated funds stay in Storage Balance indefinitely
+- **✅ No Expiration**: There are no timeout mechanisms that move funds elsewhere
+- **✅ Accumulation**: Monthly earnings continue to accumulate in Storage Balance
+- **✅ Immediate Access**: Once bank account is connected, all accumulated funds become available for payout
+
+### **What This Means:**
+- **For Creators**: Your earnings are safely held until you're ready to receive them
+- **For WeWrite**: Storage Balance accurately reflects all outstanding creator obligations
+- **For Compliance**: Proper fund segregation ensures regulatory compliance
+
+### **Important Notes:**
+- Only **unallocated subscription funds** move to Payments Balance via "use it or lose it"
+- **Allocated funds** (creator earnings) never expire or move back to platform revenue
+- **Storage Balance** serves as a permanent escrow for creator obligations
 
 ---
 

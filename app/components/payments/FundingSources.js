@@ -3,6 +3,8 @@ import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
 import { Check, X } from "lucide-react";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 const FundingSources = () => {
   const { fundingSources } = useContext(PortfolioContext);
@@ -71,7 +73,7 @@ const AddFundingSourceForm = () => {
           id="type"
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="mb-2 border p-2"
+          className="wewrite-input mb-2"
         >
           <option value="">Select type</option>
           <option value="card">Card</option>
@@ -80,10 +82,10 @@ const AddFundingSourceForm = () => {
       </div>
       <div className="flex flex-col">
         <label htmlFor="last4">Last 4</label>
-        <input
+        <Input
           type="text"
           id="last4"
-          className="mb-2 border p-2"
+          className="mb-2"
           value={last4}
           onChange={(e) => setLast4(e.target.value)}
           autoComplete="off"
@@ -100,7 +102,7 @@ const AddFundingSourceForm = () => {
         />
         <label htmlFor="default">Default</label>
       </div>
-      <button type="submit">Add Funding Source</button>
+      <Button type="submit">Add Funding Source</Button>
     </form>
   );
 };

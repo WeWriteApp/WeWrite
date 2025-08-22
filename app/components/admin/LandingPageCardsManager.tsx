@@ -258,7 +258,7 @@ export function LandingPageCardsManager({ className = '' }: LandingPageCardsMana
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className="border rounded-lg p-4 space-y-3"
+              className="wewrite-card space-y-3"
             >
               {/* Card Header */}
               <div className="flex items-center justify-between">

@@ -9,6 +9,8 @@ import FloatingActionButton from './FloatingActionButton';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 import FloatingFinancialHeader from './FloatingFinancialHeader';
+import VerifyEmailBanner from '../utils/VerifyEmailBanner';
+import PWABanner from '../utils/PWABanner';
 
 
 /**
@@ -30,6 +32,10 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <>
+      {/* Banner system - shows at top of content */}
+      <VerifyEmailBanner />
+      <PWABanner />
+
       {/* Floating elements - render outside SidebarLayout to ensure proper viewport positioning */}
       <FloatingFinancialHeader />
       <MobileBottomNav />

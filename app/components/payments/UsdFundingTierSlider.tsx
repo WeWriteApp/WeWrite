@@ -147,6 +147,16 @@ export default function UsdFundingTierSlider({
   const isOverspent = availableUsdCents < 0 && currentSubscriptionAmount > 0;
   const overspentCents = isOverspent ? Math.abs(availableUsdCents) : 0;
 
+  // Calculate potential overspending for selected amount (downgrade preview)
+  const selectedTotalUsdCents = selectedAmount * 100;
+  const selectedAvailableUsdCents = selectedTotalUsdCents - allocatedUsdCents;
+  const wouldBeOverspent = selectedAvailableUsdCents < 0 && selectedAmount > 0;
+  const wouldBeOverspentCents = wouldBeOverspent ? Math.abs(selectedAvailableUsdCents) : 0;
+
+  // Show downgrade overspend warning only when downgrading and would create overspend
+  const isDowngrade = selectedAmount < currentSubscriptionAmount && currentSubscriptionAmount > 0;
+  const showDowngradeOverspendWarning = isDowngrade && wouldBeOverspent;
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -349,6 +359,20 @@ export default function UsdFundingTierSlider({
             </div>
           )}
 
+          {/* Downgrade overspend warning */}
+          {showDowngradeOverspendWarning && (
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mt-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-orange-700 dark:text-orange-300">
+                  <p className="font-medium mb-1">Downgrade will create overspending</p>
+                  <p>Downgrading to ${selectedAmount}/month will leave {formatUsdCents(wouldBeOverspentCents)} of your allocations unfunded (shown in orange).
+                     Consider reducing your allocations first or choose a higher amount.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* +10 Button and Custom Amount Button */}
           <div className="flex justify-center gap-3">
             <Button
@@ -425,7 +449,7 @@ export default function UsdFundingTierSlider({
                   placeholder="100.00"
                   value={customAmount}
                   onChange={(e) => handleCustomAmountChange(e.target.value)}
-                  className={`pl-10 ${customError ? 'border-destructive' : ''}`}
+                  className={`wewrite-input-with-left-icon ${customError ? 'border-destructive' : ''}`}
                 />
               </div>
 

@@ -17,6 +17,7 @@ import { useDemoBalance, useShouldUseDemoBalance } from "../../contexts/DemoBala
 import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
 import { useSidebarContext } from './UnifiedSidebar';
+import { useBanner } from "../../providers/BannerProvider";
 
 export interface FloatingFinancialHeaderProps {
   className?: string;
@@ -47,6 +48,9 @@ export default function FloatingFinancialHeader({
   const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
   const { demoBalance } = useDemoBalance();
   const { sidebarWidth, isExpanded } = useSidebarContext();
+  const { bannerOffset } = useBanner();
+
+
 
   // Calculate header positioning width - should match PageHeader.tsx and SidebarLayout.tsx
   const headerSidebarWidth = React.useMemo(() => {
@@ -348,7 +352,14 @@ export default function FloatingFinancialHeader({
   return (
     <FixedPortal>
       {/* Mobile: Standard centered layout */}
-      <div className="md:hidden fixed-layer fixed-top z-fixed-header pointer-events-none">
+      <div
+        className="md:hidden fixed-layer z-fixed-header pointer-events-none"
+        style={{
+          top: `calc(var(--fixed-safe-top) + ${bannerOffset}px)`,
+          left: 0,
+          right: 0
+        }}
+      >
         <div className="mx-auto px-4 max-w-4xl transition-all duration-300 ease-in-out pointer-events-auto">
           <FloatingHeader size="md" noShadowAtTop={true}>
             <div className="relative flex items-center justify-between h-10">

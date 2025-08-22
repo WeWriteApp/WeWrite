@@ -137,6 +137,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! ü
 > **Note**: As of August 2025, duplicate title prevention has been removed to allow for a more forgiving approach. Future implementations will include merging of detected duplicates or construction of timelines of ordered duplicates.
 
 #### User Interface
+- **[Banner System Guide](docs/BANNER_SYSTEM_GUIDE.md)** - ‚≠ê **ESSENTIAL** - Priority-based banner system with admin testing (email verification, PWA installation)
 - **[Settings Navigation System](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - Settings page navigation
 - **[Version System](docs/VERSION_SYSTEM.md)** - Version management system
 

@@ -35,6 +35,8 @@
     padding-bottom: 140px;
     transition: padding-top 300ms ease-in-out;
   }
+
+  /* Dynamic banner spacing - controlled by inline styles for scroll-aware positioning */
 }
 
 @media (min-width: 768px) {

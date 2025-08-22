@@ -666,7 +666,7 @@ export default function PageHeader({
                   {/* Left: Back Button */}
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
                       className="text-foreground"
                       onClick={handleBackClick}
@@ -686,7 +686,7 @@ export default function PageHeader({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           className="text-foreground"
                           title="Page actions"
@@ -870,37 +870,18 @@ export default function PageHeader({
                       {(
                         <div className="flex items-center justify-center relative">
                           {isEditing && canEdit && isEditingTitle && !(isExactDateFormat(title || "") && title !== "Daily note") ? (
-                            <>
-                              <textarea
-                                ref={titleInputRef}
-                                value={editingTitle}
-                                onChange={handleTitleChange}
-                                onKeyDown={handleTitleKeyDown}
-                                onBlur={handleTitleBlur}
-                                onFocus={handleTitleFocus}
-                                tabIndex={isNewPage ? 1 : undefined}
-                                className={`wewrite-title-input wewrite-card py-2 outline-none font-semibold text-center resize-none overflow-hidden ${
-                                  isTitleFocused
-                                    ? "wewrite-active-card"
-                                    : ""
-                                } ${
-                                  titleError
-                                    ? "border-destructive focus:border-destructive"
-                                    : ""
-                                } text-2xl`}
-                                style={{
-                                  width: "100%",
-                                  height: "2.5rem",
-                                  minHeight: "2.5rem",
-                                  maxHeight: "2.5rem",
-                                  lineHeight: "1.3",
-                                  fontSize: '1.5rem' // Force text-2xl size to prevent shrinking on focus
-                                }}
-                                placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
-                                rows={1}
-                              />
-
-                            </>
+                            <textarea
+                              ref={titleInputRef}
+                              value={editingTitle}
+                              onChange={handleTitleChange}
+                              onKeyDown={handleTitleKeyDown}
+                              onBlur={handleTitleBlur}
+                              onFocus={handleTitleFocus}
+                              tabIndex={isNewPage ? 1 : undefined}
+                              className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full h-10 text-2xl font-semibold text-center resize-none overflow-hidden`}
+                              placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
+                              rows={1}
+                            />
                           ) : (
                             <span
                               className={`${

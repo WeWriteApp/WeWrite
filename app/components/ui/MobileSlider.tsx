@@ -56,7 +56,7 @@ export default function MobileSlider({
           value={value}
           onChange={handleChange}
           onInput={handleInput}
-          className="mobile-slider-input w-full"
+          className="mobile-slider-input w-full wewrite-input"
           style={{
             background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${percentage}%, hsl(var(--muted)) ${percentage}%, hsl(var(--muted)) 100%)`,
             touchAction: 'manipulation',

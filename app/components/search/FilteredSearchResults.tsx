@@ -484,7 +484,7 @@ const FilteredSearchResults = forwardRef(({
   return (
     <div className={`flex flex-col h-full min-w-0 ${className}`}>
       {/* Search Input */}
-      <div className="relative flex-shrink-0 mb-3 min-w-0 wewrite-card">
+      <div className="relative flex-shrink-0 mb-3 min-w-0">
         {isLinkEditor ? (
           <ClearableInput
             ref={ref || searchInputRef}
@@ -493,7 +493,7 @@ const FilteredSearchResults = forwardRef(({
             value={search}
             onChange={handleSearchChange}
             onClear={handleClear}
-            className="w-full border-0 bg-transparent"
+            className="w-full"
             autoComplete="off"
           />
         ) : (
@@ -503,7 +503,7 @@ const FilteredSearchResults = forwardRef(({
             placeholder={placeholder}
             value={search}
             onChange={handleSearchChange}
-            className="w-full pr-10 border-0 bg-transparent"
+            className="w-full pr-10"
             autoComplete="off"
           />
         )}

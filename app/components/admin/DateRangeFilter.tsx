@@ -351,7 +351,7 @@ export function DateRangeFilter({
                 value={formatDateForInput(dateRange.startDate)}
                 onChange={handleStartDateChange}
                 max={formatDateForInput(dateRange.endDate)}
-                className="flex-1 px-3 py-2.5 border border-border rounded-md text-foreground bg-background text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                className="wewrite-input flex-1 text-sm"
               />
             </div>
             <div className="flex items-center gap-3 text-sm flex-1">
@@ -362,7 +362,7 @@ export function DateRangeFilter({
                 onChange={handleEndDateChange}
                 min={formatDateForInput(dateRange.startDate)}
                 max={formatDateForInput(new Date())}
-                className="flex-1 px-3 py-2.5 border border-border rounded-md text-foreground bg-background text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                className="wewrite-input flex-1 text-sm"
               />
             </div>
           </div>

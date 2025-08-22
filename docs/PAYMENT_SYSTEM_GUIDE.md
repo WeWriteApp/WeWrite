@@ -191,6 +191,18 @@ Use the admin testing infrastructure:
 - **Test Allocations**: `/api/dev/test-allocation`
 - **Debug Endpoints**: `/api/debug/earnings-status`
 
+## 💰 Fund Retention & Storage Balance
+
+### Creator Fund Safety
+- **Indefinite Retention**: Creator earnings remain in Storage Balance until bank account is set up
+- **No Expiration**: Funds never timeout or move back to platform revenue
+- **Accumulation**: Monthly earnings continue to build up in Storage Balance
+- **Immediate Access**: All accumulated funds become available once bank account is connected
+
+### Key Distinctions
+- **Allocated Funds** (creator earnings) → Stay in Storage Balance forever until paid out
+- **Unallocated Funds** (unused subscription) → Move to Payments Balance via "use it or lose it"
+
 ## 🚨 Troubleshooting
 
 ### Common Issues
@@ -204,6 +216,7 @@ Use the admin testing infrastructure:
    - Verify Stripe Connect account status
    - Check minimum balance requirements
    - Review platform fee calculations
+   - **Note**: Failed payouts due to missing bank accounts leave funds in Storage Balance indefinitely
 
 3. **Allocation Issues**
    - Verify user has sufficient available balance

@@ -19,6 +19,16 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Invalid background type');
     }
 
+    // Check subscription status for image backgrounds
+    if (backgroundType === 'image') {
+      const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
+      const subscription = await getUserSubscriptionServer(userId, { verbose: false });
+
+      if (!subscription || subscription.status !== 'active' || (subscription.amount || 0) <= 0) {
+        return createErrorResponse('FORBIDDEN', 'Custom background images require an active subscription');
+      }
+    }
+
     // Get Firebase Admin instance
     const admin = initAdmin();
     const db = admin.firestore();
@@ -51,7 +61,9 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const userId = await getUserIdFromRequest(request);
+    console.log('[Background Preference API] GET request for user:', userId);
     if (!userId) {
+      console.log('[Background Preference API] No user ID found');
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
 
@@ -59,8 +71,16 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
 
     const collectionName = await getCollectionNameAsync('users');
+    console.log('[Background Preference API] Using collection:', collectionName);
     const userDoc = await db.collection(collectionName).doc(userId).get();
     const userData = userDoc.data();
+
+    console.log('[Background Preference API] User data found:', {
+      hasBackgroundPreference: !!userData?.backgroundPreference,
+      hasBackgroundImage: !!userData?.backgroundImage,
+      backgroundPreference: userData?.backgroundPreference,
+      backgroundImage: userData?.backgroundImage
+    });
 
     return createApiResponse({
       backgroundPreference: userData?.backgroundPreference || null,

@@ -17,7 +17,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { createEditor, Descendant, Element as SlateElement, Text, Transforms, Editor, Range, Point, Node } from 'slate';
+import { createEditor, Descendant, Element as SlateElement, Text, Transforms, Editor, Range, Point, Node, Location } from 'slate';
 import { Slate, Editable, withReact, ReactEditor, useSlateStatic, RenderElementProps, RenderLeafProps } from 'slate-react';
 import { withHistory } from 'slate-history';
 import PillLink from '../utils/PillLink';
@@ -77,10 +77,122 @@ declare module 'slate' {
 // ============================================================================
 
 /**
+ * Custom plugin to handle link deletion as single units
+ */
+const withLinkDeletion = (editor: ReactEditor) => {
+  const { deleteBackward, deleteForward } = editor;
+
+  editor.deleteBackward = (unit) => {
+    const { selection } = editor;
+
+    if (selection && Range.isCollapsed(selection)) {
+      // Check if we're inside a link and at the start - delete the whole link
+      const [linkMatch] = Editor.nodes(editor, {
+        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+        mode: 'highest',
+      });
+
+      if (linkMatch) {
+        const [, linkPath] = linkMatch;
+        const start = Editor.start(editor, linkPath);
+
+        // If cursor is at the start of a link, delete the entire link
+        if (Point.equals(selection.anchor, start)) {
+          Transforms.removeNodes(editor, { at: linkPath });
+          return;
+        }
+      }
+
+      // Check if we're positioned right after a link element
+      try {
+        const [parentNode, parentPath] = Editor.parent(editor, selection);
+        if (SlateElement.isElement(parentNode) && parentNode.type === 'paragraph') {
+          const currentIndex = selection.anchor.path[selection.anchor.path.length - 1];
+
+          // Check if there's a previous sibling that's a link
+          if (currentIndex > 0) {
+            const prevSiblingPath = [...parentPath, currentIndex - 1];
+            const [prevSibling] = Editor.node(editor, prevSiblingPath);
+
+            if (SlateElement.isElement(prevSibling) && prevSibling.type === 'link') {
+              // We're right after a link, delete it entirely
+              Transforms.removeNodes(editor, { at: prevSiblingPath });
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        // Continue with normal deletion if path operations fail
+      }
+    }
+
+    deleteBackward(unit);
+  };
+
+  editor.deleteForward = (unit) => {
+    const { selection } = editor;
+
+    if (selection && Range.isCollapsed(selection)) {
+      // Check if we're inside a link and at the end - delete the whole link
+      const [linkMatch] = Editor.nodes(editor, {
+        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+        mode: 'highest',
+      });
+
+      if (linkMatch) {
+        const [, linkPath] = linkMatch;
+        const end = Editor.end(editor, linkPath);
+
+        // If cursor is at the end of a link, delete the entire link
+        if (Point.equals(selection.anchor, end)) {
+          Transforms.removeNodes(editor, { at: linkPath });
+          return;
+        }
+      }
+
+      // Check if we're positioned right before a link element
+      try {
+        const [parentNode, parentPath] = Editor.parent(editor, selection);
+        if (SlateElement.isElement(parentNode) && parentNode.type === 'paragraph') {
+          const currentIndex = selection.anchor.path[selection.anchor.path.length - 1];
+
+          // If we're at the end of a text node, check the next sibling
+          const currentNode = Editor.node(editor, selection.anchor.path)[0];
+          if (currentNode && typeof currentNode === 'object' && 'text' in currentNode) {
+            const textLength = currentNode.text.length;
+            if (selection.anchor.offset === textLength) {
+              // We're at the end of this text node, check next sibling
+              const nextSiblingPath = [...parentPath, currentIndex + 1];
+              try {
+                const [nextSibling] = Editor.node(editor, nextSiblingPath);
+
+                if (SlateElement.isElement(nextSibling) && nextSibling.type === 'link') {
+                  // We're right before a link, delete it entirely
+                  Transforms.removeNodes(editor, { at: nextSiblingPath });
+                  return;
+                }
+              } catch (e) {
+                // Next sibling doesn't exist, continue with normal deletion
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Continue with normal deletion if path operations fail
+      }
+    }
+
+    deleteForward(unit);
+  };
+
+  return editor;
+};
+
+/**
  * Create a Slate editor with React and History plugins
  */
 const createSlateEditor = () => {
-  const editor = withHistory(withReact(createEditor()));
+  const editor = withLinkDeletion(withHistory(withReact(createEditor())));
 
   // Override isInline to treat link elements as inline
   const { isInline } = editor;
@@ -1073,7 +1185,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         initialValue={safeInitialValue || [{ type: 'paragraph', children: [{ text: '' }] }]}
         onChange={handleChange}
       >
-        <div className="relative w-full max-w-none">
+        <div className={`relative w-full max-w-none wewrite-input ${isFocused ? 'wewrite-active-input' : ''}`}>
           <Editable
             renderElement={Element}
             renderLeaf={Leaf}

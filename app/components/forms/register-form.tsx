@@ -284,7 +284,7 @@ export function RegisterForm({
               onChange={(e) => setUsername(e.target.value)}
               tabIndex={1}
               className={cn(
-                "h-10 bg-background pr-10",
+                "h-10 pr-10",
                 validationError ? "border-destructive focus-visible:ring-destructive" : "",
                 isAvailable === true ? "border-success focus-visible:ring-success" : ""
               )}

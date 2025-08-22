@@ -46,7 +46,7 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
   ];
 
   return (
-    <footer className={`w-full py-6 px-4 border-t border-accent-20 mt-12 pb-40 ${className}`}>
+    <footer className={`w-full py-6 px-4 border-t border-neutral-20 mt-12 pb-40 ${className}`}>
       <div className="container mx-auto">
         {/* All footer links in a centered wrapped list */}
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">

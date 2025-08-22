@@ -95,7 +95,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                 placeholder="Search ideas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="wewrite-input-with-left-icon w-64"
               />
             </div>
             <Button

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { useAuth } from '../providers/AuthProvider';
+import { useBanner } from '../providers/BannerProvider';
 import { firestore, rtdb } from "../firebase/config";
 import { getCollectionName } from "../utils/environmentConfig";
 import {
@@ -52,6 +53,7 @@ interface PageCountsByUser {
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
+  const { bannerOffset } = useBanner();
   const [loading, setLoading] = useState<boolean>(true);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
@@ -211,7 +213,14 @@ export default function LeaderboardPage() {
   }, [user]);
 
   return (
-    <main className="p-4 md:p-6 space-y-6 max-w-full overflow-hidden">
+    <main
+      className="p-4 md:p-6 space-y-6 max-w-full overflow-hidden"
+      style={{
+        paddingTop: typeof window !== 'undefined' && window.innerWidth < 768
+          ? `${16 + bannerOffset}px`
+          : undefined
+      }}
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <Link href="/">
           <Button variant="ghost" size="icon" className="h-8 w-8">

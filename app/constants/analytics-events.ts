@@ -19,6 +19,12 @@ export const AUTH_EVENTS = {
   PASSWORD_RESET: 'password_reset',
   PASSWORD_RESET_REQUEST: 'password_reset_request'};
 
+// Email Verification Events
+export const EMAIL_VERIFICATION_EVENTS = {
+  EMAIL_BANNER_ACTION: 'email_banner_action',
+  EMAIL_VERIFICATION_SENT: 'email_verification_sent',
+  EMAIL_VERIFIED: 'email_verified'};
+
 // Content Creation Events
 export const CONTENT_EVENTS = {
   PAGE_CREATED: 'page_created',
@@ -104,6 +110,7 @@ export const SESSION_EVENTS = {
 export const ANALYTICS_EVENTS = {
   ...PAGE_EVENTS,
   ...AUTH_EVENTS,
+  ...EMAIL_VERIFICATION_EVENTS,
   ...CONTENT_EVENTS,
   ...INTERACTION_EVENTS,
   ...NAVIGATION_EVENTS,
@@ -116,6 +123,7 @@ export const ANALYTICS_EVENTS = {
 export const EVENT_CATEGORIES = {
   PAGE: 'Page',
   AUTH: 'Authentication',
+  EMAIL_VERIFICATION: 'Email_Verification',
   USER: 'User',
   CONTENT: 'Content',
   INTERACTION: 'Interaction',

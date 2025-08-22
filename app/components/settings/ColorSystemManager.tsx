@@ -12,6 +12,7 @@ import { useAccentColor } from '@/contexts/AccentColorContext';
 import { useNeutralColor } from '@/contexts/NeutralColorContext';
 import { useAppBackground, type ImageBackground } from '@/contexts/AppBackgroundContext';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { hexToOklch, oklchToHex, type OKLCHColor } from '@/lib/oklch-utils';
 
 interface ColorSystemManagerProps {
@@ -68,6 +69,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
   const { neutralColor, setNeutralColor } = useNeutralColor();
   const { background, setBackground, lastUploadedImage, backgroundBlur, setBackgroundBlur } = useAppBackground();
   const { theme } = useTheme();
+  const { hasActiveSubscription } = useSubscription();
 
   // State for all three color systems - initialize with actual context values
   const [accentOklch, setAccentOklch] = useState<OKLCHColor>(() => {
@@ -108,14 +110,28 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
   // Initialize from current neutral color - always update when neutralColor changes
   useEffect(() => {
     const converted = hexToOklch(neutralColor);
-    if (converted) {
-      // Always update to ensure we have the latest value from context
+    if (converted && accentOklch) {
+      // Force neutral to use accent hue for consistency
+      const neutralWithAccentHue = { ...converted, h: accentOklch.h };
+      setNeutralOklch(neutralWithAccentHue);
+    } else if (converted) {
+      // Fallback to original color if accent not yet loaded
       setNeutralOklch(converted);
     } else {
       // Fallback if conversion fails
       setNeutralOklch({ l: 0.50, c: 0.05, h: 240 });
     }
-  }, [neutralColor]);
+  }, [neutralColor, accentOklch]);
+
+  // Update neutral color hue when accent color hue changes
+  useEffect(() => {
+    if (accentOklch && neutralOklch && accentOklch.h !== neutralOklch.h) {
+      const neutralWithAccentHue = { ...neutralOklch, h: accentOklch.h };
+      setNeutralOklch(neutralWithAccentHue);
+      // Update the context to persist the change
+      setNeutralColor(oklchToHex(neutralWithAccentHue));
+    }
+  }, [accentOklch?.h, neutralOklch, setNeutralColor]);
 
   // Initialize from current background color (theme-aware)
   useEffect(() => {
@@ -212,7 +228,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
   };
 
   // Function to switch back to uploaded image
-  const switchToUploadedImage = () => {
+  const switchToUploadedImage = async () => {
     if (lastUploadedImage) {
       const imageBackground: ImageBackground = {
         type: 'image',
@@ -220,6 +236,24 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
         opacity: 0.15
       };
       setBackground(imageBackground);
+
+      // Save the preference to ensure it persists across sessions
+      try {
+        await fetch('/api/user/background-preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            backgroundType: 'image',
+            backgroundData: imageBackground
+          })
+        });
+        console.log('[Background Switch] Background preference saved');
+      } catch (error) {
+        console.warn('[Background Switch] Failed to save background preference:', error);
+      }
     }
   };
 
@@ -295,41 +329,65 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
           <div>
             <label className="text-sm font-medium mb-2 block">Background Image</label>
             <div className="space-y-3">
-              <BackgroundImageUpload />
+              {hasActiveSubscription ? (
+                <>
+                  <BackgroundImageUpload />
 
-              {/* Overlay Opacity Slider - only show when using image background */}
-              {background.type === 'image' && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Overlay Opacity</label>
-                    <span className="text-sm text-muted-foreground">
-                      {Math.round((background.opacity || 0.15) * 100)}%
-                    </span>
+                  {/* Overlay Opacity Slider - only show when using image background */}
+                  {background.type === 'image' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Overlay Opacity</label>
+                        <span className="text-sm text-muted-foreground">
+                          {Math.round((background.opacity || 0.15) * 100)}%
+                        </span>
+                      </div>
+                      <ColorSlider
+                        value={(background.opacity || 0.15) * 100}
+                        onChange={(value) => {
+                          const newOpacity = value / 100;
+                          const updatedBackground: ImageBackground = {
+                            ...background,
+                            opacity: newOpacity
+                          };
+                          setBackground(updatedBackground);
+
+                          // Immediately update the overlay for instant feedback
+                          const root = document.documentElement;
+                          const isDark = theme === 'dark';
+                          const overlayColor = isDark ? '0.00% 0.0000 0.0' : '98.22% 0.0061 255.5';
+                          root.style.setProperty('--background-overlay', `oklch(${overlayColor} / ${newOpacity})`);
+                        }}
+                        min={0}
+                        max={100}
+                        step={5}
+                        gradient={`linear-gradient(to right, transparent, ${oklchToHex(backgroundOklch)})`}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Adjust how much the background color overlays the image
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="wewrite-card bg-muted/30 border-dashed border-2 border-muted-foreground/20">
+                  <div className="p-6 text-center space-y-3">
+                    <div className="text-muted-foreground">
+                      <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="font-medium text-foreground">Custom Background Images</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Unlock custom background images by starting your subscription
+                    </p>
+                    <Button
+                      onClick={() => window.location.href = '/settings/subscription'}
+                      className="mt-4"
+                    >
+                      Start Subscription
+                    </Button>
                   </div>
-                  <ColorSlider
-                    value={(background.opacity || 0.15) * 100}
-                    onChange={(value) => {
-                      const newOpacity = value / 100;
-                      const updatedBackground: ImageBackground = {
-                        ...background,
-                        opacity: newOpacity
-                      };
-                      setBackground(updatedBackground);
-
-                      // Immediately update the overlay for instant feedback
-                      const root = document.documentElement;
-                      const isDark = theme === 'dark';
-                      const overlayColor = isDark ? '0.00% 0.0000 0.0' : '98.22% 0.0061 255.5';
-                      root.style.setProperty('--background-overlay', `oklch(${overlayColor} / ${newOpacity})`);
-                    }}
-                    min={0}
-                    max={100}
-                    step={5}
-                    gradient={`linear-gradient(to right, transparent, ${oklchToHex(backgroundOklch)})`}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Adjust how much the background color overlays the image
-                  </p>
                 </div>
               )}
 
@@ -355,7 +413,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
               </div>
 
               {/* Switch back to uploaded image button - only show if we have an uploaded image and are currently using solid color */}
-              {lastUploadedImage && background.type === 'solid' && (
+              {hasActiveSubscription && lastUploadedImage && background.type === 'solid' && (
                 <Button
                   variant="outline"
                   size="sm"

@@ -598,16 +598,22 @@ export function DesktopOptimizedDashboard({
       </div>
 
       {/* Dashboard Rows */}
-      <div className="space-y-4">
-        {dashboardRows.map((row) => (
-          <DashboardRow
-            key={row.id}
-            row={row}
-            dateRange={dateRange}
-            granularity={granularity}
-            globalFilters={globalFilters}
-            height={getRowHeight()}
-          />
+      <div className="space-y-0">
+        {dashboardRows.map((row, index) => (
+          <>
+            <DashboardRow
+              key={row.id}
+              row={row}
+              dateRange={dateRange}
+              granularity={granularity}
+              globalFilters={globalFilters}
+              height={getRowHeight()}
+            />
+            {/* Separator line between graphs */}
+            {index < dashboardRows.length - 1 && (
+              <div className="border-t border-accent-20 my-6" />
+            )}
+          </>
         ))}
       </div>
     </div>
@@ -641,9 +647,9 @@ function DashboardRow({
   const trend = calculateTrend(data);
   
   return (
-    <div 
+    <div
       data-row-id={row.id}
-      className="wewrite-card p-4 hover:shadow-lg transition-shadow duration-200"
+      className="py-6"
       style={{ minHeight: height + 60 }} // Add padding for header
     >
       {/* Header */}

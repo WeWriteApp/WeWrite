@@ -11,17 +11,27 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-primary/90", // Dynamic text color based on accent lightness
+          "bg-primary text-primary-foreground hover:bg-primary/80 dark:hover:bg-primary/120 active:bg-primary/70 dark:active:bg-primary/140 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive primary button
+        // Destructive variants using our error color system
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90", // Always use white text for better contrast - shadow removed
+          "bg-error text-white hover:bg-error/80 dark:hover:bg-error/120 active:bg-error/70 dark:active:bg-error/140 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive destructive button
+        "destructive-secondary":
+          "bg-error-10 text-error hover:bg-error-20 dark:hover:bg-error-15 active:bg-error-25 dark:active:bg-error-20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2", // Interactive light destructive
+        "destructive-ghost":
+          "text-error hover:bg-error-10 hover:text-error active:bg-error-15 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2", // Interactive ghost destructive
+        // Success variants using our success color system
         success:
-          "bg-success text-success-foreground hover:bg-success/90", // Success variant using theme system
+          "bg-success text-white hover:bg-success/80 dark:hover:bg-success/120 active:bg-success/70 dark:active:bg-success/140 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive success button
+        "success-secondary":
+          "bg-success-10 text-success hover:bg-success-20 dark:hover:bg-success-15 active:bg-success-25 dark:active:bg-success-20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2", // Interactive light success
+        "success-ghost":
+          "text-success hover:bg-success-10 hover:text-success active:bg-success-15 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2", // Interactive ghost success
         outline:
-          "border border-theme-medium bg-background text-foreground hover:bg-background hover:border-theme-medium", // Shadows removed
+          "border border-neutral-100 bg-neutral-10 text-secondary-foreground hover:bg-neutral-15 dark:hover:bg-neutral-15 hover:border-neutral-100 active:bg-neutral-20 dark:active:bg-neutral-20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-neutral focus-visible:ring-offset-2", // Interactive neutral outline
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80", // Shadow removed
-        ghost: "hover:bg-muted hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline"},
+          "bg-secondary text-secondary-foreground hover:bg-secondary/70 dark:hover:bg-secondary/130 active:bg-secondary/60 dark:active:bg-secondary/150 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive secondary
+        ghost: "hover:bg-muted/60 dark:hover:bg-muted/140 hover:text-foreground active:bg-muted/80 dark:active:bg-muted/160 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive ghost
+        link: "text-primary underline-offset-4 hover:underline active:text-primary/60 dark:active:text-primary/140 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed"},
       size: {
         default: "h-9 px-4 py-2",
         sm: "h-8 px-3 text-xs",

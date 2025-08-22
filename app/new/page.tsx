@@ -1227,47 +1227,25 @@ function NewPageContent() {
 
         {/* Simplified layout container - single consistent padding for all elements */}
         <div className="px-4 pb-32">
-          {/* Content editor */}
+          {/* Content editor - Clean container without unnecessary card wrapper */}
           {isEditing && (
             <div
-              className={`wewrite-card px-4 py-4 outline-none ${
-                isEditorFocused
-                  ? "wewrite-active-card"
-                  : ""
-              } w-full max-w-none`}
-              style={{
-                minHeight: '200px',
-                height: 'auto',
-                contain: 'layout style paint',
-                willChange: 'auto',
-                transition: 'all 200ms ease-in-out'
-              }}
-              onClick={() => {
-                // Focus the editor when clicking the container
-                const editorElement = document.querySelector('[contenteditable="true"]');
-                if (editorElement) {
-                  (editorElement as HTMLElement).focus();
-                }
-              }}
+              className="animate-in fade-in-0 duration-300"
+              style={{ contain: 'layout style paint' }}
             >
-              <div
-                className="animate-in fade-in-0 duration-300"
-                style={{ contain: 'layout style paint' }}
-              >
-                <PageProvider>
-                  <ContentDisplay
-                    content={editorState}
-                    isEditable={true}
-                    onChange={handleContentChange}
-                    isSaving={isSaving}
-                    error={error || ""}
-                    isNewPage={true}
-                    placeholder={customPlaceholder}
-                    showToolbar={false}
-                    onInsertLinkRequest={handleInsertLinkRequest}
-                  />
-                </PageProvider>
-              </div>
+              <PageProvider>
+                <ContentDisplay
+                  content={editorState}
+                  isEditable={true}
+                  onChange={handleContentChange}
+                  isSaving={isSaving}
+                  error={error || ""}
+                  isNewPage={true}
+                  placeholder={customPlaceholder}
+                  showToolbar={false}
+                  onInsertLinkRequest={handleInsertLinkRequest}
+                />
+              </PageProvider>
             </div>
           )}
 

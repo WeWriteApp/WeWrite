@@ -84,8 +84,9 @@
 
 /**
  * Slate Editor Editable Area
- * 
+ *
  * Styles for the actual Slate.js editable content area.
+ * Now works with wewrite-input container styling.
  */
 .wewrite-slate-editable {
   @apply min-h-[200px] focus:outline-none max-w-none;
@@ -98,10 +99,12 @@
   /* Ensure proper text color */
   color: inherit;
 
-  /* Clean appearance */
-  background: transparent;
-  border: none;
-  outline: none;
+  /* Clean appearance - let container handle styling */
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 
   /* PREVENT FLICKER: Stable height and containment */
   contain: layout style paint;

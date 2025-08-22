@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../providers/AuthProvider';
+import { useSubscription } from './SubscriptionContext';
 import { hexToOklch, formatOklchForCSSVar } from '../lib/oklch-utils';
 
 // Background types
@@ -131,6 +132,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
   const [lastUploadedImage, setLastUploadedImage] = useState<string | null>(null);
   const { theme, resolvedTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Ref to store the debounce timeout
@@ -159,35 +161,75 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
           // Load from database for authenticated users
           try {
+            console.log('[AppBackground] Fetching background preference for user:', currentUserId);
             const response = await fetch('/api/user/background-preference', {
               method: 'GET',
               credentials: 'include'
             });
 
+            console.log('[AppBackground] API response status:', response.status);
             if (response.ok) {
               const data = await response.json();
+              console.log('[AppBackground] API response data:', data);
 
               // Always store the uploaded image if it exists
               if (data.backgroundImage?.url) {
+                console.log('[AppBackground] Found uploaded image:', data.backgroundImage.url);
                 setLastUploadedImage(data.backgroundImage.url);
+              } else {
+                console.log('[AppBackground] No uploaded image found');
               }
 
               // Apply the user's preference (solid color or image)
               if (data.backgroundPreference) {
+                console.log('[AppBackground] Found background preference:', data.backgroundPreference);
                 if (data.backgroundPreference.type === 'image' && data.backgroundPreference.data) {
-                  // Use the saved preference data directly, which contains the full image background object
-                  setBackground(data.backgroundPreference.data);
+                  // Check subscription status before loading image background
+                  if (hasActiveSubscription) {
+                    // Use the saved preference data directly, which contains the full image background object
+                    setBackground(data.backgroundPreference.data);
+                    console.log('[AppBackground] Loaded image background from preference:', data.backgroundPreference.data.url);
+                  } else {
+                    // User doesn't have active subscription, fall back to default solid background
+                    console.log('[AppBackground] Image background blocked - no active subscription');
+                    setBackground(DEFAULT_BACKGROUND);
+                  }
                 } else if (data.backgroundPreference.type === 'solid' && data.backgroundPreference.data) {
                   setBackground(data.backgroundPreference.data);
+                  console.log('[AppBackground] Loaded solid background from preference');
                 }
               } else if (data.backgroundImage?.url) {
-                // Fallback: if no preference but image exists, use image
-                const imageBackground: ImageBackground = {
-                  type: 'image',
-                  url: data.backgroundImage.url,
-                  opacity: 0.15
-                };
-                setBackground(imageBackground);
+                // Fallback: if no preference but image exists, check subscription before using
+                if (hasActiveSubscription) {
+                  const imageBackground: ImageBackground = {
+                    type: 'image',
+                    url: data.backgroundImage.url,
+                    opacity: 0.15
+                  };
+                  setBackground(imageBackground);
+                  console.log('[AppBackground] Loaded image background from fallback, saving as preference:', data.backgroundImage.url);
+                } else {
+                  // User doesn't have active subscription, use default background
+                  console.log('[AppBackground] Image background blocked - no active subscription');
+                  setBackground(DEFAULT_BACKGROUND);
+                }
+
+                // Save this as the user's preference for future sessions
+                try {
+                  await fetch('/api/user/background-preference', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                      backgroundType: 'image',
+                      backgroundData: imageBackground
+                    })
+                  });
+                } catch (error) {
+                  console.warn('[AppBackground] Failed to save fallback preference:', error);
+                }
               }
 
               // Mark that we've loaded for this user
@@ -393,6 +435,17 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
     return () => clearTimeout(timeoutId);
   }, [background, cardOpacity, backgroundBlur, resolvedTheme, isInitialized]);
+
+  // Handle subscription changes - reset to default if subscription expires and user has image background
+  useEffect(() => {
+    if (!isInitialized || !isAuthenticated) return;
+
+    // If user doesn't have active subscription and is currently using an image background
+    if (!hasActiveSubscription && background.type === 'image') {
+      console.log('[AppBackground] Subscription expired, resetting image background to default');
+      setBackground(DEFAULT_BACKGROUND);
+    }
+  }, [hasActiveSubscription, background.type, isInitialized, isAuthenticated]);
 
   const resetToDefault = () => {
     setBackground(DEFAULT_BACKGROUND);

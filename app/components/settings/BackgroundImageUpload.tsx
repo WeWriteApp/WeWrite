@@ -124,6 +124,26 @@ export function BackgroundImageUpload({ className }: BackgroundImageUploadProps)
       };
 
       setBackground(newBackground);
+
+      // Save the preference to ensure it persists across sessions
+      try {
+        await fetch('/api/user/background-preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            backgroundType: 'image',
+            backgroundData: newBackground
+          })
+        });
+        console.log('[Background Upload] Background preference saved');
+      } catch (prefError) {
+        console.warn('[Background Upload] Failed to save background preference:', prefError);
+        // Don't fail the upload if preference saving fails
+      }
+
       console.log('[Background Upload] Upload completed successfully');
     } catch (error) {
       console.error('[Background Upload] Upload error:', error);

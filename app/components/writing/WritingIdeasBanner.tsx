@@ -79,7 +79,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
   if (!isExpanded) {
     return (
       <div
-        className="w-full flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:bg-muted/50 transition-colors"
+        className="w-full wewrite-card flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={handleExpand}
       >
         <div className="flex items-center gap-2">

@@ -1555,36 +1555,16 @@ export default function PageView({
               transition: 'padding-top 300ms ease-in-out'
             }}
           >
-            {/* Content container with title-like styling */}
+            {/* Content container - Clean without unnecessary card wrapper */}
             <div className="px-4">
-              <div
-                className={`px-4 py-4 outline-none transition-all duration-200 ${
-                  isEditing && canEdit
-                    ? `wewrite-card ${
-                        isEditorFocused
-                          ? "wewrite-active-card"
-                          : ""
-                      }`
-                    : "bg-transparent border-none"
-                } min-h-[200px] w-full max-w-none`}
-                onClick={() => {
-                  // Focus the editor when clicking the container
-                  if (isEditing && canEdit) {
-                    const editorElement = document.querySelector('[contenteditable="true"]');
-                    if (editorElement) {
-                      (editorElement as HTMLElement).focus();
-                    }
-                  }
-                }}
+              <TextSelectionProvider
+                contentRef={contentRef}
+                enableCopy={true}
+                enableShare={true}
+                enableAddToPage={true}
+                username={user?.username}
               >
-                <TextSelectionProvider
-                  contentRef={contentRef}
-                  enableCopy={true}
-                  enableShare={true}
-                  enableAddToPage={true}
-                  username={user?.username}
-                >
-                  <div ref={contentRef}>
+                <div ref={contentRef}>
                     <UnifiedErrorBoundary fallback={({ error, resetError }) => (
                       <div className="p-4 text-muted-foreground">
                         <p>Unable to display page content. The page may have formatting issues.</p>
@@ -1644,9 +1624,8 @@ export default function PageView({
                       showNotification={true}
                       autoScroll={true}
                     />
-                  </div>
-                </TextSelectionProvider>
-              </div>
+                </div>
+              </TextSelectionProvider>
             </div>
 
             {/* Page Footer with actions - tight spacing */}

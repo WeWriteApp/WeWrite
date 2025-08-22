@@ -403,7 +403,7 @@ export function UsdAllocationModal({
                   placeholder="0.00"
                   value={inputValue}
                   onChange={(e) => handleInputChange(e.target.value)}
-                  className="pl-10"
+                  className="wewrite-input-with-left-icon"
                   disabled={isLoading}
                 />
               </div>

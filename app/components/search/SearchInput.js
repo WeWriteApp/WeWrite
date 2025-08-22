@@ -159,14 +159,14 @@ const SearchInput = ({
 
   return (
     <form onSubmit={handleSubmit} className="mb-8">
-      <div className="relative wewrite-card">
+      <div className="relative">
         <Input
           ref={searchInputRef}
           type="text"
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full pl-10 pr-12 border-0 bg-transparent"
+          className="w-full wewrite-input-with-left-icon wewrite-input-with-right-icon"
           autoComplete="off"
         />
 

@@ -23,7 +23,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
 
   if (loading) {
     return (
-      <div className={`bg-card rounded-lg border p-6 ${className}`}>
+      <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-3 mb-4">
           <Smartphone className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">PWA Status</h3>
@@ -38,7 +38,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
 
   if (!pwaData) {
     return (
-      <div className={`bg-card rounded-lg border p-6 ${className}`}>
+      <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-3 mb-4">
           <Smartphone className="h-5 w-5 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-muted-foreground">PWA Status</h3>
@@ -57,7 +57,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
   const DeviceIcon = getDeviceIcon();
 
   return (
-    <div className={`bg-card rounded-lg border p-6 ${className}`}>
+    <div className={`wewrite-card ${className}`}>
       <div className="flex items-center gap-3 mb-4">
         <DeviceIcon className="h-5 w-5 text-primary" />
         <h3 className="text-lg font-semibold">PWA Status</h3>

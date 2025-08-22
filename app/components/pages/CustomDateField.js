@@ -245,57 +245,27 @@ export default function CustomDateField({
 
         {/* Enhanced Date picker overlay */}
         {showDatePicker && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDatePicker(false)}>
-            <div className="wewrite-card max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <div className="mb-6">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDatePicker(false)}>
+            <div className="wewrite-card max-w-md w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header - Fixed */}
+              <div className="flex-shrink-0 mb-6">
                 <h3 className="text-lg font-semibold mb-2">Select custom date</h3>
                 <p className="text-sm text-muted-foreground">Choose a date for this page</p>
               </div>
 
-              {/* Calendar Interface */}
-              <div className="mb-6">
-                <CalendarGrid
-                  selectedDate={customDate}
-                  onDateSelect={handleCalendarDateSelect}
-                  accentColorValue={accentColorValue}
-                />
-              </div>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto space-y-6">
+                {/* Calendar Interface with Card Container */}
+                <div className="wewrite-card">
+                  <CalendarGrid
+                    selectedDate={customDate}
+                    onDateSelect={handleCalendarDateSelect}
+                    accentColorValue={accentColorValue}
+                  />
+                </div>
 
-              {/* Quick Today Button */}
-              <div className="mb-4">
-                <button
-                  onClick={() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    if (onCustomDateChange) {
-                      onCustomDateChange(today);
-                    }
-                    setShowDatePicker(false);
-                  }}
-                  className="w-full px-4 py-2 text-sm font-medium rounded-md transition-colors"
-                  style={{
-                    backgroundColor: accentColorValue,
-                    color: 'white'
-                  }}
-                >
-                  Select Today
-                </button>
-              </div>
-
-              {/* Date input field for manual entry */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Or enter date manually (YYYY-MM-DD):</label>
-                <input
-                  type="date"
-                  value={customDate || ''}
-                  onChange={handleDateChange}
-                  className="wewrite-input w-full px-3 py-2 rounded-md"
-                />
-              </div>
-
-              {/* Quick action buttons */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Quick actions:</label>
-                <div className="flex gap-2">
+                {/* Quick Today Button */}
+                <div>
                   <button
                     onClick={() => {
                       const today = new Date().toISOString().split('T')[0];
@@ -304,47 +274,93 @@ export default function CustomDateField({
                       }
                       setShowDatePicker(false);
                     }}
-                    className="px-3 py-2 text-sm border border-border rounded hover:bg-muted flex-1"
+                    className="w-full px-4 py-2 text-sm font-medium rounded-md transition-colors"
                     style={{
-                      borderColor: accentColorValue + '40',
-                      color: accentColorValue
+                      backgroundColor: accentColorValue,
+                      color: 'white'
                     }}
                   >
-                    Today
+                    Select Today
                   </button>
-                  <button
-                    onClick={() => {
-                      const yesterday = new Date();
-                      yesterday.setDate(yesterday.getDate() - 1);
-                      const yesterdayString = yesterday.toISOString().split('T')[0];
-                      if (onCustomDateChange) {
-                        onCustomDateChange(yesterdayString);
-                      }
-                      setShowDatePicker(false);
-                    }}
-                    className="px-3 py-2 text-sm border border-border rounded hover:bg-muted flex-1"
-                  >
-                    Yesterday
-                  </button>
+                </div>
+
+                {/* Date input field for manual entry */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Or enter date manually (YYYY-MM-DD):</label>
+                  <input
+                    type="date"
+                    value={customDate || ''}
+                    onChange={handleDateChange}
+                    className="wewrite-input w-full px-3 py-2 rounded-md"
+                  />
+                </div>
+
+                {/* Quick action buttons */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Quick actions:</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        if (onCustomDateChange) {
+                          onCustomDateChange(today);
+                        }
+                        setShowDatePicker(false);
+                      }}
+                      className="px-3 py-2 text-sm border border-border rounded hover:bg-muted flex-1"
+                      style={{
+                        borderColor: accentColorValue + '40',
+                        color: accentColorValue
+                      }}
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => {
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const yesterdayString = yesterday.toISOString().split('T')[0];
+                        if (onCustomDateChange) {
+                          onCustomDateChange(yesterdayString);
+                        }
+                        setShowDatePicker(false);
+                      }}
+                      className="px-3 py-2 text-sm border border-border rounded hover:bg-muted flex-1"
+                    >
+                      Yesterday
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-2 justify-end">
-                {customDate && (
+              {/* Sticky Action Buttons */}
+              <div className="flex-shrink-0 border-t border-neutral-20 pt-4 mt-4 bg-[var(--card-bg)] backdrop-blur-md">
+                <div className="flex gap-2 justify-end">
+                  {customDate && (
+                    <button
+                      onClick={handleClearDate}
+                      className="px-4 py-2 text-sm border border-destructive text-destructive rounded hover:bg-destructive/10"
+                    >
+                      Clear
+                    </button>
+                  )}
                   <button
-                    onClick={handleClearDate}
-                    className="px-4 py-2 text-sm border border-destructive text-destructive rounded hover:bg-destructive/10"
+                    onClick={() => setShowDatePicker(false)}
+                    className="px-4 py-2 text-sm border border-border rounded hover:bg-muted"
                   >
-                    Clear
+                    Cancel
                   </button>
-                )}
-                <button
-                  onClick={() => setShowDatePicker(false)}
-                  className="px-4 py-2 text-sm border border-border rounded hover:bg-muted"
-                >
-                  Cancel
-                </button>
+                  <button
+                    onClick={() => setShowDatePicker(false)}
+                    className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+                    style={{
+                      backgroundColor: accentColorValue,
+                      color: 'white'
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
             </div>
           </div>

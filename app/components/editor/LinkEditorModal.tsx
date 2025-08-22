@@ -6,11 +6,11 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
-import { Link, ExternalLink, Users, FileText } from 'lucide-react';
+import { Link, ExternalLink, Users, FileText, X } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '../ui/dialog';
 
 interface LinkEditorModalProps {
   isOpen: boolean;
@@ -33,12 +33,7 @@ export default function LinkEditorModal({
   selectedText = '',
   linkedPageIds = []
 }: LinkEditorModalProps) {
-  console.log('🔗 LINK_MODAL: Component rendered with props:', {
-    isOpen,
-    selectedText,
-    hasOnClose: !!onClose,
-    hasOnInsertLink: !!onInsertLink
-  });
+
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('pages');
   const [externalUrl, setExternalUrl] = useState('');
@@ -56,9 +51,7 @@ export default function LinkEditorModal({
 
   // Reset state when modal opens/closes
   useEffect(() => {
-    console.log('🔗 LINK_MODAL: useEffect triggered, isOpen:', isOpen);
     if (isOpen) {
-      console.log('🔗 LINK_MODAL: Modal is opening, selectedText:', selectedText);
       if (editingLink) {
         // Pre-populate fields when editing
         const { type, data } = editingLink;
@@ -132,10 +125,30 @@ export default function LinkEditorModal({
   // Handle page selection from search results
   const handlePageSelect = (page: any) => {
     setSelectedPage(page);
-    
+
     // If custom text is not enabled, use the page title as display text
     if (!customText) {
       setDisplayText(page.title || '');
+    }
+
+    // If custom text is not enabled, create the link immediately
+    if (!customText) {
+      const linkData = {
+        type: showAuthor ? 'compound' : 'page',
+        pageId: page.id,
+        pageTitle: page.title,
+        text: '',
+        showAuthor,
+        authorUsername: page.username,
+        isEditing,
+        element: editingLink?.element,
+        isNew: page.isNew // For creating new pages
+      };
+
+      if (typeof onInsertLink === 'function') {
+        onInsertLink(linkData);
+      }
+      onClose();
     }
   };
 
@@ -193,15 +206,19 @@ export default function LinkEditorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      console.log('🔗 LINK_MODAL: Dialog onOpenChange called with:', open);
+  
       if (!open) {
         console.log('🔗 LINK_MODAL: Dialog wants to close, calling onClose');
         onClose();
       }
     }}>
       <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
+        <DialogHeader className="relative">
           <DialogTitle>{modalTitle}</DialogTitle>
+          <DialogClose className="absolute right-0 top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
         </DialogHeader>
         <div className="space-y-4">
         {/* Custom Link Text - Above tabs and persistent */}
@@ -268,6 +285,11 @@ export default function LinkEditorModal({
                 linkedPageIds={linkedPageIds}
               />
             </div>
+            {!customText && (
+              <p className="text-xs text-muted-foreground text-center">
+                Click on a page to create link immediately
+              </p>
+            )}
           </SegmentedControlContent>
 
           <SegmentedControlContent value="external" className="space-y-4">
@@ -278,6 +300,12 @@ export default function LinkEditorModal({
                 id="external-url"
                 value={externalUrl}
                 onChange={(e) => setExternalUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && externalUrl.trim() && !customText) {
+                    e.preventDefault();
+                    handleCreateExternalLink();
+                  }
+                }}
                 onPaste={(e) => {
                   // Ensure paste events are handled properly in the modal
                   e.stopPropagation();
@@ -285,28 +313,32 @@ export default function LinkEditorModal({
                 placeholder="https://example.com"
                 autoFocus={activeTab === 'external'}
               />
+              {!customText && externalUrl.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Press Enter to create link
+                </p>
+              )}
             </div>
           </SegmentedControlContent>
         </SegmentedControl>
 
-        {/* Footer Buttons */}
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Cancel
-          </Button>
-          <Button
-            onClick={activeTab === 'external' ? handleCreateExternalLink : handleCreatePageLink}
-            disabled={
-              activeTab === 'external'
-                ? !externalUrl.trim()
-                : !selectedPage
-            }
-            className="w-full sm:w-auto"
-          >
-            <Link className="h-4 w-4 mr-2" />
-            {buttonText}
-          </Button>
-        </div>
+        {/* Footer Buttons - Only show when custom text is enabled or for external links */}
+        {(customText || activeTab === 'external') && (
+          <div className="flex justify-end pt-4">
+            <Button
+              onClick={activeTab === 'external' ? handleCreateExternalLink : handleCreatePageLink}
+              disabled={
+                activeTab === 'external'
+                  ? !externalUrl.trim()
+                  : !selectedPage
+              }
+              className="w-full sm:w-auto"
+            >
+              <Link className="h-4 w-4 mr-2" />
+              {isEditing ? 'Update Link' : 'Save'}
+            </Button>
+          </div>
+        )}
         </div>
       </DialogContent>
     </Dialog>

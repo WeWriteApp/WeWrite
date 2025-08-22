@@ -986,6 +986,14 @@ input[type="range"]::-moz-range-thumb,
     --warn-base: 0.72 0.15 72; /* Orange */
     --error-base: 0.55 0.15 28; /* Red */
 
+    /* Hover variants - darker in light mode */
+    --accent-90: var(--primary); /* Will be overridden by theme-aware hover */
+    --accent-110: var(--primary); /* Will be overridden by theme-aware hover */
+    --success-90: 0.50 0.15 142; /* Darker green */
+    --success-110: 0.60 0.15 142; /* Brighter green */
+    --error-90: 0.50 0.15 28; /* Darker red */
+    --error-110: 0.60 0.15 28; /* Brighter red */
+
     /* Focus indicator variables */
     --focus-ring-color: var(--accent-base);
     --focus-ring-width: 2px;
@@ -1200,32 +1208,9 @@ iframe[src*="js.stripe.com"] {
   background-color: hsl(var(--muted) / 0.5);
 }
 
-/* Base styling for WeWrite inputs */
-.wewrite-input {
-  border: 1px solid hsl(var(--border) / 0.4);
-  transition: all 0.2s ease-in-out;
-}
+/* Base styling for WeWrite inputs - now handled by glassmorphic input system below */
 
-.wewrite-input:hover {
-  border-color: hsl(var(--border) / 0.6);
-}
 
-/* Focus states for inputs using active card style */
-.wewrite-input:focus,
-.wewrite-input:focus-within {
-  border: 1px solid oklch(var(--accent-70)) !important;
-  background-color: oklch(var(--accent-10)) !important;
-  outline: none;
-  box-shadow: 0 0 0 3px oklch(var(--accent-70) / 0.1);
-}
-
-/* Override wewrite-input styles for elements that use wewrite-card */
-.wewrite-card.wewrite-input,
-.wewrite-card:not(.wewrite-input) {
-  /* Let wewrite-card handle all styling - don't apply wewrite-input styles */
-  border: 1px solid var(--card-border) !important;
-  background-color: var(--card-bg) !important;
-}
 
 .wewrite-card.wewrite-input:hover,
 .wewrite-card:not(.wewrite-input):hover {
@@ -1233,70 +1218,130 @@ iframe[src*="js.stripe.com"] {
   background-color: var(--card-bg-hover) !important;
 }
 
-/* Title input specific styling - override ALL default textarea styles */
+/* Title input specific styling - works with wewrite-input glassmorphic system */
 .wewrite-title-input {
-  /* Reset all default textarea/input styling */
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
+  /* Title-specific typography - let wewrite-input handle background/border */
+  font-weight: 600 !important;
+  text-align: center !important;
 
-  /* Override Tailwind base styles completely */
-  border: none !important;
-  background: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-
-  /* Let wewrite-card handle all visual styling */
-  padding: 0 !important;
-  margin: 0 !important;
-
-  /* Ensure proper text rendering */
-  font-family: inherit !important;
-  color: inherit !important;
-
-  /* Remove any default focus styles */
-  ring: none !important;
-  ring-offset: none !important;
-
-  /* Override any Tailwind utilities that might interfere */
-  border-width: 0 !important;
-  border-style: none !important;
-  border-color: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
+  /* Override default textarea min-height for title inputs */
+  min-height: 40px !important;
 }
 
-/* Ensure wewrite-card styles take precedence for title input - maximum specificity */
-textarea.wewrite-title-input.wewrite-card,
-div textarea.wewrite-title-input.wewrite-card,
-h1 textarea.wewrite-title-input.wewrite-card {
-  /* Force card styling to override everything */
-  border: 1px solid var(--card-border) !important;
+/* ===== GLOBAL GLASSMORPHIC INPUT SYSTEM ===== */
+
+/**
+ * Universal WeWrite Input Style
+ *
+ * Provides glassmorphic styling consistent with the card system.
+ * Used for all inputs throughout the app except Stripe embedded inputs.
+ *
+ * Features:
+ * - Glassmorphic background matching card system
+ * - Active state with accent color
+ * - Consistent with global design system
+ * - Theme-aware colors
+ */
+.wewrite-input {
+  /* Base glassmorphic styling matching cards */
   background-color: var(--card-bg) !important;
   backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1)) !important;
   -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1)) !important;
-  border-radius: 1rem !important;
-  padding: 0.5rem 1rem !important;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
+
+  /* Border and styling */
+  border: 1px solid var(--card-border) !important;
+  border-radius: 0.75rem !important; /* Slightly less rounded than cards for input feel */
+
+  /* Text and spacing */
+  color: var(--card-text) !important;
+  padding: 0.75rem 1rem !important;
+
+  /* Transitions */
   transition: all 0.2s ease-in-out !important;
+
+  /* Remove default styling */
+  box-shadow: none !important;
+  outline: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
 }
 
-/* Active state for title input - maximum specificity */
-textarea.wewrite-title-input.wewrite-card.wewrite-active-card,
-div textarea.wewrite-title-input.wewrite-card.wewrite-active-card,
-h1 textarea.wewrite-title-input.wewrite-card.wewrite-active-card {
-  border: 1px solid oklch(var(--accent-70)) !important;
-  background-color: oklch(var(--accent-10)) !important;
-  box-shadow: 0 0 0 3px oklch(var(--accent-70) / 0.1) !important;
+/* Active/Focus state for inputs */
+.wewrite-input:focus,
+.wewrite-input:focus-visible,
+.wewrite-input.wewrite-active-input {
+  border: 1px solid oklch(var(--accent-base)) !important;
+  background-color: oklch(var(--accent-base) / 0.1) !important;
+  box-shadow: 0 0 0 3px oklch(var(--accent-base) / 0.1) !important;
 }
 
-/* Hover state for title input */
-textarea.wewrite-title-input.wewrite-card:hover:not(.wewrite-active-card),
-div textarea.wewrite-title-input.wewrite-card:hover:not(.wewrite-active-card),
-h1 textarea.wewrite-title-input.wewrite-card:hover:not(.wewrite-active-card) {
-  border-color: var(--card-border-hover) !important;
-  background-color: var(--card-bg-hover) !important;
+/* Placeholder styling */
+.wewrite-input::placeholder {
+  color: var(--card-text-muted) !important;
+  opacity: 0.7 !important;
 }
+
+/* Placeholder styling for inputs with left icons */
+.wewrite-input.pl-12::placeholder {
+  text-indent: 0 !important; /* Reset any text-indent */
+  padding-left: 0 !important; /* The pl-12 class already handles the spacing */
+}
+
+/* Specific classes for inputs with icons */
+.wewrite-input-with-left-icon {
+  padding-left: 3rem !important; /* 48px - enough space for icon + padding */
+}
+
+.wewrite-input-with-left-icon::placeholder {
+  text-indent: 0 !important;
+  padding-left: 0 !important;
+}
+
+.wewrite-input-with-right-icon {
+  padding-right: 3rem !important; /* 48px - enough space for icon + padding */
+}
+
+.wewrite-input-with-right-icon::placeholder {
+  text-indent: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Disabled state */
+.wewrite-input:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* Textarea specific adjustments */
+textarea.wewrite-input {
+  min-height: 80px !important;
+  resize: none !important;
+}
+
+/* Override any conflicting Tailwind styles */
+input.wewrite-input,
+textarea.wewrite-input,
+select.wewrite-input {
+  /* Force our styling to take precedence */
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+}
+
+/* Ensure focus states work properly */
+input.wewrite-input:focus,
+textarea.wewrite-input:focus,
+select.wewrite-input:focus,
+input.wewrite-input:focus-visible,
+textarea.wewrite-input:focus-visible,
+select.wewrite-input:focus-visible {
+  border: 1px solid oklch(var(--accent-base)) !important;
+  background-color: oklch(var(--accent-base) / 0.1) !important;
+  box-shadow: 0 0 0 3px oklch(var(--accent-base) / 0.1) !important;
+  outline: none !important;
+}
+
+/* Title input hover state is now handled by wewrite-input system */
 
 /* High contrast mode styling */
 html[data-high-contrast="true"] .wewrite-card,
@@ -2113,9 +2158,20 @@ button.bg-transparent[type] {
 /* Systematic Color System - Opacity-based Utility Classes */
 
 /* Accent Colors (accent-n) */
+.bg-accent-5 { background-color: oklch(var(--accent-base) / 0.05) !important; }
 .bg-accent-10 { background-color: oklch(var(--accent-base) / 0.1) !important; }
+.bg-accent-15 { background-color: oklch(var(--accent-base) / 0.15) !important; }
 .bg-accent-20 { background-color: oklch(var(--accent-base) / 0.2) !important; }
+.bg-accent-25 { background-color: oklch(var(--accent-base) / 0.25) !important; }
 .bg-accent-30 { background-color: oklch(var(--accent-base) / 0.3) !important; }
+.bg-accent-35 { background-color: oklch(var(--accent-base) / 0.35) !important; }
+.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
+.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7) !important; }
+.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8) !important; }
+.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
+.bg-accent-110 { background-color: oklch(var(--accent-base) / 1.1) !important; }
+.bg-accent-120 { background-color: oklch(var(--accent-base) / 1.2) !important; }
+.bg-accent-140 { background-color: oklch(var(--accent-base) / 1.4) !important; }
 .bg-accent-40 { background-color: oklch(var(--accent-base) / 0.4) !important; }
 .bg-accent-50 { background-color: oklch(var(--accent-base) / 0.5) !important; }
 .bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
@@ -2124,20 +2180,102 @@ button.bg-transparent[type] {
 .bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
 .bg-accent-100 { background-color: oklch(var(--accent-base)) !important; }
 
-/* Neutral Colors (neutral-n) */
-.bg-neutral-10 { background-color: oklch(var(--neutral-base) / 0.1) !important; }
-.bg-neutral-20 { background-color: oklch(var(--neutral-base) / 0.2) !important; }
-.bg-neutral-30 { background-color: oklch(var(--neutral-base) / 0.3) !important; }
-.bg-neutral-40 { background-color: oklch(var(--neutral-base) / 0.4) !important; }
-.bg-neutral-50 { background-color: oklch(var(--neutral-base) / 0.5) !important; }
-.bg-neutral-60 { background-color: oklch(var(--neutral-base) / 0.6) !important; }
-.bg-neutral-70 { background-color: oklch(var(--neutral-base) / 0.7) !important; }
-.bg-neutral-80 { background-color: oklch(var(--neutral-base) / 0.8) !important; }
+/* Complete Background Color System - 1% to 100% opacity for all tokens */
+
+/* Accent Background Colors */
+.bg-accent { background-color: oklch(var(--accent-base)) !important; }
+.bg-accent-100 { background-color: oklch(var(--accent-base)) !important; }
+.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
+.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8) !important; }
+.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7) !important; }
+.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
+.bg-accent-50 { background-color: oklch(var(--accent-base) / 0.5) !important; }
+.bg-accent-40 { background-color: oklch(var(--accent-base) / 0.4) !important; }
+.bg-accent-30 { background-color: oklch(var(--accent-base) / 0.3) !important; }
+.bg-accent-25 { background-color: oklch(var(--accent-base) / 0.25) !important; }
+.bg-accent-20 { background-color: oklch(var(--accent-base) / 0.2) !important; }
+.bg-accent-15 { background-color: oklch(var(--accent-base) / 0.15) !important; }
+.bg-accent-10 { background-color: oklch(var(--accent-base) / 0.1) !important; }
+.bg-accent-5 { background-color: oklch(var(--accent-base) / 0.05) !important; }
+.bg-accent-1 { background-color: oklch(var(--accent-base) / 0.01) !important; }
+
+/* Neutral Background Colors */
+.bg-neutral { background-color: oklch(var(--neutral-base)) !important; }
+.bg-neutral-100 { background-color: oklch(var(--neutral-base)) !important; }
 .bg-neutral-90 { background-color: oklch(var(--neutral-base) / 0.9) !important; }
+.bg-neutral-80 { background-color: oklch(var(--neutral-base) / 0.8) !important; }
+.bg-neutral-70 { background-color: oklch(var(--neutral-base) / 0.7) !important; }
+.bg-neutral-60 { background-color: oklch(var(--neutral-base) / 0.6) !important; }
+.bg-neutral-50 { background-color: oklch(var(--neutral-base) / 0.5) !important; }
+.bg-neutral-40 { background-color: oklch(var(--neutral-base) / 0.4) !important; }
+.bg-neutral-30 { background-color: oklch(var(--neutral-base) / 0.3) !important; }
+.bg-neutral-25 { background-color: oklch(var(--neutral-base) / 0.25) !important; }
+.bg-neutral-20 { background-color: oklch(var(--neutral-base) / 0.2) !important; }
+.bg-neutral-15 { background-color: oklch(var(--neutral-base) / 0.15) !important; }
+.bg-neutral-10 { background-color: oklch(var(--neutral-base) / 0.1) !important; }
+.bg-neutral-5 { background-color: oklch(var(--neutral-base) / 0.05) !important; }
+.bg-neutral-1 { background-color: oklch(var(--neutral-base) / 0.01) !important; }
+
+/* Success Background Colors */
+.bg-success { background-color: oklch(var(--success-base)) !important; }
+.bg-success-100 { background-color: oklch(var(--success-base)) !important; }
+.bg-success-90 { background-color: oklch(var(--success-base) / 0.9) !important; }
+.bg-success-80 { background-color: oklch(var(--success-base) / 0.8) !important; }
+.bg-success-70 { background-color: oklch(var(--success-base) / 0.7) !important; }
+.bg-success-60 { background-color: oklch(var(--success-base) / 0.6) !important; }
+.bg-success-50 { background-color: oklch(var(--success-base) / 0.5) !important; }
+.bg-success-40 { background-color: oklch(var(--success-base) / 0.4) !important; }
+.bg-success-30 { background-color: oklch(var(--success-base) / 0.3) !important; }
+.bg-success-25 { background-color: oklch(var(--success-base) / 0.25) !important; }
+.bg-success-20 { background-color: oklch(var(--success-base) / 0.2) !important; }
+.bg-success-15 { background-color: oklch(var(--success-base) / 0.15) !important; }
+.bg-success-10 { background-color: oklch(var(--success-base) / 0.1) !important; }
+.bg-success-5 { background-color: oklch(var(--success-base) / 0.05) !important; }
+.bg-success-1 { background-color: oklch(var(--success-base) / 0.01) !important; }
+
+/* Warning Background Colors */
+.bg-warn { background-color: oklch(var(--warn-base)) !important; }
+.bg-warn-100 { background-color: oklch(var(--warn-base)) !important; }
+.bg-warn-90 { background-color: oklch(var(--warn-base) / 0.9) !important; }
+.bg-warn-80 { background-color: oklch(var(--warn-base) / 0.8) !important; }
+.bg-warn-70 { background-color: oklch(var(--warn-base) / 0.7) !important; }
+.bg-warn-60 { background-color: oklch(var(--warn-base) / 0.6) !important; }
+.bg-warn-50 { background-color: oklch(var(--warn-base) / 0.5) !important; }
+.bg-warn-40 { background-color: oklch(var(--warn-base) / 0.4) !important; }
+.bg-warn-30 { background-color: oklch(var(--warn-base) / 0.3) !important; }
+.bg-warn-25 { background-color: oklch(var(--warn-base) / 0.25) !important; }
+.bg-warn-20 { background-color: oklch(var(--warn-base) / 0.2) !important; }
+.bg-warn-15 { background-color: oklch(var(--warn-base) / 0.15) !important; }
+.bg-warn-10 { background-color: oklch(var(--warn-base) / 0.1) !important; }
+.bg-warn-5 { background-color: oklch(var(--warn-base) / 0.05) !important; }
+.bg-warn-1 { background-color: oklch(var(--warn-base) / 0.01) !important; }
+
+/* Error Background Colors */
+.bg-error { background-color: oklch(var(--error-base)) !important; }
+.bg-error-100 { background-color: oklch(var(--error-base)) !important; }
+.bg-error-90 { background-color: oklch(var(--error-base) / 0.9) !important; }
+.bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
+.bg-error-70 { background-color: oklch(var(--error-base) / 0.7) !important; }
+.bg-error-60 { background-color: oklch(var(--error-base) / 0.6) !important; }
+.bg-error-50 { background-color: oklch(var(--error-base) / 0.5) !important; }
+.bg-error-40 { background-color: oklch(var(--error-base) / 0.4) !important; }
+.bg-error-30 { background-color: oklch(var(--error-base) / 0.3) !important; }
+.bg-error-25 { background-color: oklch(var(--error-base) / 0.25) !important; }
+.bg-error-20 { background-color: oklch(var(--error-base) / 0.2) !important; }
+.bg-error-15 { background-color: oklch(var(--error-base) / 0.15) !important; }
+.bg-error-10 { background-color: oklch(var(--error-base) / 0.1) !important; }
+.bg-error-5 { background-color: oklch(var(--error-base) / 0.05) !important; }
+.bg-error-1 { background-color: oklch(var(--error-base) / 0.01) !important; }
 
 /* Success Colors (success-n) */
 .bg-success-10 { background-color: oklch(var(--success-base) / 0.1) !important; }
+.bg-success-15 { background-color: oklch(var(--success-base) / 0.15) !important; }
 .bg-success-20 { background-color: oklch(var(--success-base) / 0.2) !important; }
+.bg-success-25 { background-color: oklch(var(--success-base) / 0.25) !important; }
+.bg-success-70 { background-color: oklch(var(--success-base) / 0.7) !important; }
+.bg-success-80 { background-color: oklch(var(--success-base) / 0.8) !important; }
+.bg-success-120 { background-color: oklch(var(--success-base) / 1.2) !important; }
+.bg-success-140 { background-color: oklch(var(--success-base) / 1.4) !important; }
 .bg-success-30 { background-color: oklch(var(--success-base) / 0.3) !important; }
 .bg-success-40 { background-color: oklch(var(--success-base) / 0.4) !important; }
 .bg-success-50 { background-color: oklch(var(--success-base) / 0.5) !important; }
@@ -2159,7 +2297,13 @@ button.bg-transparent[type] {
 
 /* Error Colors (error-n) */
 .bg-error-10 { background-color: oklch(var(--error-base) / 0.1) !important; }
+.bg-error-15 { background-color: oklch(var(--error-base) / 0.15) !important; }
 .bg-error-20 { background-color: oklch(var(--error-base) / 0.2) !important; }
+.bg-error-25 { background-color: oklch(var(--error-base) / 0.25) !important; }
+.bg-error-70 { background-color: oklch(var(--error-base) / 0.7) !important; }
+.bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
+.bg-error-120 { background-color: oklch(var(--error-base) / 1.2) !important; }
+.bg-error-140 { background-color: oklch(var(--error-base) / 1.4) !important; }
 .bg-error-30 { background-color: oklch(var(--error-base) / 0.3) !important; }
 .bg-error-40 { background-color: oklch(var(--error-base) / 0.4) !important; }
 .bg-error-50 { background-color: oklch(var(--error-base) / 0.5) !important; }
@@ -2168,31 +2312,267 @@ button.bg-transparent[type] {
 .bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
 .bg-error-90 { background-color: oklch(var(--error-base) / 0.9) !important; }
 
-/* Border Colors */
-.border-accent-70 { border-color: oklch(var(--accent-base) / 0.7) !important; }
-.border-accent-100 { border-color: oklch(var(--accent-base)) !important; }
-.border-neutral-10 { border-color: oklch(var(--neutral-base) / 0.1) !important; }
-.border-neutral-15 { border-color: oklch(var(--neutral-base) / 0.15) !important; }
-.border-neutral-20 { border-color: oklch(var(--neutral-base) / 0.2) !important; }
-.border-neutral-30 { border-color: oklch(var(--neutral-base) / 0.3) !important; }
+/* Complete Border Color System - 1% to 100% opacity for all tokens */
 
-/* Text Colors */
+/* Accent Border Colors */
+.border-accent { border-color: oklch(var(--accent-base)) !important; }
+.border-accent-100 { border-color: oklch(var(--accent-base)) !important; }
+.border-accent-90 { border-color: oklch(var(--accent-base) / 0.9) !important; }
+.border-accent-80 { border-color: oklch(var(--accent-base) / 0.8) !important; }
+.border-accent-70 { border-color: oklch(var(--accent-base) / 0.7) !important; }
+.border-accent-60 { border-color: oklch(var(--accent-base) / 0.6) !important; }
+.border-accent-50 { border-color: oklch(var(--accent-base) / 0.5) !important; }
+.border-accent-40 { border-color: oklch(var(--accent-base) / 0.4) !important; }
+.border-accent-30 { border-color: oklch(var(--accent-base) / 0.3) !important; }
+.border-accent-25 { border-color: oklch(var(--accent-base) / 0.25) !important; }
+.border-accent-20 { border-color: oklch(var(--accent-base) / 0.2) !important; }
+.border-accent-15 { border-color: oklch(var(--accent-base) / 0.15) !important; }
+.border-accent-10 { border-color: oklch(var(--accent-base) / 0.1) !important; }
+.border-accent-5 { border-color: oklch(var(--accent-base) / 0.05) !important; }
+.border-accent-1 { border-color: oklch(var(--accent-base) / 0.01) !important; }
+
+/* Neutral Border Colors */
+.border-neutral { border-color: oklch(var(--neutral-base)) !important; }
+.border-neutral-100 { border-color: oklch(var(--neutral-base)) !important; }
+.border-neutral-90 { border-color: oklch(var(--neutral-base) / 0.9) !important; }
+.border-neutral-80 { border-color: oklch(var(--neutral-base) / 0.8) !important; }
+.border-neutral-70 { border-color: oklch(var(--neutral-base) / 0.7) !important; }
+.border-neutral-60 { border-color: oklch(var(--neutral-base) / 0.6) !important; }
+.border-neutral-50 { border-color: oklch(var(--neutral-base) / 0.5) !important; }
+.border-neutral-40 { border-color: oklch(var(--neutral-base) / 0.4) !important; }
+.border-neutral-30 { border-color: oklch(var(--neutral-base) / 0.3) !important; }
+.border-neutral-25 { border-color: oklch(var(--neutral-base) / 0.25) !important; }
+.border-neutral-20 { border-color: oklch(var(--neutral-base) / 0.2) !important; }
+.border-neutral-15 { border-color: oklch(var(--neutral-base) / 0.15) !important; }
+.border-neutral-10 { border-color: oklch(var(--neutral-base) / 0.1) !important; }
+.border-neutral-5 { border-color: oklch(var(--neutral-base) / 0.05) !important; }
+.border-neutral-1 { border-color: oklch(var(--neutral-base) / 0.01) !important; }
+
+/* Success Border Colors */
+.border-success { border-color: oklch(var(--success-base)) !important; }
+.border-success-100 { border-color: oklch(var(--success-base)) !important; }
+.border-success-90 { border-color: oklch(var(--success-base) / 0.9) !important; }
+.border-success-80 { border-color: oklch(var(--success-base) / 0.8) !important; }
+.border-success-70 { border-color: oklch(var(--success-base) / 0.7) !important; }
+.border-success-60 { border-color: oklch(var(--success-base) / 0.6) !important; }
+.border-success-50 { border-color: oklch(var(--success-base) / 0.5) !important; }
+.border-success-40 { border-color: oklch(var(--success-base) / 0.4) !important; }
+.border-success-30 { border-color: oklch(var(--success-base) / 0.3) !important; }
+.border-success-25 { border-color: oklch(var(--success-base) / 0.25) !important; }
+.border-success-20 { border-color: oklch(var(--success-base) / 0.2) !important; }
+.border-success-15 { border-color: oklch(var(--success-base) / 0.15) !important; }
+.border-success-10 { border-color: oklch(var(--success-base) / 0.1) !important; }
+.border-success-5 { border-color: oklch(var(--success-base) / 0.05) !important; }
+.border-success-1 { border-color: oklch(var(--success-base) / 0.01) !important; }
+
+/* Warning Border Colors */
+.border-warn { border-color: oklch(var(--warn-base)) !important; }
+.border-warn-100 { border-color: oklch(var(--warn-base)) !important; }
+.border-warn-90 { border-color: oklch(var(--warn-base) / 0.9) !important; }
+.border-warn-80 { border-color: oklch(var(--warn-base) / 0.8) !important; }
+.border-warn-70 { border-color: oklch(var(--warn-base) / 0.7) !important; }
+.border-warn-60 { border-color: oklch(var(--warn-base) / 0.6) !important; }
+.border-warn-50 { border-color: oklch(var(--warn-base) / 0.5) !important; }
+.border-warn-40 { border-color: oklch(var(--warn-base) / 0.4) !important; }
+.border-warn-30 { border-color: oklch(var(--warn-base) / 0.3) !important; }
+.border-warn-25 { border-color: oklch(var(--warn-base) / 0.25) !important; }
+.border-warn-20 { border-color: oklch(var(--warn-base) / 0.2) !important; }
+.border-warn-15 { border-color: oklch(var(--warn-base) / 0.15) !important; }
+.border-warn-10 { border-color: oklch(var(--warn-base) / 0.1) !important; }
+.border-warn-5 { border-color: oklch(var(--warn-base) / 0.05) !important; }
+.border-warn-1 { border-color: oklch(var(--warn-base) / 0.01) !important; }
+
+/* Error Border Colors */
+.border-error { border-color: oklch(var(--error-base)) !important; }
+.border-error-100 { border-color: oklch(var(--error-base)) !important; }
+.border-error-90 { border-color: oklch(var(--error-base) / 0.9) !important; }
+.border-error-80 { border-color: oklch(var(--error-base) / 0.8) !important; }
+.border-error-70 { border-color: oklch(var(--error-base) / 0.7) !important; }
+.border-error-60 { border-color: oklch(var(--error-base) / 0.6) !important; }
+.border-error-50 { border-color: oklch(var(--error-base) / 0.5) !important; }
+.border-error-40 { border-color: oklch(var(--error-base) / 0.4) !important; }
+.border-error-30 { border-color: oklch(var(--error-base) / 0.3) !important; }
+.border-error-25 { border-color: oklch(var(--error-base) / 0.25) !important; }
+.border-error-20 { border-color: oklch(var(--error-base) / 0.2) !important; }
+.border-error-15 { border-color: oklch(var(--error-base) / 0.15) !important; }
+.border-error-10 { border-color: oklch(var(--error-base) / 0.1) !important; }
+.border-error-5 { border-color: oklch(var(--error-base) / 0.05) !important; }
+.border-error-1 { border-color: oklch(var(--error-base) / 0.01) !important; }
+
+/* Complete Text Color System - 1% to 100% opacity for all tokens */
+
+/* Accent Text Colors */
 .text-accent { color: oklch(var(--accent-base)) !important; }
 .text-accent-100 { color: oklch(var(--accent-base)) !important; }
+.text-accent-90 { color: oklch(var(--accent-base) / 0.9) !important; }
+.text-accent-80 { color: oklch(var(--accent-base) / 0.8) !important; }
 .text-accent-70 { color: oklch(var(--accent-base) / 0.7) !important; }
-.text-neutral { color: oklch(var(--neutral-base)) !important; }
-.text-neutral-15 { color: oklch(var(--neutral-base) / 0.15) !important; }
-.text-neutral-20 { color: oklch(var(--neutral-base) / 0.20) !important; }
-.text-success { color: oklch(var(--success-base)) !important; }
-.text-warn { color: oklch(var(--warn-base)) !important; }
-.text-error { color: oklch(var(--error-base)) !important; }
+.text-accent-60 { color: oklch(var(--accent-base) / 0.6) !important; }
+.text-accent-50 { color: oklch(var(--accent-base) / 0.5) !important; }
+.text-accent-40 { color: oklch(var(--accent-base) / 0.4) !important; }
+.text-accent-30 { color: oklch(var(--accent-base) / 0.3) !important; }
+.text-accent-20 { color: oklch(var(--accent-base) / 0.2) !important; }
+.text-accent-15 { color: oklch(var(--accent-base) / 0.15) !important; }
+.text-accent-10 { color: oklch(var(--accent-base) / 0.1) !important; }
+.text-accent-5 { color: oklch(var(--accent-base) / 0.05) !important; }
+.text-accent-1 { color: oklch(var(--accent-base) / 0.01) !important; }
 
-/* Full Opacity Background Colors */
-.bg-accent { background-color: oklch(var(--accent-base)) !important; }
-.bg-neutral { background-color: oklch(var(--neutral-base)) !important; }
-.bg-success { background-color: oklch(var(--success-base)) !important; }
-.bg-warn { background-color: oklch(var(--warn-base)) !important; }
-.bg-error { background-color: oklch(var(--error-base)) !important; }
+/* Neutral Text Colors */
+.text-neutral { color: oklch(var(--neutral-base)) !important; }
+.text-neutral-100 { color: oklch(var(--neutral-base)) !important; }
+.text-neutral-90 { color: oklch(var(--neutral-base) / 0.9) !important; }
+.text-neutral-80 { color: oklch(var(--neutral-base) / 0.8) !important; }
+.text-neutral-70 { color: oklch(var(--neutral-base) / 0.7) !important; }
+.text-neutral-60 { color: oklch(var(--neutral-base) / 0.6) !important; }
+.text-neutral-50 { color: oklch(var(--neutral-base) / 0.5) !important; }
+.text-neutral-40 { color: oklch(var(--neutral-base) / 0.4) !important; }
+.text-neutral-30 { color: oklch(var(--neutral-base) / 0.3) !important; }
+.text-neutral-25 { color: oklch(var(--neutral-base) / 0.25) !important; }
+.text-neutral-20 { color: oklch(var(--neutral-base) / 0.2) !important; }
+.text-neutral-15 { color: oklch(var(--neutral-base) / 0.15) !important; }
+.text-neutral-10 { color: oklch(var(--neutral-base) / 0.1) !important; }
+.text-neutral-5 { color: oklch(var(--neutral-base) / 0.05) !important; }
+.text-neutral-1 { color: oklch(var(--neutral-base) / 0.01) !important; }
+
+/* Success Text Colors */
+.text-success { color: oklch(var(--success-base)) !important; }
+.text-success-100 { color: oklch(var(--success-base)) !important; }
+.text-success-90 { color: oklch(var(--success-base) / 0.9) !important; }
+.text-success-80 { color: oklch(var(--success-base) / 0.8) !important; }
+.text-success-70 { color: oklch(var(--success-base) / 0.7) !important; }
+.text-success-60 { color: oklch(var(--success-base) / 0.6) !important; }
+.text-success-50 { color: oklch(var(--success-base) / 0.5) !important; }
+.text-success-40 { color: oklch(var(--success-base) / 0.4) !important; }
+.text-success-30 { color: oklch(var(--success-base) / 0.3) !important; }
+.text-success-20 { color: oklch(var(--success-base) / 0.2) !important; }
+.text-success-15 { color: oklch(var(--success-base) / 0.15) !important; }
+.text-success-10 { color: oklch(var(--success-base) / 0.1) !important; }
+.text-success-5 { color: oklch(var(--success-base) / 0.05) !important; }
+.text-success-1 { color: oklch(var(--success-base) / 0.01) !important; }
+
+/* Warning Text Colors */
+.text-warn { color: oklch(var(--warn-base)) !important; }
+.text-warn-100 { color: oklch(var(--warn-base)) !important; }
+.text-warn-90 { color: oklch(var(--warn-base) / 0.9) !important; }
+.text-warn-80 { color: oklch(var(--warn-base) / 0.8) !important; }
+.text-warn-70 { color: oklch(var(--warn-base) / 0.7) !important; }
+.text-warn-60 { color: oklch(var(--warn-base) / 0.6) !important; }
+.text-warn-50 { color: oklch(var(--warn-base) / 0.5) !important; }
+.text-warn-40 { color: oklch(var(--warn-base) / 0.4) !important; }
+.text-warn-30 { color: oklch(var(--warn-base) / 0.3) !important; }
+.text-warn-20 { color: oklch(var(--warn-base) / 0.2) !important; }
+.text-warn-15 { color: oklch(var(--warn-base) / 0.15) !important; }
+.text-warn-10 { color: oklch(var(--warn-base) / 0.1) !important; }
+.text-warn-5 { color: oklch(var(--warn-base) / 0.05) !important; }
+.text-warn-1 { color: oklch(var(--warn-base) / 0.01) !important; }
+
+/* Error Text Colors */
+.text-error { color: oklch(var(--error-base)) !important; }
+.text-error-100 { color: oklch(var(--error-base)) !important; }
+.text-error-90 { color: oklch(var(--error-base) / 0.9) !important; }
+.text-error-80 { color: oklch(var(--error-base) / 0.8) !important; }
+.text-error-70 { color: oklch(var(--error-base) / 0.7) !important; }
+.text-error-60 { color: oklch(var(--error-base) / 0.6) !important; }
+.text-error-50 { color: oklch(var(--error-base) / 0.5) !important; }
+.text-error-40 { color: oklch(var(--error-base) / 0.4) !important; }
+.text-error-30 { color: oklch(var(--error-base) / 0.3) !important; }
+.text-error-20 { color: oklch(var(--error-base) / 0.2) !important; }
+.text-error-15 { color: oklch(var(--error-base) / 0.15) !important; }
+.text-error-10 { color: oklch(var(--error-base) / 0.1) !important; }
+.text-error-5 { color: oklch(var(--error-base) / 0.05) !important; }
+.text-error-1 { color: oklch(var(--error-base) / 0.01) !important; }
+
+/* Focus Ring Colors for Buttons */
+.focus-visible\:ring-accent:focus-visible { --tw-ring-color: oklch(var(--accent-base) / 0.5) !important; }
+.focus-visible\:ring-success:focus-visible { --tw-ring-color: oklch(var(--success-base) / 0.5) !important; }
+.focus-visible\:ring-error:focus-visible { --tw-ring-color: oklch(var(--error-base) / 0.5) !important; }
+.focus-visible\:ring-secondary:focus-visible { --tw-ring-color: oklch(var(--secondary) / 0.5) !important; }
+.focus-visible\:ring-muted:focus-visible { --tw-ring-color: oklch(var(--muted) / 0.5) !important; }
+
+/* Additional muted variants for interactive states */
+.bg-muted\/60 { background-color: oklch(var(--muted) / 0.6) !important; }
+.bg-muted\/70 { background-color: oklch(var(--muted) / 0.7) !important; }
+.bg-muted\/80 { background-color: oklch(var(--muted) / 0.8) !important; }
+.bg-muted\/130 { background-color: oklch(var(--muted) / 1.3) !important; }
+.bg-muted\/140 { background-color: oklch(var(--muted) / 1.4) !important; }
+.bg-muted\/150 { background-color: oklch(var(--muted) / 1.5) !important; }
+.bg-muted\/160 { background-color: oklch(var(--muted) / 1.6) !important; }
+
+/* Additional secondary variants for interactive states */
+.bg-secondary\/60 { background-color: oklch(var(--secondary) / 0.6) !important; }
+.bg-secondary\/70 { background-color: oklch(var(--secondary) / 0.7) !important; }
+.bg-secondary\/130 { background-color: oklch(var(--secondary) / 1.3) !important; }
+.bg-secondary\/150 { background-color: oklch(var(--secondary) / 1.5) !important; }
+
+/* Theme-Aware Hover States */
+/* These classes automatically get brighter in dark mode and darker in light mode */
+
+/* Primary/Accent Hover States */
+.hover-accent-theme {
+  transition: background-color 0.2s ease;
+}
+
+.hover-accent-theme:hover {
+  background-color: oklch(var(--accent-90)) !important;
+}
+
+[data-theme="dark"] .hover-accent-theme:hover {
+  background-color: oklch(var(--accent-110)) !important;
+}
+
+/* Secondary/Muted Hover States */
+.hover-secondary-theme {
+  transition: background-color 0.2s ease;
+}
+
+.hover-secondary-theme:hover {
+  background-color: oklch(var(--secondary) / 0.8) !important;
+}
+
+[data-theme="dark"] .hover-secondary-theme:hover {
+  background-color: oklch(var(--muted) / 0.3) !important;
+}
+
+/* Ghost/Transparent Hover States */
+.hover-ghost-theme {
+  transition: background-color 0.2s ease;
+}
+
+.hover-ghost-theme:hover {
+  background-color: oklch(var(--muted) / 0.08) !important;
+}
+
+[data-theme="dark"] .hover-ghost-theme:hover {
+  background-color: oklch(var(--muted) / 0.15) !important;
+}
+
+/* Success Hover States */
+.hover-success-theme {
+  transition: background-color 0.2s ease;
+}
+
+.hover-success-theme:hover {
+  background-color: oklch(var(--success-90)) !important;
+}
+
+[data-theme="dark"] .hover-success-theme:hover {
+  background-color: oklch(var(--success-110)) !important;
+}
+
+/* Error/Destructive Hover States */
+.hover-error-theme {
+  transition: background-color 0.2s ease;
+}
+
+.hover-error-theme:hover {
+  background-color: oklch(var(--error-90)) !important;
+}
+
+[data-theme="dark"] .hover-error-theme:hover {
+  background-color: oklch(var(--error-110)) !important;
+}
+
+/* Full Opacity Background Colors - Already included in complete system above */
 
 /* Legacy compatibility - keep existing neutral alpha classes */
 .bg-neutral-alpha-2 {

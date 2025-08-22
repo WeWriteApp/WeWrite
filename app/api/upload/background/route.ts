@@ -19,6 +19,17 @@ export async function POST(request: NextRequest) {
     }
     console.log(`[Background Upload API] User authenticated: ${userId}`);
 
+    // Check subscription status
+    console.log('[Background Upload API] Checking subscription status...');
+    const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
+    const subscription = await getUserSubscriptionServer(userId, { verbose: false });
+
+    if (!subscription || subscription.status !== 'active' || (subscription.amount || 0) <= 0) {
+      console.log('[Background Upload API] User does not have active subscription - blocking upload');
+      return createErrorResponse('FORBIDDEN', 'Custom background images require an active subscription');
+    }
+    console.log('[Background Upload API] Subscription verified - proceeding with upload');
+
     console.log('[Background Upload API] Parsing form data...');
     const formData = await request.formData();
     const file = formData.get('image') as File;
@@ -88,8 +99,20 @@ export async function POST(request: NextRequest) {
       uploadedAt: new Date().toISOString()
     };
 
+    // Also save as the active background preference
+    const imageBackgroundPreference = {
+      type: 'image',
+      data: {
+        type: 'image',
+        url: downloadURL,
+        opacity: 0.15
+      },
+      updatedAt: new Date().toISOString()
+    };
+
     await db.collection(collectionName).doc(userId).update({
-      backgroundImage: backgroundImageData
+      backgroundImage: backgroundImageData,
+      backgroundPreference: imageBackgroundPreference
     });
 
     console.log('[Background Upload API] Upload completed successfully');

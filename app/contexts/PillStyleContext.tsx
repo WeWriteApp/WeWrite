@@ -88,8 +88,10 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         text-sm font-medium
         rounded-lg
         transition-all duration-150 ease-out
-        hover:scale-105
-        active:scale-95
+        hover:scale-[1.05]
+        active:scale-[0.95]
+        hover:shadow-sm
+        active:shadow-none
         transform-gpu
         text-indent-0
         float-none
@@ -98,6 +100,10 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         max-w-[calc(100vw-2rem)]
         my-0.5
         vertical-align-baseline
+        focus-visible:ring-2
+        focus-visible:ring-accent
+        focus-visible:ring-offset-2
+        focus-visible:outline-none
       `.trim().replace(/\s+/g, ' ');
 
       // Style-specific classes
@@ -106,14 +112,17 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         styleClasses = `
           bg-transparent text-accent-100
           border border-accent-70
-          hover:shadow-sm pill-outline-style
+          hover:bg-accent-10 hover:border-accent-100
+          active:bg-accent-15 active:border-accent-100
+          pill-outline-style
           px-2 py-0.5
         `;
       } else if (pillStyle === PILL_STYLES.TEXT_ONLY) {
         styleClasses = `
           bg-transparent text-accent-100 font-bold
           border-none
-          hover:underline
+          hover:underline hover:bg-accent-5
+          active:bg-accent-10
           shadow-none
           px-1
           pill-text-style
@@ -123,7 +132,8 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           bg-transparent text-accent-100 font-bold
           border-none
           underline
-          hover:decoration-2
+          hover:decoration-2 hover:bg-accent-5
+          active:bg-accent-10
           shadow-none
           px-1
           pill-underlined-style
@@ -134,7 +144,10 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         styleClasses = `
           bg-accent-100
           border border-accent-100
+          hover:bg-accent-80 dark:hover:bg-accent-120
+          active:bg-accent-70 dark:active:bg-accent-140
           hover:shadow-md
+          active:shadow-sm
           ${textColor} !important
           px-2 py-0.5
           pill-filled-style

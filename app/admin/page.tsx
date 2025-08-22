@@ -42,9 +42,30 @@ export default function AdminPage() {
 
   // Testing tools state
   const [statusCheckLoading, setStatusCheckLoading] = useState(false);
-
   const [showPWABanner, setShowPWABanner] = useState(false);
   const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(false);
+
+  // Initialize email banner override from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedOverride = localStorage.getItem('wewrite_admin_email_banner_override') === 'true';
+      setShowUnverifiedEmailBanner(savedOverride);
+    }
+  }, []);
+
+  // Handle email banner override changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (showUnverifiedEmailBanner) {
+        localStorage.setItem('wewrite_admin_email_banner_override', 'true');
+      } else {
+        localStorage.removeItem('wewrite_admin_email_banner_override');
+      }
+
+      // Dispatch custom event to notify BannerProvider of changes
+      window.dispatchEvent(new CustomEvent('bannerOverrideChange'));
+    }
+  }, [showUnverifiedEmailBanner]);
 
   // Platform fee revenue state
   const [platformFeeData, setPlatformFeeData] = useState<any[]>([]);
@@ -188,17 +209,24 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-5xl">
       <div className="mb-8">
-        <Link href="/settings" className="inline-flex items-center text-primary hover:text-primary/80">
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Back to Settings
-        </Link>
-        <h1 className="text-3xl font-bold mt-4 mb-2">
-          Admin Panel
-        </h1>
-        <p className="text-muted-foreground">
-          Administrative tools and dashboard access
-        </p>
-
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              Admin Panel
+            </h1>
+            <p className="text-muted-foreground">
+              Administrative tools and dashboard access
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/')}
+            className="h-10 w-10"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Simplified admin interface - no tabs needed */}
@@ -212,7 +240,7 @@ export default function AdminPage() {
 
           {/* Admin Dashboard - Moved to top */}
           <div className="mb-6">
-            <div className="flex flex-col p-6 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors bg-primary/5">
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Admin Dashboard</h3>
                 <BarChart3 className="h-5 w-5 text-primary" />
@@ -235,7 +263,7 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">PWA Testing</h3>
               </div>
@@ -257,12 +285,12 @@ export default function AdminPage() {
             </div>
 
             {/* Email Banner Testing */}
-            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Email Banner Testing</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
-                Control unverified email banner visibility for testing.
+                Control unverified email banner visibility for testing. When enabled, the banner will show even for verified users. Navigate away from admin to see the banner.
               </span>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Show unverified email banner</span>
@@ -278,7 +306,7 @@ export default function AdminPage() {
 
 
             {/* Testing Tools */}
-            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Testing Tools</h3>
               </div>
@@ -291,7 +319,7 @@ export default function AdminPage() {
             </div>
 
             {/* Landing Page Management */}
-            <div className="flex flex-col p-4 rounded-lg border-theme-strong hover:bg-muted/50 transition-colors">
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Landing Page Cards</h3>
               </div>
@@ -307,6 +335,28 @@ export default function AdminPage() {
                 >
                   <Eye className="h-4 w-4" />
                   Manage Landing Cards
+                </Button>
+              </div>
+            </div>
+
+            {/* Design System */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Design System</h3>
+                <Palette className="h-5 w-5 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Interactive showcase of all WeWrite components with their states and documentation
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/design-system')}
+                >
+                  <Palette className="h-4 w-4" />
+                  View Design System
                 </Button>
               </div>
             </div>
