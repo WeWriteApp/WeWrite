@@ -285,7 +285,7 @@ function MyComponent() {
 import { hexToOklch, oklchToHex } from '@/lib/oklch-utils';
 
 // Pure OKLCH workflow - minimal conversions
-const oklchColor = hexToOklch('#1768FF');
+const oklchColor = hexToOklch('#2563EB');
 const hexColor = oklchToHex(oklchColor); // Only for external APIs
 ```
 

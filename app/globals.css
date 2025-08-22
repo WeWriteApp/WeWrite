@@ -946,10 +946,10 @@ input[type="range"]::-moz-range-thumb,
 @layer base {
   :root {
     /* Accent color variables - dynamically set by AccentColorContext */
-    --accent-h: 217;
+    --accent-h: 230;
     --accent-s: 91%;
     --accent-l: 60%;
-    --accent-color-rgb: 23, 104, 255; /* Default blue RGB values */
+    --accent-color-rgb: 37, 99, 235; /* Default blue RGB values for #2563EB */
 
     /* Radix Colors - Light Mode */
     --background: 0 0% 100%;

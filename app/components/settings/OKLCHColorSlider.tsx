@@ -30,7 +30,7 @@ export default function OKLCHColorSlider({
   // Initialize with the actual value prop, not hardcoded defaults
   const [oklch, setOklch] = useState<OKLCHColor>(() => {
     const converted = hexToOklch(value);
-    return converted || { l: 0.56, c: 0.66, h: 285 }; // Fallback only if conversion fails
+    return converted || { l: 0.56, c: 0.66, h: 230 }; // Fallback only if conversion fails
   });
   const [lastExternalHex, setLastExternalHex] = useState<string>(value);
 

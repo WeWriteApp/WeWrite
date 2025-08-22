@@ -74,7 +74,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
   // State for all three color systems - initialize with actual context values
   const [accentOklch, setAccentOklch] = useState<OKLCHColor>(() => {
     const converted = hexToOklch(accentColor);
-    return converted || { l: 0.56, c: 0.66, h: 285 };
+    return converted || { l: 0.56, c: 0.66, h: 230 };
   });
   const [neutralOklch, setNeutralOklch] = useState<OKLCHColor | null>(null); // Start as null to indicate not initialized
   const [backgroundOklch, setBackgroundOklch] = useState<OKLCHColor>(() => {
@@ -83,9 +83,9 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
       const isDark = theme === 'dark';
       const bgColor = isDark && background.darkColor ? background.darkColor : background.color;
       const converted = hexToOklch(bgColor);
-      return converted || { l: isDark ? 0.0 : 0.98, c: 0.01, h: 240 };
+      return converted || { l: isDark ? 0.0 : 0.98, c: 0.01, h: 230 };
     }
-    return { l: theme === 'dark' ? 0.0 : 0.98, c: 0.01, h: 240 };
+    return { l: theme === 'dark' ? 0.0 : 0.98, c: 0.01, h: 230 };
   });
 
   // State for collapsed/expanded cards (accordion behavior)
@@ -119,7 +119,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
       setNeutralOklch(converted);
     } else {
       // Fallback if conversion fails
-      setNeutralOklch({ l: 0.50, c: 0.05, h: 240 });
+      setNeutralOklch({ l: 0.50, c: 0.05, h: 230 });
     }
   }, [neutralColor, accentOklch]);
 

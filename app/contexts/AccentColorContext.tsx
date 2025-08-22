@@ -5,7 +5,7 @@ import { hexToOklch, formatOklchForCSSVar, OKLCHColor } from '../lib/oklch-utils
 
 // SIMPLE accent colors - no 792-line nightmare
 const COLORS = {
-  blue: '#1768FF',
+  blue: '#2563EB',  // Updated to 230° hue blue
   red: '#E5484D',
   green: '#46A758',
   purple: '#8B5CF6',
@@ -16,7 +16,7 @@ const COLORS = {
 
 // OKLCH values for CSS variables (converted from original hex colors)
 const COLOR_OKLCH = {
-  blue: { l: 48.64, c: 0.8787, h: 293.1 },    // #1768FF
+  blue: { l: 48.64, c: 0.8787, h: 230.0 },    // #2563EB - 230° hue blue
   red: { l: 53.85, c: 0.6863, h: 28.0 },      // #E5484D
   green: { l: 61.34, c: 0.5602, h: 144.7 },   // #46A758
   purple: { l: 51.61, c: 0.8844, h: 306.9 },  // #8B5CF6

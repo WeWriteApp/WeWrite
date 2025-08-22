@@ -28,7 +28,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
   // Get the actual color value from the accent color system
   const getAccentColorValue = () => {
     if (accentColor.startsWith('custom')) {
-      return customColors[accentColor] || '#1768FF';
+      return customColors[accentColor] || '#2563EB';
     }
     // For preset colors, we need to get the CSS variable value
     const computedStyle = getComputedStyle(document.documentElement);
@@ -36,7 +36,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
     if (primaryHsl) {
       return `hsl(${primaryHsl})`;
     }
-    return '#1768FF'; // fallback
+    return '#2563EB'; // fallback
   };
 
   if (!isAuthenticated || !user) {
