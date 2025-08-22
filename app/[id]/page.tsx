@@ -156,6 +156,20 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
           return;
         }
 
+        // Handle new page creation from inline links (new:title format)
+        if (cleanId.startsWith('new:')) {
+          const title = cleanId.substring(4); // Remove 'new:' prefix
+          if (title) {
+            // Redirect to /new with the title parameter
+            router.replace(`/new?title=${encodeURIComponent(title)}`);
+            return;
+          } else {
+            // If no title provided, just redirect to /new
+            router.replace('/new');
+            return;
+          }
+        }
+
         // Check if this is a deleted page preview
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('preview') === 'deleted') {

@@ -175,6 +175,19 @@ export function middleware(request: NextRequest) {
  * Handle URL structure redirects
  */
 function handleUrlRedirects(path: string, url: URL): NextResponse | null {
+  // Handle new page creation from inline links (new:title format)
+  if (path.startsWith('/new:')) {
+    const title = path.substring(5); // Remove '/new:' prefix
+    if (title) {
+      url.pathname = '/new';
+      url.searchParams.set('title', decodeURIComponent(title));
+      return NextResponse.redirect(url);
+    } else {
+      url.pathname = '/new';
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Redirect /pages/[id] to /[id]
   if (path.startsWith('/pages/')) {
     const id = path.replace('/pages/', '');
