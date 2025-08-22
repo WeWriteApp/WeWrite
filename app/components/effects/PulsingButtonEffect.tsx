@@ -32,29 +32,29 @@ export function PulsingButtonEffect({
   // Get the current accent color value
   const getAccentColorValue = () => {
     if (accentColor.startsWith('custom')) {
-      return customColors[accentColor] || '#3b82f6'; // fallback to blue
+      return customColors[accentColor] || 'oklch(var(--primary))'; // fallback to theme primary
     }
-    
+
     // Get the CSS variable value for the current accent color
     if (typeof window !== 'undefined') {
       const computedStyle = getComputedStyle(document.documentElement);
       const primaryColor = computedStyle.getPropertyValue('--primary').trim();
-      
+
       // Convert HSL to hex if needed
       if (primaryColor.startsWith('hsl')) {
         return hslToHex(primaryColor);
       }
-      
-      return primaryColor || '#3b82f6';
+
+      return primaryColor || 'oklch(var(--primary))';
     }
-    
-    return '#3b82f6'; // fallback
+
+    return 'oklch(var(--primary))'; // fallback to theme primary
   };
 
   // Convert HSL to hex color
   const hslToHex = (hsl: string): string => {
     const match = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-    if (!match) return '#3b82f6';
+    if (!match) return '#8b5cf6';
     
     const h = parseInt(match[1]) / 360;
     const s = parseInt(match[2]) / 100;

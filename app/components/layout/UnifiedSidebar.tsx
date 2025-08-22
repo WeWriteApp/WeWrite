@@ -337,7 +337,11 @@ function UnifiedSidebarContent({
       {/* Desktop Sidebar - Hidden on mobile */}
       <div
         className={cn(
-          "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[200] flex-col",
+          "hidden md:flex fixed left-0 top-0 h-screen z-[200] flex-col",
+          // Use full wewrite-card system (includes glassmorphism backdrop blur)
+          "wewrite-card border-r border-[var(--card-border)]",
+          // Remove rounded corners for sidebar
+          "!rounded-none",
           "sidebar-smooth-transition overflow-hidden", // Prevent any overflow
           showContent ? "w-64" : "w-16",
           isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
@@ -377,7 +381,13 @@ function UnifiedSidebarContent({
             "scrollbar-hide" // Hide scrollbars completely
           )}>
             {/* Navigation Items */}
-            <nav className="flex flex-col gap-2 mb-6">
+            <nav className={cn(
+              "flex flex-col gap-2 mb-6",
+              // IMPORTANT: Add horizontal padding for collapsed state to center icons properly
+              // This works with NavButton w-full to prevent icon clipping
+              // Collapsed: w-16 sidebar - px-2 container = 48px button width (perfect for icons)
+              !showContent && "px-2"
+            )}>
             {completeSidebarOrder
               .filter((itemId, index, array) => array.indexOf(itemId) === index) // Remove duplicates
               .map((itemId, index) => {

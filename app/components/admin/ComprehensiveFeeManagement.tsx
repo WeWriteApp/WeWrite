@@ -130,7 +130,7 @@ export default function ComprehensiveFeeManagement() {
     <div className="space-y-6">
       {/* Status Message */}
       {message && (
-        <Alert className={message.type === 'error' ? 'border-red-500' : message.type === 'success' ? 'border-green-500' : 'border-blue-500'}>
+        <Alert className={message.type === 'error' ? 'border-red-500' : message.type === 'success' ? 'border-green-500' : 'border-border'}>
           {message.type === 'error' ? (
             <AlertCircle className="h-4 w-4" />
           ) : message.type === 'success' ? (

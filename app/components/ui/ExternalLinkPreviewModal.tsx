@@ -216,7 +216,7 @@ export function ExternalLinkPreviewModal({
                       <div key={page.id} className="flex items-center gap-2">
                         <a
                           href={`/${page.id}`}
-                          className="text-xs text-blue-600 hover:text-blue-800 underline"
+                          className="text-xs text-primary hover:text-foreground underline"
                         >
                           {page.title}
                         </a>

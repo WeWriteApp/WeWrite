@@ -362,7 +362,7 @@ export default function TrendingPages({ limit = 5 }) {
         {trendingPages.map((page) => (
           <div
             key={page.id}
-            className="group block bg-card border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all p-5"
+            className="wewrite-card group block overflow-hidden hover:bg-[var(--card-bg-hover)] transition-all"
             onClick={() => window.location.href = `/${page.id}`}
             style={{ cursor: 'pointer' }}
           >

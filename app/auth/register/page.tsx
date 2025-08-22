@@ -19,8 +19,8 @@ function RegisterContent(): JSX.Element {
     >
       {isPostingReply && (
         <Alert className="mb-4 bg-primary/10 border-theme-medium">
-          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertDescription className="text-blue-600 dark:text-blue-400">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-primary">
             Create an account to post your reply. Your draft has been saved and will be posted automatically after you sign up.
           </AlertDescription>
         </Alert>

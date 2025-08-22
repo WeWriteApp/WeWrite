@@ -78,7 +78,7 @@ export default function StickySaveHeader({
           <Button
             variant="secondary"
             size="sm"
-            className="gap-2 bg-white text-green-600 hover:bg-gray-100 font-medium rounded-lg flex-1"
+            className="gap-2 bg-background text-green-600 hover:bg-muted font-medium rounded-lg flex-1"
             onClick={onSave}
             disabled={isSaving}
           >
@@ -102,7 +102,7 @@ export default function StickySaveHeader({
           <Button
             variant="secondary"
             size="sm"
-            className="gap-2 bg-white text-green-600 hover:bg-gray-100 font-medium rounded-lg"
+            className="gap-2 bg-background text-green-600 hover:bg-muted font-medium rounded-lg"
             onClick={onSave}
             disabled={isSaving}
           >

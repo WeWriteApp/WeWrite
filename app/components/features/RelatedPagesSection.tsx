@@ -175,7 +175,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
 
   return (
     <div>
-      <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+      <div className="wewrite-card">
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-medium">
@@ -217,7 +217,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
                           <div className="text-muted-foreground">by {relatedPage.username}</div>
                         )}
                         {relatedPage.similarity && (
-                          <div className="text-blue-400">
+                          <div className="text-muted-foreground">
                             {Math.round(relatedPage.similarity * 100)}% similar
                           </div>
                         )}

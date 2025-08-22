@@ -122,7 +122,7 @@ export default function TrendingPageClient() {
   }, []);
 
   return (
-    <div className="container max-w-5xl mx-auto px-4 py-6">
+    <div className="container max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-center mb-6">
         <h1 className="text-2xl font-bold">
           Trending Pages
@@ -137,7 +137,7 @@ export default function TrendingPageClient() {
           </div>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center gap-4 p-6 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
+        <div className="flex flex-col items-center justify-center gap-4 p-6 text-sm bg-muted/50 dark:bg-muted/30 text-primary dark:text-muted-foreground rounded-lg">
           <p>{error}</p>
           <Button
             variant="outline"

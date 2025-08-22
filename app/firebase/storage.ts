@@ -106,6 +106,84 @@ export const addDocument = async (
 };
 
 /**
+ * Upload background image to Firebase Storage
+ * @param imageFile - The image file to upload
+ * @param userId - The user ID for organizing files
+ * @returns Promise<string | null> - The download URL or null if failed
+ */
+export const uploadBackgroundImage = async (
+  imageFile: File,
+  userId: string
+): Promise<string | null> => {
+  if (!imageFile || !userId) {
+    console.error("Missing required parameters for background image upload");
+    return null;
+  }
+
+  // Create storage reference for background images
+  const backgroundRef: StorageReference = storageRef(storage, `backgrounds/${userId}`);
+  const fileType = imageFile.type.split("/")[1];
+  const fileName = `background-${new Date().getTime()}.${fileType}`;
+  const imageRef: StorageReference = storageRef(backgroundRef, fileName);
+
+  try {
+    // Upload the file
+    const uploadResult: UploadResult = await uploadBytes(imageRef, imageFile);
+    const downloadURL: string = await getDownloadURL(imageRef);
+
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading background image:", error);
+    return null;
+  }
+};
+
+/**
+ * Delete background image from Firebase Storage
+ * @param imageUrl - The full download URL of the image to delete
+ * @returns Promise<boolean> - Success status
+ */
+export const deleteBackgroundImage = async (imageUrl: string): Promise<boolean> => {
+  if (!imageUrl) {
+    return false;
+  }
+
+  try {
+    // Extract the storage path from the download URL
+    const imageRef: StorageReference = storageRef(storage, imageUrl);
+    await deleteObject(imageRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting background image:", error);
+    return false;
+  }
+};
+
+/**
+ * Delete background image by filename
+ * @param userId - The user ID
+ * @param filename - The filename to delete
+ * @returns Promise<boolean> - Success status
+ */
+export const deleteBackgroundImageByFilename = async (
+  userId: string,
+  filename: string
+): Promise<boolean> => {
+  if (!userId || !filename) {
+    return false;
+  }
+
+  try {
+    const imageRef: StorageReference = storageRef(storage, `backgrounds/${userId}/${filename}`);
+    await deleteObject(imageRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting background image by filename:", error);
+    return false;
+  }
+};
+
+/**
  * Remove a document from the Realtime Database
  *
  * @param docId - The ID of the document to remove

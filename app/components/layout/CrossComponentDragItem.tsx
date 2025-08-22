@@ -120,7 +120,7 @@ export default function CrossComponentDragItem({
         // Drag states
         isDragging && "opacity-50 scale-95",
         // Drop states
-        isOver && canDrop && "bg-primary/10 ring-2 ring-primary/20",
+        isOver && canDrop && "bg-muted/20 ring-2 ring-border/30",
         isOver && !canDrop && "bg-red-50 dark:bg-red-900/20",
         className
       )}
@@ -142,10 +142,10 @@ export default function CrossComponentDragItem({
 
       {/* Visual feedback for drop zones */}
       {isOver && canDrop && (
-        <div className="absolute inset-0 border-2 border-primary/30 rounded-md pointer-events-none" />
+        <div className="absolute inset-0 border-2 border-neutral-30 rounded-md pointer-events-none" />
       )}
       {isOver && !canDrop && (
-        <div className="absolute inset-0 border-2 border-red-300 rounded-md pointer-events-none" />
+        <div className="absolute inset-0 border-2 border-error-30 rounded-md pointer-events-none" />
       )}
     </div>
   );

@@ -5,11 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import UsdFundingTierSlider from '../../components/payments/UsdFundingTierSlider';
 import SubscriptionHistory from '../../components/subscription/SubscriptionHistory';
 import { useAuth } from '../../providers/AuthProvider';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2, CheckCircle } from 'lucide-react';
 
 export default function FundAccountPage() {
   const { user } = useAuth();
+  const { refreshUsdBalance } = useUsdBalance();
   const searchParams = useSearchParams();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [currentSubscription, setCurrentSubscription] = useState(null);
@@ -74,6 +76,22 @@ export default function FundAccountPage() {
 
     loadSubscription();
   }, [user?.uid]);
+
+  // Refresh USD balance when subscription changes or on success/cancellation
+  useEffect(() => {
+    if (success || cancelled) {
+      // Force refresh USD balance to reflect subscription changes
+      refreshUsdBalance();
+    }
+  }, [success, cancelled, refreshUsdBalance]);
+
+  // Also refresh USD balance when current subscription changes
+  useEffect(() => {
+    if (currentSubscription) {
+      // Refresh USD balance to ensure it reflects the current subscription amount
+      refreshUsdBalance();
+    }
+  }, [currentSubscription?.amount, refreshUsdBalance]);
 
   if (isLoading) {
     return (

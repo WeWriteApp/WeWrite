@@ -5,12 +5,12 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Plus, DollarSign, Wallet, User } from 'lucide-react';
+import { Plus, DollarSign, Wallet, User, AlertTriangle } from 'lucide-react';
 import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier } from '../../utils/usdConstants';
 import { formatUsdCents, dollarsToCents, parseDollarInputToCents } from '../../utils/formatCurrency';
-import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useAuth } from '../../providers/AuthProvider';
+import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import Link from 'next/link';
 
 interface UsdFundingTierSliderProps {
@@ -55,6 +55,7 @@ export default function UsdFundingTierSlider({
   showCurrentOption = false
 }: UsdFundingTierSliderProps) {
   const { user } = useAuth();
+  const { usdBalance } = useUsdBalance();
   const [sliderNodes, setSliderNodes] = useState(INITIAL_NODES);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
@@ -138,6 +139,14 @@ export default function UsdFundingTierSlider({
   const selectedTierInfo = getTierInfo(selectedAmount);
   const currentTierInfo = currentSubscription ? getTierInfo(currentSubscription.amount) : null;
 
+  // Calculate overspending - always use current subscription as source of truth
+  const currentSubscriptionAmount = currentSubscription?.amount || 0;
+  const totalUsdCents = currentSubscriptionAmount * 100; // Always use current subscription amount
+  const allocatedUsdCents = usdBalance?.allocatedUsdCents || 0;
+  const availableUsdCents = totalUsdCents - allocatedUsdCents;
+  const isOverspent = availableUsdCents < 0 && currentSubscriptionAmount > 0;
+  const overspentCents = isOverspent ? Math.abs(availableUsdCents) : 0;
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -172,25 +181,118 @@ export default function UsdFundingTierSlider({
 
         {/* Current subscription indicator */}
         {showCurrentOption && currentSubscription && currentTierInfo && (
-          <div className="bg-muted/50 rounded-lg p-3">
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Current Plan</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">
+                <span className="text-sm font-semibold text-primary">
                   {formatUsdCents(currentTierInfo.usdCents)}/month
                 </span>
-                <SubscriptionTierBadge tier={currentTierInfo.tier} />
               </div>
             </div>
+
+            {/* Overspent indicator */}
+            {isOverspent && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Over spent</span>
+                </div>
+                <span className="text-sm font-semibold text-orange-500">
+                  {formatUsdCents(overspentCents)}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
         {/* Slider */}
         <div className="space-y-4">
           <div className="relative">
+            {/* Custom slider track with rounded segments and gaps */}
+            <div className="w-full h-2 bg-muted rounded-full relative overflow-hidden">
+              {(() => {
+                // Calculate positions as percentages
+                const maxSliderAmount = sliderNodes[sliderNodes.length - 1];
+                const gapWidth = 0.5; // Gap width as percentage
+
+                // Current subscription position
+                const currentPosition = currentSubscriptionAmount > 0
+                  ? Math.min(100, (currentSubscriptionAmount / maxSliderAmount) * 100)
+                  : 0;
+
+                // Calculate overspent position (current + overspent amount)
+                const overspentAmount = currentSubscriptionAmount + (overspentCents / 100);
+                const overspentPosition = Math.min(100, (overspentAmount / maxSliderAmount) * 100);
+
+                // Calculate selected position
+                const selectedPosition = selectedAmount > maxSliderAmount
+                  ? 100
+                  : (selectedAmount / maxSliderAmount) * 100;
+
+                const segments = [];
+
+                if (isOverspent) {
+                  // Current plan segment (primary color)
+                  if (currentPosition > 0) {
+                    segments.push(
+                      <div
+                        key="current"
+                        className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                        style={{ width: `${Math.max(0, currentPosition - gapWidth/2)}%` }}
+                      />
+                    );
+                  }
+
+                  // Overspent segment (orange) with gap
+                  if (overspentPosition > currentPosition) {
+                    segments.push(
+                      <div
+                        key="overspent"
+                        className="absolute top-0 h-full rounded-full"
+                        style={{
+                          left: `${currentPosition + gapWidth/2}%`,
+                          width: `${Math.max(0, overspentPosition - currentPosition - gapWidth)}%`,
+                          backgroundColor: 'rgb(249 115 22)'
+                        }}
+                      />
+                    );
+                  }
+
+                  // Selected amount beyond overspent (if applicable) with gap
+                  if (selectedPosition > overspentPosition) {
+                    segments.push(
+                      <div
+                        key="selected"
+                        className="absolute top-0 h-full bg-primary rounded-full"
+                        style={{
+                          left: `${overspentPosition + gapWidth/2}%`,
+                          width: `${Math.max(0, selectedPosition - overspentPosition - gapWidth/2)}%`
+                        }}
+                      />
+                    );
+                  }
+                } else {
+                  // Normal case: just show selected amount
+                  if (selectedPosition > 0) {
+                    segments.push(
+                      <div
+                        key="selected"
+                        className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                        style={{ width: `${selectedPosition}%` }}
+                      />
+                    );
+                  }
+                }
+
+                return segments;
+              })()}
+            </div>
+
+            {/* Visible slider input with custom styling */}
             <input
               type="range"
               min="0"
@@ -215,20 +317,11 @@ export default function UsdFundingTierSlider({
                   setCustomError('');
                 }
               }}
-              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
+              className="absolute top-0 left-0 w-full h-2 appearance-none cursor-pointer slider"
               style={{
-                background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${(() => {
-                  // If selected amount is above $100, show slider filled to $100 position
-                  const displayIndex = selectedAmount > 100
-                    ? sliderNodes.findIndex(amount => amount === 100)
-                    : sliderNodes.findIndex(amount => amount === selectedAmount);
-                  return (displayIndex / (sliderNodes.length - 1)) * 100;
-                })()}%, hsl(var(--muted)) ${(() => {
-                  const displayIndex = selectedAmount > 100
-                    ? sliderNodes.findIndex(amount => amount === 100)
-                    : sliderNodes.findIndex(amount => amount === selectedAmount);
-                  return (displayIndex / (sliderNodes.length - 1)) * 100;
-                })()}%, hsl(var(--muted)) 100%)`
+                background: 'transparent',
+                WebkitAppearance: 'none',
+                appearance: 'none'
               }}
             />
           </div>
@@ -241,6 +334,20 @@ export default function UsdFundingTierSlider({
               </span>
             ))}
           </div>
+
+          {/* Overspending explanation */}
+          {isOverspent && (
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mt-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-orange-700 dark:text-orange-300">
+                  <p className="font-medium mb-1">You're currently overspending</p>
+                  <p>The orange section shows your overspent amount ({formatUsdCents(overspentCents)}).
+                     Drag the slider to at least ${Math.ceil(currentSubscriptionAmount + (overspentCents / 100))} to cover your current allocations.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* +10 Button and Custom Amount Button */}
           <div className="flex justify-center gap-3">
@@ -349,7 +456,7 @@ export default function UsdFundingTierSlider({
               asChild
               className={`w-full text-white ${
                 currentSubscription?.amount === selectedAmount
-                  ? 'bg-gray-500 hover:bg-gray-600 cursor-not-allowed'
+                  ? 'bg-muted-foreground hover:bg-muted-foreground/80 cursor-not-allowed'
                   : selectedAmount > (currentSubscription?.amount || 0)
                     ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-yellow-600 hover:bg-yellow-700'

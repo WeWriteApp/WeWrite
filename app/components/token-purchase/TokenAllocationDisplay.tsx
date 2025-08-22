@@ -195,7 +195,7 @@ export default function TokenAllocationDisplay({
               {/* Funded tokens (blue normally, orange when nearly full - same as homepage pie chart) */}
               {fundedPercentage > 0 && (
                 <div
-                  className={`${isNearlyFull ? 'bg-orange-500' : 'bg-blue-600'} transition-all duration-300 rounded-full`}
+                  className={`${isNearlyFull ? 'bg-orange-500' : 'bg-primary'} transition-all duration-300 rounded-full`}
                   style={{ width: `${fundedPercentage}%` }}
                 />
               )}

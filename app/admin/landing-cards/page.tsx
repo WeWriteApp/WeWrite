@@ -250,7 +250,7 @@ export default function LandingCardsManagement() {
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-4xl">
         <div className="mb-8">
-          <Link href="/admin" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+          <Link href="/admin" className="inline-flex items-center text-primary hover:text-primary/80">
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Admin Panel
           </Link>
@@ -345,7 +345,7 @@ export default function LandingCardsManagement() {
                   {sortedCards.map((card, index) => (
                     <div
                       key={card.id}
-                      className="flex items-center gap-3 p-4 rounded-lg border bg-card"
+                      className="flex items-center gap-3 wewrite-card"
                     >
                       <div className="flex flex-col gap-1">
                         <Button

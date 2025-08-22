@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { getBestTextColor } from "../utils/accessibility";
+import { useAccentColor } from "./AccentColorContext";
+import { hexToOklch } from "../lib/oklch-utils";
 
 // Define the available pill styles
 export const PILL_STYLES = {
@@ -41,6 +43,16 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   // Try to load from localStorage, default to filled
   const [pillStyle, setPillStyle] = useState(PILL_STYLES.FILLED);
   const { theme } = useTheme();
+  const { accentColor } = useAccentColor();
+
+  // Determine text color for filled pills based on accent color lightness
+  const getFilledTextColor = useCallback(() => {
+    const oklch = hexToOklch(accentColor);
+    if (oklch && oklch.l >= 0.80) {
+      return 'text-black'; // Use black text for light backgrounds (≥80% lightness)
+    }
+    return 'text-white'; // Use white text for dark backgrounds (<80% lightness)
+  }, [accentColor]);
 
   // Load saved preference on mount
   useEffect(() => {
@@ -83,7 +95,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         float-none
         leading-tight
         w-auto
-        max-w-[200px]
+        max-w-[calc(100vw-2rem)]
         my-0.5
         vertical-align-baseline
       `.trim().replace(/\s+/g, ' ');
@@ -92,46 +104,46 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       let styleClasses = '';
       if (pillStyle === PILL_STYLES.OUTLINE) {
         styleClasses = `
-          bg-transparent text-primary
-          border-[1.5px] border-primary/40
-          hover:bg-primary/15 hover:border-primary/70 hover:shadow-sm
-          active:bg-primary/20
+          bg-transparent text-accent-100
+          border-[1.5px] border-accent-70
+          hover:shadow-sm pill-outline-style
           px-2 py-0.5
         `;
       } else if (pillStyle === PILL_STYLES.TEXT_ONLY) {
         styleClasses = `
-          bg-transparent text-primary font-bold
+          bg-transparent text-accent-100 font-bold
           border-none
-          hover:underline hover:bg-primary/5
-          active:bg-primary/10
+          hover:underline
           shadow-none
           px-1
+          pill-text-style
         `;
       } else if (pillStyle === PILL_STYLES.UNDERLINED) {
         styleClasses = `
-          bg-transparent text-primary font-bold
+          bg-transparent text-accent-100 font-bold
           border-none
           underline
-          hover:bg-primary/5 hover:decoration-2
-          active:bg-primary/10
+          hover:decoration-2
           shadow-none
           px-1
+          pill-underlined-style
         `;
       } else {
-        // Default filled style - ensure white text on accent color background
+        // Default filled style - dynamic text color based on accent lightness
+        const textColor = getFilledTextColor();
         styleClasses = `
-          bg-primary
-          border-[1.5px] border-primary/20
-          hover:bg-primary/90 hover:border-primary/30 hover:shadow-md
-          active:bg-primary/80
-          text-white !important
+          bg-accent-100
+          border-[1.5px] border-accent-100
+          hover:shadow-md
+          ${textColor} !important
           px-2 py-0.5
+          pill-filled-style
         `;
       }
 
       return `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
     };
-  }, [pillStyle]); // Only recompute when pillStyle changes
+  }, [pillStyle, accentColor]); // Recompute when pillStyle or accentColor changes
 
   // Get the best text color for a pill based on its background - memoized for performance
   const getTextColorForPill = useCallback((backgroundColor: string): string => {

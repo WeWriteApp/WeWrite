@@ -64,10 +64,10 @@ export function ErrorDisplay({
       bgLight: 'bg-amber-50 dark:bg-amber-950/30'
     },
     info: {
-      bg: 'bg-blue-100 dark:bg-blue-900/20',
-      text: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-primary/10 dark:bg-primary/20',
+      text: 'text-primary dark:text-primary',
       border: 'border-theme-medium',
-      bgLight: 'bg-blue-50 dark:bg-blue-950/30'
+      bgLight: 'bg-primary/5 dark:bg-primary/10'
     }
   };
 

@@ -119,7 +119,7 @@ export default function UsdAllocationDisplay({
     statusText = 'Overspent';
   } else if (isFullyAllocated) {
     status = 'fully-allocated';
-    statusColor = 'bg-blue-500';
+    statusColor = 'bg-muted/500';
     statusText = 'Fully Allocated';
   } else if (isNearlyFull) {
     status = 'warning';
@@ -166,7 +166,7 @@ export default function UsdAllocationDisplay({
             indicatorClassName={
               status === 'overspent' ? 'bg-red-500' :
               status === 'warning' ? 'bg-yellow-500' :
-              status === 'fully-allocated' ? 'bg-blue-500' :
+              status === 'fully-allocated' ? 'bg-muted/500' :
               status === 'no-subscription' ? 'bg-orange-500' :
               'bg-green-500'
             }
@@ -247,12 +247,12 @@ export default function UsdAllocationDisplay({
         )}
 
         {isFullyAllocated && !isOverspent && !hasNoSubscription && (
-          <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+          <div className="bg-muted/50 dark:bg-muted/50 border border-border dark:border-border rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2 text-foreground dark:text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span className="font-medium">Fully Allocated</span>
             </div>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
+            <p className="text-sm text-primary dark:text-muted-foreground">
               You've allocated 100% of your monthly budget.
               You have {formatUsdCents(availableUsdCents)} remaining.
             </p>

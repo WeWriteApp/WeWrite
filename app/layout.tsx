@@ -15,6 +15,8 @@ import SessionMonitor from "./components/auth/SessionMonitor"
 import { DataProvider } from "./providers/DataProvider"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
 import { AccentColorProvider } from "./contexts/AccentColorContext"
+import { NeutralColorProvider } from "./contexts/NeutralColorContext"
+import { AppBackgroundProvider } from "./contexts/AppBackgroundContext"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
 // import { GraphSettingsProvider, GraphSettingsDrawer } from "./contexts/GraphSettingsContext"
 // LoggingProvider removed - using unified logger from init-logger.ts
@@ -88,7 +90,9 @@ export default function RootLayout({
                       <DataProvider>
                         <DateFormatProvider>
                           <AccentColorProvider>
-                            <PillStyleProvider>
+                            <NeutralColorProvider>
+                              <AppBackgroundProvider>
+                                <PillStyleProvider>
                               <LineSettingsProvider>
                                 <RecentPagesProvider>
                                   <AllocationIncrementProvider>
@@ -114,7 +118,9 @@ export default function RootLayout({
                                   </AllocationIncrementProvider>
                                 </RecentPagesProvider>
                               </LineSettingsProvider>
-                            </PillStyleProvider>
+                                </PillStyleProvider>
+                              </AppBackgroundProvider>
+                            </NeutralColorProvider>
                           </AccentColorProvider>
                         </DateFormatProvider>
                       </DataProvider>

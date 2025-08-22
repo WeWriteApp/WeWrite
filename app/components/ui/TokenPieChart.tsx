@@ -114,7 +114,7 @@ export function TokenPieChart({
               fill="none"
               stroke="currentColor"
               strokeWidth={strokeWidth}
-              className="text-muted-foreground/20"
+              className="text-neutral-20"
             />
           )}
 

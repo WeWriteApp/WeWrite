@@ -23,6 +23,7 @@ import { Button } from '../ui/button';
 import { Plus, Minus } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
@@ -271,7 +272,7 @@ export function EmbeddedAllocationBar({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0"
+          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
           onClick={(e) => handleButtonClick(-1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -294,7 +295,7 @@ export function EmbeddedAllocationBar({
             {/* Other pages (spent elsewhere) - left side */}
             {compositionData.otherPagesPercentage > 0 && (
               <div
-                className="bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
+                className={ALLOCATION_BAR_STYLES.sections.other}
                 style={{ width: `${compositionData.otherPagesPercentage}%` }}
               />
             )}
@@ -329,7 +330,7 @@ export function EmbeddedAllocationBar({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0"
+          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
           onClick={(e) => compositionData.isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}

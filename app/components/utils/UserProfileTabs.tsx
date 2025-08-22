@@ -76,12 +76,14 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
 
   return (
     <div className="space-y-4">
-      <input
-        type="text"
-        placeholder={`Search ${username}'s pages...`}
-        className="w-full px-3 py-2 border border-input rounded-md"
-        onChange={(e) => performSearch(e.target.value)}
-      />
+      <div className="relative wewrite-card">
+        <input
+          type="text"
+          placeholder={`Search ${username}'s pages...`}
+          className="w-full px-3 py-2 border-0 bg-transparent rounded-md"
+          onChange={(e) => performSearch(e.target.value)}
+        />
+      </div>
 
       {isLoading && (
         <div className="text-center py-4">
@@ -439,7 +441,7 @@ export default function UserProfileTabs({ profile }) {
         urlNavigation="hash"
         className="w-full"
       >
-        <div id="profile-tabs-header" className="relative border-b border-border/40 mb-4 bg-background z-10">
+        <div id="profile-tabs-header" className="relative border-b border-neutral-30 mb-4 bg-background z-10">
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
               {/* Bio tab (first/default) */}

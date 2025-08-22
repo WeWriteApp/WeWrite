@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { logoutUser } from "../../firebase/auth";
-import { useRouter } from 'next/navigation';
+import { useAuth } from "../../providers/AuthProvider";
 
 const Logout = (): null => {
-  const router = useRouter();
+  const { signOut } = useAuth();
 
   useEffect(() => {
-    logoutUser().then(() => {
-      // Force refresh to ensure clean state
-      window.location.href = '/';
-    });
-  }, [router]);
+    // Use the consolidated logout from AuthProvider
+    signOut();
+  }, [signOut]);
 
   return null;
 };

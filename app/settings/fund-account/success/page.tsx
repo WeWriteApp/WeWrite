@@ -63,8 +63,8 @@ export default function FundAccountSuccessPage() {
         />
       )}
 
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-8 max-w-md mx-auto px-4">
+      <div className="flex items-center justify-center min-h-[60vh] p-4">
+        <div className="wewrite-card text-center space-y-8 max-w-md w-full">
           {/* Success icon */}
           <div className="flex justify-center">
             <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full">

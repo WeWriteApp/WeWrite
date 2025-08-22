@@ -169,7 +169,7 @@ export function OptimizedImage({
     return (
       <div
         className={cn(
-          'flex items-center justify-center bg-gray-100 text-gray-400 text-sm',
+          'flex items-center justify-center bg-muted text-muted-foreground text-sm',
           className
         )}
         style={{ width, height }}
@@ -204,7 +204,7 @@ export function OptimizedImage({
       {!isLoaded && (
         <div
           className={cn(
-            'absolute inset-0 bg-gray-100 animate-pulse',
+            'absolute inset-0 bg-white dark:bg-black animate-pulse',
             fill ? 'w-full h-full' : ''
           )}
           style={!fill ? { width, height } : {}}

@@ -55,6 +55,12 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **[Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - General performance tuning
 - **[Environment Aware API Architecture](./ENVIRONMENT_AWARE_API_ARCHITECTURE.md)** - API architecture and optimization
 
+### 🎨 Design & Color System
+- **[OKLCH Color System](./OKLCH_COLOR_SYSTEM.md)** - Professional 3-color OKLCH system with true component independence
+- **[Design System Architecture](./DESIGN_SYSTEM_ARCHITECTURE.md)** - Universal card system and design tokens
+- **[Customization System Architecture](./CUSTOMIZATION_SYSTEM_ARCHITECTURE.md)** - OKLCH-based user personalization system
+- **[Theme System Architecture](./THEME_SYSTEM_ARCHITECTURE.md)** - Theme architecture and customization
+
 ### 🔧 Development Guides
 - **[Dependency Management Standards](./DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management best practices
 - **[Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md)** - Authentication system cleanup reference

@@ -36,13 +36,13 @@ export function TierComparison({
   const getTierIcon = (tierId: string) => {
     switch (tierId) {
       case 'tier1':
-        return <Star className="h-5 w-5 text-blue-500" />;
+        return <Star className="h-5 w-5 text-primary" />;
       case 'tier2':
         return <Zap className="h-5 w-5 text-purple-500" />;
       case 'tier3':
         return <Crown className="h-5 w-5 text-yellow-500" />;
       default:
-        return <Star className="h-5 w-5 text-gray-500" />;
+        return <Star className="h-5 w-5 text-muted-foreground" />;
     }
   };
 

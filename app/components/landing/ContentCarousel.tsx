@@ -33,7 +33,7 @@ export default function ContentCarousel({
 }: ContentCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll functionality
+  // Auto-scroll functionality with seamless infinite loop
   useEffect(() => {
     if (loading || error || !scrollRef.current) return;
 
@@ -42,21 +42,36 @@ export default function ContentCarousel({
 
     // Check if there's enough content to scroll
     const hasScrollableContent = scrollContainer.scrollWidth > scrollContainer.clientWidth;
+    console.log('ContentCarousel: Scroll check:', {
+      scrollWidth: scrollContainer.scrollWidth,
+      clientWidth: scrollContainer.clientWidth,
+      hasScrollableContent,
+      childrenCount: Array.isArray(children) ? children.length : 'not array'
+    });
     if (!hasScrollableContent) {
       console.log('ContentCarousel: Not enough content to scroll');
       return;
     }
+
+    // For seamless infinite scrolling, we need to track the original content width
+    const originalContentWidth = scrollContainer.scrollWidth / 2; // Since we duplicate content
 
     const scroll = () => {
       if (scrollContainer) {
         const direction = reverseDirection ? -scrollSpeed : scrollSpeed;
         scrollContainer.scrollLeft += direction;
 
-        // Reset scroll position when reaching the end
-        if (reverseDirection && scrollContainer.scrollLeft <= 0) {
-          scrollContainer.scrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
-        } else if (!reverseDirection && scrollContainer.scrollLeft >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
-          scrollContainer.scrollLeft = 0;
+        // Seamless infinite loop - reset position when we've scrolled through one full set
+        if (reverseDirection) {
+          // When scrolling left, if we've gone past the start of the first set
+          if (scrollContainer.scrollLeft <= 0) {
+            scrollContainer.scrollLeft = originalContentWidth;
+          }
+        } else {
+          // When scrolling right, if we've gone past the end of the first set
+          if (scrollContainer.scrollLeft >= originalContentWidth) {
+            scrollContainer.scrollLeft = 0;
+          }
         }
       }
       animationId = requestAnimationFrame(scroll);
@@ -64,6 +79,10 @@ export default function ContentCarousel({
 
     // Start scrolling after a brief delay to ensure content is rendered
     const timeoutId = setTimeout(() => {
+      // Set initial position for reverse direction
+      if (reverseDirection) {
+        scrollContainer.scrollLeft = originalContentWidth;
+      }
       animationId = requestAnimationFrame(scroll);
     }, 100);
 
@@ -75,7 +94,7 @@ export default function ContentCarousel({
         clearTimeout(timeoutId);
       }
     };
-  }, [loading, error, scrollSpeed, reverseDirection]);
+  }, [loading, error, scrollSpeed, reverseDirection, children]);
 
   // Loading state
   if (loading) {
@@ -114,7 +133,7 @@ export default function ContentCarousel({
   }
 
   return (
-    <div 
+    <div
       className={`relative overflow-hidden ${fullWidth ? 'w-full' : ''}`}
       style={{ height: `${height}px` }}
     >
@@ -127,6 +146,9 @@ export default function ContentCarousel({
           WebkitScrollbar: { display: 'none' }
         }}
       >
+        {/* Original content */}
+        {children}
+        {/* Duplicate content for seamless infinite scrolling */}
         {children}
       </div>
     </div>

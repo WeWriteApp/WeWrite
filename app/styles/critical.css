@@ -2,12 +2,13 @@
 
 /* Essential base styles */
 :root {
-  /* Core color variables for immediate rendering */
-  --background: 0 0% 100%;
+  /* Core color variables for immediate rendering - using neutral defaults */
+  --background: 210 20% 98%; /* Light grey background */
   --foreground: 222 47% 11%;
-  --primary: 217 91% 60%;
+  --primary: 50% 0.05 240; /* Neutral gray default in OKLCH - will be overridden by theme system */
   --primary-foreground: 0 0% 100%;
   --border: 215 20% 85%;
+  --ring: 50% 0.05 240; /* Neutral gray ring - will be overridden by theme system */
   --radius: 0.5rem;
 }
 
@@ -15,6 +16,8 @@
   --background: 0 0% 0%;
   --foreground: 210 40% 98%;
   --border: 217 33% 25%;
+  --primary: 70% 0.05 240; /* Neutral gray for dark mode - will be overridden by theme system */
+  --ring: 70% 0.05 240; /* Neutral gray ring for dark mode - will be overridden by theme system */
 }
 
 /* Critical layout styles */

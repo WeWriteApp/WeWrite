@@ -980,8 +980,15 @@ input[type="range"]::-moz-range-thumb,
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
+    --success: 0.55 0.15 142;
+    --success-foreground: 1.00 0.00 0;
+
+    /* Systematic Color System - Base Colors (OKLCH) */
+    --accent-base: var(--primary); /* User's custom accent color */
+    --neutral-base: var(--primary); /* Same hue as accent, low chroma */
+    --success-base: 0.55 0.15 142; /* Green */
+    --warn-base: 0.72 0.15 72; /* Orange */
+    --error-base: 0.55 0.15 28; /* Red */
 
     /* Focus indicator variables */
     --focus-ring-color: var(--accent-h) var(--accent-s) var(--accent-l);
@@ -1027,8 +1034,8 @@ input[type="range"]::-moz-range-thumb,
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 73% 42%;
-    --success-foreground: 0 0% 100%;
+    --success: 0.60 0.15 142;
+    --success-foreground: 1.00 0.00 0;
 
     --border: 0 0% 25%;
     --input: 0 0% 18%;
@@ -1928,17 +1935,7 @@ button.bg-transparent[type] {
   color: hsl(var(--primary)) !important;
 }
 
-/* CRITICAL FIX: Ensure filled pills always have white text on accent color background */
-a.bg-primary, button.bg-primary, div.bg-primary,
-a[data-pill-style="filled"], button[data-pill-style="filled"], div[data-pill-style="filled"] {
-  color: white !important;
-}
 
-/* Ensure filled pills maintain white text on hover */
-a.bg-primary:hover, button.bg-primary:hover, div.bg-primary:hover,
-a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[data-pill-style="filled"]:hover {
-  color: white !important;
-}
 
 /* COMPOUND LINK FIXES - Ensure proper separation and styling with inline-block layout */
 .compound-link-container {
@@ -1994,7 +1991,89 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   color: hsl(var(--foreground)) !important;
 }
 
-/* Neutral alpha utility classes for consistent hover states */
+/* Systematic Color System - Opacity-based Utility Classes */
+
+/* Accent Colors (accent-n) */
+.bg-accent-10 { background-color: oklch(var(--accent-base) / 0.1) !important; }
+.bg-accent-20 { background-color: oklch(var(--accent-base) / 0.2) !important; }
+.bg-accent-30 { background-color: oklch(var(--accent-base) / 0.3) !important; }
+.bg-accent-40 { background-color: oklch(var(--accent-base) / 0.4) !important; }
+.bg-accent-50 { background-color: oklch(var(--accent-base) / 0.5) !important; }
+.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
+.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7) !important; }
+.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8) !important; }
+.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
+.bg-accent-100 { background-color: oklch(var(--accent-base)) !important; }
+
+/* Neutral Colors (neutral-n) */
+.bg-neutral-10 { background-color: oklch(var(--neutral-base) / 0.1) !important; }
+.bg-neutral-20 { background-color: oklch(var(--neutral-base) / 0.2) !important; }
+.bg-neutral-30 { background-color: oklch(var(--neutral-base) / 0.3) !important; }
+.bg-neutral-40 { background-color: oklch(var(--neutral-base) / 0.4) !important; }
+.bg-neutral-50 { background-color: oklch(var(--neutral-base) / 0.5) !important; }
+.bg-neutral-60 { background-color: oklch(var(--neutral-base) / 0.6) !important; }
+.bg-neutral-70 { background-color: oklch(var(--neutral-base) / 0.7) !important; }
+.bg-neutral-80 { background-color: oklch(var(--neutral-base) / 0.8) !important; }
+.bg-neutral-90 { background-color: oklch(var(--neutral-base) / 0.9) !important; }
+
+/* Success Colors (success-n) */
+.bg-success-10 { background-color: oklch(var(--success-base) / 0.1) !important; }
+.bg-success-20 { background-color: oklch(var(--success-base) / 0.2) !important; }
+.bg-success-30 { background-color: oklch(var(--success-base) / 0.3) !important; }
+.bg-success-40 { background-color: oklch(var(--success-base) / 0.4) !important; }
+.bg-success-50 { background-color: oklch(var(--success-base) / 0.5) !important; }
+.bg-success-60 { background-color: oklch(var(--success-base) / 0.6) !important; }
+.bg-success-70 { background-color: oklch(var(--success-base) / 0.7) !important; }
+.bg-success-80 { background-color: oklch(var(--success-base) / 0.8) !important; }
+.bg-success-90 { background-color: oklch(var(--success-base) / 0.9) !important; }
+
+/* Warning Colors (warn-n) */
+.bg-warn-10 { background-color: oklch(var(--warn-base) / 0.1) !important; }
+.bg-warn-20 { background-color: oklch(var(--warn-base) / 0.2) !important; }
+.bg-warn-30 { background-color: oklch(var(--warn-base) / 0.3) !important; }
+.bg-warn-40 { background-color: oklch(var(--warn-base) / 0.4) !important; }
+.bg-warn-50 { background-color: oklch(var(--warn-base) / 0.5) !important; }
+.bg-warn-60 { background-color: oklch(var(--warn-base) / 0.6) !important; }
+.bg-warn-70 { background-color: oklch(var(--warn-base) / 0.7) !important; }
+.bg-warn-80 { background-color: oklch(var(--warn-base) / 0.8) !important; }
+.bg-warn-90 { background-color: oklch(var(--warn-base) / 0.9) !important; }
+
+/* Error Colors (error-n) */
+.bg-error-10 { background-color: oklch(var(--error-base) / 0.1) !important; }
+.bg-error-20 { background-color: oklch(var(--error-base) / 0.2) !important; }
+.bg-error-30 { background-color: oklch(var(--error-base) / 0.3) !important; }
+.bg-error-40 { background-color: oklch(var(--error-base) / 0.4) !important; }
+.bg-error-50 { background-color: oklch(var(--error-base) / 0.5) !important; }
+.bg-error-60 { background-color: oklch(var(--error-base) / 0.6) !important; }
+.bg-error-70 { background-color: oklch(var(--error-base) / 0.7) !important; }
+.bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
+.bg-error-90 { background-color: oklch(var(--error-base) / 0.9) !important; }
+
+/* Border Colors */
+.border-accent-70 { border-color: oklch(var(--accent-base) / 0.7) !important; }
+.border-accent-100 { border-color: oklch(var(--accent-base)) !important; }
+.border-neutral-10 { border-color: oklch(var(--neutral-base) / 0.1) !important; }
+.border-neutral-15 { border-color: oklch(var(--neutral-base) / 0.15) !important; }
+.border-neutral-20 { border-color: oklch(var(--neutral-base) / 0.2) !important; }
+.border-neutral-30 { border-color: oklch(var(--neutral-base) / 0.3) !important; }
+
+/* Text Colors */
+.text-accent { color: oklch(var(--accent-base)) !important; }
+.text-accent-100 { color: oklch(var(--accent-base)) !important; }
+.text-accent-70 { color: oklch(var(--accent-base) / 0.7) !important; }
+.text-neutral { color: oklch(var(--neutral-base)) !important; }
+.text-success { color: oklch(var(--success-base)) !important; }
+.text-warn { color: oklch(var(--warn-base)) !important; }
+.text-error { color: oklch(var(--error-base)) !important; }
+
+/* Full Opacity Background Colors */
+.bg-accent { background-color: oklch(var(--accent-base)) !important; }
+.bg-neutral { background-color: oklch(var(--neutral-base)) !important; }
+.bg-success { background-color: oklch(var(--success-base)) !important; }
+.bg-warn { background-color: oklch(var(--warn-base)) !important; }
+.bg-error { background-color: oklch(var(--error-base)) !important; }
+
+/* Legacy compatibility - keep existing neutral alpha classes */
 .bg-neutral-alpha-2 {
   background-color: rgba(0, 0, 0, 0.05) !important;
 }

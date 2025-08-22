@@ -37,7 +37,7 @@ export function PagePreviewCard({
   const getCardStyleByStatus = (status: string) => {
     switch (status) {
       case 'done':
-        return "bg-success/10 dark:bg-success/20 border-theme-medium text-success dark:text-success-foreground";
+        return "bg-success-20 border-theme-medium text-success";
       case 'in-progress':
         return "bg-amber-50 dark:bg-amber-950/50 border-theme-medium text-amber-900 dark:text-amber-100";
       case 'coming-soon':
@@ -68,7 +68,7 @@ export function PagePreviewCard({
 
     switch (status) {
       case 'done':
-        return <Badge variant="default" className="bg-success text-success-foreground">Available Now</Badge>;
+        return <Badge variant="default" className="bg-success-20 text-success">Available Now</Badge>;
       case 'in-progress':
         return <Badge variant="default" className="bg-amber-500 text-white">In Progress</Badge>;
       case 'coming-soon':

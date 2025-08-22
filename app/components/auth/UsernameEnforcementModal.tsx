@@ -11,7 +11,7 @@ import { cn } from '../../lib/utils';
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername, userNeedsUsername } from '../../utils/usernameValidation';
 
 export default function UsernameEnforcementModal() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -24,9 +24,24 @@ export default function UsernameEnforcementModal() {
 
   // Check if the user has a username using centralized logic
   useEffect(() => {
-    if (userNeedsUsername(user)) {
+    console.log('[UsernameEnforcementModal] User data:', user);
+
+    // If user is authenticated but has no username or null username, show modal
+    if (user && (!user.username || user.username === null || user.username.trim() === '')) {
+      console.log('[UsernameEnforcementModal] User authenticated but missing username, opening modal');
+      setOpen(true);
+      return;
+    }
+
+    // Use centralized logic as backup
+    const needsUsername = userNeedsUsername(user);
+    console.log('[UsernameEnforcementModal] User needs username (centralized check):', needsUsername);
+
+    if (needsUsername) {
+      console.log('[UsernameEnforcementModal] Opening modal for user without username');
       setOpen(true);
     } else {
+      console.log('[UsernameEnforcementModal] User has valid username, closing modal');
       setOpen(false);
     }
   }, [user]);
@@ -137,9 +152,9 @@ export default function UsernameEnforcementModal() {
       const result = await response.json();
 
       if (result.success) {
-        // Success - close modal and let the auth system refresh the user
+        // Success - refresh user data and close modal
+        await refreshUser();
         setOpen(false);
-        // The user will be updated automatically by the auth system
       } else {
         setError(result.error || 'Failed to save username. Please try again.');
       }
@@ -157,7 +172,7 @@ export default function UsernameEnforcementModal() {
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border-theme-strong wewrite-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
         <DialogHeader>
           <DialogTitle>Set Your Username</DialogTitle>
           <DialogDescription>

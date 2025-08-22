@@ -98,11 +98,11 @@ export function PaymentErrorDisplay({
         };
       default:
         return {
-          bg: 'bg-blue-50 dark:bg-blue-950/20',
+          bg: 'bg-muted/50',
           border: 'border-theme-medium',
-          borderStyle: { borderColor: 'hsl(217 91% 60% / 0.3)' },
-          text: 'text-blue-800 dark:text-blue-200',
-          icon: 'text-blue-600 dark:text-blue-400'
+          borderStyle: { borderColor: 'oklch(var(--border))' },
+          text: 'text-muted-foreground',
+          icon: 'text-muted-foreground'
         };
     }
   };
@@ -155,7 +155,7 @@ export function PaymentErrorDisplay({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm')}>
+            <div className={cn('p-2 rounded-full bg-background shadow-sm')}>
               <CreditCard className={cn('h-5 w-5', colors.icon)} />
             </div>
             <div>
@@ -230,9 +230,9 @@ export function PaymentErrorDisplay({
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 space-y-2">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Error Details
                   </span>
                   <Button
@@ -245,7 +245,7 @@ export function PaymentErrorDisplay({
                     Copy
                   </Button>
                 </div>
-                <div className="text-xs font-mono text-gray-700 dark:text-gray-300 space-y-1">
+                <div className="text-xs font-mono text-muted-foreground space-y-1">
                   {error?.type && <div><strong>Type:</strong> {error.type}</div>}
                   {error?.code && <div><strong>Code:</strong> {error.code}</div>}
                   {error?.decline_code && <div><strong>Decline Code:</strong> {error.decline_code}</div>}

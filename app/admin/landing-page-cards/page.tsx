@@ -79,7 +79,7 @@ export default function LandingPageCardsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="py-6 px-4 container mx-auto max-w-6xl">
+      <div className="py-6 px-4 container mx-auto max-w-4xl">
         {/* Header */}
         <div className="mb-8">
           <Link 
@@ -99,9 +99,9 @@ export default function LandingPageCardsPage() {
         </div>
 
         {/* Instructions */}
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">How to use:</h3>
-          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+        <div className="mb-6 p-4 bg-muted/50 border border-border rounded-lg">
+          <h3 className="font-semibold text-foreground mb-2">How to use:</h3>
+          <ul className="text-sm text-muted-foreground space-y-1">
             <li>• <strong>Add cards:</strong> Click "Add New Card" and search for pages to add</li>
             <li>• <strong>Rearrange:</strong> Use the up/down arrows to change display order</li>
             <li>• <strong>Edit:</strong> Click the edit button to modify card settings</li>

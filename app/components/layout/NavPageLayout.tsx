@@ -1,11 +1,11 @@
 "use client";
 
 import React, { Suspense } from "react";
-
+import { MAX_WIDTH_CLASSES, RESPONSIVE_PADDING_CLASSES, type MaxWidthOption } from "../../constants/layout";
 
 export interface NavPageLayoutProps {
   children: React.ReactNode;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "4xl" | "6xl" | "full";
+  maxWidth?: MaxWidthOption;
   className?: string;
   loading?: boolean;
   loadingFallback?: React.ReactNode;
@@ -29,17 +29,6 @@ export default function NavPageLayout({
   loadingFallback
 }: NavPageLayoutProps) {
 
-  const maxWidthClasses = {
-    sm: "max-w-sm",
-    md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
-    "2xl": "max-w-2xl",
-    "4xl": "max-w-4xl",
-    "6xl": "max-w-6xl",
-    full: "max-w-full"
-  };
-
   const defaultLoadingFallback = (
     <div className="flex items-center justify-center min-h-[200px] w-full">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
@@ -49,7 +38,7 @@ export default function NavPageLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Content area with proper top padding to account for floating header */}
-      <div className={`${maxWidthClasses[maxWidth]} mx-auto px-4 sm:px-6 lg:px-8 pb-32 md:pb-8 pt-24 ${className}`}>
+      <div className={`${MAX_WIDTH_CLASSES[maxWidth]} mx-auto ${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 pt-24 ${className}`}>
         {/* Content loads progressively below header */}
         {loading ? (
           loadingFallback || defaultLoadingFallback

@@ -97,7 +97,7 @@ const SegmentedControlList = React.forwardRef<HTMLDivElement, React.HTMLAttribut
         // Base segmented control styling - iOS-like appearance
         "relative inline-flex items-center rounded-lg p-1",
         // Light mode
-        "bg-gray-100 dark:bg-gray-800",
+        "bg-muted",
         // Ensure proper spacing and sizing
         "h-10 w-full",
         className
@@ -122,13 +122,13 @@ const SegmentedControlTrigger = React.forwardRef<
         // Base button styling
         "relative flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out",
         // Focus states
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         // Disabled states
         "disabled:pointer-events-none disabled:opacity-50",
         // Active state - looks like selected segment
         isActive
           ? "bg-background text-foreground shadow-sm border-theme-strong"
-          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white",
+          : "text-muted-foreground hover:text-foreground",
         className
       )}
       onClick={(e) => {

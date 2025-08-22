@@ -117,7 +117,7 @@ export function GraphSettingsDrawer() {
   return (
     <div className="fixed inset-0 z-50 bg-black/50" onClick={closeDrawer}>
       <div 
-        className="fixed bottom-0 left-0 right-0 bg-background border-t border-border rounded-t-lg shadow-lg max-h-[70vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 bg-background border-t-only rounded-t-lg shadow-lg max-h-[70vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">

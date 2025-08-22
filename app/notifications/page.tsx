@@ -11,7 +11,9 @@ import NavPageLayout from '../components/layout/NavPageLayout';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
-import { Loader, CheckCheck, ChevronLeft } from 'lucide-react';
+import { Loader, CheckCheck, ChevronLeft, TestTube, MoreHorizontal, Settings } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { createTestNotification } from '../firebase/notifications';
 import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
 
 function NotificationsContent() {
@@ -25,6 +27,23 @@ function NotificationsContent() {
     markAllAsRead
   } = useNotifications();
   const { trackNotificationInteraction } = useWeWriteAnalytics();
+
+  // Test notification creation
+  const handleCreateTestNotification = async () => {
+    if (!user?.uid) return;
+
+    try {
+      console.log('Creating test notification...');
+      const notificationId = await createTestNotification(user.uid);
+      if (notificationId) {
+        console.log('Test notification created:', notificationId);
+        // Refresh notifications to show the new one
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error creating test notification:', error);
+    }
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -75,9 +94,22 @@ function NotificationsContent() {
           <h1 className="text-2xl font-bold">Notifications</h1>
           <p className="text-muted-foreground">Stay updated with your latest activity</p>
         </div>
-        {notifications.length > 0 && (
-          <NotificationsHeaderButton />
-        )}
+        <div className="flex items-center gap-2">
+          {/* Test notification button for validation */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCreateTestNotification}
+            className="flex items-center gap-2"
+          >
+            <TestTube className="h-4 w-4" />
+            Test Notification
+          </Button>
+
+          {notifications.length > 0 && (
+            <NotificationsHeaderButton />
+          )}
+        </div>
       </div>
 
       <div className="mt-6">
@@ -137,6 +169,7 @@ export default function NotificationsPage() {
 // Extract the header button to avoid loading delays
 function NotificationsHeaderButton() {
   const { markAllAsRead, loading } = useNotifications();
+  const router = useRouter();
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -146,17 +179,33 @@ function NotificationsHeaderButton() {
     }
   };
 
+  const handleNotificationSettings = () => {
+    router.push('/settings/notifications');
+  };
+
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleMarkAllAsRead}
-      disabled={loading}
-      className="flex items-center gap-2"
-      aria-label="Mark all notifications as read"
-    >
-      <CheckCheck className="h-4 w-4" />
-      <span className="hidden md:inline">Mark all as read</span>
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+          aria-label="Notification actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+          <span className="hidden md:inline">Actions</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={handleMarkAllAsRead} disabled={loading}>
+          <CheckCheck className="h-4 w-4 mr-2" />
+          Mark all as read
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleNotificationSettings}>
+          <Settings className="h-4 w-4 mr-2" />
+          Notification settings
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

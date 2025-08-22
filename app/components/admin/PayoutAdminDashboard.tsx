@@ -321,7 +321,7 @@ export default function PayoutAdminDashboard() {
               <CardTitle className="text-sm font-medium">Processing</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-primary">
                 {payoutData.stats.processing}
               </div>
             </CardContent>
@@ -411,7 +411,7 @@ export default function PayoutAdminDashboard() {
           </div>
 
           {selectedPayouts.length > 0 && (
-            <div className="flex gap-2 mb-4 p-3 bg-blue-50 rounded-md">
+            <div className="flex gap-2 mb-4 p-3 bg-muted/50 rounded-md">
               <span className="text-sm font-medium">
                 {selectedPayouts.length} payouts selected
               </span>

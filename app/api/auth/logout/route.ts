@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Logout] Processing logout request');
 
-    // Clear all auth-related cookies
+    // Clear all auth-related cookies with proper domain/path settings
     const cookiesToClear = [
       'simpleUserSession',
       'sessionId', // CRITICAL FIX: Also clear sessionId cookie
@@ -26,7 +26,20 @@ export async function POST(request: NextRequest) {
       'session'
     ];
 
+    // Cookie settings that match what was used when setting them
+    const cookieOptions = {
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? '.getwewrite.app' : undefined,
+      secure: true,
+      sameSite: 'lax' as const
+    };
+
     cookiesToClear.forEach(cookieName => {
+      // Delete with the same options used when setting
+      cookieStore.delete(cookieName, cookieOptions);
+      // Also try deleting without domain for safety
+      cookieStore.delete(cookieName, { path: '/' });
+      // Also try deleting with no options for legacy cookies
       cookieStore.delete(cookieName);
     });
 
@@ -40,12 +53,21 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Logout] Logout error:', error);
 
-    // Even if there's an error, try to clear cookies
+    // Even if there's an error, try to clear cookies with proper options
     const cookieStore = await cookies();
-    cookieStore.delete('simpleUserSession');
-    cookieStore.delete('sessionId'); // CRITICAL FIX: Also clear sessionId cookie
-    cookieStore.delete('userSession');
-    cookieStore.delete('devUserSession');
+    const cookieOptions = {
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? '.getwewrite.app' : undefined,
+      secure: true,
+      sameSite: 'lax' as const
+    };
+
+    const essentialCookies = ['simpleUserSession', 'sessionId', 'userSession', 'devUserSession'];
+    essentialCookies.forEach(cookieName => {
+      cookieStore.delete(cookieName, cookieOptions);
+      cookieStore.delete(cookieName, { path: '/' });
+      cookieStore.delete(cookieName);
+    });
 
     return NextResponse.json({
       success: true,

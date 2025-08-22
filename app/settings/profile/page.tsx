@@ -316,7 +316,7 @@ export default function ProfilePage() {
                     className={`transition-all duration-200 ${
                       isEditingUsername
                         ? 'border-primary ring-1 ring-primary/20 bg-background'
-                        : 'border-border/50 bg-muted/30 text-muted-foreground'
+                        : 'border-theme-light bg-muted/30 text-muted-foreground'
                     }`}
                   />
                 </div>
@@ -375,7 +375,7 @@ export default function ProfilePage() {
                     className={`transition-all duration-200 ${
                       isEditingEmail
                         ? 'border-primary ring-1 ring-primary/20 bg-background'
-                        : 'border-border/50 bg-muted/30 text-muted-foreground'
+                        : 'border-theme-light bg-muted/30 text-muted-foreground'
                     }`}
                   />
                 </div>
@@ -443,7 +443,7 @@ export default function ProfilePage() {
                       type="password"
                       value="••••••••"
                       disabled={true}
-                      className="border-border/50 bg-muted/30 text-muted-foreground"
+                      className="border-theme-light bg-muted/30 text-muted-foreground"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -616,18 +616,8 @@ export default function ProfilePage() {
                 });
 
                 if (confirmed) {
-                  // Import and call the logout function with appropriate parameters
-                  import('../../firebase/auth').then(({ logoutUser }) => {
-                    // If multiple accounts, try to return to previous account
-                    // Otherwise, do a normal logout
-                    logoutUser(false, hasMultipleAccounts).then((result) => {
-                      if (!result.returnedToPrevious) {
-                        // Force refresh to ensure clean state
-                        window.location.href = '/';
-                      }
-                      // If we returned to previous account, the redirect is handled by logoutUser
-                    });
-                  });
+                  // Use the consolidated logout from AuthProvider
+                  signOut();
                 }
               }}
               className="ml-auto"

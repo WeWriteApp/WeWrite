@@ -1,8 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPageById } from '../../../firebase/database/pages';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { pageCache } from '../../../utils/pageCache';
+import { getCollectionNameAsync } from '../../../utils/environmentConfig';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+
+/**
+ * Fetch page data directly using Firebase Admin
+ * This avoids circular calls and properly handles production data headers
+ */
+async function fetchPageDirectly(pageId: string, userId: string | null, request: NextRequest) {
+  try {
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
+    // Use async collection name resolution to handle X-Force-Production-Data header
+    const collectionName = await getCollectionNameAsync('pages');
+    console.log(`[Page API] Using collection: ${collectionName} for pageId: ${pageId}`);
+
+    // Get the page document
+    const pageRef = db.collection(collectionName).doc(pageId);
+    const pageDoc = await pageRef.get();
+
+    if (!pageDoc.exists) {
+      return { error: 'Page not found' };
+    }
+
+    const pageData = pageDoc.data();
+
+    // Check if page is deleted
+    if (pageData?.deleted === true) {
+      return { error: 'Page not found' };
+    }
+
+    // Check access permissions
+    const isOwner = userId && pageData?.userId === userId;
+    const isPublic = pageData?.isPublic === true;
+
+    if (!isOwner && !isPublic) {
+      return { error: 'Access denied - page is private' };
+    }
+
+    // Return the page data in the expected format
+    return {
+      pageData: {
+        id: pageId,
+        ...pageData
+      }
+    };
+
+  } catch (error) {
+    console.error('[Page API] Error fetching page directly:', error);
+    return { error: 'Failed to fetch page data' };
+  }
+}
 
 /**
  * Highly Optimized Page Data API
@@ -63,8 +114,8 @@ export async function GET(
     // Track this read for cost monitoring
     trackFirebaseRead('pages', 'getPageById', 1, 'api-cache-miss');
 
-    // Fetch page data using existing optimized function
-    const result = await getPageById(pageId, effectiveUserId);
+    // Fetch page data directly using Firebase Admin (avoid circular calls)
+    const result = await fetchPageDirectly(pageId, effectiveUserId, request);
 
     if (result.error) {
       if (result.error === 'Page not found') {
@@ -73,8 +124,8 @@ export async function GET(
           { status: 404 }
         );
       }
-      
-      if (result.error.includes('permission') || result.error.includes('private')) {
+
+      if (result.error.includes('permission') || result.error.includes('private') || result.error.includes('Access denied')) {
         return NextResponse.json(
           { error: 'Access denied' },
           { status: 403 }
@@ -88,7 +139,7 @@ export async function GET(
     }
 
     // Cache the successful result for future requests
-    const etag = `"${pageId}-${result.pageData?.updatedAt || Date.now()}"`;
+    const etag = `"${pageId}-${result.pageData?.lastModified || result.pageData?.updatedAt || Date.now()}"`;
     pageCache.set(pageId, result, effectiveUserId, etag);
 
     const responseTime = Date.now() - startTime;
@@ -98,7 +149,6 @@ export async function GET(
     const response = NextResponse.json({
       success: true,
       pageData: result.pageData,
-      versionData: result.versionData,
       fromCache: false
     });
 

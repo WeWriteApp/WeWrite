@@ -46,7 +46,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
               Deleted: -{deleted.toLocaleString()} chars
             </p>
             <p className="text-sm font-medium">
-              <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-2"></span>
+              <span className="inline-block w-3 h-3 bg-muted/500 rounded mr-2"></span>
               Net: {net > 0 ? '+' : ''}{net.toLocaleString()} chars
             </p>
           </div>

@@ -327,7 +327,7 @@ export default function EarningsSourceBreakdown() {
             )}
             
             {/* Summary */}
-            <div className="pt-3 mt-3 border-t border-border">
+            <div className="pt-3 mt-3 border-t border-neutral-15">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
                   {mode === 'pages' 

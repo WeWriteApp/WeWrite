@@ -218,7 +218,7 @@ const SwipeableTabs = ({
         if (child.type === SwipeableTabsList) {
           return (
             <div
-              className="relative border-b border-border/40 mb-4"
+              className="relative border-b border-neutral-30 mb-4"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}

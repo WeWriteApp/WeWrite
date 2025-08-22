@@ -251,42 +251,144 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [setLoading, clearError, setUser, setError]);
 
-  // Sign out
+  // Consolidated sign out - single source of truth for logout
   const signOut = useCallback(async () => {
+    console.log('[Auth] 🔴 LOGOUT: Starting consolidated logout process');
+
     try {
       setLoading(true);
       clearError();
 
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      // Always clear local state, even if API call fails
+      // Step 1: Clear local React state immediately
       setUser(null);
-      console.log('[Auth] Sign out completed');
+      console.log('[Auth] 🔴 LOGOUT: Local state cleared');
 
-      if (!response.ok) {
-        console.warn('[Auth] Logout API call failed, but local state cleared');
+      // Step 2: Sign out from Firebase Auth
+      try {
+        const { signOut: firebaseSignOut } = await import('firebase/auth');
+        const { auth } = await import('../firebase/auth');
+        await firebaseSignOut(auth);
+        console.log('[Auth] 🔴 LOGOUT: Firebase Auth logout completed');
+      } catch (firebaseError) {
+        console.warn('[Auth] 🔴 LOGOUT: Firebase logout error (continuing):', firebaseError);
       }
 
-      // Force refresh to ensure clean state and redirect to landing page
-      console.log('[Auth] Force refreshing page after logout');
-      window.location.href = '/';
+      // Step 3: Clear client-side cookies and localStorage
+      try {
+        const Cookies = (await import('js-cookie')).default;
+
+        const cookiesToClear = [
+          'session',
+          'authenticated',
+          'userSession',
+          'simpleUserSession',
+          'sessionId',
+          'devUserSession',
+          'authToken'
+        ];
+
+        // Clear cookies with different domain/path combinations
+        cookiesToClear.forEach(cookieName => {
+          Cookies.remove(cookieName);
+          Cookies.remove(cookieName, { path: '/' });
+          if (window.location.hostname.includes('getwewrite.app')) {
+            Cookies.remove(cookieName, { path: '/', domain: '.getwewrite.app' });
+            Cookies.remove(cookieName, { path: '/', domain: 'getwewrite.app' });
+          }
+        });
+
+        // Clear relevant localStorage items
+        const localStorageKeysToRemove = [
+          'email_verification_notification_dismissed',
+          'last_email_verification_notification',
+          'email_verification_resend_cooldown',
+          'email_verification_resend_count',
+          'authRedirectPending'
+        ];
+
+        localStorageKeysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+
+        console.log('[Auth] 🔴 LOGOUT: Client-side cleanup completed');
+      } catch (cleanupError) {
+        console.warn('[Auth] 🔴 LOGOUT: Client cleanup error (continuing):', cleanupError);
+      }
+
+      // Step 4: Call server-side logout API
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          console.log('[Auth] 🔴 LOGOUT: Server-side logout completed');
+        } else {
+          console.warn('[Auth] 🔴 LOGOUT: Server logout API failed (continuing)');
+        }
+      } catch (apiError) {
+        console.warn('[Auth] 🔴 LOGOUT: Server logout API error (continuing):', apiError);
+      }
+
+      console.log('[Auth] 🔴 LOGOUT: All logout steps completed');
 
     } catch (error) {
-      console.error('[Auth] Sign out error:', error);
-      // Still clear local state even if API fails
+      console.error('[Auth] 🔴 LOGOUT: Unexpected error during logout:', error);
+      // Still clear local state even if everything fails
       setUser(null);
-      // Force refresh even if there was an error
-      window.location.href = '/';
+    } finally {
+      // ALWAYS force refresh to ensure clean state, regardless of errors
+      console.log('[Auth] 🔴 LOGOUT: Force refreshing page to complete logout');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100); // Small delay to ensure state updates are processed
     }
   }, [setLoading, clearError, setUser]);
 
-  // Refresh user data
+  // Refresh user data - force refresh from Firebase Auth to get latest emailVerified status
   const refreshUser = useCallback(async () => {
-    await checkSession();
-  }, [checkSession]);
+    try {
+      setLoading(true);
+      clearError();
+
+      // First, check if we have a Firebase Auth user and refresh their token
+      const { auth } = await import('../firebase/auth');
+      if (auth.currentUser) {
+        console.log('[Auth] Refreshing Firebase Auth user token to get latest emailVerified status');
+        await auth.currentUser.reload(); // Refresh the user's data from Firebase
+
+        // Get fresh ID token with updated claims
+        const idToken = await auth.currentUser.getIdToken(true); // Force refresh
+
+        // Create new session with updated data
+        const response = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ idToken })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isAuthenticated && data.user) {
+            setUser(data.user);
+            console.log('[Auth] User data refreshed with updated emailVerified status:', data.user.emailVerified);
+            return;
+          }
+        }
+      }
+
+      // Fallback to regular session check
+      await checkSession();
+    } catch (error) {
+      console.error('[Auth] Error refreshing user data:', error);
+      // Fallback to regular session check
+      await checkSession();
+    }
+  }, [checkSession, setLoading, clearError, setUser]);
 
   // Update user profile
   const updateProfile = useCallback(async (updates: Partial<User>) => {
@@ -332,6 +434,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     checkSession();
   }, [checkSession]);
+
+  // Listen for page visibility changes to refresh user data when user returns
+  // This helps catch email verification status changes when user returns from email
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && authState.user && !authState.user.emailVerified) {
+        console.log('[Auth] Page became visible and user is unverified, refreshing user data');
+        refreshUser();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [authState.user, refreshUser]);
 
   // Context value
   const contextValue: AuthContextValue = {

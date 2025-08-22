@@ -166,7 +166,7 @@ export function RandomPagesSkeleton({ limit = 10 }: { limit?: number }) {
             </div>
 
             {/* Allocation Bar */}
-            <div className="pt-2 border-t border-border/20">
+            <div className="pt-2 border-t border-neutral-15">
               <Skeleton className="h-8 w-full rounded-full" />
             </div>
           </div>

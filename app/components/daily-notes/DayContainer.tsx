@@ -175,22 +175,12 @@ const DayContainer = React.memo(function DayContainer({
                 "w-full flex items-center justify-center gap-2 px-3 py-2",
                 "rounded-lg border-2 transition-all duration-200",
                 "text-sm font-medium hover:scale-[1.02] active:scale-[0.98]",
-                "focus:outline-none focus:ring-2 focus:ring-offset-2",
+                "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/40",
                 // Conditional styling based on whether there are notes
                 notes.length === 0
-                  ? "border-solid text-white hover:opacity-90" // Empty state: solid accent button
+                  ? "border-solid bg-primary border-primary text-primary-foreground hover:bg-primary/90" // Empty state: solid accent button
                   : "border-dashed border-border text-muted-foreground hover:border-border/80 hover:text-foreground" // Has notes: dotted outline
               )}
-              style={{
-                ...(notes.length === 0
-                  ? {
-                      backgroundColor: accentColor,
-                      borderColor: accentColor
-                    }
-                  : {}
-                ),
-                focusRingColor: accentColor + '40' // 25% opacity for focus ring
-              }}
               onClick={() => onAddNewClick(date)}
             >
               <Plus className="w-4 h-4" />
@@ -203,10 +193,7 @@ const DayContainer = React.memo(function DayContainer({
       {/* Today pill - positioned underneath the card, centered */}
       {isToday && (
         <div className="mt-2 flex justify-center">
-          <div
-            className="px-3 py-1 rounded-full text-xs font-medium text-white"
-            style={{ backgroundColor: accentColor }}
-          >
+          <div className="px-3 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
             Today
           </div>
         </div>

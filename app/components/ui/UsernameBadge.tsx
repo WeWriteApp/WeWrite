@@ -264,8 +264,8 @@ export function UsernameBadge({
         className={cn(
           "username-badge-link inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit no-underline",
           isInactive
-            ? "hover:bg-muted/50 text-muted-foreground"
-            : "hover:bg-accent/50 text-primary",
+            ? "hover:bg-primary/5 text-muted-foreground"
+            : "hover:bg-primary/10 text-primary",
           "hover:no-underline focus:no-underline",
           className
         )}

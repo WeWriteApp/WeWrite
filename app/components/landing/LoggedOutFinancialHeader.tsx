@@ -111,7 +111,7 @@ export function LoggedOutFinancialHeader() {
         trigger={
           <Badge
             variant="secondary"
-            className="cursor-pointer transition-colors text-sm text-green-600 bg-green-50 border-green-200 hover:bg-green-100 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:bg-green-900"
+            className="cursor-pointer transition-colors text-sm text-green-100 bg-green-15 border-green-30 hover:bg-green-20"
           >
             {formatUsdCents(fakeEarnings)}
           </Badge>
@@ -124,7 +124,7 @@ export function LoggedOutFinancialHeader() {
               lastMonthEarnings={5.67} // Pass as dollars, not cents
               monthlyChange={15} // 15% increase
             />
-            <div className="text-xs text-muted-foreground bg-green-50 dark:bg-green-950/50 p-2 rounded">
+            <div className="text-xs text-success bg-success-20 p-2 rounded">
               <strong>Demo Mode:</strong> Start writing pages to earn from supporters! Sign up to begin.
             </div>
           </div>
@@ -136,7 +136,7 @@ export function LoggedOutFinancialHeader() {
   return (
     <div className="fixed top-20 left-0 right-0 z-40 mb-6">
       <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-        <FloatingHeader className="p-3 md:p-4 relative" withGradient={true}>
+        <FloatingHeader className="p-3 md:p-4 relative">
           <div className="flex items-center justify-between">
             {/* Spend Display (left side) */}
             <div className="flex items-center min-w-0 flex-shrink-0">

@@ -210,10 +210,10 @@ export function SubscriptionOverview() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-blue-600" />
+                  <DollarSign className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Pledged</span>
                 </div>
-                <p className="text-lg font-bold text-blue-600">
+                <p className="text-lg font-bold text-primary">
                   {formatCurrency(subscription.pledgedAmount || 0)}
                 </p>
               </div>

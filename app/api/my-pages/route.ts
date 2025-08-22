@@ -61,10 +61,9 @@ async function getUserPageCountServer(userId: string, viewerUserId: string | nul
         return publicCounterDoc.data().pageCount;
       }
 
-      // No counter, count manually
+      // No counter, count manually (all pages are public now)
       const pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
-        .where('isPublic', '==', true)
         .where('deleted', '==', false);
 
       const pagesSnapshot = await pagesQuery.get();

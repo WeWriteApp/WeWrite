@@ -449,7 +449,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
         {/* Restore button for activity context - only show if needed */}
         {canRestore && (
-          <div className="flex-shrink-0 pt-3 border-t border-border/20 mt-3">
+          <div className="flex-shrink-0 pt-3 border-t border-neutral-15 mt-3">
             <div className="flex justify-end items-center">
               <Button
                 variant="outline"
@@ -476,7 +476,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
         {/* Dollar allocation UI - show for all users' pages when not viewing your own */}
         {activity.userId && activity.pageId && (!user || user.uid !== activity.userId) && (
-          <div className="pt-3 border-t border-border/20 mt-3">
+          <div className="pt-3 border-t border-neutral-20 mt-3">
             <AllocationControls
               pageId={activity.pageId}
               authorId={activity.userId}

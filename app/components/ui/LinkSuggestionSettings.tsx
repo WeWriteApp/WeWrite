@@ -80,7 +80,7 @@ export function LinkSuggestionSettings({
         )}
 
         {/* Help Text */}
-        <div className="pt-2 border-t border-border">
+        <div className="pt-2 border-t border-neutral-15">
           <p className="text-xs text-muted-foreground">
             Link suggestions analyze your text and recommend pages to link to. 
             You can dismiss suggestions you don't want to see again during this session.

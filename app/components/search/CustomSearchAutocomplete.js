@@ -106,11 +106,17 @@ const CustomSearchAutocomplete = (props) => {
   };
 
   return (
-    <div ref={inputRef}>
+    <div ref={inputRef} className="wewrite-card">
       <ReactSearchAutocomplete
         {...otherProps}
         onSearch={handleOnSearch}
         formatResult={formatResult}
+        styling={{
+          ...otherProps.styling,
+          border: "none",
+          backgroundColor: "transparent",
+          boxShadow: "none"
+        }}
       />
     </div>
   );

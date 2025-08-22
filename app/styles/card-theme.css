@@ -11,23 +11,29 @@
 /* ===== CARD THEME CSS VARIABLES ===== */
 
 :root {
-  /* Light theme card variables - more subtle and transparent */
-  --card-bg: rgba(255, 255, 255, 0.7);
-  --card-bg-hover: rgba(255, 255, 255, 0.85);
-  --card-border: rgba(0, 0, 0, 0.08);
-  --card-border-hover: rgba(0, 0, 0, 0.12);
-  --card-text: hsl(210, 24%, 16%);
-  --card-text-muted: hsl(210, 16%, 46%);
+  /* Dynamic card opacity - default 15% */
+  --card-opacity: 0.15;
+
+  /* Dynamic card blur - default 50% */
+  --card-blur: 0.5;
+
+  /* Light theme card variables - these are set by NeutralColorContext, don't override here */
+  /* --card-bg is dynamically set by NeutralColorContext using neutral colors */
+  /* --card-bg-hover is dynamically set by NeutralColorContext */
+  --card-border: oklch(0.00% 0.0000 0.0 / 0.1); /* Slightly stronger border for better definition */
+  --card-border-hover: oklch(0.00% 0.0000 0.0 / 0.15);
+  --card-text: oklch(16.39% 0.1306 274.7);
+  --card-text-muted: oklch(48.70% 0.1396 267.5);
 }
 
 .dark {
-  /* Dark theme card variables - completely neutral grey (zero saturation) */
-  --card-bg: rgba(20, 20, 20, 0.7);
-  --card-bg-hover: rgba(20, 20, 20, 0.85);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --card-border-hover: rgba(255, 255, 255, 0.12);
-  --card-text: hsl(0, 0%, 98%);
-  --card-text-muted: hsl(0, 0%, 65%);
+  /* Dark theme card variables - these are set by NeutralColorContext, don't override here */
+  /* --card-bg is dynamically set by NeutralColorContext using neutral colors */
+  /* --card-bg-hover is dynamically set by NeutralColorContext */
+  --card-border: oklch(100.00% 0.0000 158.2 / 0.08);
+  --card-border-hover: oklch(100.00% 0.0000 158.2 / 0.12);
+  --card-text: oklch(98.27% 0.0000 158.2);
+  --card-text-muted: oklch(68.12% 0.0000 158.2);
 }
 
 /* ===== UNIVERSAL CARD SYSTEM ===== */
@@ -36,19 +42,24 @@
  * Universal WeWrite Card
  *
  * ONE card class for ALL components. This provides:
- * - Consistent background and borders across light/dark themes
- * - Subtle transparency for modern look
- * - Backdrop blur for glassmorphism effect
- * - Responsive hover states
- * - Accessibility support
+ * - Semi-transparent white overlay that adapts to any background
+ * - Glassmorphism effect with backdrop blur
+ * - Future-proof for custom background colors/images
+ * - Consistent borders and shadows across light/dark themes
+ * - Responsive hover states and accessibility support
+ *
+ * Design Philosophy: Cards are always lighter overlays on top of the background,
+ * making them work beautifully with any background color or image.
  *
  * Use this class for ALL cards: daily notes, recent edits, content cards, etc.
  */
 .wewrite-card {
-  /* Background with subtle transparency and glassmorphism */
+  /* Semi-transparent white overlay with conditional glassmorphism */
   background-color: var(--card-bg);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+
+  /* Backdrop filters using separate blur and opacity controls */
+  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1));
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1));
 
   /* Subtle, theme-aware borders */
   border: 1px solid var(--card-border);
@@ -61,22 +72,108 @@
   padding: 1rem;
   transition: all 0.2s ease-in-out;
 
-  /* Subtle shadow */
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  /* Subtle card shadows */
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 .wewrite-card:hover {
   background-color: var(--card-bg-hover);
   border-color: var(--card-border-hover);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  /* Enhanced hover shadow */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  /* Enhanced backdrop filters on hover with increased blur */
+  backdrop-filter: blur(calc(var(--card-blur) * 24px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.15));
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 24px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.15));
 }
 
 .dark .wewrite-card {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+  /* Dark mode shadows */
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
 }
 
 .dark .wewrite-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+  /* Dark mode hover shadow */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+}
+
+/* ===== CARD MODIFIERS ===== */
+
+/**
+ * Corner radius modifiers
+ * Use these to customize border radius while keeping all other card properties
+ */
+.wewrite-card.wewrite-card-sharp {
+  border-radius: 0;
+}
+
+.wewrite-card.wewrite-card-rounded-sm {
+  border-radius: 0.25rem; /* 4px */
+}
+
+.wewrite-card.wewrite-card-rounded {
+  border-radius: 0.5rem; /* 8px */
+}
+
+.wewrite-card.wewrite-card-rounded-lg {
+  border-radius: 0.75rem; /* 12px */
+}
+
+.wewrite-card.wewrite-card-rounded-xl {
+  border-radius: 1rem; /* 16px - default */
+}
+
+.wewrite-card.wewrite-card-rounded-2xl {
+  border-radius: 1.5rem; /* 24px */
+}
+
+/**
+ * Border modifiers
+ * Use these to customize borders while keeping all other card properties
+ */
+.wewrite-card.wewrite-card-border-none {
+  border: none;
+}
+
+.wewrite-card.wewrite-card-border-top {
+  border: none;
+  border-top: 1px solid var(--card-border);
+}
+
+.wewrite-card.wewrite-card-border-bottom {
+  border: none;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.wewrite-card.wewrite-card-border-x {
+  border: none;
+  border-left: 1px solid var(--card-border);
+  border-right: 1px solid var(--card-border);
+}
+
+.wewrite-card.wewrite-card-border-y {
+  border: none;
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+}
+
+/**
+ * Padding modifiers
+ * Use these to customize padding while keeping all other card properties
+ */
+.wewrite-card.wewrite-card-no-padding {
+  padding: 0;
+}
+
+.wewrite-card.wewrite-card-padding-sm {
+  padding: 0.5rem; /* 8px */
+}
+
+.wewrite-card.wewrite-card-padding-lg {
+  padding: 1.5rem; /* 24px */
+}
+
+.wewrite-card.wewrite-card-padding-xl {
+  padding: 2rem; /* 32px */
 }
 
 /* ===== TEXT UTILITY CLASSES ===== */
@@ -96,22 +193,38 @@
  * All inherit from .wewrite-card base styling
  */
 
-/* Daily notes cards - flex layout for proper content centering */
+/* Daily notes cards - flex layout with enhanced glassmorphism */
 .wewrite-card.wewrite-daily-notes {
   display: flex;
   flex-direction: column;
   min-height: 16rem; /* h-64 */
+
+  /* FIXED: Use consistent blur variable instead of opacity-based calculation */
+  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+
+  /* Enhanced shadows for better depth */
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
-/* Floating cards - enhanced blur and shadow for overlays */
+.dark .wewrite-card.wewrite-daily-notes {
+  /* Enhanced blur and shadow for daily notes cards in dark mode - use consistent blur variable */
+  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
+/* Floating cards - enhanced shadows */
 .wewrite-card.wewrite-floating {
-  backdrop-filter: blur(20px) saturate(200%);
-  -webkit-backdrop-filter: blur(20px) saturate(200%);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  /* Enhanced floating card shadows */
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .dark .wewrite-card.wewrite-floating {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  /* FIXED: Use consistent blur variable instead of opacity-based calculation */
+  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
 }
 
 /* ===== RESPONSIVE ADJUSTMENTS ===== */

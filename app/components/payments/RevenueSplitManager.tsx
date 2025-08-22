@@ -262,10 +262,10 @@ export default function RevenueSplitManager({
                 </div>
                 <div className="p-3 border rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
-                    <Percent className="h-4 w-4 text-blue-600" />
+                    <Percent className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium">Platform Fee</span>
                   </div>
-                  <p className="text-xl font-bold text-blue-600">
+                  <p className="text-xl font-bold text-primary">
                     {revenueSplit.splits
                       .filter(s => s.recipientType === 'platform')
                       .reduce((sum, s) => sum + s.percentage, 0)

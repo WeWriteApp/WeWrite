@@ -246,7 +246,7 @@ export default function CustomDateField({
         {/* Enhanced Date picker overlay */}
         {showDatePicker && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDatePicker(false)}>
-            <div className="bg-background border rounded-lg p-6 shadow-lg max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="wewrite-card max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-2">Select custom date</h3>
                 <p className="text-sm text-muted-foreground">Choose a date for this page</p>

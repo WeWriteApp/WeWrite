@@ -63,14 +63,7 @@ export const INTERACTION_EVENTS = {
   PAGE_SHARE_ABORTED: 'page_share_aborted',
   PAGE_SHARE_SUCCEEDED: 'page_share_succeeded'};
 
-// Group Events - REMOVED: Groups feature has been completely removed from the application
-// export const GROUP_EVENTS = {
-//   GROUP_CREATED: 'group_created',
-//   GROUP_JOINED: 'group_joined',
-//   GROUP_LEFT: 'group_left',
-//   GROUP_PAGE_CREATED: 'group_page_created',
-//   GROUP_PAGE_EDITED: 'group_page_edited',
-// };
+
 
 // Feature Usage Events
 export const FEATURE_EVENTS = {
@@ -114,7 +107,7 @@ export const ANALYTICS_EVENTS = {
   ...CONTENT_EVENTS,
   ...INTERACTION_EVENTS,
   ...NAVIGATION_EVENTS,
-  // ...GROUP_EVENTS, // Removed: Groups feature has been completely removed
+
   ...FEATURE_EVENTS,
   ...SESSION_EVENTS,
   ...PWA_EVENTS};

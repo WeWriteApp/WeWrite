@@ -206,7 +206,7 @@ export function SecurityComplianceChecker({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pass':
-        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Secure</Badge>;
+        return <Badge className="bg-success-20 text-success">Secure</Badge>;
       case 'fail':
         return <Badge variant="destructive">Failed</Badge>;
       case 'warning':

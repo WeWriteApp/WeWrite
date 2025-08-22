@@ -117,11 +117,11 @@ export function PlatformFeeRevenueWidget({
               <div className="text-xs text-green-600">Total Revenue</div>
             </div>
             
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-lg font-bold text-blue-800">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-lg font-bold text-foreground">
                 {formatCurrency(stats.monthlyRevenue)}
               </div>
-              <div className="text-xs text-blue-600">This Month</div>
+              <div className="text-xs text-primary">This Month</div>
             </div>
             
             <div className="text-center p-3 bg-purple-50 rounded-lg">

@@ -200,7 +200,11 @@ export function Modal({
             }}
             className={cn(
               // Base styles
-              "relative glass-overlay z-10",
+              "relative z-10",
+              // Use proper card styling instead of deprecated glass-overlay
+              "bg-[var(--card-bg)] border border-[var(--card-border)]",
+              // Add backdrop blur for glassmorphism effect
+              "backdrop-blur-md",
               // Mobile: Full screen slide-up modal with top margin
               "w-full rounded-t-2xl md:rounded-2xl",
               // Mobile height: account for top padding (20px) to prevent full screen coverage

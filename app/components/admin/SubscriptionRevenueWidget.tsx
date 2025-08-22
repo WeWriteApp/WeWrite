@@ -223,10 +223,10 @@ export function SubscriptionRevenueWidget({
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Users className="h-3 w-3 text-blue-600" />
+                <Users className="h-3 w-3 text-primary" />
                 <span className="text-xs text-muted-foreground">Avg ARPU</span>
               </div>
-              <div className="text-lg font-bold text-blue-600">
+              <div className="text-lg font-bold text-primary">
                 {formatCurrency(averageARPU)}
               </div>
             </div>

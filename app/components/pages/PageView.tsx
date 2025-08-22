@@ -1645,7 +1645,7 @@ export default function PageView({
 
                             {/* Dense mode toggle below content - only show in view mode */}
                             {!canEdit && (
-                              <div className="flex justify-center pt-4 border-t border-border/50">
+                              <div className="flex justify-center pt-4">
                                 <DenseModeToggle />
                               </div>
                             )}

@@ -85,14 +85,69 @@ const CollapsibleContent = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
   const context = React.useContext(CollapsibleContext);
+  const [isAnimating, setIsAnimating] = React.useState(false);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
-  if (!context?.open) {
+  React.useEffect(() => {
+    const element = contentRef.current;
+    if (!element) return;
+
+    if (context?.open) {
+      // Opening animation
+      setIsAnimating(true);
+      element.style.height = '0px';
+      element.style.opacity = '0';
+
+      // Force reflow
+      element.offsetHeight;
+
+      // Animate to full height
+      element.style.transition = 'height 0.2s ease-out, opacity 0.2s ease-out';
+      element.style.height = element.scrollHeight + 'px';
+      element.style.opacity = '1';
+
+      const handleTransitionEnd = () => {
+        element.style.height = 'auto';
+        setIsAnimating(false);
+        element.removeEventListener('transitionend', handleTransitionEnd);
+      };
+
+      element.addEventListener('transitionend', handleTransitionEnd);
+    } else {
+      // Closing animation
+      setIsAnimating(true);
+      element.style.height = element.scrollHeight + 'px';
+      element.style.opacity = '1';
+
+      // Force reflow
+      element.offsetHeight;
+
+      // Animate to zero height
+      element.style.transition = 'height 0.2s ease-out, opacity 0.2s ease-out';
+      element.style.height = '0px';
+      element.style.opacity = '0';
+
+      const handleTransitionEnd = () => {
+        setIsAnimating(false);
+        element.removeEventListener('transitionend', handleTransitionEnd);
+      };
+
+      element.addEventListener('transitionend', handleTransitionEnd);
+    }
+  }, [context?.open]);
+
+  // Don't render if closed and not animating
+  if (!context?.open && !isAnimating) {
     return null;
   }
 
   return (
     <div
-      ref={ref}
+      ref={(node) => {
+        contentRef.current = node;
+        if (typeof ref === 'function') ref(node);
+        else if (ref) ref.current = node;
+      }}
       className={cn("overflow-hidden", className)}
       {...props}
     >

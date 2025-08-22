@@ -67,7 +67,7 @@ const DonationPieChart: React.FC<DonationPieChartProps> = ({
         ></div>
         
         {/* Center circle with total amount */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-gray-900 rounded-full m-8">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background rounded-full m-8">
           <DollarSign className="h-5 w-5 text-muted-foreground mb-1" />
           <div className="text-lg font-bold">${totalAmount.toFixed(2)}</div>
           <div className="text-xs text-muted-foreground">of ${maxAmount.toFixed(2)}</div>
@@ -78,7 +78,7 @@ const DonationPieChart: React.FC<DonationPieChartProps> = ({
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 mt-4">
         {sortedPledges.map((pledge) => (
           <div key={pledge.id} className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-gray-500 mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-muted-foreground mr-2"></div>
             <div className="text-sm truncate">
               <span className="font-medium">${pledge.amount.toFixed(2)}</span>
               <span className="text-muted-foreground ml-1 text-xs">{pledge.title}</span>
@@ -88,7 +88,7 @@ const DonationPieChart: React.FC<DonationPieChartProps> = ({
         
         {unusedAmount > 0 && (
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700 mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-muted mr-2"></div>
             <div className="text-sm">
               <span className="font-medium">${unusedAmount.toFixed(2)}</span>
               <span className="text-muted-foreground ml-1 text-xs">Unused</span>

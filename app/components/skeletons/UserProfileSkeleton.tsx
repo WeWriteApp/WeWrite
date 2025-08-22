@@ -68,7 +68,7 @@ export function UserProfileSkeleton({
       {showTabs && (
         <div className="mt-6">
           {/* Tab headers */}
-          <div className="border-b border-border/40 mb-4">
+          <div className="border-b border-neutral-30 mb-4">
             <div className="flex gap-6 pb-2">
               {['Bio', 'Pages', 'Activity', 'Links'].map((tab, i) => (
                 <div
@@ -151,7 +151,7 @@ export function ProfileTabsSkeleton({ className }: { className?: string }) {
       {/* Tab content skeleton */}
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="border border-border/40 rounded-lg p-4">
+          <div key={i} className="border border-neutral-30 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-muted rounded-full flex-shrink-0" />
               <div className="flex-1 space-y-2">

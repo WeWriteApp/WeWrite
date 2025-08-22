@@ -61,7 +61,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
               <p className="text-sm text-green-600">
                 <span className="font-medium">Authenticated:</span> {authenticated}
               </p>
-              <p className="text-sm text-blue-600">
+              <p className="text-sm text-primary">
                 <span className="font-medium">Anonymous:</span> {anonymous}
               </p>
             </div>

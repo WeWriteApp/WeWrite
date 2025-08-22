@@ -35,7 +35,7 @@ export function ModernAuthLayout({
           {/* Header removed as requested */}
 
           <motion.div
-            className="bg-card rounded-xl shadow-sm border border-border p-6 md:p-8"
+            className="wewrite-card rounded-xl shadow-sm border border-border p-6 md:p-8"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{

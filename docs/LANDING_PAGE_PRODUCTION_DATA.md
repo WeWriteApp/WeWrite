@@ -11,7 +11,37 @@ This applies to:
 
 Only after successful authentication do users switch to environment-appropriate collections (DEV_ collections in development).
 
-## Architecture
+## Authentication System
+
+### Consolidated Logout Mechanism
+
+WeWrite uses a single, consolidated logout mechanism managed by the `AuthProvider` to ensure reliable logout across all components:
+
+**Single Source of Truth**: The `AuthProvider.signOut()` method is the only logout mechanism used throughout the app.
+
+**Comprehensive Cleanup Process**:
+1. **Local State**: Immediately clears React authentication state
+2. **Firebase Auth**: Signs out from Firebase Authentication
+3. **Client Cookies**: Removes all authentication cookies with multiple domain/path combinations
+4. **Local Storage**: Clears authentication-related localStorage items
+5. **Server Session**: Calls logout API to clear server-side session
+6. **Page Refresh**: Forces page refresh to ensure clean state
+
+**Error Resilience**: Each step has error handling to ensure logout completes even if individual steps fail.
+
+**Usage**: All logout buttons and mechanisms use `const { signOut } = useAuth()` and call `signOut()` directly.
+
+### Email Verification System
+
+The email verification system includes automatic refresh mechanisms to ensure users see updated verification status:
+
+**Automatic Refresh**: When users return to the app after potentially verifying their email, the system automatically refreshes their verification status.
+
+**Manual Refresh**: Users can click "Check Again" button in verification alerts to manually refresh their status.
+
+**Real-time Updates**: The system uses Firebase Auth token refresh to get the latest `emailVerified` status from the server.
+
+## Production Data Architecture
 
 ### The Problem
 

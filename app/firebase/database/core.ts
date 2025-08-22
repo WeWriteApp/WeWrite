@@ -84,10 +84,11 @@ export const createUserPageQuery = (userId: string, includeDeleted: boolean = fa
 
 /**
  * Helper function to create page queries with soft delete filtering
+ * All pages are now public, so this is equivalent to createPageQuery
  */
 export const createPublicPageQuery = (includeDeleted: boolean = false, additionalFilters: any[] = []) => {
   const baseQuery = [
-    where('isPublic', '==', true),
+    // All pages are now public - no isPublic filter needed
     ...additionalFilters
   ];
   return createPageQuery(baseQuery, includeDeleted);

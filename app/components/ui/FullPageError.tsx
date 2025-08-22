@@ -240,7 +240,7 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      <div className="max-w-md w-full bg-card p-8 rounded-lg shadow-lg text-center">
+      <div className="max-w-md w-full wewrite-card p-8 rounded-lg shadow-lg text-center">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
             <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />

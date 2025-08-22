@@ -64,7 +64,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${
           pwaData.isPWA 
             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+            : 'bg-muted text-muted-foreground'
         }`}>
           {pwaData.isPWA ? 'PWA Mode' : 'Browser Mode'}
         </div>
@@ -102,7 +102,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
             <span className="text-muted-foreground text-sm">Device Info:</span>
             <div className="flex flex-wrap gap-2 mt-1">
               {pwaData.deviceInfo.isIOS && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs">
+                <span className="px-2 py-1 bg-muted text-foreground dark:bg-muted dark:text-muted-foreground rounded text-xs">
                   iOS
                 </span>
               )}
@@ -135,7 +135,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
                 </span>
               )}
               {pwaData.browserInfo.isSafari && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs">
+                <span className="px-2 py-1 bg-muted text-foreground dark:bg-muted dark:text-muted-foreground rounded text-xs">
                   Safari
                 </span>
               )}
@@ -145,7 +145,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
                 </span>
               )}
               {pwaData.browserInfo.isEdge && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs">
+                <span className="px-2 py-1 bg-muted text-foreground dark:bg-muted dark:text-muted-foreground rounded text-xs">
                   Edge
                 </span>
               )}

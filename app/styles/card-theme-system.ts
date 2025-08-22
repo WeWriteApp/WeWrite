@@ -1,17 +1,18 @@
 /**
  * WeWrite Card Theme System
- * 
+ *
  * Centralized card styling system based on Radix Colors design principles.
  * This provides semantic color tokens for consistent card backgrounds across
  * floating cards, regular cards, daily notes, and all other card components.
- * 
+ *
  * Design Principles:
  * - Single source of truth for all card styling
  * - Semantic color tokens (not hardcoded values)
  * - Consistent opacity levels across light/dark themes
  * - Industry-standard color scales from Radix
  * - Theme-aware with automatic dark mode support
- * 
+ * - OKLCH color space for better perceptual uniformity
+ *
  * Reference: https://www.radix-ui.com/themes/docs/theme/color
  */
 
@@ -26,6 +27,8 @@ import {
   mauveDark
 } from '@radix-ui/colors';
 
+import { radixColorToCssVar } from '../lib/radix-utils';
+
 /**
  * Card Background Semantic Tokens
  * 
@@ -37,50 +40,51 @@ import {
  * - 11-12: Text colors
  */
 export const cardThemeTokens = {
-  // Light theme card backgrounds
+  // Light theme card backgrounds (OKLCH)
   light: {
     // Primary card background - subtle, elevated feel
-    cardBackground: slate.slate2,        // Very light gray-blue
-    cardBackgroundHover: slate.slate3,   // Slightly darker on hover
-    
-    // Floating card background - translucent for glassmorphism
-    floatingBackground: 'rgba(255, 255, 255, 0.85)',
-    floatingBackgroundHover: 'rgba(255, 255, 255, 0.95)',
-    
+    cardBackground: radixColorToCssVar(slate.slate2),        // Very light gray-blue
+    cardBackgroundHover: radixColorToCssVar(slate.slate3),   // Slightly darker on hover
+
+    // Floating card background - translucent for glassmorphism (OKLCH with alpha)
+    floatingBackground: 'oklch(100.00% 0.0000 158.2 / 0.85)',
+    floatingBackgroundHover: 'oklch(100.00% 0.0000 158.2 / 0.95)',
+
     // Card borders
-    cardBorder: slate.slate6,            // Subtle border
-    cardBorderHover: slate.slate7,       // More visible on hover
-    
+    cardBorder: radixColorToCssVar(slate.slate6),            // Subtle border
+    cardBorderHover: radixColorToCssVar(slate.slate7),       // More visible on hover
+
     // Card text
-    cardForeground: slate.slate12,       // High contrast text
-    cardForegroundMuted: slate.slate11,  // Muted text
+    cardForeground: radixColorToCssVar(slate.slate12),       // High contrast text
+    cardForegroundMuted: radixColorToCssVar(slate.slate11),  // Muted text
   },
-  
-  // Dark theme card backgrounds
+
+  // Dark theme card backgrounds (OKLCH)
   dark: {
     // Primary card background - subtle, elevated feel (neutral grey)
-    cardBackground: grayDark.gray3,        // Dark but not black
-    cardBackgroundHover: grayDark.gray4,   // Slightly lighter on hover
-    
-    // Floating card background - translucent for glassmorphism
-    floatingBackground: 'rgba(20, 20, 20, 0.85)',  // Neutral dark grey with transparency
-    floatingBackgroundHover: 'rgba(20, 20, 20, 0.95)',
-    
+    cardBackground: radixColorToCssVar(grayDark.gray3),        // Dark but not black
+    cardBackgroundHover: radixColorToCssVar(grayDark.gray4),   // Slightly lighter on hover
+
+    // Floating card background - translucent for glassmorphism (OKLCH with alpha)
+    floatingBackground: 'oklch(18.94% 0.0000 158.2 / 0.85)',  // Neutral dark grey with transparency
+    floatingBackgroundHover: 'oklch(18.94% 0.0000 158.2 / 0.95)',
+
     // Card borders (neutral grey)
-    cardBorder: grayDark.gray6,            // Subtle border
-    cardBorderHover: grayDark.gray7,       // More visible on hover
+    cardBorder: radixColorToCssVar(grayDark.gray6),            // Subtle border
+    cardBorderHover: radixColorToCssVar(grayDark.gray7),       // More visible on hover
 
     // Card text (neutral grey)
-    cardForeground: grayDark.gray12,       // High contrast text
-    cardForegroundMuted: grayDark.gray11,  // Muted text
+    cardForeground: radixColorToCssVar(grayDark.gray12),       // High contrast text
+    cardForegroundMuted: radixColorToCssVar(grayDark.gray11),  // Muted text
   }
 };
 
 /**
- * CSS Custom Properties for Card Theme
- * 
+ * CSS Custom Properties for Card Theme (OKLCH)
+ *
  * These will be injected into the root CSS to provide
  * theme-aware card styling throughout the application.
+ * All values are now in OKLCH color space for better perceptual uniformity.
  */
 export const cardThemeCSSVariables = {
   light: {
@@ -159,19 +163,19 @@ export function generateCardThemeCSS(): string {
       ${cardThemeClasses.card}
       border-radius: 1rem;
       padding: 1rem;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      /* Shadow removed - user prefers no shadows */
     }
-    
+
     /* Floating card component */
     .wewrite-floating-card-v2 {
       ${cardThemeClasses.floatingCard}
       border-radius: 1rem;
       padding: 1rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      /* Shadow removed - user prefers no shadows */
     }
-    
+
     .dark .wewrite-floating-card-v2 {
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      /* Shadow removed - user prefers no shadows */
     }
   `;
 }

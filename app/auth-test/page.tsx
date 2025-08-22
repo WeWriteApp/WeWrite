@@ -74,11 +74,11 @@ export default function AuthTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-muted/30 py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Simple Auth Test</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Simple Auth Test</h1>
+          <p className="text-muted-foreground mt-2">
             Testing the new authentication system
           </p>
         </div>
@@ -140,7 +140,7 @@ export default function AuthTestPage() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
+                  <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Email:</span>
                   <span>[REDACTED FOR SECURITY]</span>
                   {user.emailVerified && (
@@ -150,7 +150,7 @@ export default function AuthTestPage() {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-gray-500" />
+                  <User className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Username:</span>
                   <span>{user.username}</span>
                 </div>
@@ -163,7 +163,7 @@ export default function AuthTestPage() {
                   <span className="font-mono text-sm">{user.uid}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Last Login:</span>
                   <span className="text-sm">{new Date(user.lastLoginAt).toLocaleString()}</span>
                 </div>
@@ -284,7 +284,7 @@ export default function AuthTestPage() {
                 >
                   <div>
                     <div className="font-medium">{testUser.username}</div>
-                    <div className="text-xs text-gray-500">{testUser.role}</div>
+                    <div className="text-xs text-muted-foreground">{testUser.role}</div>
                   </div>
                 </Button>
               ))}

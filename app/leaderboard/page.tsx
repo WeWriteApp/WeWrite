@@ -234,7 +234,7 @@ export default function LeaderboardPage() {
             </div>
           </div>
         ) : error && !user ? (
-          <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
+          <div className="flex items-center gap-2 p-4 text-sm bg-muted/50 text-muted-foreground">
             <Info className="h-4 w-4 flex-shrink-0" />
             <p>Sign in to see the leaderboard</p>
           </div>

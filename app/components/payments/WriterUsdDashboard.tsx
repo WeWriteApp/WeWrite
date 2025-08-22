@@ -223,8 +223,8 @@ export default function WriterUsdDashboard({ className }: WriterUsdDashboardProp
             <Card key={i} className="wewrite-card">
               <CardContent className="p-6">
                 <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+                  <div className="h-8 bg-muted rounded w-3/4"></div>
                 </div>
               </CardContent>
             </Card>
@@ -323,7 +323,7 @@ export default function WriterUsdDashboard({ className }: WriterUsdDashboardProp
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-gray-600"></div>
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground"></div>
                   <span className="text-sm">Paid Out</span>
                 </div>
                 <span className="font-medium">{formatCurrency(paidOutUsd)}</span>
@@ -420,9 +420,9 @@ export default function WriterUsdDashboard({ className }: WriterUsdDashboardProp
       {!loading && !balance && (
         <Card className="wewrite-card">
           <CardContent className="p-12 text-center">
-            <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Earnings Yet</h3>
-            <p className="text-gray-600 mb-4">
+            <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No Earnings Yet</h3>
+            <p className="text-muted-foreground mb-4">
               You haven't received any USD allocations yet. Start creating content to earn!
             </p>
             <Button variant="outline" onClick={loadWriterData}>

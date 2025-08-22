@@ -175,7 +175,7 @@ export function SubscriptionConversionFunnelWidget({
               <div className="text-xs text-muted-foreground">Completed</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-blue-600">
+              <div className="text-lg font-bold text-primary">
                 {data[5]?.count.toLocaleString() || '0'}
               </div>
               <div className="text-xs text-muted-foreground">Ongoing</div>

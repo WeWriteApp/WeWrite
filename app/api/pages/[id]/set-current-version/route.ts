@@ -76,6 +76,25 @@ export async function POST(
 
     await pageRef.update(updateData);
 
+    // CRITICAL FIX: Invalidate cache after restoring version
+    try {
+      console.log('🗑️ [SET CURRENT VERSION] Invalidating cache for page:', pageId);
+
+      // Import cache invalidation utilities
+      const { invalidatePageData } = await import('../../../../utils/unifiedCache');
+      const { pageCache } = await import('../../../../utils/pageCache');
+
+      // Invalidate unified cache
+      invalidatePageData(pageId, currentUserId);
+
+      // Invalidate page cache specifically
+      pageCache.invalidate(pageId);
+
+      console.log('✅ [SET CURRENT VERSION] Cache invalidation completed for page:', pageId);
+    } catch (cacheError) {
+      console.error('⚠️ [SET CURRENT VERSION] Cache invalidation failed (non-fatal):', cacheError);
+    }
+
     console.log('✅ [SET CURRENT VERSION] Successfully restored version', {
       pageId,
       versionId,

@@ -281,8 +281,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
   // Use different styling for suggestions vs normal pill links
   const baseStyles = isSuggestion
-    ? `inline-block px-2 py-1 text-sm font-medium text-primary bg-transparent border-b-2 border-dotted border-primary/60 hover:bg-primary/10 transition-colors cursor-pointer max-w-[200px] overflow-hidden ${className}`.trim()
-    : `${getPillStyleClasses()} max-w-[200px] overflow-hidden ${className}`.trim();
+    ? `inline-block px-2 py-1 text-sm font-medium text-primary bg-transparent border-b-2 border-dotted border-primary/60 hover:bg-primary/10 transition-colors cursor-pointer max-w-[calc(100vw-2rem)] overflow-hidden ${className}`.trim()
+    : `${getPillStyleClasses()} max-w-[calc(100vw-2rem)] overflow-hidden ${className}`.trim();
 
   // External link with confirmation modal
   if (isExternalLinkType) {

@@ -21,7 +21,7 @@ import { DiffPreview as DiffPreviewType, calculateDiff } from '../../utils/diffS
  * Styling Standards Applied:
  * - Addition Styling: bg-green-50 dark:bg-green-900/40, text-green-600 dark:text-green-400
  * - Deletion Styling: bg-red-50 dark:bg-red-900/40, text-red-600 dark:text-red-400, line-through
- * - Context Styling: text-muted-foreground dark:text-slate-300
+ * - Context Styling: text-muted-foreground
  *
  * Activity Card Locations Using This Component:
  * 1. Main Activity Page (/activity) - ActivityPageClient.tsx → ActivityCard.js
@@ -98,7 +98,7 @@ export default function DiffPreview({
     if (preview.includes('location') || preview.includes('date')) {
       return (
         <div className={`text-xs h-full flex items-center ${className}`}>
-          <span className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded text-xs font-medium">
+          <span className="text-primary dark:text-muted-foreground bg-muted/50 dark:bg-muted/40 px-1.5 py-0.5 rounded text-xs font-medium">
             {preview}
           </span>
         </div>
@@ -126,8 +126,8 @@ export default function DiffPreview({
         {/* Before context */}
         {preview.beforeContext && (
           <>
-            <span className="text-muted-foreground dark:text-slate-300">...</span>
-            <span className="text-muted-foreground dark:text-slate-300">{preview.beforeContext}</span>
+            <span className="text-muted-foreground">...</span>
+            <span className="text-muted-foreground">{preview.beforeContext}</span>
           </>
         )}
 
@@ -148,8 +148,8 @@ export default function DiffPreview({
         {/* After context */}
         {preview.afterContext && (
           <>
-            <span className="text-muted-foreground dark:text-slate-300">{preview.afterContext}</span>
-            <span className="text-muted-foreground dark:text-slate-300">...</span>
+            <span className="text-muted-foreground">{preview.afterContext}</span>
+            <span className="text-muted-foreground">...</span>
           </>
         )}
 
@@ -201,7 +201,7 @@ export function DiffStats({
     if (added === 0 && removed === 0 && !isNewPage) {
       // This might be a special change type (location, custom date)
       return (
-        <span className="text-blue-600 dark:text-blue-400">●</span>
+        <span className="text-primary dark:text-muted-foreground">●</span>
       );
     }
 

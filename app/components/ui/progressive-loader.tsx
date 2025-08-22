@@ -127,13 +127,13 @@ export function ProgressivePageLoader({
     const headerSkeleton = showHeader && (
       <div className="flex items-center mb-6">
         <div className="flex-1">
-          <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+          <div className="h-9 w-20 bg-muted/20 rounded-md animate-pulse" />
         </div>
         <div className="flex-1 flex justify-center">
-          <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="h-8 w-32 bg-muted/20 rounded-md animate-pulse" />
         </div>
         <div className="flex-1 flex justify-end">
-          <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+          <div className="h-8 w-8 bg-muted/20 rounded-full animate-pulse" />
         </div>
       </div>
     );
@@ -141,10 +141,10 @@ export function ProgressivePageLoader({
     const navigationSkeleton = showNavigation && (
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <div className="h-8 w-20 bg-muted rounded-2xl animate-pulse" />
-          <div className="h-8 w-24 bg-muted rounded-2xl animate-pulse" />
+          <div className="h-8 w-20 bg-muted/20 rounded-2xl animate-pulse" />
+          <div className="h-8 w-24 bg-muted/20 rounded-2xl animate-pulse" />
         </div>
-        <div className="h-8 w-20 bg-muted rounded-2xl animate-pulse" />
+        <div className="h-8 w-20 bg-muted/20 rounded-2xl animate-pulse" />
       </div>
     );
 
@@ -154,12 +154,12 @@ export function ProgressivePageLoader({
         contentSkeleton = (
           <div className="space-y-4">
             {Array(5).fill(0).map((_, i) => (
-              <div key={i} className="p-4 border border-border rounded-2xl">
+              <div key={i} className="p-4 border border-neutral-20 rounded-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
+                  <div className="h-10 w-10 bg-muted/20 rounded-full animate-pulse" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded-md w-3/4 animate-pulse" />
-                    <div className="h-3 bg-muted rounded-md w-1/2 animate-pulse" />
+                    <div className="h-4 bg-muted/20 rounded-md w-3/4 animate-pulse" />
+                    <div className="h-3 bg-muted/20 rounded-md w-1/2 animate-pulse" />
                   </div>
                 </div>
               </div>
@@ -169,16 +169,16 @@ export function ProgressivePageLoader({
         break;
       case 'table':
         contentSkeleton = (
-          <div className="border border-border rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-border">
-              <div className="h-6 bg-muted rounded-md w-1/4 animate-pulse" />
+          <div className="border border-neutral-20 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-neutral-15">
+              <div className="h-6 bg-muted/20 rounded-md w-1/4 animate-pulse" />
             </div>
             <div className="divide-y divide-border">
               {Array(8).fill(0).map((_, i) => (
                 <div key={i} className="p-4 flex items-center gap-4">
-                  <div className="h-4 bg-muted rounded-md w-1/3 animate-pulse" />
-                  <div className="h-4 bg-muted rounded-md w-1/4 animate-pulse" />
-                  <div className="h-4 bg-muted rounded-md w-1/6 animate-pulse" />
+                  <div className="h-4 bg-muted/20 rounded-md w-1/3 animate-pulse" />
+                  <div className="h-4 bg-muted/20 rounded-md w-1/4 animate-pulse" />
+                  <div className="h-4 bg-muted/20 rounded-md w-1/6 animate-pulse" />
                 </div>
               ))}
             </div>
@@ -188,13 +188,13 @@ export function ProgressivePageLoader({
       default: // 'page'
         contentSkeleton = (
           <div className="space-y-6">
-            <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+            <div className="h-10 w-3/4 bg-muted/20 rounded-md animate-pulse" />
             <div className="space-y-4">
               {Array(5).fill(0).map((_, i) => (
                 <div key={i} className="space-y-2">
-                  <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
-                  <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
-                  <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
+                  <div className="h-4 bg-muted/20 rounded-md w-full animate-pulse" />
+                  <div className="h-4 bg-muted/20 rounded-md w-5/6 animate-pulse" />
+                  <div className="h-4 bg-muted/20 rounded-md w-4/6 animate-pulse" />
                 </div>
               ))}
             </div>

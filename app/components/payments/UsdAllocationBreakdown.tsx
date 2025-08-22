@@ -16,6 +16,7 @@ import {
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
 import { PillLink } from '../utils/PillLink';
+import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 // Enhanced allocation with page/user details
 interface EnhancedUsdAllocation extends UsdAllocation {
@@ -184,7 +185,7 @@ export function UsdAllocationBreakdown({
           return (
             <div
               key={allocation.id}
-              className="relative p-4 sm:p-6 bg-card border border-border rounded-xl hover:shadow-sm transition-all duration-500 ease-in-out space-y-4"
+              className="relative p-4 sm:p-6 wewrite-card border border-border rounded-xl hover:shadow-sm transition-all duration-500 ease-in-out space-y-4"
               style={{
                 transform: 'translateZ(0)', // Force GPU acceleration for smooth animations
                 willChange: 'transform, opacity'
@@ -259,7 +260,7 @@ export function UsdAllocationBreakdown({
                   <div className="absolute inset-0 flex gap-1 p-1">
                     {/* Other allocations (left section) - muted */}
                     <div
-                      className="bg-muted-foreground/30 rounded-sm transition-all duration-300 ease-out"
+                      className={`${ALLOCATION_BAR_STYLES.sections.other} rounded-sm`}
                       style={{ width: `${Math.max(0, (totalUsdCents - allocation.usdCents - (totalUsdCents - totalAllocatedCents)) / totalUsdCents * 100)}%` }}
                     />
 

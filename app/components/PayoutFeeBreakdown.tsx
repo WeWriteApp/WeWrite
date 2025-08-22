@@ -122,8 +122,8 @@ export default function PayoutFeeBreakdown({
       </div>
 
       {/* Fee Explanation */}
-      <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-100">
-        <div className="text-xs text-blue-800">
+      <div className="mt-3 p-3 bg-muted/50 rounded border border-border">
+        <div className="text-xs text-muted-foreground">
           <div className="font-medium mb-1">Why these fees?</div>
           <ul className="space-y-1">
             <li>• <strong>Stripe processing:</strong> Payment processing and international transfers</li>

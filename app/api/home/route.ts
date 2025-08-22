@@ -182,7 +182,6 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
       const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
 
       pagesQuery = db.collection(getCollectionName('pages'))
-        .where('isPublic', '==', true)
         .where('lastModified', '>=', sevenDaysAgo.toISOString())
         .orderBy('lastModified', 'desc')
         .limit(limitCount * 2); // Get more to account for filtering deleted pages
@@ -213,10 +212,7 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     // Filter out deleted pages in application code to avoid composite index requirement
     const filteredPages = pages
       .filter(page => page.deleted !== true) // Filter deleted pages in code
-      .filter(page => {
-        if (!userId) return page.isPublic;
-        return page.isPublic || page.userId === userId;
-      })
+      // All pages are now public - no visibility filtering needed
       .slice(0, limitCount);
 
     console.log(`🏠 [HOME_API] Filtered pages result:`, {

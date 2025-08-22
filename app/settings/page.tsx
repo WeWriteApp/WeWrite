@@ -249,8 +249,8 @@ export default function SettingsIndexPage() {
   return (
     <div>
       {/* Mobile Settings List */}
-      <div className="lg:hidden">
-        <div className="divide-y divide-border">
+      <div className="lg:hidden p-4">
+        <div className="wewrite-card divide-y divide-border">
           {availableSections.map((section) => {
             const IconComponent = section.icon;
 
@@ -269,7 +269,7 @@ export default function SettingsIndexPage() {
                   className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors select-none"
                 >
                   <div className="flex items-center">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 mr-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg mr-3" style={{ backgroundColor: 'oklch(var(--primary) / 0.1)' }}>
                       <IconComponent className="h-4 w-4 text-primary" />
                     </div>
                     <span className="font-medium">{section.title}</span>

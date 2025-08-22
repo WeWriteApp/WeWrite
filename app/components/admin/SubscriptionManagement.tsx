@@ -146,28 +146,28 @@ export default function SubscriptionManagement() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold">{monitoringReport.customersWithIssues}</div>
-                <div className="text-sm text-gray-600">Issues Found</div>
+                <div className="text-sm text-muted-foreground">Issues Found</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold flex items-center justify-center gap-2">
                   {monitoringReport.issueBreakdown.multipleActive}
                   {getSeverityBadge(monitoringReport.issueBreakdown.multipleActive, 'critical')}
                 </div>
-                <div className="text-sm text-gray-600">Multiple Active</div>
+                <div className="text-sm text-muted-foreground">Multiple Active</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold flex items-center justify-center gap-2">
                   {monitoringReport.issueBreakdown.multipleTotal}
                   {getSeverityBadge(monitoringReport.issueBreakdown.multipleTotal, 'warning')}
                 </div>
-                <div className="text-sm text-gray-600">Multiple Total</div>
+                <div className="text-sm text-muted-foreground">Multiple Total</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold flex items-center justify-center gap-2">
                   {monitoringReport.issueBreakdown.orphanedSubscriptions}
                   {getSeverityBadge(monitoringReport.issueBreakdown.orphanedSubscriptions, 'info')}
                 </div>
-                <div className="text-sm text-gray-600">Orphaned</div>
+                <div className="text-sm text-muted-foreground">Orphaned</div>
               </div>
             </div>
 
@@ -177,7 +177,7 @@ export default function SubscriptionManagement() {
                 <ul className="space-y-1">
                   {monitoringReport.recommendations.map((rec, index) => (
                     <li key={index} className="text-sm flex items-start gap-2">
-                      <span className="text-blue-500 mt-1">•</span>
+                      <span className="text-primary mt-1">•</span>
                       <span>{rec}</span>
                     </li>
                   ))}
@@ -225,15 +225,15 @@ export default function SubscriptionManagement() {
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold">{cleanupResult.summary.totalCustomersProcessed}</div>
-                <div className="text-sm text-gray-600">Customers Processed</div>
+                <div className="text-sm text-muted-foreground">Customers Processed</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">{cleanupResult.summary.customersWithMultipleSubscriptions}</div>
-                <div className="text-sm text-gray-600">Had Multiple Subs</div>
+                <div className="text-sm text-muted-foreground">Had Multiple Subs</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">{cleanupResult.summary.totalSubscriptionsCancelled}</div>
-                <div className="text-sm text-gray-600">{cleanupResult.dryRun ? 'Would Cancel' : 'Cancelled'}</div>
+                <div className="text-sm text-muted-foreground">{cleanupResult.dryRun ? 'Would Cancel' : 'Cancelled'}</div>
               </div>
             </div>
 
@@ -292,7 +292,7 @@ export default function SubscriptionManagement() {
                 <RefreshCw className="w-4 h-4" />
                 <span className="font-semibold">Preview Cleanup</span>
               </div>
-              <span className="text-sm text-gray-600 text-left">
+              <span className="text-sm text-muted-foreground text-left">
                 See what subscriptions would be cleaned up without making changes
               </span>
             </Button>
@@ -307,7 +307,7 @@ export default function SubscriptionManagement() {
                 <Monitor className="w-4 h-4" />
                 <span className="font-semibold">Health Check</span>
               </div>
-              <span className="text-sm text-gray-600 text-left">
+              <span className="text-sm text-muted-foreground text-left">
                 Scan for subscription issues and get recommendations
               </span>
             </Button>

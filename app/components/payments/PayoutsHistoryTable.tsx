@@ -162,7 +162,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
       },
       in_transit: {
         icon: Loader2,
-        color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+        color: 'bg-muted/50 text-muted-foreground',
         label: 'In Transit',
         description: 'Payout has been submitted to bank and is in transit'
       },
@@ -180,7 +180,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
       },
       canceled: {
         icon: AlertTriangle,
-        color: 'bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300',
+        color: 'bg-muted text-muted-foreground',
         label: 'Canceled',
         description: 'Payout was canceled'
       }

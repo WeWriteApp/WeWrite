@@ -246,11 +246,11 @@ export function UnifiedFormValidation({
     if (validationState === 'checking') return baseClasses;
     
     if (showSuccessState && validationState === 'valid') {
-      return cn(baseClasses, "border-green-500 focus-visible:ring-green-500");
+      return cn(baseClasses, "border-success focus-visible:ring-success");
     }
-    
+
     if (validationState === 'invalid' || validationState === 'duplicate') {
-      return cn(baseClasses, "border-red-500 focus-visible:ring-red-500");
+      return cn(baseClasses, "border-destructive focus-visible:ring-destructive");
     }
     
     return baseClasses;

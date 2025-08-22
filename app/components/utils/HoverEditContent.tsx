@@ -51,7 +51,7 @@ const HoverEditContent: React.FC<HoverEditContentProps> = ({
       onMouseLeave={() => setIsHovering(false)}
     >
       {/* Content area with hover effects - unified structure with edit mode */}
-      <div className={`relative ${canEdit ? 'cursor-text hover:bg-muted/20 transition-colors duration-150' : ''}`}>
+      <div className={`relative ${canEdit ? 'cursor-text hover:bg-primary/5 transition-colors duration-150' : ''}`}>
         <TextView
           content={content}
           canEdit={canEdit}

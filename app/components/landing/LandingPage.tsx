@@ -109,18 +109,10 @@ const LandingPage = () => {
     // No need for direct Firebase auth listener here
   }, []);
 
-  // Always set accent color to blue on landing page mount
+  // Use user's current accent color on landing page mount (no forced blue)
   useEffect(() => {
-    // Remove any accent color class from body or html
-    document.body.classList.remove('accent-red', 'accent-green', 'accent-yellow', 'accent-purple', 'accent-pink', 'accent-orange');
-    document.documentElement.classList.remove('accent-red', 'accent-green', 'accent-yellow', 'accent-purple', 'accent-pink', 'accent-orange');
-    // Add blue accent color
-    document.body.classList.add('accent-blue');
-    document.documentElement.classList.add('accent-blue');
-    // Force blue accent color variables for landing page
-    document.documentElement.style.setProperty('--accent-h', '217');
-    document.documentElement.style.setProperty('--accent-s', '91%');
-    document.documentElement.style.setProperty('--accent-l', '60%');
+    // Landing page now respects user's theme preferences
+    // No forced color changes - let the theme system handle it
     document.documentElement.style.setProperty('--accent', '#2563eb'); // Tailwind blue-600
     // Don't force theme - respect user's system preference
     // if (setTheme) setTheme('light');
@@ -255,7 +247,7 @@ const LandingPage = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'done':
-        return <Badge variant="default" className="bg-success text-success-foreground">Available Now</Badge>;
+        return <Badge variant="default" className="bg-success-20 text-success">Available Now</Badge>;
       case 'in-progress':
         return <Badge variant="secondary" className="bg-amber-500 text-white">In Progress</Badge>;
       case 'coming-soon':
@@ -304,7 +296,7 @@ const LandingPage = () => {
               <>
                 <Button
                   variant="secondary"
-                  className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                  className="bg-muted hover:bg-muted/80 text-foreground"
                   asChild
                 >
                   <Link
@@ -324,14 +316,13 @@ const LandingPage = () => {
                     Sign In
                   </Link>
                 </Button>
-                <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
                   <Link href="/auth/register">Create Account</Link>
                 </Button>
               </>
             ) : (
               <Button
-                variant="default"
-                className="bg-green-600 hover:bg-green-700 text-white"
+                variant="success"
                 asChild
               >
                 <Link href="/new">Create Page</Link>
@@ -375,7 +366,7 @@ const LandingPage = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                    className="bg-muted hover:bg-muted/80 text-foreground"
                     asChild
                   >
                     <Link
@@ -395,7 +386,7 @@ const LandingPage = () => {
                       Sign In
                     </Link>
                   </Button>
-                  <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                  <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
                     <Link href="/auth/register">Sign Up</Link>
                   </Button>
                 </>
@@ -403,7 +394,7 @@ const LandingPage = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-success-20 hover:bg-success-30 text-success"
                   asChild
                 >
                   <Link href="/new">Create Page</Link>

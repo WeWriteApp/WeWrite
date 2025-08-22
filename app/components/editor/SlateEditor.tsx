@@ -248,7 +248,7 @@ const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
   if ((leaf as any).linkSuggestion) {
     children = (
       <span
-        className="bg-blue-100 dark:bg-blue-900/30 border-b-2 border-blue-400 dark:border-blue-500 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+        className="bg-primary/10 border-b-2 border-primary cursor-pointer hover:bg-primary/20 transition-colors"
         title="Click to see link suggestions"
       >
         {children}

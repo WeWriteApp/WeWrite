@@ -4,14 +4,18 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useTheme } from "../../providers/ThemeProvider";
 import { useRouter } from 'next/navigation';
 import { Sun, Moon, Laptop, Check } from 'lucide-react';
-import AccentColorSwitcher from '../../components/utils/AccentColorSwitcher';
+import ColorSystemManager from '../../components/settings/ColorSystemManager';
+import SolidColorPicker from '../../components/settings/SolidColorPicker';
+import CardOpacityControl from '../../components/settings/CardOpacityControl';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
+import { useAccentColor } from '../../contexts/AccentColorContext';
 import { cn } from "../../lib/utils";
 
 export default function AppearancePage() {
   const { user } = useAuth();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { accentColor, setAccentColor, getAccentColorValue } = useAccentColor();
 
   if (!user) {
     return null;
@@ -19,88 +23,75 @@ export default function AppearancePage() {
 
   // Theme options with icons
   const themeOptions = [
-    { 
-      value: 'light', 
-      label: 'Light', 
-      icon: <Sun className="h-4 w-4 mr-2" />,
-      description: 'Light theme for bright environments'
+    {
+      value: 'light',
+      label: 'Light',
+      icon: <Sun className="h-6 w-6" />
     },
-    { 
-      value: 'dark', 
-      label: 'Dark', 
-      icon: <Moon className="h-4 w-4 mr-2" />,
-      description: 'Dark theme for low-light environments'
+    {
+      value: 'dark',
+      label: 'Dark',
+      icon: <Moon className="h-6 w-6" />
     },
-    { 
-      value: 'system', 
-      label: 'System', 
-      icon: <Laptop className="h-4 w-4 mr-2" />,
-      description: 'Automatically match your system preference'
+    {
+      value: 'system',
+      label: 'System',
+      icon: <Laptop className="h-6 w-6" />
     }
   ];
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8" data-page="appearance">
       <div className="space-y-8">
         {/* Theme Selection */}
-        <div className="bg-card border-theme-strong rounded-lg p-6">
+        <div className="wewrite-card">
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Theme</h2>
-            <p className="text-muted-foreground text-sm">
-              Choose how WeWrite looks to you. Select a single theme, or sync with your system and automatically switch between day and night themes.
-            </p>
           </div>
 
-          <div className="grid gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {themeOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setTheme(option.value)}
+                data-theme={option.value}
+                data-active={theme === option.value}
                 className={cn(
-                  "flex items-center justify-between p-4 text-left border rounded-lg transition-colors",
-                  "hover:bg-muted/50",
+                  "flex flex-col items-center gap-3 p-4 border rounded-lg transition-all duration-200 wewrite-interactive-card",
                   theme === option.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border"
+                    ? "wewrite-active-state"
+                    : "border-theme-medium"
                 )}
               >
-                <div className="flex items-center">
-                  {option.icon}
-                  <div>
-                    <div className="font-medium">{option.label}</div>
-                    <div className="text-sm text-muted-foreground">{option.description}</div>
-                  </div>
-                </div>
+                {option.icon}
+                <div className="font-medium">{option.label}</div>
                 {theme === option.value && (
-                  <Check className="h-5 w-5 text-primary" />
+                  <Check className="h-4 w-4 text-primary" />
                 )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Accent Color */}
-        <div className="bg-card border-theme-strong rounded-lg p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Accent Color</h2>
-            <p className="text-muted-foreground text-sm">
-              Choose an accent color to personalize your WeWrite experience.
-            </p>
-          </div>
-
-          <AccentColorSwitcher />
-        </div>
-
         {/* Pill Style */}
-        <div className="bg-card border-theme-strong rounded-lg p-6">
+        <div className="wewrite-card">
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Link Style</h2>
-            <p className="text-muted-foreground text-sm">
-              Customize how page links appear throughout WeWrite.
-            </p>
           </div>
 
           <PillStyleToggle />
+        </div>
+
+        {/* Color System */}
+        <ColorSystemManager />
+
+        {/* Card Style */}
+        <div className="wewrite-card">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">Card Style</h2>
+          </div>
+
+          <CardOpacityControl />
         </div>
       </div>
     </div>

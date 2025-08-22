@@ -43,7 +43,7 @@ export function AlertModal({
       case 'warning':
         return <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />;
       case 'info':
-        return <Info className="h-6 w-6 text-blue-600 dark:text-blue-400" />;
+        return <Info className="h-6 w-6 text-primary" />;
       default:
         return null;
     }
@@ -79,7 +79,7 @@ export function AlertModal({
               ? 'bg-amber-100 dark:bg-amber-900/30'
               : variant === 'success'
               ? 'bg-green-100 dark:bg-green-900/30'
-              : 'bg-blue-100 dark:bg-blue-900/30'
+              : 'bg-primary/10 dark:bg-primary/20'
           }`}>
             {getIcon()}
           </div>

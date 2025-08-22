@@ -212,7 +212,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
       <div className="lg:flex h-[calc(100vh-3.5rem)]">
         {/* Desktop Persistent Sidebar */}
-        <div className="hidden lg:block lg:w-64 lg:border-r lg:border-border lg:bg-background">
+        <div className="hidden lg:block lg:w-64 lg:border-r-only lg:bg-background">
           <div className="flex flex-col h-full">
             <nav className="flex-1 px-3 py-4">
               <div className="space-y-1">
@@ -244,10 +244,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                       <button
                         onClick={() => handleSectionClick(section.href)}
                         className={cn(
-                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none",
+                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none wewrite-interactive",
                           isActive
-                            ? "bg-primary/10 text-primary border-theme-strong"
-                            : "text-foreground hover:bg-muted"
+                            ? "wewrite-active-state text-primary"
+                            : "text-foreground"
                         )}
                       >
                         <IconComponent className={cn(

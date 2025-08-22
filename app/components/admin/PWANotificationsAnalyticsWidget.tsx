@@ -71,7 +71,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
       <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Bell className="w-5 h-5 text-blue-600 mr-2" />
+            <Bell className="w-5 h-5 text-primary mr-2" />
             <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
           </div>
         </div>
@@ -105,7 +105,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
     <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
-          <Bell className="w-5 h-5 text-blue-600 mr-2" />
+          <Bell className="w-5 h-5 text-primary mr-2" />
           <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
         </div>
         {hasData && (

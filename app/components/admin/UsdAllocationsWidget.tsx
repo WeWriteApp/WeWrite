@@ -48,7 +48,7 @@ export function UsdAllocationsWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-blue-600" />
+            <Wallet className="h-5 w-5 text-primary" />
             USD Allocations
           </CardTitle>
           <CardDescription>User allocation patterns and distribution</CardDescription>
@@ -95,7 +95,7 @@ export function UsdAllocationsWidget({
     <Card className={`wewrite-card ${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5 text-blue-600" />
+          <Wallet className="h-5 w-5 text-primary" />
           USD Allocations
         </CardTitle>
         <CardDescription>
@@ -106,15 +106,15 @@ export function UsdAllocationsWidget({
         <div className="space-y-6">
           {/* Key Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+            <div className="text-center p-3 bg-muted/50 dark:bg-muted/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <DollarSign className="h-4 w-4 text-blue-600" />
+                <DollarSign className="h-4 w-4 text-primary" />
                 <Badge variant="secondary" className="text-xs">Total</Badge>
               </div>
-              <div className="text-lg font-bold text-blue-800 dark:text-blue-400">
+              <div className="text-lg font-bold text-foreground dark:text-muted-foreground">
                 {formatCurrency(stats?.totalAllocated || 0)}
               </div>
-              <div className="text-xs text-blue-600 dark:text-blue-500">Total Allocated</div>
+              <div className="text-xs text-primary dark:text-primary">Total Allocated</div>
             </div>
 
             <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">

@@ -74,8 +74,8 @@ Use `.wewrite-card` for ALL card components:
 ```
 
 **Universal Features:**
+- **Glassmorphism by default**: All `wewrite-card` components include subtle transparency and backdrop blur
 - Consistent background and borders across light/dark themes
-- Subtle transparency with glassmorphism effect
 - Theme-aware borders that adapt automatically
 - Responsive hover states
 - Accessibility support with high contrast mode
@@ -98,6 +98,7 @@ Use semantic text classes:
 |-------------|-------------|
 | `bg-white dark:bg-card` | `wewrite-card` |
 | `bg-white/15 dark:bg-black/15` | `wewrite-card wewrite-floating` |
+| `glass-overlay` (deprecated) | `wewrite-card` |
 | `wewrite-card-v2` | `wewrite-card` |
 | `wewrite-floating-card-v2` | `wewrite-card wewrite-floating` |
 | `wewrite-daily-card-v2` | `wewrite-card wewrite-daily-notes` |
@@ -155,6 +156,22 @@ html[data-high-contrast="true"] .wewrite-card {
   border-color: var(--card-text);
 }
 ```
+
+## Recent Improvements (2025)
+
+### Appearance Settings Enhancements
+
+- **Improved Slider Dots**: Slider thumbs now extend outside container edges to prevent clipping
+- **Better Visibility**: White slider dots with shadows for visibility in both light and dark modes
+- **Background Blur**: New background blur slider (0-20px range) for background images
+- **Theme-Aware Loading**: Dark mode loading backgrounds are now black instead of grey
+
+### UI Consistency Improvements
+
+- **Unified Profile Cards**: User profile top section now uses consistent card styling
+- **Card-Style Search**: Pages search input now uses card styling for consistency
+- **Switch Component**: Dense mode toggle off state now uses `neutral-20` background
+- **Neutral Color Inheritance**: All neutral colors now properly inherit chroma settings
 
 ## Making Changes
 

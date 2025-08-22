@@ -373,7 +373,7 @@ export default function PayoutDashboard() {
   if (loading) {
     return (
       <div className="p-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-border mx-auto"></div>
         <p className="mt-4">Loading payout dashboard...</p>
       </div>
     );
@@ -456,10 +456,10 @@ export default function PayoutDashboard() {
         <Card className="wewrite-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-blue-600" />
+              <TrendingUp className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Total Earned</span>
             </div>
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-2xl font-bold text-primary">
               {formatCurrency(earnings_breakdown.totalEarnings)}
             </p>
             <div className="text-xs text-muted-foreground mt-1">
@@ -580,8 +580,8 @@ export default function PayoutDashboard() {
 
                 {/* Protection Warnings */}
                 {riskAssessment && riskAssessment.canPayout && riskAssessment.riskLevel !== 'low' && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-theme-strong">
-                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                  <div className="p-3 bg-muted/50 dark:bg-muted/20 rounded-lg border-theme-strong">
+                    <div className="text-sm text-foreground dark:text-muted-foreground">
                       <strong>Security Notice:</strong> {riskAssessment.recommendedAction}
                     </div>
                   </div>

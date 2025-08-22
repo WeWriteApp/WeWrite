@@ -6,7 +6,7 @@ import { Skeleton } from "../ui/skeleton";
 export default function TrendingPagesSkeleton({ count = 5 }) {
   return (
     <div className="bg-card border border-theme-strong rounded-xl shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-border/40">
+      <div className="p-4 border-b border-neutral-20">
         <Skeleton className="h-6 w-40" />
       </div>
       <div className="p-4 space-y-4">

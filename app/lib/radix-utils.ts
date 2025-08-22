@@ -1,7 +1,8 @@
 /**
  * Radix Colors Utility Functions
- * 
+ *
  * This file provides utility functions for working with Radix Colors.
+ * Updated to support OKLCH color space for better perceptual uniformity.
  */
 
 import {
@@ -17,6 +18,8 @@ import {
   greenDark,
   gray,
   grayDark} from '@radix-ui/colors';
+
+import { hslToOklch, formatOklchForCSSVar, parseOklch } from './oklch-utils';
 
 /**
  * Get a Radix color by scale and step
@@ -61,33 +64,70 @@ export function getRadixColor(scale: string, step: number, isDark: boolean = fal
 }
 
 /**
- * Convert a Radix color to a CSS variable
- * 
- * @param color The Radix color value
- * @returns The CSS variable value (e.g., '217 91% 60%')
+ * Convert a Radix color to an OKLCH CSS variable
+ *
+ * @param color The Radix color value (HSL format)
+ * @returns The OKLCH CSS variable value (e.g., '55.93% 0.6617 284.9')
  */
 export function radixColorToCssVar(color: string): string {
-  // Extract HSL values from the color string
-  const hslMatch = color.match(/hsl\((\d+)deg\s+(\d+)%\s+(\d+)%\)/i);
-  
+  // Handle special cases for white and transparent colors
+  if (color === 'white' || color === '#ffffff') {
+    return '100.00% 0.0000 158.2';
+  }
+  if (color === 'black' || color === '#000000') {
+    return '0.00% 0.0000 0.0';
+  }
+  if (color === 'transparent') {
+    return '0.00% 0.0000 0.0';
+  }
+
+  // Extract HSL values from the Radix color string
+  const hslMatch = color.match(/hsl\((\d+(?:\.\d+)?)(?:deg)?\s*,?\s*(\d+(?:\.\d+)?)%\s*,?\s*(\d+(?:\.\d+)?)%\)/i);
+
   if (hslMatch) {
     const [_, h, s, l] = hslMatch;
-    return `${h} ${s}% ${l}%`;
+    const hslColor = {
+      h: parseFloat(h),
+      s: parseFloat(s),
+      l: parseFloat(l)
+    };
+
+    const oklchColor = hslToOklch(hslColor);
+    return formatOklchForCSSVar(oklchColor);
   }
-  
-  // Return the original color if it's not in HSL format
-  return color;
+
+  // If it's already in OKLCH format, return as is
+  const oklchMatch = color.match(/oklch\(/);
+  if (oklchMatch) {
+    const parsed = parseOklch(color);
+    return parsed ? formatOklchForCSSVar(parsed) : color;
+  }
+
+  // Return a fallback value for unrecognized formats
+  console.warn(`Unable to convert Radix color to OKLCH: ${color}`);
+  return '50.00% 0.0000 0.0';
 }
 
 /**
- * Get a CSS variable for a Radix color
- * 
+ * Get an OKLCH CSS variable for a Radix color
+ *
  * @param scale The color scale (e.g., 'blue', 'red')
  * @param step The step in the scale (1-12)
  * @param isDark Whether to use the dark variant
- * @returns The CSS variable value (e.g., '217 91% 60%')
+ * @returns The OKLCH CSS variable value (e.g., '55.93% 0.6617 284.9')
  */
 export function getRadixColorVar(scale: string, step: number, isDark: boolean = false): string {
   const color = getRadixColor(scale, step, isDark);
+  return radixColorToCssVar(color);
+}
+
+/**
+ * Convert HSL format to OKLCH for Radix colors
+ * Helper function for backward compatibility
+ *
+ * @param color HSL color string
+ * @returns OKLCH CSS variable format
+ */
+export function radixToOklch(color: string): string {
   return radixColorToCssVar(color);
 }

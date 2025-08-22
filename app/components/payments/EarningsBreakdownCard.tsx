@@ -89,7 +89,7 @@ export default function EarningsBreakdownCard() {
 
       {/* Zero State Message */}
       {totalEarnings === 0 && (
-        <div className="text-xs text-muted-foreground text-center pt-4 border-t border-border">
+        <div className="text-xs text-muted-foreground text-center pt-4 border-t border-neutral-15">
           Start writing pages to earn from supporters
         </div>
       )}

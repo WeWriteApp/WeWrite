@@ -109,7 +109,7 @@ export default function TokenPurchaseHistory({ className = '' }: SubscriptionHis
         return <PlayCircle className="h-4 w-4 text-green-500" />;
       case 'subscription_updated':
       case 'plan_changed':
-        return <ArrowUpCircle className="h-4 w-4 text-blue-500" />;
+        return <ArrowUpCircle className="h-4 w-4 text-primary" />;
       case 'payment_succeeded':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'payment_failed':
@@ -119,7 +119,7 @@ export default function TokenPurchaseHistory({ className = '' }: SubscriptionHis
       case 'refund_issued':
         return <ArrowLeftCircle className="h-4 w-4 text-orange-600" />;
       default:
-        return <History className="h-4 w-4 text-gray-500" />;
+        return <History className="h-4 w-4 text-muted-foreground" />;
     }
   };
 

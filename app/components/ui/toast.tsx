@@ -33,13 +33,13 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-card text-card-foreground",
+        default: "border wewrite-card text-card-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
         success:
           "success group border-success bg-success text-success-foreground",
         info:
-          "info group border-primary bg-primary/10 text-foreground",
+          "info group border-border bg-muted text-foreground",
         warning:
           "warning group border-theme-medium bg-yellow-500/10 text-foreground"}},
     defaultVariants: {

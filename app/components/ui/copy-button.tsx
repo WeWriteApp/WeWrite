@@ -71,8 +71,8 @@ export function CopyButton({
 
   const variantClasses = {
     default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-    ghost: 'hover:bg-accent hover:text-accent-foreground',
-    outline: 'border-theme-strong bg-background hover:bg-accent hover:text-accent-foreground'
+    ghost: 'hover:bg-primary/10 hover:text-primary',
+    outline: 'border-theme-strong bg-background hover:bg-primary/10 hover:text-primary'
   };
 
   const iconSize = {

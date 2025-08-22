@@ -61,6 +61,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **[Payment System Guide](docs/PAYMENT_SYSTEM_GUIDE.md)** - ⭐ **ESSENTIAL** - Complete USD payment system documentation
 - **[Performance Optimization Guide](docs/PERFORMANCE_OPTIMIZATION_GUIDE.md)** - ⭐ **ESSENTIAL** - Optimization strategies (90% cost reduction achieved)
 - **[Design System](docs/design-system.md)** - ⭐ **ESSENTIAL** - FloatingCard component system and glassmorphism guidelines
+- **[OKLCH Color System](docs/color-system-oklch.md)** - ⭐ **ESSENTIAL** - Modern OKLCH color space for better accessibility and perceptual uniformity
 
 #### Quick Start Guides
 - **[Environment Quick Reference](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Development environment setup
@@ -121,6 +122,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **[Dependency Management Standards](docs/DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
 - **[Border Styling Guidelines](docs/BORDER_STYLING_GUIDELINES.md)** - UI styling standards
 - **[DOM Element Identifiers](docs/DOM_ELEMENT_IDENTIFIERS.md)** - DOM element naming conventions
+- **[Native App Migration Plan](docs/NATIVE_APP_PLAN.md)** - PWA-to-native migration strategy and notification system architecture
 
 ### 📱 Features & User Experience
 

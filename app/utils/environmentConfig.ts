@@ -112,41 +112,8 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  * sync and async contexts gracefully.
  */
 const shouldUseProductionCollections = (): boolean => {
-  // Check if we're in a server context with headers available
-  if (typeof window === 'undefined') {
-    try {
-      // Try to access headers from the current request context
-      // This works in API routes and server components
-      const { headers } = require('next/headers');
-      const headersList = headers();
-
-      // In Next.js 15+, headers() returns a promise, but we can't await here
-      // For synchronous contexts, we'll catch the error and fall back to normal environment detection
-      // The async version (getCollectionNameAsync) should be used in API routes for proper header support
-      if (headersList && typeof headersList.get === 'function') {
-        try {
-          return headersList.get('x-force-production-data') === 'true';
-        } catch (syncError) {
-          // Next.js 15+ async headers - silently fall back
-          return false;
-        }
-      }
-
-      return false;
-    } catch (error: any) {
-      // Silently handle Next.js 15+ async headers requirement
-      // This prevents console spam while maintaining functionality
-      if (error.message && error.message.includes('headers()')) {
-        // This is the expected Next.js 15+ async headers error
-        // Fall back to normal environment detection without logging
-        return false;
-      }
-
-      // Log other unexpected errors for debugging
-      console.warn('[Environment Config] Unexpected error accessing headers:', error.message);
-      return false;
-    }
-  }
+  // Always return false to avoid sync header access in Next.js 15+
+  // Use shouldUseProductionCollectionsAsync in API routes instead
   return false;
 };
 

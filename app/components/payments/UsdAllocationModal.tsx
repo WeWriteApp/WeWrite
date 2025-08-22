@@ -12,6 +12,7 @@ import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
 import { toast } from '../ui/use-toast';
+import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 interface UsdAllocationModalProps {
   isOpen: boolean;
@@ -212,14 +213,14 @@ export function UsdAllocationModal({
         <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-0">
           {/* Demo Balance Notice */}
           {isDemoBalance && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="bg-muted/50 dark:bg-muted/20 border border-border dark:border-border rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                <div className="w-2 h-2 bg-muted/500 rounded-full"></div>
+                <span className="text-sm font-medium text-primary dark:text-muted-foreground">
                   Demo Mode - $10/mo
                 </span>
               </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400">
+              <p className="text-xs text-primary dark:text-muted-foreground">
                 {!hasActiveSubscription
                   ? "Activate your subscription to make these allocations real"
                   : "Try the allocation system with demo funds"
@@ -270,7 +271,7 @@ export function UsdAllocationModal({
                     {/* OTHER - Other pages (grey, leftmost) */}
                     {otherPagesPercentage > 0 && (
                       <div
-                        className="bg-muted-foreground/30 transition-all duration-300"
+                        className={`${ALLOCATION_BAR_STYLES.sections.other} transition-all duration-300`}
                         style={{ width: `${otherPagesPercentage}%` }}
                       />
                     )}

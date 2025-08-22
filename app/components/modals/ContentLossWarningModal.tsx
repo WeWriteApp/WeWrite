@@ -62,14 +62,14 @@ export function ContentLossWarningModal({
           </div>
 
           {/* Recommendation */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-border dark:border-border rounded-lg">
             <div className="flex items-start gap-2">
-              <Save className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <Save className="h-4 w-4 text-primary dark:text-muted-foreground mt-0.5 flex-shrink-0" />
               <div className="text-sm">
-                <div className="font-medium text-blue-800 dark:text-blue-200 mb-1">
+                <div className="font-medium text-foreground dark:text-muted-foreground mb-1">
                   Recommended: Save your content first
                 </div>
-                <div className="text-blue-700 dark:text-blue-300">
+                <div className="text-primary dark:text-muted-foreground">
                   Change the title to something unique, then save your page. You can always visit 
                   the existing page afterward.
                 </div>

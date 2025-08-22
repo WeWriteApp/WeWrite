@@ -21,7 +21,6 @@ interface FloatingCardProps {
   className?: string;
   variant?: 'default' | 'toolbar' | 'header' | 'overlay' | 'pledge';
   size?: 'xs' | 'sm' | 'md' | 'lg';
-  withGradient?: boolean;
   isExpanded?: boolean;
   noShadowAtTop?: boolean;
 }
@@ -36,7 +35,6 @@ export function FloatingCard({
   className = '',
   variant = 'default',
   size = 'md',
-  withGradient = false,
   isExpanded = false,
   noShadowAtTop = false
 }: FloatingCardProps) {
@@ -111,11 +109,6 @@ export function FloatingCard({
       data-floating-card={variant}
     >
       {children}
-
-      {/* Optional bottom gradient */}
-      {withGradient && (
-        <div className="absolute -bottom-6 left-0 right-0 h-6 bg-gradient-to-b from-white/20 dark:from-card/20 to-transparent pointer-events-none" />
-      )}
     </div>
   );
 }
@@ -147,7 +140,6 @@ export function FloatingToolbar({
 export function FloatingHeader({
   children,
   className = '',
-  withGradient = true,
   noShadowAtTop = false,
   ...props
 }: Omit<FloatingCardProps, 'variant'>) {
@@ -155,7 +147,6 @@ export function FloatingHeader({
     <FloatingCard
       variant="header"
       className={className}
-      withGradient={withGradient}
       noShadowAtTop={noShadowAtTop}
       {...props}
     >

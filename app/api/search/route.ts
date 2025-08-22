@@ -401,7 +401,6 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       // MAJOR OPTIMIZATION: Server-side filtering and reduced limits
       const pagesQuery = query(
         collection(db, getCollectionName(COLLECTIONS.PAGES)),
-        where('isPublic', '==', true),
         where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
         orderBy('deleted'), // Required for != queries
         orderBy('lastModified', 'desc'),

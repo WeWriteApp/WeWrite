@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocationModal } from './UsdAllocationModal';
-import { FloatingPledge } from '../ui/FloatingCard';
+import { ParticleAnimation, PulseAnimation } from '../ui/ParticleAnimation';
 
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
@@ -25,6 +25,7 @@ import {
   Subscription,
   CompositionBarData
 } from '../../types/allocation';
+import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 interface AllocationBarProps extends Omit<FloatingAllocationBarProps, 'pageId' | 'authorId' | 'pageTitle'> {
   pageId?: string;
@@ -59,6 +60,10 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
   // Flash animation state
   const [flashType, setFlashType] = useState<'accent' | 'red' | null>(null);
+
+  // Game-like animation state for allocation increases
+  const [showParticles, setShowParticles] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
@@ -117,9 +122,15 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       return;
     }
 
-    // Trigger appropriate flash based on whether we're increasing or decreasing
+    // Trigger appropriate flash and game-like animations based on whether we're increasing or decreasing
     if (amount > 0) {
       triggerFlash('accent');
+      // Trigger game-like animations for increases
+      setShowPulse(true);
+      setShowParticles(true);
+      // Reset animations after they complete
+      setTimeout(() => setShowPulse(false), 600);
+      setTimeout(() => setShowParticles(false), 1000);
     } else if (amount < 0) {
       triggerFlash('red');
     }
@@ -157,6 +168,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const getCompositionData = (): CompositionBarData => {
     // Use appropriate balance based on subscription status
     const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
+
+
 
     if (!currentBalance) {
       return {
@@ -200,6 +213,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     const currentPageOverfundedPercentage = displayTotal > 0 ? (currentPageOverfundedCents / displayTotal) * 100 : 0;
     const availablePercentage = displayTotal > 0 ? Math.max(0, (optimisticAvailableCents / displayTotal) * 100) : 0;
 
+
+
     return {
       otherPagesPercentage,
       currentPageFundedPercentage,
@@ -237,20 +252,18 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         isHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
       )}
     >
-      <FloatingPledge
+      <div
+        ref={ref}
+        data-allocation-bar
+        onClick={handleAllocationBarClick}
         className={cn(
-          "relative w-full max-w-md overflow-hidden",
+          "wewrite-card wewrite-floating relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-20",
           "transition-all duration-300 ease-in-out", // Ensure smooth transitions
           flashType === 'accent' && "animate-flash-bar-accent",
           flashType === 'red' && "animate-flash-bar-red",
           className
         )}
       >
-        <div
-          ref={ref}
-          data-allocation-bar
-          onClick={handleAllocationBarClick}
-        >
         {/* Main Content */}
         <div className={cn(
           "space-y-2",
@@ -261,7 +274,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
             <div>
               {pageStats ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                  <div className="text-center p-2 bg-muted rounded-lg">
                     <div className="text-xl font-bold text-primary">
                       {pageStats.sponsorCount}
                     </div>
@@ -269,7 +282,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                       {pageStats.sponsorCount === 1 ? 'Supporter' : 'Supporters'}
                     </div>
                   </div>
-                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                  <div className="text-center p-2 bg-muted rounded-lg">
                     <div className="text-xl font-bold text-primary">
                       {formatUsdCents(pageStats.totalPledgedUsdCents)}
                     </div>
@@ -300,7 +313,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
               {/* Out of funds message */}
               {compositionData.isOutOfFunds && (
-                <div className="text-center text-sm text-orange-500 font-medium">
+                <div className="text-center text-sm text-error font-medium">
                   Out of funds
                 </div>
               )}
@@ -342,7 +355,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                           handleAllocationChange(-decreaseAmount, e);
                         }}
                         disabled={isProcessing}
-                        className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80"
+                        className="h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -364,7 +377,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     variant="outline"
                     onClick={(e) => handleAllocationChange(-allocationIntervalCents, e)}
                     className={cn(
-                      "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80",
+                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
                       allocationState.currentAllocationCents <= 0 && "opacity-50",
                       isProcessing && "opacity-75"
                     )}
@@ -374,37 +387,57 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   </Button>
 
                   {/* Composition Bar */}
-                  <div className="flex-1 h-12 flex gap-1 items-center">
+                  <div className="flex-1 h-12 flex gap-1 items-center bg-muted rounded-lg p-1">
                     {/* Always show composition - even when out of funds */}
                     <>
-                      {/* Other pages */}
+                      {/* Other pages - use neutral color system */}
                       {compositionData.otherPagesPercentage > 0 && (
                         <div
-                          className="h-full bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
+                          className={`h-full ${ALLOCATION_BAR_STYLES.sections.other}`}
                           style={{ width: `${compositionData.otherPagesPercentage}%` }}
                         />
                       )}
 
-                      {/* Current page - funded portion */}
+                      {/* Current page - funded portion with game-like animations */}
                       {compositionData.currentPageFundedPercentage > 0 && (
                         <div
-                          className="h-full bg-primary rounded-md transition-all duration-300 ease-out"
+                          className={cn(
+                            "h-full bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
+                            showPulse && "animate-allocation-pulse"
+                          )}
                           style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-                        />
+                        >
+                          {/* Pulse animation overlay */}
+                          <PulseAnimation
+                            trigger={showPulse}
+                            onComplete={() => setShowPulse(false)}
+                            className="bg-primary rounded-md"
+                            intensity={1.05}
+                          />
+
+                          {/* Particle animation */}
+                          <ParticleAnimation
+                            trigger={showParticles}
+                            onComplete={() => setShowParticles(false)}
+                            particleCount={6}
+                            duration={800}
+                            color="hsl(var(--primary))"
+                          />
+                        </div>
                       )}
 
                       {/* Current page - overfunded portion */}
                       {compositionData.currentPageOverfundedPercentage > 0 && (
                         <div
-                          className="h-full bg-orange-500 rounded-md transition-all duration-300 ease-out"
+                          className={`h-full ${ALLOCATION_BAR_STYLES.sections.overspent}`}
                           style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
                         />
                       )}
 
-                      {/* Available/Remaining */}
+                      {/* Available/Remaining - use neutral color system */}
                       {compositionData.availablePercentage > 0 && (
                         <div
-                          className="h-full bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+                          className="h-full bg-muted rounded-md transition-all duration-300 ease-out"
                           style={{ width: `${compositionData.availablePercentage}%` }}
                         />
                       )}
@@ -420,7 +453,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                       handleAllocationChange(allocationIntervalCents, e);
                     }}
                     className={cn(
-                      "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80",
+                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
                       compositionData.isOutOfFunds && "opacity-50",
                       isProcessing && "opacity-75"
                     )}
@@ -442,7 +475,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         {/* Login Notice */}
         {showLoginNotice && (
           <div
-            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+            className="bg-primary text-primary-foreground p-3 rounded-b-2xl cursor-pointer hover:bg-primary/90 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               router.push('/');
@@ -457,7 +490,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         {/* Subscription Notice */}
         {showSubscriptionNotice && (
           <div
-            className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-colors"
+            className="bg-warning text-warning-foreground p-3 rounded-b-2xl cursor-pointer hover:bg-warning/90 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               router.push('/settings/fund-account');
@@ -469,7 +502,6 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
           </div>
         )}
         </div>
-      </FloatingPledge>
 
       {/* USD Allocation Modal */}
       <UsdAllocationModal

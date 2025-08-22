@@ -1,12 +1,20 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow public read access to all files (for background images)
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read: if true;
+    }
+
+    // Allow authenticated users to upload background images to their own folder
+    match /backgrounds/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Deny all other write access
+    match /{allPaths=**} {
+      allow write: if false;
     }
   }
 }

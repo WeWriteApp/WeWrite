@@ -347,7 +347,7 @@ export default function FloatingFinancialHeader({
     <div className="fixed top-4 left-0 right-0 z-[70] mb-6">
       {/* Mobile: Standard centered layout */}
       <div className="md:hidden mx-auto px-4 max-w-4xl transition-all duration-300 ease-in-out">
-        <FloatingHeader size="md" withGradient={true} noShadowAtTop={true}>
+        <FloatingHeader size="md" noShadowAtTop={true}>
           <div className="relative flex items-center justify-between h-10">
             {/* Spend/Overspend Display (left side) */}
             <div className="flex items-center min-w-0 flex-shrink-0 h-full">
@@ -386,7 +386,7 @@ export default function FloatingFinancialHeader({
           }),
         }}
       >
-        <FloatingHeader size="lg" withGradient={true} noShadowAtTop={true}>
+        <FloatingHeader size="lg" noShadowAtTop={true}>
           <div className="relative flex items-center justify-between h-12">
             {/* Spend/Overspend Display (left side) */}
             <div className="flex items-center min-w-0 flex-shrink-0 h-full">

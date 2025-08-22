@@ -80,7 +80,7 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
       case 'down':
         return <TrendingDown className="h-4 w-4 text-red-600" />;
       default:
-        return <Minus className="h-4 w-4 text-gray-600" />;
+        return <Minus className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -91,7 +91,7 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
       case 'down':
         return 'text-red-600';
       default:
-        return 'text-gray-600';
+        return 'text-muted-foreground';
     }
   };
 

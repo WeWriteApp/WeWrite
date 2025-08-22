@@ -28,6 +28,12 @@ export function transformTimeDisplayMode<T extends AnalyticsDataPoint>(
   data: T[],
   mode: 'cumulative' | 'overTime'
 ): T[] {
+  // Add defensive check for data
+  if (!Array.isArray(data)) {
+    console.warn('transformTimeDisplayMode: data is not an array', data);
+    return [];
+  }
+
   if (mode === 'overTime') {
     // Return data as-is for period-over-period view
     return data;
@@ -37,7 +43,7 @@ export function transformTimeDisplayMode<T extends AnalyticsDataPoint>(
   let runningTotal = 0;
   return data.map(point => ({
     ...point,
-    count: runningTotal += point.count
+    count: runningTotal += (point?.count || 0)
   }));
 }
 
@@ -49,22 +55,36 @@ export function transformPerUserNormalization<T extends AnalyticsDataPoint>(
   userCountData: UserCountData[],
   enabled: boolean
 ): T[] {
+  // Add defensive checks
+  if (!Array.isArray(data)) {
+    console.warn('transformPerUserNormalization: data is not an array', data);
+    return [];
+  }
+
   if (!enabled) {
     return data;
+  }
+
+  if (!Array.isArray(userCountData)) {
+    console.warn('transformPerUserNormalization: userCountData is not an array', userCountData);
+    return data; // Return original data if userCountData is invalid
   }
 
   // Create a map of date to active user count for quick lookup
   const userCountMap = new Map<string, number>();
   userCountData.forEach(userData => {
-    userCountMap.set(userData.date, userData.activeUsers);
+    if (userData && userData.date) {
+      userCountMap.set(userData.date, userData.activeUsers || 1);
+    }
   });
 
   return data.map(point => {
+    if (!point) return point; // Handle null/undefined points
     const activeUsers = userCountMap.get(point.date) || 1; // Avoid division by zero
     return {
       ...point,
-      count: activeUsers > 0 ? point.count / activeUsers : 0,
-      originalCount: point.count, // Preserve original for reference
+      count: activeUsers > 0 ? (point.count || 0) / activeUsers : 0,
+      originalCount: point.count || 0, // Preserve original for reference
       activeUsers // Include active user count for context
     };
   });

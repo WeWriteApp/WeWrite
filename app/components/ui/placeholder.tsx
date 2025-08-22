@@ -58,7 +58,7 @@ export function ImagePlaceholder({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-md bg-gradient-to-br from-blue-500/30 to-emerald-500/30",
+        "relative overflow-hidden rounded-md bg-gradient-to-br from-primary/30 to-emerald-500/30",
         className
       )}
       style={{

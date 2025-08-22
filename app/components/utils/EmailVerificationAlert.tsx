@@ -31,7 +31,7 @@ function EmailVerificationAlert({
   variant = "alert",
   onDismiss
 }: EmailVerificationAlertProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const [isResending, setIsResending] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
@@ -171,6 +171,24 @@ function EmailVerificationAlert({
     }
   };
 
+  // Handle checking verification status again
+  const handleCheckAgain = async () => {
+    try {
+      console.log('EmailVerificationAlert: Checking verification status again');
+      await refreshUser(); // This will refresh the user data from Firebase Auth
+
+      // After refresh, check if user is now verified
+      // The useEffect will handle hiding the alert if verification status changed
+    } catch (error) {
+      console.error('EmailVerificationAlert: Error checking verification status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check verification status. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Render banner variant (full-width top banner)
   if (variant === 'banner') {
     return (
@@ -201,6 +219,16 @@ function EmailVerificationAlert({
 
             {/* Action buttons - compact on mobile, full on desktop */}
             <div className="flex items-center justify-end space-x-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCheckAgain}
+                className="bg-green-100 dark:bg-green-900/30 border-theme-medium text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900/50 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto"
+              >
+                <span className="hidden sm:inline">Check Again</span>
+                <span className="sm:hidden">Check</span>
+              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -271,6 +299,16 @@ function EmailVerificationAlert({
         </div>
 
         <div className="flex items-center justify-end space-x-2 flex-shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCheckAgain}
+            className="bg-green-100 dark:bg-green-900/30 border-theme-medium text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900/50 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto"
+          >
+            <span className="hidden sm:inline">Check Again</span>
+            <span className="sm:hidden">Check</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"

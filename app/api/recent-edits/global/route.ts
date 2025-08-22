@@ -118,11 +118,10 @@ export async function GET(request: NextRequest) {
       // This ensures we have enough content after filtering out deleted/private/own pages
       pagesQuery = pagesQuery.limit(Math.min(limit * 3, 50)); // Fetch 3x the limit to account for filtering
     } else {
-      // For anonymous users, only public pages from last 30 days
+      // For anonymous users, all pages from last 30 days (all pages are public now)
       const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
 
       pagesQuery = db.collection(pagesCollectionName)
-        .where('isPublic', '==', true)
         .where('lastModified', '>=', thirtyDaysAgo.toISOString())
         .orderBy('lastModified', 'desc');
 
@@ -167,18 +166,7 @@ export async function GET(request: NextRequest) {
         return false;
       }
 
-      // Filter by visibility (same logic as home API)
-      if (!userId) {
-        // For anonymous users, only show public pages
-        if (!page.isPublic) {
-          return false;
-        }
-      } else {
-        // For logged-in users, show public pages OR their own pages
-        if (!page.isPublic && page.userId !== userId) {
-          return false;
-        }
-      }
+      // All pages are now public - no visibility filtering needed
 
       // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
       if (!includeOwn && page.userId === userId) {

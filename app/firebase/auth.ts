@@ -173,10 +173,46 @@ export const logoutUser = async (): Promise<LogoutResult> => {
     // Sign out from Firebase
     await firebaseSignOut(auth);
 
-    // Clear cookies
-    Cookies.remove('session');
-    Cookies.remove('authenticated');
-    Cookies.remove('userSession');
+    // Clear all possible cookies with different domain/path combinations
+    const cookiesToClear = [
+      'session',
+      'authenticated',
+      'userSession',
+      'simpleUserSession',
+      'sessionId',
+      'devUserSession',
+      'authToken'
+    ];
+
+    // Clear cookies with different domain/path combinations to ensure complete cleanup
+    cookiesToClear.forEach(cookieName => {
+      // Clear with default options
+      Cookies.remove(cookieName);
+      // Clear with explicit path
+      Cookies.remove(cookieName, { path: '/' });
+      // Clear with domain for production
+      if (window.location.hostname.includes('getwewrite.app')) {
+        Cookies.remove(cookieName, { path: '/', domain: '.getwewrite.app' });
+        Cookies.remove(cookieName, { path: '/', domain: 'getwewrite.app' });
+      }
+    });
+
+    // Clear localStorage items that might persist user state
+    try {
+      const localStorageKeysToRemove = [
+        'email_verification_notification_dismissed',
+        'last_email_verification_notification',
+        'email_verification_resend_cooldown',
+        'email_verification_resend_count',
+        'authRedirectPending'
+      ];
+
+      localStorageKeysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error);
+    }
 
     // Clear server-side session
     try {

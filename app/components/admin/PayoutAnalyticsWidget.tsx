@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p className="font-medium">{label}</p>
         <div className="space-y-1 mt-2">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-muted/500 rounded-full"></div>
             <span className="text-sm">Payouts: {formatCurrency(data.payouts)}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -153,10 +153,10 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
             
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-600" />
+                <Users className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">Payout Count</span>
               </div>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-primary">
                 {totalPayoutCount.toLocaleString()}
               </div>
             </div>

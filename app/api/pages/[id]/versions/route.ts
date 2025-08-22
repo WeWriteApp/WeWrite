@@ -270,6 +270,25 @@ export async function POST(
       lastModified: now
     });
 
+    // CRITICAL FIX: Invalidate cache after updating page with new version
+    try {
+      console.log('🗑️ [VERSION API] Invalidating cache for page:', pageId);
+
+      // Import cache invalidation utilities
+      const { invalidatePageData } = await import('../../../../utils/unifiedCache');
+      const { pageCache } = await import('../../../../utils/pageCache');
+
+      // Invalidate unified cache
+      invalidatePageData(pageId, currentUserId);
+
+      // Invalidate page cache specifically
+      pageCache.invalidate(pageId);
+
+      console.log('✅ [VERSION API] Cache invalidation completed for page:', pageId);
+    } catch (cacheError) {
+      console.error('⚠️ [VERSION API] Cache invalidation failed (non-fatal):', cacheError);
+    }
+
     return createApiResponse({
       success: true,
       message: 'Version created successfully',

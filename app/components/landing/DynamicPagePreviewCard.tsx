@@ -154,7 +154,7 @@ export function DynamicPagePreviewCard({
   // Loading state
   if (loading && showLoading) {
     return (
-      <Card className={`h-full border-theme-medium ${className}`}>
+      <Card className={`h-full wewrite-card ${className}`}>
         <CardContent className="p-6 flex items-center justify-center min-h-[200px]">
           <div className="flex items-center justify-center space-x-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -168,7 +168,7 @@ export function DynamicPagePreviewCard({
   // Error state
   if (error) {
     return (
-      <Card className={`h-full border-theme-medium border-destructive/20 ${className}`}>
+      <Card className={`h-full wewrite-card ${className}`}>
         <CardContent className="p-6">
           <div className="flex items-center space-x-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
@@ -183,7 +183,7 @@ export function DynamicPagePreviewCard({
   // No page data
   if (!page) {
     return (
-      <Card className={`h-full border-theme-medium ${className}`}>
+      <Card className={`h-full wewrite-card ${className}`}>
         <CardContent className="p-6">
           <div className="text-center text-muted-foreground">
             <span className="text-sm">Page not found</span>
@@ -198,7 +198,7 @@ export function DynamicPagePreviewCard({
 
   return (
     <Card
-      className={`min-h-[500px] h-full p-0 cursor-pointer hover:shadow-lg transition-shadow duration-200 ${className}`}
+      className={`min-h-[500px] h-full p-0 cursor-pointer wewrite-card transition-all duration-200 ${className}`}
       onClick={handleViewFullPage}
     >
       <CardHeader className="p-4 pb-3 md:p-6 md:pb-4">
@@ -245,10 +245,10 @@ export function DynamicPagePreviewCard({
           </div>
         )}
 
-        {/* Floating Embedded Allocation Bar */}
+        {/* Embedded Allocation Bar with separator */}
         {showAllocationBar && pageId && (
           <div
-            className="relative z-20 bg-card/95 backdrop-blur-sm rounded-lg border border-border/50 p-2 md:p-3 shadow-lg mt-auto"
+            className="relative z-20 mt-auto pt-3 border-t border-neutral-20"
             onClick={(e) => e.stopPropagation()}
           >
             <EmbeddedAllocationBar

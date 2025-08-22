@@ -31,15 +31,34 @@ class LogRocketService {
   private isProduction = false;
 
   constructor() {
-    // Initialize in production, or in development if explicitly enabled
-    this.isProduction = process.env.NODE_ENV === 'production' ||
-                       process.env.NEXT_PUBLIC_LOGROCKET_ENABLE_DEV === 'true';
+    // Only enable LogRocket in actual production environment (wewrite.app domain)
+    // Never enable in development, even when using production collections
+    this.isProduction = this.isActualProduction();
 
     console.log('🔍 LogRocketService constructor:', {
       nodeEnv: process.env.NODE_ENV,
-      enableDev: process.env.NEXT_PUBLIC_LOGROCKET_ENABLE_DEV,
+      vercelEnv: process.env.VERCEL_ENV,
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
       isProduction: this.isProduction
     });
+  }
+
+  /**
+   * Check if we're in actual production environment (not dev using production collections)
+   */
+  private isActualProduction(): boolean {
+    // Server-side: use environment variables
+    if (typeof window === 'undefined') {
+      return process.env.NODE_ENV === 'production' &&
+             process.env.VERCEL_ENV === 'production';
+    }
+
+    // Client-side: check actual domain
+    const hostname = window.location.hostname;
+    const isProductionDomain = hostname === 'wewrite.app' ||
+                              hostname === 'www.wewrite.app';
+
+    return process.env.NODE_ENV === 'production' && isProductionDomain;
   }
 
   /**
@@ -62,18 +81,13 @@ class LogRocketService {
       appIdPreview: process.env.NEXT_PUBLIC_LOGROCKET_APP_ID ?
         `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...` : 'NOT_SET',
       nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV
+      vercelEnv: process.env.VERCEL_ENV,
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'server'
     });
-
-    // 🚨 PRODUCTION FIX: Disable LogRocket to prevent session quota issues
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('🚨 LogRocket disabled in production to prevent session quota exceeded errors');
-      return;
-    }
 
     // Skip initialization if:
     // - Already initialized
-    // - Not in production
+    // - Not in actual production (wewrite.app domain)
     // - Running on server-side
     // - No app ID configured
     if (this.isInitialized) {
@@ -82,7 +96,7 @@ class LogRocketService {
     }
 
     if (!this.isProduction) {
-      console.log('⏭️ LogRocket skipped: Not in production environment (set NEXT_PUBLIC_LOGROCKET_ENABLE_DEV=true to enable in dev)');
+      console.log('⏭️ LogRocket skipped: Not in actual production environment (only enabled on wewrite.app domain)');
       return;
     }
 
@@ -169,7 +183,7 @@ class LogRocketService {
 
 
   /**
-   * Configure ignore rules for bots and localhost
+   * Configure ignore rules for bots
    */
   private configureIgnoreRules(): void {
     // Ignore bot traffic
@@ -184,16 +198,8 @@ class LogRocketService {
       return;
     }
 
-    // Ignore localhost and development domains
-    const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || 
-                       hostname === '127.0.0.1' || 
-                       hostname.includes('.local');
-
-    if (isLocalhost) {
-      console.log('🏠 Localhost detected - LogRocket session ignored');
-      return;
-    }
+    // Note: Domain filtering is now handled in isActualProduction()
+    console.log('✅ LogRocket session allowed - production domain confirmed');
   }
 
   /**

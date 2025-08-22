@@ -945,7 +945,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           {/* Funded tokens (solid blue with rounded caps) */}
                           {fundedPercentage > 0 && (
                             <div
-                              className="bg-blue-600 transition-all duration-300 rounded-full"
+                              className="bg-primary transition-all duration-300 rounded-full"
                               style={{ width: `${fundedPercentage}%` }}
                             />
                           )}
@@ -995,7 +995,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
 
             {/* Show total count even when all loaded */}
             {allocationData?.pagination && !allocationData.pagination.hasMore && allocationData.pagination.total > 20 && (
-              <div className="text-center py-4 border-t border-border/50 mt-4">
+              <div className="text-center py-4 border-t border-neutral-15 mt-4">
                 <div className="text-sm text-muted-foreground">
                   ✅ Showing all {allocationData.pagination.total} pages you're pledging to
                 </div>

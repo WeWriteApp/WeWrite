@@ -19,6 +19,12 @@ export interface User {
   tier?: SubscriptionTier;
   subscriptionStatus?: SubscriptionStatus;
   followerCount?: number;
+  // Background image stored in Firebase Storage
+  backgroundImage?: {
+    url: string;
+    filename: string;
+    uploadedAt: string | Timestamp;
+  };
 }
 
 // Page types

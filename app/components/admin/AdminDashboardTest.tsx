@@ -163,7 +163,7 @@ export function AdminDashboardTest() {
       case 'error':
         return <XCircle className="h-5 w-5 text-red-500" />;
       case 'loading':
-        return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
+        return <RefreshCw className="h-5 w-5 text-primary animate-spin" />;
       default:
         return <Activity className="h-5 w-5 text-gray-500" />;
     }
@@ -176,7 +176,7 @@ export function AdminDashboardTest() {
       case 'error':
         return 'text-red-600 bg-red-50 border-red-200';
       case 'loading':
-        return 'text-blue-600 bg-blue-50 border-blue-200';
+        return 'text-primary bg-muted/50 border-border';
       default:
         return 'text-muted-foreground bg-muted border-border';
     }

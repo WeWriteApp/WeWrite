@@ -70,8 +70,9 @@ const SingleProfileView = ({ profile }) => {
     <ProfilePagesProvider userId={profile.uid}>
       {/* Content area - header spacing handled by NavPageLayout */}
       <div className="space-y-6">
-
-        {/* Username row */}
+        {/* Profile header and tabs - unified card styling */}
+        <div className="wewrite-card">
+          {/* Username row */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-3">
             <UsernameBadge
@@ -120,7 +121,8 @@ const SingleProfileView = ({ profile }) => {
 
 
 
-        <UserProfileTabs profile={profile} />
+          <UserProfileTabs profile={profile} />
+        </div>
       </div>
 
       {/* Floating allocation bar - only show on other people's pages */}

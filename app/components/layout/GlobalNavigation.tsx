@@ -3,6 +3,7 @@
 import React from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { SidebarProvider } from './UnifiedSidebar';
+
 import MobileBottomNav from './MobileBottomNav';
 import FloatingActionButton from './FloatingActionButton';
 import SidebarLayout from './SidebarLayout';
@@ -28,18 +29,21 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
   }
 
   return (
-    <SidebarProvider>
-      {/* Floating financial header - shows on all logged-in pages */}
-      <FloatingFinancialHeader />
-      <SidebarLayout>
-        {children}
-      </SidebarLayout>
-      {/* Mobile bottom navigation - handles its own visibility logic */}
-      <MobileBottomNav />
-      {/* Floating action button - shows on both mobile and desktop */}
-      <FloatingActionButton />
-      {/* Username enforcement modal - shows when user needs to set username */}
-      <UsernameEnforcementModal />
-    </SidebarProvider>
+    <>
+      <SidebarProvider>
+        {/* Floating financial header - shows on all logged-in pages */}
+        <FloatingFinancialHeader />
+        <SidebarLayout>
+          {children}
+        </SidebarLayout>
+        {/* Mobile bottom navigation - properly implemented */}
+        <MobileBottomNav />
+        {/* Floating action button - shows on appropriate pages */}
+        <FloatingActionButton />
+        {/* Username enforcement modal - shows when user needs to set username */}
+        <UsernameEnforcementModal />
+      </SidebarProvider>
+
+    </>
   );
 }

@@ -51,8 +51,8 @@ const SubscriptionsTable = () => {
       {/* Save Changes Button */}
       <div className="pt-4">
         <button
-          className={`px-4 py-2 bg-blue-600 text-white font-semibold rounded ${
-            !changesMade ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+          className={`px-4 py-2 bg-primary text-white font-semibold rounded ${
+            !changesMade ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/90"
           }`}
           disabled={!changesMade}
           onClick={handleSaveChanges}

@@ -62,23 +62,23 @@ export function SaveButtonGroup({
   const variantStyles = {
     default: {
       container: 'bg-background border-theme-strong rounded-lg p-3',
-      saveButton: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      revertButton: 'border-theme-strong hover:bg-accent'
+      saveButton: 'bg-primary text-primary-foreground hover:bg-primary/90', // Dynamic text color based on accent lightness
+      revertButton: 'border-theme-strong hover:bg-primary/10'
     },
     header: {
-      container: 'bg-green-600 text-white',
-      saveButton: 'bg-white text-green-600 hover:bg-gray-100',
-      revertButton: 'text-white hover:bg-green-700 border border-white/30 hover:border-white/50'
+      container: 'bg-primary text-primary-foreground',
+      saveButton: 'bg-primary-foreground text-primary hover:bg-muted',
+      revertButton: 'text-primary-foreground hover:bg-primary/90 border border-primary-foreground/30 hover:border-primary-foreground/50'
     },
     footer: {
-      container: 'bg-green-600 text-white rounded-lg p-4',
-      saveButton: 'bg-white text-green-600 hover:bg-gray-100',
-      revertButton: 'text-white hover:bg-green-700 border border-white/30 hover:border-white/50'
+      container: 'bg-primary text-primary-foreground rounded-lg p-4',
+      saveButton: 'bg-primary-foreground text-primary hover:bg-muted',
+      revertButton: 'text-primary-foreground hover:bg-primary/90 border border-primary-foreground/30 hover:border-primary-foreground/50'
     },
     modal: {
       container: 'bg-background',
       saveButton: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      revertButton: 'border-theme-strong hover:bg-accent'
+      revertButton: 'border-theme-strong hover:bg-primary/10'
     }
   };
   

@@ -93,7 +93,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
 
   return (
     <div
-      className="w-full rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm transition-all duration-300 ease-in-out flex flex-col"
+      className="w-full wewrite-card transition-all duration-300 ease-in-out flex flex-col"
       style={{ height: '320px' }}
     >
       {/* Header - clickable to collapse */}

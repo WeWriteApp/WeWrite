@@ -38,6 +38,7 @@ import {
 import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
 import { UsdPaymentsOverviewWidget } from "../../components/admin/UsdPaymentsOverviewWidget";
 import { UsdAllocationsWidget } from "../../components/admin/UsdAllocationsWidget";
+import { WritingIdeasManager } from "../../components/admin/WritingIdeasManager";
 
 // 🚨 CRITICAL: Database Reads Crisis Monitoring
 
@@ -131,6 +132,9 @@ const initialWidgets = [
   // Writer Analytics Widgets
   { id: 'writer-earnings', component: WriterEarningsWidget },
   { id: 'writer-payouts-new', component: NewWriterPayoutsWidget },
+
+  // Content Management Widgets
+  { id: 'writing-ideas-manager', component: WritingIdeasManager },
 ];
 
 export default function AdminDashboardPage() {
@@ -308,7 +312,7 @@ export default function AdminDashboardPage() {
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-background">
         {/* Clean Header with Back Button and Centered Title */}
-        <div className="border-b border-border bg-card">
+        <div className="border-b-only bg-card">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <Button
@@ -347,7 +351,7 @@ export default function AdminDashboardPage() {
 
         {/* Collapsible Options Bar */}
         <div
-          className={`border-b border-border bg-card transition-all duration-300 ease-in-out overflow-hidden ${
+          className={`border-b-only bg-card transition-all duration-300 ease-in-out overflow-hidden ${
             isOptionsBarExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
           }`}
         >

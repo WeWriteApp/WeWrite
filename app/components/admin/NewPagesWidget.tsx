@@ -76,7 +76,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
             {hasBreakdown && (
               <div className="text-xs space-y-1 pt-1">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-sm bg-blue-500"></div>
+                  <div className="w-2 h-2 rounded-sm bg-muted/500"></div>
                   <span>{data.publicPagesCreated || 0} pages created</span>
                 </div>
                 <div className="flex items-center gap-2">

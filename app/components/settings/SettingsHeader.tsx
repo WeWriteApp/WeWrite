@@ -44,7 +44,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
   return (
     <>
       {/* Mobile Header - Always visible on mobile */}
-      <div className="lg:hidden sticky top-0 z-50 bg-background border-b border-border">
+      <div className="lg:hidden sticky top-0 z-50 wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding">
         <div className="flex items-center justify-between h-14 px-4">
           {/* Left: Back button */}
           <div className="flex items-center">

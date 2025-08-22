@@ -164,7 +164,7 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
       </main>
 
       {/* Sticky Subscribe Button Footer */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border p-4 bg-background z-50">
+      <div className="fixed bottom-0 left-0 right-0 border-t-only p-4 bg-background z-50">
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleSubmit}

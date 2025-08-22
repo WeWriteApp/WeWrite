@@ -55,7 +55,7 @@ export function WarningDot({
   const variantClasses = {
     warning: 'bg-orange-500 border-orange-600',
     error: 'bg-red-500 border-red-600',
-    critical: 'bg-red-600 border-red-700'
+    critical: 'bg-destructive border-destructive'
   };
 
   // Position classes

@@ -131,8 +131,8 @@ export function SecurityMonitoringDashboard() {
       case 'critical': return 'bg-red-500';
       case 'high': return 'bg-orange-500';
       case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+      case 'low': return 'bg-muted-foreground';
+      default: return 'bg-muted-foreground';
     }
   };
 
@@ -339,7 +339,7 @@ export function SecurityMonitoringDashboard() {
                     <div className="text-sm text-gray-600">Fraud Detection Rate</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-2xl font-bold text-primary">
                       {metrics?.compliance.overallScore || 0}%
                     </div>
                     <div className="text-sm text-gray-600">Compliance Score</div>

@@ -14,7 +14,7 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
 
   // Define color options for the appearance settings
   const colorOptions = [
-    { value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES.blue, label: "Blue" },
+    { value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES.blue, label: "Blue (Legacy)" },
     { value: ACCENT_COLORS.PURPLE, color: ACCENT_COLOR_VALUES.purple, label: "Purple" },
     { value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES.red, label: "Red" },
     { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES.green, label: "Green" },

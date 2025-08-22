@@ -102,7 +102,7 @@ export function StatusIcon({
       case 'active':
         return {
           icon: Check,
-          bgColor: 'bg-green-500'
+          bgColor: 'bg-success'
         };
       case 'error':
         return {
@@ -117,7 +117,7 @@ export function StatusIcon({
       case 'info':
         return {
           icon: Info,
-          bgColor: 'bg-blue-500'
+          bgColor: 'bg-primary'
         };
       case 'pending':
         return {
@@ -127,14 +127,14 @@ export function StatusIcon({
       case 'inactive':
         return {
           icon: Ban,
-          bgColor: 'bg-gray-500'
+          bgColor: 'bg-muted-foreground'
         };
 
       case 'custom':
       default:
         return {
           icon: customIcon || AlertCircle,
-          bgColor: customBgColor || 'bg-gray-500'
+          bgColor: customBgColor || 'bg-muted-foreground'
         };
     }
   };

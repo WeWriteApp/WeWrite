@@ -130,28 +130,26 @@ export default function CrossComponentMobileNavButton({
       onMouseEnter={handleMouseEnter}
       onTouchStart={handleTouchStart}
       className={cn(
-        "flex flex-col items-center justify-center h-11 flex-1 rounded-lg py-0.5 px-1 relative gap-0.5 group",
-        "transition-all duration-75 ease-out",
+        "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-2 relative gap-0.5 group",
+        "transition-all duration-200 ease-out", // Springy transitions
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
         // Drag states
         isDragging && "opacity-50 scale-95",
-        // Press states
-        isPressed && "scale-95 bg-primary/20",
+        // Springy scale animations
+        isPressed && "scale-110 duration-75", // Scale up when pressed
+        "active:scale-95 active:duration-75", // Quick scale down on active
         // Base states with enhanced contrast
-        "hover:bg-primary/10 active:bg-primary/20",
-        // Active state styling - use semi-transparent colors for glassmorphism
+        "hover:bg-primary/10",
+        // Active state styling - accent with transparency
         isActive
-          ? "bg-accent/20 text-accent-foreground dark:bg-white/20 dark:text-white"
-          : [
-              "text-slate-600 hover:text-slate-900",
-              "dark:text-muted-foreground dark:hover:text-foreground"
-            ],
+          ? "bg-primary/20 text-primary"
+          : "text-muted-foreground hover:text-foreground",
         // Loading state when navigating
         isNavigating && "opacity-75",
         // Drop zone states
-        isOver && canDrop && "ring-2 ring-primary/30 bg-primary/5",
-        isOver && !canDrop && "ring-2 ring-red-300 bg-red-50 dark:bg-red-900/20"
+        isOver && canDrop && "ring-2 ring-border/30 bg-muted/20",
+        isOver && !canDrop && "ring-2 ring-destructive/30 bg-destructive/10"
       )}
       aria-label={ariaLabel}
       aria-pressed={isActive}
@@ -174,12 +172,7 @@ export default function CrossComponentMobileNavButton({
         "text-[10px] font-medium leading-tight transition-colors duration-75",
         "text-center max-w-full",
         "line-clamp-2 break-words", // Allow 2 lines with word breaking
-        isActive
-          ? "text-accent-foreground"
-          : [
-              "text-slate-500 group-hover:text-slate-700",
-              "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
-            ]
+        isActive && "text-primary"
       )}>
         {label}
       </span>
@@ -193,10 +186,10 @@ export default function CrossComponentMobileNavButton({
 
       {/* Drop zone visual feedback */}
       {isOver && canDrop && (
-        <div className="absolute inset-0 border-2 border-primary/30 rounded-lg pointer-events-none animate-pulse" />
+        <div className="absolute inset-0 border-2 border-neutral-30 rounded-lg pointer-events-none animate-pulse" />
       )}
       {isOver && !canDrop && (
-        <div className="absolute inset-0 border-2 border-red-300 rounded-lg pointer-events-none" />
+        <div className="absolute inset-0 border-2 border-destructive/30 rounded-lg pointer-events-none" />
       )}
     </Button>
   );

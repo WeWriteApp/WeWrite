@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
@@ -18,6 +18,8 @@ import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { AllocationIntervalModal } from './AllocationIntervalModal';
+import { ParticleAnimation, PulseAnimation } from '../ui/ParticleAnimation';
+import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 /**
  * Base component for all allocation bars
@@ -165,6 +167,25 @@ export function AllocationBarBase({
     allocationState.isOptimistic ? allocationState.currentAllocationCents : null
   );
 
+  // Game-like animation state for allocation increases
+  const [showParticles, setShowParticles] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
+
+  // Wrapper for allocation change that triggers animations
+  const handleAllocationChangeWithAnimation = (amount: number, event?: React.MouseEvent) => {
+    // Trigger game-like animations for increases
+    if (amount > 0) {
+      setShowPulse(true);
+      setShowParticles(true);
+      // Reset animations after they complete
+      setTimeout(() => setShowPulse(false), 600);
+      setTimeout(() => setShowParticles(false), 1000);
+    }
+
+    // Call the original handler
+    return handleAllocationChange(amount, event);
+  };
+
   // Don't render for page owners or when loading critical data
   if (isPageOwner || (allocationState.isLoading && intervalLoading)) {
     return null;
@@ -210,7 +231,7 @@ export function AllocationBarBase({
 
       {/* Out of funds message */}
       {isOutOfFunds && (
-        <div className="text-center text-sm text-orange-500 font-medium mb-2">
+        <div className="text-center text-sm text-error font-medium mb-2">
           Out of funds
         </div>
       )}
@@ -223,10 +244,10 @@ export function AllocationBarBase({
             size={buttonSize}
             variant={buttonVariant}
             className={cn(
-              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary/50 hover:bg-secondary/80",
+              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
               buttonVariant === 'ghost' && "hover:bg-destructive/20"
             )}
-            onClick={(e) => handleAllocationChange(-1, e)}
+            onClick={(e) => handleAllocationChangeWithAnimation(-1, e)}
             disabled={disabled || isProcessing || allocationState.currentAllocationCents <= 0}
           >
             <Minus className="h-4 w-4" />
@@ -234,36 +255,56 @@ export function AllocationBarBase({
 
           {/* Composition bar */}
           {showCompositionBar && (
-            <div className="flex-1 h-8 relative">
-              <div className="absolute inset-0 flex gap-1">
-                {/* Other pages (spent elsewhere) */}
+            <div className="flex-1 h-8 relative bg-muted rounded-lg">
+              <div className="absolute inset-0 flex gap-1 p-1">
+                {/* Other pages (spent elsewhere) - use neutral color system */}
                 {compositionData.otherPagesPercentage > 0 && (
                   <div
-                    className="bg-muted-foreground/30 rounded-md transition-all duration-300 ease-out"
+                    className={ALLOCATION_BAR_STYLES.sections.other}
                     style={{ width: `${compositionData.otherPagesPercentage}%` }}
                   />
                 )}
 
-                {/* Current page - funded portion */}
+                {/* Current page - funded portion with game-like animations */}
                 {compositionData.currentPageFundedPercentage > 0 && (
                   <div
-                    className="bg-primary rounded-md transition-all duration-300 ease-out"
+                    className={cn(
+                      "bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
+                      showPulse && "animate-allocation-pulse"
+                    )}
                     style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-                  />
+                  >
+                    {/* Pulse animation overlay */}
+                    <PulseAnimation
+                      trigger={showPulse}
+                      onComplete={() => setShowPulse(false)}
+                      className="bg-primary rounded-md"
+                      intensity={1.05}
+                    />
+
+                    {/* Particle animation */}
+                    <ParticleAnimation
+                      trigger={showParticles}
+                      onComplete={() => setShowParticles(false)}
+                      particleCount={6}
+                      duration={800}
+                      color="hsl(var(--primary))"
+                    />
+                  </div>
                 )}
 
                 {/* Current page - overfunded portion */}
                 {compositionData.currentPageOverfundedPercentage > 0 && (
                   <div
-                    className="bg-orange-500 rounded-md transition-all duration-300 ease-out"
+                    className={ALLOCATION_BAR_STYLES.sections.overspent}
                     style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
                   />
                 )}
 
-                {/* Available funds */}
+                {/* Available funds - use neutral color system */}
                 {compositionData.availablePercentage > 0 && (
                   <div
-                    className="bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+                    className="bg-muted rounded-md transition-all duration-300 ease-out"
                     style={{ width: `${compositionData.availablePercentage}%` }}
                   />
                 )}
@@ -275,8 +316,8 @@ export function AllocationBarBase({
           <Button
             size={buttonSize}
             variant={buttonVariant}
-            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary/50 hover:bg-secondary/80"
-            onClick={(e) => handleAllocationChange(allocationIntervalCents, e)}
+            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20"
+            onClick={(e) => handleAllocationChangeWithAnimation(allocationIntervalCents, e)}
             disabled={disabled || isProcessing}
             onContextMenu={onLongPress ? (e) => {
               e.preventDefault();

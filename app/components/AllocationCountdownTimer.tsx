@@ -90,14 +90,14 @@ export default function AllocationCountdownTimer({
     red: 'bg-red-50 border-red-200 text-red-800',
     orange: 'bg-orange-50 border-orange-200 text-orange-800',
     yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    blue: 'bg-blue-50 border-blue-200 text-blue-800'
+    blue: 'bg-muted/50 border-border text-muted-foreground'
   };
 
   const dotClasses = {
     red: 'bg-red-500',
     orange: 'bg-orange-500',
     yellow: 'bg-yellow-500',
-    blue: 'bg-blue-500'
+    blue: 'bg-muted-foreground'
   };
 
   return (
@@ -186,14 +186,14 @@ export function CompactAllocationTimer({ className = '' }: { className?: string 
     red: 'text-red-600',
     orange: 'text-orange-600',
     yellow: 'text-yellow-600',
-    blue: 'text-blue-600'
+    blue: 'text-primary'
   };
 
   const dotClasses = {
     red: 'bg-red-500',
     orange: 'bg-orange-500',
     yellow: 'bg-yellow-500',
-    blue: 'bg-blue-500'
+    blue: 'bg-muted/500'
   };
 
   return (

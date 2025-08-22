@@ -62,7 +62,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg border-theme-strong bg-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg border-theme-strong wewrite-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
         <DialogClose asChild>
           <Button variant="outline" size="icon" className="absolute right-4 top-4">
             <X className="h-4 w-4" />
@@ -81,7 +81,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
           <div className="space-y-4">
             {tiers.map((tier) => {
               const isActive = currentTier === tier.tier;
-              const bgColorClass = 'bg-card';
+              const bgColorClass = 'wewrite-card'; // Use dynamic neutral color system
               const borderColorClass = isActive ? 'border-primary border-2' : 'border-theme-medium';
               const activeTextClass = isActive ? 'text-primary font-bold' : '';
               return (

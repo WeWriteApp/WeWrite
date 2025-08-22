@@ -405,7 +405,7 @@ export function RegisterForm({
           <Separator className="w-full" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white dark:bg-gray-900 px-2 text-xs text-muted-foreground">
+          <span className="bg-background px-2 text-xs text-muted-foreground">
             OR
           </span>
         </div>

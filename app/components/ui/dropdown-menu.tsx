@@ -237,7 +237,7 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
         // Use universal card system with floating variant
         "wewrite-card wewrite-floating",
         "min-w-[8rem] overflow-hidden rounded-2xl",
-        "shadow-[0_12px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)]",
+        /* Shadow removed - user prefers no shadows */
         "p-2",
         getAnimationClasses(),
         className

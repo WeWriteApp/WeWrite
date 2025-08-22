@@ -199,6 +199,21 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       console.error("🔴 VERSION SERVER: Error recording user activity (non-fatal):", activityError);
     }
 
+    // CRITICAL FIX: Invalidate cache after saving new version
+    try {
+      console.log('🗑️ [VERSION SERVER] Invalidating cache for page:', pageId);
+
+      // Import cache invalidation utilities
+      const { invalidatePageData } = await import('../../utils/unifiedCache');
+
+      // Invalidate unified cache
+      invalidatePageData(pageId, data.userId);
+
+      console.log('✅ [VERSION SERVER] Cache invalidation completed for page:', pageId);
+    } catch (cacheError) {
+      console.error('⚠️ [VERSION SERVER] Cache invalidation failed (non-fatal):', cacheError);
+    }
+
     logger.info('Version saved successfully (server-side)', {
       pageId,
       versionId: versionRef.id,

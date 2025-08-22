@@ -792,7 +792,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   if (nodes.length <= 1) {
     return (
       <div className={className}>
-        <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+        <div className="wewrite-card">
           <h3 className="text-sm font-medium mb-4">Graph view</h3>
           <div className="flex items-center justify-center h-32 text-muted-foreground">
             <p>No page connections found</p>
@@ -805,14 +805,14 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   if (isFullscreen) {
     return (
       <div
-        className="fixed inset-0 z-[9999] bg-background animate-in fade-in-0 duration-300"
+        className="fixed inset-0 z-[9999] wewrite-card animate-in fade-in-0 duration-300"
         style={{
           touchAction: 'manipulation',
           pointerEvents: 'auto'
         }}
       >
         {/* Header with controls */}
-        <div className="absolute top-0 left-0 right-0 z-20 bg-background border-b border-border p-4">
+        <div className="absolute top-0 left-0 right-0 z-20 wewrite-card wewrite-floating border-b border-neutral-15 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <h3 className="text-lg font-semibold">Graph view</h3>
@@ -868,7 +868,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         {/* Graph container */}
         <SubscriptionGate
           featureName="graph"
-          className={`bg-background ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}
+          className={`wewrite-card ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}
           allowInteraction={true}
         >
           <div ref={containerRef} className="w-full h-full">
@@ -879,7 +879,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         {/* Settings panel (bottom half when open) */}
         {isViewSettingsOpen && (
           <div
-            className="absolute bottom-0 left-0 right-0 h-1/2 bg-background border-t border-border overflow-y-auto"
+            className="absolute bottom-0 left-0 right-0 h-1/2 wewrite-card border-t border-neutral-15 overflow-y-auto"
             style={{
               touchAction: 'manipulation',
               pointerEvents: 'auto'
@@ -899,7 +899,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   return (
     <div className={`${className} animate-in fade-in-0 duration-300`}>
       <div
-        className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:shadow-md transition-all duration-200"
+        className="wewrite-card cursor-pointer transition-all duration-200"
         onClick={() => setIsFullscreen(true)}
       >
         {/* Header */}
@@ -961,7 +961,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
           <div
             ref={containerRef}
-            className="bg-background h-96 transition-all duration-300"
+            className="wewrite-card h-96 transition-all duration-300"
           >
             <svg ref={svgRef} className="w-full h-full" />
 

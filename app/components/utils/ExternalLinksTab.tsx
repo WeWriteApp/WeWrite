@@ -190,7 +190,7 @@ export default function ExternalLinksTab({
               </PillLink>
 
               {/* Global Count Badge */}
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-foreground dark:bg-muted dark:text-muted-foreground">
                 {link.globalCount} {link.globalCount === 1 ? 'link' : 'links'} across WeWrite
               </span>
 

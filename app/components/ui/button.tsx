@@ -11,16 +11,16 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-white shadow hover:bg-primary/90", // Always use white text for better contrast
+          "bg-primary text-primary-foreground hover:bg-primary/90", // Dynamic text color based on accent lightness
         destructive:
-          "bg-destructive text-white shadow-sm hover:bg-destructive/90", // Always use white text for better contrast
+          "bg-destructive text-white hover:bg-destructive/90", // Always use white text for better contrast - shadow removed
         success:
-          "bg-green-600 text-white shadow-sm hover:bg-green-700", // Green success variant
+          "bg-success text-success-foreground hover:bg-success/90", // Success variant using theme system
         outline:
-          "border border-theme-medium bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
+          "border border-theme-medium bg-background text-foreground hover:bg-background hover:border-theme-medium", // Shadows removed
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80", // Shadow removed
+        ghost: "hover:bg-muted hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline"},
       size: {
         default: "h-9 px-4 py-2",

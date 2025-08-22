@@ -146,10 +146,10 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
           {/* Anonymous Users */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-blue-600" />
+              <UserX className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Anonymous</span>
             </div>
-            <span className="text-sm font-bold text-blue-600">{counts.anonymous}</span>
+            <span className="text-sm font-bold text-primary">{counts.anonymous}</span>
           </div>
 
           {/* Bot Detection Info (Debug Mode) */}

@@ -225,7 +225,7 @@ export function EarningsBreakdown({
       </div>
 
       {totalEarnings === 0 && (
-        <div className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t border-border">
+        <div className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t border-neutral-15">
           Start writing pages to earn from supporters
         </div>
       )}

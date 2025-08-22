@@ -60,15 +60,23 @@ export function UsdPieChart({
     }] : [])
   ];
 
-  // Color scheme for different resource types
+  // Color scheme for different resource types - using CSS variables for theme consistency
   const getSegmentColor = (resourceType: string, index: number) => {
+    // Get current accent color from CSS variables
+    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+    const primaryHex = primaryColor ? `oklch(${primaryColor})` : '#3b82f6';
+
+    // Get neutral color for unallocated segments
+    const neutralColor = getComputedStyle(document.documentElement).getPropertyValue('--neutral-40').trim();
+    const neutralHex = neutralColor ? `oklch(${neutralColor})` : '#6b7280';
+
     const colors = {
-      page: ['#3b82f6', '#1d4ed8', '#1e40af', '#1e3a8a'], // Blues
+      page: [primaryHex, '#1d4ed8', '#1e40af', '#1e3a8a'], // Use accent color for primary
       user: ['#10b981', '#059669', '#047857', '#065f46'], // Greens
       wewrite: ['#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6'], // Purples
-      unallocated: ['#6b7280', '#4b5563', '#374151', '#1f2937'] // Grays
+      unallocated: [neutralHex, neutralHex, neutralHex, neutralHex] // Use neutral color system
     };
-    
+
     const colorArray = colors[resourceType as keyof typeof colors] || colors.page;
     return colorArray[index % colorArray.length];
   };
@@ -130,7 +138,7 @@ export function UsdPieChart({
             key={segment.id}
             d={segment.pathData}
             fill={segment.color}
-            stroke="white"
+            stroke="hsl(var(--background))"
             strokeWidth="2"
             className={`transition-all duration-200 ${
               onSegmentClick ? 'cursor-pointer hover:opacity-80' : ''
@@ -145,7 +153,7 @@ export function UsdPieChart({
           cx={center}
           cy={center}
           r={radius * 0.6}
-          fill="white"
+          fill="hsl(var(--background))"
           className="drop-shadow-sm"
         />
         

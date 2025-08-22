@@ -160,7 +160,7 @@ export default function HeroCard({
   }, []);
 
   return (
-    <Card className="h-full">
+    <Card className="h-full wewrite-card">
       <CardContent className="p-6 md:p-8 flex flex-col justify-center min-h-[500px]">
         <div className="text-center max-w-4xl mx-auto">
           {/* Hero Text */}
@@ -193,7 +193,7 @@ export default function HeroCard({
                       )}
                     </Badge>
                     {' '}who've made{' '}
-                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800">
+                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-green-100 bg-green-15 border-green-30">
                       {isLoading || totalPayouts === null ? (
                         <span className="flex items-center gap-1">
                           $<Loader2 className="h-4 w-4 animate-spin" />
@@ -217,7 +217,7 @@ export default function HeroCard({
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                  className="bg-muted hover:bg-muted/80 text-foreground"
                   asChild
                 >
                   <Link
@@ -237,7 +237,7 @@ export default function HeroCard({
                     Sign In
                   </Link>
                 </Button>
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white" asChild>
                   <Link
                     href="/auth/register"
                     onClick={() => {

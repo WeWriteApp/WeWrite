@@ -38,7 +38,7 @@ export const getSubscriptionStatusInfo = (
         status: 'inactive',
         displayText: 'No subscription',
         variant: 'secondary',
-        color: 'text-gray-600',
+        color: 'text-muted-foreground',
         isActive: false,
         showActivateButton: true,
         showManageButton: false
@@ -50,7 +50,7 @@ export const getSubscriptionStatusInfo = (
         status: 'inactive',
         displayText: 'No subscription',
         variant: 'secondary',
-        color: 'text-gray-600',
+        color: 'text-muted-foreground',
         isActive: false,
         showActivateButton: true,
         showManageButton: false
@@ -148,7 +148,7 @@ export const getSubscriptionStatusInfo = (
         status: 'canceled',
         displayText: 'Canceled',
         variant: 'secondary',
-        color: 'text-gray-600',
+        color: 'text-muted-foreground',
         isActive: false,
         showActivateButton: true,
         showManageButton: false};
@@ -158,7 +158,7 @@ export const getSubscriptionStatusInfo = (
         status: 'trialing',
         displayText: 'Trial',
         variant: 'default',
-        color: 'text-blue-600',
+        color: 'text-primary',
         isActive: true,
         showActivateButton: false,
         showManageButton: true};
@@ -168,7 +168,7 @@ export const getSubscriptionStatusInfo = (
         status: 'paused',
         displayText: 'Paused',
         variant: 'secondary',
-        color: 'text-gray-600',
+        color: 'text-muted-foreground',
         isActive: false,
         showActivateButton: false,
         showManageButton: true};
@@ -178,7 +178,7 @@ export const getSubscriptionStatusInfo = (
         status: status.toLowerCase(),
         displayText: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
         variant: 'secondary',
-        color: 'text-gray-600',
+        color: 'text-muted-foreground',
         isActive: false,
         showActivateButton: true,
         showManageButton: false};

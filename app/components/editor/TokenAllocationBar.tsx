@@ -168,7 +168,7 @@ const TokenAllocationBar: React.FC<TokenAllocationBarProps> = ({
             {/* Show title only when showTitle prop is true */}
             {showTitle && pledge.title && (
               <div className="mb-2 text-sm font-medium text-foreground/90">
-                <a href={`/${pledge.pageId}`} className="hover:text-blue-600 hover:underline transition-colors">
+                <a href={`/${pledge.pageId}`} className="hover:text-primary hover:underline transition-colors">
                   {pledge.title}
                 </a>
               </div>

@@ -164,7 +164,7 @@ export default function PayoutValidationPage() {
                 <div className="text-sm text-muted-foreground">Stripe Connect Fee (Auto)</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-primary">
                   {formatCurrency(feeStructure.minimumPayoutThreshold)}
                 </div>
                 <div className="text-sm text-muted-foreground">Minimum Threshold</div>
@@ -292,11 +292,11 @@ export default function PayoutValidationPage() {
                       {((validation.totalFees / validation.grossAmount) * 100).toFixed(1)}% of gross
                     </div>
                   </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-800">
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-foreground">
                       {formatCurrency(validation.netAmount)}
                     </div>
-                    <div className="text-sm text-blue-600">Net Payout</div>
+                    <div className="text-sm text-muted-foreground">Net Payout</div>
                     <div className="text-xs text-muted-foreground">
                       Amount you receive
                     </div>

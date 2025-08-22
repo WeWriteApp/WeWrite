@@ -77,12 +77,9 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
         </Button>
       </SectionTitle>
 
-      {/* Content container */}
-      <div className="relative">
+      {/* Content container with fade effect applied to scroll container */}
+      <div className="carousel-container-with-fade">
         <DailyNotesCarousel accentColor={getAccentColorValue()} />
-        {/* Gradient fade on edges for better visual indication of scrollability */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       </div>
     </div>
   );

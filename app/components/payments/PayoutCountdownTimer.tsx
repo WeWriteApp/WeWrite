@@ -124,7 +124,7 @@ export default function PayoutCountdownTimer({
     red: 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/30 text-red-900 dark:text-red-100',
     orange: 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/30 text-orange-900 dark:text-orange-100',
     yellow: 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800/30 text-yellow-900 dark:text-yellow-100',
-    blue: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/30 text-blue-900 dark:text-blue-100'
+    blue: 'bg-muted/50 border-border text-muted-foreground'
   };
 
   if (timeRemaining.hasExpired) {
@@ -178,7 +178,7 @@ export default function PayoutCountdownTimer({
       </div>
 
       {showExplanation && (
-        <div className="mt-3 pt-3 border-t border-border">
+        <div className="mt-3 pt-3 border-t border-neutral-15">
           <p className="text-sm opacity-70">
             Payouts are processed monthly on the 1st at 9:00 AM UTC.
             Earnings must meet the $25 minimum threshold and require a verified bank account.
@@ -211,7 +211,7 @@ function CompactPayoutTimer({
     red: 'text-red-600 dark:text-red-400',
     orange: 'text-orange-600 dark:text-orange-400',
     yellow: 'text-yellow-600 dark:text-yellow-400',
-    blue: 'text-blue-600 dark:text-blue-400'
+    blue: 'text-muted-foreground'
   };
 
   return (

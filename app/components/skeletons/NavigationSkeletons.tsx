@@ -41,7 +41,7 @@ function HomeSkeleton({ className }: { className?: string }) {
           <div className="h-6 w-32 bg-muted rounded mb-4" />
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 p-3 border border-border/40 rounded-lg">
+              <div key={i} className="flex items-center gap-3 p-3 border border-neutral-20 rounded-lg">
                 <div className="w-10 h-10 bg-muted rounded-full" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 w-3/4 bg-muted rounded" />
@@ -87,7 +87,7 @@ function NotificationsSkeleton({ className }: { className?: string }) {
       {/* Notification items */}
       <div className="space-y-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="flex items-start gap-3 p-4 border border-border/40 rounded-lg">
+          <div key={i} className="flex items-start gap-3 p-4 border border-neutral-20 rounded-lg">
             <div className="w-10 h-10 bg-muted rounded-full flex-shrink-0" />
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ function GenericPageSkeleton({ className }: { className?: string }) {
 
         {/* Content sections */}
         {[1, 2, 3].map((i) => (
-          <div key={i} className="border border-border/40 rounded-lg p-4">
+          <div key={i} className="border border-neutral-20 rounded-lg p-4">
             <div className="h-5 w-1/3 bg-muted rounded mb-3" />
             <div className="space-y-2">
               <div className="h-4 w-full bg-muted rounded" />

@@ -23,7 +23,7 @@ export default function StartOfMonthExplainer({
           <strong>Start-of-Month Processing:</strong> All monthly operations happen on the 1st. 
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-blue-600 hover:text-blue-800 ml-1"
+            className="text-primary hover:text-foreground ml-1"
           >
             Learn more
           </button>
@@ -44,12 +44,12 @@ export default function StartOfMonthExplainer({
 
   if (variant === 'compact') {
     return (
-      <div className={`bg-blue-50 border-theme-strong rounded-lg p-3 ${className}`}>
+      <div className={`bg-muted/50 border-theme-strong rounded-lg p-3 ${className}`}>
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-blue-800 text-sm">Start-of-Month Processing</h3>
+          <h3 className="font-semibold text-foreground text-sm">Start-of-Month Processing</h3>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-primary hover:text-foreground"
           >
             {isExpanded ? (
               <ChevronUp className="w-4 h-4" />
@@ -59,7 +59,7 @@ export default function StartOfMonthExplainer({
           </button>
         </div>
         
-        <p className="text-blue-700 text-sm mt-1">
+        <p className="text-primary text-sm mt-1">
           All monthly operations happen on the 1st at 9 AM UTC
         </p>
 
@@ -67,19 +67,19 @@ export default function StartOfMonthExplainer({
           <div className="mt-3 space-y-2">
             <div className="grid grid-cols-1 gap-2 text-xs">
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-bold">1</div>
+                <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-foreground font-bold">1</div>
                 <span>Finalize allocations → send to writers</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-bold">2</div>
+                <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-foreground font-bold">2</div>
                 <span>Process payouts for writers</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-bold">3</div>
+                <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-foreground font-bold">3</div>
                 <span>Renew subscriptions → new tokens available</span>
               </div>
             </div>
-            <div className="text-xs text-blue-600 mt-2">
+            <div className="text-xs text-primary mt-2">
               <strong>Next processing:</strong> {nextProcessingDate.toLocaleDateString()} at {nextProcessingDate.toLocaleTimeString()}
             </div>
           </div>
@@ -92,17 +92,17 @@ export default function StartOfMonthExplainer({
   return (
     <div className={`bg-gradient-to-r from-blue-50 to-indigo-50 border-theme-strong rounded-lg p-6 ${className}`}>
       <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-          <span className="text-blue-800 font-bold text-lg">1</span>
+        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+          <span className="text-foreground font-bold text-lg">1</span>
         </div>
         <div>
-          <h2 className="text-xl font-bold text-blue-900">Start-of-Month Processing</h2>
-          <p className="text-blue-700">Simple, predictable monthly operations</p>
+          <h2 className="text-xl font-bold text-foreground">Start-of-Month Processing</h2>
+          <p className="text-primary">Simple, predictable monthly operations</p>
         </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg p-4 border border-blue-100">
+        <div className="bg-white rounded-lg p-4 border border-border">
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
               <span className="text-green-800 font-bold">1</span>
@@ -114,7 +114,7 @@ export default function StartOfMonthExplainer({
           </p>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-blue-100">
+        <div className="bg-white rounded-lg p-4 border border-border">
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
               <span className="text-yellow-800 font-bold">2</span>
@@ -126,10 +126,10 @@ export default function StartOfMonthExplainer({
           </p>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-blue-100">
+        <div className="bg-white rounded-lg p-4 border border-border">
           <div className="flex items-center space-x-2 mb-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-800 font-bold">3</span>
+            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+              <span className="text-foreground font-bold">3</span>
             </div>
             <h3 className="font-semibold text-gray-900">Renew Subscriptions</h3>
           </div>
@@ -139,7 +139,7 @@ export default function StartOfMonthExplainer({
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-4 border border-blue-100">
+      <div className="bg-white rounded-lg p-4 border border-border">
         <h3 className="font-semibold text-gray-900 mb-2">Why Start-of-Month?</h3>
         <ul className="text-sm text-gray-600 space-y-1">
           <li className="flex items-start space-x-2">
@@ -161,10 +161,10 @@ export default function StartOfMonthExplainer({
         </ul>
       </div>
 
-      <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+      <div className="mt-4 p-3 bg-muted rounded-lg">
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-blue-800">Next processing date:</span>
-          <span className="font-mono text-blue-900">
+          <span className="font-medium text-foreground">Next processing date:</span>
+          <span className="font-mono text-foreground">
             {nextProcessingDate.toLocaleDateString()} at {nextProcessingDate.toLocaleTimeString()} UTC
           </span>
         </div>

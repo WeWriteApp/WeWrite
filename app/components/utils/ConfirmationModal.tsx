@@ -47,7 +47,7 @@ export function ConfirmationModal({
       case 'delete':
         return <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />;
       case 'logout':
-        return <LogOut className="h-6 w-6 text-blue-600 dark:text-blue-400" />;
+        return <LogOut className="h-6 w-6 text-primary dark:text-muted-foreground" />;
       case 'check':
         return <Check className="h-6 w-6 text-green-600 dark:text-green-400" />;
       default:
@@ -86,7 +86,7 @@ export function ConfirmationModal({
               ? 'bg-red-100 dark:bg-red-900/30'
               : variant === 'warning'
               ? 'bg-amber-100 dark:bg-amber-900/30'
-              : 'bg-blue-100 dark:bg-blue-900/30'
+              : 'bg-muted dark:bg-muted/30'
           }`}>
             {getIcon()}
           </div>

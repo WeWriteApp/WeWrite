@@ -7,7 +7,7 @@ function Skeleton({
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-white/10",
+        "animate-pulse rounded-md bg-muted/20",
         className
       )}
       {...props}
@@ -22,7 +22,7 @@ function ShimmerEffect({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-md bg-white/10 before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
+        "relative overflow-hidden rounded-md bg-muted/20 before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-muted/40 before:to-transparent",
         className
       )}
       {...props}
@@ -46,7 +46,7 @@ function UsernameSkeleton({ className }: { className?: string }) {
  */
 function NotificationSkeleton() {
   return (
-    <div className="bg-card rounded-xl border-theme-strong shadow-sm p-4">
+    <div className="wewrite-card rounded-xl border-theme-strong shadow-sm p-4">
       <div className="flex items-start gap-3">
         {/* Avatar skeleton */}
         <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />

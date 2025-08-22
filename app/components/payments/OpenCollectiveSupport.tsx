@@ -41,7 +41,7 @@ export default function OpenCollectiveSupport({
 
         <Button
           onClick={handleOpenCollective}
-          className="w-full mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 animate-gradient-x"
+          className="w-full mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-primary hover:from-teal-600 hover:to-primary/90 animate-gradient-x"
         >
           Support WeWrite
           <ArrowRight className="h-4 w-4" />
@@ -69,7 +69,7 @@ export default function OpenCollectiveSupport({
       <CardFooter>
         <Button
           onClick={handleOpenCollective}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 animate-gradient-x"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-primary hover:from-teal-600 hover:to-primary/90 animate-gradient-x"
         >
           Support WeWrite
           <ArrowRight className="h-4 w-4" />

@@ -28,10 +28,10 @@ export function Sparkline({
   showDots = false,
   trend
 }: SparklineProps) {
-  // Handle empty or invalid data
-  if (!data || data.length === 0) {
+  // Handle empty or invalid data - add more defensive checks
+  if (!data || !Array.isArray(data) || data.length === 0) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center bg-muted/30 rounded ${className}`}
         style={{ height, width }}
       >

@@ -27,6 +27,7 @@ export interface SimulatedUsdBalance {
 const SIMULATED_MONTHLY_USD_CENTS = 1000; // Equivalent to $10/month
 const STORAGE_KEY_PREFIX = 'wewrite_simulated_usd';
 const LOGGED_OUT_STORAGE_KEY = `${STORAGE_KEY_PREFIX}_logged_out`;
+const DEMO_BALANCE_VERSION = 3; // Force reset to show OTHER section properly
 
 /**
  * Get storage key for a specific user (logged-in users without subscription)
@@ -54,19 +55,27 @@ export const getLoggedOutUsdBalance = (): SimulatedUsdBalance => {
     const stored = localStorage.getItem(LOGGED_OUT_STORAGE_KEY);
     if (stored) {
       const data = JSON.parse(stored);
-      return {
-        totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
-        allocatedUsdCents: data.allocatedUsdCents || 0,
-        availableUsdCents: SIMULATED_MONTHLY_USD_CENTS - (data.allocatedUsdCents || 0),
-        allocations: data.allocations || [],
-        lastUpdated: data.lastUpdated || Date.now()
-      };
+
+      // Check if we need to reset due to version change (to add mock allocations)
+      if (data.version !== DEMO_BALANCE_VERSION) {
+        console.log('Demo balance version changed, resetting to add mock allocations');
+        localStorage.removeItem(LOGGED_OUT_STORAGE_KEY);
+        // Fall through to return default balance with mock allocations
+      } else {
+        return {
+          totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
+          allocatedUsdCents: data.allocatedUsdCents || 0,
+          availableUsdCents: SIMULATED_MONTHLY_USD_CENTS - (data.allocatedUsdCents || 0),
+          allocations: data.allocations || [],
+          lastUpdated: data.lastUpdated || Date.now()
+        };
+      }
     }
   } catch (error) {
     console.warn('Error reading logged-out USD balance:', error);
   }
 
-  // Return default balance
+  // Return default balance with no allocations
   return {
     totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
     allocatedUsdCents: 0,
@@ -84,19 +93,27 @@ export const getUserUsdBalance = (userId: string): SimulatedUsdBalance => {
     const stored = localStorage.getItem(getUserStorageKey(userId));
     if (stored) {
       const data = JSON.parse(stored);
-      return {
-        totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
-        allocatedUsdCents: data.allocatedUsdCents || 0,
-        availableUsdCents: SIMULATED_MONTHLY_USD_CENTS - (data.allocatedUsdCents || 0),
-        allocations: data.allocations || [],
-        lastUpdated: data.lastUpdated || Date.now()
-      };
+
+      // Check if we need to reset due to version change (to add mock allocations)
+      if (data.version !== DEMO_BALANCE_VERSION) {
+        console.log('User demo balance version changed, resetting to add mock allocations');
+        localStorage.removeItem(getUserStorageKey(userId));
+        // Fall through to return default balance with mock allocations
+      } else {
+        return {
+          totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
+          allocatedUsdCents: data.allocatedUsdCents || 0,
+          availableUsdCents: SIMULATED_MONTHLY_USD_CENTS - (data.allocatedUsdCents || 0),
+          allocations: data.allocations || [],
+          lastUpdated: data.lastUpdated || Date.now()
+        };
+      }
     }
   } catch (error) {
     console.warn('Error reading user USD balance:', error);
   }
 
-  // Return default balance
+  // Return default balance with no allocations
   return {
     totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
     allocatedUsdCents: 0,
@@ -112,6 +129,7 @@ export const getUserUsdBalance = (userId: string): SimulatedUsdBalance => {
 const saveUsdBalance = (storageKey: string, balance: SimulatedUsdBalance): void => {
   try {
     const dataToStore = {
+      version: DEMO_BALANCE_VERSION,
       allocatedUsdCents: balance.allocatedUsdCents,
       allocations: balance.allocations,
       lastUpdated: Date.now()

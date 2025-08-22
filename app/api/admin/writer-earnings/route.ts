@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
   try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
     }
 
     const admin = initAdmin();

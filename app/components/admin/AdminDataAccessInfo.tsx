@@ -161,12 +161,12 @@ export function AdminDataAccessInfo() {
       </div>
 
       {/* Important Notes */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+      <div className="p-3 bg-muted/50 border border-border rounded-md">
         <div className="flex items-start gap-2">
-          <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+          <Info className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <h4 className="font-medium text-blue-800 mb-1">Important Notes</h4>
-            <ul className="text-blue-700 text-sm space-y-1">
+            <h4 className="font-medium text-foreground mb-1">Important Notes</h4>
+            <ul className="text-primary text-sm space-y-1">
               <li>• Admin dashboards always show production data for accurate metrics</li>
               <li>• Regular users in development see isolated test data (DEV_ prefix)</li>
               <li>• All admin analytics and reports reflect real user activity</li>

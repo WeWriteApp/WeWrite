@@ -50,7 +50,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
           <p className="text-sm">
-            <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-2"></span>
+            <span className="inline-block w-3 h-3 bg-muted/500 rounded mr-2"></span>
             Edits: {payload[0].value}
           </p>
         </div>
@@ -109,14 +109,14 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
   return (
     <div className={`wewrite-card ${className}`}>
       <div className="flex items-center gap-2 mb-4">
-        <Edit3 className="h-5 w-5 text-blue-500" />
+        <Edit3 className="h-5 w-5 text-primary" />
         <h3 className="text-lg font-semibold">Edits Made</h3>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div className="text-center">
-          <div className="text-2xl font-bold text-blue-500">{totalEdits}</div>
+          <div className="text-2xl font-bold text-primary">{totalEdits}</div>
           <div className="text-xs text-muted-foreground">Total Edits</div>
         </div>
         <div className="text-center">

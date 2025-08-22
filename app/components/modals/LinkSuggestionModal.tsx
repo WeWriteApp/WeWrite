@@ -53,7 +53,7 @@ export function LinkSuggestionModal({
       case 'exact':
         return <LinkIcon className="h-4 w-4 text-green-500" />;
       case 'partial':
-        return <LinkIcon className="h-4 w-4 text-blue-500" />;
+        return <LinkIcon className="h-4 w-4 text-primary" />;
       case 'keyword':
         return <Sparkles className="h-4 w-4 text-purple-500" />;
       case 'content':
@@ -80,7 +80,7 @@ export function LinkSuggestionModal({
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'text-green-600 dark:text-green-400';
-    if (confidence >= 0.6) return 'text-blue-600 dark:text-blue-400';
+    if (confidence >= 0.6) return 'text-primary dark:text-muted-foreground';
     if (confidence >= 0.4) return 'text-orange-600 dark:text-orange-400';
     return 'text-gray-600 dark:text-gray-400';
   };
@@ -105,8 +105,8 @@ export function LinkSuggestionModal({
 
         <div className="flex-1 overflow-y-auto space-y-4">
           {/* Explanation */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-border dark:border-border rounded-lg">
+            <p className="text-sm text-foreground dark:text-muted-foreground">
               We found pages that might be related to "<strong>{matchedText}</strong>". 
               Choose a page to create a link, or dismiss this suggestion.
             </p>

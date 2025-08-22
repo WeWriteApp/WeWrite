@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { cn } from '../../lib/utils';
-import { Button } from '../ui/button';
+import { NavButton } from '../ui/nav-button';
 import { LucideIcon, GripVertical } from 'lucide-react';
 
 interface DraggableSidebarItemProps {
@@ -170,26 +170,10 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
   }
 
   return (
-    <Button
+    <div
       ref={ref}
-      variant="ghost"
-      size={isCompact ? "sm" : "default"}
-      onClick={onClick}
       className={cn(
-        "w-full justify-start transition-all duration-200 group relative",
-        // Desktop sidebar styling
-        !isCompact && [
-          "h-12 px-3",
-          showContent ? "justify-start text-left" : "justify-center px-0", // Added text-left
-          isActive && "bg-primary/10 text-primary", // Removed right border
-          "hover:bg-primary/5",
-        ],
-        // Mobile sidebar styling
-        isCompact && [
-          "px-4 py-3 text-sm rounded-md min-h-[48px]",
-          "hover:bg-neutral-alpha-2 dark:hover:bg-muted",
-          isActive && "bg-primary/10 text-primary",
-        ],
+        "relative group",
         // Dragging state - better visual feedback
         isDragging && [
           "scale-105 shadow-xl z-50 bg-background border border-border",
@@ -203,36 +187,32 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Icon */}
-      <Icon className={cn(
-        "flex-shrink-0 transition-colors duration-200",
-        isCompact ? "h-5 w-5 mr-3" : "h-5 w-5",
-        !isCompact && !showContent && "mx-auto",
-        !isCompact && showContent && "mr-3",
-        isActive && "text-primary"
-      )} />
-      
-      {/* Label - only show when content should be visible */}
-      {(isCompact || showContent) && (
-        <span className={cn(
-          "transition-colors duration-200 truncate flex-1",
-          isActive && "text-primary",
-          isCompact ? "text-sm" : "text-sm font-medium"
-        )}>
-          {label}
-        </span>
-      )}
+      <NavButton
+        id={id}
+        icon={Icon}
+        label={label}
+        onClick={onClick}
+        isActive={isActive}
+        ariaLabel={label}
+        variant={
+          isCompact
+            ? 'mobile-toolbar'
+            : showContent
+              ? 'desktop-sidebar'
+              : 'desktop-sidebar-collapsed'
+        }
+        className={cn(
+          isCompact && "px-4 py-3 text-sm rounded-md min-h-[48px]"
+        )}
+      >
+        {children}
+      </NavButton>
 
       {/* Drag handle - show on right side when expanded and hovered */}
       {!isCompact && showContent && isHovered && isDragEnabled && (
-        <GripVertical className="h-4 w-4 text-muted-foreground/50 ml-2 flex-shrink-0" />
+        <GripVertical className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
       )}
-
-      {/* Children (like notification badges or status icons) */}
-      {children}
-
-
-    </Button>
+    </div>
   );
 };
 

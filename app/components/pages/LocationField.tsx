@@ -90,7 +90,7 @@ export default function LocationField({
       teal: "#14B8A6",
       cyan: "#06B6D4"
     };
-    return ACCENT_COLOR_VALUES[accentColor] || "#1768FF";
+    return ACCENT_COLOR_VALUES[accentColor] || "oklch(var(--primary))";
   };
 
   const accentColorValue = getAccentColorValue();

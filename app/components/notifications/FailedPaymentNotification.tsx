@@ -136,8 +136,8 @@ export function FailedPaymentNotification({
 
   return (
     <div className={`
-      relative p-4 border-theme-medium rounded-lg transition-all duration-200
-      ${notification.read ? 'bg-muted/30' : 'bg-card'}
+      relative wewrite-card transition-all duration-200
+      ${notification.read ? 'opacity-60' : ''}
       ${getNotificationVariant() === 'destructive' ? 'border-destructive/50 bg-destructive/5' : ''}
     `}>
       {/* Dismiss Button */}

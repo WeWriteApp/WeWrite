@@ -490,6 +490,21 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
 
     // Activity creation removed - now using recent pages with diff data stored on pages
 
+    // CRITICAL FIX: Invalidate cache after saving new version
+    try {
+      console.log('🗑️ [VERSION CLIENT] Invalidating cache for page:', pageId);
+
+      // Import cache invalidation utilities
+      const { invalidatePageData } = await import('../../utils/unifiedCache');
+
+      // Invalidate unified cache
+      invalidatePageData(pageId, data.userId);
+
+      console.log('✅ [VERSION CLIENT] Cache invalidation completed for page:', pageId);
+    } catch (cacheError) {
+      console.error('⚠️ [VERSION CLIENT] Cache invalidation failed (non-fatal):', cacheError);
+    }
+
     console.log("✅ VERSION: Successfully saved new version and updated page");
     return {
       success: true,

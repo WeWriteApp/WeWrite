@@ -1,9 +1,10 @@
 /**
  * Radix Colors Configuration
- * 
+ *
  * This file defines the color scales used throughout the application.
  * We're using Radix Colors for consistent, accessible color palettes.
- * 
+ * Updated to use OKLCH color space for better perceptual uniformity.
+ *
  * Reference: https://www.radix-ui.com/colors
  */
 
@@ -21,6 +22,8 @@ import {
   gray,
   grayDark} from '@radix-ui/colors';
 
+import { radixColorToCssVar } from '../lib/radix-utils';
+
 // Define our color scales
 export const radixColors = {
   // Main colors
@@ -37,96 +40,90 @@ export const radixColors = {
   gray,
   grayDark};
 
-// Map Radix colors to our CSS variables
+// Map Radix colors to our OKLCH CSS variables
 export const lightModeColors = {
   // Base colors
-  '--background': gray.gray1,
-  '--foreground': gray.gray12,
-  
+  '--background': radixColorToCssVar(gray.gray1),
+  '--foreground': radixColorToCssVar(gray.gray12),
+
   // Card colors
-  '--card': 'white',
-  '--card-foreground': gray.gray12,
-  
+  '--card': radixColorToCssVar('white'),
+  '--card-foreground': radixColorToCssVar(gray.gray12),
+
   // Popover colors
-  '--popover': 'white',
-  '--popover-foreground': gray.gray12,
-  
-  // Primary colors (blue)
-  '--primary': blue.blue9,
-  '--primary-foreground': 'white',
-  
-  // Secondary colors
-  '--secondary': slate.slate3,
-  '--secondary-foreground': slate.slate11,
-  
-  // Muted colors
-  '--muted': slate.slate3,
-  '--muted-foreground': slate.slate11,
-  
-  // Accent colors
-  '--accent': blue.blue3,
-  '--accent-foreground': blue.blue11,
-  
+  '--popover': radixColorToCssVar('white'),
+  '--popover-foreground': radixColorToCssVar(gray.gray12),
+
+  // Primary colors - will be overridden by accent color system (using neutral gray as fallback)
+  '--primary': radixColorToCssVar(gray.gray9),
+  '--primary-foreground': radixColorToCssVar('white'),
+
+  // Secondary colors - using neutral gray
+  '--secondary': radixColorToCssVar(gray.gray3),
+  '--secondary-foreground': radixColorToCssVar(gray.gray11),
+
+  // Muted colors - using neutral gray
+  '--muted': radixColorToCssVar(gray.gray3),
+  '--muted-foreground': radixColorToCssVar(gray.gray11),
+
+  // Accent colors - will be overridden by accent color system (using neutral gray as fallback)
+  '--accent': radixColorToCssVar(gray.gray3),
+  '--accent-foreground': radixColorToCssVar(gray.gray11),
+
   // Destructive colors
-  '--destructive': red.red9,
-  '--destructive-foreground': 'white',
-  
-  // Border colors
-  '--border': slate.slate6,
-  '--input': slate.slate7,
-  '--ring': blue.blue7,
-  
+  '--destructive': radixColorToCssVar(red.red9),
+  '--destructive-foreground': radixColorToCssVar('white'),
+
+  // Border colors - using neutral gray
+  '--border': radixColorToCssVar(gray.gray6),
+  '--input': radixColorToCssVar(gray.gray7),
+  '--ring': radixColorToCssVar(gray.gray7),
+
   // Radius
   '--radius': '0.5rem'};
 
 export const darkModeColors = {
   // Base colors
-  '--background': gray.gray1,
-  '--foreground': gray.gray12,
-  
+  '--background': radixColorToCssVar(grayDark.gray1),
+  '--foreground': radixColorToCssVar(grayDark.gray12),
+
   // Card colors
-  '--card': grayDark.gray2,
-  '--card-foreground': grayDark.gray12,
-  
+  '--card': radixColorToCssVar(grayDark.gray2),
+  '--card-foreground': radixColorToCssVar(grayDark.gray12),
+
   // Popover colors
-  '--popover': grayDark.gray2,
-  '--popover-foreground': grayDark.gray12,
-  
-  // Primary colors (blue)
-  '--primary': blueDark.blue9,
-  '--primary-foreground': 'white',
-  
+  '--popover': radixColorToCssVar(grayDark.gray2),
+  '--popover-foreground': radixColorToCssVar(grayDark.gray12),
+
+  // Primary colors - will be overridden by accent color system (using neutral gray as fallback)
+  '--primary': radixColorToCssVar(grayDark.gray9),
+  '--primary-foreground': radixColorToCssVar('white'),
+
   // Secondary colors - using neutral grey instead of slate
-  '--secondary': grayDark.gray3,
-  '--secondary-foreground': grayDark.gray11,
+  '--secondary': radixColorToCssVar(grayDark.gray3),
+  '--secondary-foreground': radixColorToCssVar(grayDark.gray11),
 
   // Muted colors - using neutral grey instead of slate
-  '--muted': grayDark.gray3,
-  '--muted-foreground': grayDark.gray11,
-  
-  // Accent colors
-  '--accent': blueDark.blue3,
-  '--accent-foreground': blueDark.blue11,
-  
-  // Destructive colors
-  '--destructive': redDark.red9,
-  '--destructive-foreground': 'white',
-  
-  // Border colors - using neutral grey instead of slate
-  '--border': grayDark.gray6,
-  '--input': grayDark.gray7,
-  '--ring': blueDark.blue7};
+  '--muted': radixColorToCssVar(grayDark.gray3),
+  '--muted-foreground': radixColorToCssVar(grayDark.gray11),
 
-// Helper function to convert Radix color to HSL format for Tailwind
-export function radixToHsl(color: string): string {
-  // Extract the HSL values from the Radix color
-  const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-  
-  if (hslMatch) {
-    const [_, h, s, l] = hslMatch;
-    return `${h} ${s}% ${l}%`;
-  }
-  
-  // Return a default value if the color is not in HSL format
-  return color;
+  // Accent colors - will be overridden by accent color system (using neutral gray as fallback)
+  '--accent': radixColorToCssVar(grayDark.gray3),
+  '--accent-foreground': radixColorToCssVar(grayDark.gray11),
+
+  // Destructive colors
+  '--destructive': radixColorToCssVar(redDark.red9),
+  '--destructive-foreground': radixColorToCssVar('white'),
+
+  // Border colors - using neutral grey instead of slate
+  '--border': radixColorToCssVar(grayDark.gray6),
+  '--input': radixColorToCssVar(grayDark.gray7),
+  '--ring': radixColorToCssVar(grayDark.gray7)};
+
+// Helper function to convert Radix color to OKLCH format for Tailwind
+export function radixToOklch(color: string): string {
+  return radixColorToCssVar(color);
 }
+
+// Backward compatibility alias
+export const radixToHsl = radixToOklch;

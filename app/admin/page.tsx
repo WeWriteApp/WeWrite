@@ -243,7 +243,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-5xl">
       <div className="mb-8">
-        <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+        <Link href="/settings" className="inline-flex items-center text-primary hover:text-primary/80">
           <ChevronLeft className="h-4 w-4 mr-2" />
           Back to Settings
         </Link>

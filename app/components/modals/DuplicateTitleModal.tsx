@@ -104,7 +104,7 @@ export function DuplicateTitleModal({
 
           {/* Content Warning Hint */}
           {hasUnsavedContent && (
-            <div className="text-xs text-muted-foreground text-center p-2 bg-blue-50 dark:bg-blue-950/20 border-theme-medium rounded" style={{ borderColor: 'hsl(217 91% 60% / 0.3)' }}>
+            <div className="text-xs text-muted-foreground text-center p-2 bg-muted/50 dark:bg-muted/20 border-theme-medium rounded" style={{ borderColor: 'hsl(217 91% 60% / 0.3)' }}>
               <p>
                 💡 Since you have unsaved content, we'll check before navigating away
               </p>
