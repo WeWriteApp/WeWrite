@@ -114,18 +114,58 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🖼️ [API] File validation passed, initializing Firebase...');
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      console.error('🖼️ [API] Firebase Admin initialization failed');
+    let admin;
+    try {
+      admin = getFirebaseAdmin();
+      if (!admin) {
+        console.error('🖼️ [API] Firebase Admin initialization returned null');
+        return NextResponse.json(
+          { success: false, error: 'Firebase initialization failed - null instance' },
+          { status: 500 }
+        );
+      }
+      console.log('🖼️ [API] Firebase Admin initialized successfully');
+    } catch (initError) {
+      console.error('🖼️ [API] Firebase Admin initialization threw error:', initError);
       return NextResponse.json(
-        { success: false, error: 'Firebase initialization failed' },
+        { success: false, error: `Firebase initialization failed: ${initError.message}` },
         { status: 500 }
       );
     }
 
     const db = admin.firestore();
     const storage = admin.storage();
-    const bucket = storage.bucket();
+
+    // Try to get the correct bucket
+    let bucket;
+    const possibleBuckets = [
+      process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
+      'wewrite-ccd82.appspot.com',
+      'wewrite-ccd82.firebasestorage.app',
+      'wewrite-ccd82-storage'
+    ].filter(Boolean);
+
+    console.log('🖼️ [API] Trying bucket names:', possibleBuckets);
+
+    for (const bucketName of possibleBuckets) {
+      try {
+        bucket = storage.bucket(bucketName);
+        await bucket.getMetadata(); // Test if bucket exists
+        console.log('🖼️ [API] Successfully connected to bucket:', bucketName);
+        break;
+      } catch (bucketError) {
+        console.log('🖼️ [API] Failed to connect to bucket:', bucketName, bucketError.message);
+        bucket = null;
+      }
+    }
+
+    if (!bucket) {
+      console.error('🖼️ [API] Could not connect to any storage bucket');
+      return NextResponse.json(
+        { success: false, error: 'Storage bucket not accessible' },
+        { status: 500 }
+      );
+    }
 
     console.log('🖼️ [API] Firebase services initialized:', {
       hasDb: !!db,
