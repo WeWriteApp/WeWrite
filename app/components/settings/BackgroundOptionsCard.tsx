@@ -10,8 +10,8 @@ import { Button } from '../ui/button';
 import { Lock, Palette, Image as ImageIcon } from 'lucide-react';
 import OKLCHColorSlider from './OKLCHColorSlider';
 import ColorSlider from './ColorSlider';
-import BackgroundImageUpload from './BackgroundImageUpload';
-import { oklchToHex } from '../../utils/colorConversions';
+import { BackgroundImageUpload } from './BackgroundImageUpload';
+import { oklchToHex } from '../../lib/oklch-utils';
 
 export default function BackgroundOptionsCard() {
   const router = useRouter();
