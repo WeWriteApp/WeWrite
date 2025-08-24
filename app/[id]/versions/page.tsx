@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getPageById } from '../../firebase/database';
 import { getPageVersions } from '../../services/versionService';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Clock } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import UnifiedLoader from '../../components/ui/unified-loader';
 import ActivityCard from '../../components/activity/ActivityCard';
@@ -162,7 +162,11 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
               versionId: version.id,
               isActivityContext: true,
               isCurrentVersion: index === 0, // First item is most recent
-              hasPreviousVersion: index < pageVersions.length - 1 // Has previous version if not the last item
+              hasPreviousVersion: index < pageVersions.length - 1, // Has previous version if not the last item
+              // Add subscription data - UsernameBadge will fetch this automatically based on userId
+              subscriptionTier: version.subscriptionTier || null,
+              hasActiveSubscription: version.hasActiveSubscription || false,
+              subscriptionAmount: version.subscriptionAmount || null
             };
           }));
 
@@ -219,8 +223,9 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
     return (
       <div className="p-4 max-w-4xl mx-auto">
         <PageHeader
-          title="Page Versions"
-          username="Error"
+          title={page?.title || "Page History"}
+          username={page?.username}
+          userId={page?.userId}
           isLoading={false}
         />
         {/* Back button removed - using PageHeader back button instead */}
@@ -235,18 +240,15 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
   return (
     <div className="p-4 max-w-4xl mx-auto">
         <PageHeader
-          title="Page History"
+          title={page?.title || "Page History"}
+          username={page?.username}
+          userId={page?.userId}
           isLoading={loading}
         />
 
         {/* Back button removed - using PageHeader back button instead */}
 
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Clock className="h-8 w-8 text-muted-foreground" />
-            <h2 className="text-2xl font-semibold">Page Versions</h2>
-          </div>
-
           {activities.length === 0 ? (
             <div className="text-center p-8 border rounded-md">
               <p className="text-muted-foreground">No versions available for this page</p>
