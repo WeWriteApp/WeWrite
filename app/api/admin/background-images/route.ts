@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 interface DefaultBackgroundImage {
   id: string;
@@ -27,11 +27,23 @@ export async function GET(request: NextRequest) {
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    
+
     // Get default background images from Firestore
-    const backgroundImagesRef = db.collection(getCollectionName('defaultBackgroundImages'));
-    const snapshot = await backgroundImagesRef.orderBy('order', 'asc').get();
-    
+    const backgroundImagesRef = db.collection(getCollectionName(COLLECTIONS.DEFAULT_BACKGROUND_IMAGES));
+
+    let snapshot;
+    try {
+      snapshot = await backgroundImagesRef.orderBy('order', 'asc').get();
+    } catch (indexError) {
+      // If there's an index issue or collection doesn't exist, return empty results for admin
+      console.log('[ADMIN] Collection query failed, returning empty results:', indexError.message);
+      return NextResponse.json({
+        success: true,
+        images: [],
+        count: 0
+      });
+    }
+
     const images: DefaultBackgroundImage[] = [];
     snapshot.forEach((doc) => {
       images.push({
@@ -49,10 +61,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[ADMIN] Error fetching background images:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to fetch background images',
-        auditId: adminAuth.auditId 
+        auditId: adminAuth.auditId
       },
       { status: 500 }
     );
@@ -219,7 +231,7 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('🖼️ [API] Saving metadata to Firestore...');
-    const docRef = await db.collection(getCollectionName('defaultBackgroundImages')).add(imageData);
+    const docRef = await db.collection(getCollectionName(COLLECTIONS.DEFAULT_BACKGROUND_IMAGES)).add(imageData);
     console.log('🖼️ [API] Document created with ID:', docRef.id);
 
     console.log('🖼️ [API] Upload completed successfully');
@@ -271,7 +283,7 @@ export async function PUT(request: NextRequest) {
 
     // Update each image
     for (const image of images) {
-      const docRef = db.collection(getCollectionName('defaultBackgroundImages')).doc(image.id);
+      const docRef = db.collection(getCollectionName(COLLECTIONS.DEFAULT_BACKGROUND_IMAGES)).doc(image.id);
       batch.update(docRef, {
         order: image.order,
         active: image.active
@@ -326,7 +338,7 @@ export async function DELETE(request: NextRequest) {
     const bucket = storage.bucket();
 
     // Get image data
-    const docRef = db.collection(getCollectionName('defaultBackgroundImages')).doc(imageId);
+    const docRef = db.collection(getCollectionName(COLLECTIONS.DEFAULT_BACKGROUND_IMAGES)).doc(imageId);
     const doc = await docRef.get();
 
     if (!doc.exists) {

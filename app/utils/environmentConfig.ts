@@ -390,7 +390,8 @@ export const COLLECTIONS = {
   BACKLINKS: 'backlinks',
   FOLLOWS: 'follows',
   PAGE_FOLLOWERS: 'pageFollowers',
-  MIGRATION_AUDIT_LOGS: 'migrationAuditLogs'
+  MIGRATION_AUDIT_LOGS: 'migrationAuditLogs',
+  DEFAULT_BACKGROUND_IMAGES: 'defaultBackgroundImages'
 } as const;
 
 /**
