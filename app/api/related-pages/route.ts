@@ -111,8 +111,20 @@ export async function GET(request: NextRequest) {
 
       // Extract words from candidate page
       const candidateTitleWords = extractMeaningfulWords(pageData.title);
-      const candidateContentWords = pageData.content 
-        ? extractMeaningfulWords(pageData.content.substring(0, 1000))
+
+      // Handle content - it might be a string or Slate.js nodes array
+      let contentText = '';
+      if (pageData.content) {
+        if (typeof pageData.content === 'string') {
+          contentText = pageData.content.substring(0, 1000);
+        } else if (Array.isArray(pageData.content)) {
+          // Extract text from Slate.js nodes
+          contentText = JSON.stringify(pageData.content).substring(0, 1000);
+        }
+      }
+
+      const candidateContentWords = contentText
+        ? extractMeaningfulWords(contentText)
         : [];
       const candidateWords = [...new Set([...candidateTitleWords, ...candidateContentWords])];
 
