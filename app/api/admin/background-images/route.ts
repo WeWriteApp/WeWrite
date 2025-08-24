@@ -64,18 +64,32 @@ export async function GET(request: NextRequest) {
  * Upload a new default background image
  */
 export async function POST(request: NextRequest) {
+  console.log('🖼️ [API] Background image upload request received');
+
   // Verify admin access
   const adminAuth = await verifyAdminAccess(request);
   if (!adminAuth.isAdmin) {
+    console.log('🖼️ [API] Admin access denied');
     return createAdminUnauthorizedResponse(adminAuth.auditId);
   }
+
+  console.log('🖼️ [API] Admin access verified');
 
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const order = parseInt(formData.get('order') as string) || 0;
 
+    console.log('🖼️ [API] Form data parsed:', {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      order
+    });
+
     if (!file) {
+      console.log('🖼️ [API] No file provided in request');
       return NextResponse.json(
         { success: false, error: 'No file provided' },
         { status: 400 }
@@ -92,16 +106,33 @@ export async function POST(request: NextRequest) {
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
+      console.log('🖼️ [API] File too large:', file.size);
       return NextResponse.json(
         { success: false, error: 'File size must be less than 5MB' },
         { status: 400 }
       );
     }
 
+    console.log('🖼️ [API] File validation passed, initializing Firebase...');
     const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.error('🖼️ [API] Firebase Admin initialization failed');
+      return NextResponse.json(
+        { success: false, error: 'Firebase initialization failed' },
+        { status: 500 }
+      );
+    }
+
     const db = admin.firestore();
     const storage = admin.storage();
     const bucket = storage.bucket();
+
+    console.log('🖼️ [API] Firebase services initialized:', {
+      hasDb: !!db,
+      hasStorage: !!storage,
+      hasBucket: !!bucket,
+      bucketName: bucket.name
+    });
 
     // Generate unique filename
     const timestamp = Date.now();
@@ -109,10 +140,15 @@ export async function POST(request: NextRequest) {
     const filename = `default-bg-${timestamp}.${fileExtension}`;
     const filePath = `backgrounds/defaults/${filename}`;
 
+    console.log('🖼️ [API] Generated filename:', filename);
+    console.log('🖼️ [API] Upload path:', filePath);
+
     // Upload to Firebase Storage
+    console.log('🖼️ [API] Converting file to buffer...');
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const fileRef = bucket.file(filePath);
-    
+
+    console.log('🖼️ [API] Uploading to Firebase Storage...');
     await fileRef.save(fileBuffer, {
       metadata: {
         contentType: file.type,
@@ -125,10 +161,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Make file publicly accessible
+    console.log('🖼️ [API] Making file public...');
     await fileRef.makePublic();
 
     // Get public URL
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    console.log('🖼️ [API] Public URL generated:', publicUrl);
 
     // Save metadata to Firestore
     const imageData: Omit<DefaultBackgroundImage, 'id'> = {
@@ -140,8 +178,11 @@ export async function POST(request: NextRequest) {
       active: true
     };
 
+    console.log('🖼️ [API] Saving metadata to Firestore...');
     const docRef = await db.collection(getCollectionName('defaultBackgroundImages')).add(imageData);
+    console.log('🖼️ [API] Document created with ID:', docRef.id);
 
+    console.log('🖼️ [API] Upload completed successfully');
     return NextResponse.json({
       success: true,
       image: {

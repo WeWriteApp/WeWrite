@@ -87,22 +87,35 @@ export default function AdminBackgroundImagesPage() {
 
   // Handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🖼️ [Upload] File upload triggered');
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('🖼️ [Upload] No file selected');
+      return;
+    }
+
+    console.log('🖼️ [Upload] File selected:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
 
     setUploading(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('order', String(images.length));
 
+      console.log('🖼️ [Upload] Sending request to API...');
       const response = await fetch('/api/admin/background-images', {
         method: 'POST',
         body: formData
       });
 
+      console.log('🖼️ [Upload] API response status:', response.status);
       const data = await response.json();
+      console.log('🖼️ [Upload] API response data:', data);
 
       if (data.success) {
         toast({
@@ -111,6 +124,7 @@ export default function AdminBackgroundImagesPage() {
         });
         fetchImages(); // Refresh the list
       } else {
+        console.error('🖼️ [Upload] Upload failed:', data.error);
         toast({
           title: "Error",
           description: data.error || "Failed to upload image",
@@ -118,7 +132,7 @@ export default function AdminBackgroundImagesPage() {
         });
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('🖼️ [Upload] Error uploading image:', error);
       toast({
         title: "Error",
         description: "Failed to upload image",
