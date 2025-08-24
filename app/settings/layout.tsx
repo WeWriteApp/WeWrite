@@ -212,7 +212,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
       <div className="lg:flex h-[calc(100vh-3.5rem)]">
         {/* Desktop Persistent Sidebar */}
-        <div className="hidden lg:block lg:w-64 lg:border-r-only lg:bg-background">
+        <div className="hidden lg:block lg:w-64 lg:border-r-only">
           <div className="flex flex-col h-full">
             <nav className="flex-1 px-3 py-4">
               <div className="space-y-1">

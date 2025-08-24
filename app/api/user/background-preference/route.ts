@@ -19,13 +19,21 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Invalid background type');
     }
 
-    // Check subscription status for image backgrounds
-    if (backgroundType === 'image') {
-      const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
-      const subscription = await getUserSubscriptionServer(userId, { verbose: false });
+    // Check subscription status for custom image backgrounds (but allow default background images)
+    if (backgroundType === 'image' && backgroundData?.url) {
+      // Helper function to check if an image URL is a default background
+      const isDefaultBackgroundImage = (url: string): boolean => {
+        return url.includes('/backgrounds/defaults/') || url.includes('default-bg-');
+      };
 
-      if (!subscription || subscription.status !== 'active' || (subscription.amount || 0) <= 0) {
-        return createErrorResponse('FORBIDDEN', 'Custom background images require an active subscription');
+      // Only require subscription for custom uploaded images, not default ones
+      if (!isDefaultBackgroundImage(backgroundData.url)) {
+        const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
+        const subscription = await getUserSubscriptionServer(userId, { verbose: false });
+
+        if (!subscription || subscription.status !== 'active' || (subscription.amount || 0) <= 0) {
+          return createErrorResponse('FORBIDDEN', 'Custom background images require an active subscription');
+        }
       }
     }
 

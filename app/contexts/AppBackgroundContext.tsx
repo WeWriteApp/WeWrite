@@ -135,6 +135,12 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
   const { hasActiveSubscription } = useSubscription();
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Helper function to check if an image URL is a default background (always allowed)
+  // vs a custom uploaded image (requires subscription)
+  const isDefaultBackgroundImage = (url: string): boolean => {
+    return url.includes('/backgrounds/defaults/') || url.includes('default-bg-');
+  };
+
   // Ref to store the debounce timeout
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -184,14 +190,15 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
               if (data.backgroundPreference) {
                 console.log('[AppBackground] Found background preference:', data.backgroundPreference);
                 if (data.backgroundPreference.type === 'image' && data.backgroundPreference.data) {
-                  // Check subscription status before loading image background
-                  if (hasActiveSubscription) {
+                  const imageUrl = data.backgroundPreference.data.url;
+                  // Allow default background images even without subscription, but require subscription for custom uploads
+                  if (hasActiveSubscription || isDefaultBackgroundImage(imageUrl)) {
                     // Use the saved preference data directly, which contains the full image background object
                     setBackground(data.backgroundPreference.data);
-                    console.log('[AppBackground] Loaded image background from preference:', data.backgroundPreference.data.url);
+                    console.log('[AppBackground] Loaded image background from preference:', imageUrl);
                   } else {
-                    // User doesn't have active subscription, fall back to default solid background
-                    console.log('[AppBackground] Image background blocked - no active subscription');
+                    // User doesn't have active subscription and it's a custom image, fall back to default solid background
+                    console.log('[AppBackground] Custom image background blocked - no active subscription');
                     setBackground(DEFAULT_BACKGROUND);
                   }
                 } else if (data.backgroundPreference.type === 'solid' && data.backgroundPreference.data) {
@@ -200,17 +207,18 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
                 }
               } else if (data.backgroundImage?.url) {
                 // Fallback: if no preference but image exists, check subscription before using
-                if (hasActiveSubscription) {
+                const imageUrl = data.backgroundImage.url;
+                if (hasActiveSubscription || isDefaultBackgroundImage(imageUrl)) {
                   const imageBackground: ImageBackground = {
                     type: 'image',
-                    url: data.backgroundImage.url,
+                    url: imageUrl,
                     opacity: 0.15
                   };
                   setBackground(imageBackground);
-                  console.log('[AppBackground] Loaded image background from fallback, saving as preference:', data.backgroundImage.url);
+                  console.log('[AppBackground] Loaded image background from fallback, saving as preference:', imageUrl);
                 } else {
-                  // User doesn't have active subscription, use default background
-                  console.log('[AppBackground] Image background blocked - no active subscription');
+                  // User doesn't have active subscription and it's a custom image, use default background
+                  console.log('[AppBackground] Custom image background blocked - no active subscription');
                   setBackground(DEFAULT_BACKGROUND);
                 }
 
@@ -436,16 +444,17 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
     return () => clearTimeout(timeoutId);
   }, [background, cardOpacity, backgroundBlur, resolvedTheme, isInitialized]);
 
-  // Handle subscription changes - reset to default if subscription expires and user has image background
+  // Handle subscription changes - reset to default if subscription expires and user has custom image background
   useEffect(() => {
     if (!isInitialized || !isAuthenticated) return;
 
-    // If user doesn't have active subscription and is currently using an image background
-    if (!hasActiveSubscription && background.type === 'image') {
-      console.log('[AppBackground] Subscription expired, resetting image background to default');
+    // If user doesn't have active subscription and is currently using a custom image background
+    // (but allow default background images to continue working)
+    if (!hasActiveSubscription && background.type === 'image' && !isDefaultBackgroundImage(background.url)) {
+      console.log('[AppBackground] Subscription expired, resetting custom image background to default');
       setBackground(DEFAULT_BACKGROUND);
     }
-  }, [hasActiveSubscription, background.type, isInitialized, isAuthenticated]);
+  }, [hasActiveSubscription, background.type, background, isInitialized, isAuthenticated]);
 
   const resetToDefault = () => {
     setBackground(DEFAULT_BACKGROUND);
