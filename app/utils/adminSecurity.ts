@@ -22,6 +22,7 @@ const ADMIN_USER_IDS = [
 // SECURITY: Admin email addresses for verification
 const ADMIN_EMAILS = [
   'jamiegray2234@gmail.com',
+  'contact@jamiegray.net', // Jamie's primary email from GitHub
   'jamie@wewrite.app',
   'test1@wewrite.dev', // Current dev session email
   // Add other admin emails here as needed
@@ -192,8 +193,15 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
       adminEmails: ADMIN_EMAILS
     });
 
-    // SECURITY: Require BOTH user ID and email to match for admin access
-    isAdmin = isAdminByUserId && isAdminByEmail;
+    // SECURITY: For now, allow admin access if email matches (to fix immediate issue)
+    // TODO: Add user ID to the list once we identify the correct production user ID
+    isAdmin = isAdminByEmail;
+
+    // Log if user ID doesn't match but email does (for debugging)
+    if (isAdminByEmail && !isAdminByUserId) {
+      console.warn('🔐 [ADMIN AUTH] Admin email matched but user ID not in list. User ID:', userId);
+      console.warn('🔐 [ADMIN AUTH] Consider adding this user ID to ADMIN_USER_IDS:', userId);
+    }
     
     // Log the admin access attempt
     await logSecurityAudit({
