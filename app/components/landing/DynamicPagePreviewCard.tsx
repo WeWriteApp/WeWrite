@@ -93,9 +93,9 @@ export function DynamicPagePreviewCard({
         setError(null);
 
         // Use production data fetch (automatically uses production data for logged-out users)
-        console.log(`Fetching page data for pageId: ${pageId}`);
+        console.log(`[DynamicPagePreviewCard] Fetching page data for pageId: ${pageId}`);
         const response = await fetchJson(`/api/pages/${pageId}`);
-        console.log(`Response for ${pageId}:`, response);
+        console.log(`[DynamicPagePreviewCard] Response for ${pageId}:`, response);
 
         const pageData = response.pageData || response; // Handle different response structures
         console.log(`Page data for ${pageId}:`, pageData);
@@ -104,8 +104,15 @@ export function DynamicPagePreviewCard({
         pageCache.set(pageId, pageData);
         setPage(pageData);
       } catch (err) {
-        console.error(`Failed to fetch page ${pageId}:`, err);
-        setError(err instanceof Error ? err.message : 'Failed to load page');
+        console.error(`[DynamicPagePreviewCard] Failed to fetch page ${pageId}:`, err);
+        // Don't show error for 404s - just skip this page silently
+        if (err instanceof Error && err.message.includes('404')) {
+          console.log(`[DynamicPagePreviewCard] Page ${pageId} not found in production, skipping`);
+          setError(null);
+          setPage(null);
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to load page');
+        }
       } finally {
         setLoading(false);
       }
@@ -180,17 +187,10 @@ export function DynamicPagePreviewCard({
     );
   }
 
-  // No page data
+  // No page data - return null to hide the component instead of showing error
   if (!page) {
-    return (
-      <Card className={`h-full wewrite-card ${className}`}>
-        <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">
-            <span className="text-sm">Page not found</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    console.log(`[DynamicPagePreviewCard] No page data for ${pageId}, hiding component`);
+    return null;
   }
 
   const title = customTitle || page.title || 'Untitled';
