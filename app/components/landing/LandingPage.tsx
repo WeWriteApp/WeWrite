@@ -264,7 +264,7 @@ const LandingPage = () => {
 
 
       {/* Desktop Navigation - Always sticky at the top */}
-      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md`}>
+      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} shadow-md`} style={{ backgroundColor: 'hsl(var(--background)) !important', backdropFilter: 'none !important', WebkitBackdropFilter: 'none !important' }}>
         {/* Row 1: Logo + Navigation + Auth */}
         <div className="border-b border-border/20 py-2">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-6">

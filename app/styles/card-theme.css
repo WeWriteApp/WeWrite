@@ -214,10 +214,13 @@
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
 }
 
-/* Floating cards - enhanced shadows */
+/* Floating cards - enhanced shadows and glassmorphism */
 .wewrite-card.wewrite-floating {
   /* Enhanced floating card shadows */
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* Add glassmorphism blur for light mode too */
+  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
+  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
 }
 
 .dark .wewrite-card.wewrite-floating {

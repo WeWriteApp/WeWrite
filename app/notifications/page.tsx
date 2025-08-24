@@ -11,9 +11,8 @@ import NavPageLayout from '../components/layout/NavPageLayout';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
-import { Loader, CheckCheck, ChevronLeft, TestTube, MoreHorizontal, Settings } from 'lucide-react';
+import { Loader, CheckCheck, ChevronLeft, MoreHorizontal, Settings } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
-import { createTestNotification } from '../firebase/notifications';
 import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
 
 function NotificationsContent() {
@@ -28,22 +27,7 @@ function NotificationsContent() {
   } = useNotifications();
   const { trackNotificationInteraction } = useWeWriteAnalytics();
 
-  // Test notification creation
-  const handleCreateTestNotification = async () => {
-    if (!user?.uid) return;
 
-    try {
-      console.log('Creating test notification...');
-      const notificationId = await createTestNotification(user.uid);
-      if (notificationId) {
-        console.log('Test notification created:', notificationId);
-        // Refresh notifications to show the new one
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Error creating test notification:', error);
-    }
-  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -95,17 +79,6 @@ function NotificationsContent() {
           <p className="text-muted-foreground">Stay updated with your latest activity</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Test notification button for validation */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCreateTestNotification}
-            className="flex items-center gap-2"
-          >
-            <TestTube className="h-4 w-4" />
-            Test Notification
-          </Button>
-
           {notifications.length > 0 && (
             <NotificationsHeaderButton />
           )}

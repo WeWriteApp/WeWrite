@@ -136,7 +136,7 @@ export function LoggedOutFinancialHeader() {
   return (
     <div className="fixed top-20 left-0 right-0 z-40 mb-6">
       <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-        <FloatingHeader className="p-3 md:p-4 relative">
+        <FloatingHeader className="p-3 md:p-4 relative backdrop-blur-md bg-background/80">
           <div className="flex items-center justify-between">
             {/* Spend Display (left side) */}
             <div className="flex items-center min-w-0 flex-shrink-0">

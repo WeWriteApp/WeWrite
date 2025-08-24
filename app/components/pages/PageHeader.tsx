@@ -14,6 +14,7 @@ import { UsernameBadge } from "../ui/UsernameBadge";
 import ClickableByline from "../utils/ClickableByline";
 import { useAuth } from '../../providers/AuthProvider';
 import { useDateFormat } from '../../contexts/DateFormatContext';
+import { useBanner } from '../../providers/BannerProvider';
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
 
 import { useSidebarContext } from "../layout/UnifiedSidebar";
@@ -143,6 +144,7 @@ export default function PageHeader({
   const router = useRouter();
   const { user } = useAuth();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
+  const { bannerOffset } = useBanner();
 
   // State for scroll behavior - only used in view mode
   const [isScrolled, setIsScrolled] = React.useState(false);
@@ -583,7 +585,10 @@ export default function PageHeader({
           ${!isEditing ? 'transition-all duration-300 ease-out will-change-transform' : ''}
           ${isScrolled && !isEditing ? 'bg-background/80 backdrop-blur-sm shadow-sm' : ''}
         `}
-        style={!isEditing ? { transform: 'translateZ(0)' } : {}}
+        style={!isEditing ? {
+          transform: 'translateZ(0)',
+          top: `${bannerOffset}px`
+        } : {}}
       >
         {/* Full width in edit mode, sidebar-aware in view mode */}
         <div className="flex w-full h-full">
