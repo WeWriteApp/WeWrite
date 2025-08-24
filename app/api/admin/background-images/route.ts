@@ -80,8 +80,15 @@ export async function POST(request: NextRequest) {
 
   // Verify admin access
   const adminAuth = await verifyAdminAccess(request);
+  console.log('🖼️ [API] Admin auth result:', {
+    isAdmin: adminAuth.isAdmin,
+    userId: adminAuth.userId,
+    userEmail: adminAuth.userEmail,
+    auditId: adminAuth.auditId
+  });
+
   if (!adminAuth.isAdmin) {
-    console.log('🖼️ [API] Admin access denied');
+    console.log('🖼️ [API] Admin access denied - detailed info:', adminAuth);
     return createAdminUnauthorizedResponse(adminAuth.auditId);
   }
 
