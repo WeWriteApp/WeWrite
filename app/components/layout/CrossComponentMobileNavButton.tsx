@@ -141,9 +141,9 @@ export default function CrossComponentMobileNavButton({
         "active:scale-95 active:duration-75", // Quick scale down on active
         // Base states with enhanced contrast
         "hover:bg-primary/10",
-        // Active state styling - accent with transparency
+        // Active state styling - neutral semi-transparent background to match "more" button
         isActive
-          ? "bg-primary/20 text-primary"
+          ? "bg-muted text-foreground"
           : "text-muted-foreground hover:text-foreground",
         // Loading state when navigating
         isNavigating && "opacity-75",

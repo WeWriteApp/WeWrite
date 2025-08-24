@@ -531,13 +531,10 @@ export default function MobileBottomNav() {
           isPressed && "scale-95 bg-primary/20",
           // Base states with enhanced contrast
           "hover:bg-primary/10 active:bg-primary/20",
-          // Active state styling - use semi-transparent colors for glassmorphism
+          // Active state styling - neutral semi-transparent background to match "more" button
           isActive
-            ? "bg-accent/20 text-accent-foreground dark:bg-white/20 dark:text-white"
-            : [
-                "text-slate-600 hover:text-slate-900",
-                "dark:text-muted-foreground dark:hover:text-foreground"
-              ],
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground",
           // Loading state when navigating
           isCurrentlyNavigating && "opacity-75"
         )}
