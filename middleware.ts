@@ -86,7 +86,7 @@ function getPathChecks(path: string): PathChecks {
                       path === "/subscription/";
 
   // Define paths that require admin access (only accessible to admin users)
-  const requiresAdmin = false; // No paths require admin access by default
+  const requiresAdmin = path.startsWith("/admin") && path !== "/admin-login";
 
   return {
     isAccessiblePath,

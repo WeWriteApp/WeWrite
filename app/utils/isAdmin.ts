@@ -1,8 +1,10 @@
 // Define admin user IDs - ONLY these emails have admin access
+// SECURITY: This must match the ADMIN_EMAILS list in adminSecurity.ts
 const ADMIN_USER_IDS: string[] = [
   'jamiegray2234@gmail.com',
+  'jamie@wewrite.app',
+  'test1@wewrite.dev', // Current dev session email - REMOVE IN PRODUCTION
   'admin.test@wewrite.app', // Secure admin test account for production data access
-  'jamie@wewrite.app', // Development admin user
 ];
 
 /**
