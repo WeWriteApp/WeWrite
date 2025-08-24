@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
-import { useRouter } from 'next/navigation';
+import { useSessionValidation } from '../../hooks/useSessionValidation';
 
 interface SessionMonitorProps {
   // Check interval in milliseconds (default: 5 minutes)
@@ -22,106 +22,25 @@ export default function SessionMonitor({
   checkInterval = 15 * 60 * 1000, // CRITICAL FIX: Increased to 15 minutes to reduce server load
   showNotifications = true
 }: SessionMonitorProps) {
-  const { user, signOut } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
+  const { validateSession, handleSessionRevoked, requestNotificationPermission } = useSessionValidation({
+    showNotifications
+  });
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isCheckingRef = useRef(false);
 
-  // Check session validity
+  // Check session validity using the reusable hook
   const checkSessionValidity = async () => {
-    // Prevent multiple simultaneous checks
-    if (isCheckingRef.current) return;
-    
-    try {
-      isCheckingRef.current = true;
-      
-      const response = await fetch('/api/auth/validate-session', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      
-      if (!response.ok) {
-        console.warn('Session validation request failed:', response.status, response.statusText);
-        // CRITICAL FIX: Don't logout on network errors, only on actual auth failures
-        if (response.status === 401) {
-          console.log('[SessionMonitor] 401 Unauthorized - session actually expired');
-          // Continue to handle as session expired
-        } else if (response.status === 404) {
-          console.log('[SessionMonitor] 404 Not Found - validation endpoint missing, assuming session valid');
-          return; // Don't logout when endpoint is missing
-        } else {
-          console.log('[SessionMonitor] Network/server error - not logging out user');
-          return; // Don't logout on network errors
-        }
-      }
-      
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error('[SessionMonitor] Failed to parse session response:', parseError);
-        return; // Don't logout on parse errors
-      }
+    const result = await validateSession();
 
-      console.log('[SessionMonitor] Session validation result:', result);
-
-      if (!result.valid) {
-        console.log('[SessionMonitor] Session invalid, triggering logout. Reason:', result.reason);
-
-        // Show notification if enabled
-        if (showNotifications && 'Notification' in window) {
-          try {
-            new Notification('WeWrite Security Alert', {
-              body: 'Your session has been logged out from another device for security.',
-              icon: '/favicon.ico',
-            });
-          } catch (error) {
-            console.warn('Could not show notification:', error);
-          }
-        }
-
-        // Log out user and redirect
-        await handleSessionRevoked();
-      } else {
-        console.log('[SessionMonitor] Session is valid, continuing...');
-      }
-      
-    } catch (error) {
-      console.error('Error checking session validity:', error);
-    } finally {
-      isCheckingRef.current = false;
+    if (result && !result.valid) {
+      console.log('[SessionMonitor] Session invalid, triggering logout. Reason:', result.reason);
+      await handleSessionRevoked();
+    } else if (result) {
+      console.log('[SessionMonitor] Session is valid, continuing...');
     }
   };
 
-  // Handle session revoked
-  const handleSessionRevoked = async () => {
-    try {
-      // Clear local session
-      await signOut();
-      
-      // Redirect to login with message
-      router.push('/auth/login?message=session_revoked');
-      
-    } catch (error) {
-      console.error('Error handling session revocation:', error);
-      // Force redirect even if signOut fails
-      window.location.href = '/auth/login?message=session_revoked';
-    }
-  };
 
-  // Request notification permission
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      try {
-        await Notification.requestPermission();
-      } catch (error) {
-        console.warn('Could not request notification permission:', error);
-      }
-    }
-  };
 
   // Start monitoring when user is authenticated
   useEffect(() => {

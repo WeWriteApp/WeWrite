@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, lazy, Suspense, useCallback, useMem
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
+import { AuthButton } from '../auth/AuthButton';
 import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info, Clock, Wrench } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -294,36 +295,20 @@ const LandingPage = () => {
           <div className="flex items-center space-x-4">
             {!isAuthenticated ? (
               <>
-                <Button
+                <AuthButton
+                  type="login"
                   variant="secondary"
                   className="bg-muted hover:bg-muted/80 text-foreground"
-                  asChild
+                  device="desktop"
+                />
+                <AuthButton
+                  type="register"
+                  variant="default"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  device="desktop"
                 >
-                  <Link
-                    href="/auth/login"
-                    onClick={(e) => {
-                      console.log('🟠 Desktop Sign In button clicked');
-                      // Track desktop sign-in click in analytics
-                      try {
-                        analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                          label: 'Desktop sign-in button',
-                          link_type: 'auth',
-                          link_text: 'Sign In',
-                          link_url: '/auth/login',
-                          device: 'desktop'
-                        });
-                      } catch (error) {
-                        console.error('Analytics error:', error);
-                      }
-                      // Don't prevent default - let navigation happen
-                    }}
-                  >
-                    Sign In
-                  </Link>
-                </Button>
-                <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
-                  <Link href="/auth/register">Create Account</Link>
-                </Button>
+                  Create Account
+                </AuthButton>
               </>
             ) : (
               <Button
@@ -368,37 +353,22 @@ const LandingPage = () => {
             <div className="flex items-center space-x-2">
               {!isAuthenticated ? (
                 <>
-                  <Button
+                  <AuthButton
+                    type="login"
                     variant="ghost"
                     size="sm"
                     className="bg-muted hover:bg-muted/80 text-foreground"
-                    asChild
+                    device="mobile"
+                  />
+                  <AuthButton
+                    type="register"
+                    variant="default"
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    device="mobile"
                   >
-                    <Link
-                      href="/auth/login"
-                      onClick={(e) => {
-                        console.log('🟠 Mobile Sign In button clicked');
-                        // Track mobile sign-in click in analytics
-                        try {
-                          analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                            label: 'Mobile sign-in button',
-                            link_type: 'auth',
-                            link_text: 'Sign In',
-                            link_url: '/auth/login',
-                            device: 'mobile'
-                          });
-                        } catch (error) {
-                          console.error('Analytics error:', error);
-                        }
-                        // Don't prevent default - let navigation happen
-                      }}
-                    >
-                      Sign In
-                    </Link>
-                  </Button>
-                  <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
-                    <Link href="/auth/register">Sign Up</Link>
-                  </Button>
+                    Sign Up
+                  </AuthButton>
                 </>
               ) : (
                 <Button

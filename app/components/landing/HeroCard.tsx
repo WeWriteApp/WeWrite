@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
+import { AuthButton } from '../auth/AuthButton';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Loader2 } from 'lucide-react';
@@ -212,47 +213,21 @@ export default function HeroCard({
 
           {/* Action Buttons - Always show Sign In and Sign Up */}
           <div className={`flex flex-col sm:flex-row justify-center gap-4 ${fadeInClass}`}>
-            <Button
+            <AuthButton
+              type="login"
               size="lg"
               variant="secondary"
               className="bg-muted hover:bg-muted/80 text-foreground"
-              asChild
+              device="hero_card"
+            />
+            <AuthButton
+              type="register"
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-white"
+              device="hero_card"
             >
-              <Link
-                href="/auth/login"
-                onClick={() => {
-                  console.log('🟠 Hero Sign In button clicked');
-                  // Track hero sign-in click in analytics
-                  analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                    label: 'Hero sign-in button',
-                    link_type: 'auth',
-                    link_text: 'Sign In',
-                    link_url: '/auth/login',
-                    device: 'hero_card'
-                  });
-                }}
-              >
-                Sign In
-              </Link>
-            </Button>
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white" asChild>
-              <Link
-                href="/auth/register"
-                onClick={() => {
-                  console.log('🟠 Hero Sign Up button clicked');
-                  // Track hero sign-up click in analytics
-                  analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                    label: 'Hero sign-up button',
-                    link_type: 'auth',
-                    link_text: 'Sign Up',
-                    link_url: '/auth/register',
-                    device: 'hero_card'
-                  });
-                }}
-              >
-                Sign Up
-              </Link>
-            </Button>
+              Sign Up
+            </AuthButton>
           </div>
 
 
