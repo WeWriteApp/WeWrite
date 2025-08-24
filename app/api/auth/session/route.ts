@@ -180,11 +180,11 @@ export async function POST(request: NextRequest) {
         // CRITICAL PWA FIX: Enhanced cookie settings for PWA compatibility
         cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
           httpOnly: true,
-          secure: true, // Always secure for PWA
+          secure: process.env.NODE_ENV === 'production', // Only secure in production
           sameSite: 'lax',
           maxAge: 60 * 60 * 24 * 7, // 7 days
           path: '/', // Explicit path for PWA
-          domain: process.env.NODE_ENV === 'production' ? '.getwewrite.app' : undefined
+          // No domain restriction for development
         });
 
         // Update last login time
@@ -277,11 +277,11 @@ export async function POST(request: NextRequest) {
       // CRITICAL PWA FIX: Enhanced cookie settings for PWA compatibility
       cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
         httpOnly: true,
-        secure: true, // Always secure for PWA
+        secure: process.env.NODE_ENV === 'production', // Only secure in production
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/', // Explicit path for PWA
-        domain: process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? '.getwewrite.app' : undefined
+        // No domain restriction for development
       });
 
       // Update last login time
@@ -349,11 +349,11 @@ async function createUserSession(request: NextRequest, userId: string) {
     const cookieStore = await cookies();
     cookieStore.set('sessionId', sessionId, {
       httpOnly: true,
-      secure: true, // Always secure for PWA
+      secure: process.env.NODE_ENV === 'production', // Only secure in production
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/', // Explicit path for PWA
-      domain: process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? '.getwewrite.app' : undefined
+      // No domain restriction for development
     });
 
     console.log(`Created user session ${sessionId} for user ${userId}`);

@@ -98,6 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Check current session
   const checkSession = useCallback(async () => {
     try {
+      console.log('[Auth] 🔍 Starting session check...');
       setLoading(true);
       clearError();
 
@@ -106,21 +107,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
         credentials: 'include'
       });
 
+      console.log('[Auth] 🔍 Session check response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
+      });
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[Auth] 🔍 Session data received:', {
+          isAuthenticated: data.isAuthenticated,
+          hasUser: !!data.user,
+          userEmail: data.user?.email
+        });
+
         if (data.isAuthenticated && data.user) {
           setUser(data.user);
-          console.log('[Auth] Session restored for user:', data.user.email);
+          console.log('[Auth] ✅ Session restored for user:', data.user.email);
         } else {
           setUser(null);
-          console.log('[Auth] No active session found');
+          console.log('[Auth] ❌ No active session found - data:', data);
         }
       } else {
+        const errorData = await response.text();
         setUser(null);
-        console.log('[Auth] Session check failed:', response.status);
+        console.log('[Auth] ❌ Session check failed:', response.status, errorData);
       }
     } catch (error) {
-      console.error('[Auth] Session check error:', error);
+      console.error('[Auth] ❌ Session check error:', error);
       setError('Failed to check authentication status');
       setUser(null);
     }
