@@ -257,7 +257,6 @@ analytics.trackInteractionEvent(ANALYTICS_EVENTS.LANDING_PAGE_LOADED, {
 
 ### Content Management
 - **Feature Roadmap**: Page IDs for dynamic content
-- **Hero Images**: Static assets in `/images/landing/`
 - **Copy Text**: Centralized in component constants
 
 ## Deployment & Testing
