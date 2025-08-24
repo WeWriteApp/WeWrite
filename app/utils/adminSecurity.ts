@@ -13,7 +13,8 @@ import { getCollectionName } from './environmentConfig';
 
 // SECURITY: Single source of truth for admin users
 const ADMIN_USER_IDS = [
-  'jamie-admin-uid', // Jamie's admin user ID
+  'mP9yRa3nO6gS8wD4xE2hF5jK7m9N', // Jamie's admin user ID (dev_admin_user)
+  'jamie-admin-uid', // Legacy admin user ID
   // Add other admin user IDs here as needed
 ];
 
@@ -150,9 +151,11 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
   try {
     // Get authenticated user ID
     userId = await getUserIdFromRequest(request);
-    
+    console.log('🔐 [ADMIN AUTH] User ID from request:', userId);
+
     if (!userId) {
       // Not authenticated - definitely not admin
+      console.log('🔐 [ADMIN AUTH] No user ID found - not authenticated');
       await logSecurityAudit({
         auditId,
         action: 'admin_access_attempt',
@@ -165,17 +168,27 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
         route,
         method
       });
-      
+
       return { isAdmin: false, userId: null, userEmail: null, auditId };
     }
     
     // Get user email for verification
     userEmail = await getUserEmail(userId);
-    
+    console.log('🔐 [ADMIN AUTH] User email:', userEmail);
+
     // Check admin status using both user ID and email for security
     const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
     const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
-    
+
+    console.log('🔐 [ADMIN AUTH] Admin checks:', {
+      userId,
+      userEmail,
+      isAdminByUserId,
+      isAdminByEmail,
+      adminUserIds: ADMIN_USER_IDS,
+      adminEmails: ADMIN_EMAILS
+    });
+
     // SECURITY: Require BOTH user ID and email to match for admin access
     isAdmin = isAdminByUserId && isAdminByEmail;
     
