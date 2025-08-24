@@ -17,35 +17,104 @@ import { getEffectiveTier } from './subscriptionTiers';
  * @returns The username or "Missing username" if not found
  */
 export const getUsernameById = async (userId: string): Promise<string> => {
-  if (!userId) return "Missing username";
+  if (!userId) {
+    console.log('👤 [USER UTILS] No userId provided');
+    return "Missing username";
+  }
 
   try {
-    // Try to get user from API endpoint
-    console.log('👤 [USER UTILS] Fetching user data via API for:', userId);
-    const response = await userProfileApi.getProfile(userId);
+    // Check if we're running on the server side
+    const isServerSide = typeof window === 'undefined';
 
-    if (response.success && response.data) {
-      const userData = response.data as User;
+    if (isServerSide) {
+      // Server-side: Use direct Firestore access
+      console.log('👤 [USER UTILS] Server-side: Fetching user data directly from Firestore for:', userId);
+      return await getUsernameByIdServer(userId);
+    } else {
+      // Client-side: Use API endpoint
+      console.log('👤 [USER UTILS] Client-side: Fetching user data via API for:', userId);
+      const response = await userProfileApi.getProfile(userId);
 
-      // Check for valid username (not empty, not "Anonymous", not "Missing username")
-      if (userData.username &&
-          userData.username !== "Anonymous" &&
-          userData.username !== "Missing username" &&
-          userData.username.trim() !== "") {
-        return userData.username.trim();
+      if (response.success && response.data) {
+        const userData = response.data as User;
+
+        // Check for valid username (not empty, not "Anonymous", not "Missing username")
+        if (userData.username &&
+            userData.username !== "Anonymous" &&
+            userData.username !== "Missing username" &&
+            userData.username.trim() !== "") {
+          console.log('👤 [USER UTILS] Found valid username:', userData.username);
+          return userData.username.trim();
+        }
+
+        console.log('👤 [USER UTILS] User data found but no valid username:', {
+          hasUsername: !!userData.username,
+          username: userData.username,
+          userId
+        });
+      } else {
+        console.log('👤 [USER UTILS] API call failed or returned no data:', {
+          success: response.success,
+          hasData: !!response.data,
+          error: response.error,
+          userId
+        });
       }
-
-      // SECURITY: Never expose email addresses - always return "Missing username"
     }
 
     // If no valid username found, return default
     console.log('👤 [USER UTILS] No valid username found for user:', userId);
     return "Missing username";
   } catch (error) {
-    console.error("Error fetching username by ID:", error);
+    console.error("👤 [USER UTILS] Error fetching username by ID:", error);
     return "Missing username";
   }
 };
+
+/**
+ * Server-side version that directly queries Firestore
+ * @param userId - The user ID to get the username for
+ * @returns The username or "Missing username" if not found
+ */
+async function getUsernameByIdServer(userId: string): Promise<string> {
+  try {
+    // Import Firebase admin (only available server-side)
+    const { getFirebaseAdmin } = await import('../firebase/admin');
+    const { getCollectionName } = await import('./environmentConfig');
+
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+
+    if (!userDoc.exists) {
+      console.log('👤 [USER UTILS] Server: User document not found for:', userId);
+      return "Missing username";
+    }
+
+    const userData = userDoc.data();
+    const username = userData?.username;
+
+    // Check for valid username
+    if (username &&
+        username !== "Anonymous" &&
+        username !== "Missing username" &&
+        username.trim() !== "") {
+      console.log('👤 [USER UTILS] Server: Found valid username:', username);
+      return username.trim();
+    }
+
+    console.log('👤 [USER UTILS] Server: User found but no valid username:', {
+      hasUsername: !!username,
+      username,
+      userId
+    });
+    return "Missing username";
+  } catch (error) {
+    console.error("👤 [USER UTILS] Server: Error fetching username:", error);
+    return "Missing username";
+  }
+}
 
 /**
  * Gets the current authenticated user's username

@@ -3,7 +3,6 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { ServerUsdService } from '../../../services/usdService.server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { getUsernameById } from '../../../utils/userUtils';
 
 interface EnhancedUsdAllocation {
   id: string;
@@ -15,6 +14,50 @@ interface EnhancedUsdAllocation {
   month: string;
   resourceType: 'page' | 'user_bio' | 'user' | 'wewrite';
   resourceId: string;
+}
+
+/**
+ * Server-side function to get username by ID
+ * @param userId - The user ID to get the username for
+ * @returns The username or "Missing username" if not found
+ */
+async function getUsernameByIdServer(userId: string): Promise<string> {
+  if (!userId) {
+    return "Missing username";
+  }
+
+  try {
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+
+    if (!userDoc.exists) {
+      console.log(`👤 [ALLOCATIONS API] User document not found for: ${userId}`);
+      return "Missing username";
+    }
+
+    const userData = userDoc.data();
+    const username = userData?.username;
+
+    // Check for valid username
+    if (username &&
+        username !== "Anonymous" &&
+        username !== "Missing username" &&
+        username.trim() !== "") {
+      console.log(`👤 [ALLOCATIONS API] Found valid username: ${username} for user: ${userId}`);
+      return username.trim();
+    }
+
+    console.log(`👤 [ALLOCATIONS API] User found but no valid username for: ${userId}`, {
+      hasUsername: !!username,
+      username
+    });
+    return "Missing username";
+  } catch (error) {
+    console.error(`👤 [ALLOCATIONS API] Error fetching username for ${userId}:`, error);
+    return "Missing username";
+  }
 }
 
 /**
@@ -68,7 +111,7 @@ export async function GET(request: NextRequest) {
 
             try {
               console.log(`Fetching username for user allocation: ${userId}`);
-              const authorUsername = await getUsernameById(userId);
+              const authorUsername = await getUsernameByIdServer(userId);
 
               return {
                 id: allocation.id,
@@ -135,7 +178,7 @@ export async function GET(request: NextRequest) {
               authorUsername.trim() === '') {
             try {
               console.log(`Fetching username for user ${authorId} (page ${allocation.resourceId})`);
-              authorUsername = await getUsernameById(authorId);
+              authorUsername = await getUsernameByIdServer(authorId);
             } catch (usernameError) {
               console.error(`Error fetching username for user ${authorId}:`, usernameError);
               authorUsername = 'Unknown';
@@ -159,7 +202,7 @@ export async function GET(request: NextRequest) {
           // Try to get username from recipient user ID as fallback
           let authorUsername = 'Unknown';
           try {
-            authorUsername = await getUsernameById(allocation.recipientUserId);
+            authorUsername = await getUsernameByIdServer(allocation.recipientUserId);
           } catch (usernameError) {
             console.error(`Error fetching username for error case ${allocation.resourceId}:`, usernameError);
           }

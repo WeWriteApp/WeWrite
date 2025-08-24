@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Clock, FileText, Users } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import PillLink from '../utils/PillLink';
+import { UsernameBadge } from '../ui/UsernameBadge';
 
 interface Allocation {
   id?: string;
@@ -213,12 +214,13 @@ export default function RecentAllocationsCard({ allocations, className = "" }: R
               <div key={supporterGroup.fromUserId} className="flex items-center justify-between p-3 rounded-lg border-theme-strong">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <PillLink
-                      href={`/user/${supporterGroup.fromUserId}`}
-                      className="text-sm"
-                    >
-                      {supporterGroup.fromUsername || supporterGroup.fromUserId}
-                    </PillLink>
+                    <UsernameBadge
+                      userId={supporterGroup.fromUserId}
+                      username={supporterGroup.fromUsername}
+                      variant="link"
+                      size="sm"
+                      showBadge={true}
+                    />
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>{supporterGroup.totalTokens} tokens</span>

@@ -201,7 +201,7 @@ export function UsdAllocationBreakdown({
                     <div className="flex items-center space-x-1">
                       <UsernameBadge
                         userId={allocation.resourceId}
-                        variant="pill"
+                        variant="link"
                         size="sm"
                         showBadge={true}
                       />
@@ -212,12 +212,13 @@ export function UsdAllocationBreakdown({
                       <PillLink href={`/${allocation.resourceId}`}>
                         {allocation.pageTitle || allocation.resourceId}
                       </PillLink>
-                      {allocation.authorUsername && (
+                      {allocation.authorUsername && allocation.authorUsername !== 'Missing username' && allocation.authorUsername !== 'Unknown' && (
                         <>
                           <span className="text-xs sm:text-sm text-muted-foreground">by</span>
                           <UsernameBadge
-                            userId={allocation.authorUserId || allocation.authorUsername}
-                            variant="pill"
+                            userId={allocation.authorId || allocation.authorUserId}
+                            username={allocation.authorUsername}
+                            variant="link"
                             size="sm"
                             showBadge={true}
                           />
