@@ -269,9 +269,7 @@ export default function SettingsIndexPage() {
                   className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors select-none"
                 >
                   <div className="flex items-center">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg mr-3" style={{ backgroundColor: 'oklch(var(--primary) / 0.1)' }}>
-                      <IconComponent className="h-4 w-4 text-primary" />
-                    </div>
+                    <IconComponent className="h-5 w-5 mr-3 text-foreground" />
                     <span className="font-medium">{section.title}</span>
                   </div>
                   <div className="flex items-center gap-2">

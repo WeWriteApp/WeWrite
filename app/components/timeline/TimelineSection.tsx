@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Clock, Calendar, List } from 'lucide-react';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger } from '../ui/segmented-control';
 import { SectionTitle } from '../ui/section-title';
+import { Button } from '../ui/button';
 import StickySection from "../utils/StickySection";
 import TimelineCarousel from './TimelineCarousel';
 import TimelineCalendar from './TimelineCalendar';

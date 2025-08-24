@@ -83,12 +83,12 @@ export default function FloatingActionButton() {
     // On mobile, position above floating mobile nav when visible
     if (shouldShowMobileNav) {
       const navHeight = 80; // Height of mobile nav content
-      const extraGap = 24; // Additional gap between FAB and nav for better spacing
-      return `calc(var(--fixed-safe-bottom) + ${navHeight + extraGap}px)`;
+      const toolbarMargin = 16; // Match the toolbar's margin (left-4 right-4 = 16px)
+      return `calc(var(--fixed-safe-bottom) + ${navHeight + toolbarMargin}px)`;
     }
 
-    // When mobile nav is hidden, use fixed-layer system
-    return 'var(--fixed-safe-bottom)';
+    // When mobile nav is hidden, use fixed-layer system with toolbar margin
+    return 'calc(var(--fixed-safe-bottom) + 16px)';
   }, [shouldShowMobileNav]);
 
   // Don't render if conditions not met

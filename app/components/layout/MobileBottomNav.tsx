@@ -29,6 +29,7 @@ import { useEarnings } from '../../contexts/EarningsContext';
 import { WarningDot } from '../ui/warning-dot';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 import { FloatingToolbar } from '../ui/FloatingCard';
+import { isAdmin } from '../../utils/isAdmin';
 
 /**
  * MobileBottomNav Component
@@ -607,10 +608,12 @@ export default function MobileBottomNav() {
       {/* Bottom navigation using FloatingToolbar for consistency */}
       <FloatingToolbar
         className={cn(
-          "md:hidden fixed-layer fixed-bottom z-fixed-toolbar pointer-events-auto left-4 right-4",
+          "md:hidden fixed-layer fixed-bottom pointer-events-auto left-4 right-4",
           "transition-all duration-300 ease-in-out",
           !shouldHideNav ? "translate-y-0" : "translate-y-full",
-          "touch-manipulation"
+          "touch-manipulation",
+          // Higher z-index when expanded to appear above FAB
+          isExpanded ? "z-[95]" : "z-fixed-toolbar"
         )}
         style={{
           // Use CSS custom property for PWA spacing, but let fixed-bottom handle base positioning
@@ -701,6 +704,13 @@ export default function MobileBottomNav() {
                 <div className="grid grid-cols-5 gap-2">
                   {sidebarOrder
                     .filter(itemId => !mobileOrder.includes(itemId))
+                    .filter(itemId => {
+                      // Hide admin button for non-admin users
+                      if (itemId === 'admin' && !isAdmin(user?.email)) {
+                        return false;
+                      }
+                      return true;
+                    })
                     .map((itemId) => {
                       const item = expandedNavigationItems[itemId];
                       if (!item) return null;
