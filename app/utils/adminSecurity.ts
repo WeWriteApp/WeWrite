@@ -14,6 +14,7 @@ import { getCollectionName } from './environmentConfig';
 // SECURITY: Single source of truth for admin users
 const ADMIN_USER_IDS = [
   'mP9yRa3nO6gS8wD4xE2hF5jK7m9N', // Jamie's admin user ID (dev_admin_user)
+  'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L', // Current dev session user ID
   'jamie-admin-uid', // Legacy admin user ID
   // Add other admin user IDs here as needed
 ];
@@ -21,6 +22,8 @@ const ADMIN_USER_IDS = [
 // SECURITY: Admin email addresses for verification
 const ADMIN_EMAILS = [
   'jamiegray2234@gmail.com',
+  'jamie@wewrite.app',
+  'test1@wewrite.dev', // Current dev session email
   // Add other admin emails here as needed
 ];
 
