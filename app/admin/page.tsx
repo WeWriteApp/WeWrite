@@ -11,7 +11,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 // Swipeable tabs removed - simplified admin interface
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -396,6 +396,28 @@ export default function AdminPage() {
                 >
                   <Palette className="h-4 w-4" />
                   View Design System
+                </Button>
+              </div>
+            </div>
+
+            {/* Background Images Management */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Background Images</h3>
+                <ImageIcon className="h-5 w-5 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Manage default background images available to all users. Upload, delete, and reorder images.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/background-images')}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Manage Backgrounds
                 </Button>
               </div>
             </div>

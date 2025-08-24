@@ -1,35 +1,69 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '../../providers/ThemeProvider';
 import { useAppBackground, type ImageBackground } from '../../contexts/AppBackgroundContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
 import { Button } from '../ui/button';
-import { Lock, Palette, Image as ImageIcon } from 'lucide-react';
+import { Lock, Palette, Image as ImageIcon, Loader } from 'lucide-react';
 import OKLCHColorSlider from './OKLCHColorSlider';
 import ColorSlider from './ColorSlider';
 import { BackgroundImageUpload } from './BackgroundImageUpload';
 import { oklchToHex } from '../../lib/oklch-utils';
 
+interface DefaultBackgroundImage {
+  id: string;
+  filename: string;
+  url: string;
+  order: number;
+  active: boolean;
+}
+
 export default function BackgroundOptionsCard() {
   const router = useRouter();
   const { theme } = useTheme();
-  const { 
-    background, 
-    setBackground, 
-    backgroundBlur, 
+  const {
+    background,
+    setBackground,
+    backgroundBlur,
     setBackgroundBlur,
-    lastUploadedImage 
+    lastUploadedImage
   } = useAppBackground();
   const { hasActiveSubscription } = useSubscription();
-  
+
   // Default to 'color' tab, but switch to 'image' if currently using an image background
   const [activeTab, setActiveTab] = useState(background.type === 'image' ? 'image' : 'color');
 
+  // State for default background images
+  const [defaultImages, setDefaultImages] = useState<DefaultBackgroundImage[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(true);
+
+  // Fetch default background images
+  useEffect(() => {
+    const fetchDefaultImages = async () => {
+      try {
+        const response = await fetch('/api/background-images');
+        const data = await response.json();
+
+        if (data.success) {
+          setDefaultImages(data.images);
+        } else {
+          console.error('Failed to fetch default background images:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching default background images:', error);
+      } finally {
+        setImagesLoading(false);
+      }
+    };
+
+    fetchDefaultImages();
+  }, []);
+
   // Get background OKLCH for color slider
-  const backgroundOklch = background.type === 'solid' 
+  const backgroundOklch = background.type === 'solid'
     ? (theme === 'dark' ? background.oklchDark : background.oklchLight) || '0.00% 0.0000 0.0'
     : '98.22% 0.0061 255.5'; // Default light background
 
@@ -58,10 +92,10 @@ export default function BackgroundOptionsCard() {
     }
   };
 
-  const handleDefaultImageSelect = (slot: number) => {
+  const handleDefaultImageSelect = (imageUrl: string) => {
     const imageBackground: ImageBackground = {
       type: 'image',
-      url: `/images/backgrounds/default-${slot}.png`,
+      url: imageUrl,
       opacity: 0.15
     };
     setBackground(imageBackground);
@@ -106,23 +140,38 @@ export default function BackgroundOptionsCard() {
             <label className="text-sm font-medium mb-2 block">Default Backgrounds</label>
 
             {/* Default Background Image Slots */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[1, 2, 3].map((slot) => (
-                <button
-                  key={slot}
-                  onClick={() => handleDefaultImageSelect(slot)}
-                  className={`aspect-video rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/20 hover:bg-muted/40 transition-colors flex items-center justify-center ${
-                    background.type === 'image' && background.url === `/images/backgrounds/default-${slot}.png`
-                      ? 'border-primary bg-primary/10'
-                      : ''
-                  }`}
-                >
-                  <div className="text-center">
-                    <ImageIcon className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Slot {slot}</span>
-                  </div>
-                </button>
-              ))}
+            <div className="mb-4">
+              {imagesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">Loading backgrounds...</span>
+                </div>
+              ) : defaultImages.length === 0 ? (
+                <div className="text-center py-8">
+                  <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No default backgrounds available</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {defaultImages.map((image) => (
+                    <button
+                      key={image.id}
+                      onClick={() => handleDefaultImageSelect(image.url)}
+                      className={`aspect-video rounded-lg border-2 overflow-hidden transition-all duration-200 ${
+                        background.type === 'image' && background.url === image.url
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-muted-foreground/25 hover:border-muted-foreground/40'
+                      }`}
+                    >
+                      <img
+                        src={image.url}
+                        alt={image.filename}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Custom Upload Section */}
