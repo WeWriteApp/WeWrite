@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import OKLCHColorSlider from './OKLCHColorSlider';
 import { BackgroundImageUpload } from './BackgroundImageUpload';
 import ColorSlider from './ColorSlider';
+import BackgroundOptionsCard from './BackgroundOptionsCard';
 import { useAccentColor } from '@/contexts/AccentColorContext';
 import { useNeutralColor } from '@/contexts/NeutralColorContext';
 import { useAppBackground, type ImageBackground } from '@/contexts/AppBackgroundContext';
@@ -308,124 +309,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
         isExpanded={expandedCard === 'background'}
         onToggle={toggleBackground}
       >
-        <div className="space-y-4">
-          {/* Color Option */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Background Color</label>
-            <OKLCHColorSlider
-              value={oklchToHex(backgroundOklch)}
-              onChange={handleBackgroundChange}
-              hiddenSliders={['hue']} // Hide hue - inherits from accent
-              limits={{
-                lightness: theme === 'dark'
-                  ? { min: 0.0, max: 0.20 }   // Dark mode: 0-20% (black to very dark grey)
-                  : { min: 0.80, max: 1.0 },  // Light mode: 80-100% (very light grey to white)
-                chroma: { min: 0.0, max: 0.05 }, // Very limited chroma for backgrounds
-              }}
-            />
-          </div>
-
-          {/* Image Upload Option */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Background Image</label>
-            <div className="space-y-3">
-              {hasActiveSubscription ? (
-                <>
-                  <BackgroundImageUpload />
-
-                  {/* Overlay Opacity Slider - only show when using image background */}
-                  {background.type === 'image' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Overlay Opacity</label>
-                        <span className="text-sm text-muted-foreground">
-                          {Math.round((background.opacity || 0.15) * 100)}%
-                        </span>
-                      </div>
-                      <ColorSlider
-                        value={(background.opacity || 0.15) * 100}
-                        onChange={(value) => {
-                          const newOpacity = value / 100;
-                          const updatedBackground: ImageBackground = {
-                            ...background,
-                            opacity: newOpacity
-                          };
-                          setBackground(updatedBackground);
-
-                          // Immediately update the overlay for instant feedback
-                          const root = document.documentElement;
-                          const isDark = theme === 'dark';
-                          const overlayColor = isDark ? '0.00% 0.0000 0.0' : '98.22% 0.0061 255.5';
-                          root.style.setProperty('--background-overlay', `oklch(${overlayColor} / ${newOpacity})`);
-                        }}
-                        min={0}
-                        max={100}
-                        step={5}
-                        gradient={`linear-gradient(to right, transparent, ${oklchToHex(backgroundOklch)})`}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Adjust how much the background color overlays the image
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="wewrite-card bg-muted/30 border-dashed border-2 border-muted-foreground/20">
-                  <div className="p-6 text-center space-y-3">
-                    <div className="text-muted-foreground">
-                      <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-medium text-foreground">Custom Background Images</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Unlock custom background images by starting your subscription
-                    </p>
-                    <Button
-                      onClick={() => window.location.href = '/settings/subscription'}
-                      className="mt-4"
-                    >
-                      Start Subscription
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Background Blur Slider - show for both image and solid backgrounds */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Background Blur</label>
-                  <span className="text-sm text-muted-foreground">
-                    {Math.round(backgroundBlur * 100)}%
-                  </span>
-                </div>
-                <ColorSlider
-                  value={backgroundBlur * 100}
-                  onChange={(value) => setBackgroundBlur(value / 100)}
-                  min={0}
-                  max={100}
-                  step={5}
-                  gradient="linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5))"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Add blur effect to the background (0-20px blur)
-                </p>
-              </div>
-
-              {/* Switch back to uploaded image button - only show if we have an uploaded image and are currently using solid color */}
-              {hasActiveSubscription && lastUploadedImage && background.type === 'solid' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={switchToUploadedImage}
-                  className="w-full"
-                >
-                  Switch to Uploaded Image
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+        <BackgroundOptionsCard />
       </CollapsibleColorCard>
     </div>
   );

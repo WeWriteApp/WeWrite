@@ -239,7 +239,7 @@
 }
 
 @media (min-width: 1024px) {
-  .wewrite-card:hover {
+  .wewrite-card:hover:not([role="dialog"]) {
     transform: translateY(-1px);
   }
 }

@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [statusCheckLoading, setStatusCheckLoading] = useState(false);
   const [showPWABanner, setShowPWABanner] = useState(false);
   const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(false);
+  const [noSubscriptionMode, setNoSubscriptionMode] = useState(false);
 
   // Initialize email banner override from localStorage
   useEffect(() => {
@@ -66,6 +67,28 @@ export default function AdminPage() {
       window.dispatchEvent(new CustomEvent('bannerOverrideChange'));
     }
   }, [showUnverifiedEmailBanner]);
+
+  // Initialize paywall testing mode from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('wewrite_admin_no_subscription_mode') === 'true';
+      setNoSubscriptionMode(savedMode);
+    }
+  }, []);
+
+  // Handle paywall testing mode changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (noSubscriptionMode) {
+        localStorage.setItem('wewrite_admin_no_subscription_mode', 'true');
+      } else {
+        localStorage.removeItem('wewrite_admin_no_subscription_mode');
+      }
+
+      // Dispatch custom event to notify subscription contexts of changes
+      window.dispatchEvent(new CustomEvent('adminPaywallOverrideChange'));
+    }
+  }, [noSubscriptionMode]);
 
   // Platform fee revenue state
   const [platformFeeData, setPlatformFeeData] = useState<any[]>([]);
@@ -305,6 +328,22 @@ export default function AdminPage() {
 
 
 
+            {/* Paywall Testing */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Paywall Testing</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Force all paywalls to show for testing purposes. When enabled, all subscription checks will return false, triggering paywalls even for active subscribers.
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">No subscription (force paywalls)</span>
+                <Switch
+                  checked={noSubscriptionMode}
+                  onCheckedChange={setNoSubscriptionMode}
+                />
+              </div>
+            </div>
             {/* Testing Tools */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">

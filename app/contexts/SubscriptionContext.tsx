@@ -42,6 +42,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [adminPaywallOverride, setAdminPaywallOverride] = useState(false);
   const fetchingRef = useRef<Promise<void> | null>(null);
 
   /**
@@ -141,6 +142,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return subscription.status || 'unknown';
   }, [subscription]);
 
+  // Check for admin paywall override on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkAdminOverride = () => {
+        const override = localStorage.getItem('wewrite_admin_no_subscription_mode') === 'true';
+        setAdminPaywallOverride(override);
+      };
+
+      // Check on mount
+      checkAdminOverride();
+
+      // Listen for changes from admin panel
+      const handleOverrideChange = () => {
+        checkAdminOverride();
+      };
+
+      window.addEventListener('adminPaywallOverrideChange', handleOverrideChange);
+      return () => {
+        window.removeEventListener('adminPaywallOverrideChange', handleOverrideChange);
+      };
+    }
+  }, []);
+
   // Fetch subscription when user changes
   useEffect(() => {
     fetchSubscription();
@@ -148,12 +172,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const contextValue: SubscriptionContextType = {
     subscription,
-    hasActiveSubscription,
+    hasActiveSubscription: adminPaywallOverride ? false : hasActiveSubscription,
     subscriptionAmount: subscription?.amount || 0,
     isLoading,
     lastUpdated,
     refreshSubscription,
-    isSubscriptionActive,
+    isSubscriptionActive: () => adminPaywallOverride ? false : isSubscriptionActive(),
     getSubscriptionStatus
   };
 
