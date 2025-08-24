@@ -38,9 +38,9 @@ function CollapsibleColorCard({
   children
 }: CollapsibleColorCardProps) {
   return (
-    <div className="wewrite-card">
+    <div className="wewrite-card wewrite-card-no-padding">
       <div
-        className="cursor-pointer hover:bg-muted/50 transition-colors p-6"
+        className="cursor-pointer hover:bg-muted/50 transition-colors p-4"
         onClick={onToggle}
       >
         <div className="flex items-center justify-between">
@@ -56,7 +56,7 @@ function CollapsibleColorCard({
       </div>
       <Collapsible open={isExpanded} onOpenChange={onToggle}>
         <CollapsibleContent>
-          <div className="p-6 pt-0">
+          <div className="px-4 pb-4">
             {children}
           </div>
         </CollapsibleContent>
