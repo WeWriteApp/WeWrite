@@ -465,12 +465,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const data = await response.json();
 
           if (data.isAuthenticated && data.user) {
-            setAuthState(prev => ({ ...prev, user: data.user, isLoading: false, error: null }));
+            setUser(data.user);
           } else {
-            setAuthState(prev => ({ ...prev, user: null, isLoading: false, error: null }));
+            setUser(null);
           }
         } else {
-          setAuthState(prev => ({ ...prev, user: null, isLoading: false, error: null }));
+          setUser(null);
         }
       } catch (error) {
         console.error('[Auth] Session check error:', error);
