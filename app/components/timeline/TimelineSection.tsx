@@ -119,7 +119,7 @@ export default function TimelineSection({}: TimelineSectionProps) {
             title="Timeline"
           >
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={scrollToToday}
               className="rounded-2xl"

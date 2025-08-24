@@ -45,7 +45,7 @@ export default function UnfollowConfirmationDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>

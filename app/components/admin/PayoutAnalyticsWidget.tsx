@@ -179,7 +179,7 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
                 {cumulative ? 'Cumulative Payouts Over Time' : 'Payouts by Period'}
               </h4>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="secondary" className="text-xs">
                   {metadata?.granularity || 'auto'} granularity
                 </Badge>
                 <Badge variant="secondary" className="text-xs">

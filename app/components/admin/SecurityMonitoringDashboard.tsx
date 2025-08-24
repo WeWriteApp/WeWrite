@@ -210,7 +210,7 @@ export function SecurityMonitoringDashboard() {
           <Button
             onClick={refreshData}
             disabled={refreshing}
-            variant="outline"
+            variant="secondary"
             size="sm"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
@@ -218,7 +218,7 @@ export function SecurityMonitoringDashboard() {
           </Button>
           <Button
             onClick={exportSecurityReport}
-            variant="outline"
+            variant="secondary"
             size="sm"
           >
             <Download className="h-4 w-4 mr-2" />
@@ -384,7 +384,7 @@ export function SecurityMonitoringDashboard() {
                         <Badge className={getSeverityColor(alert.severity)}>
                           {alert.severity}
                         </Badge>
-                        <Badge variant="outline">{alert.type}</Badge>
+                        <Badge variant="secondary">{alert.type}</Badge>
                       </div>
                     </div>
                   ))

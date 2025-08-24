@@ -106,7 +106,7 @@ export function FinancialDropdown({
             <div className="mt-3 space-y-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   // Close dropdown before navigating
                   setIsOpen(false);

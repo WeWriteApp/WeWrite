@@ -229,7 +229,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
       {hasMore && (
         <div className="flex justify-center mt-4">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => loadFollowedUsers(true)}
             disabled={loadingMore}
             className="w-full"

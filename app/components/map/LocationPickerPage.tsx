@@ -135,7 +135,7 @@ export default function LocationPickerPage({
               <div className="flex gap-3">
                 {currentLocation && (
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={handleDeleteClick}
                     className="flex-1 hover:bg-muted border-border text-destructive hover:text-destructive"
                   >

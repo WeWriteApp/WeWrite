@@ -43,7 +43,7 @@ import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext"
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   ssr: false,
-  loading: () => <Button variant="outline" size="lg" className="gap-2 w-full rounded-2xl" disabled>Loading...</Button>
+  loading: () => <Button variant="secondary" size="lg" className="gap-2 w-full rounded-2xl" disabled>Loading...</Button>
 });
 
 /**

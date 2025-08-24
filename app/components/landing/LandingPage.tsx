@@ -251,7 +251,7 @@ const LandingPage = () => {
       case 'in-progress':
         return <Badge variant="secondary" className="bg-amber-500 text-white">In Progress</Badge>;
       case 'coming-soon':
-        return <Badge variant="outline">Coming Soon</Badge>;
+        return <Badge variant="secondary">Coming Soon</Badge>;
       default:
         return null;
     }

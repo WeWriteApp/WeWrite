@@ -165,7 +165,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
         {onCancel && (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={onCancel}
             disabled={loading}
           >

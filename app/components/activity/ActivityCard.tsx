@@ -452,7 +452,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           <div className="flex-shrink-0 pt-3 border-t border-neutral-15 mt-3">
             <div className="flex justify-end items-center">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleRestore}
                 disabled={isRestoring}

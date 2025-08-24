@@ -95,7 +95,7 @@ export default function FundAccountSuccessPage() {
 
             <Button
               onClick={() => router.push('/settings/fund-account')}
-              variant="outline"
+              variant="secondary"
               size="lg"
               className="w-full max-w-xs mx-auto"
             >

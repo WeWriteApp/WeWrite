@@ -315,7 +315,7 @@ export default function RecentlyDeletedPages() {
               <span className="text-sm font-medium leading-relaxed">{error}</span>
             </div>
             {retryCount < 3 && (
-              <Button onClick={retryFetch} variant="outline" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
+              <Button onClick={retryFetch} variant="secondary" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
                 Try Again {retryCount > 0 && `(${retryCount}/3)`}
               </Button>
             )}
@@ -324,7 +324,7 @@ export default function RecentlyDeletedPages() {
                 <p className="text-xs text-destructive/80 leading-relaxed">
                   Multiple attempts failed. Please try refreshing the page or contact support.
                 </p>
-                <Button onClick={() => window.location.reload()} variant="outline" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
+                <Button onClick={() => window.location.reload()} variant="secondary" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
                   Refresh Page
                 </Button>
               </div>
@@ -386,7 +386,7 @@ export default function RecentlyDeletedPages() {
                           </PillLink>
                         </div>
                         <Badge
-                          variant="outline"
+                          variant="secondary"
                           className="shrink-0 self-start text-xs text-muted-foreground border-muted-foreground/30 bg-transparent"
                         >
                           {page.isPublic ? "Public" : "Private"}
@@ -418,7 +418,7 @@ export default function RecentlyDeletedPages() {
 
                     <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50 sm:border-t-0 sm:pt-0 sm:ml-4 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity duration-200">
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => restorePage(page.id)}
                         disabled={restoring === page.id || permanentlyDeleting === page.id}

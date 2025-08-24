@@ -1131,7 +1131,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       {showToolbar && (
         <div className="flex items-center gap-2 p-2 border-b-only bg-muted/30">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => setShowLinkModal(true)}
             disabled={readOnly}
@@ -1161,7 +1161,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           )}
 
           {onCancel && (
-            <Button variant="outline" size="sm" onClick={onCancel}>
+            <Button variant="secondary" size="sm" onClick={onCancel}>
               Cancel
             </Button>
           )}

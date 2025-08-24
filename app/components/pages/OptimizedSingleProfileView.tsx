@@ -136,7 +136,7 @@ export default function OptimizedSingleProfileView({
       <div className="flex items-center mb-6">
         <div className="flex-1">
           <Link href="/">
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="secondary" size="sm" className="gap-1">
               <ChevronLeft className="h-4 w-4" />
               <span>Back</span>
             </Button>
@@ -150,12 +150,12 @@ export default function OptimizedSingleProfileView({
         <div className="flex-1 flex justify-end gap-2">
           {isCurrentUser && (
             <Link href="/settings/profile">
-              <Button variant="outline" size="sm">
+              <Button variant="secondary" size="sm">
                 <Settings className="h-4 w-4" />
               </Button>
             </Link>
           )}
-          <Button variant="outline" size="sm">
+          <Button variant="secondary" size="sm">
             <Share2 className="h-4 w-4" />
           </Button>
         </div>

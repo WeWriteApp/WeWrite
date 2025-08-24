@@ -581,7 +581,7 @@ export default function UserProfileTabs({ profile }) {
                 {/* Automatic change detection enabled - no manual refresh needed */}
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="secondary" size="sm" className="gap-2">
                     {sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     {getSortLabel(sortBy, sortDirection)}
                     {/* 🚨 DEBUG: Log current sort state */}
@@ -652,7 +652,7 @@ export default function UserProfileTabs({ profile }) {
                   <div className="flex justify-center pt-4">
                     <Button
                       onClick={loadMore}
-                      variant="outline"
+                      variant="secondary"
                     >
                       Load More Pages
                     </Button>

@@ -223,7 +223,7 @@ export function UnifiedModal(props: UnifiedModalProps) {
           {(props.variant === 'confirm' || props.variant === 'prompt') && (
             <>
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={props.onClose}
                 disabled={props.isLoading}
                 className="flex-1"

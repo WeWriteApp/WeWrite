@@ -127,7 +127,7 @@ export function ConfirmationStep({
               <Button
                 onClick={handleViewSubscription}
                 disabled={isRedirecting}
-                variant="outline"
+                variant="secondary"
                 className="w-full"
               >
                 <CreditCard className="w-4 h-4 mr-2" />
@@ -162,7 +162,7 @@ export function ConfirmationStep({
             <Button
               onClick={handleViewSubscription}
               disabled={isRedirecting}
-              variant="outline"
+              variant="secondary"
               size="lg"
               className="w-full"
             >

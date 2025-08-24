@@ -97,7 +97,7 @@ export default function FollowingPage() {
               {/* Quick Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => router.push('/search')}
                   className="flex items-center gap-2 rounded-2xl h-8 px-3"
                 >

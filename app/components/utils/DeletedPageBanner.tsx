@@ -117,7 +117,7 @@ export default function DeletedPageBanner({
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleRestore}
               disabled={isRestoring || isPermanentlyDeleting}
@@ -132,7 +132,7 @@ export default function DeletedPageBanner({
             </Button>
 
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handlePermanentDelete}
               disabled={isRestoring || isPermanentlyDeleting}

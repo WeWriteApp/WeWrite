@@ -318,7 +318,7 @@ export default function LeaderboardPage() {
               <div className="p-4 flex justify-center">
                 <Button
                   onClick={loadMore}
-                  variant="outline"
+                  variant="secondary"
                   disabled={loadingMore}
                   className="min-w-[200px]"
                 >

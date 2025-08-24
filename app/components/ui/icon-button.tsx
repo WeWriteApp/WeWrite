@@ -13,8 +13,7 @@ const iconButtonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/80 dark:hover:bg-primary/120 active:bg-primary/70 dark:active:bg-primary/140 hover:scale-[1.05] active:scale-[0.95] focus-visible:ring-primary disabled:cursor-not-allowed", // Interactive primary icon button
         destructive:
           "bg-error text-white hover:bg-error/80 dark:hover:bg-error/120 active:bg-error/70 dark:active:bg-error/140 hover:scale-[1.05] active:scale-[0.95] focus-visible:ring-error disabled:cursor-not-allowed",
-        outline:
-          "border border-neutral-100 bg-neutral-10 text-secondary-foreground hover:bg-neutral-15 dark:hover:bg-neutral-15 hover:border-neutral-100 active:bg-neutral-20 dark:active:bg-neutral-20 hover:scale-[1.05] active:scale-[0.95] focus-visible:ring-neutral",
+
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/70 dark:hover:bg-secondary/130 active:bg-secondary/60 dark:active:bg-secondary/150 hover:scale-[1.05] active:scale-[0.95] focus-visible:ring-secondary disabled:cursor-not-allowed",
         ghost: "hover:bg-muted/60 dark:hover:bg-muted/140 hover:text-foreground active:bg-muted/80 dark:active:bg-muted/160 hover:scale-[1.05] active:scale-[0.95] focus-visible:ring-muted disabled:cursor-not-allowed",

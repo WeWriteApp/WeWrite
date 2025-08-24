@@ -164,7 +164,7 @@ export function UserFollowButton({
           </DialogHeader>
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowUnfollowDialog(false)}
             >
               Cancel

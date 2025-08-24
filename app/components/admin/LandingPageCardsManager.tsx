@@ -220,7 +220,7 @@ export function LandingPageCardsManager({ className = '' }: LandingPageCardsMana
           <div className="flex gap-2">
             <Button
               onClick={resetToDefaults}
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={saving}
             >
@@ -246,7 +246,7 @@ export function LandingPageCardsManager({ className = '' }: LandingPageCardsMana
         {/* Add New Card Button */}
         <Button
           onClick={addCard}
-          variant="outline"
+          variant="secondary"
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -347,7 +347,7 @@ export function LandingPageCardsManager({ className = '' }: LandingPageCardsMana
                       />
                       {card.pageId && (
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           onClick={() => window.open(`/${card.pageId}`, '_blank')}
                         >

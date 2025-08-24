@@ -206,7 +206,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
           </Button>
           
           <Button
-            variant="outline"
+            variant="secondary"
             className="flex items-center gap-2"
             onClick={() => {
               // Navigate to payment methods management

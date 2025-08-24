@@ -217,7 +217,7 @@ export default function CancelSubscriptionPage() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
-            variant="outline"
+            variant="secondary"
             className="flex-1 order-2 sm:order-1"
             asChild
           >

@@ -91,7 +91,7 @@ export default function PWABanner() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="h-9 text-xs text-foreground"
               onClick={handleDontRemind}
@@ -99,7 +99,7 @@ export default function PWABanner() {
               Never
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="h-9 text-xs text-foreground"
               onClick={handleMaybeLater}
@@ -136,7 +136,7 @@ export default function PWABanner() {
             </p>
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" className="text-foreground" onClick={handleCloseInstructions}>
+            <Button variant="secondary" className="text-foreground" onClick={handleCloseInstructions}>
               Got it
             </Button>
           </DialogFooter>

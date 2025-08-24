@@ -120,7 +120,7 @@ export function UnifiedLoader({
               </Button>
             )}
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => window.location.reload()}
             >
               Refresh Page

@@ -201,7 +201,7 @@ function CustomPasswordResetContent() {
               Request New Reset Link
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => router.push("/auth/login")}
               className="w-full"
             >
@@ -341,7 +341,7 @@ function CustomPasswordResetContent() {
 
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => router.push("/auth/login")}
             className="w-full"
           >

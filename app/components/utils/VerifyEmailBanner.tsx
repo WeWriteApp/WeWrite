@@ -140,7 +140,7 @@ export default function VerifyEmailBanner() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-9 text-xs text-foreground"
             onClick={handleLater}
@@ -203,7 +203,7 @@ function EmailVerificationHelpModal({
 
           <div className="flex flex-col gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 window.open('/settings/account', '_blank');
               }}

@@ -114,7 +114,7 @@ export function ContentLossWarningModal({
             {/* Cancel */}
             <Button
               onClick={onClose}
-              variant="outline"
+              variant="secondary"
               className="w-full"
             >
               Cancel

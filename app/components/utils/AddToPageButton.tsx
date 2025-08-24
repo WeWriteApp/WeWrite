@@ -330,7 +330,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
                 </Button>
                 <Button
                   onClick={handleClose}
-                  variant="outline"
+                  variant="secondary"
                   className="rounded-2xl font-medium"
                   size="lg"
                 >

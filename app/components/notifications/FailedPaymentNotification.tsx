@@ -195,7 +195,7 @@ export function FailedPaymentNotification({
           
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={handleGoToSettings}
             className="flex items-center gap-1"
           >

@@ -607,7 +607,7 @@ export default function PayoutDashboard() {
             </div>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={loadPayoutData}
                 disabled={loading}
@@ -659,7 +659,7 @@ export default function PayoutDashboard() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="secondary" size="sm">
                 <Settings className="h-4 w-4 mr-1" />
                 Manage Account
               </Button>
@@ -877,7 +877,7 @@ export default function PayoutDashboard() {
                       <span className="font-medium">
                         {earning.pageId ? 'Token Allocation' : 'Token Earnings'}
                       </span>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="secondary" className="text-xs">
                         tokens
                       </Badge>
                     </div>

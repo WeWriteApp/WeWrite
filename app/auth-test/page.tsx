@@ -234,7 +234,7 @@ export default function AuthTestPage() {
               <div className="space-y-3">
                 <Button
                   onClick={handleRefresh}
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                 >
                   Refresh User Data
@@ -277,7 +277,7 @@ export default function AuthTestPage() {
               ].map((testUser) => (
                 <Button
                   key={testUser.email}
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setEmail(testUser.email)}
                   className="text-left justify-start"

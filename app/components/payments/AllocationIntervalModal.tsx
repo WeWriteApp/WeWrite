@@ -124,7 +124,7 @@ export function AllocationIntervalModal({ isOpen, onClose }: AllocationIntervalM
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={handleCancel} className="flex-1">
+            <Button variant="secondary" onClick={handleCancel} className="flex-1">
               Cancel
             </Button>
             <Button 

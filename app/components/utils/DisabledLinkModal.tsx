@@ -53,7 +53,7 @@ export default function DisabledLinkModal({ isOpen, onClose }: DisabledLinkModal
 
           <Button
             onClick={handleFollowOnX}
-            variant="outline"
+            variant="secondary"
             className="w-full flex items-center gap-2 rounded-2xl"
           >
             <Twitter className="h-4 w-4" />
@@ -63,7 +63,7 @@ export default function DisabledLinkModal({ isOpen, onClose }: DisabledLinkModal
 
           <Button
             onClick={onClose}
-            variant="outline"
+            variant="secondary"
             className="w-full rounded-2xl"
           >
             Got it

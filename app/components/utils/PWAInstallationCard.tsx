@@ -77,7 +77,7 @@ export default function PWAInstallationCard() {
                 </div>
 
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="w-full flex items-center justify-center gap-2 text-foreground"
                   onClick={async () => {

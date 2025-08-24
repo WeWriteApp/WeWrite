@@ -154,7 +154,6 @@ export default function DesignSystemPage() {
           >
             <StateDemo label="Primary Variants">
               <Button variant="default">Default</Button>
-              <Button variant="outline">Outline</Button>
               <Button variant="secondary">Secondary</Button>
               <Button variant="ghost">Ghost</Button>
               <Button variant="link">Link</Button>
@@ -190,7 +189,7 @@ export default function DesignSystemPage() {
             
             <StateDemo label="With Icons">
               <Button><Plus className="mr-2 h-4 w-4" />Add Item</Button>
-              <Button variant="outline"><Search className="mr-2 h-4 w-4" />Search</Button>
+              <Button variant="secondary"><Search className="mr-2 h-4 w-4" />Search</Button>
               <Button variant="success"><Check className="mr-2 h-4 w-4" />Save</Button>
               <Button variant="destructive"><X className="mr-2 h-4 w-4" />Delete</Button>
               <Button variant="success-secondary"><Check className="mr-2 h-4 w-4" />Approve</Button>
@@ -218,8 +217,7 @@ export default function DesignSystemPage() {
             <StateDemo label="Variants">
               <IconButton variant="default"><Settings className="h-4 w-4" /></IconButton>
               <IconButton variant="destructive"><X className="h-4 w-4" /></IconButton>
-              <IconButton variant="outline"><Search className="h-4 w-4" /></IconButton>
-              <IconButton variant="secondary"><User className="h-4 w-4" /></IconButton>
+              <IconButton variant="secondary"><Search className="h-4 w-4" /></IconButton>
               <IconButton variant="ghost"><Heart className="h-4 w-4" /></IconButton>
               <IconButton variant="link"><Star className="h-4 w-4" /></IconButton>
             </StateDemo>
@@ -365,7 +363,6 @@ export default function DesignSystemPage() {
               <Badge variant="secondary">Secondary</Badge>
               <Badge variant="success">Success</Badge>
               <Badge variant="destructive">Destructive</Badge>
-              <Badge variant="outline">Outline</Badge>
             </StateDemo>
 
             <StateDemo label="With Icons">
@@ -570,7 +567,7 @@ export default function DesignSystemPage() {
                       <span className="text-sm font-medium text-foreground">Please verify your email address</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm" className="h-9 text-xs text-foreground">
+                      <Button variant="secondary" size="sm" className="h-9 text-xs text-foreground">
                         Later
                       </Button>
                       <Button variant="default" size="sm" className="h-9 text-xs">
@@ -591,10 +588,10 @@ export default function DesignSystemPage() {
                       <span className="text-sm font-medium text-foreground">Want to use WeWrite as an app?</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                      <Button variant="outline" size="sm" className="h-9 text-xs text-foreground">
+                      <Button variant="secondary" size="sm" className="h-9 text-xs text-foreground">
                         Never
                       </Button>
-                      <Button variant="outline" size="sm" className="h-9 text-xs text-foreground">
+                      <Button variant="secondary" size="sm" className="h-9 text-xs text-foreground">
                         Later
                       </Button>
                       <Button variant="default" size="sm" className="h-9 text-xs">

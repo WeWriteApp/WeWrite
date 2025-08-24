@@ -172,7 +172,7 @@ export default function CrossComponentMobileNavButton({
         "text-[10px] font-medium leading-tight transition-colors duration-75",
         "text-center max-w-full",
         "line-clamp-2 break-words", // Allow 2 lines with word breaking
-        isActive && "text-primary"
+        isActive && "text-foreground"
       )}>
         {label}
       </span>

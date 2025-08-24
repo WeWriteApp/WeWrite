@@ -16,7 +16,7 @@ const badgeVariants = cva(
           "border-transparent bg-error text-white hover:bg-error-90",
         success:
           "border-transparent bg-success text-white hover:bg-success-90",
-        outline: "text-foreground"}},
+      }},
     defaultVariants: {
       variant: "default"}}
 )

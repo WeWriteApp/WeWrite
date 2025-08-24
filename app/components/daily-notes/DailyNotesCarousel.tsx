@@ -547,7 +547,7 @@ export default function DailyNotesCarousel({
       {/* Load More Past Button */}
       <div className="flex-shrink-0 flex items-center justify-center min-w-48 h-[200px]">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={loadMorePast}
           disabled={loadingPast}
@@ -601,7 +601,7 @@ export default function DailyNotesCarousel({
       {/* Load More Future Button */}
       <div className="flex-shrink-0 flex items-center justify-center min-w-48 h-[200px]">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={loadMoreFuture}
           disabled={loadingFuture}

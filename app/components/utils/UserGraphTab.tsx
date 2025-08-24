@@ -511,7 +511,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
             {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => {
               setIsViewSettingsOpen(false);
@@ -551,7 +551,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
                   {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => {
                     setIsFullscreen(false);

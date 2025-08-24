@@ -140,7 +140,7 @@ export default function TrendingPageClient() {
         <div className="flex flex-col items-center justify-center gap-4 p-6 text-sm bg-muted/50 dark:bg-muted/30 text-primary dark:text-muted-foreground rounded-lg">
           <p>{error}</p>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => window.location.reload()}
           >

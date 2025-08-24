@@ -197,7 +197,7 @@ export function AllocationBarBase({
       <div className={cn("flex items-center gap-3", className)}>
         <Button
           size={buttonSize}
-          variant="outline"
+          variant="secondary"
           className="h-8 px-3 text-xs"
           onClick={() => router.push('/auth/login')}
         >

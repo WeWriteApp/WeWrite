@@ -144,7 +144,7 @@ function TimelineContent() {
             <p className="text-muted-foreground">{getDescription()}</p>
           </div>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={scrollToToday}
             className="rounded-2xl relative"

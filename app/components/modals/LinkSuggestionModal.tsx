@@ -170,7 +170,7 @@ export function LinkSuggestionModal({
                         {/* Select button */}
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="secondary"
                           className="flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -208,7 +208,7 @@ export function LinkSuggestionModal({
           
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleDismiss}
               size="sm"
             >

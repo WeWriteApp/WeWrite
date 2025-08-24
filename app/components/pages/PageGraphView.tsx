@@ -826,7 +826,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
                 {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => {
                   setIsFullscreen(false);
@@ -917,7 +917,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
               {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();

@@ -62,7 +62,7 @@ export default function EmptyLinesAlert({
             {/* Action button */}
             <div className="flex-shrink-0">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={onDeleteAllEmptyLines}
                 className="gap-2 h-8 px-3 text-xs sm:text-sm border-theme-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"

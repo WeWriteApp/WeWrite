@@ -377,7 +377,7 @@ export default function RevenueSplitManager({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
             <Button onClick={addContributor} disabled={saving}>

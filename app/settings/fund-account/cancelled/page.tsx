@@ -47,7 +47,7 @@ export default function CancellationSuccessPage() {
               
               <Button
                 onClick={handleManageAccount}
-                variant="outline"
+                variant="secondary"
                 className="w-full"
                 size="lg"
               >

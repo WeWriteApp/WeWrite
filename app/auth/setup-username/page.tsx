@@ -290,7 +290,7 @@ function SetupUsernameContent() {
 
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => router.push("/auth/register")}
             className="w-full"
           >

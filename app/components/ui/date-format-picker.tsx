@@ -153,7 +153,7 @@ export function DateFormatPicker({
       <div onClick={toggleDropdown}>
         {trigger || (
           <Button
-            variant="outline"
+            variant="secondary"
             className="justify-between w-full"
           >
             <span>{getPreviewText(dateFormat)}</span>

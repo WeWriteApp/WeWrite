@@ -111,7 +111,7 @@ export default function SubscriptionManagement() {
           <Button 
             onClick={runMonitoring} 
             disabled={isMonitoring}
-            variant="outline"
+            variant="secondary"
           >
             <Monitor className="w-4 h-4 mr-2" />
             {isMonitoring ? 'Scanning...' : 'Run Monitor'}
@@ -190,7 +190,7 @@ export default function SubscriptionManagement() {
                 <Button 
                   onClick={() => runCleanup(true)} 
                   disabled={isCleaningUp}
-                  variant="outline"
+                  variant="secondary"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Preview Cleanup
@@ -285,7 +285,7 @@ export default function SubscriptionManagement() {
             <Button 
               onClick={() => runCleanup(true)} 
               disabled={isCleaningUp}
-              variant="outline"
+              variant="secondary"
               className="h-auto p-4 flex flex-col items-start"
             >
               <div className="flex items-center gap-2 mb-2">
@@ -300,7 +300,7 @@ export default function SubscriptionManagement() {
             <Button 
               onClick={runMonitoring} 
               disabled={isMonitoring}
-              variant="outline"
+              variant="secondary"
               className="h-auto p-4 flex flex-col items-start"
             >
               <div className="flex items-center gap-2 mb-2">

@@ -195,7 +195,7 @@ export function BackgroundImageUpload({ className }: BackgroundImageUploadProps)
           {/* Actions */}
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleUploadClick}
               disabled={isUploading}
@@ -205,7 +205,7 @@ export function BackgroundImageUpload({ className }: BackgroundImageUploadProps)
               {isUploading ? 'Uploading...' : 'Change Image'}
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleRemoveImage}
               disabled={isUploading}
@@ -217,7 +217,7 @@ export function BackgroundImageUpload({ className }: BackgroundImageUploadProps)
       ) : (
         /* Upload button for solid backgrounds */
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={handleUploadClick}
           disabled={isUploading}
           className="w-full h-12 border-dashed"

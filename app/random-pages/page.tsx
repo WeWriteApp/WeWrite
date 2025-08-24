@@ -284,7 +284,7 @@ export default function RandomPagesPage() {
 
                 {/* Shuffle Button */}
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleShuffle}
                   className="flex items-center gap-2 rounded-2xl h-8 px-3"
                 >

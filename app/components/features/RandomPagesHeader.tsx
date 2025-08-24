@@ -95,7 +95,7 @@ const RandomPagesHeader = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
+            variant="secondary"
             size="icon"
             className="h-8 w-8 rounded-2xl hover:bg-muted/80 transition-colors"
             aria-label="Random pages options"
@@ -184,7 +184,7 @@ const RandomPagesHeader = () => {
           <>
             {/* Desktop: Button with text and icon */}
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleShuffle}
               className="hidden sm:flex items-center gap-2 rounded-2xl h-8 px-3"
             >
@@ -194,7 +194,7 @@ const RandomPagesHeader = () => {
 
             {/* Mobile: Icon-only button */}
             <Button
-              variant="outline"
+              variant="secondary"
               size="icon"
               onClick={handleShuffle}
               className="sm:hidden h-8 w-8 rounded-2xl"

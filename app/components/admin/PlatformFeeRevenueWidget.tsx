@@ -152,10 +152,10 @@ export function PlatformFeeRevenueWidget({
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium">Revenue Trend</h4>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="secondary" className="text-xs">
                     {stats.totalPayouts} total payouts
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="secondary" className="text-xs">
                     10% platform fee
                   </Badge>
                 </div>

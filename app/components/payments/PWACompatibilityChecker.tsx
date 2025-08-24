@@ -253,7 +253,7 @@ export function PWACompatibilityChecker({
                   </div>
                   <div className="flex items-center gap-2">
                     {check.required && (
-                      <Badge variant="outline" className="text-xs">Required</Badge>
+                      <Badge variant="secondary" className="text-xs">Required</Badge>
                     )}
                     {getStatusBadge(check.status)}
                     {getStatusIcon(check.status)}
@@ -264,7 +264,7 @@ export function PWACompatibilityChecker({
 
             {/* Retry Button */}
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="sm" 
               onClick={performCompatibilityChecks}
               className="w-full"

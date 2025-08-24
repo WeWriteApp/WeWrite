@@ -276,7 +276,7 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
             
             {showGoBack && (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="lg"
                 className="gap-2 w-full sm:w-1/2"
                 onClick={() => window.history.back()}
@@ -297,7 +297,7 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
           >
             <CollapsibleTrigger asChild>
               <Button
-                variant="outline"
+                variant="secondary"
                 className="w-full flex items-center justify-between p-4"
               >
                 <span>Error Details</span>
@@ -311,7 +311,7 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
                 </pre>
               </div>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="gap-2 w-full"
                 onClick={copyToClipboard}

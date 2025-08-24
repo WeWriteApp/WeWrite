@@ -306,7 +306,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
               onRefresh?.();
             }}
             disabled={loading}
-            variant="outline"
+            variant="secondary"
             size="sm"
           >
             {loading ? (
@@ -320,7 +320,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
           <Button
             onClick={downloadCsv}
             disabled={downloadingCsv || filteredPayouts.length === 0}
-            variant="outline"
+            variant="secondary"
             size="sm"
           >
             {downloadingCsv ? (
@@ -417,7 +417,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
 
                       <TableCell>
                         {payout.period ? (
-                          <Badge variant="outline">
+                          <Badge variant="secondary">
                             {payout.period}
                           </Badge>
                         ) : (
@@ -466,7 +466,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                       <div className="flex flex-col items-end gap-1">
                         {getStatusBadge(payout.status)}
                         {payout.period && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="secondary" className="text-xs">
                             {payout.period}
                           </Badge>
                         )}
@@ -548,7 +548,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
             </CardDescription>
           </div>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => window.open('https://dashboard.stripe.com/connect/accounts', '_blank')}
             className="flex items-center gap-2"

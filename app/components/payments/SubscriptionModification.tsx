@@ -276,7 +276,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
                   {formatCurrency(currentAmount)}/month • {calculateTokensForAmount(currentAmount)} tokens
                 </p>
               </div>
-              <Badge variant="outline">Active</Badge>
+              <Badge variant="secondary">Active</Badge>
             </div>
           </div>
 
@@ -319,7 +319,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
                     <p className="text-xs text-muted-foreground">{tier.description}</p>
                     
                     {isCurrentTier && (
-                      <Badge variant="outline" className="mt-2">Current</Badge>
+                      <Badge variant="secondary" className="mt-2">Current</Badge>
                     )}
                   </button>
                 );
@@ -336,7 +336,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
                   </p>
                 </div>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleCustomAmountSelect}
                   disabled={loadingPreview}
                 >
@@ -378,7 +378,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCustomAmountDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowCustomAmountDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleCustomAmountConfirm}>
@@ -466,7 +466,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowConfirmDialog(false)}>
               Cancel
             </Button>
             <Button

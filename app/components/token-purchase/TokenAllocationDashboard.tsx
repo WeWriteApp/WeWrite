@@ -318,7 +318,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
                     </Badge>
                     
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => handleRemoveAllocation(
                         allocation.resourceType,

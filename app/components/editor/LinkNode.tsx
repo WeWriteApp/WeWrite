@@ -74,8 +74,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     return <span className="text-red-500">[Invalid Link]</span>;
   }
 
-  // Debug log to help diagnose link rendering issues
-  console.log('LINK_RENDER_DEBUG: Rendering link node:', JSON.stringify(linkNode));
+
 
   // MAJOR FIX: Completely rewritten link validation for view mode
   // This ensures links created with any version of the editor will render correctly
@@ -89,7 +88,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       // Look for link objects in children
       for (const child of linkNode.children) {
         if (child && child.type === 'link') {
-          console.log('LINK_RENDER_DEBUG: Found link in children, extracting:', JSON.stringify(child));
           validatedNode = validateLink(child);
           if (validatedNode) break;
         }
@@ -98,7 +96,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
 
     // If we still don't have a valid node but have a URL, create a minimal valid link
     if (!validatedNode && linkNode.url) {
-      console.log('LINK_RENDER_DEBUG: Creating minimal valid link from URL:', linkNode.url);
       validatedNode = validateLink({
         type: 'link',
         url: linkNode.url,
@@ -109,14 +106,12 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
 
     // If still no valid node, check if this is a nested structure
     if (!validatedNode && linkNode.link && typeof linkNode.link === 'object') {
-      console.log('LINK_RENDER_DEBUG: Found nested link object, extracting:', JSON.stringify(linkNode.link));
       validatedNode = validateLink(linkNode.link);
     }
 
     // Check for data property that might contain link information
     if (!validatedNode && linkNode.data && typeof linkNode.data === 'object') {
       if (linkNode.data.url || linkNode.data.href || linkNode.data.pageId) {
-        console.log('LINK_RENDER_DEBUG: Found link data in data property:', JSON.stringify(linkNode.data));
         validatedNode = validateLink({
           ...linkNode.data,
           type: 'link',
@@ -125,8 +120,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
         });
       }
     }
-
-    console.log('LINK_RENDER_DEBUG: After validation:', JSON.stringify(validatedNode));
 
     // If still no valid node, create a fallback
     if (!validatedNode) {

@@ -168,7 +168,7 @@ export function PaymentMethodsOverview() {
 
             {/* Manage Button */}
             <div className="pt-2">
-              <Button variant="outline" className="w-full" asChild>
+              <Button variant="secondary" className="w-full" asChild>
                 <Link href="/settings/subscription">
                   <Settings className="h-4 w-4 mr-2" />
                   Manage All Payment Methods

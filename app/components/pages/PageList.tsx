@@ -83,7 +83,7 @@ const DefaultEmptyState = ({ createButtonHref = "/new", createButtonText = "Crea
       <div className="text-muted-foreground mb-6">
         Create your first page to start writing
       </div>
-      <Button variant="outline" size="sm" asChild>
+      <Button variant="secondary" size="sm" asChild>
         <Link href={createButtonHref} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           {createButtonText}
@@ -155,7 +155,7 @@ export default function PageList({
           )}
 
           {showCreateButton && (
-            <Button variant="outline" asChild>
+            <Button variant="secondary" asChild>
               <Link href={finalCreateButtonHref} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 {createButtonText}
@@ -248,7 +248,7 @@ export default function PageList({
                     <span>
                       {new Date(page.lastModified || page.createdAt).toLocaleDateString()}
                     </span>
-                    <Badge variant="outline" className="flex items-center gap-1">
+                    <Badge variant="secondary" className="flex items-center gap-1">
                       <span>Published</span>
                     </Badge>
                   </div>
@@ -263,7 +263,7 @@ export default function PageList({
       {/* View all button */}
       {showViewAll && pages.length > 0 && (
         <div className="flex justify-center mt-4">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="secondary" size="sm" asChild>
             <Link href={viewAllHref}>{viewAllText}</Link>
           </Button>
         </div>

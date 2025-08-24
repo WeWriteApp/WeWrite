@@ -149,7 +149,7 @@ export function PerformanceDashboard() {
             Last updated: {lastUpdated.toLocaleTimeString()}
           </span>
           <Button 
-            variant="outline" 
+            variant="secondary" 
             size="sm" 
             onClick={loadPerformanceData}
             disabled={loading}
@@ -174,7 +174,7 @@ export function PerformanceDashboard() {
                 {metric.value.toFixed(metric.unit === 'ms' ? 0 : 3)}{metric.unit}
               </div>
               <div className="flex items-center justify-between mt-2">
-                <Badge variant="outline" className={getRatingColor(metric.rating)}>
+                <Badge variant="secondary" className={getRatingColor(metric.rating)}>
                   {metric.rating.replace('-', ' ')}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
@@ -206,7 +206,7 @@ export function PerformanceDashboard() {
                 {networkBreakdown.map((network) => (
                   <div key={network.type} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <Badge variant="outline">{network.type}</Badge>
+                      <Badge variant="secondary">{network.type}</Badge>
                       <span className="text-sm">{network.percentage}% of users</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -243,7 +243,7 @@ export function PerformanceDashboard() {
                       <div className="text-xs text-muted-foreground mb-1">Recommendations:</div>
                       <div className="flex flex-wrap gap-1">
                         {resource.recommendations?.map((rec: string, i: number) => (
-                          <Badge key={i} variant="outline" className="text-xs">
+                          <Badge key={i} variant="secondary" className="text-xs">
                             {rec}
                           </Badge>
                         ))}

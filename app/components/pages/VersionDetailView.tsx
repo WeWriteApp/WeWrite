@@ -301,7 +301,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
               <div className="flex flex-col gap-3 sm:hidden">
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={goBackToVersions}
                     className="flex items-center justify-center gap-2 flex-1"
@@ -326,7 +326,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
 
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={goToOlder}
                     disabled={currentIndex >= versions.length - 1}
@@ -337,7 +337,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                   </Button>
 
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={goToNewer}
                     disabled={currentIndex <= 0}
@@ -353,7 +353,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
               <div className="hidden sm:flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={goBackToVersions}
                     className="flex items-center gap-2"
@@ -378,7 +378,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
 
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={goToOlder}
                     disabled={currentIndex >= versions.length - 1}
@@ -389,7 +389,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                   </Button>
 
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={goToNewer}
                     disabled={currentIndex <= 0}

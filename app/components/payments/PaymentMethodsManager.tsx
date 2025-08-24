@@ -158,7 +158,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
         <Button type="submit" disabled={loading || !stripe}>
@@ -375,7 +375,7 @@ export function PaymentMethodsManager() {
                             {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last4}
                           </p>
                           {method.isPrimary && (
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                               Primary
                             </Badge>
                           )}
@@ -388,7 +388,7 @@ export function PaymentMethodsManager() {
                     <div className="flex gap-2">
                       {!method.isPrimary && (
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           onClick={() => setIsSettingPrimary(method.id)}
                         >
@@ -396,7 +396,7 @@ export function PaymentMethodsManager() {
                         </Button>
                       )}
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => setIsConfirmingDelete(method.id)}
@@ -455,7 +455,7 @@ export function PaymentMethodsManager() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmingDelete(null)}>
+            <Button variant="secondary" onClick={() => setIsConfirmingDelete(null)}>
               Cancel
             </Button>
             <Button
@@ -479,7 +479,7 @@ export function PaymentMethodsManager() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSettingPrimary(null)}>
+            <Button variant="secondary" onClick={() => setIsSettingPrimary(null)}>
               Cancel
             </Button>
             <Button

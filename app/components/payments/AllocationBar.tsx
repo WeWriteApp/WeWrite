@@ -331,7 +331,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     ].map((cents) => (
                       <Button
                         key={cents}
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -347,7 +347,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     {/* Minus button */}
                     {allocationState.currentAllocationCents > 0 && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -374,7 +374,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 <>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     onClick={(e) => handleAllocationChange(-allocationIntervalCents, e)}
                     className={cn(
                       "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
@@ -446,7 +446,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     onClick={(e) => {
                       e.stopPropagation();
                       // Always try to allocate - if out of funds, the modal will show

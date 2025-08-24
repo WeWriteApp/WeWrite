@@ -167,7 +167,7 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
               <p className="text-sm font-medium text-destructive mb-2">Failed to load subscription history</p>
               <p className="text-xs text-muted-foreground mb-4">{error}</p>
             </div>
-            <Button onClick={fetchHistory} variant="outline" size="sm">
+            <Button onClick={fetchHistory} variant="secondary" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>

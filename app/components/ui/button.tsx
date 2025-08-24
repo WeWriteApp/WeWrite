@@ -26,8 +26,7 @@ const buttonVariants = cva(
           "bg-success-10 text-success hover:bg-success-20 dark:hover:bg-success-15 active:bg-success-25 dark:active:bg-success-20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2", // Interactive light success
         "success-ghost":
           "text-success hover:bg-success-10 hover:text-success active:bg-success-15 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2", // Interactive ghost success
-        outline:
-          "border border-neutral-100 bg-neutral-10 text-secondary-foreground hover:bg-neutral-15 dark:hover:bg-neutral-15 hover:border-neutral-100 active:bg-neutral-20 dark:active:bg-neutral-20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-neutral focus-visible:ring-offset-2", // Interactive neutral outline
+
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/70 dark:hover:bg-secondary/130 active:bg-secondary/60 dark:active:bg-secondary/150 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive secondary
         ghost: "hover:bg-muted/60 dark:hover:bg-muted/140 hover:text-foreground active:bg-muted/80 dark:active:bg-muted/160 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 disabled:cursor-not-allowed", // Interactive ghost

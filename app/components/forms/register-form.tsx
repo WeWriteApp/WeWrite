@@ -413,7 +413,7 @@ export function RegisterForm({
 
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         className="w-full h-10"
         onClick={() => router.push('/auth/login')}
       >

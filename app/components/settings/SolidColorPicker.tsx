@@ -129,7 +129,7 @@ export default function SolidColorPicker({ className }: SolidColorPickerProps) {
         <div className="flex items-center justify-between mb-3">
           <Label className="text-sm font-medium">Custom Color</Label>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => setShowCustomPicker(!showCustomPicker)}
             className="gap-2"

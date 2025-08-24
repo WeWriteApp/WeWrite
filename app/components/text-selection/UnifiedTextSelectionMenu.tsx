@@ -76,7 +76,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
               <div className="grid grid-cols-1 gap-2">
                 <Button
                   onClick={handleAddAsTitle}
-                  variant="outline"
+                  variant="secondary"
                   className="justify-start gap-2 h-auto p-3"
                 >
                   <Type className="h-4 w-4" />
@@ -87,7 +87,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
                 </Button>
                 <Button
                   onClick={handleAddAsBody}
-                  variant="outline"
+                  variant="secondary"
                   className="justify-start gap-2 h-auto p-3"
                 >
                   <FileText className="h-4 w-4" />

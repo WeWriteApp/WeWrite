@@ -465,7 +465,7 @@ const SearchPage = React.memo(() => {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => handleSave(currentQuery)}
               className="flex items-center gap-2"
@@ -475,7 +475,7 @@ const SearchPage = React.memo(() => {
               <span className="hidden sm:inline">Save search</span>
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={shareSearchUrl}
               className="flex items-center gap-2"

@@ -418,7 +418,7 @@ export default function TrendingPages({ limit = 5 }) {
 
       {/* View All button */}
       <div className="flex justify-center mt-4">
-        <Button variant="outline" asChild>
+        <Button variant="secondary" asChild>
           <a href="/trending">
             View all trending pages
           </a>

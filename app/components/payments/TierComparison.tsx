@@ -249,7 +249,7 @@ export function TierComparison({
             
             {showActions && (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => onTierSelect?.('custom')}
                 className="mt-4"
               >

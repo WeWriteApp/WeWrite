@@ -72,7 +72,7 @@ export function PagePreviewCard({
       case 'in-progress':
         return <Badge variant="default" className="bg-amber-500 text-white">In Progress</Badge>;
       case 'coming-soon':
-        return <Badge variant="outline" className="text-muted-foreground border-border">Coming Soon</Badge>;
+        return <Badge variant="secondary" className="text-muted-foreground border-border">Coming Soon</Badge>;
       default:
         return null;
     }

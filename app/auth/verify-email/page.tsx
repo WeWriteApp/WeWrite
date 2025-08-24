@@ -247,7 +247,7 @@ export default function VerifyEmailPage() {
 
           <div className="space-y-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleResendEmail}
               disabled={isResending || cooldownRemaining > 0}
               className="w-full"

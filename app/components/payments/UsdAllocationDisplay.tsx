@@ -228,7 +228,7 @@ export default function UsdAllocationDisplay({
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => router.push('/settings/fund-account')}
                 className="w-full sm:w-auto text-xs"
               >
@@ -236,7 +236,7 @@ export default function UsdAllocationDisplay({
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => router.push('/settings/spend')}
                 className="w-full sm:w-auto text-xs"
               >

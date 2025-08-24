@@ -317,7 +317,7 @@ export function SubscriptionOverview() {
                 Reactivate Funding
               </Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="secondary" asChild>
               <Link href="/settings/fund-account">
                 <Settings className="h-4 w-4 mr-2" />
                 Manage
@@ -325,7 +325,7 @@ export function SubscriptionOverview() {
             </Button>
           </>
         ) : (
-          <Button variant="outline" className="w-full" asChild>
+          <Button variant="secondary" className="w-full" asChild>
             <Link href="/settings/fund-account">
               <Settings className="h-4 w-4 mr-2" />
               Manage Account Funding

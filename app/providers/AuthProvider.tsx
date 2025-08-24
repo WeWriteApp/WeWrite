@@ -444,10 +444,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [authState.user, setLoading, clearError, setUser, setError]);
 
-  // Initialize authentication on mount
+  // Initialize authentication on mount (client-side only)
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    // Only run on client side to avoid SSR issues
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Perform session check on client-side mount
+    const performSessionCheck = async () => {
+      try {
+        setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        const response = await fetch('/api/auth/session', {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.isAuthenticated && data.user) {
+            setAuthState(prev => ({ ...prev, user: data.user, isLoading: false, error: null }));
+          } else {
+            setAuthState(prev => ({ ...prev, user: null, isLoading: false, error: null }));
+          }
+        } else {
+          setAuthState(prev => ({ ...prev, user: null, isLoading: false, error: null }));
+        }
+      } catch (error) {
+        console.error('[Auth] Session check error:', error);
+        setAuthState(prev => ({ ...prev, user: null, isLoading: false, error: 'Failed to check authentication status' }));
+      }
+    };
+
+    performSessionCheck();
+  }, []); // Empty dependency array to run only once on mount
 
   // Listen for page visibility changes to refresh user data when user returns
   // This helps catch email verification status changes when user returns from email

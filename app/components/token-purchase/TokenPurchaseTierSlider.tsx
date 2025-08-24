@@ -318,7 +318,7 @@ export default function TokenPurchaseTierSlider({
         {/* +10 Button and Custom Amount Button */}
         <div className="flex justify-center gap-3">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={handleAddTen}
             disabled={selectedAmount >= 100}

@@ -136,7 +136,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
       {/* Shuffle Button - Pinned to Bottom */}
       <div className="p-4 pt-0 flex-shrink-0">
         <Button
-          variant="outline"
+          variant="secondary"
           size="default"
           onClick={handleShuffle}
           disabled={isGenerating}

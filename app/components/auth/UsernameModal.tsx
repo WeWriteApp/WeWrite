@@ -156,7 +156,7 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border-theme-strong wewrite-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
         <DialogClose asChild>
-          <Button variant="outline" size="icon" className="absolute right-4 top-4">
+          <Button variant="secondary" size="icon" className="absolute right-4 top-4">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </Button>
@@ -229,7 +229,7 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
         <DialogFooter className="mt-4 pt-4 border-t-only">
           <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={onClose}
             >
               Cancel

@@ -263,7 +263,7 @@ export default function FollowedPages({
       {hasMore && (
         <div className="flex justify-center mt-4">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => loadFollowedPages(true)}
             disabled={loadingMore}
             className="w-full"

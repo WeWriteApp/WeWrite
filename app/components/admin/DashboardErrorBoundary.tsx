@@ -128,7 +128,7 @@ class WidgetErrorBoundaryInternal extends Component<
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => window.location.reload()}
                 className="gap-2"
               >

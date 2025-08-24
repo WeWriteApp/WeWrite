@@ -101,7 +101,7 @@ export function PromptModal({
         {/* Action Buttons */}
         <div className="flex justify-center gap-3 w-full mt-4">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onClose}
             disabled={isLoading}
             className="flex-1"

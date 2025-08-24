@@ -241,7 +241,7 @@ export default function BackgroundOptionsCard() {
                 {/* Switch back to uploaded image button - only show if we have an uploaded image and are currently using solid color */}
                 {hasActiveSubscription && lastUploadedImage && background.type === 'solid' && (
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={switchToUploadedImage}
                     className="w-full"

@@ -334,7 +334,7 @@ export default function ProfilePage() {
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={handleCancelUsername}
                         disabled={loading}
                         className="h-9 px-3"
@@ -346,7 +346,7 @@ export default function ProfilePage() {
                   ) : (
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       onClick={handleEditUsername}
                       className="h-9 px-3"
                     >
@@ -393,7 +393,7 @@ export default function ProfilePage() {
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={handleCancelEmail}
                         disabled={loading}
                         className="h-9 px-3"
@@ -405,7 +405,7 @@ export default function ProfilePage() {
                   ) : (
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       onClick={handleEditEmail}
                       className="h-9 px-3"
                     >
@@ -449,7 +449,7 @@ export default function ProfilePage() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       onClick={handleEditPassword}
                       className="h-9 px-3"
                     >
@@ -563,7 +563,7 @@ export default function ProfilePage() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       onClick={handleCancelPassword}
                       disabled={loading}
                       className="h-9 px-3"

@@ -167,7 +167,7 @@ export function UserUsdAllocationBar({
                 {quickAmounts.map((cents) => (
                   <Button
                     key={cents}
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => handleUsdAllocation(cents)}
                     disabled={isLoading || cents > availableUsdCents}
@@ -183,7 +183,7 @@ export function UserUsdAllocationBar({
                 <div className="flex items-center space-x-2">
                   {currentUsdAllocation > 0 && (
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => handleUsdAllocation(-Math.min(currentUsdAllocation, 25))}
                       disabled={isLoading}
@@ -195,7 +195,7 @@ export function UserUsdAllocationBar({
                 </div>
 
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setIsModalOpen(true)}
                   disabled={isLoading}

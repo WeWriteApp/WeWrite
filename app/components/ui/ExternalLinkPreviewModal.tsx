@@ -241,7 +241,7 @@ export function ExternalLinkPreviewModal({
 
             {/* Footer */}
             <div className="flex justify-end gap-3 p-4 border-t border-theme-medium">
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="secondary" onClick={onClose}>
                 Back
               </Button>
               <Button variant="default" onClick={handleVisitLink}>

@@ -187,7 +187,7 @@ export function DateRangeFilter({
           {presetRanges.map((preset) => (
             <Button
               key={preset.label}
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => applyPresetRange(preset)}
               className="text-xs px-2.5 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
@@ -374,7 +374,7 @@ export function DateRangeFilter({
               {presetRanges.map((preset) => (
                 <Button
                   key={preset.label}
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => applyPresetRange(preset)}
                   className="text-sm py-2.5 px-3 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors"

@@ -229,7 +229,7 @@ export const PlatformAccountConfig: React.FC = () => {
         </div>
         <Button 
           onClick={loadPlatformStatus} 
-          variant="outline"
+          variant="secondary"
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
@@ -326,7 +326,7 @@ export const PlatformAccountConfig: React.FC = () => {
             <Button
               onClick={() => handleAction('enable_manual_payouts')}
               disabled={actionLoading === 'enable_manual_payouts'}
-              variant="outline"
+              variant="secondary"
               className="w-full"
             >
               {actionLoading === 'enable_manual_payouts' && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}

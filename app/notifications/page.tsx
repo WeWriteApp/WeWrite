@@ -102,7 +102,7 @@ function NotificationsContent() {
             {hasMore && (
               <div className="mt-6 flex justify-center">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={loadMoreNotifications}
                   disabled={loading}
                 >
@@ -160,7 +160,7 @@ function NotificationsHeaderButton() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="flex items-center gap-2"
           aria-label="Notification actions"

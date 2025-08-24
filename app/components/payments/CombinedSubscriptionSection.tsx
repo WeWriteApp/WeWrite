@@ -286,7 +286,7 @@ function CombinedSubscriptionSectionInner() {
                       {formatCurrency(subscription?.pledgedAmount || 0)} pledged • {formatCurrency(subscription && subscription.amount !== undefined ? Math.max(0, subscription.amount - (subscription.pledgedAmount || 0)) : 0)} available
                     </p>
                   </div>
-                  <Button variant="outline" asChild>
+                  <Button variant="secondary" asChild>
                     <Link href="/settings/subscription/manage">
                       <Settings className="h-4 w-4 mr-2" />
                       Manage
@@ -348,7 +348,7 @@ function CombinedSubscriptionSectionInner() {
                       Add Payment Method
                     </Button>
                     {!subscription && (
-                      <Button variant="outline" asChild>
+                      <Button variant="secondary" asChild>
                         <Link href="/settings/subscription">
                           Start Subscription
                         </Link>
@@ -384,7 +384,7 @@ function CombinedSubscriptionSectionInner() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="secondary" size="sm" asChild>
                       <Link href="/settings/subscription/manage">
                         Update
                       </Link>
@@ -404,7 +404,7 @@ function CombinedSubscriptionSectionInner() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="secondary" size="sm" asChild>
                       <Link href="/settings/subscription/manage">
                         Manage
                       </Link>
@@ -413,7 +413,7 @@ function CombinedSubscriptionSectionInner() {
                 ))}
 
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                   onClick={() => setShowPaymentMethodSetup(true)}
                 >
@@ -491,7 +491,7 @@ function CombinedSubscriptionSectionInner() {
                   </div>
                 ))}
 
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="secondary" className="w-full" asChild>
                   <Link href="/settings/subscription/manage">
                     <Settings className="h-4 w-4 mr-2" />
                     Manage All Pledges
@@ -536,7 +536,7 @@ function CombinedSubscriptionSectionInner() {
               </Button>
               
               {subscription && (
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="secondary" className="w-full" asChild>
                   <Link href="/settings/subscription/manage">
                     View Payment History
                   </Link>

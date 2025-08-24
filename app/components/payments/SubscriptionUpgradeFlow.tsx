@@ -235,7 +235,7 @@ export function SubscriptionUpgradeFlow({
             </AlertDescription>
           </Alert>
           <div className="flex space-x-2 mt-4">
-            <Button variant="outline" onClick={onCancel}>
+            <Button variant="secondary" onClick={onCancel}>
               Cancel
             </Button>
             <Button onClick={() => window.location.href = '/settings/subscription'}>
@@ -356,7 +356,7 @@ export function SubscriptionUpgradeFlow({
 
       {/* Action Buttons */}
       <div className="flex space-x-3">
-        <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
+        <Button variant="secondary" onClick={onCancel} disabled={isProcessing}>
           Cancel
         </Button>
         <Button 

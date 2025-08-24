@@ -436,7 +436,7 @@ function UnifiedSidebarContent({
           {showContent && (
             <div className="mt-auto mb-4">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={resetSidebarOrder}
                 className="w-full text-xs text-muted-foreground hover:text-foreground"
@@ -501,7 +501,7 @@ function UnifiedSidebarContent({
                     {/* Cancel button */}
                     <Button
                       onClick={editorContext.onCancel}
-                      variant="outline"
+                      variant="secondary"
                       className={cn(
                         "flex items-center gap-3 h-auto p-3 justify-start",
                         !showContent && "justify-center w-12 h-12 p-0"

@@ -283,7 +283,7 @@ export function SecurityComplianceChecker({
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-medium text-sm">{check.name}</p>
                         {check.critical && (
-                          <Badge variant="outline" className="text-xs">Critical</Badge>
+                          <Badge variant="secondary" className="text-xs">Critical</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mb-1">{check.message}</p>
@@ -305,7 +305,7 @@ export function SecurityComplianceChecker({
             {/* Actions */}
             <div className="flex gap-2">
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 size="sm" 
                 onClick={() => setShowDetails(!showDetails)}
                 className="flex items-center gap-2"
@@ -315,7 +315,7 @@ export function SecurityComplianceChecker({
               </Button>
               
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 size="sm" 
                 onClick={performSecurityChecks}
               >

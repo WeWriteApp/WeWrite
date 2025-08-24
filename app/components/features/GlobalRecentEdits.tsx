@@ -291,7 +291,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
         </div>
         <div className="text-center py-8">
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => fetchEdits()} variant="outline">
+          <Button onClick={() => fetchEdits()} variant="secondary">
             Try Again
           </Button>
         </div>
@@ -311,7 +311,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               data-dropdown-trigger="true"
               data-dropdown-id="recent-edits-filter"
@@ -430,7 +430,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
             <div className="flex justify-center pt-4">
               <Button
                 onClick={handleManualLoadMore}
-                variant="outline"
+                variant="secondary"
                 disabled={loadingMoreState || loadingMore}
               >
                 Load More

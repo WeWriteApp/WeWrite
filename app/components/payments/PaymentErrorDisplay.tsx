@@ -135,7 +135,7 @@ export function PaymentErrorDisplay({
           <p>{errorDetails.message}</p>
           {showRetry && errorDetails.retryable && onRetry && (
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleRetry}
               disabled={isRetrying}
@@ -203,7 +203,7 @@ export function PaymentErrorDisplay({
           )}
           
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => window.open('/settings/subscription', '_blank')}
             className="gap-2"

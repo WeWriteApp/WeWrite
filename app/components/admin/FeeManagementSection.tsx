@@ -168,7 +168,7 @@ export default function FeeManagementSection() {
           
           {hasChanges && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleReset}
               disabled={isSaving}
             >

@@ -175,7 +175,7 @@ export default function UsersPageClient() {
     <div className="container max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => {
             try {

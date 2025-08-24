@@ -408,7 +408,7 @@ export default function ComprehensiveFeeManagement() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             disabled={!hasChanges || isSaving}
           >

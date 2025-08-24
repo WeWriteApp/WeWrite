@@ -142,7 +142,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                     <Save className="h-4 w-4 mr-2" />
                     Save
                   </Button>
-                  <Button onClick={handleCancel} variant="outline" size="sm">
+                  <Button onClick={handleCancel} variant="secondary" size="sm">
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
@@ -229,7 +229,7 @@ function IdeaRow({ idea, isEditing, onEdit, onSave, onDelete, onCancel }: IdeaRo
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button onClick={onCancel} variant="outline" size="sm">
+            <Button onClick={onCancel} variant="secondary" size="sm">
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>

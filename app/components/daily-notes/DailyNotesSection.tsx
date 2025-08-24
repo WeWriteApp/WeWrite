@@ -67,7 +67,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
         title="My Daily Notes"
       >
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={scrollToToday}
           className="rounded-2xl"

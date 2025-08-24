@@ -278,7 +278,7 @@ export function UserManagement() {
           </p>
         </div>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={loadUsers}
           disabled={loading}

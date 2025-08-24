@@ -367,7 +367,7 @@ export default function AdminPage() {
               </span>
               <div className="mt-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/landing-page-cards')}
@@ -389,7 +389,7 @@ export default function AdminPage() {
               </span>
               <div className="mt-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/design-system')}
@@ -411,7 +411,7 @@ export default function AdminPage() {
               </span>
               <div className="mt-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/background-images')}

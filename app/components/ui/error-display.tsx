@@ -177,7 +177,7 @@ ${errorDetails.stack ? `Stack Trace:\n${errorDetails.stack}` : ''}
 
             {showRetry && onRetry && (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className={cn('mt-3 gap-1.5', color.text, color.border)}
                 onClick={handleRetry}
@@ -212,7 +212,7 @@ ${errorDetails.stack ? `Stack Trace:\n${errorDetails.stack}` : ''}
                 </pre>
               </div>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="gap-1.5 w-full text-xs h-8"
                 onClick={copyToClipboard}

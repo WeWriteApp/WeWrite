@@ -110,7 +110,7 @@ export default function ResetPasswordPage() {
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => router.push("/settings")}
               >
                 Cancel

@@ -280,7 +280,7 @@ export default function LandingCardsManagement() {
                   onKeyDown={(e) => e.key === 'Enter' && searchPages()}
                 />
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={searchPages}
                   disabled={isSearching || !searchTerm.trim()}
                 >
@@ -302,7 +302,7 @@ export default function LandingCardsManagement() {
                           <div className="text-sm text-muted-foreground">by {page.username}</div>
                         </div>
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           onClick={() => addPageToLanding(page)}
                         >

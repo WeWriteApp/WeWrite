@@ -155,7 +155,7 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-6">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={goToPreviousMonth}
           disabled={loading}
@@ -177,7 +177,7 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
         </div>
 
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={goToNextMonth}
           disabled={loading}

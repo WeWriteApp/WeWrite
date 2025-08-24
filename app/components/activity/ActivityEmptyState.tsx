@@ -42,7 +42,7 @@ export default function ActivityEmptyState({ mode = 'all' }: ActivityEmptyStateP
       <div className="flex flex-col sm:flex-row gap-2">
         <Button
           onClick={handleSearchClick}
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="flex items-center gap-2"
         >

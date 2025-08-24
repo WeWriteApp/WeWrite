@@ -406,7 +406,7 @@ export default function SpendPage() {
                     </div>
                   </div>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => setShowIntervalModal(true)}
                   >

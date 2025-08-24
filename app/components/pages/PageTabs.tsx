@@ -255,7 +255,7 @@ const PageTabs = () => {
           {hasMorePages && (
             <div className="flex justify-center mt-4">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={loadMorePages}
                 disabled={isMoreLoading}
                 className="rounded-full"

@@ -737,7 +737,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-48 justify-between">
+                  <Button variant="secondary" className="w-48 justify-between">
                     {sortBy === 'tokens-desc' && 'Highest tokens first'}
                     {sortBy === 'tokens-asc' && 'Lowest tokens first'}
                     {sortBy === 'title-asc' && 'Page title (A-Z)'}
@@ -891,7 +891,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           {/* Minus Button - Allow reducing even when overspending */}
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="secondary"
                             onClick={() => handleTokenAllocation(allocation.pageId, -incrementAmount)}
                             disabled={allocation.tokens <= 0 || pendingChanges[allocation.pageId]}
                             className={`h-8 w-8 p-0 ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
@@ -915,7 +915,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           {isZeroAllocation ? (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="secondary"
                               onClick={() => handleDeleteAllocation(allocation.pageId)}
                               disabled={pendingChanges[allocation.pageId]}
                               className={`h-8 w-8 p-0 text-destructive hover:text-destructive ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
@@ -926,7 +926,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           ) : (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="secondary"
                               onClick={() => handleZeroAllocation(allocation.pageId)}
                               disabled={pendingChanges[allocation.pageId]}
                               className={`h-8 w-8 p-0 ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
@@ -971,7 +971,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                   Showing {allocationData.allocations.length} of {allocationData.pagination.total} pages you're pledging to
                 </div>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
                   className="min-w-[160px] hover:bg-primary hover:text-primary-foreground transition-colors"

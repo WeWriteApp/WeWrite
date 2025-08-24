@@ -248,7 +248,7 @@ const RandomPages = React.memo(function RandomPages({
           <p className="text-muted-foreground mb-4">Failed to load random pages</p>
           <p className="text-sm text-muted-foreground mb-4">{error}</p>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => fetchRandomPages()}
             className="rounded-2xl"
           >
@@ -266,7 +266,7 @@ const RandomPages = React.memo(function RandomPages({
         <div className={wewriteCard('default', 'text-center')}>
           <p className="text-muted-foreground">No pages available to display</p>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => fetchRandomPages()}
             className="mt-4 rounded-2xl"
           >

@@ -376,7 +376,7 @@ export default function UsdFundingTierSlider({
           {/* +10 Button and Custom Amount Button */}
           <div className="flex justify-center gap-3">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => {
                 const newAmount = selectedAmount + 10;
@@ -424,7 +424,7 @@ export default function UsdFundingTierSlider({
             </Button>
 
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleCustomInputToggle}
               className={`flex items-center gap-2 h-9 ${

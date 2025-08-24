@@ -205,11 +205,11 @@ export default function PayoutAdminDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Payout Administration</h1>
         <div className="flex gap-2">
-          <Button onClick={loadMonitoringData} variant="outline" size="sm">
+          <Button onClick={loadMonitoringData} variant="secondary" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="secondary" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -417,14 +417,14 @@ export default function PayoutAdminDashboard() {
               </span>
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleBulkAction('retry', 'Admin bulk retry')}
               >
                 Bulk Retry
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleBulkAction('cancel', 'Admin bulk cancellation')}
               >
                 Bulk Cancel
@@ -488,7 +488,7 @@ export default function PayoutAdminDashboard() {
                     {payout.status === 'failed' && (
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => handlePayoutAction('retry', payout.id, 'Admin manual retry')}
                       >
                         Retry
@@ -498,7 +498,7 @@ export default function PayoutAdminDashboard() {
                     {(payout.status === 'pending' || payout.status === 'processing') && (
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => handlePayoutAction('cancel', payout.id, 'Admin cancellation')}
                       >
                         Cancel

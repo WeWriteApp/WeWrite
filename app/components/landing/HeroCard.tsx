@@ -210,61 +210,49 @@ export default function HeroCard({
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - Always show Sign In and Sign Up */}
           <div className={`flex flex-col sm:flex-row justify-center gap-4 ${fadeInClass}`}>
-            {!isAuthenticated ? (
-              <>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="bg-muted hover:bg-muted/80 text-foreground"
-                  asChild
-                >
-                  <Link
-                    href="/auth/login"
-                    onClick={() => {
-                      console.log('🟠 Hero Sign In button clicked');
-                      // Track hero sign-in click in analytics
-                      analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                        label: 'Hero sign-in button',
-                        link_type: 'auth',
-                        link_text: 'Sign In',
-                        link_url: '/auth/login',
-                        device: 'hero_card'
-                      });
-                    }}
-                  >
-                    Sign In
-                  </Link>
-                </Button>
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white" asChild>
-                  <Link
-                    href="/auth/register"
-                    onClick={() => {
-                      console.log('🟠 Hero Create Account button clicked');
-                      // Track hero create account click in analytics
-                      analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                        label: 'Hero create account button',
-                        link_type: 'auth',
-                        link_text: 'Create Account',
-                        link_url: '/auth/register',
-                        device: 'hero_card'
-                      });
-                    }}
-                  >
-                    Create Account
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="lg"
-                className="bg-green-600 hover:bg-green-700 text-white"
-                asChild
+            <Button
+              size="lg"
+              variant="secondary"
+              className="bg-muted hover:bg-muted/80 text-foreground"
+              asChild
+            >
+              <Link
+                href="/auth/login"
+                onClick={() => {
+                  console.log('🟠 Hero Sign In button clicked');
+                  // Track hero sign-in click in analytics
+                  analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                    label: 'Hero sign-in button',
+                    link_type: 'auth',
+                    link_text: 'Sign In',
+                    link_url: '/auth/login',
+                    device: 'hero_card'
+                  });
+                }}
               >
-                <Link href="/new">Create Page</Link>
-              </Button>
-            )}
+                Sign In
+              </Link>
+            </Button>
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white" asChild>
+              <Link
+                href="/auth/register"
+                onClick={() => {
+                  console.log('🟠 Hero Sign Up button clicked');
+                  // Track hero sign-up click in analytics
+                  analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                    label: 'Hero sign-up button',
+                    link_type: 'auth',
+                    link_text: 'Sign Up',
+                    link_url: '/auth/register',
+                    device: 'hero_card'
+                  });
+                }}
+              >
+                Sign Up
+              </Link>
+            </Button>
           </div>
 
 

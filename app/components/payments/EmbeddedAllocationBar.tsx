@@ -271,7 +271,7 @@ export function EmbeddedAllocationBar({
         {/* Minus button on left - now outline for consistency */}
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
           onClick={(e) => handleButtonClick(-1, e)}
           onMouseDown={handleMouseDown}
@@ -329,7 +329,7 @@ export function EmbeddedAllocationBar({
         {/* Plus button on right */}
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
           onClick={(e) => compositionData.isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
           onMouseDown={handleMouseDown}

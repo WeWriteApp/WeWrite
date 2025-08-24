@@ -72,7 +72,7 @@ const ActivitySectionHeader = () => {
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className={`gap-2 h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors ${
                       viewMode === 'following' || viewMode === 'mine' ? 'border-primary text-primary' : ''

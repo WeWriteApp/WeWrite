@@ -162,7 +162,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-6">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={goToPreviousMonth}
           disabled={loading}
@@ -188,7 +188,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
         </div>
 
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={goToNextMonth}
           disabled={loading}
@@ -305,7 +305,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
             
             <div className="flex justify-end mt-4">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   setShowModal(false);
                   setSelectedDate(null);

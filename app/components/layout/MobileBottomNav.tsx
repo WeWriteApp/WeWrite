@@ -557,7 +557,7 @@ export default function MobileBottomNav() {
           "text-center max-w-full",
           "line-clamp-2 break-words", // Allow 2 lines with word breaking
           isActive
-            ? "text-accent-foreground"
+            ? "text-foreground"
             : [
                 "text-slate-500 group-hover:text-slate-700",
                 "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
@@ -649,7 +649,7 @@ export default function MobileBottomNav() {
                       </div>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={async () => {
                         // CRITICAL FIX: Use system dialog instead of custom WeWrite dialog
@@ -685,7 +685,7 @@ export default function MobileBottomNav() {
                       Overflow menu items
                     </h3>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         clearCache();

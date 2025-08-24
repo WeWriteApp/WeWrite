@@ -16,6 +16,7 @@ import {
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
 import { PillLink } from '../utils/PillLink';
+import { UsernameBadge } from '../ui/UsernameBadge';
 import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 // Enhanced allocation with page/user details
@@ -198,9 +199,12 @@ export function UsdAllocationBreakdown({
                     <p className="font-medium truncate text-sm sm:text-base">WeWrite Platform</p>
                   ) : allocation.resourceType === 'user' ? (
                     <div className="flex items-center space-x-1">
-                      <PillLink href={`/user/${allocation.authorUsername || allocation.resourceId}`}>
-                        {allocation.authorUsername || allocation.resourceId}
-                      </PillLink>
+                      <UsernameBadge
+                        userId={allocation.resourceId}
+                        variant="pill"
+                        size="sm"
+                        showBadge={true}
+                      />
                       <span className="text-xs sm:text-sm text-muted-foreground">(User)</span>
                     </div>
                   ) : (
@@ -211,9 +215,12 @@ export function UsdAllocationBreakdown({
                       {allocation.authorUsername && (
                         <>
                           <span className="text-xs sm:text-sm text-muted-foreground">by</span>
-                          <PillLink href={`/user/${allocation.authorUsername}`}>
-                            {allocation.authorUsername}
-                          </PillLink>
+                          <UsernameBadge
+                            userId={allocation.authorUserId || allocation.authorUsername}
+                            variant="pill"
+                            size="sm"
+                            showBadge={true}
+                          />
                         </>
                       )}
                     </div>
@@ -244,7 +251,7 @@ export function UsdAllocationBreakdown({
               <div className="flex items-center gap-2">
                 {/* Minus button on left */}
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="h-8 w-8 p-0 flex-shrink-0"
                   title="Decrease allocation"
@@ -280,7 +287,7 @@ export function UsdAllocationBreakdown({
 
                 {/* Plus button on right */}
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="h-8 w-8 p-0 flex-shrink-0"
                   title="Increase allocation"

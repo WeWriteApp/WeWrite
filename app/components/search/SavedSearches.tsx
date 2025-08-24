@@ -150,7 +150,7 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
           </DialogHeader>
           <DialogFooter className="flex justify-end gap-2 mt-4">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowDeleteDialog(false)}
             >
               Cancel

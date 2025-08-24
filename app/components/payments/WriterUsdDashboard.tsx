@@ -425,7 +425,7 @@ export default function WriterUsdDashboard({ className }: WriterUsdDashboardProp
             <p className="text-muted-foreground mb-4">
               You haven't received any USD allocations yet. Start creating content to earn!
             </p>
-            <Button variant="outline" onClick={loadWriterData}>
+            <Button variant="secondary" onClick={loadWriterData}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>

@@ -251,7 +251,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         <h3 className="text-xl font-semibold mb-2">Something went wrong</h3>
         <p className="text-muted-foreground text-center mb-4">{error}</p>
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={() => window.location.reload()}
         >
           Try Again

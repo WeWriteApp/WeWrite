@@ -340,7 +340,7 @@ export function UsdAllocationModal({
                         You've allocated your full monthly budget
                       </span>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => {
                           onClose();
@@ -385,7 +385,7 @@ export function UsdAllocationModal({
             <div className="flex items-center space-x-2 mt-2">
               {/* Minus button */}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleMinusClick}
                 disabled={isLoading || (parseDollarInputToCents(inputValue) || 0) === 0}
@@ -410,7 +410,7 @@ export function UsdAllocationModal({
 
               {/* Plus button */}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handlePlusClick}
                 disabled={isLoading}
@@ -433,7 +433,7 @@ export function UsdAllocationModal({
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 p-4 border-t border-border flex-shrink-0">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onClose}
             disabled={isLoading}
           >
