@@ -37,8 +37,10 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
     const isOwner = userId && pageData?.userId === userId;
     const isPublic = pageData?.isPublic === true;
 
-    // Allow development access for debugging
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development';
+    // Allow development and preview access for debugging
+    const isDevelopment = process.env.NODE_ENV === 'development' ||
+                         process.env.VERCEL_ENV === 'development' ||
+                         process.env.VERCEL_ENV === 'preview';
 
     // Check if user is admin (for debugging and admin access)
     const isAdmin = userId && (

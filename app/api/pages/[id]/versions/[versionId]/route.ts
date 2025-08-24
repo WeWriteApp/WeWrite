@@ -55,8 +55,10 @@ export async function GET(
       false
     );
     
-    // Enhanced permission check - allow public pages, owners, admins, or in development
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development';
+    // Enhanced permission check - allow public pages, owners, admins, or in development/preview
+    const isDevelopment = process.env.NODE_ENV === 'development' ||
+                         process.env.VERCEL_ENV === 'development' ||
+                         process.env.VERCEL_ENV === 'preview';
     const canView = isPublic || isOwner || isAdmin || isDevelopment;
     
     console.log(`📊 [VERSION_DETAIL] Permission check:`, {
