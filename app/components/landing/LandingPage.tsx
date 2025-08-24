@@ -301,16 +301,21 @@ const LandingPage = () => {
                 >
                   <Link
                     href="/auth/login"
-                    onClick={() => {
+                    onClick={(e) => {
                       console.log('🟠 Desktop Sign In button clicked');
                       // Track desktop sign-in click in analytics
-                      analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                        label: 'Desktop sign-in button',
-                        link_type: 'auth',
-                        link_text: 'Sign In',
-                        link_url: '/auth/login',
-                        device: 'desktop'
-                      });
+                      try {
+                        analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                          label: 'Desktop sign-in button',
+                          link_type: 'auth',
+                          link_text: 'Sign In',
+                          link_url: '/auth/login',
+                          device: 'desktop'
+                        });
+                      } catch (error) {
+                        console.error('Analytics error:', error);
+                      }
+                      // Don't prevent default - let navigation happen
                     }}
                   >
                     Sign In
@@ -371,16 +376,21 @@ const LandingPage = () => {
                   >
                     <Link
                       href="/auth/login"
-                      onClick={() => {
+                      onClick={(e) => {
                         console.log('🟠 Mobile Sign In button clicked');
                         // Track mobile sign-in click in analytics
-                        analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                          label: 'Mobile sign-in button',
-                          link_type: 'auth',
-                          link_text: 'Sign In',
-                          link_url: '/auth/login',
-                          device: 'mobile'
-                        });
+                        try {
+                          analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                            label: 'Mobile sign-in button',
+                            link_type: 'auth',
+                            link_text: 'Sign In',
+                            link_url: '/auth/login',
+                            device: 'mobile'
+                          });
+                        } catch (error) {
+                          console.error('Analytics error:', error);
+                        }
+                        // Don't prevent default - let navigation happen
                       }}
                     >
                       Sign In
