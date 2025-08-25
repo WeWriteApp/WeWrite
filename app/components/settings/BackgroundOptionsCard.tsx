@@ -40,6 +40,20 @@ export default function BackgroundOptionsCard() {
   const [defaultImages, setDefaultImages] = useState<DefaultBackgroundImage[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
 
+  // Track previous backgrounds for switching
+  const [previousColorBackground, setPreviousColorBackground] = useState(
+    background.type === 'solid' ? background : {
+      type: 'solid' as const,
+      color: '#ffffff',
+      darkColor: '#000000',
+      oklchLight: '98.22% 0.0061 255.5',
+      oklchDark: '0.00% 0.0000 0.0'
+    }
+  );
+  const [previousImageBackground, setPreviousImageBackground] = useState<ImageBackground | null>(
+    background.type === 'image' ? background : null
+  );
+
   // Fetch default background images
   useEffect(() => {
     const fetchDefaultImages = async () => {
@@ -78,6 +92,7 @@ export default function BackgroundOptionsCard() {
       oklchDark: theme === 'dark' ? backgroundOklch : '0.00% 0.0000 0.0'
     };
     setBackground(newBackground);
+    setPreviousColorBackground(newBackground);
   };
 
   const switchToUploadedImage = () => {
@@ -88,6 +103,7 @@ export default function BackgroundOptionsCard() {
         opacity: 0.15
       };
       setBackground(imageBackground);
+      setPreviousImageBackground(imageBackground);
       setActiveTab('image');
     }
   };
@@ -99,12 +115,45 @@ export default function BackgroundOptionsCard() {
       opacity: 0.15
     };
     setBackground(imageBackground);
+    setPreviousImageBackground(imageBackground);
+  };
+
+  // Handle tab switching - actually switch backgrounds
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+
+    if (newTab === 'color') {
+      // Switch to color background
+      if (background.type === 'image') {
+        setPreviousImageBackground(background);
+      }
+      setBackground(previousColorBackground);
+    } else if (newTab === 'image') {
+      // Switch to image background
+      if (background.type === 'solid') {
+        setPreviousColorBackground(background);
+      }
+
+      // Use previous image background if available, otherwise try last uploaded image
+      if (previousImageBackground) {
+        setBackground(previousImageBackground);
+      } else if (lastUploadedImage) {
+        const imageBackground: ImageBackground = {
+          type: 'image',
+          url: lastUploadedImage,
+          opacity: 0.15
+        };
+        setBackground(imageBackground);
+        setPreviousImageBackground(imageBackground);
+      }
+      // If no previous image and no uploaded image, just show the tab (user can select a default image)
+    }
   };
 
   return (
     <div className="space-y-4">
       {/* Segmented Control for Color/Image */}
-      <SegmentedControl value={activeTab} onValueChange={setActiveTab}>
+      <SegmentedControl value={activeTab} onValueChange={handleTabChange}>
         <SegmentedControlList>
           <SegmentedControlTrigger value="color" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
