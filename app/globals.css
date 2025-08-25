@@ -1646,6 +1646,7 @@ input[type="number"] {
 html,
 body {
   min-height: 100vh;
+  min-height: 100dvh; /* Use dynamic viewport height on supported browsers */
   overflow-x: hidden;
   background-color: hsl(var(--background));
 }
@@ -1672,12 +1673,67 @@ body::after {
   bottom: 0;
   background-image: var(--background-image, none);
   background-size: cover;
-  background-position: center;
+  background-position: center center;
   background-repeat: no-repeat;
   background-attachment: fixed;
   filter: blur(var(--background-blur, 0px));
   pointer-events: none;
   z-index: -3; /* Behind overlay */
+  /* Ensure proper dimensions */
+  width: 100vw;
+  height: 100vh;
+  /* Prevent any scaling or transformation issues */
+  transform: none;
+  will-change: auto;
+}
+
+/* Mobile-specific background adjustments */
+@media (max-width: 768px) {
+  body::after {
+    /* Ensure background fills screen height on mobile */
+    background-attachment: scroll; /* Fixed attachment can cause issues on mobile */
+    /* Try contain to prevent excessive cropping/zooming */
+    background-size: contain;
+    background-position: center center; /* Center the image both horizontally and vertically */
+    /* Fill empty space with theme-appropriate color */
+    background-color: hsl(var(--background));
+    /* Use standard viewport units for better compatibility */
+    min-height: 100vh;
+    height: 100vh;
+    width: 100vw;
+    /* Ensure proper positioning */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Prevent over-scaling */
+    max-width: 100vw;
+    max-height: 100vh;
+    /* Ensure the pseudo-element doesn't cause layout issues */
+    overflow: hidden;
+  }
+
+  /* Fallback: if contain leaves too much empty space, use cover with better constraints */
+  @media (max-width: 768px) and (orientation: portrait) {
+    body::after {
+      background-size: cover;
+      /* For portrait orientation, position slightly higher to show more of the image */
+      background-position: center 30%;
+    }
+  }
+
+  /* Ensure body and html don't interfere with background sizing */
+  html, body {
+    /* Prevent any transforms or scaling that might affect background */
+    transform: none !important;
+    scale: none !important;
+    zoom: 1 !important;
+    /* Ensure no overflow that might cause scaling issues */
+    overflow-x: hidden;
+    /* Ensure proper height calculation */
+    height: 100%;
+    min-height: 100vh;
+  }
 }
 
 /* Background overlay for images */
