@@ -92,9 +92,8 @@ service cloud.firestore {
       // Writing rules: Only page owner can modify, with data validation
       allow create: if (isAuthenticated() || isDevelopmentTestUser(request.resource.data.userId)) &&
         (request.resource.data.userId == request.auth.uid || isDevelopmentTestUser(request.resource.data.userId)) &&
-        request.resource.data.keys().hasAll(['title', 'isPublic', 'userId', 'createdAt']) &&
+        request.resource.data.keys().hasAll(['title', 'userId', 'createdAt']) &&
         request.resource.data.title is string &&
-        request.resource.data.isPublic is bool &&
         request.resource.data.userId is string &&
         (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp) &&
         // Allow optional fields that the application uses

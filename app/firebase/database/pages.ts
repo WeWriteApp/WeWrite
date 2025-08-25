@@ -88,7 +88,6 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
     const pageData = {
       title: data.title || "Untitled",
-      isPublic: true, // All pages are public
       userId: data.userId,
       username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: now,

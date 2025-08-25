@@ -33,9 +33,8 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       return { error: 'Page not found' };
     }
 
-    // Check access permissions
+    // Check access permissions - all pages are now accessible
     const isOwner = userId && pageData?.userId === userId;
-    const isPublic = pageData?.isPublic === true;
 
     // Allow development and preview access for debugging
     const isDevelopment = process.env.NODE_ENV === 'development' ||
@@ -49,22 +48,21 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       userId === 'jamiegray2234@gmail.com'
     );
 
-    const canView = isPublic || isOwner || isAdmin || isDevelopment;
+    // All pages are now public - simplified access model
+    const canView = true;
 
     console.log(`📄 [Page API] Permission check for ${pageId}:`, {
       userId,
       pageUserId: pageData?.userId,
       isOwner,
-      isPublic,
       isAdmin,
       isDevelopment,
-      canView,
-      pageTitle: pageData?.title
+      canView: true,
+      pageTitle: pageData?.title,
+      note: 'All pages are now public'
     });
 
-    if (!canView) {
-      return { error: 'Access denied - page is private' };
-    }
+    // No access control needed - all pages are accessible
 
     // Return the page data in the expected format
     return {

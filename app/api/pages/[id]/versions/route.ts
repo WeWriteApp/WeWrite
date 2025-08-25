@@ -80,7 +80,6 @@ export async function GET(
 
     // Enhanced permission check with admin support
     const isOwner = pageData?.userId === currentUserId;
-    const isPublic = pageData?.isPublic;
 
     // Check if user is admin (for debugging and admin access)
     const isAdmin = currentUserId && (
@@ -90,11 +89,11 @@ export async function GET(
       false
     );
 
-    // Enhanced permission check - allow public pages, owners, admins, or in development/preview
+    // All pages are now public - simplified access model
     const isDevelopment = process.env.NODE_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
-    const canView = isPublic || isOwner || isAdmin || isDevelopment;
+    const canView = true; // All pages are accessible
 
     console.log(`📊 [PAGE_VERSIONS] Permission check:`, {
       pageId,

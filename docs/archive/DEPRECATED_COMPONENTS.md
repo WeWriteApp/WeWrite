@@ -32,6 +32,19 @@ This document lists all components and systems that have been deprecated as part
 - **Reason**: Eliminate competing error UIs and provide consistent error experience with copy functionality
 - **Migration**: All full-page errors now use the unified `FullPageError` component with consistent styling, copy-to-clipboard functionality, and recovery actions
 
+### isPublic Page Visibility System
+- **Status**: Completely Removed
+- **Date Removed**: January 2025
+- **Description**: Legacy system that allowed pages to be marked as public or private
+- **Components Removed**:
+  - `isPublic` field from Page interface in `types/database.ts`
+  - `isPublic` checks in all API routes (`pages/[id]`, `versions`, etc.)
+  - `isPublic` filtering in link suggestions and database queries
+  - `isPublic` validation in Firestore rules
+  - `isPublic` field from page creation in `firebase/database/pages.ts`
+- **Reason**: Simplified access model - all pages are now accessible to everyone, removing complexity and maintenance burden
+- **Migration**: All pages are now public by default. No access control based on page visibility. Only soft-delete functionality remains for content management.
+
 ### Competing Full-Page Error States
 - **Status**: Consolidated and Standardized
 - **Date Consolidated**: January 2025

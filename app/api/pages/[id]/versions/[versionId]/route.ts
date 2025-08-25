@@ -40,43 +40,40 @@ export async function GET(
 
     const pageData = pageDoc.data();
 
-    // Check permissions - user must own the page or it must be public
+    // Check permissions - all pages are now accessible
     const currentUserId = await getUserIdFromRequest(request);
-    
+
     // Enhanced permission check with admin support
     const isOwner = pageData?.userId === currentUserId;
-    const isPublic = pageData?.isPublic;
-    
+
     // Check if user is admin (for debugging and admin access)
     const isAdmin = currentUserId && (
-      currentUserId === 'jamie' || 
+      currentUserId === 'jamie' ||
       currentUserId === 'jamiegray2234@gmail.com' ||
       // Add any other admin identifiers
       false
     );
-    
-    // Enhanced permission check - allow public pages, owners, admins, or in development/preview
+
+    // All pages are now public - simplified access model
     const isDevelopment = process.env.NODE_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
-    const canView = isPublic || isOwner || isAdmin || isDevelopment;
-    
+    const canView = true; // All pages are accessible
+
     console.log(`📊 [VERSION_DETAIL] Permission check:`, {
       pageId,
       versionId,
       currentUserId,
       isOwner,
-      isPublic,
       isAdmin,
       isDevelopment,
-      canView,
+      canView: true,
       pageUserId: pageData?.userId,
-      pageTitle: pageData?.title
+      pageTitle: pageData?.title,
+      note: 'All pages are now public'
     });
-    
-    if (!canView) {
-      return createErrorResponse('You do not have permission to view this page version', 'FORBIDDEN');
-    }
+
+    // No access control needed - all pages are accessible
 
     // Get the specific version
     const versionRef = pageRef.collection('versions').doc(versionId);

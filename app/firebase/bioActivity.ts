@@ -28,7 +28,6 @@ interface BioActivityData {
   timestamp: any;
   content: string;
   previousContent: string;
-  isPublic: boolean;
 }
 
 // Groups functionality removed

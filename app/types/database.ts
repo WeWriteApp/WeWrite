@@ -34,7 +34,6 @@ export interface Page {
   content: EditorContent | string;
   userId: string;
   username?: string;
-  isPublic: boolean;
   createdAt: string | Timestamp;
   lastModified: string | Timestamp;
   viewCount?: number;

@@ -849,7 +849,6 @@ export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<n
     // Optimized query with limit to reduce costs
     const pagesQuery = query(
       collection(db, getCollectionName('pages')),
-      where('isPublic', '==', true),
       where('deleted', '!=', true),
       limit(1000) // Limit to reduce read costs
     );
@@ -907,7 +906,6 @@ export const getGlobalExternalLinkCounts = async (urls: string[]): Promise<Map<s
     // Query pages only
     const pagesQuery = query(
       collection(db, getCollectionName('pages')),
-      where('isPublic', '==', true),
       where('deleted', '!=', true)
     );
 
