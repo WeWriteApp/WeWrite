@@ -2,6 +2,7 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { useEffect } from 'react'
+import FullPageError from '../ui/FullPageError'
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -66,22 +67,15 @@ class NextJSErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ 
-          padding: '20px', 
-          border: '2px solid red', 
-          borderRadius: '8px',
-          backgroundColor: '#fee',
-          margin: '20px'
-        }}>
-          <h2>🚨 Something went wrong</h2>
-          <p>Error: {this.state.error?.message}</p>
-          <details>
-            <summary>Error Details</summary>
-            <pre style={{ fontSize: '12px', overflow: 'auto' }}>
-              {this.state.error?.stack}
-            </pre>
-          </details>
-        </div>
+        <FullPageError
+          title="Something went wrong"
+          message={`We encountered an unexpected error: ${this.state.error?.message || 'Unknown error'}`}
+          showGoBack={true}
+          showGoHome={true}
+          showTryAgain={true}
+          onRetry={() => window.location.reload()}
+          error={this.state.error}
+        />
       )
     }
 

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { Button } from './button';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import FullPageError from './FullPageError';
 
 interface UnifiedLoaderProps {
   isLoading: boolean;
@@ -81,54 +82,51 @@ export function UnifiedLoader({
     );
   }
 
-  // If loading has timed out, show retry options
+  // If loading has timed out, show unified error page
   if (showTimeout) {
-    return (
-      <div className={cn(
-        "flex flex-col items-center justify-center p-6 text-center",
-        fullScreen ? "fixed bg-background/80 backdrop-blur-sm z-50" : "min-h-[50vh] w-full py-8",
-        className
-      )}
-      style={{
-        position: fullScreen ? 'fixed' : 'relative',
-        ...(fullScreen ? {
-          // Use viewport centering for timeout state too
-          left: '50vw',
-          top: '50vh',
-          transform: 'translate(-50%, -50%)',
-          width: 'auto',
-          height: 'auto'
-        } : {
-          minHeight: '50vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        })
-      }}>
-        <div className="max-w-md w-full space-y-4">
-          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
-          <h3 className="text-lg font-semibold">Taking longer than expected</h3>
-          <p className="text-muted-foreground">
-            This page is taking a while to load. You can try refreshing or wait a bit longer.
-          </p>
+    if (fullScreen) {
+      return (
+        <FullPageError
+          title="Taking longer than expected"
+          message="This page is taking a while to load. You can try refreshing or wait a bit longer."
+          showGoBack={true}
+          showGoHome={true}
+          showTryAgain={true}
+          onRetry={onRetry || (() => window.location.reload())}
+        />
+      );
+    } else {
+      // For non-fullscreen timeouts, use a simpler inline display
+      return (
+        <div className={cn(
+          "flex flex-col items-center justify-center p-6 text-center min-h-[50vh]",
+          className
+        )}>
+          <div className="max-w-md w-full space-y-4">
+            <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
+            <h3 className="text-lg font-semibold">Taking longer than expected</h3>
+            <p className="text-muted-foreground">
+              This content is taking a while to load. You can try refreshing or wait a bit longer.
+            </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {onRetry && (
-              <Button onClick={onRetry} className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Try Again
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {onRetry && (
+                <Button onClick={onRetry} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Try Again
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                onClick={() => window.location.reload()}
+              >
+                Refresh Page
               </Button>
-            )}
-            <Button
-              variant="secondary"
-              onClick={() => window.location.reload()}
-            >
-              Refresh Page
-            </Button>
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   // Normal loading state

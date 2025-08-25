@@ -4,6 +4,7 @@ import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { CopyErrorButton } from '../ui/CopyErrorButton';
+import FullPageError from '../ui/FullPageError';
 
 interface Props {
   children: ReactNode;
