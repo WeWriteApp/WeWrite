@@ -21,6 +21,28 @@ This document lists all components and systems that have been deprecated as part
 - **Reason**: Consolidated to use single `SimpleEarningsDashboard` component for maintainability
 - **Migration**: All payout functionality now handled by `SimpleEarningsDashboard` in earnings page
 
+### Competing Full-Page Error States
+- **Status**: Consolidated and Standardized
+- **Date Consolidated**: January 2025
+- **Components Consolidated**:
+  - Custom 404 page in `not-found.tsx` - Now uses `FullPageError`
+  - Custom error states in `[id]/page.tsx` - Now uses `FullPageError`
+  - `UnifiedLoader` timeout states - Now uses `FullPageError` for full-screen cases
+  - `NextJSErrorHandler` custom error display - Now uses `FullPageError`
+- **Reason**: Eliminate competing error UIs and provide consistent error experience with copy functionality
+- **Migration**: All full-page errors now use the unified `FullPageError` component with consistent styling, copy-to-clipboard functionality, and recovery actions
+
+### Competing Full-Page Error States
+- **Status**: Consolidated and Standardized
+- **Date Consolidated**: January 2025
+- **Components Consolidated**:
+  - Custom 404 page in `not-found.tsx` - Now uses `FullPageError`
+  - Custom error states in `[id]/page.tsx` - Now uses `FullPageError`
+  - `UnifiedLoader` timeout states - Now uses `FullPageError` for full-screen cases
+  - `NextJSErrorHandler` custom error display - Now uses `FullPageError`
+- **Reason**: Eliminate competing error UIs and provide consistent error experience with copy functionality
+- **Migration**: All full-page errors now use the unified `FullPageError` component with consistent styling, copy-to-clipboard functionality, and recovery actions
+
 ## ⚠️ Deprecated Components
 
 ### Token Allocation Components
