@@ -61,7 +61,7 @@ export default function FixedPortal({
   if (!mounted || !container) return null;
 
   return createPortal(
-    <div className={className} style={mergedStyle} style-data-fixed-portal>
+    <div className={className} style={mergedStyle} data-fixed-portal="true">
       {children}
     </div>,
     container
