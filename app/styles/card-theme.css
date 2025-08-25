@@ -239,9 +239,15 @@
 }
 
 @media (min-width: 1024px) {
-  .wewrite-card:hover:not([role="dialog"]) {
+  .wewrite-card:hover:not([role="dialog"]):not([data-modal-content]):not([aria-modal="true"] *) {
     transform: translateY(-1px);
   }
+}
+
+/* Prevent card hover transforms within modal contexts to fix positioning issues */
+[role="dialog"] .wewrite-card:hover,
+[aria-modal="true"] .wewrite-card:hover {
+  transform: none !important;
 }
 
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */

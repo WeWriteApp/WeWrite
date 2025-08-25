@@ -6,6 +6,7 @@
   --z-fixed-toolbar: 80;
   --z-fixed-fab: 90;
   --z-overlay: 100;
+  --z-modal: 1100; /* For modals and dialogs */
 
   /* Safe positioning */
   --fixed-safe-top: 16px;
@@ -27,6 +28,12 @@
 .z-fixed-toolbar { z-index: var(--z-fixed-toolbar); }
 .z-fixed-fab { z-index: var(--z-fixed-fab); }
 .z-overlay { z-index: var(--z-overlay); }
+.z-modal {
+  z-index: var(--z-modal);
+  /* Ensure modal positioning is not affected by parent transforms */
+  transform-style: flat;
+  backface-visibility: visible;
+}
 
 /* Main content spacing */
 @media (max-width: 767px) {

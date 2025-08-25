@@ -42,6 +42,12 @@ interface DailyNotesCarouselProps {
  * - Shows multiple notes per day in container format
  * - Groups pages by their creation date (createdAt field)
  * - Maintains scroll position when loading new dates
+ *
+ * LAYOUT STRUCTURE (simplified for easy debugging):
+ * - Single overflow-x-auto container with generous bottom padding
+ * - Inner flex container for horizontal layout
+ * - No nested clipping containers
+ * - Today pill has 3rem bottom padding space to prevent clipping
  */
 export default function DailyNotesCarousel({
   accentColor = '#1768FF',
@@ -519,13 +525,23 @@ export default function DailyNotesCarousel({
 
   if (loading) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-2 px-6 pt-2">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex-shrink-0 w-48 h-[200px] bg-muted/50 rounded-xl animate-pulse border-theme-light"
-          />
-        ))}
+      <div
+        className="w-full overflow-x-auto scrollbar-hide"
+        style={{
+          paddingLeft: '1rem',
+          paddingRight: '1rem',
+          paddingTop: '0.5rem',
+          paddingBottom: '3rem' // Extra space for Today pill
+        }}
+      >
+        <div className="flex gap-4">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 w-48 h-[200px] bg-muted/50 rounded-xl animate-pulse border-theme-light"
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -534,17 +550,19 @@ export default function DailyNotesCarousel({
     <div
       ref={carouselRef}
       id="daily-notes-carousel"
-      className={cn(
-        "flex overflow-x-auto pb-2 px-6 pt-2 scrollbar-hide",
-        isFullPage ? "gap-8" : "gap-4" // Larger gaps for full page
-      )}
+      className="w-full overflow-x-auto scrollbar-hide"
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
-        WebkitOverflowScrolling: 'touch'
+        WebkitOverflowScrolling: 'touch',
+        paddingLeft: '1rem',
+        paddingRight: '1rem',
+        paddingTop: '0.5rem',
+        paddingBottom: '3rem' // Extra space for Today pill and any other elements
       }}
     >
-      {/* Load More Past Button */}
+      <div className={cn("flex", isFullPage ? "gap-8" : "gap-4")}>
+        {/* Load More Past Button */}
       <div className="flex-shrink-0 flex items-center justify-center min-w-48 h-[200px]">
         <Button
           variant="secondary"
@@ -616,6 +634,7 @@ export default function DailyNotesCarousel({
             </>
           )}
         </Button>
+      </div>
       </div>
     </div>
   );

@@ -1193,7 +1193,7 @@ function NewPageContent() {
           {isEditing && (
             <div
               className="animate-in fade-in-0 duration-300"
-              style={{ contain: 'layout style paint' }}
+              // Removed contain: layout style paint as it creates stacking context that breaks modal positioning
             >
               <PageProvider>
                 <ContentDisplay

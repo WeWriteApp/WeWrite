@@ -41,7 +41,6 @@ export default function AdminPage() {
   // Removed user management state - users tab deleted
 
   // Testing tools state
-  const [statusCheckLoading, setStatusCheckLoading] = useState(false);
   const [showPWABanner, setShowPWABanner] = useState(false);
   const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(false);
   const [noSubscriptionMode, setNoSubscriptionMode] = useState(false);
@@ -136,63 +135,6 @@ export default function AdminPage() {
       variant: 'default'
     });
   };
-
-  // Testing tools handlers
-
-
-
-
-  const handleCheckPayoutStatus = async () => {
-    console.log('[Admin Testing] Starting payout status check...');
-    setStatusCheckLoading(true);
-    try {
-      console.log('[Admin Testing] Sending request to /api/admin/payout-status');
-
-      const response = await fetch('/api/admin/payout-status', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'}
-      });
-
-      console.log('[Admin Testing] Status check response status:', response.status);
-      console.log('[Admin Testing] Status check response headers:', Object.fromEntries(response.headers.entries()));
-
-      const result = await response.json();
-      console.log('[Admin Testing] Status check response body:', result);
-
-      if (result.success) {
-        console.log('[Admin Testing] System status check completed successfully');
-        console.log('[Admin Testing] Payout System Status:', result.data);
-        toast({
-          title: "System Status Check Complete",
-          description: "Check console for detailed status information"});
-      } else {
-        console.error('[Admin Testing] Status check failed:', result);
-        toast({
-          title: "Status Check Failed",
-          description: result.error || "An error occurred",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('[Admin Testing] Exception in status check:', error);
-      console.error('[Admin Testing] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      toast({
-        title: "Error",
-        description: "Failed to check system status - check console for details",
-        variant: "destructive"
-      });
-    } finally {
-      console.log('[Admin Testing] Status check completed, setting loading to false');
-      setStatusCheckLoading(false);
-    }
-  };
-
-
-
-
-
-
 
   // Feature flags have been removed
 
@@ -344,19 +286,6 @@ export default function AdminPage() {
                 />
               </div>
             </div>
-            {/* Testing Tools */}
-            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Testing Tools</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Test payout systems, token earnings, and subscription states
-              </span>
-              <div className="mt-2 space-y-4">
-                <p className="text-sm text-muted-foreground">Testing tools have been moved to the main admin dashboard.</p>
-              </div>
-            </div>
-
             {/* Landing Page Management */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
@@ -382,7 +311,6 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Design System</h3>
-                <Palette className="h-5 w-5 text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-3">
                 Interactive showcase of all WeWrite components with their states and documentation
@@ -404,7 +332,6 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Background Images</h3>
-                <ImageIcon className="h-5 w-5 text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-3">
                 Manage default background images available to all users. Upload, delete, and reorder images.

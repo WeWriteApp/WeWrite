@@ -160,7 +160,7 @@ export function Modal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex md:items-center md:justify-center items-end justify-center overflow-hidden"
+          className="fixed inset-0 z-modal flex md:items-center md:justify-center items-end justify-center overflow-hidden"
           onClick={handleBackdropInteraction}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -173,12 +173,6 @@ export function Modal({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 100,
             // Add top padding for mobile to create gap from screen edge
             paddingTop: isMobile ? '20px' : '0'
           }}
@@ -221,12 +215,18 @@ export function Modal({
             }}
             initial={{
               opacity: 0,
-              y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : -10
+              y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : -10,
+              x: 0 // Explicitly set x to prevent any horizontal drift
             }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              x: 0 // Ensure modal stays centered horizontally
+            }}
             exit={{
               opacity: 0,
-              y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : 10
+              y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : 10,
+              x: 0 // Prevent exit animation from moving horizontally
             }}
             transition={{
               type: "spring",
@@ -234,10 +234,8 @@ export function Modal({
               stiffness: 300,
               duration: 0.3
             }}
-            style={{
-              position: 'relative',
-              zIndex: 101
-            }}
+            // Ensure transform origin is centered to prevent positioning drift
+            style={{ transformOrigin: 'center center' }}
           >
             {showCloseButton && (
               <Button

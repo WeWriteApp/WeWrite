@@ -20,6 +20,11 @@ interface DailyNotesSectionProps {
  * Uses YYYY-MM-DD format for all daily note titles.
  * Now uses the standardized sticky header pattern.
  * Uses accent color from context and respects pill style settings.
+ *
+ * LAYOUT STRUCTURE (simplified for easy debugging):
+ * - Header with horizontal padding (px-4)
+ * - Carousel with no padding wrapper (full width to prevent clipping)
+ * - Parent container has no horizontal padding to allow carousel overflow
  */
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
   const { user, isAuthenticated } = useAuth();
@@ -61,26 +66,26 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
 
   return (
     <div className="space-y-4">
-      {/* Static Section Header */}
-      <SectionTitle
-        icon={Calendar}
-        title="My Daily Notes"
-      >
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={scrollToToday}
-          className="rounded-2xl"
-          aria-label="Scroll to today's notes"
+      {/* Section Header - with horizontal padding */}
+      <div className="px-4">
+        <SectionTitle
+          icon={Calendar}
+          title="My Daily Notes"
         >
-          <Calendar className="h-4 w-4" />
-        </Button>
-      </SectionTitle>
-
-      {/* Content container with fade effect applied to scroll container */}
-      <div className="carousel-container-with-fade">
-        <DailyNotesCarousel accentColor={getAccentColorValue()} />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={scrollToToday}
+            className="rounded-2xl"
+            aria-label="Scroll to today's notes"
+          >
+            <Calendar className="h-4 w-4" />
+          </Button>
+        </SectionTitle>
       </div>
+
+      {/* Carousel - full width, no clipping containers */}
+      <DailyNotesCarousel accentColor={getAccentColorValue()} />
     </div>
   );
 }

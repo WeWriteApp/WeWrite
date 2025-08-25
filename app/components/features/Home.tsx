@@ -76,12 +76,14 @@ const Home: React.FC = () => {
             : undefined
         }}
       >
-          <div className="container max-w-4xl mx-auto px-4 py-4 space-y-6">
+          <div className="container max-w-4xl mx-auto py-4 space-y-6">
             {/* Daily Notes Section */}
             <DailyNotesSection />
 
-            {/* Recent Edits Section - Global implementation */}
-            <GlobalRecentEdits />
+            {/* Recent Edits Section - with horizontal padding */}
+            <div className="px-4">
+              <GlobalRecentEdits />
+            </div>
 
 
 

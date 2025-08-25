@@ -1174,7 +1174,7 @@ iframe[src*="js.stripe.com"] {
 /* Remove hover states - cards stay static */
 
 /* Dark mode hover state for cards - enhanced shadow for dark mode */
-.dark .wewrite-card:hover {
+.dark .wewrite-card:hover:not([role="dialog"]):not([data-modal-content]):not([aria-modal="true"] *) {
   box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3), 0 2px 4px 0 rgba(0, 0, 0, 0.2); /* Stronger shadow for dark mode */
   transform: translateY(-1px); /* Subtle lift effect */
 }

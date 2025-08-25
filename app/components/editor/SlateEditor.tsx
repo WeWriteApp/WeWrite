@@ -17,6 +17,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { createEditor, Descendant, Element as SlateElement, Text, Transforms, Editor, Range, Point, Node, Location } from 'slate';
 import { Slate, Editable, withReact, ReactEditor, useSlateStatic, RenderElementProps, RenderLeafProps } from 'slate-react';
 import { withHistory } from 'slate-history';
@@ -948,6 +949,22 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     return Array.from(linkedPageIds);
   }, [value]);
 
+  // Get selected text from editor
+  // This is used to pre-populate the link search with selected text
+  const getSelectedText = useCallback(() => {
+    const { selection } = editor;
+    if (!selection || Range.isCollapsed(selection)) {
+      return '';
+    }
+
+    try {
+      return Editor.string(editor, selection);
+    } catch (error) {
+      console.warn('Error getting selected text:', error);
+      return '';
+    }
+  }, [editor]);
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.metaKey || event.ctrlKey) {
@@ -1202,8 +1219,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             style={{
               lineHeight: '1.5',
               fontSize: '1rem',
-              fontFamily: 'inherit',
-              transform: 'translateZ(0)' // Hardware acceleration to reduce flicker
+              fontFamily: 'inherit'
+              // Removed transform: translateZ(0) as it creates stacking context that breaks modal positioning
             }}
           />
 
@@ -1223,7 +1240,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         </div>
       </Slate>
 
-      {showLinkModal && (
+      {showLinkModal && typeof document !== 'undefined' && createPortal(
         <LinkEditorModal
           isOpen={showLinkModal}
           onClose={() => setShowLinkModal(false)}
@@ -1233,11 +1250,13 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             insertLink(linkData);
           }}
           editingLink={null}
+          selectedText={getSelectedText()}
           linkedPageIds={getLinkedPageIds()}
-        />
+        />,
+        document.body
       )}
       {/* Link Suggestion Editor Modal */}
-      {showSuggestionModal && currentSuggestion && (
+      {showSuggestionModal && currentSuggestion && typeof document !== 'undefined' && createPortal(
         <LinkSuggestionEditorModal
           isOpen={showSuggestionModal}
           onClose={() => {
@@ -1248,7 +1267,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           onInsertLink={handleSuggestionLinkInsert}
           suggestion={currentSuggestion}
           matchedText={suggestionMatchedText}
-        />
+        />,
+        document.body
       )}
 
 
@@ -1258,18 +1278,21 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
 
       {/* Link Suggestion Modal */}
-      <LinkSuggestionModal
-        isOpen={linkSuggestionState.showModal}
-        onClose={linkSuggestionActions.hideSuggestionModal}
-        suggestions={linkSuggestionState.activeSuggestion?.suggestions || []}
-        matchedText={linkSuggestionState.activeSuggestion?.matchedText || ''}
-        onSelectPage={linkSuggestionActions.selectSuggestion}
-        onDismiss={() => {
-          if (linkSuggestionState.activeSuggestion) {
-            linkSuggestionActions.dismissSuggestion(linkSuggestionState.activeSuggestion.matchedText);
-          }
-        }}
-      />
+      {typeof document !== 'undefined' && createPortal(
+        <LinkSuggestionModal
+          isOpen={linkSuggestionState.showModal}
+          onClose={linkSuggestionActions.hideSuggestionModal}
+          suggestions={linkSuggestionState.activeSuggestion?.suggestions || []}
+          matchedText={linkSuggestionState.activeSuggestion?.matchedText || ''}
+          onSelectPage={linkSuggestionActions.selectSuggestion}
+          onDismiss={() => {
+            if (linkSuggestionState.activeSuggestion) {
+              linkSuggestionActions.dismissSuggestion(linkSuggestionState.activeSuggestion.matchedText);
+            }
+          }}
+        />,
+        document.body
+      )}
     </div>
   );
 };

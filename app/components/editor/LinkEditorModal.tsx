@@ -272,13 +272,14 @@ export default function LinkEditorModal({
               />
             </div>
 
-            {/* Search Results */}
+            {/* Search Results - uses selectedText as initial search query */}
             <div className="h-48 sm:h-64">
               <FilteredSearchResults
                 ref={searchInputRef}
                 onSelect={handlePageSelect}
                 userId={user?.uid}
                 placeholder="Search for pages..."
+                initialSearch={selectedText} // Pre-populate search with selected text
                 autoFocus={!selectedText}
                 className="h-full p-2 sm:p-3"
                 preventRedirect={true}
