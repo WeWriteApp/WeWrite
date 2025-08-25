@@ -249,13 +249,21 @@ export default function NotificationItem({ notification }) {
                   e.stopPropagation();
                   e.preventDefault();
                   try {
-                    // Import and call resend verification email function
-                    const { sendEmailVerification } = await import('firebase/auth');
-                    const { auth } = await import('../../firebase/auth');
-                    if (auth.currentUser) {
-                      await sendEmailVerification(auth.currentUser);
-                      // You could add a toast notification here
+                    // Use API to resend verification email
+                    const response = await fetch('/api/auth/verify-email', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      credentials: 'include',
+                      body: JSON.stringify({}), // Empty body - will use authenticated user's email
+                    });
+
+                    if (response.ok) {
                       console.log('Verification email resent');
+                    } else {
+                      const result = await response.json();
+                      console.error('Failed to resend verification email:', result.error);
                     }
                   } catch (error) {
                     console.error('Error resending verification email:', error);

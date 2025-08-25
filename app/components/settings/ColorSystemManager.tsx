@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import OKLCHColorSlider from './OKLCHColorSlider';
+import DualThemeColorPicker from './DualThemeColorPicker';
 import { BackgroundImageUpload } from './BackgroundImageUpload';
 import ColorSlider from './ColorSlider';
 import BackgroundOptionsCard from './BackgroundOptionsCard';
@@ -260,25 +261,15 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Accent Colors */}
+      {/* Accent Colors - Independent Light/Dark Mode */}
       <CollapsibleColorCard
         title="Accent Color"
-        description="Used for interactive elements, buttons, links, and highlights"
+        description="Set different accent colors for light and dark themes"
         color={oklchToHex(accentOklch)}
         isExpanded={expandedCard === 'accent'}
         onToggle={toggleAccent}
       >
-        <OKLCHColorSlider
-          value={oklchToHex(accentOklch)}
-          onChange={handleAccentChange}
-          limits={{
-            lightness: theme === 'dark'
-              ? { min: 0.50, max: 1.0 }  // Dark mode: 50-100% for better readability
-              : { min: 0.0, max: 0.50 }, // Light mode: 0-50% for better readability
-            chroma: { min: 0, max: 0.37 },
-            hue: { min: 0, max: 360 }
-          }}
-        />
+        <DualThemeColorPicker />
       </CollapsibleColorCard>
 
       {/* Neutral Colors - Only render when initialized */}

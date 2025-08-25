@@ -86,11 +86,12 @@ export default function VerifyEmailBanner() {
         label: 'Resend_Email'
       });
 
-      const response = await fetch('/api/auth/resend-verification', {
+      const response = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({}), // Empty body - will use authenticated user's email
       });
 
       if (response.ok) {
