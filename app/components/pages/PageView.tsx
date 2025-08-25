@@ -35,6 +35,7 @@ import TextView from "../editor/TextView";
 import DenseModeToggle from "../viewer/DenseModeToggle";
 import UnifiedLoader from "../ui/unified-loader";
 import { ErrorDisplay } from "../ui/error-display";
+import FullPageError from "../ui/FullPageError";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 import StickySaveHeader from "../layout/StickySaveHeader";
 
@@ -1482,17 +1483,14 @@ export default function PageView({
   // Error state
   if (error) {
     return (
-      <PublicLayout>
-        <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
-          <ErrorDisplay
-            message={error}
-            severity="error"
-            title="Page Error"
-            showRetry={true}
-            onRetry={() => window.location.reload()}
-          />
-        </div>
-      </PublicLayout>
+      <FullPageError
+        title="Page Error"
+        message={error}
+        showGoBack={true}
+        showGoHome={true}
+        showTryAgain={true}
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 
