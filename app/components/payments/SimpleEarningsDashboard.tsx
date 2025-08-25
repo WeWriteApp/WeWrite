@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -220,10 +220,7 @@ export default function SimpleEarningsDashboard() {
 
       {/* Bank Account Status */}
       <Card>
-        <CardHeader>
-          <CardTitle>Bank Account</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {bankStatus?.isConnected ? (
             <div className="flex items-center justify-between">
               <div>

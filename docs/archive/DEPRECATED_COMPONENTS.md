@@ -1,6 +1,25 @@
-# Deprecated Components - Token to USD Migration
+# Deprecated Components & Systems
 
-This document lists all components that have been deprecated as part of the migration from the token-based system to the USD-based system.
+This document lists all components and systems that have been deprecated as part of various system migrations and improvements.
+
+## ⚠️ Deprecated Systems
+
+### Email Verification Sync Queue System
+- **Status**: Deprecated and Removed
+- **Date Removed**: January 2025
+- **Description**: Legacy system that queued content creation for unverified email users
+- **Reason**: Removed as part of email verification UX improvement - users can now access all features immediately
+- **Migration**: All users can create content immediately; email verification is now handled only through banner system
+
+### Redundant Earnings Dashboard Components
+- **Status**: Deprecated and Removed
+- **Date Removed**: January 2025
+- **Components Removed**:
+  - `PayoutsManager.tsx` - Complex payout management with redundant features
+  - `PayoutDashboard.tsx` - Duplicate payout functionality
+  - `WriterUsdDashboard.tsx` - Redundant earnings display
+- **Reason**: Consolidated to use single `SimpleEarningsDashboard` component for maintainability
+- **Migration**: All payout functionality now handled by `SimpleEarningsDashboard` in earnings page
 
 ## ⚠️ Deprecated Components
 

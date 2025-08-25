@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from "../../components/ui/segmented-control";
 import { DollarSign, Wallet } from 'lucide-react';
 
-import { PayoutsManager } from '../../components/payments/PayoutsManager';
+import SimpleEarningsDashboard from '../../components/payments/SimpleEarningsDashboard';
 import EarningsBreakdownCard from '../../components/payments/EarningsBreakdownCard';
 import EarningsSourceBreakdown from '../../components/payments/EarningsSourceBreakdown';
 
@@ -38,7 +38,7 @@ export default function EarningsPage() {
         </SegmentedControlContent>
 
         <SegmentedControlContent value="payouts" className="space-y-4 sm:space-y-6">
-          <PayoutsManager />
+          <SimpleEarningsDashboard />
         </SegmentedControlContent>
       </SegmentedControl>
     </div>

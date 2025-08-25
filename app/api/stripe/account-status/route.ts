@@ -32,9 +32,16 @@ export async function POST(request: NextRequest) {
     if (!stripeConnectedAccountId) {
       console.log('[Account Status API] No Stripe Connect account found');
       return NextResponse.json({
-        error: 'No bank account found. Please set up your bank account first.',
+        success: true,
+        data: {
+          payouts_enabled: false,
+          charges_enabled: false,
+          details_submitted: false,
+          requirements: { currently_due: [], pending_verification: [], past_due: [] },
+          bankAccount: null
+        },
         needsSetup: true
-      }, { status: 400 });
+      });
     }
 
     console.log('[Account Status API] Checking Stripe Connect account:', stripeConnectedAccountId);
@@ -88,9 +95,17 @@ export async function POST(request: NextRequest) {
     if (!bankStatus.isConnected) {
       console.log('[Account Status API] No bank account found, needs setup');
       return NextResponse.json({
-        error: 'No bank account found. Please set up your bank account first.',
+        success: true,
+        data: {
+          id: stripeConnectedAccountId,
+          payouts_enabled: account.payouts_enabled,
+          charges_enabled: account.charges_enabled,
+          details_submitted: account.details_submitted,
+          requirements: account.requirements,
+          bankAccount: null
+        },
         needsSetup: true
-      }, { status: 400 });
+      });
     }
 
     console.log('[Account Status API] Bank account found:', {
@@ -122,9 +137,16 @@ export async function POST(request: NextRequest) {
     // If bank account service indicates setup needed, return appropriate response
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json({
-        error: 'No bank account found. Please set up your bank account first.',
+        success: true,
+        data: {
+          payouts_enabled: false,
+          charges_enabled: false,
+          details_submitted: false,
+          requirements: { currently_due: [], pending_verification: [], past_due: [] },
+          bankAccount: null
+        },
         needsSetup: true
-      }, { status: 400 });
+      });
     }
 
     return NextResponse.json({

@@ -729,45 +729,45 @@ function NewPageContent() {
 
       // Allow all users to create content immediately
       // Email verification is handled through the banner system only
-      {
-        // Extract and create new pages referenced in links before saving the main page
-        const newPageRefs = extractNewPageReferences(finalContent);
-        if (newPageRefs.length > 0) {
-          console.log('🔵 DEBUG: Found new page references, creating them first:', newPageRefs);
-          await createNewPagesFromLinks(newPageRefs);
-        }
 
-        // Normal page creation for verified users - use API route instead of direct Firestore
-        console.log('🔵 DEBUG: About to call API route with data:', { ...data, content: '(content omitted)' });
+      // Extract and create new pages referenced in links before saving the main page
+      const newPageRefs = extractNewPageReferences(finalContent);
+      if (newPageRefs.length > 0) {
+        console.log('🔵 DEBUG: Found new page references, creating them first:', newPageRefs);
+        await createNewPagesFromLinks(newPageRefs);
+      }
 
-        let res = null;
-        let authRetryAttempted = false;
+      // Normal page creation for verified users - use API route instead of direct Firestore
+      console.log('🔵 DEBUG: About to call API route with data:', { ...data, content: '(content omitted)' });
 
-        const attemptPageCreation = async () => {
-          const response = await fetch('/api/pages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-            credentials: 'include'
-          });
+      let res = null;
+      let authRetryAttempted = false;
 
-          if (!response.ok) {
-            // Parse the error response to get the specific error message
-            let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+      const attemptPageCreation = async () => {
+        const response = await fetch('/api/pages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          credentials: 'include'
+        });
 
-            try {
-              const errorData = await response.json();
-              // Check for error message in the correct field - API uses 'error' field, not 'message'
-              if (errorData.error) {
-                errorMessage = errorData.error;
-              } else if (errorData.message) {
-                errorMessage = errorData.message;
-              }
-            } catch (parseError) {
-              console.error('🔴 DEBUG: Failed to parse error response:', parseError);
+        if (!response.ok) {
+          // Parse the error response to get the specific error message
+          let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+
+          try {
+            const errorData = await response.json();
+            // Check for error message in the correct field - API uses 'error' field, not 'message'
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (errorData.message) {
+              errorMessage = errorData.message;
             }
+          } catch (parseError) {
+            console.error('🔴 DEBUG: Failed to parse error response:', parseError);
+          }
 
             // Handle authentication errors specifically
             if (response.status === 401 && !authRetryAttempted) {
