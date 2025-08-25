@@ -231,28 +231,13 @@ function handleAuthenticationRedirects(
   pathChecks: PathChecks,
   request: NextRequest
 ): NextResponse | null {
-  // Redirect authenticated users away from auth pages (except verify-email)
-  if (path.startsWith("/auth/") && path !== "/auth/verify-email" && auth.isAuthenticated) {
-    // If user is authenticated but not verified, redirect to verification
-    if (!auth.isEmailVerified) {
-      return NextResponse.redirect(new URL("/auth/verify-email", request.url));
-    }
+  // Redirect authenticated users away from auth pages
+  if (path.startsWith("/auth/") && auth.isAuthenticated) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Allow unverified users to access most of the app, but redirect to verification for sensitive actions
-  // Only redirect to verification page for specific sensitive paths
-  const sensitivePathsRequiringVerification = [
-    "/subscription",
-    "/subscription/",
-    "/new"
-  ];
-
-  if (auth.isAuthenticated && !auth.isEmailVerified &&
-      sensitivePathsRequiringVerification.some(sensitivePath => path.startsWith(sensitivePath)) &&
-      path !== "/auth/verify-email") {
-    return NextResponse.redirect(new URL("/auth/verify-email", request.url));
-  }
+  // Allow unverified users to access all parts of the app
+  // Email verification is now handled only through the banner system
 
   // Only redirect to login for paths that explicitly require auth
   if (pathChecks.requiresAuth && !auth.isAuthenticated) {

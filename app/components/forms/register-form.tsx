@@ -226,12 +226,12 @@ export function RegisterForm({
         // Show redirect overlay
         setIsRedirecting(true)
 
-        // Redirect to email verification page
-        console.log("Account created successfully, redirecting to email verification")
+        // Redirect to home page
+        console.log("Account created successfully, redirecting to home")
 
-          // Redirect to email verification page after a short delay
+          // Redirect to home page after a short delay - user will see email verification banner
         setTimeout(() => {
-          router.push('/auth/verify-email')
+          router.push('/')
         }, 1500)
 
       } else {

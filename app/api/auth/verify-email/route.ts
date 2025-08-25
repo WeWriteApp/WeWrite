@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     try {
       // Generate email verification link with proper action code settings
       const actionCodeSettings = {
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app'}/auth/verify-email?verified=true`,
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app'}/?verified=true`,
         handleCodeInApp: false
       };
 

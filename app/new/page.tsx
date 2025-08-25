@@ -227,12 +227,10 @@ function NewPageContent() {
       if (!isAuthenticated) {
         console.log('NewPage: User not authenticated, redirecting to login');
         router.push('/auth/login?from=/new');
-      } else if (!isEmailVerified) {
-        console.log('NewPage: User not verified, redirecting to email verification');
-        router.push('/auth/verify-email');
       }
+      // Allow unverified users to access the new page - they'll see the banner
     }
-  }, [authLoading, isAuthenticated, isEmailVerified, router]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Initialize the page after a brief delay to prevent layout shift
   useEffect(() => {
@@ -729,44 +727,9 @@ function NewPageContent() {
         return false;
       }
 
-      // Check if we should use the sync queue (only for unverified email users)
-      // For user-based auth, assume email is verified (since they successfully switched accounts)
-      const useQueue = auth.currentUser ? !auth.currentUser.emailVerified : false;
-
-      if (useQueue) {
-        // For unverified users, add to sync queue instead of creating immediately
-        // TODO: Implement sync queue functionality
-        console.log('🔵 DEBUG: Would add to sync queue for unverified user');
-
-        setHasContentChanged(false);
-        setHasTitleChanged(false);
-        setHasUnsavedChanges(false);
-
-        setIsSaving(false);
-
-        // Show success message
-        toast({
-          title: "Page queued for creation",
-          description: "Your page will be created once your email is verified.",
-        });
-
-        // Small delay to ensure user sees the success message before redirect
-        setTimeout(() => {
-          // Navigate to home or back since we don't have a page ID yet
-          if (isReply && searchParams) {
-            const replyToId = searchParams.get('replyTo');
-            if (replyToId) {
-              router.push(`/${replyToId}`);
-            } else {
-              router.push('/');
-            }
-          } else {
-            router.push('/');
-          }
-        }, 500);
-
-        return true;
-      } else {
+      // Allow all users to create content immediately
+      // Email verification is handled through the banner system only
+      {
         // Extract and create new pages referenced in links before saving the main page
         const newPageRefs = extractNewPageReferences(finalContent);
         if (newPageRefs.length > 0) {
@@ -1057,7 +1020,6 @@ function NewPageContent() {
 
           return false;
         }
-      }
     } catch (error: any) {
       console.error('🔴 DEBUG: Save failed with error:', error);
       console.error('🔴 DEBUG: Error details:', {

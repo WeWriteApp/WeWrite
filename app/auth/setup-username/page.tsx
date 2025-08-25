@@ -155,7 +155,7 @@ function SetupUsernameContent() {
       
       if (result.success) {
         // SECURITY: Don't log sensitive user actions
-        console.log("Username added successfully, redirecting to email verification");
+        console.log("Username added successfully, redirecting to home");
 
         // Track user creation event (this completes the user registration process)
         trackAuthEvent('USER_CREATED', {
@@ -168,12 +168,10 @@ function SetupUsernameContent() {
         // Clear pending user data
         localStorage.removeItem('pendingUserEmail');
         localStorage.removeItem('pendingUserId');
+        localStorage.removeItem('pendingUsername');
 
-        // Store username for email verification step
-        localStorage.setItem('pendingUsername', username);
-
-        // Redirect to email verification page
-        router.push('/auth/verify-email');
+        // Redirect to home page - user will see email verification banner
+        router.push('/');
       } else {
         setError("Failed to set username. Please try again.");
       }
