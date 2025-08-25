@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, type Firestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFirestore, type Firestore, connectFirestoreEmulator, initializeFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported, logEvent, type Analytics } from "firebase/analytics";
 import { getDatabase, type Database } from "firebase/database";
 import { initializeErrorSuppression } from '../utils/errorSuppression';
@@ -76,8 +76,19 @@ initializeErrorSuppression();
 console.log('[Firebase Config] Initializing Firebase with simple configuration');
 export const app: FirebaseApp = initializeApp(newConfig);
 export const auth: Auth = getAuth(app);
-export const firestore: Firestore = getFirestore(app);
+
+// Initialize Firestore with settings to minimize real-time connections
+// This helps prevent automatic WebSocket connections that cause CORS errors
+export const firestore: Firestore = initializeFirestore(app, {
+  // Disable local cache to prevent automatic sync attempts
+  localCache: undefined,
+  // These settings help minimize connection attempts
+  experimentalForceLongPolling: false,
+});
+
 export const rtdb: Database = getDatabase(app);
+
+console.log('[Firebase Config] Configured Firestore with minimal connection settings');
 
 // Connect to Firebase emulators if enabled
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
