@@ -77,14 +77,9 @@ console.log('[Firebase Config] Initializing Firebase with simple configuration')
 export const app: FirebaseApp = initializeApp(newConfig);
 export const auth: Auth = getAuth(app);
 
-// Initialize Firestore with settings to minimize real-time connections
-// This helps prevent automatic WebSocket connections that cause CORS errors
-export const firestore: Firestore = initializeFirestore(app, {
-  // Disable local cache to prevent automatic sync attempts
-  localCache: undefined,
-  // These settings help minimize connection attempts
-  experimentalForceLongPolling: false,
-});
+// Initialize Firestore with standard configuration
+// Use getFirestore for better compatibility and fewer connection issues
+export const firestore: Firestore = getFirestore(app);
 
 export const rtdb: Database = getDatabase(app);
 
