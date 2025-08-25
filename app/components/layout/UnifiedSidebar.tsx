@@ -537,17 +537,21 @@ function UnifiedSidebarContent({
 
           {/* Fixed bottom section - Fund Account button for users without active subscription */}
           {!isEditMode && user && hasActiveSubscription === false && (
-            <div className="px-3 pb-4 flex-shrink-0">
+            <div className={cn(
+              "pb-4 flex-shrink-0",
+              // Match navigation container padding for consistent alignment
+              showContent ? "px-3" : "px-2"
+            )}>
               <Button
                 onClick={() => router.push('/settings/fund-account')}
                 className={cn(
                   "bg-green-600 hover:bg-green-700 text-white font-medium",
-                  showContent ? "w-full" : "w-10 h-10 p-0"
+                  // Match navigation button sizing for consistency
+                  showContent ? "w-full h-auto p-3 justify-start" : "w-full h-12 p-0 justify-center"
                 )}
-                size={showContent ? "sm" : "icon"}
                 title={showContent ? "" : "Fund Account"}
               >
-                <DollarSign className={cn("h-4 w-4", showContent && "mr-2")} />
+                <DollarSign className={cn("h-4 w-4 flex-shrink-0", showContent && "mr-2")} />
                 {showContent && "Fund Account"}
               </Button>
             </div>
