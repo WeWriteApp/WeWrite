@@ -525,7 +525,7 @@ export default function PageHeader({
 
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const shouldBeScrolled = lastScrollY > 0;
+          const shouldBeScrolled = lastScrollY > 50; // Require 50px scroll before collapsing
           if (shouldBeScrolled !== isScrolled) {
             setIsScrolled(shouldBeScrolled);
           }
@@ -675,8 +675,8 @@ export default function PageHeader({
                       {(
                         <span className="flex items-center gap-1">
                           <span className="truncate">
-                            {isDailyNote && title
-                              ? formatDate(title)
+                            {(isExactDateFormat(title || "") && title !== "Daily note") && title
+                              ? (typeof window !== 'undefined' ? formatDate(title) : title)
                               : title
                               ? title
                               : isNewPage
@@ -939,7 +939,7 @@ export default function PageHeader({
                             />
                           ) : (
                             <div
-                              className={`wewrite-input wewrite-title-input ${titleError ? "border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center cursor-pointer transition-all duration-200`}
+                              className={`${canEdit && isEditing ? "wewrite-input wewrite-title-input min-h-[64px]" : ""} ${titleError ? "border-destructive" : ""} w-full text-2xl font-semibold text-center ${canEdit ? "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2" : ""} transition-all duration-200`}
                               onClick={handleTitleClick}
                               title={
                                 (isExactDateFormat(title || "") && title !== "Daily note")
