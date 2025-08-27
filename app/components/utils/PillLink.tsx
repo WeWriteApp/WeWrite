@@ -216,12 +216,12 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
     return (
       <span
-        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out max-w-full overflow-hidden bg-muted text-muted-foreground opacity-60 cursor-pointer hover:opacity-80 px-2 py-0.5 ${className}`}
+        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out max-w-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-pointer hover:bg-neutral-300 dark:hover:bg-neutral-600 px-2 py-0.5 ${className}`}
         onClick={handleDeletedClick}
         title="This page has been deleted. Click to see more options."
       >
-        <Trash2 size={14} className="mr-1 flex-shrink-0" />
-        <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">deleted page</span>
+        <Trash2 size={12} className="mr-1.5 flex-shrink-0" />
+        <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">{children || "deleted page"}</span>
       </span>
     );
   }

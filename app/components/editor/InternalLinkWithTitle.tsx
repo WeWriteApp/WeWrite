@@ -16,8 +16,9 @@ interface InternalLinkWithTitleProps {
   onEditLink?: () => void;
 }
 
-// Cache for page titles to avoid repeated API calls
+// Cache for page titles and deleted status to avoid repeated API calls
 const pageTitleCache = new Map<string, string>();
+const pageDeletedCache = new Map<string, boolean>();
 
 const getPageTitle = async (pageId: string): Promise<string | null> => {
   if (!pageId) return null;
@@ -32,6 +33,7 @@ const getPageTitle = async (pageId: string): Promise<string | null> => {
     if (pageData && pageData.title) {
       // Cache the result
       pageTitleCache.set(pageId, pageData.title);
+      pageDeletedCache.set(pageId, false); // Page exists, so not deleted
       return pageData.title;
     }
   } catch (error) {
@@ -39,6 +41,40 @@ const getPageTitle = async (pageId: string): Promise<string | null> => {
   }
 
   return null;
+};
+
+const checkIfPageDeleted = async (pageId: string): Promise<boolean> => {
+  if (!pageId) return false;
+
+  // Check cache first
+  if (pageDeletedCache.has(pageId)) {
+    return pageDeletedCache.get(pageId) || false;
+  }
+
+  try {
+    // First try the regular API
+    const pageData = await getPageById(pageId);
+    if (pageData && pageData.title) {
+      // Page exists and is not deleted
+      pageDeletedCache.set(pageId, false);
+      return false;
+    }
+
+    // If regular API fails, check debug API to see if it's deleted
+    const debugResponse = await fetch(`/api/debug/page/${pageId}`);
+    if (debugResponse.ok) {
+      const debugData = await debugResponse.json();
+      const isDeleted = debugData.pageData?.deleted === true;
+      pageDeletedCache.set(pageId, isDeleted);
+      return isDeleted;
+    }
+  } catch (error) {
+    console.error('Error checking if page is deleted:', error);
+  }
+
+  // Default to false if we can't determine
+  pageDeletedCache.set(pageId, false);
+  return false;
 };
 
 /**
@@ -65,6 +101,7 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
   const [currentTitle, setCurrentTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Start with false, only set to true when actually fetching
   const [fetchError, setFetchError] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
 
   useEffect(() => {
@@ -97,8 +134,9 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
     // Reset states when pageId changes
     setFetchError(false);
     setCurrentTitle(null);
+    setIsDeleted(false);
 
-    const fetchTitle = async () => {
+    const fetchTitleAndStatus = async () => {
       try {
         // CRITICAL FIX: Validate pageId before making any API calls
         // This prevents Firebase errors when pageId is '#' or other invalid values
@@ -113,11 +151,15 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
           setIsLoading(true);
         }
 
-        // Check cache first to avoid unnecessary API calls
-        const pageTitle = await getPageTitle(pageId);
+        // Check both title and deleted status
+        const [pageTitle, deletedStatus] = await Promise.all([
+          getPageTitle(pageId),
+          checkIfPageDeleted(pageId)
+        ]);
 
         if (isMounted) {
           setCurrentTitle(pageTitle);
+          setIsDeleted(deletedStatus);
           setIsLoading(false);
         }
       } catch (error) {
@@ -131,7 +173,7 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
     // Only fetch if we have a valid pageId and don't have originalPageTitle or if we want to update the cache
     // But prioritize showing originalPageTitle immediately
     if (pageId && pageId !== '#' && pageId.trim() !== '' && !pageId.includes('#')) {
-      fetchTitle();
+      fetchTitleAndStatus();
     } else if (!pageId || pageId === '#' || pageId.includes('#')) {
       // Handle invalid pageId gracefully
       setFetchError(true);
@@ -194,6 +236,7 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
       <PillLink
         href={formattedHref}
         isPublic={true}
+        deleted={isDeleted}
         className="inline page-link"
         data-page-id={pageId}
         isEditing={isEditing}

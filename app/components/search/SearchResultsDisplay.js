@@ -187,24 +187,15 @@ const SearchResultsDisplay = React.memo(({
         {!isLoading && results?.pages && results.pages.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-lg font-semibold mb-4">Pages</h3>
-            {results.pages.map((page, index) => {
-              // Check if this is the first result and matches the search query (likely a deleted page)
-              const isFirstResult = index === 0;
-              const searchQuery = query?.toLowerCase().trim();
-              const pageTitle = page.title?.toLowerCase().trim();
-              const isLikelyDeletedPage = isFirstResult && searchQuery && pageTitle &&
-                                         (pageTitle === searchQuery || pageTitle.includes(searchQuery));
-
-              return (
-                <div key={`page-${page.id}`} className="flex items-center gap-2 min-w-0">
-                  <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
-                    <PillLink
-                      href={`/${page.id}`}
-                      isPublic={page.isPublic}
-                      isOwned={page.userId === userId}
-                      deleted={isLikelyDeletedPage}
-                      className="hover:scale-105 transition-transform"
-                    >
+            {results.pages.map(page => (
+              <div key={`page-${page.id}`} className="flex items-center gap-2 min-w-0">
+                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
+                  <PillLink
+                    href={`/${page.id}`}
+                    isPublic={page.isPublic}
+                    isOwned={page.userId === userId}
+                    className="hover:scale-105 transition-transform"
+                  >
                       {page.title && isExactDateFormat(page.title)
                         ? formatDateString(page.title)
                         : page.title}
@@ -226,8 +217,7 @@ const SearchResultsDisplay = React.memo(({
                     </div>
                   )}
                 </div>
-              );
-            })}
+              ))}
           </div>
         )}
 
