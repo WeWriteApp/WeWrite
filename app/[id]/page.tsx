@@ -3,11 +3,21 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { getPageById } from "../firebase/database/pages";
-import { getDatabase, ref, get } from "firebase/database";
-import { rtdb } from "../firebase/config";
 // Import the client-only wrapper
 import ClientOnlyPageWrapper from '../components/pages/ClientOnlyPageWrapper';
+
+// Force this page to be fully client-side rendered
+export const dynamicParams = true;
+
+// Dynamically import Firebase modules to avoid server-side issues
+const getFirebaseModules = async () => {
+  const [{ getPageById }, { getDatabase, ref, get }, { rtdb }] = await Promise.all([
+    import("../firebase/database/pages"),
+    import("firebase/database"),
+    import("../firebase/config")
+  ]);
+  return { getPageById, getDatabase, ref, get, rtdb };
+};
 
 // Optimized PageView with preloading and progressive loading
 const PageView = dynamic(() => import('../components/pages/PageView'), {
@@ -190,25 +200,34 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
           });
 
           if (response.ok) {
+            const pageData = await response.json();
+            // Check if the page is deleted (now included in main API response)
+            if (pageData?.deleted === true) {
+              setPageTitle(pageData.title || 'Untitled');
+              setContentType('deleted');
+              setIsLoading(false);
+              return;
+            }
             setContentType('page');
             setIsLoading(false);
             return;
           } else if (response.status === 404) {
-            // Check if it's a deleted page by using the debug API
+            // Could be deleted page or truly not found - check response body
             try {
-              const debugResponse = await fetch(`/api/debug/page/${cleanId}`);
-              if (debugResponse.ok) {
-                const debugData = await debugResponse.json();
-                if (debugData.pageData?.deleted === true) {
-                  setPageTitle(debugData.pageData.title || 'Untitled');
-                  setContentType('deleted');
-                  setIsLoading(false);
-                  return;
-                }
+              const errorData = await response.json();
+              if (errorData?.pageData?.deleted === true) {
+                setPageTitle(errorData.pageData.title || 'Untitled');
+                setContentType('deleted');
+                setIsLoading(false);
+                return;
               }
-            } catch (debugError) {
-              console.warn("Debug API check failed:", debugError);
+            } catch (parseError) {
+              console.log("Could not parse 404 response body");
             }
+
+            // Page truly not found (not just deleted)
+            console.log("Page not found via API");
+
             // Check if it's a user ID and redirect
             try {
               const userCheckResponse = await fetch(`/api/users/${cleanId}/check`, {
@@ -231,24 +250,31 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
         } catch (apiError) {
           console.warn("Fast API check failed, falling back to Firebase:", apiError);
 
-          // Fallback to original logic
-          const pageResult = await getPageById(cleanId, currentAccountUid);
-          if (pageResult.pageData || (pageResult.error && pageResult.error !== "Page not found")) {
-            setContentType('page');
-            setIsLoading(false);
-            return;
-          }
-
-          // Check if it's a user ID and redirect
           try {
-            const userRef = ref(rtdb, `users/${cleanId}`);
-            const userSnapshot = await get(userRef);
-            if (userSnapshot.exists()) {
-              router.replace(`/user/${cleanId}`);
+            // Dynamically import Firebase modules
+            const { getPageById, ref, get, rtdb } = await getFirebaseModules();
+
+            // Fallback to original logic
+            const pageResult = await getPageById(cleanId, currentAccountUid);
+            if (pageResult.pageData || (pageResult.error && pageResult.error !== "Page not found")) {
+              setContentType('page');
+              setIsLoading(false);
               return;
             }
-          } catch (error) {
-            console.error("Error checking user ID:", error);
+
+            // Check if it's a user ID and redirect
+            try {
+              const userRef = ref(rtdb, `users/${cleanId}`);
+              const userSnapshot = await get(userRef);
+              if (userSnapshot.exists()) {
+                router.replace(`/user/${cleanId}`);
+                return;
+              }
+            } catch (error) {
+              console.error("Error checking user ID:", error);
+            }
+          } catch (firebaseError) {
+            console.error("Error loading Firebase modules:", firebaseError);
           }
 
           setContentType('not-found');

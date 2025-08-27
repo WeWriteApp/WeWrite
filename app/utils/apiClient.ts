@@ -10,6 +10,7 @@ interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+  statusCode?: number;
 }
 
 /**
@@ -137,7 +138,9 @@ class ConsolidatedApiClient {
       } : {
         success: false,
         error: data.error || `HTTP ${response.status}`,
-        message: data.message
+        message: data.message,
+        statusCode: response.status,
+        data: data // Preserve response data even for errors (needed for deleted page detection)
       };
 
       // Cache successful GET requests
@@ -579,6 +582,15 @@ export async function getPageById(pageId: string, userId?: string) {
   if (response.success) {
     return { pageData: response.data };
   }
+
+  // For 404 responses, check if there's deleted page data in the error response
+  if (response.statusCode === 404 && response.data?.pageData?.deleted === true) {
+    return {
+      pageData: response.data.pageData,
+      error: response.error || 'Page not found'
+    };
+  }
+
   return { pageData: null, error: response.error || 'Failed to load page' };
 }
 

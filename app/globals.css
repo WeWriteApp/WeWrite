@@ -381,6 +381,7 @@ input, textarea, select {
 /* Exception: Allow title textarea to use its specified font size */
 textarea.text-2xl {
   font-size: 1.5rem !important; /* text-2xl equivalent */
+  line-height: 1.2 !important; /* Consistent line-height for title inputs */
 }
 
 /* Global pledge bar button interactivity (all screen sizes) */
@@ -1224,8 +1225,38 @@ iframe[src*="js.stripe.com"] {
   font-weight: 600 !important;
   text-align: center !important;
 
-  /* Override default textarea min-height for title inputs */
-  min-height: 40px !important;
+  /* Override default textarea min-height for title inputs - ensure consistent height */
+  min-height: 64px !important;
+  height: 64px !important;
+
+  /* Ensure consistent box-sizing */
+  box-sizing: border-box !important;
+
+  /* Ensure consistent padding - override wewrite-input padding for precise control */
+  padding: 0.75rem 1rem !important;
+}
+
+/* Make div title inputs use flexbox for vertical centering */
+div.wewrite-title-input {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1.2 !important;
+}
+
+/* Make textarea title inputs use line-height for vertical centering to match div */
+textarea.wewrite-title-input {
+  /* Remove default textarea styling that interferes with centering */
+  resize: none !important;
+
+  /* Use line-height to center single-line text vertically */
+  line-height: calc(64px - 1.5rem) !important; /* 64px total height minus top/bottom padding */
+
+  /* Remove default padding-top/bottom since line-height handles vertical centering */
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
 }
 
 /* ===== GLOBAL GLASSMORPHIC INPUT SYSTEM ===== */
@@ -1317,6 +1348,11 @@ iframe[src*="js.stripe.com"] {
 textarea.wewrite-input {
   min-height: 80px !important;
   resize: none !important;
+}
+
+/* Override textarea min-height for title inputs specifically */
+textarea.wewrite-input.wewrite-title-input {
+  min-height: 64px !important;
 }
 
 /* Override any conflicting Tailwind styles */

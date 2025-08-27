@@ -9,8 +9,16 @@
 
 import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { optimizedQueryClient } from '../utils/reactQueryConfig';
+
+// Dynamically import devtools to avoid build issues
+const ReactQueryDevtools = React.lazy(() =>
+  import('@tanstack/react-query-devtools').then(module => ({
+    default: module.ReactQueryDevtools
+  })).catch(() => ({
+    default: () => null // Fallback if devtools fail to load
+  }))
+);
 
 interface ReactQueryProviderProps {
   children: React.ReactNode;
@@ -24,10 +32,12 @@ export function ReactQueryProvider({ children }: ReactQueryProviderProps) {
     <QueryClientProvider client={queryClient}>
       {children}
       {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools 
-          initialIsOpen={false}
-          buttonPosition="bottom-right"
-        />
+        <React.Suspense fallback={null}>
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            buttonPosition="bottom-right"
+          />
+        </React.Suspense>
       )}
     </QueryClientProvider>
   );

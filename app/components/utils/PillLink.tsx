@@ -58,7 +58,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   isOwned,
   byline,
   isLoading,
-  deleted = false,
+  deleted: deletedProp = false,
   isFallback = false,
   isSuggestion = false,
   clickable = true,
@@ -77,8 +77,84 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [pageData, setPageData] = useState(null);
   const [displayTitle, setDisplayTitle] = useState(children);
+  const [isPageDeleted, setIsPageDeleted] = useState(false);
+  // Fetch page data for permission checking (only for page links)
+  // CIRCUIT BREAKER: Add error tracking to prevent infinite loops
+  const [fetchAttempts, setFetchAttempts] = useState(0);
+  const [lastError, setLastError] = useState(null);
+  const maxAttempts = 2; // Lower for PillLink since it's more frequent
   const router = useRouter();
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
+
+  // Determine link properties early (before useEffect hooks)
+  const isUserLinkType = isUserLink(href);
+  const isGroupLinkType = isGroupLink(href);
+  const isPageLinkType = isPageLink(href);
+  const isExternalLinkType = isExternalLink(href);
+  // Use prop pageId if available, otherwise extract from href
+  const pageId = propPageId || href.split('/').pop();
+
+  // CRITICAL FIX: Generate proper href for page links when href is invalid
+  const effectiveHref = useMemo(() => {
+    // If we have a pageId and the href is invalid (like '#'), generate the correct href
+    if (isPageLinkType && pageId && pageId !== '#' && (href === '#' || !href || href.trim() === '')) {
+      console.log('🔵 PillLink: Generating href from pageId', { pageId, originalHref: href });
+      return `/${pageId}`;
+    }
+    return href;
+  }, [href, pageId, isPageLinkType]);
+
+  // Fetch page data for permission checking and deleted status (only for page links)
+  useEffect(() => {
+    if (isPageLinkType && pageId && fetchAttempts < maxAttempts) {
+      const fetchPageData = async () => {
+        try {
+          // Use direct page access - works for both authenticated and anonymous users
+          const result = await getPageById(pageId, user?.uid);
+
+          if (result.pageData) {
+            // Check if the page is marked as deleted - now available directly from main API
+            const isDeleted = result.pageData.deleted === true;
+            setIsPageDeleted(isDeleted);
+
+            if (!result.error && !isDeleted) {
+              // Normal page - set page data and clear error
+              setPageData(result.pageData);
+              setLastError(null);
+            } else if (isDeleted) {
+              // Deleted page - don't set full page data, just mark as deleted
+              setPageData(null);
+              setLastError(null);
+            } else {
+              // Error case
+              setFetchAttempts(maxAttempts);
+              setLastError(result.error);
+            }
+          } else if (result.error) {
+            // Handle access denied or page not found without pageData
+            setFetchAttempts(maxAttempts); // Stop further attempts
+            setLastError(result.error);
+            setIsPageDeleted(false);
+          }
+        } catch (error) {
+          console.error('Error fetching page data for permissions:', error);
+          setFetchAttempts(prev => prev + 1);
+          setLastError(error);
+
+          // Stop retrying on certain error types
+          if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
+            console.warn(`PillLink: Stopping retries for page ${pageId} due to ${error.code}`);
+            setFetchAttempts(maxAttempts); // Stop further attempts
+          }
+        }
+      };
+
+      // Only fetch if we haven't hit max attempts
+      if (fetchAttempts < maxAttempts) {
+        fetchPageData();
+      }
+    }
+  }, [isPageLinkType, pageId, fetchAttempts]);
 
   // Handle showing context menu
   const handleShowContextMenu = (event: React.MouseEvent) => {
@@ -145,23 +221,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   // Determine if user can edit this link
   const canEdit = !!onEditLink;
 
-  // Determine link properties early (before useEffect hooks)
-  const isUserLinkType = isUserLink(href);
-  const isGroupLinkType = isGroupLink(href);
-  const isPageLinkType = isPageLink(href);
-  const isExternalLinkType = isExternalLink(href);
-  // Use prop pageId if available, otherwise extract from href
-  const pageId = propPageId || href.split('/').pop();
 
-  // CRITICAL FIX: Generate proper href for page links when href is invalid
-  const effectiveHref = useMemo(() => {
-    // If we have a pageId and the href is invalid (like '#'), generate the correct href
-    if (isPageLinkType && pageId && pageId !== '#' && (href === '#' || !href || href.trim() === '')) {
-      console.log('🔵 PillLink: Generating href from pageId', { pageId, originalHref: href });
-      return `/${pageId}`;
-    }
-    return href;
-  }, [href, pageId, isPageLinkType]);
 
   // Listen for page title updates
   useEffect(() => {
@@ -202,11 +262,13 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   if (isLoading) return <PillLinkSkeleton />;
 
   // Deleted page pill - clickable to show deleted page view
+  // Use detected deleted status for page links, or prop for other types
+  const deleted = isPageLinkType ? isPageDeleted : deletedProp;
   if (deleted) {
     const handleDeletedClick = (e: React.MouseEvent) => {
       e.preventDefault();
-      if (onClick) {
-        onClick(e);
+      if (customOnClick) {
+        customOnClick(e);
       } else if (pageId) {
         router.push(`/${pageId}`);
       } else if (href && href !== '#') {
@@ -226,44 +288,9 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
     );
   }
 
-  // Fetch page data for permission checking (only for page links)
-  // CIRCUIT BREAKER: Add error tracking to prevent infinite loops
-  const [fetchAttempts, setFetchAttempts] = useState(0);
-  const [lastError, setLastError] = useState(null);
-  const maxAttempts = 2; // Lower for PillLink since it's more frequent
 
-  useEffect(() => {
-    if (isPageLinkType && pageId && user && fetchAttempts < maxAttempts) {
-      const fetchPageData = async () => {
-        try {
-          // Use direct page access
-          const result = await getPageById(pageId, user?.uid);
-          if (result.pageData && !result.error) {
-            setPageData(result.pageData);
-            setLastError(null); // Clear error on success
-          } else if (result.error) {
-            // Handle access denied or page not found
-            setFetchAttempts(maxAttempts); // Stop further attempts
-          }
-        } catch (error) {
-          console.error('Error fetching page data for permissions:', error);
-          setFetchAttempts(prev => prev + 1);
-          setLastError(error);
 
-          // Stop retrying on certain error types
-          if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
-            console.warn(`PillLink: Stopping retries for page ${pageId} due to ${error.code}`);
-            setFetchAttempts(maxAttempts); // Stop further attempts
-          }
-        }
-      };
 
-      // Only fetch if we haven't hit max attempts
-      if (fetchAttempts < maxAttempts) {
-        fetchPageData();
-      }
-    }
-  }, [isPageLinkType, pageId, user, fetchAttempts]);
 
   // Format byline based on whether the page belongs to a group or user
   let formattedByline = null;
@@ -355,7 +382,13 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           position={contextMenuPosition}
           onGoToLink={handleGoToLink}
           onEditLink={handleEditLink}
+          onDeleteLink={() => {
+            // Handle delete link action for external links
+            console.log('🗑️ Delete external link clicked for:', href);
+            // TODO: Implement link deletion logic
+          }}
           canEdit={canEdit}
+          isDeleted={deleted}
         />
       </>
     );
@@ -434,7 +467,13 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         position={contextMenuPosition}
         onGoToLink={handleGoToLink}
         onEditLink={handleEditLink}
+        onDeleteLink={() => {
+          // Handle delete link action
+          console.log('🗑️ Delete link clicked for:', href);
+          // TODO: Implement link deletion logic
+        }}
         canEdit={canEdit}
+        isDeleted={deleted}
       />
     </>
   );

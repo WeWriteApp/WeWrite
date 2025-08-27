@@ -523,7 +523,7 @@ export default function DesignSystemPage() {
 
             <StateDemo label="Special States">
               <div className="flex flex-wrap gap-2">
-                <PillLink href="/deleted-page" deleted={true}>Deleted Page</PillLink>
+                <PillLink href="/deleted-page" deleted={true}>I'm gonna delete this page one sec</PillLink>
                 <PillLink href="/fallback-page" isFallback={true}>Fallback Link</PillLink>
                 <PillLink href="/suggestion" isSuggestion={true}>Link Suggestion</PillLink>
               </div>

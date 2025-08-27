@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExternalLink, Edit2 } from "lucide-react";
+import { ExternalLink, Edit2, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
 interface PillLinkContextMenuProps {
@@ -11,7 +11,9 @@ interface PillLinkContextMenuProps {
   position: { x: number; y: number };
   onGoToLink: () => void;
   onEditLink: () => void;
+  onDeleteLink?: () => void;
   canEdit?: boolean;
+  isDeleted?: boolean;
 }
 
 export default function PillLinkContextMenu({
@@ -20,7 +22,9 @@ export default function PillLinkContextMenu({
   position,
   onGoToLink,
   onEditLink,
-  canEdit = true
+  onDeleteLink,
+  canEdit = true,
+  isDeleted = false
 }: PillLinkContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +118,19 @@ export default function PillLinkContextMenu({
             >
               <Edit2 size={14} />
               Edit link
+            </button>
+          )}
+
+          {canEdit && isDeleted && onDeleteLink && (
+            <button
+              onClick={() => {
+                onDeleteLink();
+                onClose();
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors"
+            >
+              <Trash2 size={14} />
+              Delete link
             </button>
           )}
         </motion.div>

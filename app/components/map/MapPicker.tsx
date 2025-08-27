@@ -7,6 +7,11 @@ import { useTheme } from 'next-themes';
 import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
 import { logMobileMapDiagnostics, testMobileMapTileLoading } from '../../utils/mobileMapDiagnostics';
 
+// Import Leaflet CSS dynamically on client side only
+if (typeof window !== 'undefined') {
+  import('leaflet/dist/leaflet.css');
+}
+
 // Leaflet imports - we'll import these dynamically to avoid SSR issues
 let L: any = null;
 

@@ -78,16 +78,17 @@ export const getBatchUserData = withDeduplication(
 
 /**
  * Deduplicated page data fetching
+ * Reduced cache time to ensure deleted page status appears quickly
  */
 export const getPageData = withDeduplication(
   async (pageId: string): Promise<any> => {
     return apiCall(`/api/pages/${pageId}`, {
-      cacheTTL: 2 * 60 * 1000 // 2 minutes cache for page data
+      cacheTTL: 10 * 1000 // 10 seconds cache for faster deleted page detection
     });
   },
   {
     keyGenerator: (pageId: string) => `page:${pageId}`,
-    cacheTTL: 2 * 60 * 1000,
+    cacheTTL: 10 * 1000, // Reduced from 2 minutes to 10 seconds
     dedupWindow: 1000
   }
 );
@@ -205,6 +206,27 @@ export const invalidateUserRelatedData = (userId: string) => {
 
 export const invalidatePageRelatedData = (pageId: string) => {
   invalidateApiCache(new RegExp(`(page|analytics):.*${pageId}`));
+};
+
+/**
+ * Specifically invalidate page data when deleted status changes
+ * This ensures deleted page status appears immediately
+ */
+export const invalidatePageDeletedStatus = (pageId: string) => {
+  console.log(`🧹 Invalidating deleted status cache for page ${pageId}`);
+  invalidateApiCache(new RegExp(`page:${pageId}`));
+
+  // Also clear the page cache
+  import('./pageCache').then(({ pageCache }) => {
+    pageCache.clearPage(pageId);
+  });
+
+  // Clear InternalLinkWithTitle caches
+  import('../components/editor/InternalLinkWithTitle').then(({ clearPageCaches }) => {
+    clearPageCaches(pageId);
+  }).catch(() => {
+    // Component might not be loaded yet, that's fine
+  });
 };
 
 /**

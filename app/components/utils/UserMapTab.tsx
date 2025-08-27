@@ -9,6 +9,11 @@ import { useTheme } from 'next-themes';
 import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
 import SubscriptionGate from '../subscription/SubscriptionGate';
 
+// Import Leaflet CSS dynamically on client side only
+if (typeof window !== 'undefined') {
+  import('leaflet/dist/leaflet.css');
+}
+
 interface Location {
   lat: number;
   lng: number;

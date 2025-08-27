@@ -256,13 +256,29 @@ export default function PageHeader({
     }
   }, [isNewPage, isEditing, canEdit]);
 
-  // Auto-resize textarea when editing title starts - DISABLED to prevent layout shifts
-  // React.useEffect(() => {
-  //   if (isEditingTitle && titleInputRef.current) {
-  //     titleInputRef.current.style.height = 'auto';
-  //     titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
-  //   }
-  // }, [isEditingTitle]);
+  // Auto-resize textarea when editing title starts
+  React.useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      const textarea = titleInputRef.current;
+      const minHeight = 64; // 64px to match CSS height
+      const content = textarea.value;
+
+      // Check if content needs more than one line
+      const lineCount = (content.match(/\n/g) || []).length + 1;
+
+      if (lineCount > 1) {
+        // Multi-line: use normal line-height and auto-resize
+        textarea.style.lineHeight = '1.2';
+        textarea.style.height = 'auto';
+        const newHeight = Math.max(textarea.scrollHeight, minHeight);
+        textarea.style.height = `${newHeight}px`;
+      } else {
+        // Single line: use centered line-height and fixed height
+        textarea.style.lineHeight = `${minHeight - 24}px`; // 64px - 1.5rem padding
+        textarea.style.height = `${minHeight}px`;
+      }
+    }
+  }, [isEditingTitle]);
 
   // Listen for focus changes to coordinate focus rings
   React.useEffect(() => {
@@ -403,11 +419,28 @@ export default function PageHeader({
   const handleTitleFocus = () => {
     setIsTitleFocused(true);
     setIsEditorFocused(false);
-    // Auto-resize textarea to fit content - DISABLED to prevent layout shifts
-    // if (titleInputRef.current) {
-    //   titleInputRef.current.style.height = 'auto';
-    //   titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
-    // }
+    // Auto-resize textarea to fit content while maintaining minimum height
+    if (titleInputRef.current) {
+      const textarea = titleInputRef.current;
+      const minHeight = 64; // 64px to match CSS height
+      const content = textarea.value;
+
+      // Check if content needs more than one line
+      const lineCount = (content.match(/\n/g) || []).length + 1;
+      const hasWrapping = textarea.scrollWidth > textarea.clientWidth;
+
+      if (lineCount > 1 || hasWrapping) {
+        // Multi-line: use normal line-height and auto-resize
+        textarea.style.lineHeight = '1.2';
+        textarea.style.height = 'auto';
+        const newHeight = Math.max(textarea.scrollHeight, minHeight);
+        textarea.style.height = `${newHeight}px`;
+      } else {
+        // Single line: use centered line-height and fixed height
+        textarea.style.lineHeight = `${minHeight - 24}px`; // 64px - 1.5rem padding
+        textarea.style.height = `${minHeight}px`;
+      }
+    }
   };
 
 
@@ -417,9 +450,25 @@ export default function PageHeader({
     const newTitle = e.target.value;
     setEditingTitle(newTitle);
 
-    // Auto-resize textarea to fit content - DISABLED to prevent layout shifts
-    // e.target.style.height = 'auto';
-    // e.target.style.height = e.target.scrollHeight + 'px';
+    // Auto-resize textarea to fit content while maintaining minimum height
+    const textarea = e.target;
+    const minHeight = 64; // 64px to match CSS height
+
+    // Check if content needs more than one line
+    const lineCount = (newTitle.match(/\n/g) || []).length + 1;
+    const hasWrapping = textarea.scrollWidth > textarea.clientWidth;
+
+    if (lineCount > 1 || hasWrapping) {
+      // Multi-line: use normal line-height and auto-resize
+      textarea.style.lineHeight = '1.2';
+      textarea.style.height = 'auto';
+      const newHeight = Math.max(textarea.scrollHeight, minHeight);
+      textarea.style.height = `${newHeight}px`;
+    } else {
+      // Single line: use centered line-height and fixed height
+      textarea.style.lineHeight = `${minHeight - 24}px`; // 64px - 1.5rem padding
+      textarea.style.height = `${minHeight}px`;
+    }
 
 
 
@@ -883,38 +932,14 @@ export default function PageHeader({
                               onBlur={handleTitleBlur}
                               onFocus={handleTitleFocus}
                               tabIndex={isNewPage ? 1 : undefined}
-                              className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full h-10 text-2xl font-semibold text-center resize-none overflow-hidden`}
+                              className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
                               placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                               rows={1}
+                              style={{ height: 'auto' }}
                             />
                           ) : (
-                            <span
-                              className={`${
-                                canEdit && !isDailyNote
-                                  ? isEditing
-                                    ? `cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 border transition-all duration-200 ${
-                                        titleError
-                                          ? "border-destructive hover:border-destructive/70"
-                                          : isEditorFocused
-                                          ? "border-muted-foreground/30"
-                                          : "border-muted-foreground/20 hover:border-muted-foreground/30"
-                                      }`
-                                    : "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 transition-all duration-200"
-                                  : isDailyNote
-                                  ? isEditing
-                                    ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
-                                    : "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 transition-all duration-200"
-                                  : isDailyNote
-                                  ? "cursor-pointer"
-                                  : ""
-                              }`}
-                              style={{
-                                width: '100%',
-                                display: 'block',
-                                wordWrap: 'break-word',
-                                overflowWrap: 'break-word',
-                                hyphens: 'none'
-                              }}
+                            <div
+                              className={`wewrite-input wewrite-title-input ${titleError ? "border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center cursor-pointer transition-all duration-200`}
                               onClick={handleTitleClick}
                               title={
                                 (isExactDateFormat(title || "") && title !== "Daily note")
@@ -935,7 +960,7 @@ export default function PageHeader({
                                   : "Untitled"
                                 }
                               </span>
-                            </span>
+                            </div>
                           )}
 
                         </div>

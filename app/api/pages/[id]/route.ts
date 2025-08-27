@@ -29,8 +29,18 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
     const pageData = pageDoc.data();
 
     // Check if page is deleted
-    if (pageData?.deleted === true) {
-      return { error: 'Page not found' };
+    const isDeleted = pageData?.deleted === true;
+
+    // For deleted pages, return error but include deleted status for PillLink detection
+    if (isDeleted) {
+      return {
+        error: 'Page not found',
+        pageData: {
+          id: pageId,
+          deleted: true,
+          title: pageData?.title || 'Deleted Page'
+        }
+      };
     }
 
     // Check access permissions - all pages are now accessible
@@ -48,21 +58,15 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       userId === 'jamiegray2234@gmail.com'
     );
 
-    // All pages are now public - simplified access model
-    const canView = true;
-
     console.log(`📄 [Page API] Permission check for ${pageId}:`, {
       userId,
       pageUserId: pageData?.userId,
       isOwner,
       isAdmin,
       isDevelopment,
-      canView: true,
       pageTitle: pageData?.title,
       note: 'All pages are now public'
     });
-
-    // No access control needed - all pages are accessible
 
     // Return the page data in the expected format
     return {
@@ -142,6 +146,17 @@ export async function GET(
 
     if (result.error) {
       if (result.error === 'Page not found') {
+        // Check if this is a deleted page with pageData
+        if (result.pageData?.deleted === true) {
+          return NextResponse.json(
+            {
+              error: 'Page not found',
+              pageData: result.pageData
+            },
+            { status: 404 }
+          );
+        }
+
         return NextResponse.json(
           { error: 'Page not found' },
           { status: 404 }

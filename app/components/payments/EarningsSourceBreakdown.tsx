@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { FileText, Users, TrendingUp, Copy } from 'lucide-react';
+import { FileText, Users, TrendingUp, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { toast } from '../ui/use-toast';
@@ -14,7 +14,13 @@ interface PageEarning {
   pageTitle: string;
   totalEarnings: number;
   sponsorCount: number;
-  sponsors: SponsorInfo[];
+  sponsors: PageSponsorInfo[];
+}
+
+interface PageSponsorInfo {
+  userId: string;
+  username: string;
+  amount: number;
 }
 
 interface SponsorInfo {
@@ -22,7 +28,13 @@ interface SponsorInfo {
   username: string;
   totalContribution: number;
   pageCount: number;
-  pages: string[];
+  pages: PageContribution[];
+}
+
+interface PageContribution {
+  pageId: string;
+  pageTitle: string;
+  amount: number;
 }
 
 type BreakdownMode = 'pages' | 'sponsors';
@@ -38,7 +50,23 @@ export default function EarningsSourceBreakdown() {
   const { earnings, loading } = useEarnings();
   const [mode, setMode] = useState<BreakdownMode>('pages');
   const [historicalEarnings, setHistoricalEarnings] = useState<any[]>([]);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [loadingHistorical, setLoadingHistorical] = useState(false);
+
+  // Helper functions for card expansion
+  const toggleCardExpansion = (cardId: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
+  };
+
+  const isCardExpanded = (cardId: string) => expandedCards.has(cardId);
 
   // Copy page link to clipboard
   const copyPageLink = async (pageId: string, pageTitle: string) => {
@@ -149,14 +177,12 @@ export default function EarningsSourceBreakdown() {
         pageData.sponsors.push({
           userId,
           username,
-          totalContribution: amount,
-          pageCount: 1,
-          pages: [pageTitle]
+          amount
         });
         pageData.sponsorCount++;
       } else {
         const sponsor = pageData.sponsors.find(s => s.userId === userId)!;
-        sponsor.totalContribution += amount;
+        sponsor.amount += amount;
       }
 
       // Update sponsor breakdown
@@ -171,9 +197,13 @@ export default function EarningsSourceBreakdown() {
       }
       const sponsorData = sponsorMap.get(userId)!;
       sponsorData.totalContribution += amount;
-      
-      if (!sponsorData.pages.includes(pageTitle)) {
-        sponsorData.pages.push(pageTitle);
+
+      // Find existing page contribution or create new one
+      const existingPage = sponsorData.pages.find(p => p.pageId === pageId);
+      if (existingPage) {
+        existingPage.amount += amount;
+      } else {
+        sponsorData.pages.push({ pageId, pageTitle, amount });
         sponsorData.pageCount++;
       }
     });
@@ -261,69 +291,171 @@ export default function EarningsSourceBreakdown() {
         <div className="space-y-3">
           {mode === 'pages' ? (
             // Pages breakdown - Each page gets its own card
-            pageBreakdown.map((page, index) => (
-              <Card key={page.pageId} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
-                      <PillLink
-                        href={`/${page.pageId}`}
-                        pageId={page.pageId}
-                        isPublic={true}
-                      >
-                        {page.pageTitle}
-                      </PillLink>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => copyPageLink(page.pageId, page.pageTitle)}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {page.sponsorCount} sponsor{page.sponsorCount !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-green-600">
-                      {formatUsdCents(page.totalEarnings * 100)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">/month</div>
-                  </div>
-                </div>
-              </Card>
-            ))
-            ) : (
-              // Sponsors breakdown - Each sponsor gets its own card
-              sponsorBreakdown.map((sponsor, index) => (
-                <Card key={sponsor.userId} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
-                        <PillLink
-                          href={`/user/${sponsor.userId}`}
-                          isPublic={true}
-                        >
-                          {sponsor.username}
-                        </PillLink>
+            pageBreakdown.map((page, index) => {
+              const cardId = `page-${page.pageId}`;
+              const isExpanded = isCardExpanded(cardId);
+
+              return (
+                <Card key={page.pageId} className="overflow-hidden">
+                  <div
+                    className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => toggleCardExpansion(cardId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
+                          <PillLink
+                            href={`/${page.pageId}`}
+                            pageId={page.pageId}
+                            isPublic={true}
+                            customOnClick={(e) => e.stopPropagation()}
+                          >
+                            {page.pageTitle}
+                          </PillLink>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyPageLink(page.pageId, page.pageTitle);
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {page.sponsorCount} sponsor{page.sponsorCount !== 1 ? 's' : ''}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Supporting {sponsor.pageCount} page{sponsor.pageCount !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-green-600">
-                        {formatUsdCents(sponsor.totalContribution * 100)}
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <div className="font-semibold text-green-600">
+                            {formatUsdCents(page.totalEarnings * 100)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">/month</div>
+                        </div>
+                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                          isExpanded ? 'rotate-90' : 'rotate-0'
+                        }`} />
                       </div>
-                      <div className="text-xs text-muted-foreground">/month</div>
+                    </div>
+                  </div>
+
+                  {/* Expanded content - Sponsor breakdown for this page */}
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
+                    <div className="border-t border-neutral-15 bg-muted/20">
+                      <div className="p-4">
+                        <h4 className="text-sm font-medium mb-3 text-muted-foreground">
+                          Sponsors for this page
+                        </h4>
+                        <div className="space-y-2">
+                          {page.sponsors.map((sponsor) => (
+                            <div key={sponsor.userId} className="flex items-center justify-between py-2 px-3 bg-background rounded-md">
+                              <div className="flex items-center gap-2">
+                                <PillLink
+                                  href={`/user/${sponsor.userId}`}
+                                  isPublic={true}
+                                >
+                                  {sponsor.username}
+                                </PillLink>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-semibold text-green-600">
+                                  {formatUsdCents((sponsor.amount || 0) * 100)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">/month</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </Card>
-              ))
+              );
+            })
+            ) : (
+              // Sponsors breakdown - Each sponsor gets its own card
+              sponsorBreakdown.map((sponsor, index) => {
+                const cardId = `sponsor-${sponsor.userId}`;
+                const isExpanded = isCardExpanded(cardId);
+
+                return (
+                  <Card key={sponsor.userId} className="overflow-hidden">
+                    <div
+                      className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => toggleCardExpansion(cardId)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
+                            <PillLink
+                              href={`/user/${sponsor.userId}`}
+                              isPublic={true}
+                              customOnClick={(e) => e.stopPropagation()}
+                            >
+                              {sponsor.username}
+                            </PillLink>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Supporting {sponsor.pageCount} page{sponsor.pageCount !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="font-semibold text-green-600">
+                              {formatUsdCents(sponsor.totalContribution * 100)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">/month</div>
+                          </div>
+                          <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                            isExpanded ? 'rotate-90' : 'rotate-0'
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded content - Pages breakdown for this sponsor */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <div className="border-t border-neutral-15 bg-muted/20">
+                        <div className="p-4">
+                          <h4 className="text-sm font-medium mb-3 text-muted-foreground">
+                            Pages supported by {sponsor.username}
+                          </h4>
+                          <div className="space-y-2">
+                            {sponsor.pages.map((page) => (
+                              <div key={page.pageId} className="flex items-center justify-between py-2 px-3 bg-background rounded-md">
+                                <div className="flex items-center gap-2">
+                                  <PillLink
+                                    href={`/${page.pageId}`}
+                                    pageId={page.pageId}
+                                    isPublic={true}
+                                  >
+                                    {page.pageTitle}
+                                  </PillLink>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-semibold text-green-600">
+                                    {formatUsdCents((page.amount || 0) * 100)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">/month</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
             )}
             
             {/* Summary */}

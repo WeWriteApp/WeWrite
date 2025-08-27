@@ -200,6 +200,14 @@ class EnhancedPageCache {
     console.log('🧹 PAGE CACHE: Cleared all entries');
   }
 
+  // Clear cache for a specific page (useful when page deleted status changes)
+  clearPage(pageId: string, userId?: string | null): void {
+    const key = this.getCacheKey(pageId, userId);
+    if (this.cache.delete(key)) {
+      console.log(`💾 PAGE CACHE: Cleared cache for ${pageId}`);
+    }
+  }
+
   invalidate(pageId: string): void {
     // Remove all entries for this page (different user contexts)
     const keysToDelete: string[] = [];

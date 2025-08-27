@@ -352,6 +352,13 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       finalDisplayText = originalPageTitle || `TEST PAGE LINK: ${pageId}`;
     }
 
+    console.log(`🔍 [LINKNODE] Rendering InternalLinkWithTitle:`, {
+      pageId,
+      href: formattedHref,
+      displayText: finalDisplayText,
+      originalPageTitle
+    });
+
     return (
       <span className="inline-block">
         <InternalLinkWithTitle

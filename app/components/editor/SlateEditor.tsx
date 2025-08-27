@@ -30,6 +30,7 @@ import { useLinkSuggestions } from '../../hooks/useLinkSuggestions';
 import { LinkSuggestionModal } from '../modals/LinkSuggestionModal';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { useAuth } from '../../providers/AuthProvider';
+import { getPageById } from '../../utils/apiClient';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -636,6 +637,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         }
 
         // Normal confirmed pill links - NEVER treat these as suggestions
+        // The PillLink component handles deleted page detection automatically
 
         return (
           <span

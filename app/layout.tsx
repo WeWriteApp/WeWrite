@@ -1,6 +1,5 @@
 import React from "react"
 import "./globals.css"
-import "leaflet/dist/leaflet.css" // Leaflet CSS for maps
 import "./utils/init-logger" // Initialize logging system early
 import "./utils/errorSuppression" // Initialize error suppression early
 import "./utils/detailedErrorLogging" // Initialize detailed error logging

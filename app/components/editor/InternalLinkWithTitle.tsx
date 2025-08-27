@@ -20,6 +20,19 @@ interface InternalLinkWithTitleProps {
 const pageTitleCache = new Map<string, string>();
 const pageDeletedCache = new Map<string, boolean>();
 
+// Clear caches when needed (e.g., when page deleted status changes)
+export const clearPageCaches = (pageId?: string) => {
+  if (pageId) {
+    pageTitleCache.delete(pageId);
+    pageDeletedCache.delete(pageId);
+    console.log(`🧹 Cleared caches for page ${pageId}`);
+  } else {
+    pageTitleCache.clear();
+    pageDeletedCache.clear();
+    console.log('🧹 Cleared all page caches');
+  }
+};
+
 const getPageTitle = async (pageId: string): Promise<string | null> => {
   if (!pageId) return null;
 
@@ -48,31 +61,35 @@ const checkIfPageDeleted = async (pageId: string): Promise<boolean> => {
 
   // Check cache first
   if (pageDeletedCache.has(pageId)) {
+    console.log(`🔍 [DELETED CHECK] Cache hit for ${pageId}:`, pageDeletedCache.get(pageId));
     return pageDeletedCache.get(pageId) || false;
   }
 
+  console.log(`🔍 [DELETED CHECK] Checking if page ${pageId} is deleted`);
+
   try {
-    // First try the regular API
+    // Use the main API which now includes deleted status
     const pageData = await getPageById(pageId);
-    if (pageData && pageData.title) {
-      // Page exists and is not deleted
+    console.log(`🔍 [DELETED CHECK] API result for ${pageId}:`, pageData);
+
+    if (pageData && pageData.pageData) {
+      // Check the deleted flag directly from the main API response
+      const isDeleted = pageData.pageData.deleted === true;
+      console.log(`🔍 [DELETED CHECK] Page ${pageId} deleted status:`, isDeleted);
+      pageDeletedCache.set(pageId, isDeleted);
+      return isDeleted;
+    } else if (pageData && pageData.error && !pageData.pageData) {
+      // Page not found and no pageData - assume not deleted
+      console.log(`🔍 [DELETED CHECK] Page ${pageId} not found, assuming not deleted`);
       pageDeletedCache.set(pageId, false);
       return false;
     }
-
-    // If regular API fails, check debug API to see if it's deleted
-    const debugResponse = await fetch(`/api/debug/page/${pageId}`);
-    if (debugResponse.ok) {
-      const debugData = await debugResponse.json();
-      const isDeleted = debugData.pageData?.deleted === true;
-      pageDeletedCache.set(pageId, isDeleted);
-      return isDeleted;
-    }
   } catch (error) {
-    console.error('Error checking if page is deleted:', error);
+    console.error(`🔍 [DELETED CHECK] Error checking if page ${pageId} is deleted:`, error);
   }
 
   // Default to false if we can't determine
+  console.log(`🔍 [DELETED CHECK] Defaulting to false for ${pageId}`);
   pageDeletedCache.set(pageId, false);
   return false;
 };
@@ -152,15 +169,19 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
         }
 
         // Check both title and deleted status
+        console.log(`🔍 [INTERNAL LINK] Fetching title and deleted status for pageId: ${pageId}`);
         const [pageTitle, deletedStatus] = await Promise.all([
           getPageTitle(pageId),
           checkIfPageDeleted(pageId)
         ]);
 
+        console.log(`🔍 [INTERNAL LINK] Results for ${pageId}:`, { pageTitle, deletedStatus });
+
         if (isMounted) {
           setCurrentTitle(pageTitle);
           setIsDeleted(deletedStatus);
           setIsLoading(false);
+          console.log(`🔍 [INTERNAL LINK] Set deleted status for ${pageId}:`, deletedStatus);
         }
       } catch (error) {
         if (isMounted) {
@@ -230,6 +251,14 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
       </span>
     );
   }
+
+  console.log(`🔍 [INTERNAL LINK RENDER] Rendering PillLink for ${pageId}:`, {
+    pageId,
+    isDeleted,
+    displayText,
+    textToDisplay,
+    formattedHref
+  });
 
   return (
     <span className="inline-block">
