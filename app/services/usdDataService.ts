@@ -59,6 +59,53 @@ export interface ApiResponse<T> {
  */
 export class UsdDataService {
   /**
+   * Fetch all financial data in a single API call to reduce redundant requests
+   * This is more efficient than making separate calls for balance, subscription, and earnings
+   */
+  static async fetchAllFinancialData(): Promise<ApiResponse<UsdDataFetchResult>> {
+    try {
+      const response = await fetch('/api/financial/all', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          data: null,
+          error: `Financial data API error: ${response.status}`,
+          status: response.status
+        };
+      }
+
+      const data = await response.json();
+
+      const result: UsdDataFetchResult = {
+        balance: data.balance || null,
+        subscription: data.subscription || null,
+        earnings: data.earnings || null,
+        hasActiveSubscription: data.hasActiveSubscription || false
+      };
+
+      return {
+        success: true,
+        data: result,
+        status: response.status
+      };
+    } catch (error) {
+      console.error('[UsdDataService] All financial data fetch error:', error);
+      return {
+        success: false,
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: 0
+      };
+    }
+  }
+  /**
    * Fetch USD balance from API
    */
   static async fetchBalance(): Promise<ApiResponse<UsdBalance>> {

@@ -9,7 +9,7 @@ import SimpleSparkline from "../utils/SimpleSparkline";
 import { Button } from '../ui/button';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
-import { getBatchUserData } from '../../firebase/batchUserData';
+import { getBatchUserData } from '../../utils/apiClient';
 import EmptyState from '../ui/EmptyState';
 import { getEnvironmentType } from '../../utils/environmentConfig';
 // import { getTrendingPages } from '../../firebase/pageViews';

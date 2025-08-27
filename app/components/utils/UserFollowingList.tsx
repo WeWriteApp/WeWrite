@@ -81,31 +81,26 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
       // Check if there are more users to load
       setHasMore(followedUsersData.length > endIndex);
 
-      // Fetch additional user details for each followed user (tier, subscription info)
-      const userPromises = paginatedUsers.map(async (followedUser) => {
-        try {
-          const response = await fetch(`/api/users/profile?id=${encodeURIComponent(followedUser.id)}`);
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data) {
-              return {
-                ...followedUser,
-                tier: result.data.tier,
-                subscriptionStatus: result.data.subscriptionStatus,
-                subscriptionAmount: result.data.subscriptionAmount
-              };
-            }
-          }
-          // Fallback to basic user data from follows API
-          return followedUser;
-        } catch (err) {
-          console.error(`Error fetching additional user details for ${followedUser.id}:`, err);
-          // Fallback to basic user data from follows API
-          return followedUser;
-        }
-      });
+      // Fetch additional user details using batch API (more efficient)
+      let userResults = paginatedUsers;
+      try {
+        const userIds = paginatedUsers.map(user => user.id).filter(Boolean);
+        if (userIds.length > 0) {
+          const { getBatchUserData } = await import('../../utils/apiClient');
+          const userData = await getBatchUserData(userIds);
 
-      const userResults = await Promise.all(userPromises);
+          userResults = paginatedUsers.map(followedUser => ({
+            ...followedUser,
+            tier: userData[followedUser.id]?.tier,
+            subscriptionStatus: userData[followedUser.id]?.subscriptionStatus,
+            subscriptionAmount: userData[followedUser.id]?.subscriptionAmount
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching batch user details:', err);
+        // Fallback to basic user data from follows API
+        userResults = paginatedUsers;
+      }
 
       if (loadMore) {
         setFollowedUsers(prev => [...prev, ...userResults]);

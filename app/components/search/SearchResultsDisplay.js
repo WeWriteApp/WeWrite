@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
+import { UsernameBadge } from "../ui/UsernameBadge";
+import { getBatchUserData } from '../../utils/apiDeduplication';
 import PerformanceMonitor from '../utils/PerformanceMonitor';
 
 import { useAuth } from '../../providers/AuthProvider';
@@ -35,6 +37,9 @@ const SearchResultsDisplay = React.memo(({
 }) => {
   const { formatDate: formatDateString } = useDateFormat();
   const { user } = useAuth();
+
+  // State for user subscription data
+  const [userSubscriptionData, setUserSubscriptionData] = useState(new Map());
 
   // Check if user is admin for debug features
   const isAdmin = user?.email === 'jamiegray2234@gmail.com';
@@ -77,6 +82,36 @@ const SearchResultsDisplay = React.memo(({
     // For now, we'll just sort alphabetically by display name
     return combined.sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [results, groupsEnabled]);
+
+  // Fetch user subscription data when results change
+  useEffect(() => {
+    const fetchUserSubscriptionData = async () => {
+      if (!results?.pages || results.pages.length === 0) return;
+
+      // Extract unique user IDs from pages
+      const userIds = [...new Set(results.pages.map(page => page.userId).filter(Boolean))];
+      if (userIds.length === 0) return;
+
+      try {
+        const response = await getBatchUserData(userIds);
+        if (response.success && response.data) {
+          const newUserData = new Map();
+          Object.entries(response.data).forEach(([userId, userData]) => {
+            newUserData.set(userId, {
+              tier: userData.tier,
+              subscriptionStatus: userData.subscriptionStatus,
+              subscriptionAmount: userData.subscriptionAmount
+            });
+          });
+          setUserSubscriptionData(newUserData);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch user subscription data:', error);
+      }
+    };
+
+    fetchUserSubscriptionData();
+  }, [results]);
 
   // Memoize total results count
   const totalResults = useMemo(() => {
@@ -166,9 +201,21 @@ const SearchResultsDisplay = React.memo(({
                       : page.title}
                   </PillLink>
                 </div>
-                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                  by {page.username || "Missing username"}
-                </span>
+                {page.username && page.userId && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                    <span>by</span>
+                    <UsernameBadge
+                      userId={page.userId}
+                      username={page.username}
+                      tier={userSubscriptionData.get(page.userId)?.tier}
+                      subscriptionStatus={userSubscriptionData.get(page.userId)?.subscriptionStatus}
+                      subscriptionAmount={userSubscriptionData.get(page.userId)?.subscriptionAmount}
+                      size="sm"
+                      variant="link"
+                      className="text-xs"
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>

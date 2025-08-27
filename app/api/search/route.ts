@@ -748,8 +748,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           // Format users for the response
           users = users.map(user => ({
             id: user.id,
-            username: session.username || "Anonymous",
-            photoURL: session.photoURL || null,
+            username: user.username || "Anonymous", // Fixed: Use user.username instead of session.username
+            photoURL: user.photoURL || null,
             type: 'user'
           }));
         } catch (userError) {

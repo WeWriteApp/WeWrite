@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar, Award, Flame } from 'lucide-react';
-import { getUserStreaks } from "../../firebase/streaks";
+import { getUserStreaks } from "../../utils/apiClient";
 import { Skeleton } from "../ui/skeleton";
 import { Card, CardContent } from "../ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';

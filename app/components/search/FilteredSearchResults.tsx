@@ -16,6 +16,8 @@ import { Search } from "lucide-react";
 import { Input } from "../ui/input";
 import { ClearableInput } from "../ui/clearable-input";
 import { PillLink } from "../utils/PillLink";
+import { UsernameBadge } from "../ui/UsernameBadge";
+import { getBatchUserData } from '../../utils/apiDeduplication';
 import searchPerformanceMonitor from '../../utils/searchPerformanceMonitor';
 import { shouldAllowRequest } from "../../utils/requestThrottle";
 import { cn, wewriteCard } from '../../lib/utils';
@@ -64,6 +66,7 @@ const FilteredSearchResults = forwardRef(({
   const [pageDataCache, setPageDataCache] = useState(new Map());
   const [activeFilter, setActiveFilter] = useState('recent');
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [userSubscriptionData, setUserSubscriptionData] = useState(new Map());
 
   // Refs
   const searchInputRef = useRef(null);
@@ -75,6 +78,32 @@ const FilteredSearchResults = forwardRef(({
 
   // Character count threshold for search
   const characterCount = isLinkEditor ? 0 : 2;
+
+  // Fetch user subscription data for pages
+  const fetchUserSubscriptionData = useCallback(async (pages) => {
+    if (!pages || pages.length === 0) return;
+
+    // Extract unique user IDs from pages
+    const userIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
+    if (userIds.length === 0) return;
+
+    try {
+      const response = await getBatchUserData(userIds);
+      if (response.success && response.data) {
+        const newUserData = new Map();
+        Object.entries(response.data).forEach(([userId, userData]) => {
+          newUserData.set(userId, {
+            tier: userData.tier,
+            subscriptionStatus: userData.subscriptionStatus,
+            subscriptionAmount: userData.subscriptionAmount
+          });
+        });
+        setUserSubscriptionData(newUserData);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user subscription data:', error);
+    }
+  }, []);
 
   // Reset search results
   const resetSearchResults = useCallback(() => {
@@ -225,6 +254,10 @@ const FilteredSearchResults = forwardRef(({
         setPages(filteredPages);
         setUsers(userResults);
         setGroups(groupResults);
+
+        // Fetch subscription data for page authors
+        fetchUserSubscriptionData(filteredPages);
+
         console.log('[FilteredSearchResults] Set enhanced results:', {
           pages: filteredPages.length,
           users: userResults.length,
@@ -267,6 +300,10 @@ const FilteredSearchResults = forwardRef(({
         setPages(filteredPages);
         setUsers([]); // Clear users for regular search
         setGroups([]); // Clear groups for regular search
+
+        // Fetch subscription data for page authors
+        fetchUserSubscriptionData(filteredPages);
+
         console.log('[FilteredSearchResults] Set filtered pages:', filteredPages.length, 'pages');
         console.log('[FilteredSearchResults] Pages state updated:', filteredPages);
       }
@@ -587,15 +624,25 @@ const FilteredSearchResults = forwardRef(({
                                 : page.title}
                             </PillLink>
                           </div>
-                          {page.username && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                              by {page.username}
+                          {page.username && page.userId && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                              <span>by</span>
+                              <UsernameBadge
+                                userId={page.userId}
+                                username={page.username}
+                                tier={userSubscriptionData.get(page.userId)?.tier}
+                                subscriptionStatus={userSubscriptionData.get(page.userId)?.subscriptionStatus}
+                                subscriptionAmount={userSubscriptionData.get(page.userId)?.subscriptionAmount}
+                                size="sm"
+                                variant="link"
+                                className="text-xs"
+                              />
                               {isAlreadyLinked && (
                                 <span className="ml-1 text-xs text-muted-foreground/70">
                                   • already linked
                                 </span>
                               )}
-                            </span>
+                            </div>
                           )}
                         </div>
                         {isLinkEditor && page.category && (

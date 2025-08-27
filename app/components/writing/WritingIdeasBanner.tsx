@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight, Lightbulb, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
-import { writingIdeas, type WritingIdea } from '../../data/writingIdeas';
+import { type WritingIdea } from '../../data/writingIdeas';
 
 interface WritingIdeasBannerProps {
   onIdeaSelect: (title: string, placeholder: string) => void;
@@ -37,17 +37,51 @@ const IdeaButton = React.memo(({
 export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIdeaSelect, selectedTitle, initialExpanded = false }: WritingIdeasBannerProps) {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [displayedIdeas, setDisplayedIdeas] = useState<WritingIdea[]>([]);
+  const [allIdeas, setAllIdeas] = useState<WritingIdea[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const DISPLAY_COUNT = 9; // 3x3 grid to fit without scrolling
 
+  // Load writing ideas from API
+  const loadWritingIdeas = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/writing-ideas');
+      const result = await response.json();
+
+      if (result.success && result.data.ideas) {
+        setAllIdeas(result.data.ideas);
+      } else {
+        console.error('Failed to load writing ideas:', result.error);
+        // Fallback to empty array - component will handle gracefully
+        setAllIdeas([]);
+      }
+    } catch (error) {
+      console.error('Error loading writing ideas:', error);
+      setAllIdeas([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load ideas on component mount
+  useEffect(() => {
+    loadWritingIdeas();
+  }, [loadWritingIdeas]);
+
   // Generate random ideas with staggered animation
   const generateIdeas = useCallback(async () => {
+    if (allIdeas.length === 0) {
+      console.warn('No writing ideas available to generate from');
+      return;
+    }
+
     setIsGenerating(true);
     setDisplayedIdeas([]);
 
-    const shuffled = [...writingIdeas].sort(() => Math.random() - 0.5).slice(0, DISPLAY_COUNT);
+    const shuffled = [...allIdeas].sort(() => Math.random() - 0.5).slice(0, DISPLAY_COUNT);
 
     // Animate in with 100ms delays
     for (let i = 0; i < shuffled.length; i++) {
@@ -57,14 +91,14 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
 
     setIsGenerating(false);
     setHasGenerated(true);
-  }, []);
+  }, [allIdeas, DISPLAY_COUNT]);
 
-  // Auto-generate on first expand
+  // Auto-generate on first expand (only if ideas are loaded)
   useEffect(() => {
-    if (isExpanded && !hasGenerated) {
+    if (isExpanded && !hasGenerated && allIdeas.length > 0 && !isLoading) {
       generateIdeas();
     }
-  }, [isExpanded, hasGenerated, generateIdeas]);
+  }, [isExpanded, hasGenerated, allIdeas.length, isLoading, generateIdeas]);
 
   const handleShuffle = useCallback(() => {
     setHasGenerated(false);
@@ -84,9 +118,14 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
       >
         <div className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Need writing ideas?</span>
+          <span className="text-sm font-medium">
+            {isLoading ? 'Loading writing ideas...' : 'Need writing ideas?'}
+          </span>
         </div>
-        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+        <div className="flex items-center gap-2">
+          {isLoading && <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />}
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+        </div>
       </div>
     );
   }
@@ -103,34 +142,54 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
       >
         <div className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Need writing ideas?</span>
+          <span className="text-sm font-medium">
+            {isLoading ? 'Loading writing ideas...' : 'Need writing ideas?'}
+          </span>
         </div>
-        <ChevronUp className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+        <div className="flex items-center gap-2">
+          {isLoading && <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />}
+          <ChevronUp className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+        </div>
       </div>
 
       {/* Ideas Container */}
       <div className="flex-1 px-4 py-2 flex flex-wrap justify-center gap-2 content-start">
-        {Array.from({ length: DISPLAY_COUNT }, (_, index) => {
-          const idea = displayedIdeas[index];
-          return (
-            <div
-              key={index}
-              className={`transition-all duration-300 ${idea ? 'animate-in fade-in-0 slide-in-from-bottom-2' : 'opacity-0'}`}
-              style={{
-                animationDelay: idea ? `${index * 100}ms` : '0ms',
-                minHeight: '36px'
-              }}
-            >
-              {idea && (
-                <IdeaButton
-                  idea={idea}
-                  isSelected={selectedTitle === idea.title}
-                  onClick={() => onIdeaSelect(idea.title, idea.placeholder)}
-                />
+        {isLoading || allIdeas.length === 0 ? (
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="text-center">
+              {isLoading ? (
+                <>
+                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Loading ideas...</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No writing ideas available</p>
               )}
             </div>
-          );
-        })}
+          </div>
+        ) : (
+          Array.from({ length: DISPLAY_COUNT }, (_, index) => {
+            const idea = displayedIdeas[index];
+            return (
+              <div
+                key={index}
+                className={`transition-all duration-300 ${idea ? 'animate-in fade-in-0 slide-in-from-bottom-2' : 'opacity-0'}`}
+                style={{
+                  animationDelay: idea ? `${index * 100}ms` : '0ms',
+                  minHeight: '36px'
+                }}
+              >
+                {idea && (
+                  <IdeaButton
+                    idea={idea}
+                    isSelected={selectedTitle === idea.title}
+                    onClick={() => onIdeaSelect(idea.title, idea.placeholder)}
+                  />
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Shuffle Button - Pinned to Bottom */}

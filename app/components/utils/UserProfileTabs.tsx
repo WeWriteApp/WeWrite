@@ -441,7 +441,7 @@ export default function UserProfileTabs({ profile }) {
         urlNavigation="hash"
         className="w-full"
       >
-        <div id="profile-tabs-header" className="relative border-b border-neutral-30 mb-4 bg-background z-10">
+        <div id="profile-tabs-header" className="relative border-b border-neutral-30 mb-4 z-10">
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
               {/* Bio tab (first/default) */}

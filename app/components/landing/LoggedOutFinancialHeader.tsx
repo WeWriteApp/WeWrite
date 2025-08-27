@@ -111,7 +111,7 @@ export function LoggedOutFinancialHeader() {
         trigger={
           <Badge
             variant="secondary"
-            className="cursor-pointer transition-colors text-sm text-green-100 bg-green-15 border-green-30 hover:bg-green-20"
+            className="cursor-pointer transition-colors text-sm text-green-600 dark:text-green-100 bg-green-50 dark:bg-green-15 border-green-200 dark:border-green-30 hover:bg-green-100 dark:hover:bg-green-20"
           >
             {formatUsdCents(fakeEarnings)}
           </Badge>

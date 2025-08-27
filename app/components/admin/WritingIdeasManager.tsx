@@ -1,36 +1,65 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Search, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { writingIdeas, type WritingIdea } from '../../data/writingIdeas';
+import { useToast } from '../ui/use-toast';
+import { type WritingIdea } from '../../data/writingIdeas';
 
 interface WritingIdeasManagerProps {
   className?: string;
 }
 
-interface EditingIdea extends WritingIdea {
-  id: number;
+interface StoredWritingIdea extends WritingIdea {
+  id: string;
+  createdAt?: string;
+  updatedAt?: string;
   isNew?: boolean;
 }
 
 export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
-  const [ideas, setIdeas] = useState<EditingIdea[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [ideas, setIdeas] = useState<StoredWritingIdea[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newIdea, setNewIdea] = useState<WritingIdea>({ title: '', placeholder: '' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
-  // Initialize ideas with IDs
+  // Load ideas from API
+  const loadIdeas = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/admin/writing-ideas');
+      const result = await response.json();
+
+      if (result.success) {
+        setIdeas(result.data.ideas || []);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to load writing ideas",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error loading ideas:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load writing ideas",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const ideasWithIds = writingIdeas.map((idea, index) => ({
-      ...idea,
-      id: index
-    }));
-    setIdeas(ideasWithIds);
+    loadIdeas();
   }, []);
 
   // Filter ideas based on search term
@@ -39,41 +68,147 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
     idea.placeholder.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string) => {
     setEditingId(id);
     setIsAddingNew(false);
   };
 
-  const handleSave = (id: number, updatedIdea: WritingIdea) => {
-    setIdeas(prev => prev.map(idea => 
-      idea.id === id ? { ...idea, ...updatedIdea } : idea
-    ));
-    setEditingId(null);
-    // TODO: Save to backend/file system
-    console.log('Saving idea:', updatedIdea);
-  };
+  const handleSave = async (id: string, updatedIdea: WritingIdea) => {
+    try {
+      setIsSaving(true);
+      const response = await fetch('/api/admin/writing-ideas', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id,
+          title: updatedIdea.title,
+          placeholder: updatedIdea.placeholder
+        })
+      });
 
-  const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this writing idea?')) {
-      setIdeas(prev => prev.filter(idea => idea.id !== id));
-      // TODO: Delete from backend/file system
-      console.log('Deleting idea with id:', id);
+      const result = await response.json();
+
+      if (result.success) {
+        setIdeas(prev => prev.map(idea =>
+          idea.id === id ? { ...idea, ...updatedIdea, updatedAt: new Date().toISOString() } : idea
+        ));
+        setEditingId(null);
+        toast({
+          title: "Success",
+          description: "Writing idea updated successfully"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update writing idea",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating idea:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update writing idea",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleAddNew = () => {
-    if (newIdea.title.trim() && newIdea.placeholder.trim()) {
-      const newId = Math.max(...ideas.map(i => i.id)) + 1;
-      const ideaToAdd: EditingIdea = {
-        ...newIdea,
-        id: newId,
-        isNew: true
-      };
-      setIdeas(prev => [ideaToAdd, ...prev]);
-      setNewIdea({ title: '', placeholder: '' });
-      setIsAddingNew(false);
-      // TODO: Save to backend/file system
-      console.log('Adding new idea:', ideaToAdd);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this writing idea?')) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const response = await fetch(`/api/admin/writing-ideas?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setIdeas(prev => prev.filter(idea => idea.id !== id));
+        toast({
+          title: "Success",
+          description: "Writing idea deleted successfully"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete writing idea",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting idea:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete writing idea",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddNew = async () => {
+    if (!newIdea.title.trim() || !newIdea.placeholder.trim()) {
+      toast({
+        title: "Error",
+        description: "Both title and placeholder are required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const response = await fetch('/api/admin/writing-ideas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newIdea.title.trim(),
+          placeholder: newIdea.placeholder.trim()
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const ideaToAdd: StoredWritingIdea = {
+          ...result.data.idea,
+          isNew: true
+        };
+        setIdeas(prev => [ideaToAdd, ...prev]);
+        setNewIdea({ title: '', placeholder: '' });
+        setIsAddingNew(false);
+        toast({
+          title: "Success",
+          description: "Writing idea added successfully"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to add writing idea",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error adding idea:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add writing idea",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -96,11 +231,21 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="wewrite-input-with-left-icon w-64"
+                disabled={isLoading}
               />
             </div>
             <Button
+              onClick={loadIdeas}
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button
               onClick={() => setIsAddingNew(true)}
-              disabled={isAddingNew}
+              disabled={isAddingNew || isLoading || isSaving}
               size="sm"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -109,7 +254,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Manage writing ideas that appear in the ideas banner. Total: {ideas.length} ideas
+          Manage writing ideas that appear when creating new pages. Total: {isLoading ? '...' : ideas.length} ideas
         </p>
       </CardHeader>
       <CardContent>
@@ -138,11 +283,15 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleAddNew} size="sm">
+                  <Button
+                    onClick={handleAddNew}
+                    size="sm"
+                    disabled={isSaving || !newIdea.title.trim() || !newIdea.placeholder.trim()}
+                  >
                     <Save className="h-4 w-4 mr-2" />
-                    Save
+                    {isSaving ? 'Saving...' : 'Save'}
                   </Button>
-                  <Button onClick={handleCancel} variant="secondary" size="sm">
+                  <Button onClick={handleCancel} variant="secondary" size="sm" disabled={isSaving}>
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
@@ -152,24 +301,40 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
           )}
 
           {/* Ideas List */}
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {filteredIdeas.map((idea) => (
-              <IdeaRow
-                key={idea.id}
-                idea={idea}
-                isEditing={editingId === idea.id}
-                onEdit={() => handleEdit(idea.id)}
-                onSave={(updatedIdea) => handleSave(idea.id, updatedIdea)}
-                onDelete={() => handleDelete(idea.id)}
-                onCancel={handleCancel}
-              />
-            ))}
-          </div>
-
-          {filteredIdeas.length === 0 && searchTerm && (
-            <div className="text-center py-8 text-muted-foreground">
-              No ideas found matching "{searchTerm}"
+          {isLoading ? (
+            <div className="text-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+              <p className="text-muted-foreground">Loading writing ideas...</p>
             </div>
+          ) : (
+            <>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {filteredIdeas.map((idea) => (
+                  <IdeaRow
+                    key={idea.id}
+                    idea={idea}
+                    isEditing={editingId === idea.id}
+                    onEdit={() => handleEdit(idea.id)}
+                    onSave={(updatedIdea) => handleSave(idea.id, updatedIdea)}
+                    onDelete={() => handleDelete(idea.id)}
+                    onCancel={handleCancel}
+                    isSaving={isSaving}
+                  />
+                ))}
+              </div>
+
+              {filteredIdeas.length === 0 && searchTerm && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No ideas found matching "{searchTerm}"
+                </div>
+              )}
+
+              {filteredIdeas.length === 0 && !searchTerm && !isLoading && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No writing ideas found. Add your first idea above.
+                </div>
+              )}
+            </>
           )}
         </div>
       </CardContent>
@@ -178,15 +343,16 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
 }
 
 interface IdeaRowProps {
-  idea: EditingIdea;
+  idea: StoredWritingIdea;
   isEditing: boolean;
   onEdit: () => void;
   onSave: (idea: WritingIdea) => void;
   onDelete: () => void;
   onCancel: () => void;
+  isSaving: boolean;
 }
 
-function IdeaRow({ idea, isEditing, onEdit, onSave, onDelete, onCancel }: IdeaRowProps) {
+function IdeaRow({ idea, isEditing, onEdit, onSave, onDelete, onCancel, isSaving }: IdeaRowProps) {
   const [editTitle, setEditTitle] = useState(idea.title);
   const [editPlaceholder, setEditPlaceholder] = useState(idea.placeholder);
 
@@ -225,11 +391,15 @@ function IdeaRow({ idea, isEditing, onEdit, onSave, onDelete, onCancel }: IdeaRo
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleSave} size="sm">
+            <Button
+              onClick={handleSave}
+              size="sm"
+              disabled={isSaving || !editTitle.trim() || !editPlaceholder.trim()}
+            >
               <Save className="h-4 w-4 mr-2" />
-              Save
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
-            <Button onClick={onCancel} variant="secondary" size="sm">
+            <Button onClick={onCancel} variant="secondary" size="sm" disabled={isSaving}>
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
@@ -256,10 +426,16 @@ function IdeaRow({ idea, isEditing, onEdit, onSave, onDelete, onCancel }: IdeaRo
           </p>
         </div>
         <div className="flex gap-1 ml-4">
-          <Button onClick={onEdit} variant="ghost" size="sm">
+          <Button onClick={onEdit} variant="ghost" size="sm" disabled={isSaving}>
             <Edit2 className="h-4 w-4" />
           </Button>
-          <Button onClick={onDelete} variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+          <Button
+            onClick={onDelete}
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={isSaving}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

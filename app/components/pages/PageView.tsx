@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { getPageById } from "../../utils/apiClient";
 import { getPageVersions, getPageVersionById } from "../../services/versionService";
 import { getOptimizedPageData } from "../../utils/readOptimizer";
-import { recordPageView } from "../../firebase/pageViews";
+import { recordPageView } from "../../utils/apiClient";
 import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
 import { useAuth } from '../../providers/AuthProvider';
 import { DataContext } from "../../providers/DataProvider";
@@ -733,18 +733,13 @@ export default function PageView({
             return user.username;
           }
 
-          // Otherwise, try to fetch from Firebase Realtime Database
+          // Otherwise, try to fetch from API
           try {
-            const { getDatabase, ref, get } = await import('firebase/database');
-            const { app } = await import('../../firebase/config');
+            const { getUserProfile } = await import('../../utils/apiClient');
+            const userData = await getUserProfile(page.userId);
 
-            const rtdb = getDatabase(app);
-            const userRef = ref(rtdb, `users/${page.userId}`);
-            const userSnapshot = await get(userRef);
-
-            if (userSnapshot.exists()) {
-              const userData = userSnapshot.val();
-              return userData.username || 'Anonymous';
+            if (userData?.username) {
+              return userData.username;
             }
           } catch (error) {
             console.error('Error fetching username for recent page:', error);

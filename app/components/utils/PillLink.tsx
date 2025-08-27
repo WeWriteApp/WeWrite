@@ -303,6 +303,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
             }
 
             // Don't handle click if component is not clickable
+            // Allow event bubbling for parent handlers when not clickable
             if (!clickable) {
               return;
             }
@@ -390,9 +391,9 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           }
 
           // Don't handle click if component is not clickable
+          // Only prevent default to avoid navigation, but allow event bubbling for parent handlers
           if (!clickable) {
             e.preventDefault();
-            e.stopPropagation();
             return;
           }
 

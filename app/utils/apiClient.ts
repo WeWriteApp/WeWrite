@@ -13,44 +13,200 @@ interface ApiResponse<T = any> {
 }
 
 /**
- * Base API client function
+ * Consolidated API client with deduplication and caching
+ * Replaces multiple overlapping utilities: apiDeduplication.ts, requestDeduplication.ts, unifiedApiClient.ts
  */
-async function apiCall<T = any>(
-  endpoint: string, 
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(endpoint, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      credentials: 'include',
-      ...options,
+
+interface CacheEntry<T = any> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+interface PendingRequest<T = any> {
+  promise: Promise<T>;
+  timestamp: number;
+}
+
+class ConsolidatedApiClient {
+  private cache = new Map<string, CacheEntry>();
+  private pendingRequests = new Map<string, PendingRequest>();
+  private readonly DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly DEDUP_WINDOW = 5000; // 5 seconds
+
+  private generateKey(url: string, options: RequestInit = {}): string {
+    const method = options.method || 'GET';
+    const body = options.body ? JSON.stringify(options.body) : '';
+    return `${method}:${url}:${body}`;
+  }
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  private setCached<T>(key: string, data: T, ttl: number): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
     });
+  }
 
-    const data = await response.json();
+  async call<T = any>(
+    endpoint: string,
+    options: RequestInit & {
+      params?: Record<string, string | number | boolean>;
+      cacheTTL?: number;
+      skipCache?: boolean;
+      skipDedup?: boolean;
+    } = {}
+  ): Promise<ApiResponse<T>> {
+    const { params, cacheTTL = this.DEFAULT_CACHE_TTL, skipCache = false, skipDedup = false, ...fetchOptions } = options;
 
-    if (!response.ok) {
-      return {
+    // Build URL with query parameters
+    let url = endpoint;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url += (url.includes('?') ? '&' : '?') + queryString;
+      }
+    }
+
+    const key = this.generateKey(url, fetchOptions);
+
+    // Check cache first
+    if (!skipCache && fetchOptions.method !== 'POST' && fetchOptions.method !== 'PUT' && fetchOptions.method !== 'DELETE') {
+      const cached = this.getCached<ApiResponse<T>>(key);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    // Check for pending request
+    if (!skipDedup) {
+      const pending = this.pendingRequests.get(key);
+      if (pending && Date.now() - pending.timestamp < this.DEDUP_WINDOW) {
+        return pending.promise as Promise<ApiResponse<T>>;
+      }
+    }
+
+    // Make the request
+    const requestPromise = this.makeRequest<T>(url, fetchOptions, cacheTTL, key);
+
+    if (!skipDedup) {
+      this.pendingRequests.set(key, {
+        promise: requestPromise,
+        timestamp: Date.now()
+      });
+    }
+
+    return requestPromise;
+  }
+
+  private async makeRequest<T>(url: string, options: RequestInit, cacheTTL: number, cacheKey: string): Promise<ApiResponse<T>> {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        credentials: 'include',
+        ...options,
+      });
+
+      const data = await response.json();
+
+      const result: ApiResponse<T> = response.ok ? {
+        success: true,
+        data: data.data || data,
+        message: data.message
+      } : {
         success: false,
         error: data.error || `HTTP ${response.status}`,
         message: data.message
       };
-    }
 
-    return {
-      success: true,
-      data: data.data || data,
-      message: data.message
-    };
-  } catch (error) {
-    console.error('API call failed:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Network error'
-    };
+      // Cache successful GET requests
+      if (response.ok && (!options.method || options.method === 'GET')) {
+        this.setCached(cacheKey, result, cacheTTL);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('API call failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error'
+      };
+    } finally {
+      this.pendingRequests.delete(cacheKey);
+    }
   }
+
+  // Convenience methods
+  async get<T>(endpoint: string, options?: Omit<Parameters<typeof this.call>[1], 'method'>): Promise<ApiResponse<T>> {
+    return this.call<T>(endpoint, { ...options, method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: any, options?: Omit<Parameters<typeof this.call>[1], 'method' | 'body'>): Promise<ApiResponse<T>> {
+    return this.call<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined
+    });
+  }
+
+  async put<T>(endpoint: string, data?: any, options?: Omit<Parameters<typeof this.call>[1], 'method' | 'body'>): Promise<ApiResponse<T>> {
+    return this.call<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined
+    });
+  }
+
+  async delete<T>(endpoint: string, options?: Omit<Parameters<typeof this.call>[1], 'method'>): Promise<ApiResponse<T>> {
+    return this.call<T>(endpoint, { ...options, method: 'DELETE' });
+  }
+
+  // Cache management
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  invalidateCache(pattern: RegExp): void {
+    for (const key of this.cache.keys()) {
+      if (pattern.test(key)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+// Global instance
+const consolidatedClient = new ConsolidatedApiClient();
+
+/**
+ * Base API client function - now uses consolidated client
+ */
+async function apiCall<T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  return consolidatedClient.call<T>(endpoint, options);
 }
 
 /**
@@ -261,6 +417,87 @@ export const homeApi = {
 };
 
 /**
+ * Analytics Operations
+ */
+export const analyticsApi = {
+  /**
+   * Record page view
+   */
+  async recordPageView(pageId: string, userId?: string): Promise<ApiResponse> {
+    return apiCall('/api/analytics/page-view', {
+      method: 'POST',
+      body: JSON.stringify({ pageId, userId })
+    });
+  },
+
+  /**
+   * Get user streaks
+   */
+  async getUserStreaks(userId: string): Promise<ApiResponse> {
+    return apiCall(`/api/analytics/streaks?userId=${encodeURIComponent(userId)}`);
+  },
+
+  /**
+   * Get global analytics counters
+   */
+  async getCounters(): Promise<ApiResponse> {
+    return apiCall('/api/analytics/counters');
+  },
+
+  /**
+   * Get page analytics
+   */
+  async getPageAnalytics(pageId: string): Promise<ApiResponse> {
+    return apiCall(`/api/analytics/page/${encodeURIComponent(pageId)}`);
+  },
+
+  /**
+   * Get user analytics
+   */
+  async getUserAnalytics(userId: string): Promise<ApiResponse> {
+    return apiCall(`/api/analytics/user/${encodeURIComponent(userId)}`);
+  },
+
+  /**
+   * Update analytics counters
+   */
+  async updateCounters(counters: any, operation: 'set' | 'increment' = 'set'): Promise<ApiResponse> {
+    return apiCall('/api/analytics/counters', {
+      method: 'POST',
+      body: JSON.stringify({ counters, operation })
+    });
+  },
+
+  /**
+   * Get analytics aggregations
+   */
+  async getAggregations(options: {
+    type: 'hourly' | 'daily';
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse> {
+    const params = new URLSearchParams({
+      type: options.type,
+      ...(options.limit && { limit: String(options.limit) }),
+      ...(options.startDate && { startDate: options.startDate }),
+      ...(options.endDate && { endDate: options.endDate })
+    });
+    return apiCall(`/api/analytics/aggregations?${params}`);
+  },
+
+  /**
+   * Create/update analytics aggregation
+   */
+  async updateAggregation(type: 'hourly' | 'daily', date: string, data: any): Promise<ApiResponse> {
+    return apiCall('/api/analytics/aggregations', {
+      method: 'POST',
+      body: JSON.stringify({ type, date, data })
+    });
+  }
+};
+
+/**
  * Legacy Firebase function replacements
  * These functions provide drop-in replacements for common Firebase operations
  */
@@ -271,6 +508,38 @@ export const homeApi = {
 export async function getUserProfile(userId: string) {
   const response = await userProfileApi.getProfile(userId);
   return response.success ? response.data : null;
+}
+
+/**
+ * Replace getBatchUserData from firebase/batchUserData.ts
+ * Now uses consolidated client for better performance
+ */
+export async function getBatchUserData(userIds: string[]) {
+  const response = await consolidatedClient.post('/api/users/batch', { userIds }, {
+    cacheTTL: 5 * 60 * 1000 // 5 minutes cache for user data
+  });
+  return response.success ? response.data : {};
+}
+
+/**
+ * Export consolidated client for advanced usage
+ */
+export { consolidatedClient as apiClient };
+
+/**
+ * Replace getUserStreaks from firebase/streaks.ts
+ */
+export async function getUserStreaks(userId: string) {
+  const response = await analyticsApi.getUserStreaks(userId);
+  return response.success ? response.data : null;
+}
+
+/**
+ * Replace recordPageView from firebase/pageViews.ts
+ */
+export async function recordPageView(pageId: string, userId?: string) {
+  const response = await analyticsApi.recordPageView(pageId, userId);
+  return response.success;
 }
 
 /**
@@ -621,55 +890,7 @@ export const linksApi = {
   }
 };
 
-/**
- * Analytics Operations
- */
-export const analyticsApi = {
-  /**
-   * Get global analytics counters
-   */
-  async getCounters(): Promise<ApiResponse> {
-    return apiCall('/api/analytics/counters');
-  },
-
-  /**
-   * Update analytics counters
-   */
-  async updateCounters(counters: any, operation: 'set' | 'increment' = 'set'): Promise<ApiResponse> {
-    return apiCall('/api/analytics/counters', {
-      method: 'POST',
-      body: JSON.stringify({ counters, operation })
-    });
-  },
-
-  /**
-   * Get analytics aggregations
-   */
-  async getAggregations(options: {
-    type: 'hourly' | 'daily';
-    limit?: number;
-    startDate?: string;
-    endDate?: string;
-  }): Promise<ApiResponse> {
-    const params = new URLSearchParams({
-      type: options.type,
-      ...(options.limit && { limit: String(options.limit) }),
-      ...(options.startDate && { startDate: options.startDate }),
-      ...(options.endDate && { endDate: options.endDate })
-    });
-    return apiCall(`/api/analytics/aggregations?${params}`);
-  },
-
-  /**
-   * Create/update analytics aggregation
-   */
-  async updateAggregation(type: 'hourly' | 'daily', date: string, data: any): Promise<ApiResponse> {
-    return apiCall('/api/analytics/aggregations', {
-      method: 'POST',
-      body: JSON.stringify({ type, date, data })
-    });
-  }
-};
+// REMOVED: Duplicate analyticsApi declaration - consolidated into the main one above
 
 // REMOVED: Duplicate rtdbApi declaration - using the one above
 

@@ -6,6 +6,7 @@ import { getRecentSearches, clearRecentSearches, removeRecentSearch } from "../.
 import { Button } from "../ui/button";
 import PillLink from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
+import { getBatchUserData } from '../../utils/apiDeduplication';
 
 /**
  * RecentSearches Component
@@ -19,6 +20,7 @@ import { UsernameBadge } from "../ui/UsernameBadge";
 export default function RecentSearches({ onSelect, userId = null }) {
   const [recentSearches, setRecentSearches] = useState([]);
   const [searchResults, setSearchResults] = useState({}); // Will store { pages: [], users: [] }
+  const [userSubscriptionData, setUserSubscriptionData] = useState(new Map());
   const [isLoading, setIsLoading] = useState(false);
 
   // Load recent searches and their results (simplified approach)
@@ -67,6 +69,30 @@ export default function RecentSearches({ onSelect, userId = null }) {
         });
 
         setSearchResults(resultsMap);
+
+        // Fetch subscription data for page authors
+        const allPages = Object.values(resultsMap).flatMap(results => results.pages || []);
+        if (allPages.length > 0) {
+          const userIds = [...new Set(allPages.map(page => page.userId).filter(Boolean))];
+          if (userIds.length > 0) {
+            try {
+              const response = await getBatchUserData(userIds);
+              if (response.success && response.data) {
+                const newUserData = new Map();
+                Object.entries(response.data).forEach(([userId, userData]) => {
+                  newUserData.set(userId, {
+                    tier: userData.tier,
+                    subscriptionStatus: userData.subscriptionStatus,
+                    subscriptionAmount: userData.subscriptionAmount
+                  });
+                });
+                setUserSubscriptionData(newUserData);
+              }
+            } catch (error) {
+              console.warn('Failed to fetch user subscription data:', error);
+            }
+          }
+        }
       } catch (error) {
         console.error('Error loading recent searches:', error);
         setRecentSearches([]);
@@ -181,9 +207,21 @@ export default function RecentSearches({ onSelect, userId = null }) {
                           {page.title || 'Untitled'}
                         </span>
                       </PillLink>
-                      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                        by {page.username || 'Unknown'}
-                      </span>
+                      {page.username && page.userId && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground truncate max-w-[120px]">
+                          <span>by</span>
+                          <UsernameBadge
+                            userId={page.userId}
+                            username={page.username}
+                            tier={userSubscriptionData.get(page.userId)?.tier}
+                            subscriptionStatus={userSubscriptionData.get(page.userId)?.subscriptionStatus}
+                            subscriptionAmount={userSubscriptionData.get(page.userId)?.subscriptionAmount}
+                            size="sm"
+                            variant="link"
+                            className="text-xs truncate"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
 

@@ -11,14 +11,13 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 // Swipeable tabs removed - simplified admin interface
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
 import { usePWA } from '../providers/PWAProvider';
 import Link from 'next/link';
 // UserManagement import removed - users tab deleted
-
 
 import { isAdmin } from '../utils/isAdmin';
 
@@ -44,6 +43,45 @@ export default function AdminPage() {
   const [showPWABanner, setShowPWABanner] = useState(false);
   const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(false);
   const [noSubscriptionMode, setNoSubscriptionMode] = useState(false);
+
+  // Writing ideas state
+  const [writingIdeasCount, setWritingIdeasCount] = useState<number | null>(null);
+
+  // Load writing ideas count
+  useEffect(() => {
+    const loadWritingIdeasCount = async () => {
+      try {
+        console.log('Loading writing ideas count...');
+        const response = await fetch('/api/admin/writing-ideas');
+        console.log('Writing ideas API response status:', response.status);
+
+        if (!response.ok) {
+          console.error('Writing ideas API failed:', response.status, response.statusText);
+          setWritingIdeasCount(0);
+          return;
+        }
+
+        const result = await response.json();
+        console.log('Writing ideas API result:', result);
+
+        if (result.success) {
+          setWritingIdeasCount(result.data.total || 0);
+          console.log('Set writing ideas count to:', result.data.total || 0);
+        } else {
+          console.error('Writing ideas API returned error:', result.error);
+          setWritingIdeasCount(0);
+        }
+      } catch (error) {
+        console.error('Error loading writing ideas count:', error);
+        setWritingIdeasCount(0);
+      }
+    };
+
+    // Only load if user is authenticated and admin
+    if (user && !authLoading) {
+      loadWritingIdeasCount();
+    }
+  }, [user, authLoading]);
 
   // Initialize email banner override from localStorage
   useEffect(() => {
@@ -349,7 +387,26 @@ export default function AdminPage() {
               </div>
             </div>
 
-
+            {/* Writing Ideas Management */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Writing Ideas</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Manage writing ideas that appear when users create new pages. Currently: {writingIdeasCount !== null ? `${writingIdeasCount} ideas` : 'Loading...'}
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/writing-ideas')}
+                >
+                  <FileText className="h-4 w-4" />
+                  Manage Writing Ideas
+                </Button>
+              </div>
+            </div>
 
           </div>
         </div>

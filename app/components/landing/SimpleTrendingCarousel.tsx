@@ -9,7 +9,7 @@ import ContentCarousel from './ContentCarousel';
 import { Loader } from 'lucide-react';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
-import { getBatchUserData } from '../../firebase/batchUserData';
+import { getBatchUserData } from '../../utils/apiClient';
 import { AllocationControls } from '../payments/AllocationControls';
 import { useAuth } from '../../providers/AuthProvider';
 // import { getTrendingPages } from '../../firebase/pageViews';

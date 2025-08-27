@@ -70,10 +70,10 @@ const SingleProfileView = ({ profile }) => {
     <ProfilePagesProvider userId={profile.uid}>
       {/* Content area - header spacing handled by NavPageLayout */}
       <div className="space-y-6">
-        {/* Profile header and tabs - unified card styling */}
+        {/* Profile header - separate card */}
         <div className="wewrite-card">
           {/* Username row */}
-        <div className="flex flex-col items-center mb-6">
+          <div className="flex flex-col items-center">
           <div className="flex items-center justify-center gap-2 mb-3">
             <UsernameBadge
               userId={profile.uid}
@@ -86,8 +86,7 @@ const SingleProfileView = ({ profile }) => {
             />
           </div>
 
-          {/* Action buttons - responsive horizontal/vertical layout */}
-          <div className="mb-3">
+            {/* Action buttons - responsive horizontal/vertical layout */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-2">
               {/* Follow button - only show for other users */}
               {!isCurrentUser && (
@@ -114,15 +113,15 @@ const SingleProfileView = ({ profile }) => {
             </div>
           </div>
 
-          {/* UsernameBadge handles all subscription display automatically */}
+
         </div>
 
 
 
 
 
-          <UserProfileTabs profile={profile} />
-        </div>
+        {/* Profile tabs and content - outside of card */}
+        <UserProfileTabs profile={profile} />
       </div>
 
       {/* Floating allocation bar - only show on other people's pages */}
