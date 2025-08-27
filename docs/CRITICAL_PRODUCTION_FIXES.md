@@ -1,5 +1,47 @@
 # 🚨 Critical Production Fixes - Immediate Deployment Required
 
+## 🚨 ACTIVE ISSUE: Firebase Admin Import Path Errors (August 27, 2025)
+
+### Issue Description
+**Severity**: CRITICAL - Pages returning 404 "Page Not Found" errors in production
+**Affected URLs**: All page routes (e.g., `/n4wauIeGOhXTrQWvX93Q`)
+**Root Cause**: Outdated Firebase Admin import paths causing API initialization failures
+
+### Technical Details
+- **Problem**: 80+ API routes importing from `../firebase/firebaseAdmin.ts` (old path)
+- **Correct Path**: `../firebase/admin.ts` (current working path)
+- **Impact**: When old import fails, Firebase Admin can't initialize, causing API routes to return 500 errors
+- **Frontend Effect**: Page component receives API error, displays "Page Not Found" instead of actual page content
+
+### Immediate Hotfix Applied ✅
+**Commit**: `0afdca66` - "hotfix: Fix Firebase Admin imports causing page not found errors"
+**Fixed Routes**:
+- `/api/pages/[id]/route.ts` - Core page loading API
+- `/api/auth-helper.ts` - Authentication system
+- `/api/admin-auth-helper.ts` - Admin authentication
+
+### Remaining Work Required
+**80+ API routes** still need import path updates. Priority order:
+1. **HIGH**: Core page/user/auth routes
+2. **MEDIUM**: Admin/financial routes
+3. **LOW**: Debug/dev routes
+
+### Quick Fix Command
+```bash
+# Find all files with old import
+grep -r "firebase/firebaseAdmin" app/api/
+
+# Replace pattern (example)
+sed -i 's|firebase/firebaseAdmin|firebase/admin|g' app/api/[route]/route.ts
+```
+
+### Prevention
+- Add linting rule to prevent `firebase/firebaseAdmin` imports
+- Update documentation to specify correct import paths
+- Consider consolidating Firebase Admin initialization
+
+---
+
 ## **Issues Fixed**
 
 Based on the production console errors, I've implemented the following critical fixes:

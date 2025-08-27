@@ -37,6 +37,7 @@ import ColorSystemManager from '@/components/settings/ColorSystemManager';
 import ThemeToggle from '@/components/utils/ThemeToggle';
 import VerifyEmailBanner from '../../components/utils/VerifyEmailBanner';
 import PWABanner from '../../components/utils/PWABanner';
+import PillLink from '../../components/utils/PillLink';
 
 interface ComponentShowcaseProps {
   title: string;
@@ -487,6 +488,50 @@ export default function DesignSystemPage() {
                   <Plus className="h-6 w-6" />
                   <span className="text-xs">Add</span>
                 </div>
+              </div>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* PillLink Components */}
+          <ComponentShowcase
+            title="PillLink Components"
+            path="app/components/utils/PillLink.tsx"
+            description="Interactive pill-shaped links used throughout the application for pages, users, and external links"
+          >
+            <StateDemo label="Page Links">
+              <div className="flex flex-wrap gap-2">
+                <PillLink href="/example-page" pageId="example123">Normal Page</PillLink>
+                <PillLink href="/example-page" pageId="example123" isOwned={true}>Owned Page</PillLink>
+                <PillLink href="/example-page" pageId="example123" isPublic={true}>Public Page</PillLink>
+                <PillLink href="/example-page" pageId="example123" isLoading={true}>Loading Page</PillLink>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="User Links">
+              <div className="flex flex-wrap gap-2">
+                <PillLink href="/user/example">@username</PillLink>
+                <PillLink href="/user/example" byline="Author">@author</PillLink>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="External Links">
+              <div className="flex flex-wrap gap-2">
+                <PillLink href="https://example.com">External Link</PillLink>
+                <PillLink href="https://github.com">GitHub</PillLink>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Special States">
+              <div className="flex flex-wrap gap-2">
+                <PillLink href="/deleted-page" deleted={true}>Deleted Page</PillLink>
+                <PillLink href="/fallback-page" isFallback={true}>Fallback Link</PillLink>
+                <PillLink href="/suggestion" isSuggestion={true}>Link Suggestion</PillLink>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Group Links">
+              <div className="flex flex-wrap gap-2">
+                <PillLink href="/group/example" groupId="group123">Group Page</PillLink>
               </div>
             </StateDemo>
           </ComponentShowcase>

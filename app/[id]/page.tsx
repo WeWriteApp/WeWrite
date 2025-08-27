@@ -92,6 +92,7 @@ import UnifiedLoader from '../components/ui/unified-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
 import FullPageError from '../components/ui/FullPageError';
+import PageDeletedView from '../components/pages/PageDeletedView';
 import { useAuth } from '../providers/AuthProvider';
 import { startPageLoadTracking, recordPageError, finishPageLoadTracking } from '../utils/pageLoadPerformance';
 
@@ -99,9 +100,10 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const currentAccountUid = user?.uid;
-  const [contentType, setContentType] = useState<'page' | 'not-found' | 'error' | null>(null);
+  const [contentType, setContentType] = useState<'page' | 'not-found' | 'deleted' | 'error' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [id, setId] = useState('');
+  const [pageTitle, setPageTitle] = useState<string>('');
 
   useEffect(() => {
     async function processParams() {
@@ -192,6 +194,21 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
             setIsLoading(false);
             return;
           } else if (response.status === 404) {
+            // Check if it's a deleted page by using the debug API
+            try {
+              const debugResponse = await fetch(`/api/debug/page/${cleanId}`);
+              if (debugResponse.ok) {
+                const debugData = await debugResponse.json();
+                if (debugData.pageData?.deleted === true) {
+                  setPageTitle(debugData.pageData.title || 'Untitled');
+                  setContentType('deleted');
+                  setIsLoading(false);
+                  return;
+                }
+              }
+            } catch (debugError) {
+              console.warn("Debug API check failed:", debugError);
+            }
             // Check if it's a user ID and redirect
             try {
               const userCheckResponse = await fetch(`/api/users/${cleanId}/check`, {
@@ -300,6 +317,16 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
           <PageView params={{ id }} />
         </PageViewErrorBoundary>
       </ClientOnlyPageWrapper>
+    );
+  }
+
+  if (contentType === 'deleted') {
+    console.log('🔍 ContentPage: Rendering deleted page view for ID:', id);
+    return (
+      <PageDeletedView
+        pageTitle={pageTitle}
+        pageId={id}
+      />
     );
   }
 

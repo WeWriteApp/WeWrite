@@ -201,12 +201,24 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
 
-  // Deleted page pill
+  // Deleted page pill - clickable to show deleted page view
   if (deleted) {
+    const handleDeletedClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (onClick) {
+        onClick(e);
+      } else if (pageId) {
+        router.push(`/${pageId}`);
+      } else if (href && href !== '#') {
+        router.push(href);
+      }
+    };
+
     return (
       <span
-        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out max-w-full overflow-hidden bg-muted text-muted-foreground opacity-60 cursor-not-allowed px-2 py-0.5 ${className}`}
-        style={{ pointerEvents: 'none' }}
+        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out max-w-full overflow-hidden bg-muted text-muted-foreground opacity-60 cursor-pointer hover:opacity-80 px-2 py-0.5 ${className}`}
+        onClick={handleDeletedClick}
+        title="This page has been deleted. Click to see more options."
       >
         <Trash2 size={14} className="mr-1 flex-shrink-0" />
         <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">deleted page</span>
