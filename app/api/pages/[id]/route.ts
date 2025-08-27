@@ -3,7 +3,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { pageCache } from '../../../utils/pageCache';
 import { getCollectionNameAsync } from '../../../utils/environmentConfig';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getFirebaseAdmin } from '../../../firebase/admin';
 
 /**
  * Fetch page data directly using Firebase Admin

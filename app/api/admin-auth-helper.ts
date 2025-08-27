@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from './auth-helper';
-import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { getFirebaseAdmin } from '../firebase/admin';
 
 // Define admin user IDs - ONLY these emails have admin access
 const ADMIN_USER_IDS = [

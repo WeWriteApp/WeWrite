@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { getFirebaseAdmin } from '../firebase/admin';
 import { DEV_TEST_USERS } from '../utils/testUsers';
 
 // Type definitions
