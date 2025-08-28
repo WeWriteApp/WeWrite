@@ -26,6 +26,8 @@ interface UsernameBadgeProps {
   onClick?: (e: React.MouseEvent) => void;
   variant?: 'link' | 'pill';
   pillVariant?: 'primary' | 'secondary' | 'outline';
+  isLinkEditor?: boolean;
+  onLinkEditorSelect?: () => void;
 }
 
 export function UsernameBadge({
@@ -39,7 +41,9 @@ export function UsernameBadge({
   showBadge = true,
   onClick,
   variant = 'link',
-  pillVariant = 'primary'
+  pillVariant = 'primary',
+  isLinkEditor = false,
+  onLinkEditorSelect
 }: UsernameBadgeProps) {
   // State for fresh username fetching
   const [freshUsername, setFreshUsername] = useState<string | null>(null);
@@ -199,6 +203,14 @@ export function UsernameBadge({
 
   // Handle click - show modal on user pages, navigate elsewhere
   const handleClick = (e: React.MouseEvent) => {
+    // Handle link editor mode first
+    if (isLinkEditor && onLinkEditorSelect) {
+      e.preventDefault();
+      e.stopPropagation();
+      onLinkEditorSelect();
+      return;
+    }
+
     if (onClick) {
       onClick(e);
       return;
@@ -245,6 +257,8 @@ export function UsernameBadge({
           variant={pillVariant}
           onClick={handleClick}
           className={className}
+          isLinkEditor={isLinkEditor}
+          onLinkEditorSelect={onLinkEditorSelect}
         >
           {wrappedContent}
         </PillLink>

@@ -23,6 +23,7 @@ interface LinkEditorModalProps {
   } | null;
   selectedText?: string;
   linkedPageIds?: string[];
+  currentPageId?: string;
 }
 
 export default function LinkEditorModal({
@@ -31,7 +32,8 @@ export default function LinkEditorModal({
   onInsertLink,
   editingLink = null,
   selectedText = '',
-  linkedPageIds = []
+  linkedPageIds = [],
+  currentPageId
 }: LinkEditorModalProps) {
 
   const { user } = useAuth();
@@ -284,6 +286,7 @@ export default function LinkEditorModal({
                 className="h-full p-2 sm:p-3"
                 preventRedirect={true}
                 linkedPageIds={linkedPageIds}
+                currentPageId={currentPageId}
               />
             </div>
             {!customText && (

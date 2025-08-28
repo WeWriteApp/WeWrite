@@ -40,6 +40,10 @@ export default function BackgroundOptionsCard() {
   const [defaultImages, setDefaultImages] = useState<DefaultBackgroundImage[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
 
+  // State for user's uploaded background image
+  const [userUploadedImage, setUserUploadedImage] = useState<string | null>(null);
+  const [backgroundDataLoading, setBackgroundDataLoading] = useState(true);
+
   // Track previous backgrounds for switching
   const [previousColorBackground, setPreviousColorBackground] = useState(
     background.type === 'solid' ? background : {
@@ -53,6 +57,37 @@ export default function BackgroundOptionsCard() {
   const [previousImageBackground, setPreviousImageBackground] = useState<ImageBackground | null>(
     background.type === 'image' ? background : null
   );
+
+  // Fetch user's background preference data
+  useEffect(() => {
+    const fetchBackgroundData = async () => {
+      try {
+        const response = await fetch('/api/user/background-preference', {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[BackgroundOptionsCard] Fetched background data:', data);
+
+          // Set the uploaded image if it exists
+          if (data.backgroundImage?.url) {
+            setUserUploadedImage(data.backgroundImage.url);
+            console.log('[BackgroundOptionsCard] Found uploaded image:', data.backgroundImage.url);
+          }
+        } else {
+          console.error('Failed to fetch background preference:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching background preference:', error);
+      } finally {
+        setBackgroundDataLoading(false);
+      }
+    };
+
+    fetchBackgroundData();
+  }, []);
 
   // Fetch default background images
   useEffect(() => {
@@ -134,13 +169,15 @@ export default function BackgroundOptionsCard() {
         setPreviousColorBackground(background);
       }
 
-      // Use previous image background if available, otherwise try last uploaded image
+      // Use previous image background if available, otherwise try uploaded images
       if (previousImageBackground) {
         setBackground(previousImageBackground);
-      } else if (lastUploadedImage) {
+      } else if (lastUploadedImage || userUploadedImage) {
+        // Prefer the most recent uploaded image
+        const imageUrl = lastUploadedImage || userUploadedImage;
         const imageBackground: ImageBackground = {
           type: 'image',
-          url: lastUploadedImage,
+          url: imageUrl,
           opacity: 0.15
         };
         setBackground(imageBackground);
@@ -229,7 +266,10 @@ export default function BackgroundOptionsCard() {
               <div className="space-y-3">
                 {hasActiveSubscription ? (
                   <>
-                    <BackgroundImageUpload />
+                    <BackgroundImageUpload
+                      persistedImageUrl={userUploadedImage}
+                      isLoading={backgroundDataLoading}
+                    />
 
                     {/* Overlay Opacity Slider - only show when using image background */}
                     {background.type === 'image' && (

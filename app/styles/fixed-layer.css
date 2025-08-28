@@ -1,12 +1,12 @@
 /* Fixed Layer System - Viewport-fixed UI elements */
 
 :root {
-  /* Z-index scale */
-  --z-fixed-header: 80;
-  --z-fixed-toolbar: 80;
-  --z-fixed-fab: 90;
-  --z-overlay: 100;
-  --z-modal: 1100; /* For modals and dialogs */
+  /* Z-index scale - Proper stacking order */
+  --z-fixed-header: 70;      /* FloatingFinancialHeader - body content layer */
+  --z-fixed-toolbar: 80;     /* Navigation (sidebar, mobile nav) - above body content */
+  --z-fixed-fab: 90;         /* FloatingActionButton - above navigation */
+  --z-overlay: 100;          /* Overlays and backdrops */
+  --z-modal: 1100;           /* For modals and dialogs */
 
   /* Safe positioning */
   --fixed-safe-top: 16px;

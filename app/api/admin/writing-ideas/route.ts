@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { writingIdeas as defaultWritingIdeas, type WritingIdea } from '../../../data/writingIdeas';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
-const COLLECTION_NAME = 'admin_settings';
 const DOCUMENT_ID = 'writing_ideas';
 
 interface StoredWritingIdea extends WritingIdea {
@@ -49,7 +49,9 @@ export async function GET(request: NextRequest) {
 
     console.log('[Writing Ideas API] Getting Firestore database');
     const db = admin.firestore();
-    const docRef = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID);
+    const collectionName = getCollectionName(COLLECTIONS.ADMIN_SETTINGS);
+    console.log(`[Writing Ideas API] Using collection: ${collectionName}`);
+    const docRef = db.collection(collectionName).doc(DOCUMENT_ID);
 
     console.log('[Writing Ideas API] Fetching document from Firestore');
     const doc = await docRef.get();
@@ -145,7 +147,8 @@ export async function POST(request: NextRequest) {
       throw new Error('Firebase Admin not initialized');
     }
     const db = admin.firestore();
-    const docRef = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID);
+    const collectionName = getCollectionName(COLLECTIONS.ADMIN_SETTINGS);
+    const docRef = db.collection(collectionName).doc(DOCUMENT_ID);
     const doc = await docRef.get();
 
     let currentData: WritingIdeasDocument;
@@ -233,7 +236,8 @@ export async function PUT(request: NextRequest) {
       throw new Error('Firebase Admin not initialized');
     }
     const db = admin.firestore();
-    const docRef = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID);
+    const collectionName = getCollectionName(COLLECTIONS.ADMIN_SETTINGS);
+    const docRef = db.collection(collectionName).doc(DOCUMENT_ID);
     const doc = await docRef.get();
 
     if (!doc.exists) {
@@ -316,7 +320,8 @@ export async function DELETE(request: NextRequest) {
       throw new Error('Firebase Admin not initialized');
     }
     const db = admin.firestore();
-    const docRef = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID);
+    const collectionName = getCollectionName(COLLECTIONS.ADMIN_SETTINGS);
+    const docRef = db.collection(collectionName).doc(DOCUMENT_ID);
     const doc = await docRef.get();
 
     if (!doc.exists) {

@@ -126,6 +126,8 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   enableAddToPage = true,
   username
 }) => {
+  const params = useParams();
+  const currentPageId = params?.id as string;
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
 
@@ -423,6 +425,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
           editingLink={null}
           selectedText={selectedText}
           linkedPageIds={[]}
+          currentPageId={currentPageId}
         />,
         document.body
       )}

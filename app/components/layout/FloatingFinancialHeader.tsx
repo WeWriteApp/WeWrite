@@ -430,6 +430,6 @@ export default function FloatingFinancialHeader({
           </FloatingHeader>
         </div>
       </div>
-    </FixedPortal>
+      </FixedPortal>
   );
 }

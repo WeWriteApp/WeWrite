@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
@@ -11,6 +11,73 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from './dropdown-menu';
+
+/**
+ * Financial Dropdown Solo Behavior System
+ *
+ * Uses module-level state to ensure only one financial dropdown can be open at a time.
+ * This approach is simpler and more reliable than React Context because:
+ * 1. No provider nesting required
+ * 2. Direct control over dropdown instances
+ * 3. Immediate synchronization without React render cycles
+ * 4. Works across different component trees
+ */
+let globalOpenDropdown: string | null = null;
+const dropdownInstances = new Set<{
+  id: string;
+  setOpen: (open: boolean) => void;
+}>();
+
+// Register/unregister dropdown instances
+function registerDropdown(id: string, setOpen: (open: boolean) => void) {
+  const instance = { id, setOpen };
+  dropdownInstances.add(instance);
+  return () => dropdownInstances.delete(instance);
+}
+
+// Force close all other dropdowns when one opens
+function openDropdownSolo(targetId: string) {
+  globalOpenDropdown = targetId;
+  dropdownInstances.forEach(instance => {
+    if (instance.id !== targetId) {
+      instance.setOpen(false);
+    }
+  });
+}
+
+// Clear global state when dropdown closes
+function closeDropdown() {
+  globalOpenDropdown = null;
+}
+
+/**
+ * Hook for solo dropdown behavior
+ * Ensures only one dropdown in the group can be open at a time
+ */
+function useSoloDropdown(id: string) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Register this dropdown instance
+  useEffect(() => {
+    const unregister = registerDropdown(id, setIsOpen);
+    return unregister;
+  }, [id]);
+
+  // Handle dropdown open/close with solo behavior
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      openDropdownSolo(id);
+      setIsOpen(true);
+    } else {
+      closeDropdown();
+      setIsOpen(false);
+    }
+  }, [id]);
+
+  return { isOpen, handleOpenChange };
+}
+
+// Note: FinancialDropdownProvider is no longer needed - solo behavior is handled via module-level state
 
 interface FinancialDropdownProps {
   trigger: React.ReactNode;
@@ -51,34 +118,26 @@ export function FinancialDropdown({
   className = '',
   showNavigationButton = true
 }: FinancialDropdownProps) {
-  const [isMobile, setIsMobile] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Detect mobile vs desktop
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+  // Create unique ID for this dropdown
+  const dropdownId = `financial-${title.toLowerCase()}`;
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // Use the solo dropdown hook
+  const { isOpen, handleOpenChange } = useSoloDropdown(dropdownId);
+
+  // Enhanced handler to include onClose callback
+  const handleOpenChangeWithCallback = useCallback((open: boolean) => {
+    handleOpenChange(open);
+    if (!open && onClose) {
+      onClose();
+    }
+  }, [handleOpenChange, onClose]);
 
   return (
-    <DropdownMenu onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChangeWithCallback}>
       <DropdownMenuTrigger asChild>
-        <div
-          ref={triggerRef}
-          className={cn("cursor-pointer flex items-center", className)}
-          data-dropdown-trigger="true"
-          data-dropdown-id={`financial-${title.toLowerCase()}`}
-          aria-expanded={isOpen}
-          // Remove onClick - no more click-to-navigate behavior
-          // Dropdown opens on click, navigation happens via button
-        >
+        <div className={cn("cursor-pointer flex items-center", className)}>
           {trigger}
         </div>
       </DropdownMenuTrigger>
@@ -109,7 +168,7 @@ export function FinancialDropdown({
                 variant="secondary"
                 onClick={() => {
                   // Close dropdown before navigating
-                  setIsOpen(false);
+                  setOpenDropdown(null);
                   onNavigate();
                 }}
                 className="w-full whitespace-nowrap"
@@ -122,7 +181,7 @@ export function FinancialDropdown({
                   size="sm"
                   onClick={() => {
                     // Close dropdown before navigating
-                    setIsOpen(false);
+                    setOpenDropdown(null);
                     // Navigate to fund account page
                     router.push('/settings/fund-account');
                   }}

@@ -69,8 +69,13 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
   useEffect(() => {
     if (initialValue !== undefined && initialValue !== inputValue) {
       setInputValue(initialValue);
+      // If there's an initial value and we haven't searched for it yet, trigger search
+      if (initialValue && initialValue !== lastSearchValue.current && onSearch) {
+        lastSearchValue.current = initialValue;
+        onSearch(initialValue);
+      }
     }
-  }, [initialValue]);
+  }, [initialValue, inputValue, onSearch]);
 
   // Auto-focus effect
   useEffect(() => {
@@ -437,7 +442,7 @@ const SearchPage = React.memo(() => {
 
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput
-        initialValue={currentQuery || initialQuery}
+        initialValue={initialQuery || currentQuery}
         onSearch={handleSearch}
         onClear={handleClear}
         onSave={handleSave}

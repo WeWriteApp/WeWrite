@@ -583,7 +583,7 @@ export default function MobileBottomNav() {
       {/* Backdrop - only shows when expanded, positioned behind the expanded toolbar */}
       {isExpanded && (
         <div
-          className="md:hidden fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+          className="md:hidden fixed inset-0 z-[75] bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
           onClick={(e) => {
             // Only close if clicking directly on backdrop, not during drag operations
             if (e.target === e.currentTarget) {

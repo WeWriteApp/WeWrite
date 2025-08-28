@@ -391,7 +391,10 @@ export const COLLECTIONS = {
   FOLLOWS: 'follows',
   PAGE_FOLLOWERS: 'pageFollowers',
   MIGRATION_AUDIT_LOGS: 'migrationAuditLogs',
-  DEFAULT_BACKGROUND_IMAGES: 'defaultBackgroundImages'
+  DEFAULT_BACKGROUND_IMAGES: 'defaultBackgroundImages',
+
+  // Admin collections
+  ADMIN_SETTINGS: 'admin_settings'
 } as const;
 
 /**

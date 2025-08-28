@@ -50,7 +50,6 @@ export function showUsdAllocationNotification(
   toast({
     title,
     description,
-    duration: 3000,
   });
 }
 
@@ -95,7 +94,6 @@ export function showUserUsdAllocationNotification(
   toast({
     title,
     description,
-    duration: 3000,
   });
 }
 
@@ -116,7 +114,6 @@ export function showUsdAllocationError(
     title: "Allocation Failed",
     description: error || `Unable to update ${contextInfo}. Please try again.`,
     variant: "destructive",
-    duration: 4000,
   });
 }
 
@@ -128,7 +125,6 @@ export function showInsufficientFundsNotification() {
     title: "Insufficient funds",
     description: "You don't have enough available funds for this allocation.",
     variant: "destructive",
-    duration: 4000,
   });
 }
 
@@ -140,7 +136,6 @@ export function showSelfAllocationError() {
     title: "Cannot allocate to your own page",
     description: "You cannot allocate funds to pages you created.",
     variant: "destructive",
-    duration: 4000,
   });
 }
 
@@ -152,7 +147,6 @@ export function showRateLimitNotification() {
     title: "Too many requests",
     description: "Please wait a moment before making another allocation.",
     variant: "destructive",
-    duration: 4000,
   });
 }
 
@@ -164,7 +158,6 @@ export function showNetworkErrorNotification() {
     title: "Network error",
     description: "Unable to connect to the server. Please check your connection and try again.",
     variant: "destructive",
-    duration: 4000,
   });
 }
 
@@ -176,6 +169,5 @@ export function showAuthRequiredNotification() {
     title: "Authentication required",
     description: "Please log in to allocate funds.",
     variant: "destructive",
-    duration: 4000,
   });
 }

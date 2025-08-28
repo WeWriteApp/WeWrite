@@ -410,7 +410,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       const allPages = new Map(); // Use Map to deduplicate
 
       try {
-        const publicPagesSnapshot = await getDocs(publicQuery);
+        const publicPagesSnapshot = await getDocs(pagesQuery);
         console.log(`🌐 Found ${publicPagesSnapshot.size} public pages (server-side filtered)`);
 
         publicPagesSnapshot.forEach(doc => {

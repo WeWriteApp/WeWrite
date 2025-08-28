@@ -133,6 +133,12 @@
 - `PUT /api/rtdb` - Update Realtime Database
 - `DELETE /api/rtdb` - Remove from Realtime Database
 
+### Admin Management
+- `GET /api/admin/writing-ideas` - Get all writing ideas (environment-aware)
+- `POST /api/admin/writing-ideas` - Add new writing idea
+- `PUT /api/admin/writing-ideas` - Update existing writing idea
+- `DELETE /api/admin/writing-ideas?id={id}` - Delete writing idea
+
 ---
 
 ## 🔄 MIGRATION PATTERNS

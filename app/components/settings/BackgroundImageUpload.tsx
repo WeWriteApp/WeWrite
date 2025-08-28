@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, Image as ImageIcon, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppBackground, type ImageBackground } from '@/contexts/AppBackgroundContext';
@@ -8,13 +8,29 @@ import { cn } from '@/lib/utils';
 
 interface BackgroundImageUploadProps {
   className?: string;
+  persistedImageUrl?: string | null;
+  isLoading?: boolean;
 }
 
-export function BackgroundImageUpload({ className }: BackgroundImageUploadProps) {
+export function BackgroundImageUpload({
+  className,
+  persistedImageUrl,
+  isLoading = false
+}: BackgroundImageUploadProps) {
   const { background, setBackground, lastUploadedImage, setLastUploadedImage } = useAppBackground();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use persisted image URL if available, otherwise fall back to context
+  const currentUploadedImage = lastUploadedImage || persistedImageUrl;
+
+  // Update context with persisted image when it's loaded
+  useEffect(() => {
+    if (persistedImageUrl && !lastUploadedImage) {
+      setLastUploadedImage(persistedImageUrl);
+    }
+  }, [persistedImageUrl, lastUploadedImage, setLastUploadedImage]);
 
   const isImageBackground = background.type === 'image';
 
@@ -215,16 +231,47 @@ export function BackgroundImageUpload({ className }: BackgroundImageUploadProps)
           </div>
         </div>
       ) : (
-        /* Upload button for solid backgrounds */
-        <Button
-          variant="secondary"
-          onClick={handleUploadClick}
-          disabled={isUploading}
-          className="w-full h-12 border-dashed"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          {isUploading ? 'Uploading...' : 'Upload Background Image'}
-        </Button>
+        /* Upload section for solid backgrounds */
+        <div className="space-y-3">
+          {/* Show uploaded image if available but not currently active */}
+          {currentUploadedImage && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Your Uploaded Image</label>
+              <div className="relative rounded-lg overflow-hidden border border-border">
+                <img
+                  src={currentUploadedImage}
+                  alt="Your uploaded background"
+                  className="w-full h-20 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    // Set this as the active background
+                    const imageBackground: ImageBackground = {
+                      type: 'image',
+                      url: currentUploadedImage,
+                      opacity: 0.15
+                    };
+                    setBackground(imageBackground);
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                <div className="absolute bottom-1 left-2 flex items-center gap-1">
+                  <ImageIcon className="h-3 w-3 text-white" />
+                  <span className="text-xs text-white">Click to use</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload button */}
+          <Button
+            variant="secondary"
+            onClick={handleUploadClick}
+            disabled={isUploading || isLoading}
+            className="w-full h-12 border-dashed"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isUploading ? 'Uploading...' : isLoading ? 'Loading...' : 'Upload Background Image'}
+          </Button>
+        </div>
       )}
 
       {/* Error message */}

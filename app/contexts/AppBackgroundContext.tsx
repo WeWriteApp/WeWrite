@@ -450,11 +450,11 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
     // If user doesn't have active subscription and is currently using a custom image background
     // (but allow default background images to continue working)
-    if (!hasActiveSubscription && background.type === 'image' && !isDefaultBackgroundImage(background.url)) {
+    if (!hasActiveSubscription && background.type === 'image' && background.url && !isDefaultBackgroundImage(background.url)) {
       console.log('[AppBackground] Subscription expired, resetting custom image background to default');
       setBackground(DEFAULT_BACKGROUND);
     }
-  }, [hasActiveSubscription, background.type, background, isInitialized, isAuthenticated]);
+  }, [hasActiveSubscription, isInitialized, isAuthenticated]);
 
   const resetToDefault = () => {
     setBackground(DEFAULT_BACKGROUND);

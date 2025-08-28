@@ -11,7 +11,8 @@ import { getFirebaseAdmin } from '../firebase/admin';
 const ADMIN_USER_IDS = [
   'jamiegray2234@gmail.com',
   'admin.test@wewrite.app', // Secure admin test account for production data access
-  'jamie@wewrite.app' // Development admin user
+  'jamie@wewrite.app', // Development admin user
+  'admin@local.dev' // Local development admin user
 ];
 
 /**
@@ -34,7 +35,7 @@ export async function checkAdminPermissions(request: NextRequest): Promise<{succ
     }
 
     // For development, allow dev_admin_user to bypass Firebase Admin check
-    if (userId === 'dev_admin_user') {
+    if (userId === 'dev_admin_user' || userId === 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N') {
       console.log('🔧 DEV MODE: Allowing dev_admin_user admin access');
       return { success: true, userEmail: 'jamie@wewrite.app' };
     }

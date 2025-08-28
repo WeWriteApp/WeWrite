@@ -45,6 +45,8 @@ interface PillLinkProps {
   draggable?: boolean; // New prop to enable dragging
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
+  isLinkEditor?: boolean; // New prop to indicate if we're in link editor mode
+  onLinkEditorSelect?: () => void; // New prop for link editor selection
   [key: string]: any; // For other props passed through
 }
 
@@ -67,6 +69,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   onEditLink,
   onConfirmSuggestion,
   onDismissSuggestion,
+  isLinkEditor = false,
+  onLinkEditorSelect,
   ...otherProps
 }, ref) => {
   // Hooks
@@ -423,6 +427,14 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
             } else if (!confirmed && onDismissSuggestion) {
               onDismissSuggestion();
             }
+            return;
+          }
+
+          // Handle link editor mode first
+          if (isLinkEditor && onLinkEditorSelect) {
+            e.preventDefault();
+            e.stopPropagation();
+            onLinkEditorSelect();
             return;
           }
 

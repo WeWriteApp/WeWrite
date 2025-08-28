@@ -135,30 +135,30 @@ export function LoggedOutFinancialHeader() {
 
   return (
     <div className="fixed top-20 left-0 right-0 z-40 mb-6">
-      <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-        <FloatingHeader className="p-3 md:p-4 relative backdrop-blur-md bg-background/80">
-          <div className="flex items-center justify-between">
-            {/* Spend Display (left side) */}
-            <div className="flex items-center min-w-0 flex-shrink-0">
-              {renderSpendDisplay()}
+        <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+          <FloatingHeader className="p-3 md:p-4 relative backdrop-blur-md bg-background/80">
+            <div className="flex items-center justify-between">
+              {/* Spend Display (left side) */}
+              <div className="flex items-center min-w-0 flex-shrink-0">
+                {renderSpendDisplay()}
+              </div>
+
+              {/* Demo funds text (absolutely centered) */}
+              <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm text-muted-foreground font-medium">
+                  Demo funds
+                </span>
+              </div>
+
+              {/* Earnings Display (right side) */}
+              <div className="flex items-center min-w-0 flex-shrink-0">
+                {renderEarningsDisplay()}
+              </div>
             </div>
 
-            {/* Demo funds text (absolutely centered) */}
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm text-muted-foreground font-medium">
-                Demo funds
-              </span>
-            </div>
-
-            {/* Earnings Display (right side) */}
-            <div className="flex items-center min-w-0 flex-shrink-0">
-              {renderEarningsDisplay()}
-            </div>
-          </div>
-
-          {/* Bottom gradient for content flowing behind */}
-        </FloatingHeader>
+            {/* Bottom gradient for content flowing behind */}
+          </FloatingHeader>
+        </div>
       </div>
-    </div>
   );
 }

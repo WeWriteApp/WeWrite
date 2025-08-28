@@ -18,6 +18,7 @@ interface LinkSuggestionEditorModalProps {
   onInsertLink: (linkData: any) => void;
   suggestion: LinkSuggestion | null;
   matchedText: string;
+  currentPageId?: string;
 }
 
 export default function LinkSuggestionEditorModal({
@@ -25,7 +26,8 @@ export default function LinkSuggestionEditorModal({
   onClose,
   onInsertLink,
   suggestion,
-  matchedText
+  matchedText,
+  currentPageId
 }: LinkSuggestionEditorModalProps) {
   const { user } = useAuth();
   const [showAuthor, setShowAuthor] = useState(false);
@@ -181,6 +183,7 @@ export default function LinkSuggestionEditorModal({
               className="h-full p-3"
               preventRedirect={true}
               linkedPageIds={[]}
+              currentPageId={currentPageId}
             />
           </div>
         </div>

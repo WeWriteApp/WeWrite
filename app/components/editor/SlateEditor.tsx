@@ -1254,6 +1254,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           editingLink={null}
           selectedText={getSelectedText()}
           linkedPageIds={getLinkedPageIds()}
+          currentPageId={pageId}
         />,
         document.body
       )}
@@ -1269,6 +1270,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           onInsertLink={handleSuggestionLinkInsert}
           suggestion={currentSuggestion}
           matchedText={suggestionMatchedText}
+          currentPageId={pageId}
         />,
         document.body
       )}

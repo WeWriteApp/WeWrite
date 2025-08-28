@@ -51,7 +51,8 @@ const FilteredSearchResults = forwardRef(({
   className = "",
   autoFocus = false,
   onFocus = null,
-  linkedPageIds = []}, ref) => {
+  linkedPageIds = [],
+  currentPageId = null}, ref) => {
   const { user } = useAuth();
   const router = useRouter();
   const { formatDate: formatDateString } = useDateFormat();
@@ -251,6 +252,11 @@ const FilteredSearchResults = forwardRef(({
           });
         }
 
+        // Filter out current page if specified
+        if (currentPageId) {
+          filteredPages = filteredPages.filter(page => page.id !== currentPageId);
+        }
+
         setPages(filteredPages);
         setUsers(userResults);
         setGroups(groupResults);
@@ -295,6 +301,12 @@ const FilteredSearchResults = forwardRef(({
         } else {
           // Use pages as-is (already filtered server-side)
           console.log('[FilteredSearchResults] Using server-filtered pages:', filteredPages.length);
+        }
+
+        // Filter out current page if specified
+        if (currentPageId) {
+          filteredPages = filteredPages.filter(page => page.id !== currentPageId);
+          console.log('[FilteredSearchResults] Filtered out current page:', currentPageId, 'remaining:', filteredPages.length);
         }
 
         setPages(filteredPages);
@@ -618,6 +630,8 @@ const FilteredSearchResults = forwardRef(({
                               isPublic={page.isPublic}
                               isOwned={page.userId === user?.uid}
                               clickable={false}
+                              isLinkEditor={isLinkEditor}
+                              onLinkEditorSelect={() => handleSelect(page)}
                             >
                               {page.title && isExactDateFormat(page.title)
                                 ? formatDateString(page.title)
@@ -636,6 +650,8 @@ const FilteredSearchResults = forwardRef(({
                                 size="sm"
                                 variant="link"
                                 className="text-xs"
+                                isLinkEditor={isLinkEditor}
+                                onLinkEditorSelect={() => handleSelect(page)}
                               />
                               {isAlreadyLinked && (
                                 <span className="ml-1 text-xs text-muted-foreground/70">

@@ -14,21 +14,29 @@ const DropdownContext = React.createContext<{
 
 const DropdownMenu = ({
   children,
+  open: controlledOpen,
   onOpenChange
 }: {
   children: React.ReactNode;
+  open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) => {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLElement>(null);
+
+  // Use controlled open if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
 
   // Enhanced setOpen that calls onOpenChange callback
   const handleSetOpen = React.useCallback((newOpen: boolean) => {
-    setOpen(newOpen);
+    // Only update internal state if not controlled
+    if (controlledOpen === undefined) {
+      setInternalOpen(newOpen);
+    }
     if (onOpenChange) {
       onOpenChange(newOpen);
     }
-  }, [onOpenChange]);
+  }, [onOpenChange, controlledOpen]);
 
   // Close on outside click
   React.useEffect(() => {
