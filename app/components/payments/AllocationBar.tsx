@@ -257,18 +257,17 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         data-allocation-bar
         onClick={handleAllocationBarClick}
         className={cn(
-          "wewrite-card wewrite-floating relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-20",
+          "wewrite-card wewrite-card-no-padding wewrite-floating relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-20",
           "transition-all duration-300 ease-in-out", // Ensure smooth transitions
           flashType === 'accent' && "animate-flash-bar-accent",
           flashType === 'red' && "animate-flash-bar-red",
           className
         )}
       >
-        {/* Main Content - remove bottom padding when banner is showing */}
+        {/* Main Content - restore proper spacing between elements */}
         <div className={cn(
           "space-y-2",
-          isPageOwner ? "p-3" : "p-4",
-          (showLoginNotice || showSubscriptionNotice) && "pb-0"
+          isPageOwner ? "p-3" : "p-4"
         )}>
           {/* Page Stats for Page Owners */}
           {isPageOwner && (

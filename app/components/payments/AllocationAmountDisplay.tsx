@@ -44,7 +44,7 @@ export function AllocationAmountDisplay({
           className
         )}
       >
-        <div className="text-center font-bold text-sm text-white">
+        <div className="text-center font-bold text-sm text-foreground">
           {prefix}{intervalFormatted}
         </div>
       </div>
