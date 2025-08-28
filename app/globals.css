@@ -2081,8 +2081,8 @@ body::before {
 .unified-text-content,
 .prose,
 /* COMPREHENSIVE TEXT SELECTION CONTROL */
-/* Default: Disable text selection for all elements */
-* {
+/* Default: Disable text selection for UI elements, but NOT form inputs */
+*:not(input):not(textarea):not(select):not([contenteditable]) {
   -webkit-user-select: none;
   -khtml-user-select: none;
   -moz-user-select: none;
@@ -2090,7 +2090,19 @@ body::before {
   user-select: none;
 }
 
-/* Enable text selection ONLY for content areas and form inputs */
+/* Ensure form inputs have proper text selection (should be default now) */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text !important;
+  -khtml-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Enable text selection for content areas */
 .text-view-content,
 .editor-content,
 .paragraph-content,
@@ -2103,10 +2115,6 @@ body::before {
 [data-page-content],
 .user-bio-content,
 .group-about-content,
-[contenteditable="true"],
-input,
-textarea,
-select,
 /* Allow selection in specific content containers */
 .content-selectable,
 .selectable-text,

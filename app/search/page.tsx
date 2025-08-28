@@ -58,78 +58,52 @@ function debounce(func: (...args: any[]) => void, wait: number, immediate = fals
   return debounced;
 }
 
-// Completely isolated search input that doesn't cause parent re-renders
-const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
+// Simple search input with button - no automatic searching
+const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
   const [inputValue, setInputValue] = useState(initialValue || '');
-  const searchInputRef = useRef(null);
-  const debounceTimeoutRef = useRef(null);
-  const lastSearchValue = useRef('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Update input value when initialValue changes (for recent search selection)
   useEffect(() => {
-    if (initialValue !== undefined && initialValue !== inputValue) {
+    if (initialValue !== undefined) {
       setInputValue(initialValue);
-      // If there's an initial value and we haven't searched for it yet, trigger search
-      if (initialValue && initialValue !== lastSearchValue.current && onSearch) {
-        lastSearchValue.current = initialValue;
-        onSearch(initialValue);
-      }
     }
-  }, [initialValue, inputValue, onSearch]);
+  }, [initialValue]);
 
   // Auto-focus effect
   useEffect(() => {
     if (autoFocus && searchInputRef.current) {
       const timer = setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
+        searchInputRef.current?.focus();
       }, 100);
       return () => clearTimeout(timer);
     }
   }, [autoFocus]);
 
-  // Note: URL synchronization is handled by the parent component
+  // Simple input change handler - ONLY updates input state, NO search logic
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  }, []);
 
-  // Debounced search function
-  const debouncedSearch = useCallback((value) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-      if (value !== lastSearchValue.current && onSearch) {
-        lastSearchValue.current = value;
-        onSearch(value);
-      }
-    }, 300);
-  }, [onSearch]);
-
-  // Handle input changes
-  const handleInputChange = useCallback((e) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
-    debouncedSearch(newValue);
-  }, [debouncedSearch]);
-
-  // Handle form submission
-  const handleSubmit = useCallback((e) => {
-    e.preventDefault();
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+  // Handle search button click or Enter key
+  const handleSearch = useCallback(() => {
+    if (onSearch) {
+      onSearch(inputValue);
     }
     if (onSubmit) {
       onSubmit(inputValue);
     }
-  }, [inputValue, onSubmit]);
+  }, [inputValue, onSearch, onSubmit]);
+
+  // Handle form submission (Enter key)
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    handleSearch();
+  }, [handleSearch]);
 
   // Handle clear button
   const handleClear = useCallback(() => {
     setInputValue("");
-    lastSearchValue.current = "";
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
     if (onClear) {
       onClear();
     }
@@ -142,15 +116,6 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
     }
   }, [inputValue, onSave]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
     <form onSubmit={handleSubmit} className="mb-8">
       <div className="relative">
@@ -160,7 +125,7 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full wewrite-input-with-left-icon wewrite-input-with-right-icon"
+          className="w-full wewrite-input-with-left-icon pr-24"
           autoComplete="off"
         />
 
@@ -169,17 +134,30 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
           <Search className="h-5 w-5 text-muted-foreground" />
         </div>
 
-        {/* Clear button - larger size */}
-        {inputValue.trim() && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
-            aria-label="Clear search"
+        {/* Right side buttons */}
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+          {/* Clear button */}
+          {inputValue.trim() && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Search button */}
+          <Button
+            type="submit"
+            size="sm"
+            className="h-8 px-3"
+            disabled={!inputValue.trim()}
           >
-            <X className="h-5 w-5" />
-          </button>
-        )}
+            Search
+          </Button>
+        </div>
       </div>
     </form>
   );
@@ -196,7 +174,7 @@ const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, on
   );
 });
 
-IsolatedSearchInput.displayName = 'IsolatedSearchInput';
+SimpleSearchInput.displayName = 'SimpleSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
@@ -208,7 +186,7 @@ const SearchPage = React.memo(() => {
   // Groups functionality removed
 
   // Use unified search system - single source of truth
-  const { currentQuery, results, isLoading, performSearch, clearSearch, error, searchStats } = useUnifiedSearch(userId, {
+  const { currentQuery, results, isLoading, performSearch, debouncedSearch, clearSearch, error, searchStats } = useUnifiedSearch(userId, {
     context: SEARCH_CONTEXTS.MAIN,
     includeContent: true,
     includeUsers: true,
@@ -263,19 +241,15 @@ const SearchPage = React.memo(() => {
     }
   }, [initialQuery, performSearch, userId]); // Removed authLoading dependency
 
-  // Memoized callback functions for SearchInput component
-  const handleSearch = useCallback(async (searchTerm) => {
+  // Search handler - simple and direct, no debouncing needed
+  const handleSearch = useCallback((searchTerm) => {
+    // Perform search immediately when user clicks search or presses enter
     performSearch(searchTerm);
 
-    // For typing/debounced searches, use smart filtering and debounced saving
-    // This prevents saving every keystroke like "t", "te", "tes", "test"
+    // Handle side effects
     if (searchTerm && searchTerm.trim()) {
-      try {
-        // Use debounced saving with smart filtering for typing
-        addRecentSearchDebounced(searchTerm.trim(), userId, 2000); // 2 second delay
-      } catch (error) {
-        console.error('Error saving recent search:', error);
-      }
+      // Save recent search
+      addRecentSearchDebounced(searchTerm.trim(), userId, 2000);
     }
 
     // Update URL to reflect the search query
@@ -440,8 +414,8 @@ const SearchPage = React.memo(() => {
         <p className="text-muted-foreground">Find pages, users, and content across WeWrite</p>
       </div>
 
-      {/* Search Input Component - Completely Isolated */}
-      <IsolatedSearchInput
+      {/* Search Input Component - Simple with Button */}
+      <SimpleSearchInput
         initialValue={initialQuery || currentQuery}
         onSearch={handleSearch}
         onClear={handleClear}

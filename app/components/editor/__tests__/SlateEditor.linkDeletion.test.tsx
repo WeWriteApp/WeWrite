@@ -14,19 +14,20 @@ const withLinkDeletion = (editor: ReactEditor) => {
     const { selection } = editor;
 
     if (selection && Range.isCollapsed(selection)) {
-      // Check if we're positioned right after a link element
+      // FIXED: Only delete link if cursor is IMMEDIATELY after it (offset 0 in next text node)
       try {
         const [parentNode, parentPath] = Editor.parent(editor, selection);
         if (parentNode && typeof parentNode === 'object' && 'type' in parentNode && parentNode.type === 'paragraph') {
           const currentIndex = selection.anchor.path[selection.anchor.path.length - 1];
+          const currentOffset = selection.anchor.offset;
 
-          // Check if there's a previous sibling that's a link
-          if (currentIndex > 0) {
+          // Only proceed if we're at the very beginning of a text node (offset 0)
+          if (currentOffset === 0 && currentIndex > 0) {
             const prevSiblingPath = [...parentPath, currentIndex - 1];
             const [prevSibling] = Editor.node(editor, prevSiblingPath);
 
             if (prevSibling && typeof prevSibling === 'object' && 'type' in prevSibling && prevSibling.type === 'link') {
-              // We're right after a link, delete it entirely
+              // We're at the very beginning of text immediately after a link
               Transforms.removeNodes(editor, { at: prevSiblingPath });
               return;
             }
@@ -44,24 +45,25 @@ const withLinkDeletion = (editor: ReactEditor) => {
     const { selection } = editor;
 
     if (selection && Range.isCollapsed(selection)) {
-      // Check if we're positioned right before a link element
+      // FIXED: Only delete link if cursor is IMMEDIATELY before it (at end of previous text node)
       try {
         const [parentNode, parentPath] = Editor.parent(editor, selection);
         if (parentNode && typeof parentNode === 'object' && 'type' in parentNode && parentNode.type === 'paragraph') {
           const currentIndex = selection.anchor.path[selection.anchor.path.length - 1];
 
-          // If we're at the end of a text node, check the next sibling
+          // Check if we're at the end of a text node and there's a next sibling that's a link
           const currentNode = Editor.node(editor, selection.anchor.path)[0];
           if (currentNode && typeof currentNode === 'object' && 'text' in currentNode) {
             const textLength = currentNode.text.length;
+
+            // Only proceed if we're at the very end of the current text node
             if (selection.anchor.offset === textLength) {
-              // We're at the end of this text node, check next sibling
               const nextSiblingPath = [...parentPath, currentIndex + 1];
               try {
                 const [nextSibling] = Editor.node(editor, nextSiblingPath);
 
                 if (nextSibling && typeof nextSibling === 'object' && 'type' in nextSibling && nextSibling.type === 'link') {
-                  // We're right before a link, delete it entirely
+                  // We're at the very end of text immediately before a link
                   Transforms.removeNodes(editor, { at: nextSiblingPath });
                   return;
                 }
@@ -184,13 +186,12 @@ describe('SlateEditor Link Deletion', () => {
     // Simulate delete key
     editor.deleteForward('character');
 
-    // Check that the link was deleted entirely
+    // Check that the link was deleted entirely and text nodes were merged
     const expectedValue: Descendant[] = [
       {
         type: 'paragraph',
         children: [
-          { text: 'Hello ' },
-          { text: ' world' }
+          { text: 'Hello  world' } // Slate merges adjacent text nodes
         ]
       }
     ];
@@ -226,6 +227,65 @@ describe('SlateEditor Link Deletion', () => {
         type: 'paragraph',
         children: [
           { text: 'Helloworld' }
+        ]
+      }
+    ];
+
+    expect(editor.children).toEqual(expectedValue);
+  });
+
+  test('should NOT delete link when cursor is in middle of text after link (bug fix)', () => {
+    // This test covers the original bug: backspace anywhere in the line would delete ALL links
+    // Set up editor with content: "Hello [link] world text"
+    const initialValue: Descendant[] = [
+      {
+        type: 'paragraph',
+        children: [
+          { text: 'Hello ' },
+          {
+            type: 'link',
+            url: '/test-page',
+            pageId: 'test-page',
+            pageTitle: 'Test Page',
+            isExternal: false,
+            isPublic: true,
+            isOwned: false,
+            children: [{ text: 'link' }]
+          },
+          { text: ' world text' }
+        ]
+      }
+    ];
+
+    editor.children = initialValue;
+
+    // Position cursor in the MIDDLE of " world text" (not at the beginning)
+    // This should NOT delete the link
+    Transforms.select(editor, {
+      anchor: { path: [0, 2], offset: 7 }, // After "world" in " world text"
+      focus: { path: [0, 2], offset: 7 }
+    });
+
+    // Simulate backspace - should only delete the space before "text"
+    editor.deleteBackward('character');
+
+    // Check that the link is still there and only one character was deleted
+    const expectedValue: Descendant[] = [
+      {
+        type: 'paragraph',
+        children: [
+          { text: 'Hello ' },
+          {
+            type: 'link',
+            url: '/test-page',
+            pageId: 'test-page',
+            pageTitle: 'Test Page',
+            isExternal: false,
+            isPublic: true,
+            isOwned: false,
+            children: [{ text: 'link' }]
+          },
+          { text: ' worldtext' } // Only the space before "text" was deleted
         ]
       }
     ];

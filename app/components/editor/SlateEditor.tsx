@@ -80,6 +80,7 @@ declare module 'slate' {
 
 /**
  * Custom plugin to handle link deletion as single units
+ * Links should only be deleted when the cursor is immediately adjacent to them
  */
 const withLinkDeletion = (editor: ReactEditor) => {
   const { deleteBackward, deleteForward } = editor;
@@ -105,19 +106,20 @@ const withLinkDeletion = (editor: ReactEditor) => {
         }
       }
 
-      // Check if we're positioned right after a link element
+      // FIXED: Only delete link if cursor is IMMEDIATELY after it (offset 0 in next text node)
       try {
         const [parentNode, parentPath] = Editor.parent(editor, selection);
         if (SlateElement.isElement(parentNode) && parentNode.type === 'paragraph') {
           const currentIndex = selection.anchor.path[selection.anchor.path.length - 1];
+          const currentOffset = selection.anchor.offset;
 
-          // Check if there's a previous sibling that's a link
-          if (currentIndex > 0) {
+          // Only proceed if we're at the very beginning of a text node (offset 0)
+          if (currentOffset === 0 && currentIndex > 0) {
             const prevSiblingPath = [...parentPath, currentIndex - 1];
             const [prevSibling] = Editor.node(editor, prevSiblingPath);
 
             if (SlateElement.isElement(prevSibling) && prevSibling.type === 'link') {
-              // We're right after a link, delete it entirely
+              // We're at the very beginning of text immediately after a link
               Transforms.removeNodes(editor, { at: prevSiblingPath });
               return;
             }
@@ -152,24 +154,25 @@ const withLinkDeletion = (editor: ReactEditor) => {
         }
       }
 
-      // Check if we're positioned right before a link element
+      // FIXED: Only delete link if cursor is IMMEDIATELY before it (at end of previous text node)
       try {
         const [parentNode, parentPath] = Editor.parent(editor, selection);
         if (SlateElement.isElement(parentNode) && parentNode.type === 'paragraph') {
           const currentIndex = selection.anchor.path[selection.anchor.path.length - 1];
 
-          // If we're at the end of a text node, check the next sibling
+          // Check if we're at the end of a text node and there's a next sibling that's a link
           const currentNode = Editor.node(editor, selection.anchor.path)[0];
           if (currentNode && typeof currentNode === 'object' && 'text' in currentNode) {
             const textLength = currentNode.text.length;
+
+            // Only proceed if we're at the very end of the current text node
             if (selection.anchor.offset === textLength) {
-              // We're at the end of this text node, check next sibling
               const nextSiblingPath = [...parentPath, currentIndex + 1];
               try {
                 const [nextSibling] = Editor.node(editor, nextSiblingPath);
 
                 if (SlateElement.isElement(nextSibling) && nextSibling.type === 'link') {
-                  // We're right before a link, delete it entirely
+                  // We're at the very end of text immediately before a link
                   Transforms.removeNodes(editor, { at: nextSiblingPath });
                   return;
                 }

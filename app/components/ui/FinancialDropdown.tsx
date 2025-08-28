@@ -168,7 +168,7 @@ export function FinancialDropdown({
                 variant="secondary"
                 onClick={() => {
                   // Close dropdown before navigating
-                  setOpenDropdown(null);
+                  closeDropdown();
                   onNavigate();
                 }}
                 className="w-full whitespace-nowrap"
@@ -181,7 +181,7 @@ export function FinancialDropdown({
                   size="sm"
                   onClick={() => {
                     // Close dropdown before navigating
-                    setOpenDropdown(null);
+                    closeDropdown();
                     // Navigate to fund account page
                     router.push('/settings/fund-account');
                   }}
