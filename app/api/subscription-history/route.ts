@@ -151,43 +151,8 @@ async function getSubscriptionHistory(userId: string, db: any): Promise<Subscrip
           expand: ['data.items.data.price']
         });
 
-        // Get subscription creation events
-        subscriptions.data.forEach((subscription) => {
-          events.push({
-            id: `sub_created_${subscription.id}`,
-            type: 'subscription_created',
-            timestamp: new Date(subscription.created * 1000),
-            description: `Subscription created`,
-            details: {
-              amount: subscription.items.data[0]?.price.unit_amount ? subscription.items.data[0].price.unit_amount / 100 : 0,
-              currency: subscription.currency.toUpperCase(),
-              stripeEventId: subscription.id,
-              metadata: {
-                status: subscription.status,
-                interval: subscription.items.data[0]?.price.recurring?.interval
-              }
-            },
-            source: 'stripe'
-          });
-
-          // Add cancellation event if subscription was cancelled
-          if (subscription.canceled_at) {
-            events.push({
-              id: `sub_cancelled_${subscription.id}`,
-              type: 'subscription_cancelled',
-              timestamp: new Date(subscription.canceled_at * 1000),
-              description: `Subscription cancelled`,
-              details: {
-                stripeEventId: subscription.id,
-                metadata: {
-                  cancelAtPeriodEnd: subscription.cancel_at_period_end,
-                  cancellationReason: subscription.cancellation_details?.reason
-                }
-              },
-              source: 'stripe'
-            });
-          }
-        });
+        // REMOVED: Fake subscription creation events that were causing all changes to show as "subscription created"
+        // Now relying only on proper audit trail events from webhook handlers that show correct upgrade/downgrade messages
 
         // 5. Get refunds from Stripe
         try {

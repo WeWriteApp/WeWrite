@@ -138,6 +138,43 @@ SUBSCRIPTION_ENV=development/production
 - **Development**: `dev_users/{userId}/dev_subscriptions/current`
 - **Production**: `users/{userId}/subscriptions/current`
 
+## Status Mapping (CRITICAL FIXES APPLIED 2025-01-28)
+
+WeWrite subscription statuses map directly to Stripe statuses as follows:
+
+| WeWrite Status | Stripe Status | Description | UI Display |
+|---------------|---------------|-------------|------------|
+| `active` | `active` | Subscription is active and paid | "Active" (green) |
+| `incomplete` | `incomplete` | Payment setup required | "Payment Required" (orange) |
+| `incomplete_expired` | `incomplete_expired` | Payment setup expired | "Payment Expired" (red) |
+| `past_due` | `past_due` | Payment failed, retrying | "Past Due" (red) |
+| `cancelled` | `canceled` | Subscription has been cancelled | "Canceled" (gray) |
+| `trialing` | `trialing` | In free trial period | "Trial" (blue) |
+| `paused` | `paused` | Subscription temporarily paused | "Paused" (gray) |
+
+### Critical Fixes Applied (2025-01-28)
+
+**Problem**: Users were seeing "cancelled" in UI while Stripe showed "incomplete" status.
+
+**Root Cause**: Race condition protection in webhook handler was preventing legitimate "incomplete" statuses from being saved.
+
+**Fixes Applied**:
+1. **✅ Removed Race Condition Protection**: Webhook handlers now always use Stripe's status as source of truth
+2. **✅ Enhanced Cache Invalidation**: Webhooks properly clear subscription caches immediately
+3. **✅ Consistent Status Spelling**: Standardized on "cancelled" (not "canceled")
+4. **✅ Enhanced Debug Logging**: Added specific logging for incomplete status transitions
+
+**Code Change**:
+```typescript
+// BEFORE (Problematic):
+if (currentStatus === 'active' && newStatus === 'incomplete') {
+  subscriptionData.status = 'active'; // ❌ Prevented legitimate incomplete status
+}
+
+// AFTER (Fixed):
+subscriptionData.status = newStatus; // ✅ Always use Stripe's status
+```
+
 ## Stripe Customer Management
 
 ### Customer Creation

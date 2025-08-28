@@ -170,20 +170,19 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       updatedAt: serverTimestamp()};
 
-    // Handle status transitions properly:
-    // 1. Always update from 'incomplete' to any Stripe status
-    // 2. Don't overwrite 'active' with 'incomplete' (race condition protection)
-    // 3. Allow other valid status transitions
+    // CRITICAL FIX: Always use Stripe's status as the source of truth
+    // Removed problematic race condition protection that was preventing legitimate 'incomplete' statuses
     const currentStatus = existingData?.status;
     const newStatus = subscription.status;
 
-    if (currentStatus === 'active' && newStatus === 'incomplete') {
-      console.log(`[SUBSCRIPTION WEBHOOK] Preventing status downgrade from 'active' to 'incomplete' for user ${userId}`);
-      subscriptionData.status = 'active';
-    } else {
-      console.log(`[SUBSCRIPTION WEBHOOK] Status transition for user ${userId}: '${currentStatus}' -> '${newStatus}'`);
-      subscriptionData.status = newStatus;
+    console.log(`[SUBSCRIPTION WEBHOOK] Status transition for user ${userId}: '${currentStatus}' -> '${newStatus}'`);
+
+    // CRITICAL: Log incomplete status specifically for debugging
+    if (newStatus === 'incomplete') {
+      console.log(`[SUBSCRIPTION WEBHOOK] 🚨 INCOMPLETE STATUS: Subscription ${subscription.id} for user ${userId} is incomplete - this should show in UI as "Payment Required"`);
     }
+
+    subscriptionData.status = newStatus; // Always use Stripe's status
 
     if (subscriptionDoc.exists()) {
       await updateDoc(subscriptionRef, subscriptionData);
@@ -227,13 +226,37 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 
     console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription deletion for user ${userId}, subscription ${subscription.id}`);
 
-    // Update subscription status in Firestore
+    // Get existing subscription data for audit logging
     const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
     const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
+    const existingDoc = await getDoc(subscriptionRef);
+    const existingData = existingDoc.exists() ? existingDoc.data() : null;
+
+    // Update subscription status in Firestore
     await updateDoc(subscriptionRef, {
       status: 'cancelled',
       canceledAt: new Date().toISOString(),
-      updatedAt: serverTimestamp()});
+      updatedAt: serverTimestamp()
+    });
+
+    // Log subscription cancellation to audit trail
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+
+      await subscriptionAuditService.logSubscriptionCancelled(userId, existingData || {}, {
+        source: 'stripe',
+        correlationId: `webhook_deletion_${subscription.id}_${Date.now()}`,
+        metadata: {
+          webhookEventType: 'customer.subscription.deleted',
+          stripeSubscriptionId: subscription.id,
+          cancelReason: 'Subscription deleted in Stripe'
+        }
+      });
+      console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription cancellation to audit trail`);
+    } catch (auditError) {
+      console.error(`[SUBSCRIPTION WEBHOOK] ❌ Failed to log cancellation audit event:`, auditError);
+      // Don't fail the webhook if audit logging fails
+    }
 
     // Reset token allocation to 0
     await ServerTokenService.updateMonthlyTokenAllocation(userId, 0);
@@ -305,6 +328,41 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       await updateDoc(subscriptionRef, subscriptionData);
 
       console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}`);
+
+    // CRITICAL: Log subscription changes to audit trail for proper history
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+
+      if (existingData) {
+        // This is an update - log with before/after states
+        await subscriptionAuditService.logSubscriptionUpdated(userId, existingData, subscriptionData, {
+          source: 'stripe',
+          correlationId: `webhook_${subscription.id}_${Date.now()}`,
+          metadata: {
+            webhookEventType: 'customer.subscription.updated',
+            stripeSubscriptionId: subscription.id,
+            statusTransition: `${currentStatus} -> ${newStatus}`,
+            amountChange: existingData.amount !== amount
+          }
+        });
+        console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription update to audit trail`);
+      } else {
+        // This is a creation - log as created
+        await subscriptionAuditService.logSubscriptionCreated(userId, subscriptionData, {
+          source: 'stripe',
+          correlationId: `webhook_${subscription.id}_${Date.now()}`,
+          metadata: {
+            webhookEventType: 'customer.subscription.created',
+            stripeSubscriptionId: subscription.id,
+            initialStatus: newStatus
+          }
+        });
+        console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription creation to audit trail`);
+      }
+    } catch (auditError) {
+      console.error(`[SUBSCRIPTION WEBHOOK] ❌ Failed to log audit event:`, auditError);
+      // Don't fail the webhook if audit logging fails
+    }
 
     // CRITICAL: Invalidate subscription cache after webhook update
     try {

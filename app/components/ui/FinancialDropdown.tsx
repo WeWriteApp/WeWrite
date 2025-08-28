@@ -223,7 +223,7 @@ export function SpendBreakdown({
       </div>
       <div className="flex justify-between">
         <span className="text-muted-foreground">Available:</span>
-        <span className={`font-medium ${isOutOfFunds ? 'text-orange-600' : 'text-green-600'}`}>
+        <span className={`font-medium ${isOutOfFunds ? 'text-warn' : 'text-success'}`}>
           {isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents)}
         </span>
       </div>

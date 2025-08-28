@@ -132,11 +132,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       return;
     }
 
-    // Update subscription status to canceled
+    // Update subscription status to cancelled (consistent with Stripe webhook handler)
     await setDoc(
       doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
       {
-        status: 'canceled',
+        status: 'cancelled',
         canceledAt: new Date(),
         updatedAt: serverTimestamp()
       },

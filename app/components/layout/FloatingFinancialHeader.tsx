@@ -181,8 +181,8 @@ export default function FloatingFinancialHeader({
               variant="secondary"
               className={`cursor-pointer transition-colors text-sm ${
                 isZeroEarnings
-                  ? 'text-muted-foreground bg-secondary/50 hover:bg-secondary/80'
-                  : 'text-green-600 bg-green-50/80 border-green-200/60 hover:bg-green-100/80 dark:text-green-400 dark:bg-green-950/80 dark:border-green-800/60 dark:hover:bg-green-900/80'
+                  ? ''
+                  : 'text-success bg-success-20 border-success-30 hover:bg-success-25 dark:bg-success-15 dark:border-success-30 dark:hover:bg-success-20'
               }`}
             >
               {formatUsdCents(displayAmount * 100)}

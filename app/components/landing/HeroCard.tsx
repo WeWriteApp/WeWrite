@@ -194,7 +194,7 @@ export default function HeroCard({
                       )}
                     </Badge>
                     {' '}who've made{' '}
-                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-green-100 bg-green-15 border-green-30">
+                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-success bg-success-20 border-success-30 hover:bg-success-25 dark:bg-success-15 dark:border-success-30 dark:hover:bg-success-20">
                       {isLoading || totalPayouts === null ? (
                         <span className="flex items-center gap-1">
                           $<Loader2 className="h-4 w-4 animate-spin" />

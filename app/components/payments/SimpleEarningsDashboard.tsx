@@ -77,7 +77,11 @@ export default function SimpleEarningsDashboard() {
       // Load all data in parallel - SIMPLE API approach
       const [earningsResponse, bankResponse, payoutsResponse] = await Promise.all([
         fetch('/api/earnings/user'),
-        fetch('/api/bank-account/status'),
+        fetch('/api/stripe/account-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid })
+        }),
         fetch('/api/payouts/history')
       ]);
 
@@ -232,7 +236,7 @@ export default function SimpleEarningsDashboard() {
               </Badge>
             </div>
           ) : (
-            <SimpleBankAccountManager onUpdate={loadAllData} />
+            <SimpleBankAccountManager />
           )}
         </CardContent>
       </Card>

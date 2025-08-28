@@ -115,7 +115,42 @@ setTimeout(() => {
 }, 1000);
 ```
 
-### 5. Stripe Webhook Failures
+### 5. Status Mismatch Between Stripe and UI (CRITICAL FIX APPLIED)
+
+**Symptoms**:
+- Stripe dashboard shows "incomplete" but UI shows "cancelled"
+- Subscription appears active in Stripe but inactive in WeWrite
+- Payment succeeded in Stripe but subscription still shows as failed
+
+**Root Cause (FIXED 2025-01-28)**:
+Race condition protection in webhook handler was preventing legitimate "incomplete" statuses from being saved to Firestore.
+
+**Critical Fixes Applied**:
+1. **✅ Removed Race Condition Protection**: Webhook handler now always uses Stripe's status as source of truth
+2. **✅ Enhanced Cache Invalidation**: Webhooks now properly clear subscription caches immediately
+3. **✅ Consistent Status Spelling**: Standardized on "cancelled" (not "canceled")
+4. **✅ Enhanced Debug Logging**: Added specific logging for incomplete status transitions
+
+**Resolution Steps**:
+```bash
+# 1. Check webhook logs for "🚨 INCOMPLETE STATUS" messages
+# 2. Verify subscription status in Firestore matches Stripe
+# 3. Clear browser cache and refresh
+# 4. Check for webhook delivery failures in Stripe dashboard
+```
+
+**Code Changes Made**:
+```typescript
+// BEFORE (Problematic):
+if (currentStatus === 'active' && newStatus === 'incomplete') {
+  subscriptionData.status = 'active'; // ❌ Prevented legitimate incomplete status
+}
+
+// AFTER (Fixed):
+subscriptionData.status = newStatus; // ✅ Always use Stripe's status
+```
+
+### 6. Stripe Webhook Failures
 
 **Symptoms**: Subscription changes in Stripe don't reflect in app
 

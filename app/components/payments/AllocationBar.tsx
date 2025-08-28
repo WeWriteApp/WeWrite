@@ -264,10 +264,11 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
           className
         )}
       >
-        {/* Main Content */}
+        {/* Main Content - remove bottom padding when banner is showing */}
         <div className={cn(
           "space-y-2",
-          isPageOwner ? "p-3" : "p-4"
+          isPageOwner ? "p-3" : "p-4",
+          (showLoginNotice || showSubscriptionNotice) && "pb-0"
         )}>
           {/* Page Stats for Page Owners */}
           {isPageOwner && (
@@ -471,11 +472,11 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
         </div>
 
-        {/* Warning Banners */}
+        {/* Warning Banners - positioned outside padded content to extend to card edges */}
         {/* Login Notice */}
         {showLoginNotice && (
           <div
-            className="bg-primary text-primary-foreground p-3 rounded-b-2xl cursor-pointer hover:bg-primary/90 transition-all duration-200"
+            className="bg-primary text-primary-foreground p-3 rounded-b-xl cursor-pointer hover:bg-primary/90 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               router.push('/');
@@ -490,7 +491,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         {/* Subscription Notice */}
         {showSubscriptionNotice && (
           <div
-            className="bg-warning text-warning-foreground p-3 rounded-b-2xl cursor-pointer hover:bg-warning/90 transition-colors"
+            className="bg-warning text-warning-foreground p-3 rounded-b-xl cursor-pointer hover:bg-warning/90 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               router.push('/settings/fund-account');

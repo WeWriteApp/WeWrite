@@ -148,18 +148,44 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
 
     console.log(`Subscription change: ${oldStatus}(${oldAmount}) -> ${newStatus}(${newAmount})`);
 
-    // Update subscription in Firestore
-    await subscriptionRef.set({
+    // Prepare subscription data for update and audit
+    const subscriptionData = {
       status: newStatus,
       amount: newAmount,
       stripeSubscriptionId: subscription.id,
       stripePriceId: subscription.items?.data[0]?.price.id || null,
       currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    };
 
-    // Handle pledge budget validation if status or amount changed
+    // Update subscription in Firestore
+    await subscriptionRef.set(subscriptionData, { merge: true });
+
+    // Log subscription changes to audit trail if status or amount changed
     if (oldStatus !== newStatus || oldAmount !== newAmount) {
+      try {
+        const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+
+        const beforeState = { status: oldStatus, amount: oldAmount };
+        const afterState = { status: newStatus, amount: newAmount, ...subscriptionData };
+
+        await subscriptionAuditService.logSubscriptionUpdated(userId, beforeState, afterState, {
+          source: 'stripe',
+          correlationId: `webhook_status_${subscription.id}_${Date.now()}`,
+          metadata: {
+            webhookEventType: event.type,
+            stripeSubscriptionId: subscription.id,
+            statusTransition: `${oldStatus} -> ${newStatus}`,
+            amountChange: oldAmount !== newAmount
+          }
+        });
+        console.log(`✅ Logged subscription update to audit trail: ${oldStatus}(${oldAmount}) -> ${newStatus}(${newAmount})`);
+      } catch (auditError) {
+        console.error('❌ Failed to log subscription audit event:', auditError);
+        // Don't fail the webhook if audit logging fails
+      }
+
+      // Handle pledge budget validation
       try {
         await handleSubscriptionStatusChange(userId, oldStatus, newStatus, oldAmount, newAmount);
         console.log(`Successfully handled pledge budget changes for user: ${userId}`);
