@@ -28,10 +28,10 @@ class EnhancedPageCache {
   private cache = new Map<string, CacheEntry>();
   private stats: CacheStats = { hits: 0, misses: 0, evictions: 0, totalReads: 0 };
 
-  // Aggressive caching configuration for cost optimization
-  private readonly HOT_TTL = 10 * 60 * 1000;    // 10 minutes for frequently accessed pages
-  private readonly WARM_TTL = 30 * 60 * 1000;   // 30 minutes for moderately accessed pages
-  private readonly COLD_TTL = 2 * 60 * 60 * 1000; // 2 hours for rarely accessed pages
+  // CRITICAL: Short caching for immediate updates after saves
+  private readonly HOT_TTL = 10 * 1000;         // 10 seconds for frequently accessed pages - IMMEDIATE UPDATES
+  private readonly WARM_TTL = 30 * 1000;        // 30 seconds for moderately accessed pages - FAST UPDATES
+  private readonly COLD_TTL = 60 * 1000;        // 1 minute for rarely accessed pages - QUICK UPDATES
   private readonly MAX_SIZE = 500; // Increased cache size
   private readonly HOT_THRESHOLD = 5; // Access count to be considered "hot"
 

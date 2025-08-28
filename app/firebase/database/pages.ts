@@ -275,7 +275,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
           const response = await fetch(`/api/pages/${pageId}${userId ? `?userId=${userId}` : ''}`, {
             headers: {
-              'Cache-Control': 'max-age=30', // Request caching
+              'Cache-Control': 'no-cache', // CRITICAL: No caching for immediate updates after saves
             }
           });
 

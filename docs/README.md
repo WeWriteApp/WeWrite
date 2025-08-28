@@ -43,6 +43,9 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **[Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md)** - User authentication and session management
 - **[Landing Page Architecture](./LANDING_PAGE_ARCHITECTURE.md)** - Landing page components and structure
 
+### ⚡ Critical Performance Requirements
+- **[Immediate Updates](./IMMEDIATE_UPDATES.md)** - **CRITICAL**: Page updates must appear immediately after save (within 1-2 seconds)
+
 ### 💰 Payment & Financial Systems
 - **[USD Payment System](./USD_PAYMENT_SYSTEM.md)** - Comprehensive USD payment architecture
 - **[Allocation System](./ALLOCATION_SYSTEM.md)** - Fund allocation mechanics and API

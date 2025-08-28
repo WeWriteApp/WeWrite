@@ -22,10 +22,10 @@ interface CacheOptions {
   tags?: string[]; // Tags for bulk invalidation
 }
 
-// Simplified TTL - just two tiers for reliability
+// CRITICAL: Immediate updates for page data after saves
 const CACHE_TTL = {
-  FAST: process.env.NODE_ENV === 'development' ? 30 * 1000 : 60 * 1000, // 30s dev, 1min prod
-  SLOW: process.env.NODE_ENV === 'development' ? 60 * 1000 : 5 * 60 * 1000, // 1min dev, 5min prod
+  FAST: process.env.NODE_ENV === 'development' ? 5 * 1000 : 10 * 1000, // 5s dev, 10s prod - MUCH faster for immediate updates
+  SLOW: process.env.NODE_ENV === 'development' ? 30 * 1000 : 60 * 1000, // 30s dev, 1min prod - for static data only
 } as const;
 
 class UnifiedCache {

@@ -126,8 +126,8 @@ export async function GET(
       // Return cached data with aggressive cache headers
       const response = NextResponse.json(cachedData.pageData, { status: 200 });
 
-      // Aggressive caching headers for cached responses
-      response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=1800'); // 10min browser, 30min CDN
+      // CRITICAL: Minimal caching for immediate updates after saves
+      response.headers.set('Cache-Control', 'public, max-age=10, s-maxage=30'); // 10s browser, 30s CDN - MUCH faster updates
       response.headers.set('ETag', cachedData.etag || `"${pageId}-${Date.now()}"`);
       response.headers.set('X-Cache-Status', 'HIT');
       response.headers.set('X-Response-Time', `${responseTime}ms`);
@@ -190,14 +190,14 @@ export async function GET(
       fromCache: false
     });
 
-    // AGGRESSIVE CACHING for cost optimization
+    // CRITICAL: Minimal caching for immediate updates after saves
     if (process.env.NODE_ENV === 'development') {
-      // Moderate caching in development for testing
-      response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=120');
+      // Very short caching in development for immediate updates
+      response.headers.set('Cache-Control', 'public, max-age=5, s-maxage=10');
     } else {
-      // Aggressive caching in production for cost savings
-      response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=1800');
-      response.headers.set('CDN-Cache-Control', 'public, max-age=600');
+      // Short caching in production for immediate updates after saves
+      response.headers.set('Cache-Control', 'public, max-age=10, s-maxage=30, stale-while-revalidate=60');
+      response.headers.set('CDN-Cache-Control', 'public, max-age=30');
     }
 
     response.headers.set('ETag', etag);
