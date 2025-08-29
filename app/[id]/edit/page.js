@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from "../../firebase/config";
-import PageView from '../../components/pages/PageView';
+import ContentPageView from '../../components/pages/ContentPageView';
 import UnifiedLoader from '../../components/ui/unified-loader';
 import { use } from "react";
 
@@ -96,7 +96,7 @@ export default function EditPage({ params }) {
 
   if (pageExists) {
     // Pass a special prop to indicate this is edit mode
-    return <PageView params={{ id }} initialEditMode={true} />;
+    return <ContentPageView params={{ id }} initialEditMode={true} />;
   }
 
   return null;
