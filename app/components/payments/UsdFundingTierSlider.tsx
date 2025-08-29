@@ -464,8 +464,14 @@ export default function UsdFundingTierSlider({
           )}
         </div>
 
-        {/* Action Button */}
-        <div className="pt-2">
+        {/* Action Button - Hidden when no change, with smooth height animation */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            currentSubscription?.amount === selectedAmount && selectedAmount !== 0
+              ? 'max-h-0 opacity-0 pt-0'
+              : 'max-h-20 opacity-100 pt-2'
+          }`}
+        >
           {selectedAmount === 0 ? (
             <Button
               asChild
@@ -479,20 +485,15 @@ export default function UsdFundingTierSlider({
             <Button
               asChild
               className={`w-full text-white ${
-                currentSubscription?.amount === selectedAmount
-                  ? 'bg-muted-foreground hover:bg-muted-foreground/80 cursor-not-allowed'
-                  : selectedAmount > (currentSubscription?.amount || 0)
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-yellow-600 hover:bg-yellow-700'
+                selectedAmount > (currentSubscription?.amount || 0)
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-yellow-600 hover:bg-yellow-700'
               }`}
-              disabled={currentSubscription?.amount === selectedAmount}
             >
               <Link href={`/settings/fund-account/checkout?amount=${selectedAmount}`}>
-                {currentSubscription?.amount === selectedAmount
-                  ? 'Current Plan'
-                  : selectedAmount > (currentSubscription?.amount || 0)
-                    ? `Upgrade to $${selectedAmount}/month`
-                    : `Downgrade to $${selectedAmount}/month`
+                {selectedAmount > (currentSubscription?.amount || 0)
+                  ? `Upgrade to $${selectedAmount}/month`
+                  : `Downgrade to $${selectedAmount}/month`
                 }
               </Link>
             </Button>

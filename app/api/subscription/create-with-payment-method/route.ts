@@ -13,6 +13,7 @@ import { dollarsToCents } from '../../../utils/formatCurrency';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionAnalyticsService } from '../../../services/subscriptionAnalyticsService';
+import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
 import { ServerUsdService } from '../../../services/usdService.server';
 
 // Firebase Admin initialization function
@@ -202,6 +203,21 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Check if customer already has active subscriptions
+    const existingCheck = await SubscriptionValidationService.checkForExistingSubscriptions(customerId);
+    const validationError = SubscriptionValidationService.validateSubscriptionCreation(existingCheck);
+
+    if (validationError) {
+      SubscriptionValidationService.logValidationEvent('DUPLICATE_SUBSCRIPTION_PREVENTED', {
+        userId,
+        customerId,
+        paymentMethodId,
+        existingSubscriptionId: validationError.existingSubscriptionId
+      });
+
+      return NextResponse.json(validationError, { status: validationError.statusCode });
+    }
+
     // Create subscription with transfer_group for fund tracking (Stripe Connect model)
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
     const transferGroup = `subscription_${userId}_${currentMonth}`;
@@ -210,7 +226,7 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       items: [{ price: price.id }],
       default_payment_method: paymentMethodId,
-      payment_behavior: 'default_incomplete',
+      payment_behavior: 'error_if_incomplete',
       payment_settings: {
         payment_method_types: ['card', 'link'],
         save_default_payment_method: 'on_subscription'
@@ -236,7 +252,10 @@ export async function POST(request: NextRequest) {
       expand: ['latest_invoice.payment_intent']
     });
 
-    console.log(`[CREATE SUBSCRIPTION] Created Stripe subscription ${subscription.id} for user ${userId}`);
+    console.log(`[CREATE SUBSCRIPTION] Created Stripe subscription ${subscription.id} for user ${userId} with status: ${subscription.status}`);
+
+    // Validate subscription status
+    SubscriptionValidationService.validateSubscriptionStatus(subscription, 'active');
 
     // Extract period timestamps from subscription items (Stripe stores them there)
     const subscriptionItem = subscription.items?.data?.[0];

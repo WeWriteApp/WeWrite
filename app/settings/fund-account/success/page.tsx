@@ -1,18 +1,23 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import NavPageLayout from '../../../components/layout/NavPageLayout';
 import { Button } from '../../../components/ui/button';
-import { CheckCircle, Home, CreditCard } from 'lucide-react';
+import { CheckCircle, Home, CreditCard, Clock } from 'lucide-react';
 import Confetti from 'react-confetti';
 
 export default function FundAccountSuccessPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+  const subscriptionId = searchParams.get('subscription');
 
   // Get window dimensions for confetti
   useEffect(() => {
@@ -29,22 +34,41 @@ export default function FundAccountSuccessPage() {
     return () => window.removeEventListener('resize', updateWindowDimensions);
   }, []);
 
-  // Redirect if no user and show confetti
+  // Check subscription status
+  useEffect(() => {
+    if (!user || !subscriptionId) return;
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        setIsCheckingStatus(true);
+        const response = await fetch('/api/subscription/status');
+        if (response.ok) {
+          const data = await response.json();
+          const status = data.subscription?.status;
+          setSubscriptionStatus(status);
+
+          // Only show confetti if subscription is active
+          if (status === 'active') {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 5000);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [user, subscriptionId]);
+
+  // Redirect if no user
   useEffect(() => {
     if (!user) {
       router.push('/login');
       return;
     }
-
-    // Show confetti immediately
-    setShowConfetti(true);
-
-    // Stop confetti after 5 seconds
-    const timer = setTimeout(() => {
-      setShowConfetti(false);
-    }, 5000);
-
-    return () => clearTimeout(timer);
   }, [user, router]);
 
   if (!user) {
@@ -65,21 +89,53 @@ export default function FundAccountSuccessPage() {
 
       <div className="flex items-center justify-center min-h-[60vh] p-4">
         <div className="wewrite-card text-center space-y-8 max-w-md w-full">
-          {/* Success icon */}
+          {/* Status icon */}
           <div className="flex justify-center">
-            <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full">
-              <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
-            </div>
+            {isCheckingStatus ? (
+              <div className="p-4 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                <Clock className="h-16 w-16 text-blue-600 dark:text-blue-400 animate-pulse" />
+              </div>
+            ) : subscriptionStatus === 'active' ? (
+              <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full">
+                <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
+              </div>
+            ) : (
+              <div className="p-4 bg-yellow-100 dark:bg-yellow-900/20 rounded-full">
+                <Clock className="h-16 w-16 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            )}
           </div>
 
-          {/* Success message */}
+          {/* Status message */}
           <div className="space-y-4">
-            <h1 className="text-3xl font-bold text-green-800 dark:text-green-400">
-              Success!
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Your account funding has been activated. You can now start supporting creators!
-            </p>
+            {isCheckingStatus ? (
+              <>
+                <h1 className="text-3xl font-bold text-blue-800 dark:text-blue-400">
+                  Verifying...
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Just confirming your subscription details.
+                </p>
+              </>
+            ) : subscriptionStatus === 'active' ? (
+              <>
+                <h1 className="text-3xl font-bold text-green-800 dark:text-green-400">
+                  Success!
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Your account funding has been activated. You can now start supporting creators!
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold text-red-800 dark:text-red-400">
+                  Payment Issue
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  There was an issue processing your payment. Please try again or contact support.
+                </p>
+              </>
+            )}
           </div>
 
           {/* Action buttons */}

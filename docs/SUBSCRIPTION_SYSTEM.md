@@ -80,9 +80,10 @@ SUBSCRIPTION_ENV=development/production
 - **Flow**: Creates customer → setup intent → embedded checkout
 - **Test Handling**: Creates real Stripe resources even in dev
 
-#### `/api/subscription/create-with-payment-method`
+#### `/api/subscription/create-with-payment-method` ✅ *Duplicate-safe*
 - **Purpose**: Create subscription after payment method setup
-- **Flow**: Creates subscription → updates Firestore → allocates USD credits
+- **Flow**: Validates no existing subscription → creates subscription → updates Firestore → allocates USD credits
+- **Validation**: Uses `SubscriptionValidationService` to prevent duplicates
 
 #### `/api/subscription/update`
 - **Purpose**: Modify existing subscription amount/tier
@@ -103,6 +104,17 @@ SUBSCRIPTION_ENV=development/production
 - **Purpose**: Create Stripe customer portal sessions for subscription management
 - **Features**: Allows users to manage billing, payment methods, and view invoices
 - **Test Handling**: Requires real Stripe customer ID
+
+### Validation & Services
+
+#### `SubscriptionValidationService` 🆕
+- **Purpose**: Centralized validation logic for subscription operations
+- **Key Methods**:
+  - `checkForExistingSubscriptions()` - Detects duplicate subscriptions
+  - `validateSubscriptionCreation()` - Returns standardized error responses
+  - `validateSubscriptionStatus()` - Ensures subscriptions are in expected state
+  - `logValidationEvent()` - Structured logging for debugging
+- **Used By**: All subscription creation APIs to prevent duplicates
 
 ### Test/Debug APIs
 
@@ -138,7 +150,7 @@ SUBSCRIPTION_ENV=development/production
 - **Development**: `dev_users/{userId}/dev_subscriptions/current`
 - **Production**: `users/{userId}/subscriptions/current`
 
-## Status Mapping (CRITICAL FIXES APPLIED 2025-01-28)
+## Status Mapping (CRITICAL FIXES APPLIED 2025-08-28)
 
 WeWrite subscription statuses map directly to Stripe statuses as follows:
 
@@ -152,28 +164,57 @@ WeWrite subscription statuses map directly to Stripe statuses as follows:
 | `trialing` | `trialing` | In free trial period | "Trial" (blue) |
 | `paused` | `paused` | Subscription temporarily paused | "Paused" (gray) |
 
-### Critical Fixes Applied (2025-01-28)
+### Critical Fixes Applied (2025-08-28)
 
-**Problem**: Users were seeing "cancelled" in UI while Stripe showed "incomplete" status.
+**Problem**: Users were seeing "Payment Processing" UI while Stripe showed "incomplete" status with no actual charge.
 
-**Root Cause**: Race condition protection in webhook handler was preventing legitimate "incomplete" statuses from being saved.
+**Root Cause**: Subscriptions were created with `payment_behavior: 'default_incomplete'` which creates incomplete subscriptions that require manual confirmation, instead of processing payments immediately.
 
 **Fixes Applied**:
-1. **✅ Removed Race Condition Protection**: Webhook handlers now always use Stripe's status as source of truth
-2. **✅ Enhanced Cache Invalidation**: Webhooks properly clear subscription caches immediately
-3. **✅ Consistent Status Spelling**: Standardized on "cancelled" (not "canceled")
-4. **✅ Enhanced Debug Logging**: Added specific logging for incomplete status transitions
+1. **✅ Fixed Payment Behavior**: Changed to `payment_behavior: 'error_if_incomplete'` for immediate processing
+2. **✅ Instant Subscription Activation**: Subscriptions now activate immediately or fail with clear error
+3. **✅ Removed Misleading "Processing" UI**: No more fake processing states
+4. **✅ Enhanced Error Handling**: Clear error messages for payment failures
+5. **✅ Added Audit Trail Logging**: Subscription update API now logs audit events for history
 
-**Code Change**:
+**Code Changes**:
 ```typescript
 // BEFORE (Problematic):
-if (currentStatus === 'active' && newStatus === 'incomplete') {
-  subscriptionData.status = 'active'; // ❌ Prevented legitimate incomplete status
-}
+payment_behavior: 'default_incomplete', // ❌ Created incomplete subscriptions
+const subscription = await stripe.subscriptions.create({...}); // ❌ Always created new subscriptions
 
 // AFTER (Fixed):
-subscriptionData.status = newStatus; // ✅ Always use Stripe's status
+// 1. Check for existing subscriptions first
+const existingSubscriptions = await stripe.subscriptions.list({
+  customer: customerId,
+  status: 'active',
+  limit: 10
+});
+
+if (existingSubscriptions.data.length > 0) {
+  return NextResponse.json({
+    error: 'User already has active subscription. Use update endpoint instead.',
+    shouldUpdate: true
+  }, { status: 409 });
+}
+
+// 2. Use proper payment behavior
+payment_behavior: 'error_if_incomplete', // ✅ Immediate processing or clear failure
+
+// 3. Status validation:
+if (subscription.status !== 'active') {
+  throw new Error(`Subscription creation failed with status: ${subscription.status}`);
+}
 ```
+
+**New Subscription Creation Flow**:
+1. User submits checkout form with payment method
+2. **Validation**: `SubscriptionValidationService` checks for existing active subscriptions
+3. **If existing subscription found**: Return 409 error with redirect to update flow
+4. **If no existing subscription**: Create new subscription with `payment_behavior: 'error_if_incomplete'`
+5. **Payment processed immediately** by Stripe (no incomplete states)
+6. **Status validation**: Subscription must be `active` or creation fails with clear error
+7. **Success page**: Shows immediate success for active subscriptions
 
 ## Stripe Customer Management
 
@@ -210,6 +251,33 @@ APIs detect test subscriptions by checking if ID starts with `sub_test_` and:
 - ✅ `/api/subscription/reactivate` - Handles test subscriptions
 - ✅ `/api/subscription/cancel` - Handles test subscriptions
 
+## Subscription History & Audit Trail
+
+### Audit Trail System
+- **Service**: `subscriptionAuditService` logs all subscription events
+- **Events**: Creation, updates, cancellations, reactivations, status changes
+- **Storage**: Firestore subcollection `audit_trail` under user document
+- **Display**: `SubscriptionHistory` component shows formatted history
+
+### Event Types
+- `subscription_created`: New subscription created
+- `subscription_updated`: Amount/tier changed
+- `subscription_cancelled`: Subscription cancelled
+- `subscription_reactivated`: Cancelled subscription reactivated
+- `subscription_status_changed`: Status updated via webhook
+
+### History Display
+- **Component**: `SubscriptionHistory.tsx`
+- **Features**: Auto-refresh on page visibility, manual refresh button
+- **Formatting**: Human-readable messages (e.g., "subscription upgraded from $10/mo to $25/mo")
+- **Real-time**: Updates when returning from checkout success
+
+### Implementation Status
+- ✅ Webhook handlers log audit events
+- ✅ Subscription update API logs audit events (fixed 2025-08-28)
+- ✅ History component with refresh capabilities
+- ✅ Auto-refresh on checkout return
+
 ## Token System Integration
 
 ### Token Allocation
@@ -222,7 +290,49 @@ APIs detect test subscriptions by checking if ID starts with `sub_test_` and:
 - Previous allocations preserved for subscription continuity
 - Earnings calculated from token allocations
 
+## Fund Account UI System
+
+### UsdFundingTierSlider Component
+- **Purpose**: Main subscription management interface
+- **Features**: Slider for amount selection, upgrade/downgrade buttons
+- **Smart Button Logic**: Hides button when no change needed (2025-08-28 fix)
+- **Animation**: Smooth height transitions to prevent layout shifts
+
+### Button State Logic
+```typescript
+// Hide button when slider matches current subscription amount
+const shouldHideButton = currentSubscription?.amount === selectedAmount && selectedAmount !== 0;
+
+// Animate height smoothly
+className={`transition-all duration-300 ease-in-out ${
+  shouldHideButton ? 'max-h-0 opacity-0 pt-0' : 'max-h-20 opacity-100 pt-2'
+}`}
+```
+
+### Success Page Improvements
+- **Status Checking**: Verifies actual subscription status before showing success
+- **Conditional Messaging**: Different messages for active, incomplete, and processing states
+- **Visual Feedback**: Confetti only for truly successful (active) subscriptions
+- **Auto-refresh**: Reloads subscription data after successful checkout
+
 ## Common Issues & Solutions
+
+### Issue: Button shows "Current Plan" instead of hiding
+**Cause**: Button was disabled but still visible when no change needed
+**Solution**: Hide button completely with smooth animation (fixed 2025-08-28)
+
+### Issue: Multiple active subscriptions for same user in Stripe
+**Cause**: Subscription creation APIs always created new subscriptions instead of checking for existing ones
+**Solution**: Added duplicate subscription detection and redirect to update flow (fixed 2025-08-28)
+**Cleanup**: Performed cleanup on 2025-08-28 - removed 24 duplicate subscriptions across 4 customers in dev environment
+
+### Issue: Success page shows confetti for incomplete subscriptions
+**Cause**: Success page didn't check actual subscription status
+**Solution**: Added status verification before showing success UI (fixed 2025-08-28)
+
+### Issue: Subscription history not updating after changes
+**Cause**: Subscription update API wasn't logging audit events
+**Solution**: Added audit trail logging to update API (fixed 2025-08-28)
 
 ### Issue: Subscription upgrade button not working
 **Cause**: Missing `stripeSubscriptionId` in API response
@@ -280,6 +390,26 @@ APIs detect test subscriptions by checking if ID starts with `sub_test_` and:
 
 ---
 
-**Last Updated**: 2025-07-09 (Critical APIs implemented, system now complete)
+## Recent Updates (2025-08-28)
+
+### Major Architectural Fixes Applied
+1. **🚨 CRITICAL: Fixed Duplicate Subscription Creation**: Subscription creation APIs now check for existing active subscriptions
+2. **⚡ Fixed Instant Payment Processing**: Changed from `default_incomplete` to `error_if_incomplete` for immediate processing
+3. **🧹 Completed Duplicate Cleanup**: Cleaned up 24 duplicate subscriptions across 4 customers in dev environment
+4. **🔧 Added Validation Service**: Created `SubscriptionValidationService` for reusable validation logic
+5. **📊 Enhanced Success Page**: Added status verification and conditional messaging
+6. **📝 Added Audit Trail Logging**: All subscription changes now create history entries
+7. **🎨 Enhanced Fund Account UI**: Smart button hiding with smooth animations
+8. **🔄 Added Auto-refresh**: Subscription data refreshes after checkout completion
+
+### Code Architecture Improvements
+- **Centralized Validation**: `SubscriptionValidationService` handles all duplicate detection and status validation
+- **Consistent Error Handling**: Standardized error responses across all subscription creation APIs
+- **Improved Maintainability**: Reduced code duplication through shared validation service
+- **Better Logging**: Structured logging for validation events and subscription state changes
+
+---
+
+**Last Updated**: 2025-08-28 (Major subscription flow fixes and UI improvements)
 **Maintainer**: Development Team
 **Review Schedule**: Monthly or after major subscription changes

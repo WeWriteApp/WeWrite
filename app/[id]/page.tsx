@@ -20,7 +20,7 @@ const getFirebaseModules = async () => {
 };
 
 // Optimized PageView with preloading and progressive loading
-const PageView = dynamic(() => import('../components/pages/PageView'), {
+const ContentPageView = dynamic(() => import('../components/pages/ContentPageView'), {
   ssr: false,
   loading: () => (
     <div className="min-h-screen bg-background">
@@ -57,13 +57,13 @@ const PageView = dynamic(() => import('../components/pages/PageView'), {
   )
 });
 
-// Preload PageView component to reduce loading time
+// Preload ContentPageView component to reduce loading time
 if (typeof window !== 'undefined') {
-  import('../components/pages/PageView');
+  import('../components/pages/ContentPageView');
 }
 
-// Error boundary component for PageView - simplified error handling
-class PageViewErrorBoundary extends React.Component<
+// Error boundary component for ContentPageView - simplified error handling
+class ContentPageViewErrorBoundary extends React.Component<
   { children: React.ReactNode; pageId: string },
   { hasError: boolean; error?: Error }
 > {
@@ -77,7 +77,7 @@ class PageViewErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('PageView Error Boundary caught error:', error, errorInfo);
+    console.error('ContentPageView Error Boundary caught error:', error, errorInfo);
   }
 
   render() {
@@ -336,12 +336,12 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   }
 
   if (contentType === 'page') {
-    console.log('🔍 ContentPage: Rendering PageView for ID:', id);
+    console.log('🔍 ContentPage: Rendering ContentPageView for ID:', id);
     return (
       <ClientOnlyPageWrapper>
-        <PageViewErrorBoundary pageId={id}>
-          <PageView params={{ id }} />
-        </PageViewErrorBoundary>
+        <ContentPageViewErrorBoundary pageId={id}>
+          <ContentPageView params={{ id }} />
+        </ContentPageViewErrorBoundary>
       </ClientOnlyPageWrapper>
     );
   }

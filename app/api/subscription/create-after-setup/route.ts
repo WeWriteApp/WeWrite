@@ -3,6 +3,8 @@ import { getUserIdFromRequest, getUserEmailFromId } from '../../auth-helper';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
+import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -45,6 +47,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Check if customer already has active subscriptions
+    const existingCheck = await SubscriptionValidationService.checkForExistingSubscriptions(customerId);
+    const validationError = SubscriptionValidationService.validateSubscriptionCreation(existingCheck);
+
+    if (validationError) {
+      SubscriptionValidationService.logValidationEvent('DUPLICATE_SUBSCRIPTION_PREVENTED', {
+        userId,
+        customerId,
+        setupIntentId,
+        existingSubscriptionId: validationError.existingSubscriptionId
+      });
+
+      return NextResponse.json(validationError, { status: validationError.statusCode });
+    }
+
     // Create subscription with the payment method from setup intent
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
     const transferGroup = `subscription_${userId}_${currentMonth}`;
@@ -53,7 +70,7 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       items: [{ price: price.id }],
       default_payment_method: paymentMethodId,
-      payment_behavior: 'default_incomplete',
+      payment_behavior: 'error_if_incomplete',
       payment_settings: {
         payment_method_types: ['card', 'link'],
         save_default_payment_method: 'on_subscription'
@@ -114,7 +131,28 @@ export async function POST(request: NextRequest) {
       // Don't fail the subscription creation if cache invalidation fails
     }
 
-    console.log(`[CREATE AFTER SETUP] Successfully created subscription ${subscription.id} for user ${userId}`);
+    console.log(`[CREATE AFTER SETUP] Successfully created subscription ${subscription.id} for user ${userId} with status: ${subscription.status}`);
+
+    // Validate subscription status
+    SubscriptionValidationService.validateSubscriptionStatus(subscription, 'active');
+
+    // Log subscription creation for audit trail
+    try {
+      await subscriptionAuditService.logSubscriptionCreated(userId, subscriptionData, {
+        source: 'user',
+        correlationId: `setup_intent_${setupIntentId}_${Date.now()}`,
+        metadata: {
+          amount: amount.toString(),
+          setupIntentId,
+          stripeSubscriptionId: subscription.id,
+          paymentMethodId: setupIntent.payment_method
+        }
+      });
+      console.log(`[CREATE AFTER SETUP] ✅ Logged subscription creation to audit trail`);
+    } catch (auditError) {
+      console.warn('[CREATE AFTER SETUP] Failed to log audit event:', auditError);
+      // Don't fail the request if audit logging fails
+    }
 
     return NextResponse.json({
       success: true,

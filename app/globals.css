@@ -2879,45 +2879,14 @@ button.bg-transparent[type] {
   transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Sidebar button positioning - responsive to sidebar state */
+/* Clean sidebar button system - no !important rules needed */
 .sidebar-nav-button {
-  /* Default: center content in collapsed state */
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0.75rem !important; /* 12px padding */
-  /* Smooth transitions */
-  transition: justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  /* Ensure smooth transitions without layout shifts */
-  transform: translateZ(0); /* Force hardware acceleration */
+  /* Smooth transitions for responsive behavior */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Hardware acceleration for smooth animations */
+  transform: translateZ(0);
   backface-visibility: hidden;
   box-sizing: border-box;
-  /* No margins - let container handle spacing */
-  margin: 0.125rem 0; /* Only vertical margins */
-  border-radius: 0.75rem; /* 12px - rounded corners */
-}
-
-/* When sidebar is expanded, left-align button content */
-.sidebar-nav-button-expanded {
-  justify-content: flex-start !important;
-}
-
-/* When sidebar is collapsed, ensure no horizontal margins */
-.w-16 .sidebar-nav-button {
-  /* No horizontal margins in collapsed state - container handles spacing */
-  margin: 0.125rem 0; /* Only vertical margins */
-}
-
-/* When sidebar is expanded (hover or persistent), align to left with proper padding */
-.w-64 .sidebar-nav-button,
-.sidebar-hover-overlay .sidebar-nav-button {
-  justify-content: flex-start !important;
-  padding-left: 0.5rem !important; /* 8px - keeps icon in same visual position */
-  padding-right: 0.5rem !important;
-  /* Reset margins for expanded state */
-  margin: 0.125rem 0.25rem; /* Standard margins when expanded */
-  border-radius: 0.5rem; /* 8px - less rounded when expanded */
 }
 
 /* Sidebar text animation */
@@ -3052,6 +3021,37 @@ button.bg-transparent[type] {
   .sidebar-text-container span {
     text-align: left !important;
   }
+
+  /* Force left alignment for all desktop sidebar text labels */
+  [data-variant="desktop-sidebar"] span {
+    text-align: left !important;
+  }
+}
+
+/* Standardized Navigation Hover States - Using proper specificity
+ *
+ * This approach uses CSS specificity instead of !important rules to ensure
+ * hover states work properly across all navigation components.
+ *
+ * The utility classes (.nav-hover-state, .nav-active-state, .nav-selected-state)
+ * provide a consistent way to apply standardized interaction states without
+ * needing to override existing CSS with !important.
+ */
+
+/* Simplified navigation states - let utility classes handle the styling */
+
+/* Utility classes for standardized navigation states */
+.nav-hover-state:hover {
+  background-color: oklch(var(--neutral-base) / 0.05);
+}
+
+.nav-active-state:active {
+  background-color: oklch(var(--neutral-base) / 0.1);
+}
+
+.nav-selected-state {
+  background-color: oklch(var(--accent-base) / 0.15);
+  color: oklch(var(--accent-base));
 }
 
 /* Mobile Bottom Navigation Icon and Text Alignment */

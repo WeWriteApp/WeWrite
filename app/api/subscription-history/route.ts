@@ -156,12 +156,21 @@ async function getSubscriptionHistory(userId: string, db: any): Promise<Subscrip
 
         // 5. Get refunds from Stripe
         try {
-          const refunds = await stripe.refunds.list({
+          // Note: Stripe refunds API doesn't support filtering by customer directly
+          // We need to get charges first, then refunds for those charges
+          const charges = await stripe.charges.list({
             customer: stripeCustomerId,
             limit: 20
           });
 
-          refunds.data.forEach((refund) => {
+          const refunds = [];
+          for (const charge of charges.data) {
+            if (charge.refunds && charge.refunds.data.length > 0) {
+              refunds.push(...charge.refunds.data);
+            }
+          }
+
+          refunds.forEach((refund) => {
             events.push({
               id: `refund_${refund.id}`,
               type: 'refund_issued',
@@ -182,7 +191,7 @@ async function getSubscriptionHistory(userId: string, db: any): Promise<Subscrip
             });
           });
 
-          console.log(`[SUBSCRIPTION HISTORY] Found ${refunds.data.length} refunds for customer ${stripeCustomerId}`);
+          console.log(`[SUBSCRIPTION HISTORY] Found ${refunds.length} refunds for customer ${stripeCustomerId}`);
         } catch (refundError) {
           console.warn('[SUBSCRIPTION HISTORY] Error fetching refunds from Stripe:', refundError.message || refundError);
           // Continue even if refund fetching fails

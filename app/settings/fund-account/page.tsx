@@ -17,9 +17,11 @@ export default function FundAccountPage() {
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for success/cancellation messages
+  // Check for success/cancellation messages and update parameters
   const cancelled = searchParams.get('cancelled') === 'true';
   const success = searchParams.get('success') === 'true';
+  const updateSubscriptionId = searchParams.get('update');
+  const updateAmount = searchParams.get('amount');
 
   // Load current subscription using the same API as settings page
   useEffect(() => {
@@ -77,13 +79,82 @@ export default function FundAccountPage() {
     loadSubscription();
   }, [user?.uid]);
 
+  // Handle automatic update flow when redirected from checkout
+  useEffect(() => {
+    if (updateSubscriptionId && updateAmount && currentSubscription) {
+      const amount = parseInt(updateAmount);
+      if (amount && amount !== currentSubscription.amount) {
+        console.log(`Auto-triggering subscription update from ${currentSubscription.amount} to ${amount}`);
+        setSelectedAmount(amount);
+
+        // Auto-trigger the update after a short delay to ensure UI is ready
+        setTimeout(async () => {
+          try {
+            const response = await fetch('/api/subscription/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                subscriptionId: updateSubscriptionId,
+                newAmount: amount
+              })
+            });
+
+            if (response.ok) {
+              // Redirect to success page
+              window.location.href = `/settings/fund-account/success?subscription=${updateSubscriptionId}&amount=${amount}`;
+            } else {
+              const error = await response.json();
+              console.error('Auto-update failed:', error);
+              // Show error message or redirect to manual flow
+            }
+          } catch (error) {
+            console.error('Auto-update error:', error);
+          }
+        }, 1000);
+      }
+    }
+  }, [updateSubscriptionId, updateAmount, currentSubscription]);
+
   // Refresh USD balance when subscription changes or on success/cancellation
   useEffect(() => {
     if (success || cancelled) {
       // Force refresh USD balance to reflect subscription changes
       refreshUsdBalance();
+
+      // Also reload subscription data to ensure UI is up to date
+      if (user?.uid) {
+        const reloadSubscription = async () => {
+          try {
+            const response = await fetch('/api/account-subscription');
+            if (response.ok) {
+              const data = await response.json();
+              if (data.hasSubscription && data.fullData) {
+                let amount = 0;
+                if (data.fullData.amount) {
+                  amount = data.fullData.amount;
+                } else if (data.fullData.items?.data?.[0]?.price?.unit_amount) {
+                  amount = data.fullData.items.data[0].price.unit_amount / 100;
+                } else if (data.amount) {
+                  amount = data.amount;
+                }
+
+                setCurrentSubscription({
+                  ...data.fullData,
+                  amount: amount
+                });
+                setSelectedAmount(amount);
+              }
+            }
+          } catch (error) {
+            console.error('Error reloading subscription after success:', error);
+          }
+        };
+
+        // Add a small delay to allow webhooks to process
+        setTimeout(reloadSubscription, 2000);
+      }
     }
-  }, [success, cancelled, refreshUsdBalance]);
+  }, [success, cancelled, refreshUsdBalance, user?.uid]);
 
   // Also refresh USD balance when current subscription changes
   useEffect(() => {

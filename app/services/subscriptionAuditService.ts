@@ -94,6 +94,35 @@ class SubscriptionAuditService {
   }
 
   /**
+   * Manually add a missing downgrade event (for fixing missing history)
+   */
+  async addMissingDowngradeEvent(
+    userId: string,
+    oldAmount: number,
+    newAmount: number
+  ): Promise<void> {
+    console.log(`[AUDIT] Adding missing downgrade event: $${oldAmount} -> $${newAmount}`);
+
+    await this.logEvent({
+      userId,
+      eventType: 'plan_changed',
+      description: `Subscription downgraded from $${oldAmount} to $${newAmount}/month`,
+      entityType: 'subscription',
+      entityId: 'manual_correction',
+      beforeState: { amount: oldAmount },
+      afterState: { amount: newAmount },
+      source: 'system',
+      metadata: {
+        note: 'Manually added missing downgrade event',
+        originalAmount: oldAmount,
+        newAmount: newAmount,
+        reason: 'webhook_missed'
+      },
+      severity: 'info'
+    });
+  }
+
+  /**
    * Log subscription update/change
    */
   async logSubscriptionUpdated(

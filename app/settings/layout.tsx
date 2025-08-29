@@ -244,10 +244,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                       <button
                         onClick={() => handleSectionClick(section.href)}
                         className={cn(
-                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none wewrite-interactive",
+                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none",
                           isActive
-                            ? "wewrite-active-state text-primary"
-                            : "text-foreground"
+                            ? "nav-selected-state text-foreground"
+                            : "text-foreground nav-hover-state nav-active-state hover:text-foreground"
                         )}
                       >
                         <IconComponent className={cn(

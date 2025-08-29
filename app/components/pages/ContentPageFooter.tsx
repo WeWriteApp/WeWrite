@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PageActions } from "./PageActions";
+import ContentPageActions from "./ContentPageActions";
 import WordCounter from "../editor/WordCounter";
-import PageStats from "./PageStats";
+import ContentPageStats from "./ContentPageStats";
 import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
@@ -79,7 +79,7 @@ interface PageFooterProps {
  * @param {boolean} hasUnsavedChanges - Whether there are unsaved changes
  * @param {boolean} saveSuccess - Whether save was successful (for animation)
  */
-export default function PageFooter({
+export default function ContentPageFooter({
   page,
   content,
   isOwner,
@@ -126,7 +126,7 @@ export default function PageFooter({
     <div className="pb-6 px-4 space-y-4">
       {/* Show PageActions only for existing pages (not for new pages or bios) */}
       {page && (
-        <PageActions
+        <ContentPageActions
           page={page}
           content={content}
           isOwner={isOwner}
@@ -182,7 +182,7 @@ export default function PageFooter({
 
       {/* Page stats section - show for all existing pages */}
       {page && (
-        <PageStats
+        <ContentPageStats
           pageId={page.id}
           realTime={true}
           showSparklines={true}

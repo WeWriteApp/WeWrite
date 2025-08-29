@@ -185,7 +185,41 @@ export async function POST(request: NextRequest) {
     console.log(`[SUBSCRIPTION UPDATE] Updating USD allocation for user ${userId}: $${newAmount}`);
     await ServerUsdService.updateMonthlyUsdAllocation(userId, newAmount);
 
-    // Simple logging - just log to console for now to avoid complex dependencies
+    // Log subscription update to audit trail for proper history
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+
+      const beforeState = {
+        amount: oldSubscriptionData?.amount || 0,
+        tier: oldSubscriptionData?.tier || 'none',
+        status: oldSubscriptionData?.status || 'unknown'
+      };
+
+      const afterState = {
+        amount: newAmount,
+        tier: tier,
+        status: subscriptionData.status,
+        ...subscriptionData
+      };
+
+      await subscriptionAuditService.logSubscriptionUpdated(userId, beforeState, afterState, {
+        source: 'user',
+        correlationId: `subscription_update_${subscriptionId}_${Date.now()}`,
+        metadata: {
+          subscriptionId,
+          isTestSubscription,
+          updateType: 'amount_change',
+          oldAmount: beforeState.amount,
+          newAmount: newAmount
+        }
+      });
+
+      console.log(`[SUBSCRIPTION UPDATE] ✅ Logged subscription update to audit trail`);
+    } catch (auditError) {
+      console.error(`[SUBSCRIPTION UPDATE] ❌ Failed to log audit event:`, auditError);
+      // Don't fail the update if audit logging fails
+    }
+
     console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription:`, {
       userId,
       subscriptionId,

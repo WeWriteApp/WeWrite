@@ -161,7 +161,7 @@ const DraggableNavButton: React.FC<DraggableNavButtonProps> = ({
         // Active state styling
         isActive && "bg-primary/10 text-primary",
         // Hover states
-        "hover:bg-primary/5 active:bg-primary/10",
+        "nav-hover-state nav-active-state",
         "text-muted-foreground hover:text-foreground",
         // Dragging state
         isDragging && "scale-105 shadow-lg z-10",

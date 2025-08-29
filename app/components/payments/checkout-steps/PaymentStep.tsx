@@ -355,7 +355,16 @@ export function PaymentStep({
       const subscriptionData = await subscriptionResponse.json();
 
       if (!subscriptionResponse.ok) {
+        // Handle specific Stripe errors that might require payment confirmation
+        if (subscriptionData.error?.includes('requires_action') || subscriptionData.error?.includes('requires_confirmation')) {
+          throw new Error('Payment requires additional authentication. Please try again.');
+        }
         throw new Error(subscriptionData.error || 'Failed to create subscription');
+      }
+
+      // With error_if_incomplete, subscription should be active immediately
+      if (subscriptionData.status !== 'active') {
+        throw new Error(`Subscription creation failed with status: ${subscriptionData.status}`);
       }
 
       // Success!

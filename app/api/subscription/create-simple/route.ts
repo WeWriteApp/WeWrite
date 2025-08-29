@@ -3,6 +3,8 @@ import { getUserIdFromRequest, getUserEmailFromId } from '../../auth-helper';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
+import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -92,7 +94,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Customer has payment method - create subscription directly
+    // Check if customer already has active subscriptions
+    const existingCheck = await SubscriptionValidationService.checkForExistingSubscriptions(customer.id);
+    const validationError = SubscriptionValidationService.validateSubscriptionCreation(existingCheck);
+
+    if (validationError) {
+      SubscriptionValidationService.logValidationEvent('DUPLICATE_SUBSCRIPTION_PREVENTED', {
+        userId,
+        customerId: customer.id,
+        existingSubscriptionId: validationError.existingSubscriptionId
+      });
+
+      return NextResponse.json(validationError, { status: validationError.statusCode });
+    }
+
+    // Customer has payment method and no existing subscription - create subscription directly
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
     const transferGroup = `subscription_${userId}_${currentMonth}`;
 
@@ -100,7 +116,7 @@ export async function POST(request: NextRequest) {
       customer: customer.id,
       items: [{ price: price.id }],
       default_payment_method: paymentMethods.data[0].id,
-      payment_behavior: 'default_incomplete',
+      payment_behavior: 'error_if_incomplete',
       payment_settings: {
         payment_method_types: ['card', 'link'],
         save_default_payment_method: 'on_subscription'
@@ -114,6 +130,11 @@ export async function POST(request: NextRequest) {
       },
       expand: ['latest_invoice.payment_intent']
     });
+
+    console.log(`[CREATE SIMPLE] Successfully created subscription ${subscription.id} for user ${userId} with status: ${subscription.status}`);
+
+    // Validate subscription status
+    SubscriptionValidationService.validateSubscriptionStatus(subscription, 'active');
 
     // Save subscription to Firestore
     const admin = getFirebaseAdmin();
@@ -159,6 +180,24 @@ export async function POST(request: NextRequest) {
     } catch (cacheError) {
       console.warn('Failed to invalidate subscription cache:', cacheError);
       // Don't fail the subscription creation if cache invalidation fails
+    }
+
+    // Log subscription creation for audit trail
+    try {
+      await subscriptionAuditService.logSubscriptionCreated(userId, subscriptionData, {
+        source: 'user',
+        correlationId: `simple_subscription_${Date.now()}_${userId}`,
+        metadata: {
+          amount: amount.toString(),
+          stripeSubscriptionId: subscription.id,
+          paymentMethodId: paymentMethods.data[0].id,
+          flow: 'existing_payment_method'
+        }
+      });
+      console.log(`[CREATE SIMPLE] ✅ Logged subscription creation to audit trail`);
+    } catch (auditError) {
+      console.warn('[CREATE SIMPLE] Failed to log audit event:', auditError);
+      // Don't fail the request if audit logging fails
     }
 
     return NextResponse.json({

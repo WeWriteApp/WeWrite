@@ -353,7 +353,7 @@ export default function FloatingFinancialHeader({
     <FixedPortal>
       {/* Mobile: Standard centered layout */}
       <div
-        className="md:hidden fixed-layer z-fixed-header pointer-events-none"
+        className="md:hidden fixed-layer z-fixed-header pointer-events-none transition-all duration-300 ease-out"
         style={{
           top: `calc(var(--fixed-safe-top) + ${bannerOffset}px)`,
           left: 0,

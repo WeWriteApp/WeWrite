@@ -131,6 +131,10 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
       code: error.code,
       message: error.message,
       stack: error.stack,
+      // Check for any timing information in the error
+      customData: error.customData,
+      details: error.details,
+      serverResponse: error.serverResponse,
       // Additional debugging for Android PWA issues
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
       platform: typeof navigator !== 'undefined' ? navigator.platform : 'server',
@@ -149,7 +153,16 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
     } else if (error.code === "auth/user-disabled") {
       message = "This account has been disabled.";
     } else if (error.code === "auth/too-many-requests") {
-      message = "Too many failed login attempts. Please try again later.";
+      // Log detailed error information to see if Firebase provides any timing data
+      console.error("[Firebase Auth] Rate limit error details:", {
+        fullError: error,
+        customData: error.customData,
+        details: error.details,
+        serverResponse: error.serverResponse,
+        timestamp: new Date().toISOString()
+      });
+
+      message = "Too many failed login attempts. Please wait 15-30 minutes before trying again, or use 'Forgot Password' to reset your password.";
     } else if (error.code === "auth/network-request-failed") {
       message = "Network error. Please check your internet connection.";
     }

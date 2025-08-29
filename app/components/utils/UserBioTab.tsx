@@ -15,7 +15,7 @@ import { UserBioSkeleton } from "../ui/page-skeleton";
 
 import TextView from "../editor/TextView";
 import HoverEditContent from './HoverEditContent';
-import PageFooter from "../pages/PageFooter";
+import ContentPageFooter from "../pages/ContentPageFooter";
 import StickySaveHeader from "../layout/StickySaveHeader";
 import type { UserBioTabProps } from "../../types/components";
 import type { EditorContent, User } from "../../types/database";
@@ -296,7 +296,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
                 />
 
               {/* Page Footer with bottom save bar */}
-              <PageFooter
+              <ContentPageFooter
                 page={null} // Bio doesn't have page data
                 content={bioContent}
                 linkedPageIds={[]} // Bio doesn't have linked pages

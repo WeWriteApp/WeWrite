@@ -314,6 +314,16 @@ function UnifiedSidebarContent({
       return true;
     }
 
+    // Special case for settings - match all settings pages
+    if (item.label === 'Settings' && (pathname.startsWith('/settings/') || pathname === '/settings/')) {
+      return true;
+    }
+
+    // Special case for admin - match all admin pages
+    if (item.label === 'Admin' && (pathname.startsWith('/admin/') || pathname === '/admin/')) {
+      return true;
+    }
+
     return false;
   };
 
@@ -364,7 +374,7 @@ function UnifiedSidebarContent({
               variant="ghost"
               size="icon"
               onClick={toggleExpanded}
-              className="ml-auto text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 w-8 h-8"
+              className="ml-auto text-foreground nav-hover-state nav-active-state hover:text-foreground transition-all duration-300 w-8 h-8"
               aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
               {isExpanded ? (
@@ -381,13 +391,7 @@ function UnifiedSidebarContent({
             "scrollbar-hide" // Hide scrollbars completely
           )}>
             {/* Navigation Items */}
-            <nav className={cn(
-              "flex flex-col gap-2 mb-6",
-              // IMPORTANT: Add horizontal padding for collapsed state to center icons properly
-              // This works with NavButton w-full to prevent icon clipping
-              // Collapsed: w-16 sidebar - px-2 container = 48px button width (perfect for icons)
-              !showContent && "px-2"
-            )}>
+            <nav className="flex flex-col gap-2 mb-6">
             {completeSidebarOrder
               .filter((itemId, index, array) => array.indexOf(itemId) === index) // Remove duplicates
               .map((itemId, index) => {
@@ -585,10 +589,7 @@ function UnifiedSidebarContent({
                 <Button
                   variant="ghost"
                   onClick={handleLogoutClick}
-                  className={cn(
-                    "relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 sidebar-nav-button",
-                    showContent && "sidebar-nav-button-expanded"
-                  )}
+                  className="relative flex items-center h-12 w-full text-foreground nav-hover-state nav-active-state hover:text-foreground transition-all duration-300 sidebar-nav-button justify-start px-3 rounded-lg"
                   title="Logout"
                 >
                   {/* Icon container - maintains position during transitions */}

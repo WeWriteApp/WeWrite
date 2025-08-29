@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
-import PageHeader from './PageHeader';
+import ContentPageHeader from './ContentPageHeader';
 import UnifiedLoader from '../ui/unified-loader';
 import { ErrorDisplay } from '../ui/error-display';
 import { formatDistanceToNow } from 'date-fns';
@@ -289,7 +289,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
     <div className="min-h-screen bg-background">
       <div className="p-2 sm:p-4 max-w-4xl mx-auto">
             {/* Header */}
-            <PageHeader
+            <ContentPageHeader
               title={`${currentVersion.title} - Version History`}
               username={currentVersion.username}
               isLoading={false}

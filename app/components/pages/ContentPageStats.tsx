@@ -29,7 +29,7 @@ interface PageStatsProps {
  * Displays page statistics using environment-aware API calls.
  * Shows view count, recent edits, and supporter information.
  */
-export default function PageStats({
+export default function ContentPageStats({
   pageId,
   customDate,
   canEdit = false,

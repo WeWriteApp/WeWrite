@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import '../ui/tooltip.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -8,10 +9,12 @@ import {
   History,
   Loader2,
   RefreshCw,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../../providers/AuthProvider';
+import { formatRelativeTime } from '../../utils/formatRelativeTime';
 
 interface SubscriptionEvent {
   id: string;
@@ -45,6 +48,19 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
     }
   }, [user?.uid]);
 
+  // Refresh history when the component becomes visible (e.g., returning from checkout)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user?.uid) {
+        console.log('[SUBSCRIPTION HISTORY] Page became visible, refreshing history');
+        fetchHistory();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.uid]);
+
   const fetchHistory = async () => {
     try {
       setLoading(true);
@@ -76,34 +92,48 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
 
 
 
-  const getEventBadgeVariant = (eventType: string): "default" | "secondary" | "destructive" | "outline" => {
+  const getEventBadgeVariant = (eventType: string): "default" | "secondary" | "destructive" | "success" | "warning" => {
     switch (eventType) {
       case 'subscription_created':
       case 'subscription_reactivated':
       case 'payment_succeeded':
-        return 'default';
-      case 'subscription_updated':
-      case 'subscription_amount_changed':
-      case 'subscription_downgraded':
-        return 'secondary';
+      case 'plan_changed': // Handle upgrades (will be determined by description)
+        return 'success'; // Green for positive events
       case 'subscription_cancelled':
       case 'payment_failed':
-        return 'destructive';
+        return 'destructive'; // Red for negative events
+      case 'subscription_updated':
+      case 'subscription_amount_changed':
+        return 'secondary'; // Gray for neutral events
       default:
-        return 'outline';
+        return 'secondary';
     }
   };
 
-  const formatEventType = (eventType: string): string => {
+  const getEventBadgeVariantByDescription = (eventType: string, description: string): "default" | "secondary" | "destructive" | "success" | "warning" => {
+    // Special handling for plan_changed events based on description
+    if (eventType === 'plan_changed') {
+      if (description.toLowerCase().includes('downgraded')) {
+        return 'warning'; // Orange for downgrades
+      } else if (description.toLowerCase().includes('upgraded')) {
+        return 'success'; // Green for upgrades
+      }
+    }
+
+    // Fall back to the original logic
+    return getEventBadgeVariant(eventType);
+  };
+
+  const formatEventType = (eventType: string, description: string = ''): string => {
     switch (eventType) {
       case 'subscription_created':
-        return 'Subscription Created';
+        return 'Created';
       case 'subscription_updated':
-        return 'Subscription Updated';
+        return 'Updated';
       case 'subscription_amount_changed':
         return 'Amount Changed';
       case 'subscription_downgraded':
-        return 'Downgraded';
+        return 'Downgrade';
       case 'subscription_cancelled':
         return 'Cancelled';
       case 'subscription_reactivated':
@@ -112,6 +142,15 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
         return 'Payment Successful';
       case 'payment_failed':
         return 'Payment Failed';
+      case 'plan_changed':
+        // Determine if it's an upgrade or downgrade from the description
+        if (description.toLowerCase().includes('downgraded')) {
+          return 'Downgrade';
+        } else if (description.toLowerCase().includes('upgraded')) {
+          return 'Upgrade';
+        } else {
+          return 'Plan Changed';
+        }
       default:
         return eventType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
@@ -180,9 +219,20 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <History className="h-5 w-5" />
-          Subscription History
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Subscription History
+          </div>
+          <Button
+            onClick={fetchHistory}
+            variant="ghost"
+            size="sm"
+            disabled={loading}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
         </CardTitle>
         <CardDescription>
           Complete record of your WeWrite subscription changes and payments over time
@@ -203,33 +253,21 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
           <div className="space-y-4">
             {history.map((event) => (
               <div key={event.id} className="p-4 border-theme-strong rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant={getEventBadgeVariant(event.type)} className="text-xs">
-                      {formatEventType(event.type)}
-                    </Badge>
+                <div className="flex items-start justify-between mb-2">
+                  <Badge variant={getEventBadgeVariantByDescription(event.type, event.description)} className="text-xs">
+                    {formatEventType(event.type, event.description)}
+                  </Badge>
 
-                    {/* Show subscription amount for all events */}
-                    {event.details.amount && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
-                        <DollarSign className="h-3 w-3" />
-                        {formatAmount(event.details.amount, event.details.currency)}/month
-                      </span>
-                    )}
-
-                    {/* Show amount change for upgrade/downgrade events */}
-                    {event.details.oldAmount && event.details.newAmount && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
-                        <DollarSign className="h-3 w-3" />
-                        {formatAmount(event.details.oldAmount)} → {formatAmount(event.details.newAmount)}
-                      </span>
-                    )}
+                  {/* Relative time with tooltip showing absolute date/time */}
+                  <div
+                    className="tooltip-trigger text-xs text-muted-foreground cursor-help"
+                    data-tooltip={`${event.timestamp.toLocaleDateString()} ${event.timestamp.toLocaleTimeString()}`}
+                  >
+                    {formatRelativeTime(event.timestamp)}
                   </div>
-
-                  <p className="text-sm font-medium mb-2">{event.description}</p>
-
-                <div className="text-xs text-muted-foreground">
-                  {event.timestamp.toLocaleDateString()} {event.timestamp.toLocaleTimeString()}
                 </div>
+
+                <p className="text-sm font-medium">{event.description}</p>
               </div>
             ))}
           </div>

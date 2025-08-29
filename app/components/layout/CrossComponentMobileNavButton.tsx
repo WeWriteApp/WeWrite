@@ -140,7 +140,7 @@ export default function CrossComponentMobileNavButton({
         isPressed && "scale-110 duration-75", // Scale up when pressed
         "active:scale-95 active:duration-75", // Quick scale down on active
         // Base states with enhanced contrast
-        "hover:bg-primary/10",
+        "nav-hover-state nav-active-state",
         // Active state styling - neutral semi-transparent background to match "more" button
         isActive
           ? "bg-muted text-foreground"

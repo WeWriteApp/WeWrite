@@ -57,9 +57,9 @@ export default function AppearancePage() {
                 data-theme={option.value}
                 data-active={theme === option.value}
                 className={cn(
-                  "flex flex-col items-center gap-3 p-4 border rounded-lg transition-all duration-200 wewrite-interactive-card",
+                  "flex flex-col items-center gap-3 p-4 border rounded-lg transition-all duration-200 nav-hover-state nav-active-state",
                   theme === option.value
-                    ? "wewrite-active-state"
+                    ? "nav-selected-state border-accent"
                     : "border-theme-medium"
                 )}
               >

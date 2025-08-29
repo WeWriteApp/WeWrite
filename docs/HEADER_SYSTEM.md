@@ -43,7 +43,7 @@ WeWrite uses a three-header system to provide consistent navigation and user exp
 
 **Related Components** (kept separate):
 - **StickySaveHeader**: Appears above ContentPageHeader when editing
-- **PageFooter**: Contains bottom save actions
+- **ContentPageFooter**: Contains bottom save actions
 
 ### 3. SettingsHeader - Settings Pages
 **Purpose**: For settings and administrative pages
@@ -104,7 +104,7 @@ interface ContentPageHeaderProps {
   title: string;
   username?: string;
   userId?: string;
-  isEditing?: boolean;
+  isEditing?: boolean; // Defaults to false (view mode) - enables collapsible behavior
   onTitleChange?: (title: string) => void;
   // ... other content-specific props
 }
@@ -193,6 +193,19 @@ interface ContentPageHeaderProps {
 
 ## Recent Changes
 
+### ContentPage Naming Convention Update (August 2025)
+- **Changed**: All page-related components renamed to ContentPage convention
+- **Components Renamed**:
+  - `PageHeader` → `ContentPageHeader`
+  - `PageView` → `ContentPageView`
+  - `PageFooter` → `ContentPageFooter`
+  - `PageActions` → `ContentPageActions`
+  - `PageMenu` → `ContentPageMenu`
+  - `PageStats` → `ContentPageStats`
+  - `PageTabs` → `ContentPageTabs`
+- **Purpose**: Clear distinction between ContentPages and NavPages
+- **Collapsible Behavior Fixed**: ContentPageHeader now defaults to view mode (`isEditing = false`) enabling proper collapsible behavior for other people's content pages
+
 ### Daily Notes Today Button Update
 - **Changed**: From text "Today" to calendar icon with dot indicator
 - **Location**: Daily Notes section header (right side)
@@ -202,7 +215,9 @@ interface ContentPageHeaderProps {
 ## Notes
 
 - This system replaces all existing navigation header implementations
-- ContentPageHeader (PageHeader.tsx) remains largely unchanged (already well-designed)
+- ContentPageHeader (formerly PageHeader.tsx) now uses proper ContentPage naming convention
+- Collapsible header behavior restored for viewing other people's content pages
 - Focus on consistency and user experience
 - WeWrite logo serves as both brand identifier and home navigation
 - All duplicate header components have been removed
+- Clear distinction between ContentPages (individual content) and NavPages (navigation/utility pages)

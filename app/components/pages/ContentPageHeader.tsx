@@ -53,7 +53,7 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 const isExactDateFormat = isDailyNoteFormat;
 
 /**
- * ContentPageHeader Component (PageHeader.tsx)
+ * ContentPageHeader Component (ContentPageHeader.tsx)
  *
  * Displays the header for individual ContentPages, including:
  * - Page title (editable when user has permissions)
@@ -71,7 +71,7 @@ const isExactDateFormat = isDailyNoteFormat;
  * - Provides tooltips and click interactions
  * - Manages loading states and error handling
  */
-export interface PageHeaderProps {
+export interface ContentPageHeaderProps {
   /** The page title to display */
   title?: string;
   /** The username of the page author (fallback if userId fetch fails) */
@@ -112,7 +112,7 @@ export interface PageHeaderProps {
   onInsertLink?: () => void;
 }
 
-export default function PageHeader({
+export default function ContentPageHeader({
   title,
   username,
   userId,
@@ -121,7 +121,7 @@ export default function PageHeader({
   // scrollDirection is not used but kept for compatibility
   tier: initialTier, // deprecated - kept for compatibility
   subscriptionStatus: initialStatus, // deprecated - kept for compatibility
-  isEditing = true, // ALWAYS edit mode
+  isEditing = false, // Default to view mode - will be overridden by parent component
   setIsEditing,
   onTitleChange,
 
@@ -132,7 +132,7 @@ export default function PageHeader({
   isNewPage = false,
   isReply = false,
   onDelete,
-  onInsertLink}: PageHeaderProps) {
+  onInsertLink}: ContentPageHeaderProps) {
 
   // Fetch subscription data for the page author
   const [authorSubscription, setAuthorSubscription] = React.useState<{

@@ -186,9 +186,15 @@ function analyzeAuthError(error: any, context?: string): EnhancedErrorInfo {
 
     case 'auth/too-many-requests':
       return {
-        userMessage: 'Too many failed attempts. Please try again later',
-        technicalDetails: `Authentication rate limited${contextInfo}`,
-        suggestedActions: ['Wait a few minutes before trying again', 'Use password reset if needed'],
+        userMessage: 'Too many failed login attempts. Please wait 15-30 minutes before trying again.',
+        technicalDetails: `Authentication rate limited by Firebase${contextInfo}`,
+        suggestedActions: [
+          'Wait 15-30 minutes before attempting to login again',
+          'Try using "Forgot Password" to reset your password',
+          'Clear your browser cache and cookies',
+          'Try logging in from a different device or network',
+          'If the issue persists, wait up to 24 hours'
+        ],
         errorCategory: 'auth',
         shouldRetry: true
       };

@@ -531,7 +531,7 @@ export default function MobileBottomNav() {
           // Immediate visual feedback states
           isPressed && "scale-95 bg-primary/20",
           // Base states with enhanced contrast
-          "hover:bg-primary/10 active:bg-primary/20",
+          "nav-hover-state nav-active-state",
           // Active state styling - neutral semi-transparent background to match "more" button
           isActive
             ? "bg-muted text-foreground"

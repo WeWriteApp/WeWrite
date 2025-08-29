@@ -174,8 +174,12 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return 0;
     }
 
-    // Use detected banner height, fallback to estimated 80px
-    const totalBannerHeight = bannerHeight || 80;
+    // Use detected banner height, fallback to estimated height based on visible banners
+    let estimatedHeight = 0;
+    if (showEmailBanner) estimatedHeight += 88; // ~80px content + 8px margins
+    if (showPWABanner) estimatedHeight += 88; // ~80px content + 8px margins
+
+    const totalBannerHeight = bannerHeight || estimatedHeight;
 
     // Calculate how much of the banner is still visible
     // If user has scrolled past the banner, reduce the offset

@@ -19,8 +19,8 @@ import logger, { createLogger } from '../../utils/logger';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
-import PageHeader from "./PageHeader";
-import PageFooter from "./PageFooter";
+import ContentPageHeader from "./ContentPageHeader";
+import ContentPageFooter from "./ContentPageFooter";
 import AllocationBar from "../payments/AllocationBar";
 import RelatedPagesSection from "../features/RelatedPagesSection";
 import PageGraphView from "./PageGraphView";
@@ -56,7 +56,7 @@ if (typeof window !== 'undefined') {
   import("../content/ContentDisplay");
 }
 import EmptyLinesAlert from "../editor/EmptyLinesAlert";
-import PageActions from "./PageActions";
+import ContentPageActions from "./ContentPageActions";
 // CustomDateField and LocationField are now handled by PageFooter
 
 // Types
@@ -109,7 +109,7 @@ interface Page {
  * - Deleted page preview
  * - Version history support
  */
-export default function PageView({
+export default function ContentPageView({
   params,
   initialEditMode = false,
   showVersion = false,
@@ -1519,7 +1519,7 @@ export default function PageView({
 
       <PageProvider>
         <div className="w-full max-w-none box-border">
-          <PageHeader
+          <ContentPageHeader
             title={title}
             username={page?.username}
             userId={page?.userId}
@@ -1623,7 +1623,7 @@ export default function PageView({
 
             {/* Page Footer with actions - tight spacing */}
             <div className="mt-4">
-              <PageFooter
+              <ContentPageFooter
               page={memoizedPage}
               content={editorState}
               linkedPageIds={memoizedLinkedPageIds}
@@ -1651,7 +1651,7 @@ export default function PageView({
             {/* Page Actions - Reply and Add to Page buttons for other users' pages */}
             {page && !canEdit && (
               <div className="px-4 mb-8">
-                <PageActions page={page} />
+                <ContentPageActions page={page} />
               </div>
             )}
 

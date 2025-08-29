@@ -56,44 +56,40 @@ export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
     isNavigating && "opacity-75"
   ];
 
-  // Active state styles - neutral colors for consistency
+  // Standardized state styles with accent colors for active state
   const activeStyles = isActive
-    ? "bg-muted text-foreground"
+    ? "nav-selected-state text-accent"
     : [
-        "text-muted-foreground hover:text-foreground"
+        "text-muted-foreground hover:text-foreground",
+        "nav-hover-state nav-active-state"
       ];
 
-  // Variant-specific styles
+  // Variant-specific styles - simplified and clean
   const variantStyles = {
     'desktop-sidebar': [
-      "flex items-center justify-start h-12 w-full px-3 rounded-lg",
-      "hover:bg-primary/5"
+      "flex items-center justify-start h-12 w-full rounded-lg px-3"
     ],
     'desktop-sidebar-collapsed': [
-      // IMPORTANT: Use w-full and let parent container (nav) handle centering with px-2
-      // This prevents icon clipping and maintains simple, maintainable layout
-      "flex flex-col items-center justify-center h-12 w-full rounded-lg",
-      "hover:bg-primary/5"
+      "flex items-center justify-center h-12 w-full rounded-lg p-2"
     ],
     'mobile-toolbar': [
       "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-2 gap-0.5",
-      "flex-shrink-0 min-w-0",
-      "hover:bg-primary/10"
+      "flex-shrink-0 min-w-0"
     ]
   };
 
-  // Icon styles based on variant
+  // Icon styles based on variant and active state
   const iconStyles = {
-    'desktop-sidebar': "h-5 w-5 mr-3 flex-shrink-0",
-    'desktop-sidebar-collapsed': "h-5 w-5 flex-shrink-0",
-    'mobile-toolbar': "h-7 w-7 flex-shrink-0"
+    'desktop-sidebar': `h-5 w-5 mr-3 flex-shrink-0 ${isActive ? 'text-accent' : ''}`,
+    'desktop-sidebar-collapsed': `h-5 w-5 flex-shrink-0 ${isActive ? 'text-accent' : ''}`,
+    'mobile-toolbar': `h-7 w-7 flex-shrink-0 ${isActive ? 'text-accent' : ''}`
   };
 
-  // Label styles based on variant
+  // Label styles based on variant and active state
   const labelStyles = {
-    'desktop-sidebar': "text-sm font-medium truncate flex-1",
-    'desktop-sidebar-collapsed': "text-[10px] font-medium mt-1 text-center leading-tight",
-    'mobile-toolbar': "text-[10px] font-medium text-center leading-tight"
+    'desktop-sidebar': `text-sm font-medium truncate flex-1 text-left ${isActive ? 'text-accent' : ''}`,
+    'desktop-sidebar-collapsed': `text-[10px] font-medium mt-1 text-center leading-tight ${isActive ? 'text-accent' : ''}`,
+    'mobile-toolbar': `text-[10px] font-medium text-center leading-tight ${isActive ? 'text-accent' : ''}`
   };
 
   // Show label based on variant - never show label in collapsed desktop sidebar

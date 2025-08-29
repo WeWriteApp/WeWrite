@@ -15,7 +15,7 @@ interface PageMenuProps {
   currentMode: 'dense' | 'normal';
 }
 
-export function PageMenu({ onModeChange, currentMode }: PageMenuProps) {
+export function ContentPageMenu({ onModeChange, currentMode }: PageMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   
   return (

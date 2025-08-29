@@ -79,7 +79,7 @@ export default function PWABanner() {
   return (
     <>
       {/* PWA Banner - Static position at top of content */}
-      <div className="relative mx-4 mb-4 md:hidden" data-banner="pwa-installation">
+      <div className="relative mx-4 mt-4 mb-4 md:hidden" data-banner="pwa-installation">
         <div
           className={`bg-muted/50 border border-border rounded-xl px-4 py-3 flex flex-col transition-all duration-300 ease-in-out overflow-hidden backdrop-blur-sm ${
             isCollapsing ? 'max-h-0 py-0 opacity-0 transform -translate-y-4 scale-95' : 'max-h-32 opacity-100 transform translate-y-0 scale-100'

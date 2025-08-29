@@ -15,8 +15,8 @@ import { useRecentPages } from "../contexts/RecentPagesContext";
 import { createReplyAttribution } from "../utils/linkUtils";
 import { useAuth } from '../providers/AuthProvider';
 import { useDateFormat } from '../contexts/DateFormatContext';
-import PageHeader from "../components/pages/PageHeader";
-import PageFooter from "../components/pages/PageFooter";
+import ContentPageHeader from "../components/pages/ContentPageHeader";
+import ContentPageFooter from "../components/pages/ContentPageFooter";
 import ContentDisplay from "../components/content/ContentDisplay";
 import StickySaveHeader from "../components/layout/StickySaveHeader";
 
@@ -1171,7 +1171,7 @@ function NewPageContent() {
           <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
         </Head>
 
-        <PageHeader
+        <ContentPageHeader
           title={title}
           username={username}
           userId={user?.uid}
@@ -1266,7 +1266,7 @@ function NewPageContent() {
 
         {/* Page Footer with bottom save bar - moved outside content container */}
             {isEditing && (
-              <PageFooter
+              <ContentPageFooter
                 page={null} // New page doesn't have existing page data
                 content={editorState}
                 linkedPageIds={[]} // New page doesn't have linked pages yet

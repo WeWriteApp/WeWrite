@@ -103,7 +103,7 @@ interface PageActionsProps {
   isSaving?: boolean; // Add saving state
 }
 
-export function PageActions({
+export function ContentPageActions({
   page,
   content,
   isOwner = false,
@@ -405,4 +405,4 @@ export function PageActions({
   );
 }
 
-export default PageActions;
+export default ContentPageActions;

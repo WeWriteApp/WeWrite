@@ -50,6 +50,13 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
       console.log('Initial subscription creation response:', data);
 
       if (!response.ok) {
+        // Handle the case where user already has an active subscription
+        if (response.status === 409 && data.shouldUpdate) {
+          console.log('User already has active subscription, redirecting to update flow');
+          // Redirect to update the existing subscription instead
+          window.location.href = `/settings/fund-account?update=${data.existingSubscriptionId}&amount=${amount}`;
+          return;
+        }
         throw new Error(data.error || 'Failed to create subscription');
       }
 
@@ -89,8 +96,18 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
           console.log('Subscription creation response:', subscriptionData);
 
           if (!subscriptionResponse.ok) {
+            // Handle the case where user already has an active subscription
+            if (subscriptionResponse.status === 409 && subscriptionData.shouldUpdate) {
+              console.log('User already has active subscription, redirecting to update flow');
+              // Redirect to update the existing subscription instead
+              window.location.href = `/settings/fund-account?update=${subscriptionData.existingSubscriptionId}&amount=${amount}`;
+              return;
+            }
             throw new Error(subscriptionData.error || 'Failed to create subscription after setup');
           }
+
+          // With error_if_incomplete, subscription should be active immediately
+          // If there's an error, it will be thrown by the API call above
 
           console.log('Calling onSuccess with subscriptionId:', subscriptionData.subscriptionId);
           onSuccess(subscriptionData.subscriptionId);

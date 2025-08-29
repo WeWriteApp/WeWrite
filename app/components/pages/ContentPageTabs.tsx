@@ -106,7 +106,7 @@ function AnimatedTabsContent({ children }) {
   );
 }
 
-const PageTabs = () => {
+const ContentPageTabs = () => {
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);
   const { user } = useAuth();
   const router = useRouter();
@@ -289,4 +289,4 @@ const PageTabs = () => {
   );
 };
 
-export default PageTabs;
+export default ContentPageTabs;

@@ -10,7 +10,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import UnifiedLoader from '../../components/ui/unified-loader';
 import ActivityCard from '../../components/activity/ActivityCard';
 import { getDiff } from '../../utils/diffService';
-import PageHeader from '../../components/pages/PageHeader';
+import ContentPageHeader from '../../components/pages/ContentPageHeader';
 import { useAuth } from '../../providers/AuthProvider';
 
 interface PageVersionsPageProps {
@@ -206,7 +206,7 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
   if (loading) {
     return (
       <div className="p-4 max-w-4xl mx-auto">
-        <PageHeader
+        <ContentPageHeader
           title="Page Versions"
           username="Loading..."
           isLoading={true}
@@ -222,13 +222,13 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
   if (error) {
     return (
       <div className="p-4 max-w-4xl mx-auto">
-        <PageHeader
+        <ContentPageHeader
           title={page?.title || "Page History"}
           username={page?.username}
           userId={page?.userId}
           isLoading={false}
         />
-        {/* Back button removed - using PageHeader back button instead */}
+        {/* Back button removed - using ContentPageHeader back button instead */}
         <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
           <p className="font-medium">{error}</p>
           <p className="text-sm mt-2 text-muted-foreground">Unable to load page versions. Please try again later.</p>
@@ -239,14 +239,14 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
-        <PageHeader
+        <ContentPageHeader
           title={page?.title || "Page History"}
           username={page?.username}
           userId={page?.userId}
           isLoading={loading}
         />
 
-        {/* Back button removed - using PageHeader back button instead */}
+        {/* Back button removed - using ContentPageHeader back button instead */}
 
         <div className="mb-6">
           {activities.length === 0 ? (

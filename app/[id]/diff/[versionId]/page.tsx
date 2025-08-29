@@ -2,7 +2,7 @@
 
 import React, { use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import PageView from '../../../components/pages/PageView';
+import ContentPageView from '../../../components/pages/ContentPageView';
 
 interface PageDiffProps {
   params: Promise<{ id: string; versionId: string; }> | { id: string; versionId: string; };
@@ -24,7 +24,7 @@ function PageDiffContent({ params }: PageDiffProps) {
   const compareVersionId = searchParams?.get('compare'); // Get the comparison version from URL params
 
   return (
-    <PageView
+    <ContentPageView
       params={{ id }}
       showDiff={true}
       versionId={versionId}

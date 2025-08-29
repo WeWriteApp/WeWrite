@@ -266,7 +266,7 @@ export default function SettingsIndexPage() {
               <div key={section.id} className="relative">
                 <button
                   onClick={() => handleSectionClick(section.href)}
-                  className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors select-none"
+                  className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none"
                 >
                   <div className="flex items-center">
                     <IconComponent className="h-5 w-5 mr-3 text-foreground" />

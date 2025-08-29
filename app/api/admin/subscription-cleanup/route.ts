@@ -53,12 +53,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      dryRun = true, 
-      customerId = null, 
+    const {
+      dryRun = true,
+      customerId = null,
       maxCustomers = 50,
       includeStatuses = ['canceled', 'incomplete', 'past_due', 'unpaid']
     } = body;
+
+    console.log(`[SUBSCRIPTION CLEANUP] Starting cleanup - dryRun: ${dryRun}, maxCustomers: ${maxCustomers}, includeStatuses: ${includeStatuses.join(', ')}`);
 
     console.log(`[SUBSCRIPTION CLEANUP] Starting cleanup - DryRun: ${dryRun}, CustomerId: ${customerId}, MaxCustomers: ${maxCustomers}`);
 
