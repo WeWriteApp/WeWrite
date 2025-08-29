@@ -170,7 +170,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   };
 
   // Handle going to link (navigation)
-  const handleGoToLink = () => {
+  const handleGoToLink = async () => {
     console.log('🔵 PillLink: handleGoToLink called', {
       href,
       effectiveHref,
@@ -186,6 +186,35 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
       console.log('🔵 PillLink: Opening external link modal');
       setShowExternalLinkModal(true);
     } else if (effectiveHref && effectiveHref !== '#') {
+      // Check if this is a "new page" link that might already exist
+      if (isPageLinkType && pageId && pageId.startsWith('new:')) {
+        const titleFromPageId = pageId.substring(4); // Remove 'new:' prefix
+        console.log('🔵 PillLink: Checking for existing page with title:', titleFromPageId);
+
+        try {
+          // Search for existing pages with this title
+          const response = await fetch(`/api/search-unified?q=${encodeURIComponent(titleFromPageId)}&limit=5`);
+          if (response.ok) {
+            const searchResults = await response.json();
+
+            // Look for an exact title match
+            const exactMatch = searchResults.pages?.find((page: any) =>
+              page.title.toLowerCase().trim() === titleFromPageId.toLowerCase().trim()
+            );
+
+            if (exactMatch) {
+              console.log('🔵 PillLink: Found existing page, navigating to:', exactMatch.id);
+              // Navigate to the existing page instead of creating a new one
+              navigateToPage(exactMatch.id, user, exactMatch, user?.groups, router);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('🔴 PillLink: Error checking for existing page:', error);
+          // Continue with normal navigation if search fails
+        }
+      }
+
       // Track link click
       trackInteractionEvent(events.INTERNAL_LINK_CLICKED, {
         link_type: isPageLinkType ? 'page' : isUserLinkType ? 'user' : isGroupLinkType ? 'group' : 'unknown',
@@ -250,10 +279,10 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
       }
     };
 
-    window.addEventListener('page-title-updated', handleTitleUpdate);
+    window.addEventListener('pageTitle:updated', handleTitleUpdate);
 
     return () => {
-      window.removeEventListener('page-title-updated', handleTitleUpdate);
+      window.removeEventListener('pageTitle:updated', handleTitleUpdate);
     };
   }, [children, displayTitle, href, isPageLinkType]);
 

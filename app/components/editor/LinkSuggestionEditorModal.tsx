@@ -77,6 +77,7 @@ export default function LinkSuggestionEditorModal({
       type: showAuthor ? 'compound' : 'page',
       pageId: selectedPage.id,
       pageTitle: selectedPage.title,
+      originalPageTitle: selectedPage.title, // Set original title for propagation tracking
       text: customText ? displayText.trim() : matchedText, // Use matched text as default
       showAuthor,
       authorUsername: selectedPage.username,

@@ -138,6 +138,7 @@ export default function ContentPageView({
   const [titleError, setTitleError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [justSaved, setJustSaved] = useState(false); // Flag to prevent data reload after save
+  // 🎯 ELEGANT: No longer needed - using event system for updates
 
   // Debug logging for hasUnsavedChanges state
   useEffect(() => {
@@ -1005,12 +1006,16 @@ export default function ContentPageView({
     }
   };
 
+  // 🎯 ELEGANT: No longer needed - using existing event system in LinkNode components
+
   const handleSave = useCallback(async (passedContent?: any) => {
-    console.log('🔵 PAGE SAVE: Save initiated', {
+    console.log('🚨 SAVE_DEBUG: handleSave function called!', {
       pageId,
       hasPage: !!page,
       title,
-      editorStateLength: editorState ? editorState.length : 0
+      editorStateLength: editorState ? editorState.length : 0,
+      passedContent: !!passedContent,
+      timestamp: new Date().toISOString()
     });
 
 
@@ -1089,6 +1094,8 @@ export default function ContentPageView({
 
       console.log('🔵 PAGE SAVE: Making API request to /api/pages');
 
+      console.log('🚨 NETWORK_DEBUG: About to make fetch request to /api/pages');
+
       const response = await fetch('/api/pages', {
         method: 'PUT',
         headers: {
@@ -1098,10 +1105,12 @@ export default function ContentPageView({
         credentials: 'include'
       });
 
-      console.log('🔵 PAGE SAVE: API response received', {
+      console.log('🚨 NETWORK_DEBUG: Fetch request completed', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
+        url: response.url,
+        type: response.type,
         headers: Object.fromEntries(response.headers.entries())
       });
 
@@ -1231,6 +1240,7 @@ export default function ContentPageView({
         success: result.success,
         hasData: !!result.data,
         message: result.message,
+        titleChanged: result.titleChanged,
         resultKeys: Object.keys(result)
       });
 
@@ -1243,6 +1253,11 @@ export default function ContentPageView({
 
       console.log('✅ PAGE SAVE: Page saved successfully via API', { pageId });
       pageLogger.info('Page saved successfully via API', { pageId });
+
+      // SIMPLE: Title updates are now handled automatically by the backend
+      if (result.titleChanged) {
+        console.log('✅ SIMPLE: Title updated - all links updated automatically by backend');
+      }
 
       // CRITICAL FIX: Properly update both page state and editor state after save
       console.log('🔍 PAGE SAVE: Updating local page state with saved content');
@@ -1339,12 +1354,15 @@ export default function ContentPageView({
       // Page data should already be updated after save
       // No need to reload since the save operation updates the page state
     } catch (error) {
-      console.error('🔴 PAGE SAVE: Save operation failed', {
+      console.error('🚨 SAVE_ERROR: Save operation failed with detailed info', {
         pageId,
-        error: error.message,
         title,
-        stack: error.stack,
-        name: error.name
+        errorMessage: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        errorType: typeof error,
+        isNetworkError: error.message === 'Failed to fetch',
+        timestamp: new Date().toISOString()
       });
 
       // Simplified LogRocket error logging (reduced to prevent performance issues)
@@ -1375,36 +1393,49 @@ export default function ContentPageView({
     window.location.reload();
   }, [hasUnsavedChanges]);
 
-  // Keyboard shortcuts
+  // BULLETPROOF: Simplified keyboard shortcuts with extensive debugging
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + E removed - always in edit mode
+      console.log('🚨 KEYBOARD_DEBUG: Key pressed:', {
+        key: e.key,
+        metaKey: e.metaKey,
+        ctrlKey: e.ctrlKey,
+        isEditing,
+        hasUnsavedChanges,
+        canEdit,
+        timestamp: new Date().toISOString()
+      });
 
-      // Cmd/Ctrl + S to save
+      // Cmd/Ctrl + S to save - ALWAYS try to save, ignore conditions
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        if (isEditing && hasUnsavedChanges) {
-          handleSave();
-        }
+        console.log('🚨 KEYBOARD_DEBUG: Cmd+S detected, calling handleSave unconditionally');
+        handleSave();
+        return;
       }
 
-      // Cmd/Ctrl + Enter to save
+      // Cmd/Ctrl + Enter to save - ALWAYS try to save, ignore conditions
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
-        if (isEditing && hasUnsavedChanges) {
-          handleSave();
-        }
+        console.log('🚨 KEYBOARD_DEBUG: Cmd+Enter detected, calling handleSave unconditionally');
+        handleSave();
+        return;
       }
 
       // Escape to cancel editing
       if (e.key === 'Escape' && isEditing) {
+        console.log('🚨 KEYBOARD_DEBUG: Escape detected, calling handleCancel');
         handleCancel();
       }
     };
 
+    console.log('🚨 KEYBOARD_DEBUG: Setting up keyboard event listener');
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, hasUnsavedChanges, handleSave, canEdit, handleCancel]);
+    return () => {
+      console.log('🚨 KEYBOARD_DEBUG: Removing keyboard event listener');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleSave, handleCancel, isEditing, hasUnsavedChanges, canEdit]);
 
   const handleDelete = useCallback(async () => {
     if (!page || !pageId) return;
@@ -1435,6 +1466,15 @@ export default function ContentPageView({
       setError("Failed to delete page. Please try again.");
     }
   }, [page, pageId, router]);
+
+  // DEAD SIMPLE: Always load fresh content from database (no cache bullshit)
+  useEffect(() => {
+    if (!page?.content) return;
+
+    console.log('🔄 FRESH_CONTENT: Setting editor content from fresh database data');
+    setEditorState(page.content);
+    console.log('✅ FRESH_CONTENT: Editor content set from database');
+  }, [page?.content]); // Update whenever page content changes
 
   // Progressive loading state - show page structure immediately
   if (isLoading) {

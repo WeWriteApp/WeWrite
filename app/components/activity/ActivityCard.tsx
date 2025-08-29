@@ -102,10 +102,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       }
     };
 
-    window.addEventListener('page-title-updated', handleTitleUpdate);
+    window.addEventListener('pageTitle:updated', handleTitleUpdate);
 
     return () => {
-      window.removeEventListener('page-title-updated', handleTitleUpdate);
+      window.removeEventListener('pageTitle:updated', handleTitleUpdate);
     };
   }, [activity.pageId, currentPageName]);
 

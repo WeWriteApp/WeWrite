@@ -13,6 +13,122 @@ import { cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCach
 import { trackFirebaseRead } from '../../utils/costMonitor';
 import { pagesListCache } from '../../utils/pagesListCache';
 
+// SIMPLE SOLUTION: Update all links to a page when its title changes
+async function updateAllLinksToPage(pageId: string, oldTitle: string, newTitle: string) {
+  try {
+    console.log(`🔄 SIMPLE_UPDATE: Searching for pages that link to ${pageId}`);
+
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+    const collectionName = getCollectionName('pages');
+
+    // Get all pages
+    const pagesSnapshot = await db.collection(collectionName).get();
+
+    const batch = db.batch();
+    let updatedCount = 0;
+
+    for (const pageDoc of pagesSnapshot.docs) {
+      const pageData = pageDoc.data();
+
+      if (!pageData.content || pageDoc.id === pageId) continue;
+
+      // Check if this page's content contains links to our target page
+      const updatedContent = updateLinksInContent(pageData.content, pageId, oldTitle, newTitle);
+
+      if (JSON.stringify(updatedContent) !== JSON.stringify(pageData.content)) {
+        batch.update(pageDoc.ref, {
+          content: updatedContent,
+          lastModified: new Date().toISOString()
+        });
+        updatedCount++;
+        console.log(`🔄 SIMPLE_UPDATE: Updated links in page ${pageDoc.id}`);
+      }
+    }
+
+    if (updatedCount > 0) {
+      await batch.commit();
+      console.log(`✅ SIMPLE_UPDATE: Successfully updated ${updatedCount} pages`);
+    } else {
+      console.log(`🔄 SIMPLE_UPDATE: No pages needed updating`);
+    }
+
+  } catch (error) {
+    console.error('❌ SIMPLE_UPDATE: Error updating links:', error);
+  }
+}
+
+import { LinkNode, LinkNodeHelper, LinkMigrationHelper } from '../../types/linkNode';
+
+/**
+ * CLEAN TITLE UPDATE SYSTEM
+ *
+ * This function updates page titles in links while respecting user customization.
+ * - Auto-generated links get updated to show new page title
+ * - Custom text links keep their custom text but update pageTitle for reference
+ */
+
+// Helper function to update links in content recursively
+function updateLinksInContent(content: any, targetPageId: string, oldTitle: string, newTitle: string): any {
+  if (!content) return content;
+
+  if (Array.isArray(content)) {
+    return content.map(item => updateLinksInContent(item, targetPageId, oldTitle, newTitle));
+  }
+
+  if (typeof content === 'object') {
+    // Check if this is a link node that references our target page
+    if (content.type === 'link' && content.pageId === targetPageId) {
+
+      // MIGRATION: Convert old messy format to clean format if needed
+      let linkNode: LinkNode;
+      if (content.isCustomText === undefined) {
+        console.log(`🔄 MIGRATION: Converting old link format for page ${targetPageId}`);
+        linkNode = LinkMigrationHelper.migrateOldLink(content);
+
+        // Clean up old fields to avoid confusion
+        const cleanedLink = {
+          type: linkNode.type,
+          pageId: linkNode.pageId,
+          pageTitle: linkNode.pageTitle,
+          url: linkNode.url,
+          isCustomText: linkNode.isCustomText,
+          customText: linkNode.customText,
+          children: linkNode.children,
+          // Keep necessary Slate properties
+          isExternal: content.isExternal,
+          isPublic: content.isPublic,
+          isOwned: content.isOwned
+        };
+
+        linkNode = cleanedLink as LinkNode;
+      } else {
+        linkNode = content as LinkNode;
+      }
+
+      // CLEAN UPDATE: Use the helper to update the link
+      const updatedLink = LinkNodeHelper.updatePageTitle(linkNode, newTitle);
+
+      if (LinkNodeHelper.shouldUpdateOnTitleChange(linkNode)) {
+        console.log(`🔄 TITLE_UPDATE: Auto-updating link: "${oldTitle}" -> "${newTitle}"`);
+      } else {
+        console.log(`🔄 TITLE_UPDATE: Keeping custom text "${linkNode.customText}" for page ${targetPageId}`);
+      }
+
+      return updatedLink;
+    }
+
+    // Recursively update nested objects
+    const updated: any = {};
+    for (const [key, value] of Object.entries(content)) {
+      updated[key] = updateLinksInContent(value, targetPageId, oldTitle, newTitle);
+    }
+    return updated;
+  }
+
+  return content;
+}
+
 interface PageData {
   id?: string;
   title: string;
@@ -707,24 +823,33 @@ export async function PUT(request: NextRequest) {
       await pageRef.update(updateData);
     }
 
-    // CRITICAL FIX: Propagate title changes to all linked pages
+    // ULTRA-SIMPLE: Just detect title changes and return info
+    let titleChanged = false;
+    let titleChangeInfo = null;
+
+    console.log('🔄 ULTRA_SIMPLE: Title change detection:', {
+      pageId: id,
+      titleProvided: title !== undefined,
+      providedTitle: title,
+      trimmedTitle: title?.trim(),
+      existingTitle: pageData.title,
+      titlesEqual: title?.trim() === pageData.title,
+      willDetectChange: title !== undefined && title.trim() !== pageData.title
+    });
+
     if (title !== undefined && title.trim() !== pageData.title) {
-      try {
-        console.log('🔄 Title changed, propagating to linked pages:', {
-          pageId: id,
-          oldTitle: pageData.title,
-          newTitle: title.trim()
-        });
+      titleChanged = true;
+      titleChangeInfo = {
+        pageId: id,
+        oldTitle: pageData.title,
+        newTitle: title.trim()
+      };
 
-        // Import and call the link propagation function
-        const { propagatePageTitleUpdate } = await import('../../firebase/database/linkPropagation');
-        await propagatePageTitleUpdate(id, title.trim(), pageData.title);
+      console.log('🔄 TITLE_CHANGE: Title changed, updating all links immediately');
 
-        console.log('✅ Successfully propagated title update to linked pages');
-      } catch (propagationError) {
-        console.error('⚠️ Error propagating title update (non-fatal):', propagationError);
-        // Don't fail the page update if propagation fails
-      }
+      // DEAD SIMPLE: Update all links immediately and synchronously
+      await updateAllLinksToPage(id, pageData.title, title.trim());
+      console.log('✅ TITLE_CHANGE: All links updated successfully');
     }
 
     // Update backlinks index when content is updated
@@ -793,8 +918,16 @@ export async function PUT(request: NextRequest) {
     const responseData = {
       id,
       ...updateData,
-      message: 'Page updated successfully'
+      message: 'Page updated successfully',
+      ...(titleChanged && { titleChanged: true, titleChangeInfo })
     };
+
+    console.log('🔄 ULTRA_SIMPLE: Response data being sent:', {
+      responseData,
+      titleChanged,
+      hasTitleChangeInfo: !!titleChangeInfo,
+      titleChangeInfo
+    });
     console.log('✅ API: Returning success response', { responseData });
     return createApiResponse(responseData);
 

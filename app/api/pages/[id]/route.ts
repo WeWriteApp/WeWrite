@@ -97,6 +97,9 @@ export async function GET(
 ) {
   const startTime = Date.now();
 
+  // DISABLE ALL CACHING - ALWAYS FRESH DATA
+  console.log('🔄 NO_CACHE: Disabling all caching for fresh data');
+
   try {
     // Next.js 15 requires awaiting params
     const { id: pageId } = await params;
@@ -117,23 +120,8 @@ export async function GET(
 
     console.log(`📄 [Page API] Fetching page ${pageId} for user ${effectiveUserId || 'anonymous'}`);
 
-    // Check cache first for ultra-fast response
-    const cachedData = pageCache.get(pageId, effectiveUserId);
-    if (cachedData) {
-      const responseTime = Date.now() - startTime;
-      console.log(`🚀 [Page API] Cache hit for ${pageId} (${responseTime}ms)`);
-
-      // Return cached data with aggressive cache headers
-      const response = NextResponse.json(cachedData.pageData, { status: 200 });
-
-      // CRITICAL: Minimal caching for immediate updates after saves
-      response.headers.set('Cache-Control', 'public, max-age=10, s-maxage=30'); // 10s browser, 30s CDN - MUCH faster updates
-      response.headers.set('ETag', cachedData.etag || `"${pageId}-${Date.now()}"`);
-      response.headers.set('X-Cache-Status', 'HIT');
-      response.headers.set('X-Response-Time', `${responseTime}ms`);
-
-      return response;
-    }
+    // DISABLE CACHE - ALWAYS FETCH FRESH DATA
+    console.log('🔄 NO_CACHE: Skipping cache, fetching fresh data from database');
 
     // Cache miss - fetch from database
     console.log(`💸 [Page API] Cache miss for ${pageId} - fetching from database`);
@@ -190,15 +178,10 @@ export async function GET(
       fromCache: false
     });
 
-    // CRITICAL: Minimal caching for immediate updates after saves
-    if (process.env.NODE_ENV === 'development') {
-      // Very short caching in development for immediate updates
-      response.headers.set('Cache-Control', 'public, max-age=5, s-maxage=10');
-    } else {
-      // Short caching in production for immediate updates after saves
-      response.headers.set('Cache-Control', 'public, max-age=10, s-maxage=30, stale-while-revalidate=60');
-      response.headers.set('CDN-Cache-Control', 'public, max-age=30');
-    }
+    // DISABLE ALL CACHING - ALWAYS FRESH DATA
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
 
     response.headers.set('ETag', etag);
     response.headers.set('X-Cache-Status', 'MISS');

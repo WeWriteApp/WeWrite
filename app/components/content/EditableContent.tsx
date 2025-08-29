@@ -30,7 +30,7 @@ interface EditableContentProps {
   onChange: (content: any[]) => void;
   onEmptyLinesChange?: (count: number) => void;
   placeholder?: string;
-  
+
   // Enhanced editing functionality
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
@@ -70,6 +70,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
   pageId,
   className = ''
 }) => {
+  // 🎯 ELEGANT: No forced re-renders needed - LinkNode components auto-update via events
   return (
     <div className={`wewrite-editable-content ${className}`}>
       <SlateEditor

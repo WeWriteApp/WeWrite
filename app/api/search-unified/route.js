@@ -362,6 +362,9 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           // OPTIMIZATION: Early filtering to reduce processing
           if (!data.title && !data.content) return;
 
+          // CRITICAL: Filter out deleted pages from search results
+          if (data.deleted === true) return;
+
           const pageTitle = data.title || 'Untitled';
 
           let isMatch = false;
@@ -440,6 +443,10 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           if (allResults.length >= finalMaxResults) return;
 
           const data = doc.data();
+
+          // CRITICAL: Filter out deleted pages from search results
+          if (data.deleted === true) return;
+
           const pageTitle = data.title || '';
 
           // Enhanced client-side matching: check for individual words and full term

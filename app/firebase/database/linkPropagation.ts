@@ -112,7 +112,7 @@ const findAllLinksToPage = async (targetPageId: string): Promise<LinkReference[]
             ? JSON.parse(pageData.content)
             : pageData.content;
 
-          const hasLinksToTarget = checkContentForLinks(content, targetPageId);
+          const hasLinksToTarget = checkContentForLinks(content, targetPageId, newTitle, oldTitle);
 
           if (hasLinksToTarget.found) {
             linkReferences.push({
@@ -138,7 +138,7 @@ const findAllLinksToPage = async (targetPageId: string): Promise<LinkReference[]
 /**
  * Check if content contains links to the target page and if they need updating
  */
-const checkContentForLinks = (content: any[], targetPageId: string): {
+const checkContentForLinks = (content: any[], targetPageId: string, newTitle: string, oldTitle: string): {
   found: boolean;
   needsUpdate: boolean;
   hasCompoundLinks: boolean;
@@ -146,16 +146,16 @@ const checkContentForLinks = (content: any[], targetPageId: string): {
   let found = false;
   let needsUpdate = false;
   let hasCompoundLinks = false;
-  
+
   const checkNode = (node: any) => {
     if (!node) return;
-    
+
     // Check if this is a link to our target page
     if (node.type === 'link' && node.pageId === targetPageId) {
       found = true;
-      
+
       // Check if this link needs updating (not custom text)
-      if (shouldUpdateLink(node)) {
+      if (shouldUpdateLink(node, newTitle, oldTitle)) {
         needsUpdate = true;
       }
       
@@ -190,28 +190,30 @@ const checkContentForLinks = (content: any[], targetPageId: string): {
 /**
  * Determine if a link should be updated (not custom text)
  */
-const shouldUpdateLink = (linkNode: any): boolean => {
-  // If the link has custom display text that differs from the original page title,
-  // don't update it (preserve user customization)
-  if (linkNode.displayText && 
-      linkNode.originalPageTitle && 
-      linkNode.displayText !== linkNode.originalPageTitle) {
-    return false;
-  }
-  
-  // If displayText matches pageTitle or originalPageTitle, it's auto-generated
-  if (linkNode.displayText === linkNode.pageTitle || 
-      linkNode.displayText === linkNode.originalPageTitle) {
-    return true;
-  }
-  
-  // If no displayText but has pageTitle, it's auto-generated
-  if (!linkNode.displayText && linkNode.pageTitle) {
-    return true;
-  }
-  
-  // Default to updating if we can't determine (safer to update)
-  return true;
+const shouldUpdateLink = (linkNode: any, newTitle: string, oldTitle: string): boolean => {
+  // Get the current display text from the node
+  const currentDisplayText = linkNode.displayText ||
+                           (linkNode.children?.[0]?.text) ||
+                           linkNode.pageTitle ||
+                           '';
+
+  console.log(`🔗 PROPAGATION: shouldUpdateLink analysis:`, {
+    currentDisplayText,
+    oldTitle,
+    newTitle,
+    nodePageTitle: linkNode.pageTitle,
+    nodeOriginalPageTitle: linkNode.originalPageTitle,
+    nodeDisplayText: linkNode.displayText
+  });
+
+  // Update if the current display text matches the old page title or current pageTitle
+  const shouldUpdate = currentDisplayText === oldTitle ||
+                     currentDisplayText === linkNode.pageTitle ||
+                     currentDisplayText === linkNode.originalPageTitle ||
+                     !currentDisplayText; // Also update if no display text
+
+  console.log(`🔗 PROPAGATION: shouldUpdate = ${shouldUpdate}`);
+  return shouldUpdate;
 };
 
 /**
@@ -230,7 +232,7 @@ const updateLinksInContent = (
     
     // If this is a link to our target page
     if (node.type === 'link' && node.pageId === targetPageId) {
-      if (shouldUpdateLink(node)) {
+      if (shouldUpdateLink(node, newTitle, oldTitle)) {
         hasChanges = true;
         
         // Update the link with new title

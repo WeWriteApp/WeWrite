@@ -139,6 +139,7 @@ export default function LinkEditorModal({
         type: showAuthor ? 'compound' : 'page',
         pageId: page.id,
         pageTitle: page.title,
+        originalPageTitle: page.title, // Set original title for propagation tracking
         text: '',
         showAuthor,
         authorUsername: page.username,
@@ -188,6 +189,7 @@ export default function LinkEditorModal({
       type: showAuthor ? 'compound' : 'page',
       pageId: selectedPage.id,
       pageTitle: selectedPage.title,
+      originalPageTitle: selectedPage.title, // Set original title for propagation tracking
       text: customText ? displayText.trim() : '',
       showAuthor,
       authorUsername: selectedPage.username,

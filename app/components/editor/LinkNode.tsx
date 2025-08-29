@@ -27,46 +27,12 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [linkNode, setLinkNode] = useState(node);
 
-  // Listen for page title updates
+  // Update linkNode when node prop changes (this handles title updates from SlateEditor)
   useEffect(() => {
-    const handleTitleUpdate = (event: CustomEvent) => {
-      const { pageId, newTitle } = event.detail;
+    setLinkNode(node);
+  }, [node]);
 
-      // Check if this link references the updated page
-      if (linkNode.pageId === pageId && shouldUpdateLink(linkNode)) {
-        console.log(`🔗 TextView: Updating link title in real-time: ${linkNode.pageTitle} -> ${newTitle}`);
 
-        setLinkNode((prevNode: any) => ({
-          ...prevNode,
-          pageTitle: newTitle,
-          originalPageTitle: newTitle,
-          displayText: newTitle,
-          children: prevNode.children?.map((child: any) =>
-            child.text === prevNode.pageTitle || child.text === prevNode.originalPageTitle
-              ? { ...child, text: newTitle }
-              : child
-          ) || [{ text: newTitle }]
-        }));
-      }
-    };
-
-    window.addEventListener('page-title-updated', handleTitleUpdate as EventListener);
-
-    return () => {
-      window.removeEventListener('page-title-updated', handleTitleUpdate as EventListener);
-    };
-  }, [linkNode]);
-
-  // Helper function to determine if link should be updated
-  const shouldUpdateLink = (node: any): boolean => {
-    // Don't update if custom text differs from original page title
-    if (node.displayText &&
-        node.originalPageTitle &&
-        node.displayText !== node.originalPageTitle) {
-      return false;
-    }
-    return true;
-  };
 
   // Add more robust error handling for invalid link nodes
   if (!linkNode || typeof linkNode !== 'object') {

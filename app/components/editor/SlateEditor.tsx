@@ -31,6 +31,7 @@ import { LinkSuggestionModal } from '../modals/LinkSuggestionModal';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { useAuth } from '../../providers/AuthProvider';
 import { getPageById } from '../../utils/apiClient';
+import { LinkNodeHelper } from '../../types/linkNode';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -49,6 +50,7 @@ type LinkElement = {
   url?: string;
   pageId?: string;
   pageTitle?: string;
+  originalPageTitle?: string; // Track original title for propagation
   isExternal: boolean;
   isPublic: boolean;
   isOwned: boolean;
@@ -583,18 +585,19 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           // Select the text
           Transforms.select(editor, range);
 
-          // Insert the suggestion link (with dotted underline)
-          const linkElement: LinkElement = {
-            type: 'link',
-            pageId: suggestion.id,
-            pageTitle: suggestion.title,
-            isExternal: false,
-            isPublic: true,
-            isOwned: false,
-            isSuggestion: true, // This will show the dotted underline
-            suggestionData: suggestion, // Store original suggestion data
-            children: [{ text: textToReplace }]
-          };
+          // CLEAN: Insert suggestion link (with dotted underline)
+          const hasCustomText = textToReplace !== suggestion.title;
+
+          const linkElement: LinkElement = hasCustomText
+            ? LinkNodeHelper.createCustomLink(suggestion.id, suggestion.title, `/${suggestion.id}`, textToReplace)
+            : LinkNodeHelper.createAutoLink(suggestion.id, suggestion.title, `/${suggestion.id}`);
+
+          // Add suggestion-specific properties
+          (linkElement as any).isExternal = false;
+          (linkElement as any).isPublic = true;
+          (linkElement as any).isOwned = false;
+          (linkElement as any).isSuggestion = true; // This will show the dotted underline
+          (linkElement as any).suggestionData = suggestion; // Store original suggestion data
 
           Transforms.insertNodes(editor, linkElement);
 
@@ -726,6 +729,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     }
   }, [initialContent]);
 
+  // REMOVED: All complex link update logic - now handled directly in ContentPageView
+
   // Handle content changes
   const handleChange = useCallback((newValue: Descendant[]) => {
     try {
@@ -841,18 +846,28 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     const currentSelection = { ...selection };
 
     if (isCollapsed) {
-      // Insert new link at cursor position without modifying surrounding content
-      const link: LinkElement = {
-        type: 'link',
-        url: linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
-        pageId: linkData.pageId,
-        pageTitle: linkData.pageTitle,
-        isExternal: linkData.type === 'external',
-        isPublic: true,
-        isOwned: false,
-        isNew: linkData.isNew,
-        children: [{ text: linkData.text || linkData.pageTitle || 'Link' }]
-      };
+      // CLEAN: Create link using helper function
+      const displayText = linkData.text || linkData.pageTitle || 'Link';
+      const hasCustomText = linkData.text && linkData.text !== linkData.pageTitle;
+
+      const link: LinkElement = hasCustomText
+        ? LinkNodeHelper.createCustomLink(
+            linkData.pageId,
+            linkData.pageTitle,
+            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
+            linkData.text
+          )
+        : LinkNodeHelper.createAutoLink(
+            linkData.pageId,
+            linkData.pageTitle,
+            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`)
+          );
+
+      // Add additional properties for Slate
+      (link as any).isExternal = linkData.type === 'external';
+      (link as any).isPublic = true;
+      (link as any).isOwned = false;
+      (link as any).isNew = linkData.isNew;
 
       console.log('🔗 Inserting link at collapsed selection:', link);
 
@@ -868,18 +883,33 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       // Wrap selected text in link
       console.log('🔗 Wrapping selected text in link');
 
+      // Get the selected text to determine if it's custom
+      const selectedText = Editor.string(editor, currentSelection);
+      const hasCustomText = selectedText !== linkData.pageTitle;
+
+      // CLEAN: Create base link structure
+      const baseLinkData = hasCustomText
+        ? LinkNodeHelper.createCustomLink(
+            linkData.pageId,
+            linkData.pageTitle,
+            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
+            selectedText
+          )
+        : LinkNodeHelper.createAutoLink(
+            linkData.pageId,
+            linkData.pageTitle,
+            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`)
+          );
+
       Transforms.wrapNodes(
         editor,
         {
-          type: 'link',
-          url: linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
-          pageId: linkData.pageId,
-          pageTitle: linkData.pageTitle,
+          ...baseLinkData,
           isExternal: linkData.type === 'external',
           isPublic: true,
           isOwned: false,
           isNew: linkData.isNew,
-          children: []
+          children: [] // Slate will populate this with selected content
         },
         { split: true, at: currentSelection }
       );
@@ -909,16 +939,18 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         if (matches.length > 0) {
           const [, path] = matches[0]; // Use the first match
 
-          // Create the confirmed link element
-          const linkElement: LinkElement = {
-            type: 'link',
-            pageId: linkData.pageId,
-            pageTitle: linkData.pageTitle,
-            isExternal: linkData.type === 'external',
-            isPublic: true,
-            isOwned: false,
-            children: [{ text: linkData.text || linkData.pageTitle || 'Link' }]
-          };
+          // CLEAN: Create confirmed link element
+          const displayText = linkData.text || linkData.pageTitle || 'Link';
+          const hasCustomText = linkData.text && linkData.text !== linkData.pageTitle;
+
+          const linkElement: LinkElement = hasCustomText
+            ? LinkNodeHelper.createCustomLink(linkData.pageId, linkData.pageTitle, `/${linkData.pageId}`, linkData.text)
+            : LinkNodeHelper.createAutoLink(linkData.pageId, linkData.pageTitle, `/${linkData.pageId}`);
+
+          // Add Slate-specific properties
+          (linkElement as any).isExternal = linkData.type === 'external';
+          (linkElement as any).isPublic = true;
+          (linkElement as any).isOwned = false;
 
           // Replace the suggestion with the confirmed link
           Transforms.setNodes(editor, linkElement, { at: path });
@@ -980,7 +1012,18 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           break;
         case 's':
           event.preventDefault();
-          onSave?.();
+          console.log('🚨 SLATE_KEYBOARD_DEBUG: Cmd+S pressed in SlateEditor!', {
+            hasOnSave: !!onSave,
+            onSaveType: typeof onSave,
+            timestamp: new Date().toISOString()
+          });
+          if (onSave) {
+            console.log('🚨 SLATE_KEYBOARD_DEBUG: About to call onSave function');
+            onSave();
+            console.log('🚨 SLATE_KEYBOARD_DEBUG: onSave function called successfully');
+          } else {
+            console.log('🚨 SLATE_KEYBOARD_DEBUG: No onSave function provided!');
+          }
           break;
       }
     }
@@ -1136,6 +1179,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       });
     }
   }, [onInsertLinkRequest]);
+
+  // REMOVED: Complex title update system - now handled by fresh content loading
 
   // Prevent hydration mismatches by only rendering on client
   if (!isClient) {
