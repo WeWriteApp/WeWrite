@@ -68,14 +68,20 @@ export function ForgotPasswordForm({
       console.log("🔐 [Forgot Password Form] Attempting password reset for:", email.substring(0, 3) + '***@' + email.split('@')[1]);
 
       // Use API-first approach - no Firebase client SDK fallback
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (!response.ok) {
@@ -93,8 +99,10 @@ export function ForgotPasswordForm({
       // Use the error message from the API if available, otherwise provide fallback
       let errorMessage = error.message || "Failed to send reset email. Please try again.";
 
-      // Handle network errors specifically
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Handle specific error types
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timed out. The server may be busy. Please try again.";
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
         errorMessage = "Network error. Please check your internet connection and try again.";
       } else if (error.message.includes('JSON')) {
         errorMessage = "Server communication error. Please try again.";
@@ -183,7 +191,7 @@ export function ForgotPasswordForm({
             )}
             disabled={!isFormValid}
             isLoading={isLoading}
-            loadingText="Sending..."
+            loadingText="Sending reset link..."
           >
             Send Reset Link
           </LoadingButton>
