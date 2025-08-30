@@ -30,7 +30,7 @@ import { LINE_MODES } from '../../contexts/LineSettingsContext';
  */
 
 interface ViewableContentProps {
-  content: any[];
+  content: any;
   showDiff?: boolean;
   showLineNumbers?: boolean;
   isSearch?: boolean;

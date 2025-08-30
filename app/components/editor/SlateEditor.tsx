@@ -219,11 +219,41 @@ const createSlateEditor = () => {
 /**
  * Convert our content format to Slate format
  */
-const contentToSlate = (content: any[]): Descendant[] => {
+const contentToSlate = (content: any): Descendant[] => {
   console.log('🔍 contentToSlate: Input content:', { content, type: typeof content, isArray: Array.isArray(content) });
 
-  if (!content || content.length === 0) {
-    console.log('🔍 contentToSlate: Empty content, returning default paragraph');
+  // Handle non-array content
+  if (!content) {
+    console.log('🔍 contentToSlate: Null/undefined content, returning default paragraph');
+    return [{ type: 'paragraph', children: [{ text: '' }] }];
+  }
+
+  // Convert non-array content to array
+  if (!Array.isArray(content)) {
+    console.log('🔍 contentToSlate: Non-array content, converting to array');
+    if (typeof content === 'string') {
+      // Handle string content
+      return [{ type: 'paragraph', children: [{ text: content }] }];
+    } else if (typeof content === 'object') {
+      // Handle object content - try to extract meaningful data
+      if (content.type === 'paragraph' && content.children) {
+        return [content];
+      } else if (content.text !== undefined) {
+        return [{ type: 'paragraph', children: [{ text: content.text }] }];
+      } else {
+        // Fallback for unknown object structure
+        console.warn('🔍 contentToSlate: Unknown object structure, using fallback');
+        return [{ type: 'paragraph', children: [{ text: JSON.stringify(content) }] }];
+      }
+    } else {
+      // Fallback for other types
+      console.warn('🔍 contentToSlate: Unknown content type, using fallback');
+      return [{ type: 'paragraph', children: [{ text: String(content) }] }];
+    }
+  }
+
+  if (content.length === 0) {
+    console.log('🔍 contentToSlate: Empty array, returning default paragraph');
     return [{ type: 'paragraph', children: [{ text: '' }] }];
   }
 
@@ -383,7 +413,7 @@ const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
 // ============================================================================
 
 interface SlateEditorProps {
-  initialContent?: any[];
+  initialContent?: any;
   onChange: (content: any[]) => void;
   onEmptyLinesChange?: (count: number) => void;
   placeholder?: string;
@@ -406,7 +436,7 @@ interface SlateEditorProps {
 }
 
 const SlateEditor: React.FC<SlateEditorProps> = ({
-  initialContent = [],
+  initialContent = null,
   onChange,
   onEmptyLinesChange,
   placeholder = 'Start writing...',
@@ -446,9 +476,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   const safeInitialValue = useMemo(() => {
     console.log('🔍 SlateEditor: Creating safe initial value', { initialContent, type: typeof initialContent });
     try {
-      const content = initialContent || [];
-      console.log('🔍 SlateEditor: Content after null check', { content, length: content.length });
-      const slateValue = contentToSlate(content);
+      const slateValue = contentToSlate(initialContent);
       console.log('🔍 SlateEditor: Slate value after conversion', { slateValue, length: slateValue.length });
       // Ensure we always have at least one paragraph
       const result = slateValue.length > 0 ? slateValue : [{ type: 'paragraph', children: [{ text: '' }] }];
@@ -717,8 +745,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   // Update value when initialContent changes
   useEffect(() => {
     try {
-      const content = initialContent || [];
-      const newValue = contentToSlate(content);
+      const newValue = contentToSlate(initialContent);
       // Ensure we always have at least one paragraph
       const safeValue = newValue.length > 0 ? newValue : [{ type: 'paragraph', children: [{ text: '' }] }];
       setValue(safeValue);

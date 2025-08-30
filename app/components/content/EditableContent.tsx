@@ -26,7 +26,7 @@ import SlateEditor from '../editor/SlateEditor';
  */
 
 interface EditableContentProps {
-  content: any[];
+  content: any;
   onChange: (content: any[]) => void;
   onEmptyLinesChange?: (count: number) => void;
   placeholder?: string;

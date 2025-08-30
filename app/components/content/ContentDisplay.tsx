@@ -31,7 +31,7 @@ import ViewableContent from './ViewableContent';
 
 interface ContentDisplayProps {
   // Content data
-  content: any[];
+  content: any;
   
   // Mode control
   isEditable: boolean;
