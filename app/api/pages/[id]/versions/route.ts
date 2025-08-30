@@ -93,6 +93,7 @@ export async function GET(
     const isDevelopment = process.env.NODE_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
+    const isPublic = true; // All pages are now public
     const canView = true; // All pages are accessible
 
     console.log(`📊 [PAGE_VERSIONS] Permission check:`, {

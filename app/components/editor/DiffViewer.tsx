@@ -47,6 +47,8 @@ export default function DiffViewer({
 
       const result = await calculateDiff(parsedCurrent, parsedPrevious);
       setDiffResult(result);
+
+      // TODO: Consider using processDiffForDisplay here for better diff visualization
     } catch (error) {
       console.error('Error calculating diff:', error);
       setError('Failed to calculate diff');

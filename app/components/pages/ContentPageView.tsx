@@ -433,13 +433,22 @@ export default function ContentPageView({
 
           // Generate diff content using centralized diff service
           const { calculateDiff } = await import('../../utils/diffService');
+          const { processDiffForDisplay } = await import('../../utils/diffContentProcessor');
+
           const diffResult = await calculateDiff(
             currentVersion.content || '',
             compareVersion?.content || ''
           );
 
+          // Process diff result into displayable content with annotations
+          const processedDiff = processDiffForDisplay(
+            currentVersion.content || '',
+            compareVersion?.content || '',
+            diffResult
+          );
+
           setDiffContent(diffResult);
-          setEditorState(diffResult);
+          setEditorState(processedDiff.content); // Use processed content for display
 
           setPage({
             id: pageId,

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Diff Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .diff-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .added {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .removed {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 2px 4px;
+            border-radius: 3px;
+            text-decoration: line-through;
+        }
+        .paragraph {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        .paragraph.added {
+            border-left: 4px solid #28a745;
+            padding-left: 12px;
+            background-color: #f8fff9;
+        }
+        .paragraph.removed {
+            border-left: 4px solid #dc3545;
+            padding-left: 12px;
+            background-color: #fff8f8;
+        }
+        .paragraph.modified {
+            border-left: 4px solid #ffc107;
+            padding-left: 12px;
+            background-color: #fffdf5;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .summary {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .summary .added-count {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .summary .removed-count {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Diff Display Test</h1>
+    
+    <div class="summary">
+        <strong>Changes:</strong> 
+        <span class="added-count">+1 added</span>, 
+        <span class="removed-count">-1 removed</span>
+    </div>
+
+    <div class="diff-container">
+        <h2>Current Implementation (Raw Operations)</h2>
+        <div id="raw-operations"></div>
+    </div>
+
+    <div class="diff-container">
+        <h2>Processed Diff Display</h2>
+        <div id="processed-diff"></div>
+    </div>
+
+    <script>
+        // Sample diff operations from the API
+        const diffOperations = [
+            { type: "equal", text: "Title", start: 0 },
+            { type: "equal", text: " ", start: 5 },
+            { type: "remove", text: "1", start: 6 },
+            { type: "add", text: "2", start: 6 }
+        ];
+
+        // Display raw operations
+        const rawContainer = document.getElementById('raw-operations');
+        diffOperations.forEach(op => {
+            const span = document.createElement('span');
+            span.textContent = op.text;
+            if (op.type === 'add') {
+                span.className = 'added';
+            } else if (op.type === 'remove') {
+                span.className = 'removed';
+            }
+            rawContainer.appendChild(span);
+        });
+
+        // Simulate processed diff content (what our processor should create)
+        const processedContent = [
+            {
+                type: 'paragraph',
+                children: [
+                    { text: 'Title ' },
+                    { text: '1', removed: true },
+                    { text: '2', added: true }
+                ],
+                diffType: 'modified'
+            }
+        ];
+
+        // Display processed diff
+        const processedContainer = document.getElementById('processed-diff');
+        processedContent.forEach(paragraph => {
+            const div = document.createElement('div');
+            div.className = `paragraph ${paragraph.diffType}`;
+            
+            paragraph.children.forEach(child => {
+                const span = document.createElement('span');
+                span.textContent = child.text;
+                if (child.added) {
+                    span.className = 'added';
+                } else if (child.removed) {
+                    span.className = 'removed';
+                }
+                div.appendChild(span);
+            });
+            
+            processedContainer.appendChild(div);
+        });
+    </script>
+</body>
+</html>
