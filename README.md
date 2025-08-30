@@ -71,7 +71,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 ### 🔒 Security & Core Systems (Essential Reading)
 
 - **[USERNAME_SECURITY_GUIDELINES](docs/USERNAME_SECURITY_GUIDELINES.md)** - **🔒 CRITICAL**: Prevent email exposure vulnerabilities
-- **[VERSION_SYSTEM](docs/VERSION_SYSTEM.md)** - **ESSENTIAL**: Unified version system for page edit tracking
+- **[PAGE_DATA_AND_VERSIONS](docs/PAGE_DATA_AND_VERSIONS.md)** - **🏛️ AUTHORITATIVE**: Page data structure and version system
 - **[AUTHENTICATION_ARCHITECTURE](docs/AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
 - **[USER_DATA_FETCHING_PATTERNS](docs/USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for secure user data handling
 
@@ -139,7 +139,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 #### User Interface
 - **[Banner System Guide](docs/BANNER_SYSTEM_GUIDE.md)** - ⭐ **ESSENTIAL** - Priority-based banner system with admin testing (email verification, PWA installation)
 - **[Settings Navigation System](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - Settings page navigation
-- **[Version System](docs/VERSION_SYSTEM.md)** - Version management system
+- **[Page Data & Versions](docs/PAGE_DATA_AND_VERSIONS.md)** - Authoritative page data structure and version system
 
 ### ⚡ Performance & Optimization
 

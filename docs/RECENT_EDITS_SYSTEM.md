@@ -217,7 +217,7 @@ If we need to move to separate Firebase projects:
 ## 📚 **Related Documentation**
 
 - `ENVIRONMENT_ARCHITECTURE.md` - Environment configuration details
-- `VERSION_SYSTEM.md` - Version system (not used by recent edits)
+- `PAGE_DATA_AND_VERSIONS.md` - Authoritative page data and version system
 - `SIMPLIFIED_ACTIVITY_SYSTEM.md` - Background on simplified approach
 
 ---

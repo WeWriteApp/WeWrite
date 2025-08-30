@@ -631,9 +631,26 @@ export default function ContentPageView({
                 versionTimestamp: versionData?.timestamp
               });
 
-              const parsedContent = typeof contentToUse === 'string'
-                ? JSON.parse(contentToUse)
-                : contentToUse;
+              // CRITICAL FIX: Handle malformed JSON content (stored as string instead of array)
+              let parsedContent;
+              if (typeof contentToUse === 'string') {
+                try {
+                  parsedContent = JSON.parse(contentToUse);
+
+                  // Check if we got a string back (double-encoded JSON)
+                  if (typeof parsedContent === 'string') {
+                    console.log('🔧 DOUBLE_ENCODED: Detected double-encoded JSON, parsing again');
+                    parsedContent = JSON.parse(parsedContent);
+                  }
+
+
+                } catch (e) {
+                  console.warn('📄 PageView: Failed to parse content as JSON, treating as plain text');
+                  parsedContent = contentToUse;
+                }
+              } else {
+                parsedContent = contentToUse;
+              }
 
               console.log('📄 PageView parsed content:', {
                 source: contentSource,

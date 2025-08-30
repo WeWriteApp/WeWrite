@@ -37,6 +37,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 ## Documentation Index
 
 ### 🏗️ Core Architecture
+- **[Page Data & Versions](./PAGE_DATA_AND_VERSIONS.md)** - **🏛️ AUTHORITATIVE**: Page data structure and version system
 - **[Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md)** - Environment configuration and data separation
 - **[Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md)** - Quick environment behavior matrix
 - **[Logged-Out User Production Data](./LANDING_PAGE_PRODUCTION_DATA.md)** - Production data system for logged-out users

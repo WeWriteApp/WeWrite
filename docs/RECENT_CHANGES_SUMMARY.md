@@ -64,7 +64,7 @@ This document provides a quick overview of major changes made to WeWrite in 2025
 
 #### Documentation
 - **[SIMPLIFIED_ACTIVITY_SYSTEM.md](./SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Updated with recent edits improvements
-- **[VERSION_SYSTEM.md](./VERSION_SYSTEM.md)** - Unified version system documentation
+- **[PAGE_DATA_AND_VERSIONS.md](./PAGE_DATA_AND_VERSIONS.md)** - Authoritative page data and version system documentation
 
 ### 🚨 Emergency Firebase Cost Optimization (Jan 25, 2025)
 **Impact**: Critical cost reduction
@@ -315,7 +315,7 @@ grep -A5 -B5 "accent-color.*setProperty" app/ | grep -v "accent-h\|accent-s\|acc
 ### Development Guidelines
 - **[DEPRECATED_UI_PATTERNS.md](./DEPRECATED_UI_PATTERNS.md)** - UI patterns that must be removed
 - **[USERNAME_SECURITY_GUIDELINES.md](./USERNAME_SECURITY_GUIDELINES.md)** - Security documentation
-- **[VERSION_SYSTEM.md](./VERSION_SYSTEM.md)** - Unified version system
+- **[PAGE_DATA_AND_VERSIONS.md](./PAGE_DATA_AND_VERSIONS.md)** - Authoritative page data and version system
 
 ### Main Documentation
 - **[README.md](../README.md)** - Main project documentation and setup

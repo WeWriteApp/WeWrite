@@ -94,9 +94,9 @@ WeWrite's innovative **"Use It or Lose It"** system encourages user engagement:
 - `writerUsdEarnings` - Detailed monthly earnings records
 
 #### Content System
-- `pages` - User-generated content
+- `pages` - User-generated content (see [PAGE_DATA_AND_VERSIONS.md](PAGE_DATA_AND_VERSIONS.md))
 - `recentEdits` - Recent page modifications
-- `pageVersions` - Page version history
+- `pageVersions` - Page version history (see [PAGE_DATA_AND_VERSIONS.md](PAGE_DATA_AND_VERSIONS.md))
 
 ### Data Consistency
 - **Atomic Transactions**: Critical operations use Firestore transactions

@@ -640,7 +640,7 @@ grep -r "theme.*===.*'dark'" app/ | grep -v "resolvedTheme"
 - **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Complete documentation navigation
 
 ### System Architecture
-- **[VERSION_SYSTEM.md](./VERSION_SYSTEM.md)** - New unified system documentation
+- **[PAGE_DATA_AND_VERSIONS.md](./PAGE_DATA_AND_VERSIONS.md)** - Authoritative page data and version system documentation
 - **[AUTHENTICATION_ARCHITECTURE.md](./AUTHENTICATION_ARCHITECTURE.md)** - Auth system documentation
 - **[CONTENT_DISPLAY_ARCHITECTURE.md](./CONTENT_DISPLAY_ARCHITECTURE.md)** - Unified content display system
 

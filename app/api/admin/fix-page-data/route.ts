@@ -73,6 +73,19 @@ export async function POST(request: NextRequest) {
         issues.push('MISSING_CONTENT');
       }
 
+      // Check for malformed JSON content (stored as string instead of array)
+      if (pageData.content && typeof pageData.content === 'string') {
+        try {
+          const parsed = JSON.parse(pageData.content);
+          if (Array.isArray(parsed)) {
+            issues.push('MALFORMED_JSON_CONTENT');
+          }
+        } catch (e) {
+          // If it's a string but not valid JSON, it might be legacy text content
+          issues.push('LEGACY_TEXT_CONTENT');
+        }
+      }
+
       if (issues.length === 0) {
         continue; // No issues with this page
       }
@@ -101,6 +114,28 @@ export async function POST(request: NextRequest) {
           } catch (userError) {
             console.warn(`Failed to fetch user data for ${pageData.userId}:`, userError);
           }
+        }
+
+        // Fix malformed JSON content
+        if (issues.includes('MALFORMED_JSON_CONTENT')) {
+          try {
+            const parsed = JSON.parse(pageData.content);
+            if (Array.isArray(parsed)) {
+              updateData.content = parsed; // Store as proper array structure
+              fixes.push(`CONTENT: Fixed malformed JSON content (${parsed.length} items)`);
+              shouldUpdate = true;
+            }
+          } catch (e) {
+            console.warn(`Failed to parse malformed content for ${pageId}:`, e);
+          }
+        }
+
+        // Fix legacy text content
+        if (issues.includes('LEGACY_TEXT_CONTENT')) {
+          // Convert plain text to proper content structure
+          updateData.content = [{ type: "paragraph", children: [{ text: pageData.content }] }];
+          fixes.push(`CONTENT: Converted legacy text to proper structure`);
+          shouldUpdate = true;
         }
 
         // Fix missing title and content by looking at versions

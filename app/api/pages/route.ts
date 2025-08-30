@@ -427,13 +427,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Create page data - ensure content is properly stringified
-    const contentString = content ?
-      (typeof content === 'string' ? content : JSON.stringify(content)) :
-      null;
+    // CRITICAL FIX: Ensure content is stored in proper format, never as JSON string
+    let validatedContent = null;
+    let contentString = null;
+
+    if (content) {
+      if (typeof content === 'string') {
+        try {
+          // If content is a JSON string, parse it to get the proper structure
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) {
+            validatedContent = parsed;
+            contentString = content; // Keep string for version system
+            console.log('🔧 NEW_PAGE_VALIDATION: Parsed JSON string to proper array structure');
+          } else {
+            // Convert non-array JSON to paragraph structure
+            validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(parsed) }] }];
+            contentString = JSON.stringify(validatedContent);
+            console.log('🔧 NEW_PAGE_VALIDATION: Converted non-array JSON to paragraph structure');
+          }
+        } catch (e) {
+          // If it's not valid JSON, treat as plain text
+          validatedContent = [{ type: "paragraph", children: [{ text: content }] }];
+          contentString = JSON.stringify(validatedContent);
+          console.log('🔧 NEW_PAGE_VALIDATION: Converted plain text to paragraph structure');
+        }
+      } else if (Array.isArray(content)) {
+        // Content is already in proper format
+        validatedContent = content;
+        contentString = JSON.stringify(content);
+        console.log('🔧 NEW_PAGE_VALIDATION: Content already in proper array format');
+      } else {
+        // Convert other types to paragraph structure
+        validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(content) }] }];
+        contentString = JSON.stringify(validatedContent);
+        console.log('🔧 NEW_PAGE_VALIDATION: Converted non-array content to paragraph structure');
+      }
+    }
 
     const pageData: PageData = {
       title: title.trim(),
-      content: contentString,
+      content: validatedContent, // Store as proper structure, not string
       userId: currentUserId,
       username,
       groupId: groupId || null,
@@ -684,7 +718,34 @@ export async function PUT(request: NextRequest) {
     }
 
     if (content !== undefined) {
-      updateData.content = content;
+      // CRITICAL FIX: Ensure content is never stored as JSON string
+      // This prevents the malformed JSON content bug we just fixed
+      let validatedContent = content;
+
+      if (typeof content === 'string') {
+        try {
+          // If content is a JSON string, parse it to get the proper structure
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) {
+            validatedContent = parsed;
+            console.log('🔧 CONTENT_VALIDATION: Converted JSON string to proper array structure');
+          } else {
+            // Convert non-array JSON to paragraph structure
+            validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(parsed) }] }];
+            console.log('🔧 CONTENT_VALIDATION: Converted non-array JSON to paragraph structure');
+          }
+        } catch (e) {
+          // If it's not valid JSON, treat as plain text
+          validatedContent = [{ type: "paragraph", children: [{ text: content }] }];
+          console.log('🔧 CONTENT_VALIDATION: Converted plain text to paragraph structure');
+        }
+      } else if (!Array.isArray(content)) {
+        // Ensure content is always an array
+        validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(content) }] }];
+        console.log('🔧 CONTENT_VALIDATION: Converted non-array content to paragraph structure');
+      }
+
+      updateData.content = validatedContent;
     }
 
     if (groupId !== undefined) {

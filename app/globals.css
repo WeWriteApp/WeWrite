@@ -130,32 +130,37 @@
   .xs\:hidden { display: none; }
 }
 
-/* Comprehensive zoom prevention for mobile devices */
+/* Mobile zoom prevention and text selection */
 @media screen and (max-width: 768px) {
-  /* Prevent all zoom gestures while preserving scrolling */
-  * {
-    touch-action: pan-x pan-y;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+  /* Prevent zoom on interactive elements */
+  button, [role="button"], .button, input, select, textarea {
+    touch-action: manipulation;
+    font-size: 16px !important; /* Prevent zoom on input focus */
   }
 
-  /* Allow text selection on content areas */
-  p, h1, h2, h3, h4, h5, h6, span, div[contenteditable],
-  .editor-content, .page-content, .editable-container {
-    -webkit-user-select: text;
-    -khtml-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
+  /* Ensure content areas remain selectable on mobile */
+  h1, h2, h3, h4, h5, h6, p, .page-content, .editor-content, .content-area,
+  .prose, [data-page-content], .unified-text-content, .text-view-content,
+  .paragraph-content, .wewrite-content-display, .wewrite-viewer-content,
+  .wewrite-paragraph-content, [data-slate-node="text"], [data-slate-leaf],
+  input, textarea, select, [contenteditable="true"] {
+    -webkit-user-select: text !important;
+    -khtml-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
     touch-action: pan-x pan-y;
+  }
+
+  /* Body settings */
+  body {
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* Interactive elements need manipulation for proper touch handling */
-  input, textarea, select, button, a, [role="button"], [tabindex] {
+  button, [role="button"], [tabindex] {
     font-size: 16px !important; /* Prevent zoom on input focus */
     touch-action: manipulation;
     -webkit-user-select: none;
@@ -164,6 +169,20 @@
     -ms-user-select: none;
     user-select: none;
     pointer-events: auto; /* Ensure buttons are clickable */
+  }
+
+  /* Input fields should allow text selection but prevent zoom */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevent zoom on input focus */
+    touch-action: manipulation;
+    pointer-events: auto;
+  }
+
+  /* Links should allow text selection of their content */
+  a {
+    font-size: 16px !important;
+    touch-action: manipulation;
+    pointer-events: auto;
   }
 
   /* Special handling for range sliders - they need manipulation touch action */
@@ -2080,9 +2099,9 @@ body::before {
 .content-area,
 .unified-text-content,
 .prose,
-/* COMPREHENSIVE TEXT SELECTION CONTROL */
-/* Default: Disable text selection for UI elements, but NOT form inputs */
-*:not(input):not(textarea):not(select):not([contenteditable]) {
+/* GLOBAL TEXT SELECTION PREVENTION */
+/* Disable text selection for EVERYTHING by default */
+* {
   -webkit-user-select: none;
   -khtml-user-select: none;
   -moz-user-select: none;
@@ -2090,11 +2109,20 @@ body::before {
   user-select: none;
 }
 
-/* Ensure form inputs have proper text selection (should be default now) */
-input,
-textarea,
-select,
-[contenteditable="true"] {
+/* ONLY ALLOW TEXT SELECTION FOR SPECIFIC CONTENT */
+/* Page titles */
+h1, h2, h3, h4, h5, h6,
+.page-title, .content-title, .page-header h1, .page-header h2,
+/* Page body content */
+p, .page-content, .editor-content, .content-area, .prose,
+[data-page-content], .unified-text-content, .text-view-content,
+.paragraph-content, .wewrite-content-display, .wewrite-viewer-content,
+.wewrite-paragraph-content, [data-slate-node="text"], [data-slate-leaf],
+.slate-text, .wewrite-dense-content-flow, .wewrite-normal-content-flow,
+/* Form inputs and editable content */
+input, textarea, select, [contenteditable="true"],
+input[type="text"], input[type="email"], input[type="password"],
+input[type="search"], input[type="url"], input[type="tel"] {
   -webkit-user-select: text !important;
   -khtml-user-select: text !important;
   -moz-user-select: text !important;
@@ -2102,50 +2130,7 @@ select,
   user-select: text !important;
 }
 
-/* Enable text selection for content areas */
-.text-view-content,
-.editor-content,
-.paragraph-content,
-.slide-up-page,
-.new-page-container,
-.page-content,
-.content-area,
-.unified-text-content,
-.prose,
-[data-page-content],
-.user-bio-content,
-.group-about-content,
-/* Allow selection in specific content containers */
-.content-selectable,
-.selectable-text,
-/* Allow selection in page titles and descriptions when in content areas */
-.page-content p,
-.page-content h1,
-.page-content h2,
-.page-content h3,
-.page-content h4,
-.page-content h5,
-.page-content h6,
-.editor-content p,
-.editor-content h1,
-.editor-content h2,
-.editor-content h3,
-.editor-content h4,
-.editor-content h5,
-.editor-content h6,
-.prose p,
-.prose h1,
-.prose h2,
-.prose h3,
-.prose h4,
-.prose h5,
-.prose h6 {
-  -webkit-user-select: text !important;
-  -khtml-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  user-select: text !important;
-}
+
 
 /* Ensure text selection works in both light and dark modes */
 .dark ::selection {

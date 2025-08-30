@@ -1,8 +1,92 @@
-# WeWrite Version System Documentation
+# WeWrite Page Data & Version System Documentation
+
+**🏛️ AUTHORITATIVE SOURCE**: This document is the final authority on page data structure and version system architecture.
 
 ## Overview
 
-WeWrite uses a **unified version system** to track all page edits and changes. This system replaces the previous fragmented approach of having separate `activities`, `edits`, `history`, and `versions` collections.
+WeWrite uses a **unified page data and version system** with consistent data structures across all storage and retrieval operations. This system defines:
+
+1. **Page Data Structure**: How content is stored in the main pages collection
+2. **Version System**: How page edits and changes are tracked
+3. **Content Format**: Standardized Slate.js node arrays (never JSON strings)
+
+This replaces all previous fragmented approaches and serves as the single source of truth.
+
+## Page Data Structure
+
+### Main Page Document
+
+All pages are stored in the `pages` collection with this exact structure:
+
+```typescript
+interface PageData {
+  // Core identifiers
+  id: string;                    // Auto-generated page ID
+  title: string;                 // Page title
+  content: SlateNode[];          // CRITICAL: Always Slate.js node array, NEVER JSON string
+
+  // User information
+  userId: string;                // ID of page owner
+  username: string;              // Username of page owner
+
+  // Timestamps
+  createdAt: string;             // ISO timestamp of page creation
+  lastModified: string;          // ISO timestamp of last edit
+
+  // Organization
+  groupId?: string | null;       // Group ID if page belongs to a group
+
+  // Location data
+  location?: {
+    lat: number;
+    lng: number;
+  } | null;
+
+  // Status
+  deleted: boolean;              // Whether page is deleted
+  deletedAt?: string;            // ISO timestamp of deletion
+
+  // Custom fields
+  customDate?: string | null;    // Custom date for daily notes
+
+  // Version tracking
+  currentVersion?: string;       // ID of current version in subcollection
+
+  // Metadata
+  lastViewed?: any;              // Firestore timestamp of last view
+  viewCount?: number;            // Total view count
+}
+```
+
+### Content Format (CRITICAL)
+
+**✅ CORRECT**: Content is stored as Slate.js node arrays
+```typescript
+content: [
+  {
+    type: "paragraph",
+    children: [
+      { text: "Hello world" }
+    ]
+  }
+]
+```
+
+**❌ WRONG**: Content stored as JSON string (causes display bugs)
+```typescript
+content: "[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Hello world\"}]}]"
+```
+
+### Slate.js Node Structure
+
+```typescript
+interface SlateNode {
+  type: string;                  // Node type: "paragraph", "heading", "link", etc.
+  children?: SlateNode[];        // Child nodes (for containers)
+  text?: string;                 // Text content (for text nodes)
+  [key: string]: any;           // Additional properties (url, level, etc.)
+}
+```
 
 ## Architecture
 
@@ -19,7 +103,7 @@ pages/{pageId}/versions/{versionId}
 ```typescript
 interface PageVersion {
   id: string;                    // Auto-generated version ID
-  content: string;               // Full page content as JSON string
+  content: any[];                // Full page content as Slate.js node array
   title?: string;                // Page title at time of edit
   createdAt: string;             // ISO timestamp of when version was created
   userId: string;                // ID of user who made the edit
@@ -152,7 +236,7 @@ The individual version endpoint provides:
 ### Creating a Version
 ```typescript
 const versionData = {
-  content: JSON.stringify(pageContent),
+  content: pageContent,  // Store as Slate.js node array, NOT string
   title: pageTitle,
   createdAt: new Date().toISOString(),
   userId: currentUserId,
@@ -247,4 +331,31 @@ The WeWrite application now uses a single, unified version system for all page e
 2. **Add Features**: Consider implementing version comparison, rollback, etc.
 3. **Archive Old Data**: Consider archiving very old activities after verification
 4. **Optimize Queries**: Add indexes as needed for better performance
+
+## 🏛️ **AUTHORITATIVE STATUS**
+
+**This document is the FINAL AUTHORITY on:**
+- Page data structure and storage format
+- Version system architecture and implementation
+- Content format standards (Slate.js arrays, never JSON strings)
+- Database schema for pages and versions
+
+**All code must conform to the specifications in this document.**
+
+**When in doubt, this document takes precedence over:**
+- Code comments
+- Other documentation files
+- Legacy implementations
+- Informal discussions
+
+**For any changes to page data structure or version system:**
+1. Update this document FIRST
+2. Then implement the changes in code
+3. Update related documentation to reference this document
+
+## 📚 **Related Documentation**
+
+- **[CONTENT_DISPLAY_ARCHITECTURE.md](CONTENT_DISPLAY_ARCHITECTURE.md)** - UI components for displaying content
+- **[SIMPLIFIED_ACTIVITY_SYSTEM.md](SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Activity system built on versions
+- **[RECENT_EDITS_SYSTEM.md](RECENT_EDITS_SYSTEM.md)** - Recent edits system using versions
 

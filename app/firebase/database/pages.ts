@@ -131,7 +131,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
       // Ensure we have content before creating a version
       const versionData = {
-        content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
+        content: data.content || [{ type: "paragraph", children: [{ text: "" }] }], // Store as object array
         createdAt: now, // Using the same ISO string format
         userId: data.userId,
         username: username || "Anonymous" // Also store username in version data for consistency

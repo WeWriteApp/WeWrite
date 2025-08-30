@@ -157,7 +157,7 @@ export const appendPageReference = async (
 
     // Update the page with the new content
     await updatePage(targetPageId, {
-      content: JSON.stringify(newContent),
+      content: newContent, // CRITICAL FIX: Store as object, not string
       lastModified: new Date().toISOString()
     });
 

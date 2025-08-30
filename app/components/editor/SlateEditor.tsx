@@ -232,8 +232,21 @@ const contentToSlate = (content: any): Descendant[] => {
   if (!Array.isArray(content)) {
     console.log('🔍 contentToSlate: Non-array content, converting to array');
     if (typeof content === 'string') {
-      // Handle string content
-      return [{ type: 'paragraph', children: [{ text: content }] }];
+      // CRITICAL FIX: Try to parse JSON string first
+      try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) {
+          console.log('🔧 contentToSlate: Successfully parsed JSON string to array');
+          return parsed;
+        } else {
+          console.log('🔧 contentToSlate: Parsed JSON but not array, treating as text');
+          return [{ type: 'paragraph', children: [{ text: content }] }];
+        }
+      } catch (e) {
+        // Not JSON, treat as plain text
+        console.log('🔧 contentToSlate: Not JSON, treating as plain text');
+        return [{ type: 'paragraph', children: [{ text: content }] }];
+      }
     } else if (typeof content === 'object') {
       // Handle object content - try to extract meaningful data
       if (content.type === 'paragraph' && content.children) {

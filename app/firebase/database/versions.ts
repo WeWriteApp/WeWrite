@@ -454,7 +454,7 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     // Update the page document with the new current version and content
     const pageUpdateData = {
       currentVersion: versionRef.id,
-      content: contentString, // Store content directly on page for faster access
+      content: parsedContent, // CRITICAL FIX: Store content as object, not string
       lastModified: now,
       // Store diff information for recent activity display (with safety checks)
       lastDiff: diffResult ? {
