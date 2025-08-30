@@ -68,44 +68,21 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       note: 'All pages are now public'
     });
 
-    // EMERGENCY FIX: Convert ALL JSON string content to proper arrays
+    // Content validation and conversion (read-only, no database writes)
     let processedPageData = { ...pageData };
 
-    console.log('🚨 EMERGENCY_FIX: Checking content format for page', pageId, {
-      contentType: typeof processedPageData.content,
-      isString: typeof processedPageData.content === 'string'
-    });
-
-    // AGGRESSIVE FIX: If content is a string, convert it immediately
+    // If content is a JSON string, parse it for display (but don't write to DB)
     if (processedPageData.content && typeof processedPageData.content === 'string') {
-      console.log('🚨 EMERGENCY_FIX: Converting JSON string to proper array for page', pageId);
-
       try {
         const parsed = JSON.parse(processedPageData.content);
         if (Array.isArray(parsed)) {
           processedPageData.content = parsed;
-          console.log('✅ EMERGENCY_FIX: Successfully converted JSON string to array');
-
-          // Fix the database immediately
-          try {
-            const collectionName = await getCollectionNameAsync('pages');
-            const pageRef = db.collection(collectionName).doc(pageId);
-            await pageRef.update({
-              content: parsed,
-              lastModified: new Date().toISOString(),
-              fixedAt: new Date().toISOString(),
-              fixedBy: 'emergency-json-fix'
-            });
-            console.log('✅ EMERGENCY_DB_FIX: Database updated with proper array format');
-          } catch (dbError) {
-            console.error('❌ EMERGENCY_DB_FIX: Failed to update database:', dbError);
-          }
         } else {
-          console.warn('⚠️ EMERGENCY_FIX: Parsed content is not an array');
+          // Convert non-array content to proper Slate format
           processedPageData.content = [{ type: "paragraph", children: [{ text: processedPageData.content }] }];
         }
       } catch (parseError) {
-        console.error('❌ EMERGENCY_FIX: Failed to parse JSON string:', parseError);
+        // If parsing fails, wrap in paragraph
         processedPageData.content = [{ type: "paragraph", children: [{ text: processedPageData.content }] }];
       }
     }
