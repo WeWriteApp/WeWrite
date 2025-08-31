@@ -510,6 +510,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     return safeInitialValue;
   });
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLinkData, setEditingLinkData] = useState<any>(null);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [currentSuggestion, setCurrentSuggestion] = useState<LinkSuggestion | null>(null);
   const [suggestionMatchedText, setSuggestionMatchedText] = useState('');
@@ -711,7 +712,42 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
               isPublic={element.isPublic}
               className="cursor-pointer"
               isEditing={true}
-              onEditLink={() => setShowLinkModal(true)}
+              onEditLink={() => {
+                // Extract the current displayed text from children
+                const currentDisplayText = element.children?.[0]?.text || '';
+
+                // Prepare editing data based on link type
+                let editingData = null;
+
+                if (element.url && !element.pageId) {
+                  // External link
+                  const hasCustomText = currentDisplayText !== element.url;
+                  editingData = {
+                    type: 'external',
+                    data: {
+                      url: element.url,
+                      text: hasCustomText ? currentDisplayText : ''
+                    }
+                  };
+                } else if (element.pageId) {
+                  // Internal page link
+                  const linkType = element.showAuthor ? 'compound' : 'page';
+                  const hasCustomText = currentDisplayText !== element.pageTitle;
+                  editingData = {
+                    type: linkType,
+                    data: {
+                      id: element.pageId,
+                      title: element.pageTitle,
+                      username: element.authorUsername,
+                      text: hasCustomText ? currentDisplayText : '',
+                      showAuthor: element.showAuthor
+                    }
+                  };
+                }
+
+                setEditingLinkData(editingData);
+                setShowLinkModal(true);
+              }}
               draggable={false}
             >
               {children}
@@ -1333,13 +1369,16 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       {showLinkModal && typeof document !== 'undefined' && createPortal(
         <LinkEditorModal
           isOpen={showLinkModal}
-          onClose={() => setShowLinkModal(false)}
+          onClose={() => {
+            setShowLinkModal(false);
+            setEditingLinkData(null);
+          }}
           onInsertLink={(linkData) => {
             console.log('SlateEditor: onInsertLink called with:', linkData);
             console.log('SlateEditor: insertLink function:', insertLink);
             insertLink(linkData);
           }}
-          editingLink={null}
+          editingLink={editingLinkData}
           selectedText={getSelectedText()}
           linkedPageIds={getLinkedPageIds()}
           currentPageId={pageId}

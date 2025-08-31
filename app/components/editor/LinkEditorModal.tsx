@@ -62,6 +62,7 @@ export default function LinkEditorModal({
           setActiveTab('external');
           setExternalUrl(data.url || '');
           setDisplayText(data.text || '');
+          setCustomText(!!data.text); // Enable custom text if there's custom text
         } else if (type === 'page' || type === 'user') {
           setActiveTab('pages');
           setSelectedPage(data);
@@ -247,6 +248,26 @@ export default function LinkEditorModal({
                 placeholder="Enter custom display text"
                 className="w-full"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Reset to default text based on link type
+                  if (activeTab === 'external') {
+                    setDisplayText(externalUrl);
+                  } else if (selectedPage) {
+                    setDisplayText(selectedPage.title || '');
+                  } else if (editingLink && editingLink.type === 'external') {
+                    setDisplayText(editingLink.data.url || '');
+                  } else if (editingLink && (editingLink.type === 'page' || editingLink.type === 'compound')) {
+                    setDisplayText(editingLink.data.title || '');
+                  }
+                }}
+                className="text-xs"
+              >
+                Reset to default
+              </Button>
             </div>
           )}
         </div>
