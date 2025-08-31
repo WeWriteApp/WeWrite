@@ -72,21 +72,51 @@ async function getRecipientPendingAllocations(userId: string) {
     let totalPendingUsdCents = 0;
     const allocations = [];
 
-    snapshot.forEach(doc => {
+    // CRITICAL FIX: Process allocations and calculate funded portions
+    const allocationPromises = snapshot.docs.map(async (doc) => {
       const allocation = doc.data();
-      totalPendingUsdCents += allocation.usdCents || 0;
+      let usdCents = allocation.usdCents || 0;
 
-      allocations.push({
+      // Check sponsor's funding status
+      try {
+        const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
+          .doc(allocation.userId)
+          .get();
+
+        if (sponsorBalanceDoc.exists) {
+          const sponsorBalance = sponsorBalanceDoc.data();
+          const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
+          const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
+
+          // Calculate funded portion if sponsor is over-allocated
+          if (sponsorAllocatedCents > sponsorSubscriptionCents) {
+            const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
+            const fundedAllocationCents = Math.round(usdCents * fundingRatio);
+            console.log(`[Pending Allocations API] Sponsor ${allocation.userId} over-allocated. Original: ${usdCents}, Funded: ${fundedAllocationCents}`);
+            usdCents = fundedAllocationCents;
+          }
+        }
+      } catch (error) {
+        console.warn(`[Pending Allocations API] Error checking sponsor balance for ${allocation.userId}:`, error);
+        // If we can't check sponsor balance, use the full allocation (fail open)
+      }
+
+      totalPendingUsdCents += usdCents;
+
+      return {
         id: doc.id,
         resourceType: allocation.resourceType,
         resourceId: allocation.resourceId,
-        usdCents: allocation.usdCents,
-        usdValue: centsToDollars(allocation.usdCents),
+        usdCents: usdCents, // Use funded amount
+        usdValue: centsToDollars(usdCents),
         fromUserId: allocation.userId,
         month: allocation.month,
         createdAt: allocation.createdAt
-      });
+      };
     });
+
+    const processedAllocations = await Promise.all(allocationPromises);
+    allocations.push(...processedAllocations);
 
     // Simple deadline calculation - end of current month
     const now = new Date();

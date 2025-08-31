@@ -37,21 +37,65 @@ export async function GET(request: NextRequest) {
 
     const balance = balanceDoc.exists ? balanceDoc.data() : null;
 
+    // CRITICAL FIX: Get current month's funded allocations instead of stored balance
+    // This ensures recipients only see earnings from funded allocations
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
+    const allocationsQuery = allocationsRef
+      .where('recipientUserId', '==', userId)
+      .where('month', '==', currentMonth)
+      .where('status', '==', 'active');
+
+    const allocationsSnapshot = await allocationsQuery.get();
+    let totalFundedPendingCents = 0;
+
+    // Process each allocation and calculate funded portion
+    for (const doc of allocationsSnapshot.docs) {
+      const allocation = doc.data();
+      let allocationCents = allocation.usdCents || 0;
+
+      // Check sponsor's funding status
+      try {
+        const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
+          .doc(allocation.userId)
+          .get();
+
+        if (sponsorBalanceDoc.exists) {
+          const sponsorBalance = sponsorBalanceDoc.data();
+          const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
+          const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
+
+          // Calculate funded portion if sponsor is over-allocated
+          if (sponsorAllocatedCents > sponsorSubscriptionCents) {
+            const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
+            const fundedAllocationCents = Math.round(allocationCents * fundingRatio);
+            console.log(`[USD Earnings API] Sponsor ${allocation.userId} over-allocated. Original: ${allocationCents}, Funded: ${fundedAllocationCents}`);
+            allocationCents = fundedAllocationCents;
+          }
+        }
+      } catch (error) {
+        console.warn(`[USD Earnings API] Error checking sponsor balance for ${allocation.userId}:`, error);
+        // If we can't check sponsor balance, use the full allocation (fail open)
+      }
+
+      totalFundedPendingCents += allocationCents;
+    }
+
     const completeData = {
       balance: balance ? {
         totalEarnings: balance.totalUsdCentsEarned ? balance.totalUsdCentsEarned / 100 : 0,
         availableBalance: balance.availableUsdCents ? balance.availableUsdCents / 100 : 0,
-        pendingBalance: balance.pendingUsdCents ? balance.pendingUsdCents / 100 : 0,
+        pendingBalance: totalFundedPendingCents / 100, // Use calculated funded pending balance
         paidOutBalance: balance.paidOutUsdCents ? balance.paidOutUsdCents / 100 : 0
-      } : null
+      } : {
+        totalEarnings: 0,
+        availableBalance: 0,
+        pendingBalance: totalFundedPendingCents / 100, // Even if no balance doc, show funded pending
+        paidOutBalance: 0
+      }
     };
 
-    if (!completeData.balance) {
-      return NextResponse.json({
-        success: false,
-        error: 'No earnings data found'
-      }, { status: 404 });
-    }
+    // Always return data, even if no balance doc exists (user might have pending funded allocations)
 
     // Format response data using the actual balance data structure
     const responseData = {
