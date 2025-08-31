@@ -213,7 +213,7 @@ export function useAllocationActions({
     const newAllocationCents = Math.max(0, currentAllocationCents + amount);
     const changeCents = amount; // The amount parameter is the change in cents
 
-    // Allow over-allocation - the server will handle budget checks and show modal if needed
+    // Server will validate allocation limits and prevent over-spending
 
     // Immediate optimistic updates for both demo and real balance
     if (isDemoBalance) {

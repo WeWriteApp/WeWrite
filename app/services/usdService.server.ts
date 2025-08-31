@@ -477,7 +477,7 @@ export class ServerUsdService {
       }
 
       // Allow over-budget allocations (users can top off their account later)
-
+      // This creates "unfunded allocations" that nudge users to upgrade their subscription
       if (newAvailableCents < 0) {
         console.warn(`[USD ALLOCATION] Warning: allocation would result in negative available balance (${newAvailableCents} cents)`);
         // Allow negative available for now, but log it for investigation

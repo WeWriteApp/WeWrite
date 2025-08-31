@@ -3199,22 +3199,22 @@ body.has-sticky-save-header .slide-up-page,
 body.has-sticky-save-header .new-page-container,
 body.has-sticky-save-header main,
 body.has-sticky-save-header [data-page-content] {
-  padding-top: 56px !important; /* Push content down by save header height */
+  padding-top: 56px; /* Push content down by save header height */
   transition: padding-top 300ms ease-out;
 }
 
-/* Remove all complex header spacing rules that interfere with simple layout */
+/* Push the main header down when save banner is present */
 body.has-sticky-save-header header[data-component="main-header"] {
-  top: unset !important;
-  margin-top: unset !important;
+  /* Let the component handle the positioning with inline styles */
+  margin-top: unset;
 }
 
 body.has-sticky-save-header .page-header-edit-mode {
-  margin-top: unset !important;
+  margin-top: unset;
 }
 
 body.has-sticky-save-header header[data-component="main-header"] + div {
-  height: unset !important;
+  height: unset;
 }
 
 

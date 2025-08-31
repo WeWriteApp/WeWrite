@@ -133,7 +133,7 @@ export default function LocationField({
         onClick={canEdit ? handleLocationClick : undefined}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm font-medium">Location</span>

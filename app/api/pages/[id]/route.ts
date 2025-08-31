@@ -87,11 +87,48 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       }
     }
 
+    // Fetch username if userId exists
+    let username = processedPageData.username;
+    console.log('📊 [PAGE API] Username fetch attempt:', {
+      pageId,
+      userId: processedPageData.userId,
+      existingUsername: username,
+      needsUsernameFetch: !!(processedPageData.userId && !username)
+    });
+
+    if (processedPageData.userId && !username) {
+      try {
+        const userDoc = await db.collection(getCollectionName('users'))
+          .where('uid', '==', processedPageData.userId)
+          .limit(1)
+          .get();
+
+        console.log('📊 [PAGE API] User query result:', {
+          userId: processedPageData.userId,
+          foundUsers: userDoc.size,
+          isEmpty: userDoc.empty
+        });
+
+        if (!userDoc.empty) {
+          const userData = userDoc.docs[0].data();
+          username = userData.username || 'Unknown';
+          console.log('📊 [PAGE API] Username found:', username);
+        } else {
+          console.warn('📊 [PAGE API] No user found for userId:', processedPageData.userId);
+          username = 'Unknown';
+        }
+      } catch (error) {
+        console.warn('Failed to fetch username for page:', error);
+        username = 'Unknown';
+      }
+    }
+
     // Return the page data in the expected format
     return {
       pageData: {
         id: pageId,
-        ...processedPageData
+        ...processedPageData,
+        username: username || 'Unknown'
       }
     };
 

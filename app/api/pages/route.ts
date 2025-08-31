@@ -793,6 +793,16 @@ export async function PUT(request: NextRequest) {
           groupId: groupId
         };
 
+        // Add title change information if title is also being updated
+        if (title !== undefined && title.trim() !== pageData.title) {
+          versionData.changeType = 'content_and_title_change';
+          versionData.titleChange = {
+            oldTitle: pageData.title,
+            newTitle: title.trim()
+          };
+          console.log('🔄 TITLE_CHANGE: Adding title change info to content version');
+        }
+
         logger.debug('Calling saveNewVersion', {
           pageId: id,
           username: versionData.username,
@@ -884,9 +894,16 @@ export async function PUT(request: NextRequest) {
       await pageRef.update(updateData);
     }
 
-    // ULTRA-SIMPLE: Just detect title changes and return info
+    // TITLE CHANGE HANDLING: Handle title changes regardless of content updates
     let titleChanged = false;
     let titleChangeInfo = null;
+
+    console.log('🔍 TITLE_CHANGE_DEBUG: Checking for title changes', {
+      titleFromRequest: title,
+      currentPageTitle: pageData.title,
+      titleIsDefined: title !== undefined,
+      titlesAreDifferent: title !== undefined && title.trim() !== pageData.title
+    });
 
     console.log('🔄 ULTRA_SIMPLE: Title change detection:', {
       pageId: id,
@@ -906,9 +923,110 @@ export async function PUT(request: NextRequest) {
         newTitle: title.trim()
       };
 
-      console.log('🔄 TITLE_CHANGE: Title changed, updating all links immediately');
+      console.log('🔄 TITLE_CHANGE: Title changed, handling title change logic');
 
-      // DEAD SIMPLE: Update all links immediately and synchronously
+      // If content was NOT updated, create a separate version for the title change
+      if (!contentChanged) {
+        console.log('🔄 TITLE_CHANGE: Creating separate version for title-only change');
+
+        try {
+          const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
+          const { getUserProfile } = await import('../../firebase/database/users');
+          const currentUser = await getUserProfile(currentUserId);
+
+          // Calculate title diff for display
+          const titleDiffResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/diff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              titleChange: {
+                oldTitle: pageData.title,
+                newTitle: title.trim()
+              }
+            })
+          });
+
+          let titleDiff = null;
+          if (titleDiffResponse.ok) {
+            titleDiff = await titleDiffResponse.json();
+          }
+
+          // Create version data for title change
+          const titleVersionData = {
+            content: pageData.content, // Keep same content
+            userId: currentUserId,
+            username: currentUser?.username || 'Anonymous',
+            groupId: groupId,
+            changeType: 'title_change',
+            titleChange: {
+              oldTitle: pageData.title,
+              newTitle: title.trim()
+            }
+          };
+
+          await saveNewVersionServer(id, titleVersionData);
+
+          // Update page with title diff info for recent edits
+          await pageRef.update({
+            lastDiff: titleDiff ? {
+              added: titleDiff.added || 0,
+              removed: titleDiff.removed || 0,
+              hasChanges: true,
+              preview: titleDiff.preview || null
+            } : {
+              added: title.trim().length,
+              removed: (pageData.title || '').length,
+              hasChanges: true,
+              preview: {
+                beforeContext: 'Title: ',
+                addedText: title.trim(),
+                removedText: pageData.title || '',
+                afterContext: '',
+                hasAdditions: true,
+                hasRemovals: !!pageData.title
+              }
+            }
+          });
+
+          console.log('✅ TITLE_CHANGE: Created version for title-only change');
+        } catch (versionError) {
+          console.error('❌ TITLE_CHANGE: Error creating version for title change:', versionError);
+        }
+      } else {
+        console.log('🔄 TITLE_CHANGE: Content was also updated, title change included in content version');
+        // Title change will be handled by the content version system
+        // We just need to update the lastDiff to show the title change
+        try {
+          const titleDiffResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/diff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              titleChange: {
+                oldTitle: pageData.title,
+                newTitle: title.trim()
+              }
+            })
+          });
+
+          if (titleDiffResponse.ok) {
+            const titleDiff = await titleDiffResponse.json();
+            // Update the page's lastDiff to show title change in recent edits
+            await pageRef.update({
+              lastDiff: {
+                added: titleDiff.added || 0,
+                removed: titleDiff.removed || 0,
+                hasChanges: true,
+                preview: titleDiff.preview || null
+              }
+            });
+            console.log('✅ TITLE_CHANGE: Updated lastDiff for title change in recent edits');
+          }
+        } catch (diffError) {
+          console.error('❌ TITLE_CHANGE: Error calculating title diff:', diffError);
+        }
+      }
+
+      // Update all links immediately and synchronously
       await updateAllLinksToPage(id, pageData.title, title.trim());
       console.log('✅ TITLE_CHANGE: All links updated successfully');
     }

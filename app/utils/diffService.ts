@@ -59,7 +59,7 @@ function isCacheValid(entry: CacheEntry): boolean {
  * Main diff calculation function - uses centralized API
  * This replaces all other diff implementations in the codebase
  */
-export async function calculateDiff(currentContent: any, previousContent: any): Promise<DiffResult> {
+export async function calculateDiff(currentContent: any, previousContent: any, titleChange?: { oldTitle: string; newTitle: string }): Promise<DiffResult> {
   // Check cache first
   const cacheKey = generateCacheKey(currentContent, previousContent);
   const cached = diffCache.get(cacheKey);
@@ -83,7 +83,8 @@ export async function calculateDiff(currentContent: any, previousContent: any): 
         },
         body: JSON.stringify({
           currentContent,
-          previousContent
+          previousContent,
+          ...(titleChange && { titleChange })
         })
       });
       response = await POST(request);
@@ -96,7 +97,8 @@ export async function calculateDiff(currentContent: any, previousContent: any): 
         },
         body: JSON.stringify({
           currentContent,
-          previousContent
+          previousContent,
+          ...(titleChange && { titleChange })
         })
       });
     }

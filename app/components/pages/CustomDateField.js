@@ -223,7 +223,7 @@ export default function CustomDateField({
   return (
     <div className={`w-full ${className}`}>
       <div
-        className={`wewrite-card w-full flex items-center justify-between p-4 ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''}`}
+        className={`wewrite-card w-full flex items-center justify-between ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''}`}
         onClick={handleDateClick}
       >
         <div className="flex items-center gap-2">

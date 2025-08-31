@@ -298,7 +298,31 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
 
 export async function POST(request: NextRequest) {
   try {
-    const { currentContent, previousContent } = await request.json();
+    const { currentContent, previousContent, titleChange } = await request.json();
+
+    // Handle title changes specially
+    if (titleChange) {
+      const { oldTitle, newTitle } = titleChange;
+      const titleDiff = calculateCharacterDiff(oldTitle || '', newTitle || '');
+
+      // Create title-specific preview
+      const titlePreview: DiffPreview = {
+        beforeContext: 'Title: ',
+        addedText: newTitle || '',
+        removedText: oldTitle || '',
+        afterContext: '',
+        hasAdditions: !!newTitle && newTitle !== oldTitle,
+        hasRemovals: !!oldTitle && oldTitle !== newTitle
+      };
+
+      return NextResponse.json({
+        added: titleDiff.added,
+        removed: titleDiff.removed,
+        operations: titleDiff.operations,
+        preview: titlePreview,
+        hasChanges: true
+      });
+    }
 
     if (!currentContent && !previousContent) {
       return NextResponse.json({

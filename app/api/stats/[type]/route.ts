@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { unifiedStatsService } from '../../../services/UnifiedStatsService'; // TEMP: Disabled due to client-side import issue
+import { initAdmin } from '../../../firebase/admin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
  * Unified Stats API
@@ -38,24 +39,8 @@ export async function GET(
           );
         }
 
-        // TEMP: Return basic stats until UnifiedStatsService is fixed for server-side use
-        const stats = {
-          pageId,
-          totalViews: 0,
-          viewsLast24h: 0,
-          viewData: [],
-          recentChanges: 0,
-          changeData: [],
-          editorsCount: 0,
-          liveReaders: 0,
-          totalReaders: 0,
-          supporterCount: 0,
-          totalPledgedTokens: 0,
-          supporterData: [],
-          uniqueSponsors: [],
-          lastUpdated: Date.now(),
-          cached: false
-        };
+        // Fetch actual page statistics
+        const stats = await fetchPageStats(pageId);
 
         const loadTime = performance.now() - startTime;
 
@@ -322,5 +307,96 @@ export async function DELETE(
       },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Fetch actual page statistics from Firebase
+ */
+async function fetchPageStats(pageId: string) {
+  try {
+    const adminApp = initAdmin();
+    const db = adminApp.firestore();
+
+    // Get recent edits for the page (last 24 hours)
+    const twentyFourHoursAgo = new Date(Date.now() - (24 * 60 * 60 * 1000));
+
+    // Get versions from the page's versions subcollection
+    const versionsQuery = db.collection(getCollectionName('pages'))
+      .doc(pageId)
+      .collection('versions')
+      .where('createdAt', '>=', twentyFourHoursAgo.toISOString())
+      .orderBy('createdAt', 'desc')
+      .limit(100);
+
+    const versionsSnapshot = await versionsQuery.get();
+    const recentEdits = versionsSnapshot.docs.map(doc => ({
+      ...doc.data(),
+      lastModified: doc.data().createdAt // Use createdAt as lastModified for versions
+    }));
+
+    console.log(`📊 [PAGE_STATS] Found ${recentEdits.length} recent edits for page ${pageId} in last 24h`);
+
+    // Generate hourly data for sparkline (last 24 hours)
+    const changeData = Array(24).fill(0);
+    const now = new Date();
+
+    recentEdits.forEach(edit => {
+      if (edit.lastModified || edit.createdAt) {
+        const editDate = new Date(edit.lastModified || edit.createdAt);
+        const hoursAgo = Math.floor((now.getTime() - editDate.getTime()) / (1000 * 60 * 60));
+        if (hoursAgo >= 0 && hoursAgo < 24) {
+          changeData[23 - hoursAgo]++; // Most recent hour at the end
+        }
+      }
+    });
+
+    // Count unique editors
+    const uniqueEditors = new Set(recentEdits.map(edit => edit.userId).filter(Boolean));
+
+    console.log(`📊 [PAGE_STATS] Generated sparkline data for page ${pageId}:`, {
+      recentChanges: recentEdits.length,
+      changeData,
+      uniqueEditors: uniqueEditors.size
+    });
+
+    return {
+      pageId,
+      totalViews: 0, // TODO: Implement view tracking
+      viewsLast24h: 0,
+      viewData: Array(24).fill(0), // TODO: Implement view data
+      recentChanges: recentEdits.length,
+      changeData,
+      editorsCount: uniqueEditors.size,
+      liveReaders: 0, // TODO: Implement live reader tracking
+      totalReaders: 0,
+      supporterCount: 0, // TODO: Implement supporter tracking
+      totalPledgedTokens: 0,
+      supporterData: Array(24).fill(0),
+      uniqueSponsors: [],
+      lastUpdated: Date.now(),
+      cached: false
+    };
+  } catch (error) {
+    console.error('Error fetching page stats:', error);
+
+    // Return fallback data on error
+    return {
+      pageId,
+      totalViews: 0,
+      viewsLast24h: 0,
+      viewData: Array(24).fill(0),
+      recentChanges: 0,
+      changeData: Array(24).fill(0),
+      editorsCount: 0,
+      liveReaders: 0,
+      totalReaders: 0,
+      supporterCount: 0,
+      totalPledgedTokens: 0,
+      supporterData: Array(24).fill(0),
+      uniqueSponsors: [],
+      lastUpdated: Date.now(),
+      cached: false
+    };
   }
 }

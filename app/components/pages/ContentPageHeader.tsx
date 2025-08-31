@@ -150,6 +150,7 @@ export default function ContentPageHeader({
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerPadding, setHeaderPadding] = React.useState(8);
+  const [hasSaveBanner, setHasSaveBanner] = React.useState(false);
 
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
@@ -507,6 +508,25 @@ export default function ContentPageHeader({
 
   // No dynamic padding needed - always static
 
+  // Monitor save banner state
+  React.useEffect(() => {
+    const checkSaveBanner = () => {
+      setHasSaveBanner(document.body.classList.contains('has-sticky-save-header'));
+    };
+
+    // Check initially
+    checkSaveBanner();
+
+    // Set up observer for class changes
+    const observer = new MutationObserver(checkSaveBanner);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   React.useEffect(() => {
     // In edit mode, disable scroll handling completely
     if (isEditing) {
@@ -628,6 +648,7 @@ export default function ContentPageHeader({
     <>
       <header
         ref={headerRef}
+        data-component="main-header"
         className={`
           ${isEditing ? 'block page-header-edit-mode w-full' : 'fixed top-0 left-0 right-0 w-full'}
           z-50 bg-background border-visible
@@ -636,7 +657,7 @@ export default function ContentPageHeader({
         `}
         style={!isEditing ? {
           transform: 'translateZ(0)',
-          top: `${bannerOffset}px`
+          top: `${bannerOffset + (hasSaveBanner ? 56 : 0)}px`
         } : {}}
       >
         {/* Full width in edit mode, sidebar-aware in view mode */}
@@ -688,17 +709,7 @@ export default function ContentPageHeader({
                         </span>
                       )}
                     </h1>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      by <UsernameBadge
-                        userId={userId}
-                        username={username}
-                        tier={authorSubscription.tier}
-                        subscriptionStatus={authorSubscription.status}
-                        subscriptionAmount={authorSubscription.amount}
-                        size="sm"
-                        className="text-xs"
-                      />
-                    </div>
+
                   </div>
                 </div>
               </div>

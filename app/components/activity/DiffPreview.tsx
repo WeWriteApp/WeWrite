@@ -55,7 +55,8 @@ export default function DiffPreview({
   className = "",
   showInlineStats = false,
   added = 0,
-  removed = 0
+  removed = 0,
+  expandedContext = false
 }) {
   const [diffPreview, setDiffPreview] = useState<DiffPreviewType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,12 +123,14 @@ export default function DiffPreview({
   return (
     <div className={`text-xs overflow-hidden h-full ${className}`}>
       {/* Text content with enhanced diff display */}
-      <div className="overflow-x-hidden text-ellipsis line-clamp-3">
+      <div className={`overflow-x-hidden text-ellipsis ${expandedContext ? 'line-clamp-6' : 'line-clamp-3'}`}>
         {/* Before context */}
         {preview.beforeContext && (
           <>
-            <span className="text-muted-foreground">...</span>
-            <span className="text-muted-foreground">{preview.beforeContext}</span>
+            {preview.beforeContext !== 'Title: ' && <span className="text-muted-foreground">...</span>}
+            <span className={preview.beforeContext === 'Title: ' ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+              {preview.beforeContext}
+            </span>
           </>
         )}
 

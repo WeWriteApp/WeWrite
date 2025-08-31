@@ -24,6 +24,10 @@ interface PageVersion {
   previousVersionId?: string;
   isNoOp?: boolean;
   isNewPage?: boolean;
+  subscriptionTier?: string | null;
+  subscriptionStatus?: string | null;
+  subscriptionAmount?: number | null;
+  hasActiveSubscription?: boolean;
   diff?: {
     added: number;
     removed: number;
@@ -136,21 +140,75 @@ export async function GET(
       });
     }
 
+    // Get unique user IDs from versions to fetch usernames
+    const userIds = [...new Set(versionsSnapshot.docs.map(doc => doc.data().userId).filter(Boolean))];
+
+    // Fetch usernames and subscription data for all users
+    const usernameMap = new Map<string, any>();
+    if (userIds.length > 0) {
+      try {
+        // Handle batches of 10 due to Firestore 'in' limit
+        const batches = [];
+        for (let i = 0; i < userIds.length; i += 10) {
+          batches.push(userIds.slice(i, i + 10));
+        }
+
+        for (const batch of batches) {
+          const usersSnapshot = await db.collection(getCollectionName('users'))
+            .where('uid', 'in', batch)
+            .get();
+
+          usersSnapshot.docs.forEach(userDoc => {
+            const userData = userDoc.data();
+            if (userData.uid) {
+              const userInfo = {
+                username: userData.username || 'Unknown',
+                subscriptionTier: userData.subscriptionTier || null,
+                subscriptionStatus: userData.subscriptionStatus || null,
+                subscriptionAmount: userData.subscriptionAmount || null,
+                hasActiveSubscription: userData.hasActiveSubscription || false
+              };
+
+              console.log('📊 [VERSIONS API] User data fetched:', {
+                uid: userData.uid,
+                username: userInfo.username,
+                subscriptionTier: userInfo.subscriptionTier,
+                subscriptionStatus: userInfo.subscriptionStatus,
+                subscriptionAmount: userInfo.subscriptionAmount,
+                hasActiveSubscription: userInfo.hasActiveSubscription
+              });
+
+              usernameMap.set(userData.uid, userInfo);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to fetch user data for versions:', error);
+      }
+    }
+
     // Transform all versions first
     let allVersions: PageVersion[] = versionsSnapshot.docs.map(doc => {
       const data = doc.data();
+      const userData = usernameMap.get(data.userId);
 
       return {
         id: doc.id,
         content: data.content || '',
         createdAt: data.createdAt,
         userId: data.userId,
-        username: data.username || 'Unknown',
+        username: userData?.username || data.username || 'Unknown',
         title: data.title || pageData?.title || 'Untitled',
         groupId: data.groupId,
         previousVersionId: data.previousVersionId,
         isNoOp: data.isNoOp || false,
         isNewPage: data.isNewPage || false,
+
+        // Subscription data for UsernameBadge
+        subscriptionTier: userData?.subscriptionTier || null,
+        subscriptionStatus: userData?.subscriptionStatus || null,
+        subscriptionAmount: userData?.subscriptionAmount || null,
+        hasActiveSubscription: userData?.hasActiveSubscription || false,
 
         // Diff data for sparkline and activity display
         diff: data.diff || {

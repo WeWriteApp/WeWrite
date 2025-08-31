@@ -46,7 +46,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const { user } = useAuth();
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
-  const [currentPageName, setCurrentPageName] = useState(activity?.pageName || 'Untitled');
+  const [currentPageName, setCurrentPageName] = useState(activity?.pageName || '');
   const { formatDate } = useDateFormat();
   const { toast } = useToast();
   const [isRestoring, setIsRestoring] = useState(false);
@@ -111,7 +111,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
   // Update currentPageName when activity changes
   useEffect(() => {
-    setCurrentPageName(activity?.pageName || 'Untitled');
+    setCurrentPageName(activity?.pageName || '');
   }, [activity?.pageName]);
 
   // Validate activity data
@@ -187,7 +187,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;
-  const isTitleChange = activity.isTitleChange || false;
+  const isTitleChange = activity.isTitleChange ||
+                        activity.changeType === 'title_change' ||
+                        activity.changeType === 'content_and_title_change' || false;
 
   // State for diff calculation using centralized service
   const [diffResult, setDiffResult] = useState(null);
@@ -336,55 +338,63 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
         className="flex justify-between items-start w-full mb-3 cursor-pointer"
         onClick={handleCardClick}
       >
-        {/* Left side: Page link and user info that can wrap */}
-        <div className="flex-1 min-w-0 pr-3">
-          {/* Page title and user info on same line, can wrap */}
-          <div className="flex flex-wrap items-center gap-1 text-xs">
-            <PillLink href={activityUrl} className="flex-shrink-0">
-              {currentPageName && isExactDateFormat(currentPageName)
-                ? formatDate(new Date(currentPageName))
-                : (currentPageName || "Untitled page")}
-            </PillLink>
-            {activity.groupId && activity.groupName ? (
-              <>
-                <span className="text-foreground whitespace-nowrap">
-                  {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}
-                </span>
-                <Link
-                  href={`/group/${activity.groupId}`}
-                  className="hover:underline text-primary flex-shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {activity.groupName}
-                </Link>
-              </>
-            ) : (
-              <>
-                <span className="text-foreground whitespace-nowrap">
-                  {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
-                </span>
-                {/* Don't make user links clickable for sample data */}
-                {activity.isSample ? (
-                  <span className="text-primary flex-shrink-0">
-                    {sanitizeUsername(activity.username)}
-                  </span>
-                ) : (
-                  <UsernameBadge
-                    userId={activity.userId}
-                    username={activity.username || "Missing username"}
-                    tier={activity.subscriptionTier}
-                    subscriptionStatus={activity.hasActiveSubscription ? 'active' : 'inactive'}
-                    subscriptionAmount={activity.subscriptionAmount}
-                    size="sm"
-                    showBadge={true}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex flex-shrink-0"
-                  />
-                )}
-              </>
-            )}
+        {/* Left side: Only show if we have page name or user info */}
+        {(currentPageName || activity.userId) && (
+          <div className="flex-1 min-w-0 pr-3">
+            {/* Page title and user info on same line, can wrap */}
+            <div className="flex flex-wrap items-center gap-1 text-xs">
+              {currentPageName && (
+                <PillLink href={activityUrl} className="flex-shrink-0">
+                  {currentPageName && isExactDateFormat(currentPageName)
+                    ? formatDate(new Date(currentPageName))
+                    : (currentPageName || "Untitled page")}
+                </PillLink>
+              )}
+              {activity.userId && (
+                <>
+                  {activity.groupId && activity.groupName ? (
+                    <>
+                      <span className="text-foreground whitespace-nowrap">
+                        {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}
+                      </span>
+                      <Link
+                        href={`/group/${activity.groupId}`}
+                        className="hover:underline text-primary flex-shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {activity.groupName}
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-foreground whitespace-nowrap">
+                        {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
+                      </span>
+                      {/* Don't make user links clickable for sample data */}
+                      {activity.isSample ? (
+                        <span className="text-primary flex-shrink-0">
+                          {sanitizeUsername(activity.username)}
+                        </span>
+                      ) : (
+                        <UsernameBadge
+                          userId={activity.userId}
+                          username={activity.username || "Missing username"}
+                          tier={activity.subscriptionTier}
+                          subscriptionStatus={activity.hasActiveSubscription ? 'active' : 'inactive'}
+                          subscriptionAmount={activity.subscriptionAmount}
+                          size="sm"
+                          showBadge={true}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex flex-shrink-0"
+                        />
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right side: Timestamp and diff counter */}
         <div className="flex-shrink-0 flex flex-col items-end gap-1">
@@ -426,26 +436,20 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
       {/* Diff section at bottom - clickable area */}
       <div className="mt-auto cursor-pointer" onClick={handleCardClick}>
-        {isTitleChange ? (
-          <div className="flex items-center justify-center py-4 text-sm text-muted-foreground italic">
-            Page title was changed
-          </div>
-        ) : (
-          <DiffPreview
-            currentContent={activity.currentContent}
-            previousContent={isNewPage ? null : activity.previousContent}
-            textDiff={{
-              preview: activity.lastDiff?.preview || activity.diffPreview, // Use lastDiff.preview first, fallback to diffPreview
-              added: activity.lastDiff?.added || activity.diff?.added || 0,
-              removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
-              hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
-            }}
-            isNewPage={isNewPage}
-            showInlineStats={false}
-            added={added}
-            removed={removed}
-          />
-        )}
+        <DiffPreview
+          currentContent={activity.currentContent}
+          previousContent={isNewPage ? null : activity.previousContent}
+          textDiff={{
+            preview: activity.lastDiff?.preview || activity.diffPreview, // Use lastDiff.preview first, fallback to diffPreview
+            added: activity.lastDiff?.added || activity.diff?.added || 0,
+            removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
+            hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
+          }}
+          isNewPage={isNewPage}
+          showInlineStats={false}
+          added={added}
+          removed={removed}
+        />
 
         {/* Restore button for activity context - only show if needed */}
         {canRestore && (

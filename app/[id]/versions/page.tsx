@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { getPageById } from '../../firebase/database';
+// Removed old Firebase import - using API route directly for consistency
 import { getPageVersions } from '../../services/versionService';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import UnifiedLoader from '../../components/ui/unified-loader';
-import ActivityCard from '../../components/activity/ActivityCard';
+import VersionActivityCard from '../../components/activity/VersionActivityCard';
 import { getDiff } from '../../utils/diffService';
-import ContentPageHeader from '../../components/pages/ContentPageHeader';
+import PageVersionsHeader from '../../components/pages/PageVersionsHeader';
 import { useAuth } from '../../providers/AuthProvider';
 
 interface PageVersionsPageProps {
@@ -51,16 +51,28 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
       try {
         setLoading(true);
 
-        // Fetch page details
-        const pageResult = await getPageById(id, user?.uid);
-        if (pageResult.error) {
-          setError(pageResult.error);
+        // Fetch page details using API route for consistency
+        const pageResponse = await fetch(`/api/pages/${id}${user?.uid ? `?userId=${user.uid}` : ''}`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!pageResponse.ok) {
+          setError('Failed to load page details');
           setLoading(false);
           return;
         }
-        let pageData = pageResult.pageData;
 
+        let responseData = await pageResponse.json();
+        let pageData = responseData.pageData || responseData; // Handle both wrapped and direct responses
 
+        console.log('📊 [VERSIONS PAGE] Page data received:', {
+          title: pageData?.title,
+          fullPageData: pageData,
+          responseStructure: Object.keys(responseData)
+        });
 
         setPage(pageData);
 
@@ -146,29 +158,77 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
               };
             }
 
+            // Check if this is a title change
+            const isTitleChange = version.changeType === 'title_change' || version.changeType === 'content_and_title_change';
+            const titleChange = version.titleChange;
+
+            // For title changes, use title diff instead of content diff
+            if (isTitleChange && titleChange) {
+              try {
+                const { calculateDiff } = await import('../../utils/diffService');
+                const titleDiffResult = await calculateDiff(null, null, {
+                  oldTitle: titleChange.oldTitle || '',
+                  newTitle: titleChange.newTitle || ''
+                });
+
+                if (titleDiffResult) {
+                  diff = {
+                    added: titleDiffResult.added || 0,
+                    removed: titleDiffResult.removed || 0,
+                    hasChanges: true
+                  };
+                  diffPreview = titleDiffResult.preview || {
+                    beforeContext: 'Title: ',
+                    addedText: titleChange.newTitle || '',
+                    removedText: titleChange.oldTitle || '',
+                    afterContext: '',
+                    hasAdditions: true,
+                    hasRemovals: true
+                  };
+                }
+              } catch (error) {
+                console.error('Error calculating title diff for version:', error);
+              }
+            }
+
             return {
               id: version.id || `version-${index}`,
               pageId: id,
-              pageName: version.title || pageResult.pageData?.title || 'Untitled',
-              userId: version.userId,
-              username: version.username || 'Anonymous',
-              displayName: version.username || 'Anonymous',
+              pageName: '', // Remove page title from cards
+              userId: null, // Remove user info from cards
+              username: null, // Remove username from cards
+              displayName: null, // Remove display name from cards
+
               timestamp: version.createdAt || version.timestamp,
               currentContent: version.content || '',
               previousContent: previousContent,
               diff: diff,
               diffPreview: diffPreview,
               isNewPage: !previousContent, // First version if no previous content
+              changeType: version.changeType, // Include change type
+              titleChange: titleChange, // Include title change data
               versionId: version.id,
               isActivityContext: true,
               isCurrentVersion: index === 0, // First item is most recent
               hasPreviousVersion: index < pageVersions.length - 1, // Has previous version if not the last item
-              // Add subscription data - UsernameBadge will fetch this automatically based on userId
-              subscriptionTier: version.subscriptionTier || null,
-              hasActiveSubscription: version.hasActiveSubscription || false,
-              subscriptionAmount: version.subscriptionAmount || null
+              // Remove subscription data since we're not showing usernames
+              subscriptionTier: null,
+              subscriptionStatus: null,
+              hasActiveSubscription: false,
+              subscriptionAmount: null
             };
           }));
+
+          console.log('📊 [VERSIONS PAGE] Activity items created:', {
+            count: activityItems.length,
+            firstItem: activityItems[0] ? {
+              username: activityItems[0].username,
+              subscriptionTier: activityItems[0].subscriptionTier,
+              subscriptionStatus: activityItems[0].subscriptionStatus,
+              subscriptionAmount: activityItems[0].subscriptionAmount,
+              hasActiveSubscription: activityItems[0].hasActiveSubscription
+            } : null
+          });
 
           console.log('Page versions - Converted to activity items with calculated diffs:', activityItems.length, 'items');
         } else {
@@ -206,9 +266,8 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
   if (loading) {
     return (
       <div className="p-4 max-w-4xl mx-auto">
-        <ContentPageHeader
-          title="Page Versions"
-          username="Loading..."
+        <PageVersionsHeader
+          pageTitle="Loading..."
           isLoading={true}
         />
         <UnifiedLoader
@@ -222,14 +281,11 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
   if (error) {
     return (
       <div className="p-4 max-w-4xl mx-auto">
-        <ContentPageHeader
-          title={page?.title || "Page History"}
-          username={page?.username}
-          userId={page?.userId}
+        <PageVersionsHeader
+          pageTitle={page?.title || "Unknown Page"}
           isLoading={false}
         />
-        {/* Back button removed - using ContentPageHeader back button instead */}
-        <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
+        <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5" style={{ marginTop: '80px' }}>
           <p className="font-medium">{error}</p>
           <p className="text-sm mt-2 text-muted-foreground">Unable to load page versions. Please try again later.</p>
         </div>
@@ -238,25 +294,22 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-        <ContentPageHeader
-          title={page?.title || "Page History"}
-          username={page?.username}
-          userId={page?.userId}
+    <div className="max-w-4xl mx-auto">
+        <PageVersionsHeader
+          pageTitle={page?.title || 'Untitled'}
           isLoading={loading}
         />
 
-        {/* Back button removed - using ContentPageHeader back button instead */}
-
-        <div className="mb-6">
+        {/* Clean spacing for fixed header */}
+        <div className="p-2" style={{ paddingTop: '120px' }}>
           {activities.length === 0 ? (
             <div className="text-center p-8 border rounded-md">
               <p className="text-muted-foreground">No versions available for this page</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {activities.map((activity, index) => (
-                <ActivityCard key={index} activity={activity} />
+                <VersionActivityCard key={index} activity={activity} />
               ))}
             </div>
           )}

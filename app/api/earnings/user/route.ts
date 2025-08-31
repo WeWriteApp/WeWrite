@@ -4,9 +4,13 @@
  * UPDATED: Now uses USD-based system instead of tokens
  *
  * Provides a unified view of user earnings including:
- * - Pending USD allocations (current month)
+ * - Pending USD allocations (current month) - ONLY FUNDED ALLOCATIONS
  * - Available USD balance (ready for payout)
  * - Historical earnings in USD
+ *
+ * IMPORTANT: Recipients only see funded allocations. If a sponsor over-allocates
+ * beyond their subscription amount, the earnings are proportionally reduced to
+ * match the sponsor's actual subscription funding.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -131,7 +135,35 @@ async function getIncomingAllocationsForUser(userId: string) {
     // Process allocations and enrich with page titles and usernames
     const allocationPromises = snapshot.docs.map(async (doc) => {
       const allocation = doc.data();
-      const usdCents = allocation.usdCents || 0;
+      let usdCents = allocation.usdCents || 0;
+
+      // CRITICAL FIX: Cap allocation at sponsor's subscription amount
+      // Recipients should only see funded allocations, not unfunded over-allocations
+      try {
+        const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
+          .doc(allocation.userId)
+          .get();
+
+        if (sponsorBalanceDoc.exists) {
+          const sponsorBalance = sponsorBalanceDoc.data();
+          const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
+          const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
+
+          // Calculate how much of this sponsor's allocations are actually funded
+          if (sponsorAllocatedCents > sponsorSubscriptionCents) {
+            // Sponsor is over-allocated - calculate the funded portion
+            const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
+            const fundedAllocationCents = Math.round(usdCents * fundingRatio);
+
+            console.log(`[EARNINGS] Sponsor ${allocation.userId} over-allocated. Original: ${usdCents}, Funded: ${fundedAllocationCents}, Ratio: ${fundingRatio.toFixed(4)}`);
+            usdCents = fundedAllocationCents;
+          }
+        }
+      } catch (error) {
+        console.warn(`[EARNINGS] Error checking sponsor balance for ${allocation.userId}:`, error);
+        // If we can't check sponsor balance, use the full allocation (fail open)
+      }
+
       totalUsdCents += usdCents;
 
       // Get page title if it's a page allocation
