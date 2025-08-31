@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 🚨 CRITICAL: Check cache first to prevent massive read costs
-    const cacheKey = `unified_earnings:${userId}:v1`;
+    const cacheKey = `unified_earnings:${userId}:v2`; // v2: Fixed funded allocations calculation
     const cached = earningsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < EARNINGS_CACHE_TTL) {
       console.log(`🚀 COST OPTIMIZATION: Returning cached earnings for ${userId}`);
