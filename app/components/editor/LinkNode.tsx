@@ -191,7 +191,14 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     // NOTE: Compound links are now handled separately in the rendering logic,
     // so this function only extracts the base text without compound formatting
 
-    // CRITICAL FIX: Properly extract custom text from children array first
+    // CRITICAL FIX: Check for direct text property first (legacy links)
+    // This handles legacy links that have a direct "text" property
+    if (node.text && node.text.trim() && node.text !== 'Link' && node.text !== 'Page Link') {
+      console.log('LEGACY_TEXT_DEBUG: Found direct text property:', node.text);
+      return node.text.trim();
+    }
+
+    // CRITICAL FIX: Properly extract custom text from children array
     // This is the most important source of custom text that users configure
     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
       // Concatenate all text from children to handle custom text properly
@@ -207,35 +214,35 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       }
     }
 
-    // 2. Check for explicit displayText property (backup for custom text)
+    // 3. Check for explicit displayText property (backup for custom text)
     if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
       console.log('CUSTOM_TEXT_DEBUG: Found displayText:', node.displayText);
       return node.displayText;
     }
 
-    // 3. Check for pageTitle (for page links without custom text)
+    // 4. Check for pageTitle (for page links without custom text)
     if (node.pageTitle && node.pageTitle !== 'Link') {
       return node.pageTitle;
     }
 
-    // 4. Check for originalPageTitle
+    // 5. Check for originalPageTitle
     if (node.originalPageTitle && node.originalPageTitle !== 'Link') {
       return node.originalPageTitle;
     }
 
-    // 5. Use the standardized utility function as fallback
+    // 6. Use the standardized utility function as fallback
     const utilityText = getLinkDisplayText(node);
     if (utilityText && utilityText !== 'Link') {
       return utilityText;
     }
 
-    // 6. Check for text in data property
+    // 7. Check for text in data property
     if (node.data && typeof node.data === 'object') {
       if (node.data.text && node.data.text.trim()) return node.data.text;
       if (node.data.displayText && node.data.displayText.trim()) return node.data.displayText;
     }
 
-    // 7. Use appropriate fallbacks based on link type
+    // 8. Use appropriate fallbacks based on link type
     if (isExternal && href) return href;
     if (pageId) return pageId.replace(/-/g, ' ');
 

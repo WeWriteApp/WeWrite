@@ -72,8 +72,8 @@ export function validateLink(linkData) {
 
     // CRITICAL FIX: Ensure children array exists and has at least one text node
     if (!link.children || !Array.isArray(link.children) || link.children.length === 0) {
-      // Create a default text node if none exists
-      const displayText = link.displayText || link.text || (link.pageTitle ? link.pageTitle : 'Link');
+      // Create a default text node if none exists - prioritize direct text property for legacy links
+      const displayText = link.text || link.displayText || (link.pageTitle ? link.pageTitle : 'Link');
       link.children = [{ text: displayText }];
     }
 
@@ -314,6 +314,11 @@ export function validateLink(linkData) {
  */
 export function getLinkDisplayText(linkData) {
   if (!linkData) return 'Link';
+
+  // CRITICAL FIX: Check for direct text property first (legacy links)
+  if (linkData.text) {
+    return linkData.text;
+  }
 
   // First check for pageTitle as it's the most reliable source for page links
   if (linkData.pageTitle) {
