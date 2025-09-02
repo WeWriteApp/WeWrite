@@ -296,15 +296,18 @@ const contentToSlate = (content: any): Descendant[] => {
           }
 
           if (child.type === 'link') {
+            // CRITICAL FIX: Preserve the original text property for legacy links
+            const linkText = child.text || child.children?.[0]?.text || 'Link';
             children.push({
               type: 'link',
               url: child.url,
               pageId: child.pageId,
               pageTitle: child.pageTitle,
+              text: child.text, // CRITICAL: Preserve original text property for legacy links
               isExternal: child.isExternal || false,
               isPublic: child.isPublic || true,
               isOwned: child.isOwned || false,
-              children: [{ text: child.text || child.children?.[0]?.text || 'Link' }]
+              children: [{ text: linkText }]
             });
           } else if (child.text !== undefined) {
             children.push({ text: child.text });
