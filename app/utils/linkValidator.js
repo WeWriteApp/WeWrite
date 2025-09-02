@@ -149,6 +149,8 @@ export function validateLink(linkData) {
       let match = link.url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
       if (match) {
         link.pageId = match[1];
+        // BACKWARDS COMPATIBILITY: Convert old /pages/{id} format to new /{id} format
+        link.url = `/${match[1]}`;
       } else {
         // Handle /{id} format (direct page ID) - FIXED: More flexible pattern
         match = link.url.match(/^\/([a-zA-Z0-9-_]+)$/);
@@ -201,6 +203,21 @@ export function validateLink(linkData) {
       // CRITICAL FIX: Preserve originalPageTitle for page links
       if (link.pageTitle && !link.originalPageTitle) {
         link.originalPageTitle = link.pageTitle;
+      }
+
+      // BACKWARDS COMPATIBILITY: For legacy links without pageTitle, use the text as pageTitle
+      if (!link.pageTitle && link.pageId) {
+        // Extract title from text property or children
+        const titleFromText = link.text || (link.children && link.children[0]?.text);
+        if (titleFromText && titleFromText !== 'Link' && titleFromText.trim()) {
+          link.pageTitle = titleFromText.trim();
+          link.originalPageTitle = titleFromText.trim();
+          console.log('BACKWARDS_COMPATIBILITY: Set pageTitle from text for legacy link:', {
+            pageId: link.pageId,
+            pageTitle: link.pageTitle,
+            url: link.url
+          });
+        }
       }
     } else if (isExternalLink) {
       link.isExternal = true;
