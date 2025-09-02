@@ -3180,6 +3180,33 @@ button.bg-transparent[type] {
   to { transform: translateX(100%); opacity: 0; }
 }
 
+/* Drawer animations with bouncy effect */
+@keyframes drawer-slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-2%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawer-slide-down {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
 @keyframes slideDown {
   from {
     transform: translateY(-100%);

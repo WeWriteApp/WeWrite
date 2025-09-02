@@ -50,6 +50,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 ### 💰 Payment & Financial Systems
 - **[USD Payment System](./USD_PAYMENT_SYSTEM.md)** - Comprehensive USD payment architecture
 - **[Allocation System](./ALLOCATION_SYSTEM.md)** - Fund allocation mechanics and API
+- **[Allocation Rollover System](./allocation-rollover-system.md)** - **🏛️ AUTHORITATIVE**: Automatic allocation rollover for sustainable writer income
 - **[Subscription System](./SUBSCRIPTION_SYSTEM.md)** - Subscription management and billing
 - **[Payout System Index](./PAYOUT_SYSTEM_INDEX.md)** - Creator payout processes
 - **[Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md)** - Financial data structure

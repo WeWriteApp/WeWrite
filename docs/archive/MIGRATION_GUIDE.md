@@ -15,14 +15,12 @@ The WeWrite codebase has been successfully migrated from direct Firebase calls t
 ### 2. **New API Routes Created**
 
 #### **Follows API** (`/api/follows/`)
-- `POST /api/follows/pages` - Follow a page
-- `DELETE /api/follows/pages?pageId=xxx` - Unfollow a page
-- `GET /api/follows/pages?userId=xxx&type=following` - Get followed pages
-- `GET /api/follows/pages?pageId=xxx&type=followers` - Get page followers
 - `POST /api/follows/users` - Follow a user
 - `DELETE /api/follows/users?userId=xxx` - Unfollow a user
 - `GET /api/follows/users?userId=xxx&type=following` - Get followed users
 - `GET /api/follows/users?userId=xxx&type=followers` - Get user followers
+
+**Note**: Page following has been removed. Users can only follow other users, not pages.
 
 #### **Links & Backlinks API** (`/api/links/`)
 - `GET /api/links/backlinks?pageId=xxx` - Get backlinks for a page

@@ -184,10 +184,7 @@ export default function NotificationItem({ notification }) {
               <UserBadge uid={notification.sourceUserId} showUsername={true} />
             </div>
             <p className="text-sm text-foreground">
-              followed your page{' '}
-              <span className="font-medium">
-                {notification.targetPageTitle || 'Untitled Page'}
-              </span>
+              started following you
             </p>
           </div>
         );

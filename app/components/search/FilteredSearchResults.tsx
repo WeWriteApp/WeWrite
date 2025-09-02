@@ -12,8 +12,9 @@ import { navigateToPage } from "../../utils/pagePermissions";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import debounce from "lodash.debounce";
-import { Search } from "lucide-react";
+import { Search, Filter, Plus } from "lucide-react";
 import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import { ClearableInput } from "../ui/clearable-input";
 import { PillLink } from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
@@ -52,7 +53,10 @@ const FilteredSearchResults = forwardRef(({
   autoFocus = false,
   onFocus = null,
   linkedPageIds = [],
-  currentPageId = null}, ref) => {
+  currentPageId = null,
+  hideCreateButton = false,
+  rightButtons = null,
+  onFilterToggle = null}, ref) => {
   const { user } = useAuth();
   const router = useRouter();
   const { formatDate: formatDateString } = useDateFormat();
@@ -68,6 +72,7 @@ const FilteredSearchResults = forwardRef(({
   const [activeFilter, setActiveFilter] = useState('recent');
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [userSubscriptionData, setUserSubscriptionData] = useState(new Map());
+  const [showFilters, setShowFilters] = useState(false);
 
   // Refs
   const searchInputRef = useRef(null);
@@ -434,6 +439,17 @@ const FilteredSearchResults = forwardRef(({
       willNavigate: !preventRedirect && !isLinkEditor
     });
 
+    console.log('🔍 [FILTERED_SEARCH] Full item data:', {
+      id: item.id,
+      title: item.title,
+      username: item.username,
+      userId: item.userId,
+      hasUsername: !!item.username,
+      hasUserId: !!item.userId,
+      allKeys: Object.keys(item),
+      fullItem: item
+    });
+
     setSelectedId(item.id);
 
     if (onSelect) {
@@ -534,60 +550,85 @@ const FilteredSearchResults = forwardRef(({
     <div className={`flex flex-col h-full min-w-0 ${className}`}>
       {/* Search Input */}
       <div className="relative flex-shrink-0 mb-3 min-w-0">
-        {isLinkEditor ? (
-          <ClearableInput
-            ref={ref || searchInputRef}
-            type="text"
-            placeholder={placeholder}
-            value={search}
-            onChange={handleSearchChange}
-            onClear={handleClear}
-            className="w-full"
-            autoComplete="off"
-          />
-        ) : (
-          <Input
-            ref={ref || searchInputRef}
-            type="text"
-            placeholder={placeholder}
-            value={search}
-            onChange={handleSearchChange}
-            className="w-full pr-10"
-            autoComplete="off"
-          />
-        )}
+        <div className="relative">
+          {isLinkEditor ? (
+            <div className="relative">
+              <ClearableInput
+                ref={ref || searchInputRef}
+                type="text"
+                placeholder={placeholder}
+                value={search}
+                onChange={handleSearchChange}
+                onClear={handleClear}
+                className={cn("w-full", (rightButtons || onFilterToggle) ? "pr-20" : "")}
+                autoComplete="off"
+              />
+              {/* Right buttons inside input */}
+              {(rightButtons || onFilterToggle) && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {rightButtons}
+                  {onFilterToggle && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`h-6 w-6 p-0 ${showFilters ? 'bg-muted' : ''}`}
+                    >
+                      <Filter className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative">
+              <Input
+                ref={ref || searchInputRef}
+                type="text"
+                placeholder={placeholder}
+                value={search}
+                onChange={handleSearchChange}
+                className="w-full pr-10"
+                autoComplete="off"
+              />
+              {/* Search Icon - only show for non-link editor mode */}
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* Search Icon - only show for non-link editor mode */}
-        {!isLinkEditor && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <Search className="h-4 w-4 text-muted-foreground" />
-          </div>
-        )}
+
       </div>
 
-      {/* Filter Chips - only show in link editor mode */}
+      {/* Filter Chips - collapsible in link editor mode */}
       {isLinkEditor && (
-        <div className="flex gap-2 mb-3 flex-shrink-0">
-          <button
-            onClick={() => handleFilterChange('recent')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-              activeFilter === 'recent' && !isSearchMode
-                ? 'bg-primary text-white'
-                : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Recent
-          </button>
-          <button
-            onClick={() => handleFilterChange('my-pages')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-              activeFilter === 'my-pages' && !isSearchMode
-                ? 'bg-primary text-white'
-                : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            My Pages
-          </button>
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          showFilters ? 'max-h-20 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'
+        }`}>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => handleFilterChange('recent')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                activeFilter === 'recent' && !isSearchMode
+                  ? 'bg-primary text-white'
+                  : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Recent
+            </button>
+            <button
+              onClick={() => handleFilterChange('my-pages')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                activeFilter === 'my-pages' && !isSearchMode
+                  ? 'bg-primary text-white'
+                  : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              My Pages
+            </button>
+          </div>
         </div>
       )}
 
@@ -715,42 +756,44 @@ const FilteredSearchResults = forwardRef(({
             {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) &&
              pages.length === 0 && users.length === 0 && groups.length === 0 && !isSearching && (
               <div className={wewriteCard('default', 'text-center')}>
-                <div className="text-muted-foreground mb-4">
+                <div className="text-muted-foreground">
                   {search.length >= 2
                     ? `No results found for "${search}"`
                     : `No ${isSearchMode ? 'results' : (activeFilter === 'recent' ? 'recent pages' : 'pages')} found`
                   }
                 </div>
-
-                {/* Create new page option - only show in link editor mode with search term */}
-                {isLinkEditor && search.length >= 2 && (
-                  <button
-                    onClick={() => {
-                      // Create a placeholder page object for the link
-                      const newPageData = {
-                        id: `new:${search}`, // Special ID to indicate this is a new page
-                        title: search,
-                        isNew: true, // Flag to indicate this is a new page
-                        isPublic: false, // Default to private
-                        userId: user?.uid
-                      };
-
-                      if (onSelect) {
-                        onSelect(newPageData);
-                      }
-                    }}
-                    className="w-full p-3 hover:bg-muted rounded-md transition-colors border border-dashed border-muted-foreground/30 hover:border-muted-foreground/50"
-                  >
-                    <div className="flex items-center justify-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Create new page:</span>
-                      <span className="font-medium text-foreground">"{search}"</span>
-                    </div>
-                  </button>
-                )}
               </div>
             )}
           </>
         )}
+
+        {/* Create New Page Button - Full-width secondary button at bottom */}
+        {isLinkEditor && search.length >= 2 && !hideCreateButton && (
+          <div className="mt-auto pt-4 border-t">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                // Create a placeholder page object for the link
+                const newPageData = {
+                  id: `new:${search}`, // Special ID to indicate this is a new page
+                  title: search,
+                  isNew: true, // Flag to indicate this is a new page
+                  isPublic: false, // Default to private
+                  userId: user?.uid
+                };
+
+                if (onSelect) {
+                  onSelect(newPageData);
+                }
+              }}
+              className="w-full justify-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create new page: "{search}"
+            </Button>
+          </div>
+        )}
+
       </div>
     </div>
   );

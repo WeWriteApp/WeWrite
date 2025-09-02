@@ -14,22 +14,17 @@ const NOTIFICATION_TYPES = [
   {
     id: 'follow',
     title: 'New Followers',
-    description: 'When someone follows your page'
+    description: 'When someone follows you'
   },
   {
-    id: 'like',
-    title: 'Page Likes',
-    description: 'When someone likes your page'
+    id: 'link',
+    title: 'Page Mentions',
+    description: 'When someone links to your page'
   },
   {
-    id: 'comment',
-    title: 'Comments',
-    description: 'When someone comments on your page'
-  },
-  {
-    id: 'mention',
-    title: 'Mentions',
-    description: 'When someone mentions you in their content'
+    id: 'append',
+    title: 'Page Additions',
+    description: 'When someone adds your page to their page'
   },
   {
     id: 'payout_completed',

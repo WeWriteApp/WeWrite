@@ -17,11 +17,9 @@ import type { NotificationType } from '../types/database';
  */
 export const DEFAULT_CRITICALITY_LEVELS: Record<NotificationType, NotificationCriticality> = {
   // User interaction notifications - generally normal importance
-  'follow': 'normal',
-  'link': 'normal', 
-  'append': 'normal',
-  'page_mention': 'normal',
-  'page_follow': 'normal',
+  'follow': 'normal',        // User follows another user
+  'link': 'normal',          // User links to your page (page mention)
+  'append': 'normal',        // User adds your page to their page
   
   // System notifications - critical for account security
   'system_announcement': 'device',

@@ -4,6 +4,15 @@
 
 WeWrite uses a comprehensive 5-color OKLCH-based system with systematic naming (`accent-n`, `neutral-n`, `success-n`, `warn-n`, `error-n`) that provides complete design flexibility while maintaining semantic meaning and accessibility.
 
+### **100-Based Token System**
+All WeWrite color and opacity tokens use a **consistent 100-based naming system**:
+- `neutral-10` = 10% opacity
+- `accent-20` = 20% opacity
+- `card-80` = 80% opacity
+- `success-100` = 100% opacity (fully opaque)
+
+This ensures consistency across all color tokens, card opacity, and component styling.
+
 ## 🏗️ **System Architecture**
 
 ### **Core Color Types**
@@ -88,6 +97,42 @@ All color types support the same opacity scale:
 -80  /* 80% opacity */
 -90  /* 90% opacity */
 ```
+
+## 🎴 **Card Opacity System**
+
+WeWrite includes a dedicated card opacity system for fine-grained control over card transparency:
+
+```css
+/* Card opacity modifiers (card-n) */
+card-1    /* 1% opacity (most transparent) */
+card-5    /* 5% opacity */
+card-10   /* 10% opacity */
+card-15   /* 15% opacity (default) */
+card-20   /* 20% opacity */
+...continuing in 5% increments...
+card-80   /* 80% opacity (solid but slightly transparent) */
+card-85   /* 85% opacity */
+card-90   /* 90% opacity */
+card-95   /* 95% opacity */
+card-100  /* 100% opacity (fully opaque) */
+```
+
+### **Usage Examples**
+```html
+<!-- Very transparent overlay -->
+<div class="wewrite-card card-10">...</div>
+
+<!-- Default card transparency -->
+<div class="wewrite-card card-15">...</div>
+
+<!-- Solid modal background -->
+<div class="wewrite-card card-80">...</div>
+
+<!-- Fully opaque card -->
+<div class="wewrite-card card-100">...</div>
+```
+
+**Perfect for**: Modals, drawers, overlays, and varying card emphasis levels.
 
 ## 🔧 **Implementation Details**
 

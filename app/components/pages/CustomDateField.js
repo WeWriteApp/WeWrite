@@ -256,7 +256,7 @@ export default function CustomDateField({
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto space-y-6">
                 {/* Calendar Interface with Card Container */}
-                <div className="wewrite-card">
+                <div className="wewrite-card card-100">
                   <CalendarGrid
                     selectedDate={customDate}
                     onDateSelect={handleCalendarDateSelect}

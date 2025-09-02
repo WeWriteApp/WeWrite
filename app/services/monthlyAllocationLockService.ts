@@ -245,16 +245,28 @@ export class MonthlyAllocationLockService {
         errors: []
       };
 
-      // For each user, check if they have an active subscription for next month
+      // For each user, roll over their allocations to the next month
       for (const snapshot of userSnapshots) {
         try {
-          // This would typically check if user's subscription is still active
-          // and create new fund tracking records for the next month
           console.log(`🚀 [MONTH TRANSITION] Processing user ${snapshot.userId} for ${nextMonth}`);
-          
-          // Implementation would depend on subscription renewal logic
-          // For now, we'll just log the transition
-          
+
+          // Check if user has an active subscription for the next month
+          const hasActiveSubscription = await this.checkUserSubscriptionStatus(snapshot.userId, nextMonth);
+
+          if (hasActiveSubscription) {
+            // Roll over allocations to next month - this creates sustainable income for writers
+            const rolloverResult = await this.rolloverUserAllocations(snapshot, nextMonth);
+
+            if (rolloverResult.success) {
+              transition.totalFundsTransitioned += rolloverResult.totalRolledOver;
+              console.log(`✅ [MONTH TRANSITION] Rolled over ${formatUsdCents(rolloverResult.totalRolledOver)} in allocations for user ${snapshot.userId}`);
+            } else {
+              transition.errors.push(`Failed to rollover allocations for user ${snapshot.userId}: ${rolloverResult.error}`);
+            }
+          } else {
+            console.log(`⚠️ [MONTH TRANSITION] User ${snapshot.userId} has no active subscription for ${nextMonth}, skipping rollover`);
+          }
+
         } catch (error) {
           const errorMsg = `Failed to transition user ${snapshot.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           transition.errors.push(errorMsg);
@@ -364,6 +376,84 @@ export class MonthlyAllocationLockService {
     const [year, month] = currentMonth.split('-').map(Number);
     const nextDate = new Date(year, month, 1); // month is 0-indexed in Date constructor
     return nextDate.toISOString().slice(0, 7);
+  }
+
+  /**
+   * Check if user has an active subscription for the given month
+   */
+  private async checkUserSubscriptionStatus(userId: string, month: string): Promise<boolean> {
+    try {
+      // Check if user has an active subscription
+      // This would typically query the subscriptions collection
+      const subscriptionsQuery = query(
+        collection(db, getCollectionName('subscriptions')),
+        where('userId', '==', userId),
+        where('status', '==', 'active')
+      );
+
+      const subscriptionsSnapshot = await getDocs(subscriptionsQuery);
+      return !subscriptionsSnapshot.empty;
+    } catch (error) {
+      console.error(`❌ [MONTH TRANSITION] Error checking subscription status for user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Roll over user allocations from previous month to next month
+   * This ensures sustainable income for writers by maintaining allocation commitments
+   */
+  private async rolloverUserAllocations(
+    snapshot: UserAllocationSnapshot,
+    nextMonth: string
+  ): Promise<{ success: boolean; totalRolledOver: number; error?: string }> {
+    try {
+      const batch = writeBatch(db);
+      let totalRolledOver = 0;
+
+      console.log(`🔄 [ALLOCATION ROLLOVER] Rolling over ${snapshot.allocations.length} allocations for user ${snapshot.userId} to ${nextMonth}`);
+
+      // Create new allocation records for next month based on previous month's allocations
+      for (const allocation of snapshot.allocations) {
+        const newAllocationRef = doc(collection(db, getCollectionName('usdAllocations')));
+
+        const newAllocation = {
+          userId: snapshot.userId,
+          recipientUserId: allocation.recipientUserId,
+          resourceType: 'page',
+          resourceId: allocation.pageId,
+          usdCents: allocation.amount,
+          month: nextMonth,
+          status: 'active',
+          rolledOverFrom: snapshot.month, // Track that this was rolled over
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        batch.set(newAllocationRef, newAllocation);
+        totalRolledOver += allocation.amount;
+
+        console.log(`🔄 [ALLOCATION ROLLOVER] Rolling over ${formatUsdCents(allocation.amount)} allocation to page ${allocation.pageId}`);
+      }
+
+      // Commit all rollover allocations
+      await batch.commit();
+
+      console.log(`✅ [ALLOCATION ROLLOVER] Successfully rolled over ${formatUsdCents(totalRolledOver)} for user ${snapshot.userId}`);
+
+      return {
+        success: true,
+        totalRolledOver
+      };
+
+    } catch (error) {
+      console.error(`❌ [ALLOCATION ROLLOVER] Error rolling over allocations for user ${snapshot.userId}:`, error);
+      return {
+        success: false,
+        totalRolledOver: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 }
 

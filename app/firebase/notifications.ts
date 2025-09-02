@@ -42,25 +42,23 @@ export const createTestNotification = async (userId: string): Promise<string | n
       {
         type: 'follow',
         title: 'New Follower',
-        message: 'Someone started following your page!',
+        message: 'Someone started following you!',
         sourceUserId: 'test-user-123',
-        targetPageId: 'test-page-456',
-        targetPageTitle: 'Test Page',
         metadata: { category: 'social' }
       },
       {
-        type: 'like',
-        title: 'Page Liked',
-        message: 'Your page received a new like!',
+        type: 'link',
+        title: 'Page Mention',
+        message: 'Someone linked to your page!',
         sourceUserId: 'test-user-789',
         targetPageId: 'test-page-456',
         targetPageTitle: 'Test Page',
         metadata: { category: 'engagement' }
       },
       {
-        type: 'comment',
-        title: 'New Comment',
-        message: 'Someone commented on your page.',
+        type: 'append',
+        title: 'Page Addition',
+        message: 'Someone added your page to their page.',
         sourceUserId: 'test-user-456',
         targetPageId: 'test-page-789',
         targetPageTitle: 'Another Test Page',

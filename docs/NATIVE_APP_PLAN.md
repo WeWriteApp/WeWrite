@@ -80,9 +80,11 @@ This document outlines WeWrite's strategic plan for migrating from a Progressive
 **Notification Types:**
 ```typescript
 const NOTIFICATION_TYPES = [
-  'follow', 'like', 'comment', 'mention',
-  'payout_completed', 'payout_failed', 
-  'email_verification', 'system_updates'
+  'follow',           // User follows another user
+  'link',             // User links to your page (page mention)
+  'append',           // User adds your page to their page
+  'payout_completed', 'payout_failed',
+  'email_verification', 'system_announcement'
 ];
 ```
 

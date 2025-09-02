@@ -22,6 +22,7 @@ import { createEditor, Descendant, Element as SlateElement, Text, Transforms, Ed
 import { Slate, Editable, withReact, ReactEditor, useSlateStatic, RenderElementProps, RenderLeafProps } from 'slate-react';
 import { withHistory } from 'slate-history';
 import PillLink from '../utils/PillLink';
+import LinkNode from './LinkNode';
 import { Button } from '../ui/button';
 import { Link, Trash2 } from 'lucide-react';
 import LinkEditorModal from './LinkEditorModal';
@@ -32,6 +33,7 @@ import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { useAuth } from '../../providers/AuthProvider';
 import { getPageById } from '../../utils/apiClient';
 import { LinkNodeHelper } from '../../types/linkNode';
+import logger from '../../utils/logger';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -685,7 +687,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         }
 
         // Normal confirmed pill links - NEVER treat these as suggestions
-        // The PillLink component handles deleted page detection automatically
+        // Use LinkNode component to handle compound links and other link types
 
         return (
           <span
@@ -706,40 +708,46 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
               e.dataTransfer.clearData('text/html');
             }}
           >
-            <PillLink
-              href={element.pageTitle ? `/${element.pageTitle}` : (element.url || '#')}
-              pageId={element.pageId}
-              isPublic={element.isPublic}
-              className="cursor-pointer"
+            <LinkNode
+              node={{...element, children}}
+              canEdit={true}
               isEditing={true}
               onEditLink={() => {
                 // Extract the current displayed text from children
                 const currentDisplayText = element.children?.[0]?.text || '';
+
+                // Find the path to this link element for updating
+                const linkPath = ReactEditor.findPath(editor, element);
 
                 // Prepare editing data based on link type
                 let editingData = null;
 
                 if (element.url && !element.pageId) {
                   // External link
-                  const hasCustomText = currentDisplayText !== element.url;
+                  const hasCustomText = element.isCustomText || currentDisplayText !== element.url;
                   editingData = {
                     type: 'external',
+                    path: linkPath, // Store path for updating
                     data: {
                       url: element.url,
-                      text: hasCustomText ? currentDisplayText : ''
+                      text: hasCustomText ? currentDisplayText : '',
+                      currentDisplayText: currentDisplayText // Always include current display text
                     }
                   };
                 } else if (element.pageId) {
                   // Internal page link
                   const linkType = element.showAuthor ? 'compound' : 'page';
-                  const hasCustomText = currentDisplayText !== element.pageTitle;
+                  const hasCustomText = element.isCustomText || currentDisplayText !== element.pageTitle;
                   editingData = {
                     type: linkType,
+                    path: linkPath, // Store path for updating
                     data: {
                       id: element.pageId,
                       title: element.pageTitle,
                       username: element.authorUsername,
+                      userId: element.authorUserId, // Add userId for UsernameBadge
                       text: hasCustomText ? currentDisplayText : '',
+                      currentDisplayText: currentDisplayText, // Always include current display text
                       showAuthor: element.showAuthor
                     }
                   };
@@ -748,10 +756,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
                 setEditingLinkData(editingData);
                 setShowLinkModal(true);
               }}
-              draggable={false}
-            >
-              {children}
-            </PillLink>
+            />
           </span>
         );
       case 'paragraph':
@@ -903,97 +908,200 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     }
   }, [editor]);
 
-  // Insert link at current selection
-  const insertLink = useCallback((linkData: any) => {
-    console.log('🔗 insertLink called with:', linkData);
-    console.log('🔗 Current selection:', editor.selection);
+  // Create link element from link data (unified for both new and existing links)
+  const createLinkElement = useCallback((linkData: any) => {
 
-    const { selection } = editor;
 
-    if (!selection) {
-      console.warn('🔗 No selection available for link insertion');
-      return;
-    }
+    if (linkData.type === 'external') {
+      // External link
+      const element = {
+        type: 'link',
+        url: linkData.url,
+        isExternal: true,
+        isPublic: true,
+        isOwned: false,
+        children: [{ text: linkData.text || linkData.url }]
+      };
 
-    const isCollapsed = Range.isCollapsed(selection);
-    console.log('🔗 Selection is collapsed:', isCollapsed);
-
-    // Store the current selection to restore it if needed
-    const currentSelection = { ...selection };
-
-    if (isCollapsed) {
-      // CLEAN: Create link using helper function
-      const displayText = linkData.text || linkData.pageTitle || 'Link';
-      const hasCustomText = linkData.text && linkData.text !== linkData.pageTitle;
-
-      const link: LinkElement = hasCustomText
-        ? LinkNodeHelper.createCustomLink(
-            linkData.pageId,
-            linkData.pageTitle,
-            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
-            linkData.text
-          )
-        : LinkNodeHelper.createAutoLink(
-            linkData.pageId,
-            linkData.pageTitle,
-            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`)
-          );
-
-      // Add additional properties for Slate
-      (link as any).isExternal = linkData.type === 'external';
-      (link as any).isPublic = true;
-      (link as any).isOwned = false;
-      (link as any).isNew = linkData.isNew;
-
-      console.log('🔗 Inserting link at collapsed selection:', link);
-
-      // Insert the link directly without spacing modifications that could disrupt content
-      Transforms.insertNodes(editor, link, { at: currentSelection });
-
-      // Move cursor to after the inserted link
-      const afterLinkPoint = Editor.after(editor, currentSelection.anchor);
-      if (afterLinkPoint) {
-        Transforms.select(editor, afterLinkPoint);
-      }
+      return element;
     } else {
-      // Wrap selected text in link
-      console.log('🔗 Wrapping selected text in link');
+      // Internal page link
+      const hasCustomText = linkData.text && linkData.text.trim() !== '';
 
-      // Get the selected text to determine if it's custom
-      const selectedText = Editor.string(editor, currentSelection);
-      const hasCustomText = selectedText !== linkData.pageTitle;
 
-      // CLEAN: Create base link structure
-      const baseLinkData = hasCustomText
-        ? LinkNodeHelper.createCustomLink(
-            linkData.pageId,
-            linkData.pageTitle,
-            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`),
-            selectedText
-          )
-        : LinkNodeHelper.createAutoLink(
-            linkData.pageId,
-            linkData.pageTitle,
-            linkData.url || (linkData.isNew ? `/new?title=${encodeURIComponent(linkData.pageTitle)}` : `/${linkData.pageId}`)
-          );
+      let linkElement: any;
+      if (hasCustomText) {
 
-      Transforms.wrapNodes(
-        editor,
-        {
-          ...baseLinkData,
-          isExternal: linkData.type === 'external',
-          isPublic: true,
-          isOwned: false,
-          isNew: linkData.isNew,
-          children: [] // Slate will populate this with selected content
-        },
-        { split: true, at: currentSelection }
-      );
+        linkElement = LinkNodeHelper.createCustomLink(
+          linkData.pageId,
+          linkData.pageTitle,
+          linkData.url || `/${linkData.pageId}`,
+          linkData.text
+        );
+      } else {
+
+        linkElement = LinkNodeHelper.createAutoLink(
+          linkData.pageId,
+          linkData.pageTitle,
+          linkData.url || `/${linkData.pageId}`
+        );
+      }
+
+
+
+      // Add Slate-specific properties
+      linkElement.isExternal = false;
+      linkElement.isPublic = true;
+      linkElement.isOwned = false;
+      linkElement.isNew = linkData.isNew;
+
+      // Add compound link properties if showAuthor is enabled
+      if (linkData.showAuthor) {
+        console.log('🔥 SLATE: Adding compound link properties:', {
+          showAuthor: linkData.showAuthor,
+          authorUsername: linkData.authorUsername,
+          authorUserId: linkData.authorUserId,
+          authorTier: linkData.authorTier,
+          authorSubscriptionStatus: linkData.authorSubscriptionStatus,
+          authorSubscriptionAmount: linkData.authorSubscriptionAmount,
+          linkDataKeys: Object.keys(linkData)
+        });
+        linkElement.showAuthor = true;
+        linkElement.authorUsername = linkData.authorUsername;
+        linkElement.authorUserId = linkData.authorUserId;
+        // Include subscription data for UsernameBadge
+        linkElement.authorTier = linkData.authorTier;
+        linkElement.authorSubscriptionStatus = linkData.authorSubscriptionStatus;
+        linkElement.authorSubscriptionAmount = linkData.authorSubscriptionAmount;
+
+        console.log('🔥 SLATE: Final linkElement with compound properties:', {
+          type: linkElement.type,
+          showAuthor: linkElement.showAuthor,
+          authorUsername: linkElement.authorUsername,
+          authorUserId: linkElement.authorUserId,
+          linkElementKeys: Object.keys(linkElement)
+        });
+      }
+
+
+      return linkElement;
     }
+  }, []);
 
-    console.log('🔗 Link insertion completed');
-    setShowLinkModal(false);
-  }, [editor]);
+  // Unified link handler (works for both new and existing links)
+  const insertLink = useCallback((linkData: any) => {
+
+    try {
+      // Ensure editor is focused and DOM is stable
+      ReactEditor.focus(editor);
+
+      // Create the link element
+      const linkElement = createLinkElement(linkData);
+
+
+      // Handle link editing vs creation
+      if (linkData.isEditing) {
+        // EDITING MODE: Replace existing link
+        if (editor.children.length === 0 || !editor.children[0]) {
+          // Editor is empty, create a paragraph with the link
+          const paragraph = {
+            type: 'paragraph',
+            children: [linkElement]
+          };
+          Transforms.insertNodes(editor, paragraph, { at: [0] });
+        } else {
+          // Find and replace existing link using the stored path
+          if (editingLinkData?.path) {
+            // Use the specific path of the link being edited
+            try {
+              Transforms.setNodes(editor, linkElement, { at: editingLinkData.path });
+              console.log('✅ SLATE_EDITOR: Successfully updated link at specific path:', editingLinkData.path);
+            } catch (error) {
+              console.error('❌ SLATE_EDITOR: Error updating link at path:', editingLinkData.path, error);
+              // Fallback to finding all links if path is invalid
+              const linkMatches = Array.from(Editor.nodes(editor, {
+                at: [],
+                match: n => SlateElement.isElement(n) && n.type === 'link'
+              }));
+              if (linkMatches.length > 0) {
+                const [, path] = linkMatches[0];
+                Transforms.setNodes(editor, linkElement, { at: path });
+              }
+            }
+          } else {
+            // Fallback: Find and replace existing link (old behavior)
+            const linkMatches = Array.from(Editor.nodes(editor, {
+              at: [],
+              match: n => SlateElement.isElement(n) && n.type === 'link'
+            }));
+
+            if (linkMatches.length > 0) {
+              // Replace the first link found
+              const [, linkPath] = linkMatches[0];
+              Transforms.removeNodes(editor, { at: linkPath });
+              Transforms.insertNodes(editor, linkElement, { at: linkPath });
+            } else {
+              // No existing link, insert at current selection or end
+              if (editor.selection) {
+                Transforms.insertNodes(editor, linkElement);
+              } else {
+                // Insert at the end of the first paragraph
+                const firstParagraph = editor.children[0];
+                if (firstParagraph && firstParagraph.children) {
+                  const insertPath = [0, firstParagraph.children.length];
+                  Transforms.insertNodes(editor, linkElement, { at: insertPath });
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Insert new link at current selection
+
+        // Insert new link at current selection
+        const { selection } = editor;
+        if (!selection) {
+          console.warn('🔗 No selection available for link insertion');
+          return;
+        }
+
+        const isCollapsed = Range.isCollapsed(selection);
+        const currentSelection = { ...selection };
+
+        if (isCollapsed) {
+          // Insert link at cursor position
+          Transforms.insertNodes(editor, linkElement, { at: currentSelection });
+
+          // Move cursor to after the inserted link
+          const afterLinkPoint = Editor.after(editor, currentSelection.anchor);
+          if (afterLinkPoint) {
+            Transforms.select(editor, afterLinkPoint);
+          }
+        } else {
+          // Wrap selected text in link
+          // For wrapped text, we need to preserve the selected text as children
+          const wrapLinkElement = {
+            ...linkElement,
+            children: [] // Slate will populate this with selected content
+          };
+
+          Transforms.wrapNodes(editor, wrapLinkElement, { split: true, at: currentSelection });
+        }
+      }
+
+      // Clean up and close modal
+      setShowLinkModal(false);
+      setEditingLinkData(null);
+
+    } catch (error) {
+      console.error('Error processing link:', error);
+      // Show user-friendly error message
+      if (typeof window !== 'undefined') {
+        // Use a simple alert if toast is not available
+        alert('Error creating link. Please try again.');
+      }
+    }
+  }, [editor, createLinkElement, editingLinkData]);
 
   // Handle link creation from suggestion modal
   const handleSuggestionLinkInsert = useCallback((linkData: any) => {
@@ -1015,18 +1123,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         if (matches.length > 0) {
           const [, path] = matches[0]; // Use the first match
 
-          // CLEAN: Create confirmed link element
-          const displayText = linkData.text || linkData.pageTitle || 'Link';
-          const hasCustomText = linkData.text && linkData.text !== linkData.pageTitle;
-
-          const linkElement: LinkElement = hasCustomText
-            ? LinkNodeHelper.createCustomLink(linkData.pageId, linkData.pageTitle, `/${linkData.pageId}`, linkData.text)
-            : LinkNodeHelper.createAutoLink(linkData.pageId, linkData.pageTitle, `/${linkData.pageId}`);
-
-          // Add Slate-specific properties
-          (linkElement as any).isExternal = linkData.type === 'external';
-          (linkElement as any).isPublic = true;
-          (linkElement as any).isOwned = false;
+          // Use the unified link creation function
+          const linkElement = createLinkElement(linkData);
 
           // Replace the suggestion with the confirmed link
           Transforms.setNodes(editor, linkElement, { at: path });
@@ -1041,7 +1139,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     } catch (error) {
       console.error('🔴 SLATE_EDITOR: Error inserting link from suggestion:', error);
     }
-  }, [editor, insertLink]);
+  }, [editor, createLinkElement, insertLink]);
 
   // Extract linked page IDs from current content
   const getLinkedPageIds = useCallback(() => {
@@ -1373,11 +1471,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             setShowLinkModal(false);
             setEditingLinkData(null);
           }}
-          onInsertLink={(linkData) => {
-            console.log('SlateEditor: onInsertLink called with:', linkData);
-            console.log('SlateEditor: insertLink function:', insertLink);
-            insertLink(linkData);
-          }}
+          onInsertLink={insertLink}
           editingLink={editingLinkData}
           selectedText={getSelectedText()}
           linkedPageIds={getLinkedPageIds()}

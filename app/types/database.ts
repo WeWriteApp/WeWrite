@@ -421,11 +421,9 @@ export interface Notification {
 
 export type NotificationType =
   // User interaction notifications
-  | 'follow'                    // User follows your page
-  | 'link'                      // User links to your page
+  | 'follow'                    // User follows another user (not pages)
+  | 'link'                      // User links to your page (page mention)
   | 'append'                    // User adds your page to their page
-  | 'page_mention'              // Page mentioned in another page
-  | 'page_follow'               // Page followed (different from user follow)
 
   // System notifications
   | 'system_announcement'       // System-wide announcements

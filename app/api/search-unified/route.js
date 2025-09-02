@@ -771,26 +771,33 @@ export async function GET(request) {
     ]);
 
     // Fetch missing or invalid usernames for pages
+    console.log(`🔍 [USERNAME FETCH] Processing ${(pages || []).length} pages for username fetching`);
     const pagesWithUsernames = await Promise.all((pages || []).map(async (page) => {
       // Check if username is missing, null, or looks like a userId (long alphanumeric string)
       const needsUsernameFetch = !page.username ||
                                 page.username === 'Anonymous' ||
                                 page.username === 'NULL' ||
                                 page.username === 'Missing username' ||
-                                (page.username && page.username.length > 20 && /^[a-zA-Z0-9]+$/.test(page.username));
+                                (page.username && page.username.length >= 20 && /^[a-zA-Z0-9]+$/.test(page.username));
+
+      console.log(`🔍 [USERNAME FETCH] Page ${page.id}: username="${page.username}", userId="${page.userId}", needsFetch=${needsUsernameFetch}`);
 
       if (needsUsernameFetch && page.userId) {
         try {
+          console.log(`🔍 [USERNAME FETCH] Fetching user document for userId: ${page.userId}`);
           const userDoc = await getDoc(doc(db, getCollectionName('users'), page.userId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            const oldUsername = page.username;
             page.username = userData.username || 'Missing Username';
-            console.log(`Fixed username for page ${page.id}: "${page.username}" (was: "${page.username || 'null'}")`);
+            console.log(`🔍 [USERNAME FETCH] Fixed username for page ${page.id}: "${page.username}" (was: "${oldUsername || 'null'}")`);
+            console.log(`🔍 [USERNAME FETCH] User document data:`, { username: userData.username, userId: page.userId });
           } else {
+            console.log(`🔍 [USERNAME FETCH] User document not found for userId: ${page.userId}`);
             page.username = 'Missing Username';
           }
         } catch (error) {
-          console.error(`Error fetching username for user ${page.userId}:`, error);
+          console.error(`🔍 [USERNAME FETCH] Error fetching username for user ${page.userId}:`, error);
           page.username = 'Missing Username';
         }
       }

@@ -250,6 +250,9 @@ function NewPageContent() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Track if title was pre-filled from URL (for focus management)
+  const [titlePreFilled, setTitlePreFilled] = useState(false);
+
   // Initialize content from URL parameters (for text selection feature)
   useEffect(() => {
     if (searchParams) {
@@ -267,6 +270,7 @@ function NewPageContent() {
           // Don't set title - let user choose their own title
         } else {
           setTitle(trimmedTitle);
+          setTitlePreFilled(true); // Mark that title was pre-filled
         }
       }
 
@@ -1185,6 +1189,7 @@ function NewPageContent() {
           canEdit={true} // User can always edit their new page
           isNewPage={true} // Enable auto-focus for new pages
           isReply={isReply} // Pass reply status for contextual text
+          titlePreFilled={titlePreFilled} // Indicate if title was pre-filled from link
         />
 
         {/* Simplified layout container - single consistent padding for all elements */}

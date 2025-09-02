@@ -354,7 +354,7 @@ export default function EarningsSourceBreakdown() {
                         </h4>
                         <div className="space-y-2">
                           {page.sponsors.map((sponsor) => (
-                            <div key={sponsor.userId} className="flex items-center justify-between py-2 px-3 bg-background rounded-md">
+                            <div key={sponsor.userId} className="flex items-center justify-between py-2 px-3">
                               <div className="flex items-center gap-2">
                                 <PillLink
                                   href={`/user/${sponsor.userId}`}
@@ -431,7 +431,7 @@ export default function EarningsSourceBreakdown() {
                           </h4>
                           <div className="space-y-2">
                             {sponsor.pages.map((page) => (
-                              <div key={page.pageId} className="flex items-center justify-between py-2 px-3 bg-background rounded-md">
+                              <div key={page.pageId} className="flex items-center justify-between py-2 px-3">
                                 <div className="flex items-center gap-2">
                                   <PillLink
                                     href={`/${page.pageId}`}

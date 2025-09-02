@@ -10,6 +10,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   setDoc,
   deleteDoc,
   query,
@@ -190,7 +191,7 @@ export async function updateBacklinksIndex(
       batch = writeBatch(db);
     }
     
-    // Add new backlink entries
+    // Add new backlink entries and create notifications
     for (const link of pageLinks) {
       const backlinkId = `${pageId}_to_${link.pageId}`;
 
@@ -237,10 +238,73 @@ export async function updateBacklinksIndex(
     await batch.commit();
 
     console.log(`✅ [BACKLINKS] Successfully updated backlinks index: ${pageLinks.length} links from page ${pageId}`);
+
+    // Create notifications for page mentions (links)
+    if (!isServerSide) {
+      // Only create notifications on client side to avoid duplicate notifications
+      await createLinkNotifications(pageId, pageTitle, username, pageLinks);
+    }
     
   } catch (error) {
     console.error('Error updating backlinks index:', error);
     throw error;
+  }
+}
+
+/**
+ * Create notifications for page mentions (when pages link to other pages)
+ */
+async function createLinkNotifications(
+  sourcePageId: string,
+  sourcePageTitle: string,
+  sourceUsername: string,
+  pageLinks: any[]
+): Promise<void> {
+  try {
+    console.log(`🔔 [NOTIFICATIONS] Creating link notifications for ${pageLinks.length} page links`);
+
+    // Import notification service
+    const { createNotification } = await import('../../services/notificationsApi');
+
+    // Get target page data to find the page owners
+    for (const link of pageLinks) {
+      try {
+        // Get the target page to find its owner
+        const targetPageDoc = await getDoc(doc(db, getCollectionName('pages'), link.pageId));
+
+        if (targetPageDoc.exists()) {
+          const targetPageData = targetPageDoc.data();
+          const targetUserId = targetPageData.userId;
+
+          // Don't notify if the user is linking to their own page
+          if (targetUserId && targetUserId !== sourceUsername) {
+            await createNotification({
+              userId: targetUserId,
+              type: 'link',
+              title: 'Page Mention',
+              message: `${sourceUsername} linked to your page "${targetPageData.title || 'Untitled'}"`,
+              sourceUserId: sourceUsername, // This should be the user ID, but we have username
+              targetPageId: link.pageId,
+              targetPageTitle: targetPageData.title || 'Untitled',
+              metadata: {
+                sourcePageId,
+                sourcePageTitle,
+                linkText: link.text || '',
+                category: 'engagement'
+              }
+            });
+
+            console.log(`🔔 [NOTIFICATIONS] Created link notification for user ${targetUserId}`);
+          }
+        }
+      } catch (notificationError) {
+        console.error(`❌ [NOTIFICATIONS] Error creating notification for link to ${link.pageId}:`, notificationError);
+        // Continue with other notifications even if one fails
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [NOTIFICATIONS] Error creating link notifications:`, error);
+    // Don't throw - notifications are not critical for backlinks functionality
   }
 }
 

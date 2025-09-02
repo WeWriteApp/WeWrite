@@ -5,6 +5,7 @@ import { usePillStyle } from "../../contexts/PillStyleContext";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
+import { UsernameBadge } from "../ui/UsernameBadge";
 
 // Type definitions
 interface LinkNodeProps {
@@ -253,15 +254,36 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
                               validatedNode.data?.originalPageTitle ||
                               null;
 
+    // Debug all link rendering
+    console.log('🔥 LINK NODE RENDERING:', {
+      nodeType: validatedNode.type,
+      showAuthor: validatedNode.showAuthor,
+      authorUsername: validatedNode.authorUsername,
+      authorUserId: validatedNode.authorUserId,
+      hasAuthorInfo: !!(validatedNode.authorUsername || validatedNode.authorUserId),
+      willRenderCompound: validatedNode.showAuthor && (validatedNode.authorUsername || validatedNode.authorUserId)
+    });
+
     // Check if this is a compound link with author attribution
-    if (validatedNode.showAuthor && validatedNode.authorUsername) {
+    if (validatedNode.showAuthor && (validatedNode.authorUsername || validatedNode.authorUserId)) {
+      console.log('🔥 COMPOUND LINK DEBUG:', {
+        showAuthor: validatedNode.showAuthor,
+        authorUsername: validatedNode.authorUsername,
+        authorUserId: validatedNode.authorUserId,
+        authorTier: validatedNode.authorTier,
+        authorSubscriptionStatus: validatedNode.authorSubscriptionStatus,
+        authorSubscriptionAmount: validatedNode.authorSubscriptionAmount
+      });
+
       // Render compound link as two separate pills: [Page Title] by [Author Username]
 
       // Use the extracted displayText which already handles custom text properly
       let pageTitleText = displayText || originalPageTitle || 'Page';
 
-      // Remove @ symbol from username if present
-      const cleanUsername = validatedNode.authorUsername.replace(/^@/, '');
+      // Remove @ symbol from username if present, or use empty string if no username
+      const cleanUsername = validatedNode.authorUsername
+        ? validatedNode.authorUsername.replace(/^@/, '')
+        : '';
 
       // Ensure href is properly formatted for internal links
       // WeWrite uses /{pageId} format, not /pages/{pageId}
@@ -294,15 +316,17 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
             {pageTitleText}
           </PillLink>
           <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
-          <PillLink
-            href={`/user/${cleanUsername}`}
-            isPublic={true}
-            className="user-link author-portion"
-            isEditing={isEditing}
-            onEditLink={isEditing ? onEditLink : undefined}
-          >
-            {cleanUsername}
-          </PillLink>
+          <UsernameBadge
+            userId={validatedNode.authorUserId}
+            username={cleanUsername || 'Loading...'}
+            tier={validatedNode.authorTier}
+            subscriptionStatus={validatedNode.authorSubscriptionStatus}
+            subscriptionAmount={validatedNode.authorSubscriptionAmount}
+            size="sm"
+            variant="pill"
+            pillVariant="secondary"
+            className="author-portion"
+          />
         </span>
       );
     }

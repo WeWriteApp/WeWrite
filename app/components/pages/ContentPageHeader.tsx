@@ -105,6 +105,8 @@ export interface ContentPageHeaderProps {
   isNewPage?: boolean;
   /** Flag to indicate this is a reply */
   isReply?: boolean;
+  /** Flag to indicate the title was pre-filled from a link creation */
+  titlePreFilled?: boolean;
 
   /** Handler for delete page */
   onDelete?: () => void;
@@ -131,6 +133,7 @@ export default function ContentPageHeader({
   onOwnershipChange,
   isNewPage = false,
   isReply = false,
+  titlePreFilled = false,
   onDelete,
   onInsertLink}: ContentPageHeaderProps) {
 
@@ -244,18 +247,28 @@ export default function ContentPageHeader({
     setEditingTitle(title || "");
   }, [title]);
 
-  // Auto-focus title input for new pages
+  // Auto-focus title input for new pages (unless title was pre-filled from link creation)
   React.useEffect(() => {
     if (isNewPage && isEditing && canEdit) {
-      // Start editing the title immediately for new pages
-      setIsEditingTitle(true);
-      // Focus the input after state update
-      setTimeout(() => {
-        titleInputRef.current?.focus();
-        titleInputRef.current?.select(); // Select all text for immediate typing
-      }, 150); // Slightly longer delay to ensure component is fully rendered
+      if (titlePreFilled) {
+        // Title was pre-filled from link creation, focus the editor instead
+        setTimeout(() => {
+          const editorElement = document.querySelector('[contenteditable="true"]');
+          if (editorElement) {
+            (editorElement as HTMLElement).focus();
+          }
+        }, 150);
+      } else {
+        // Start editing the title immediately for new pages
+        setIsEditingTitle(true);
+        // Focus the input after state update
+        setTimeout(() => {
+          titleInputRef.current?.focus();
+          titleInputRef.current?.select(); // Select all text for immediate typing
+        }, 150); // Slightly longer delay to ensure component is fully rendered
+      }
     }
-  }, [isNewPage, isEditing, canEdit]);
+  }, [isNewPage, isEditing, canEdit, titlePreFilled]);
 
   // Auto-resize textarea when editing title starts
   React.useEffect(() => {

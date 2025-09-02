@@ -99,6 +99,40 @@
 /* ===== CARD MODIFIERS ===== */
 
 /**
+ * Opacity modifiers - card-n system
+ *
+ * Usage: Add card-n class to any wewrite-card element
+ * Examples:
+ *   - card-1 = 1% opacity (most transparent)
+ *   - card-15 = 15% opacity (default)
+ *   - card-80 = 80% opacity (solid but slightly transparent)
+ *   - card-100 = 100% opacity (fully opaque)
+ *
+ * Perfect for modals, overlays, and varying card transparency needs.
+ */
+.wewrite-card.card-1 { --card-opacity: 0.01; }
+.wewrite-card.card-5 { --card-opacity: 0.05; }
+.wewrite-card.card-10 { --card-opacity: 0.10; }
+.wewrite-card.card-15 { --card-opacity: 0.15; }
+.wewrite-card.card-20 { --card-opacity: 0.20; }
+.wewrite-card.card-25 { --card-opacity: 0.25; }
+.wewrite-card.card-30 { --card-opacity: 0.30; }
+.wewrite-card.card-35 { --card-opacity: 0.35; }
+.wewrite-card.card-40 { --card-opacity: 0.40; }
+.wewrite-card.card-45 { --card-opacity: 0.45; }
+.wewrite-card.card-50 { --card-opacity: 0.50; }
+.wewrite-card.card-55 { --card-opacity: 0.55; }
+.wewrite-card.card-60 { --card-opacity: 0.60; }
+.wewrite-card.card-65 { --card-opacity: 0.65; }
+.wewrite-card.card-70 { --card-opacity: 0.70; }
+.wewrite-card.card-75 { --card-opacity: 0.75; }
+.wewrite-card.card-80 { --card-opacity: 0.80; }
+.wewrite-card.card-85 { --card-opacity: 0.85; }
+.wewrite-card.card-90 { --card-opacity: 0.90; }
+.wewrite-card.card-95 { --card-opacity: 0.95; }
+.wewrite-card.card-100 { --card-opacity: 1.00; }
+
+/**
  * Corner radius modifiers
  * Use these to customize border radius while keeping all other card properties
  */
