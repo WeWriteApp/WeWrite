@@ -83,7 +83,8 @@ export default function FloatingActionButton() {
     // On mobile, position above floating mobile nav when visible
     if (shouldShowMobileNav) {
       const navHeight = 80; // Height of mobile nav content
-      const toolbarMargin = 16; // Match the toolbar's margin (left-4 right-4 = 16px)
+      const toolbarMargin = 16; // Match the toolbar's margin from bottom edge
+      // Position FAB with same margin from toolbar as toolbar has from bottom edge
       return `calc(var(--fixed-safe-bottom) + ${navHeight + toolbarMargin}px)`;
     }
 

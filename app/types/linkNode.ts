@@ -7,21 +7,21 @@
 
 export interface LinkNode {
   type: 'link';
-  
-  // Target page information
-  pageId: string;
-  pageTitle: string; // Current title of the target page (auto-updated)
-  url: string; // URL path to the page
-  
+
+  // Target information (for internal links)
+  pageId?: string; // Optional for external links
+  pageTitle?: string; // Current title of the target page (auto-updated)
+  url: string; // URL path to the page or external URL
+
   // Display text logic
   isCustomText: boolean; // Whether user has set custom display text
   customText?: string; // User-provided custom text (only if isCustomText = true)
-  
+
   // Slate.js structure
   children: Array<{ text: string }>; // The actual rendered text
-  
+
   // Optional metadata
-  isExternal?: boolean;
+  isExternal?: boolean; // True for external links
   isPublic?: boolean;
   isOwned?: boolean;
 }
@@ -37,7 +37,10 @@ export class LinkNodeHelper {
     if (link.isCustomText && link.customText) {
       return link.customText;
     }
-    return link.pageTitle;
+    if (link.isExternal) {
+      return link.url; // For external links without custom text, show URL
+    }
+    return link.pageTitle || 'Link';
   }
   
   /**
@@ -54,6 +57,21 @@ export class LinkNodeHelper {
       // Note: customText is omitted (not undefined) for auto-generated links
     };
   }
+
+  /**
+   * Create a new external link node with URL as display text
+   */
+  static createAutoExternalLink(url: string): LinkNode {
+    return {
+      type: 'link',
+      url,
+      isCustomText: false,
+      isExternal: true,
+      isPublic: true,
+      isOwned: false,
+      children: [{ text: url }]
+    };
+  }
   
   /**
    * Create a new link node with custom text
@@ -66,6 +84,22 @@ export class LinkNodeHelper {
       url,
       isCustomText: true,
       customText,
+      children: [{ text: customText }]
+    };
+  }
+
+  /**
+   * Create a new external link node with custom text
+   */
+  static createCustomExternalLink(url: string, customText: string): LinkNode {
+    return {
+      type: 'link',
+      url,
+      isCustomText: true,
+      customText,
+      isExternal: true,
+      isPublic: true,
+      isOwned: false,
       children: [{ text: customText }]
     };
   }
@@ -131,18 +165,33 @@ export class LinkMigrationHelper {
    * Convert old messy link format to clean LinkNode
    */
   static migrateOldLink(oldLink: any): LinkNode {
-    const pageId = oldLink.pageId || '';
-    const pageTitle = oldLink.pageTitle || oldLink.originalPageTitle || '';
-    const url = oldLink.url || `/${pageId}`;
-    
-    // Try to detect if this was custom text
+    const url = oldLink.url || '';
     const displayText = oldLink.children?.[0]?.text || oldLink.displayText || oldLink.text || '';
-    const isCustomText = displayText !== pageTitle && displayText !== oldLink.originalPageTitle;
-    
-    if (isCustomText) {
-      return LinkNodeHelper.createCustomLink(pageId, pageTitle, url, displayText);
+
+    // Check if this is an external link
+    if (oldLink.isExternal || (!oldLink.pageId && url && (url.startsWith('http') || url.startsWith('www')))) {
+      // External link
+      const isCustomText = displayText && displayText !== url;
+
+      if (isCustomText) {
+        return LinkNodeHelper.createCustomExternalLink(url, displayText);
+      } else {
+        return LinkNodeHelper.createAutoExternalLink(url);
+      }
     } else {
-      return LinkNodeHelper.createAutoLink(pageId, pageTitle, url);
+      // Internal page link
+      const pageId = oldLink.pageId || '';
+      const pageTitle = oldLink.pageTitle || oldLink.originalPageTitle || '';
+      const internalUrl = url || `/${pageId}`;
+
+      // Try to detect if this was custom text
+      const isCustomText = displayText !== pageTitle && displayText !== oldLink.originalPageTitle;
+
+      if (isCustomText) {
+        return LinkNodeHelper.createCustomLink(pageId, pageTitle, internalUrl, displayText);
+      } else {
+        return LinkNodeHelper.createAutoLink(pageId, pageTitle, internalUrl);
+      }
     }
   }
 }

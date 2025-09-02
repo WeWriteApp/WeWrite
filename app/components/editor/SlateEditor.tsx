@@ -923,14 +923,23 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
     if (linkData.type === 'external') {
       // External link
+      const hasCustomText = linkData.text && linkData.text.trim() !== '';
+      const displayText = hasCustomText ? linkData.text : linkData.url;
+
       const element = {
         type: 'link',
         url: linkData.url,
         isExternal: true,
         isPublic: true,
         isOwned: false,
-        children: [{ text: linkData.text || linkData.url }]
+        isCustomText: hasCustomText,
+        children: [{ text: displayText }]
       };
+
+      // Add customText field if there's custom text
+      if (hasCustomText) {
+        element.customText = linkData.text;
+      }
 
       return element;
     } else {

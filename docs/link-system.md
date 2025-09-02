@@ -2,31 +2,37 @@
 
 ## Overview
 
-The WeWrite link system provides automatic title updates while respecting user customization. This document describes the clean, maintainable architecture that replaced the previous complex system.
+The WeWrite link system supports both internal page links and external links, providing automatic title updates while respecting user customization. This document describes the clean, maintainable architecture that replaced the previous complex system.
 
 ## Core Principles
 
 1. **Simple Data Structure**: Clear separation between auto-generated and custom text
-2. **Automatic Updates**: Page title changes automatically update all links
+2. **Automatic Updates**: Page title changes automatically update internal links
 3. **User Control**: Users can set custom text that won't be auto-updated
-4. **No Maintenance Nightmares**: Clean, obvious code with descriptive naming
-5. **Intuitive Editing**: When editing links, the current display text is pre-filled for easy customization
+4. **External Link Support**: Full support for external URLs with custom display text
+5. **No Maintenance Nightmares**: Clean, obvious code with descriptive naming
+6. **Intuitive Editing**: When editing links, the current display text is pre-filled for easy customization
 
 ## Link Node Structure
 
 ```typescript
 interface LinkNode {
   type: 'link';
-  
-  // Target page information
-  pageId: string;
-  pageTitle: string; // Current title of target page (always auto-updated)
-  url: string; // URL path to the page
-  
+
+  // Target information
+  pageId?: string; // Required for internal links, optional for external
+  pageTitle?: string; // Current title of target page (auto-updated for internal links)
+  url: string; // URL path to page or external URL
+
   // Display text logic
   isCustomText: boolean; // Whether user has set custom display text
   customText?: string; // User-provided custom text (only if isCustomText = true)
-  
+
+  // Link type metadata
+  isExternal?: boolean; // True for external links
+  isPublic?: boolean;
+  isOwned?: boolean;
+
   // Slate.js structure
   children: Array<{ text: string }>; // The actual rendered text
 }
@@ -34,8 +40,13 @@ interface LinkNode {
 
 ## Display Logic
 
+### Internal Page Links
 - **If `isCustomText = false`**: Show `pageTitle` (auto-updated when page title changes)
 - **If `isCustomText = true`**: Show `customText` (never auto-updated)
+
+### External Links
+- **If `isCustomText = false`**: Show `url` (the actual URL)
+- **If `isCustomText = true`**: Show `customText` (user-defined display text)
 
 ## Editing Experience
 
@@ -103,11 +114,13 @@ When a page title changes:
 ### LinkNodeHelper
 
 ```typescript
-// Create auto-updating link
+// Internal page links
 LinkNodeHelper.createAutoLink(pageId, pageTitle, url)
-
-// Create custom text link
 LinkNodeHelper.createCustomLink(pageId, pageTitle, url, customText)
+
+// External links
+LinkNodeHelper.createAutoExternalLink(url) // Shows URL as display text
+LinkNodeHelper.createCustomExternalLink(url, customText) // Shows custom text
 
 // Update page title (respects custom text)
 LinkNodeHelper.updatePageTitle(link, newPageTitle)
@@ -125,9 +138,23 @@ The system automatically migrates old link formats:
 
 ```typescript
 // Old messy format with text, displayText, originalPageTitle, etc.
-// Gets converted to clean LinkNode structure
+// Gets converted to clean LinkNode structure for both internal and external links
 LinkMigrationHelper.migrateOldLink(oldLink)
 ```
+
+#### External Link Migration
+
+For external links that may be missing proper custom text fields:
+
+```bash
+# Run the external link migration script
+node scripts/fix-external-link-custom-text.js
+```
+
+This script:
+- Identifies external links where display text differs from URL
+- Adds proper `isCustomText` and `customText` fields
+- Removes incorrect custom text flags from URL-only links
 
 ## Implementation Files
 

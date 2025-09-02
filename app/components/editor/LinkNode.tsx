@@ -255,7 +255,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
                    fetchedPageTitle ||
                    (isFetchingTitle ? 'Loading...' : `Page: ${pageId}`);
     } else if (isExternal) {
-      displayText = href;
+      // For external links, check for custom text fields first
+      displayText = validatedNode.customText ||
+                   validatedNode.displayText ||
+                   href;
     } else {
       displayText = 'Link';
     }
