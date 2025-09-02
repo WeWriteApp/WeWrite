@@ -161,14 +161,21 @@ export function validateLink(linkData) {
     // Determine link type based on available properties
     const isUserLink = link.isUser || link.userId || (link.url && link.url.startsWith('/user/'));
     const isPageLink = link.isPageLink || link.pageId || (link.url && (link.url.startsWith('/pages/') || link.url.match(/^\/[a-zA-Z0-9-_]+$/)));
-    const isExternalLink = link.isExternal || (!isUserLink && !isPageLink && link.url && (link.url.startsWith('http://') || link.url.startsWith('https://')));
+
+    // CRITICAL FIX: Don't trust isExternal flag from data - determine based on URL pattern
+    // This fixes the issue where internal links were incorrectly marked as external
+    const isExternalLink = !isUserLink && !isPageLink && link.url && (link.url.startsWith('http://') || link.url.startsWith('https://'));
 
     // Set missing properties based on link type
     if (isUserLink) {
       link.isUser = true;
+      // CRITICAL FIX: Ensure isExternal is false for user links
+      link.isExternal = false;
       // Don't set className for inline links in Slate editor
     } else if (isPageLink) {
       link.isPageLink = true;
+      // CRITICAL FIX: Ensure isExternal is false for page links
+      link.isExternal = false;
       // Don't set className for inline links in Slate editor
 
       // CRITICAL FIX: Ensure pageId is always set for page links
