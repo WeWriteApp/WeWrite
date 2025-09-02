@@ -645,8 +645,17 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
           Transforms.insertNodes(editor, linkElement);
 
-          // Move cursor after the link
-          Transforms.move(editor, { distance: 1, unit: 'offset' });
+          // Defer cursor movement to allow DOM to sync
+          setTimeout(() => {
+            try {
+              // Move cursor after the link
+              Transforms.move(editor, { distance: 1, unit: 'offset' });
+            } catch (error) {
+              console.warn('Could not move cursor after link insertion from suggestion:', error);
+              // Fallback: just ensure editor is focused
+              ReactEditor.focus(editor);
+            }
+          }, 0);
 
           console.log('✅ SLATE_EDITOR: Successfully inserted link from suggestion');
         }
@@ -992,8 +1001,16 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   const insertLink = useCallback((linkData: any) => {
 
     try {
-      // Ensure editor is focused and DOM is stable
-      ReactEditor.focus(editor);
+      // Check if editor is properly connected to DOM
+      if (!ReactEditor.isFocused(editor)) {
+        try {
+          ReactEditor.focus(editor);
+        } catch (focusError) {
+          console.warn('Could not focus editor before link insertion:', focusError);
+          // If we can't focus, the editor might not be ready
+          return;
+        }
+      }
 
       // Create the link element
       const linkElement = createLinkElement(linkData);
@@ -1072,11 +1089,20 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           // Insert link at cursor position
           Transforms.insertNodes(editor, linkElement, { at: currentSelection });
 
-          // Move cursor to after the inserted link
-          const afterLinkPoint = Editor.after(editor, currentSelection.anchor);
-          if (afterLinkPoint) {
-            Transforms.select(editor, afterLinkPoint);
-          }
+          // Defer selection update to allow DOM to sync
+          setTimeout(() => {
+            try {
+              // Move cursor to after the inserted link
+              const afterLinkPoint = Editor.after(editor, currentSelection.anchor);
+              if (afterLinkPoint) {
+                Transforms.select(editor, afterLinkPoint);
+              }
+            } catch (error) {
+              console.warn('Could not set selection after link insertion:', error);
+              // Fallback: just ensure editor is focused
+              ReactEditor.focus(editor);
+            }
+          }, 0);
         } else {
           // Wrap selected text in link
           // For wrapped text, we need to preserve the selected text as children
@@ -1086,6 +1112,15 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           };
 
           Transforms.wrapNodes(editor, wrapLinkElement, { split: true, at: currentSelection });
+
+          // Defer selection update for wrapped text as well
+          setTimeout(() => {
+            try {
+              ReactEditor.focus(editor);
+            } catch (error) {
+              console.warn('Could not focus editor after wrapping text in link:', error);
+            }
+          }, 0);
         }
       }
 

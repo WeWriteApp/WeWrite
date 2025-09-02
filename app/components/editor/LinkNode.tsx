@@ -6,6 +6,7 @@ import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
 import { UsernameBadge } from "../ui/UsernameBadge";
+import { getPageTitle } from "../../utils/pageUtils";
 
 // Type definitions
 interface LinkNodeProps {
@@ -32,6 +33,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   useEffect(() => {
     setLinkNode(node);
   }, [node]);
+
+  // State for dynamically fetched page title
+  const [fetchedPageTitle, setFetchedPageTitle] = useState<string | null>(null);
+  const [isFetchingTitle, setIsFetchingTitle] = useState(false);
 
 
 
@@ -149,6 +154,32 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   }
   const isPageLink = validatedNode.isPageLink === true;
 
+  // Effect to fetch page title dynamically when missing
+  useEffect(() => {
+    const shouldFetchTitle = isPageLink &&
+                            pageId &&
+                            !validatedNode.pageTitle &&
+                            !validatedNode.originalPageTitle &&
+                            !isFetchingTitle &&
+                            !fetchedPageTitle;
+
+    if (shouldFetchTitle) {
+      setIsFetchingTitle(true);
+      getPageTitle(pageId)
+        .then((title) => {
+          if (title) {
+            setFetchedPageTitle(title);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching page title for', pageId, ':', error);
+        })
+        .finally(() => {
+          setIsFetchingTitle(false);
+        });
+    }
+  }, [isPageLink, pageId, validatedNode.pageTitle, validatedNode.originalPageTitle, isFetchingTitle, fetchedPageTitle]);
+
   // Determine if this is a protocol link
   const isProtocolLink =
     validatedNode.className?.includes('protocol-link') ||
@@ -218,7 +249,11 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   // If displayText is still empty or null, use appropriate fallbacks
   if (!displayText) {
     if (pageId) {
-      displayText = validatedNode.pageTitle || validatedNode.originalPageTitle || `Page: ${pageId}`;
+      // BACKWARDS COMPATIBILITY FIX: Use fetched page title if available
+      displayText = validatedNode.pageTitle ||
+                   validatedNode.originalPageTitle ||
+                   fetchedPageTitle ||
+                   (isFetchingTitle ? 'Loading...' : `Page: ${pageId}`);
     } else if (isExternal) {
       displayText = href;
     } else {

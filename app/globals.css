@@ -2181,7 +2181,7 @@ button.bg-transparent,
 div.bg-transparent.pill-link,
 a.bg-transparent[href],
 button.bg-transparent[type] {
-  color: hsl(var(--primary)) !important;
+  color: oklch(var(--accent-base)) !important;
 }
 
 
