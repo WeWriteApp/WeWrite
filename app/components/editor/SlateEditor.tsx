@@ -296,9 +296,9 @@ const contentToSlate = (content: any): Descendant[] => {
           }
 
           if (child.type === 'link') {
-            // CRITICAL FIX: Preserve the original text property for legacy links
+            // CRITICAL FIX: Get text from legacy links but don't add it as a property to Slate element
             const linkText = child.text || child.children?.[0]?.text || 'Link';
-            const linkElement = {
+            children.push({
               type: 'link',
               url: child.url,
               pageId: child.pageId,
@@ -307,14 +307,7 @@ const contentToSlate = (content: any): Descendant[] => {
               isPublic: child.isPublic || true,
               isOwned: child.isOwned || false,
               children: [{ text: linkText }]
-            };
-
-            // CRITICAL: Only preserve original text property if it exists (for legacy links)
-            if (child.text) {
-              linkElement.text = child.text;
-            }
-
-            children.push(linkElement);
+            });
           } else if (child.text !== undefined) {
             children.push({ text: child.text });
           }
@@ -727,7 +720,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             }}
           >
             <LinkNode
-              node={{...element, children}}
+              node={element}
               canEdit={true}
               isEditing={true}
               onEditLink={() => {
