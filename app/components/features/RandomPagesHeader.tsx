@@ -25,6 +25,7 @@ import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
 const RandomPagesHeader = () => {
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);
+  const [excludeUsername, setExcludeUsername] = useState('');
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -38,6 +39,9 @@ const RandomPagesHeader = () => {
       if (savedExcludeOwnPreference === 'true') {
         setExcludeOwnPages(true);
       }
+
+      const savedExcludeUsername = localStorage.getItem('randomPages_excludeUsername') || '';
+      setExcludeUsername(savedExcludeUsername);
     }
   }, []);
 
@@ -84,7 +88,8 @@ const RandomPagesHeader = () => {
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
       detail: {
         includePrivate: false,
-        excludeOwnPages: excludeOwnPages
+        excludeOwnPages: excludeOwnPages,
+        excludeUsername: excludeUsername
       }
     });
     window.dispatchEvent(shuffleEvent);
@@ -106,14 +111,7 @@ const RandomPagesHeader = () => {
         <DropdownMenuContent
           align="end"
           sideOffset={8}
-          className="w-72 p-3 text-foreground border border-theme-strong shadow-3xl rounded-2xl z-[200000] bg-popover"
-          style={{
-            position: 'relative',
-            zIndex: 200000,
-            backgroundColor: 'rgba(12, 12, 12, 0.98)',
-            backdropFilter: 'blur(10px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(10px) saturate(160%)'
-          }}
+          className="w-72 p-3 z-[200000] text-foreground"
         >
           {/* Privacy and "Not mine" filters using reusable component */}
 
@@ -181,6 +179,45 @@ const RandomPagesHeader = () => {
               />
             </div>
           </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="my-2" />
+
+          <div className="p-2 space-y-2">
+            <div className="text-sm font-medium text-foreground">Exclude username</div>
+            <input
+              className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              value={excludeUsername}
+              onChange={(e) => setExcludeUsername(e.target.value)}
+              placeholder="Enter username"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleShuffle(e as any);
+                }
+              }}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('randomPages_excludeUsername', excludeUsername.trim());
+                }
+                const shuffleEvent = new CustomEvent('shuffleRandomPages', {
+                  detail: {
+                    includePrivate: false,
+                    excludeOwnPages,
+                    excludeUsername: excludeUsername.trim()
+                  }
+                });
+                window.dispatchEvent(shuffleEvent);
+              }}
+            >
+              Apply
+            </Button>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     );

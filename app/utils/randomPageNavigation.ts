@@ -5,6 +5,8 @@
 export interface RandomPageFilters {
   includePrivate?: boolean;
   excludeOwnPages?: boolean;
+  excludeUsername?: string;
+  includeUsername?: string;
 }
 
 /**
@@ -18,8 +20,10 @@ export function getRandomPageFilters(): RandomPageFilters {
 
   const includePrivate = localStorage.getItem('randomPages_includePrivate') === 'true';
   const excludeOwnPages = localStorage.getItem('randomPages_excludeOwnPages') === 'true';
+  const excludeUsername = localStorage.getItem('randomPages_excludeUsername') || '';
+  const includeUsername = localStorage.getItem('randomPages_includeUsername') || '';
 
-  return { includePrivate, excludeOwnPages };
+  return { includePrivate, excludeOwnPages, excludeUsername, includeUsername };
 }
 
 /**
@@ -50,6 +54,14 @@ export async function getRandomPageId(userId?: string, filters?: RandomPageFilte
     // Add "Not mine" filter preference
     if (effectiveFilters.excludeOwnPages) {
       params.append('excludeOwnPages', 'true');
+    }
+
+    if (effectiveFilters.excludeUsername) {
+      params.append('excludeUsername', effectiveFilters.excludeUsername);
+    }
+
+    if (effectiveFilters.includeUsername) {
+      params.append('includeUsername', effectiveFilters.includeUsername);
     }
 
     const response = await fetch(`/api/random-pages?${params}`);

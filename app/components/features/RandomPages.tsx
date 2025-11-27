@@ -50,6 +50,12 @@ const RandomPages = React.memo(function RandomPages({
     }
     return false;
   });
+  const [excludeUsername, setExcludeUsername] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('randomPages_excludeUsername') || '';
+    }
+    return '';
+  });
 
   console.log('RandomPages: Rendering with props:', { limit, priority });
 
@@ -67,11 +73,14 @@ const RandomPages = React.memo(function RandomPages({
       if (savedExcludeOwnPreference === 'true') {
         setExcludeOwnPages(true);
       }
+
+      const savedExcludeUsername = localStorage.getItem('randomPages_excludeUsername') || '';
+      setExcludeUsername(savedExcludeUsername);
     }
   }, []);
 
   // Fetch random pages from API with throttling
-  const fetchRandomPages = useCallback(async (isShuffling = false, excludeOwn = excludeOwnPages) => {
+  const fetchRandomPages = useCallback(async (isShuffling = false, excludeOwn = excludeOwnPages, excludedUser = excludeUsername) => {
     try {
       // Prevent excessive API calls - throttle to max once per 2 seconds
       const now = Date.now();
@@ -129,6 +138,10 @@ const RandomPages = React.memo(function RandomPages({
         params.append('excludeOwnPages', 'true');
       }
 
+      if (excludedUser) {
+        params.append('excludeUsername', excludedUser.trim());
+      }
+
       // Add shuffle flag to help API provide more variety
       if (isShuffling) {
         params.append('shuffle', 'true');
@@ -175,13 +188,13 @@ const RandomPages = React.memo(function RandomPages({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, user?.uid, denseMode, excludeOwnPages]);
+  }, [limit, user?.uid, denseMode, excludeOwnPages, excludeUsername]);
 
   // Handle shuffle button click
-  const handleShuffle = useCallback((excludeOwn = excludeOwnPages) => {
-    console.log('RandomPages: Shuffle button clicked', { excludeOwn });
-    fetchRandomPages(true, excludeOwn);
-  }, [fetchRandomPages, excludeOwnPages]);
+  const handleShuffle = useCallback((excludeOwn = excludeOwnPages, excludedUser = excludeUsername) => {
+    console.log('RandomPages: Shuffle button clicked', { excludeOwn, excludedUser });
+    fetchRandomPages(true, excludeOwn, excludedUser);
+  }, [fetchRandomPages, excludeOwnPages, excludeUsername]);
 
   // Load localStorage preferences on mount
   useEffect(() => {
@@ -194,21 +207,25 @@ const RandomPages = React.memo(function RandomPages({
   // Initial fetch on component mount with correct filter settings
   useEffect(() => {
     // Use the current excludeOwnPages state (which is initialized from localStorage)
-    fetchRandomPages(false, excludeOwnPages);
-  }, [fetchRandomPages]);
+    fetchRandomPages(false, excludeOwnPages, excludeUsername);
+  }, [fetchRandomPages, excludeOwnPages, excludeUsername]);
 
   // Listen for shuffle events from sticky header
   useEffect(() => {
     const handleShuffleEvent = (event: CustomEvent) => {
       const excludeOwn = event.detail?.excludeOwnPages ?? excludeOwnPages;
-      console.log('RandomPages: Shuffle event received', { excludeOwn });
+      const excludedUser = event.detail?.excludeUsername ?? excludeUsername;
+      console.log('RandomPages: Shuffle event received', { excludeOwn, excludedUser });
 
       // Update local state if settings changed
       if (excludeOwn !== excludeOwnPages) {
         setExcludeOwnPages(excludeOwn);
       }
+      if (excludedUser !== excludeUsername) {
+        setExcludeUsername(excludedUser);
+      }
 
-      handleShuffle(excludeOwn);
+      handleShuffle(excludeOwn, excludedUser);
     };
 
     window.addEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);

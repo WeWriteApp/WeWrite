@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { MoreHorizontal, UserX } from 'lucide-react';
 import { Button } from './button';
 import { Switch } from './switch';
+import { Input } from './input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
   size = 'md'
 }) => {
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);
+  const [excludeUsername, setExcludeUsername] = useState('');
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -38,6 +40,8 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
       if (savedExcludeOwnPreference === 'true') {
         setExcludeOwnPages(true);
       }
+      const savedExcludeUsername = localStorage.getItem('randomPages_excludeUsername') || '';
+      setExcludeUsername(savedExcludeUsername);
     }
   }, []);
 
@@ -55,7 +59,22 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
     if (onFiltersChange) {
       onFiltersChange({
         includePrivate: false,
-        excludeOwnPages: newValue
+        excludeOwnPages: newValue,
+        excludeUsername
+      });
+    }
+  };
+
+  const handleApplyExcludeUsername = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('randomPages_excludeUsername', excludeUsername.trim());
+    }
+
+    if (onFiltersChange) {
+      onFiltersChange({
+        includePrivate: false,
+        excludeOwnPages,
+        excludeUsername: excludeUsername.trim()
       });
     }
   };
@@ -76,7 +95,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
           <MoreHorizontal className={iconSize} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 p-2">
+      <DropdownMenuContent align="end" className="w-72 p-3">
 
         <DropdownMenuItem
           onClick={(e) => {
@@ -108,6 +127,34 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
             />
           </div>
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator className="my-2" />
+
+        <div className="p-2 space-y-2">
+          <div className="text-sm font-medium">Exclude username</div>
+          <Input
+            value={excludeUsername}
+            onChange={(e) => setExcludeUsername(e.target.value)}
+            placeholder="Enter username to exclude"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleApplyExcludeUsername();
+              }
+            }}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleApplyExcludeUsername();
+            }}
+          >
+            Apply
+          </Button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

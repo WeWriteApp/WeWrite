@@ -17,8 +17,10 @@ export async function GET(request) {
     const userId = searchParams.get('userId'); // For access control
     const excludeOwnPages = searchParams.get('excludeOwnPages') === 'true'; // "Not mine" filter
     const isShuffling = searchParams.get('shuffle') === 'true'; // Shuffle flag for more variety
+    const excludeUsername = (searchParams.get('excludeUsername') || '').trim().toLowerCase();
+    const includeUsername = (searchParams.get('includeUsername') || '').trim().toLowerCase();
 
-    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages, 'Is shuffling:', isShuffling);
+    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages, 'Is shuffling:', isShuffling, 'Exclude username:', excludeUsername, 'Include username:', includeUsername);
 
     // Import Firebase modules
     const { getFirebaseAdmin } = await import('../../firebase/firebaseAdmin.ts');
@@ -273,6 +275,16 @@ export async function GET(request) {
     const accessiblePages = pagesWithCompleteInfo.filter(page => {
       // Apply "Not mine" filter - exclude pages authored by current user
       if (excludeOwnPages && userId && page.userId === userId) {
+        return false;
+      }
+
+      // Exclude specific username if provided
+      if (excludeUsername && (page.username || '').toLowerCase() === excludeUsername) {
+        return false;
+      }
+
+      // Include-only username filter: if set, require exact username match
+      if (includeUsername && (page.username || '').toLowerCase() !== includeUsername) {
         return false;
       }
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Head from "next/head";
+import { motion } from "framer-motion";
 import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
 import { auth } from "../firebase/config";
@@ -161,6 +162,7 @@ function NewPageContent() {
 
   // Track selected writing idea
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   // Listen for focus changes to coordinate with title focus
   useEffect(() => {
@@ -1165,6 +1167,11 @@ function NewPageContent() {
       }
     }
 
+    const navigateAway = () => {
+      setIsClosing(true);
+      setTimeout(() => router.push(backUrl), 320);
+    };
+
     // CRITICAL FIX: Use system dialog for unsaved changes confirmation
     if (hasUnsavedChanges) {
       const confirmed = window.confirm(
@@ -1172,11 +1179,11 @@ function NewPageContent() {
       );
 
       if (confirmed) {
-        router.push(backUrl);
+        navigateAway();
       }
       // If not confirmed, stay on the page
     } else {
-      router.push(backUrl);
+      navigateAway();
     }
   };
 
@@ -1188,153 +1195,160 @@ function NewPageContent() {
 
   // Render using the exact same structure as SinglePageView
   return (
-    <SlideUpPage className="min-h-screen bg-background pb-32 md:pb-28">
-      {/* Sticky Save Header - slides down from top when there are unsaved changes */}
-      <StickySaveHeader
-        hasUnsavedChanges={hasUnsavedChanges}
-        onSave={() => handleSave(editorState, 'button')}
-        onCancel={handleCancel}
-        isSaving={isSaving}
-        isAnimatingOut={saveSuccess && !hasUnsavedChanges}
-      />
-
-      <Layout>
-        <Head>
-          <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
-        </Head>
-
-        <ContentPageHeader
-          title={title}
-          username={username}
-          userId={user?.uid}
-          isLoading={isLoading}
-          scrollDirection="none"
-
-          isEditing={isEditing}
-          setIsEditing={handleSetIsEditing}
-          onTitleChange={handleTitleChange}
-          titleError={titleError}
-          canEdit={true} // User can always edit their new page
-          isNewPage={true} // Enable auto-focus for new pages
-          isReply={isReply} // Pass reply status for contextual text
-          titlePreFilled={titlePreFilled} // Indicate if title was pre-filled from link
+    <motion.div
+      initial={{ y: '100%' }}
+      animate={{ y: isClosing ? '100%' : 0 }}
+      transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
+      <SlideUpPage className="min-h-screen bg-background pb-32 md:pb-28" enableAnimation={true}>
+        {/* Sticky Save Header - slides down from top when there are unsaved changes */}
+        <StickySaveHeader
+          hasUnsavedChanges={hasUnsavedChanges}
+          onSave={() => handleSave(editorState, 'button')}
+          onCancel={handleCancel}
+          isSaving={isSaving}
+          isAnimatingOut={saveSuccess && !hasUnsavedChanges}
         />
 
-        {/* Simplified layout container - single consistent padding for all elements */}
-        <div className="px-4 pb-4">
-          {/* Content editor - Clean container without unnecessary card wrapper */}
-          {isEditing && (
-            <div
-              className="animate-in fade-in-0 duration-300"
-              // Removed contain: layout style paint as it creates stacking context that breaks modal positioning
-            >
-              <PageProvider>
-                <ContentDisplay
-                  content={editorState}
-                  isEditable={true}
-                  onChange={handleContentChange}
-                  isSaving={isSaving}
-                  error={error || ""}
-                  isNewPage={true}
-                  placeholder={customPlaceholder}
-                  showToolbar={false}
-                  onInsertLinkRequest={handleInsertLinkRequest}
-                />
-              </PageProvider>
-            </div>
-          )}
+        <Layout>
+          <Head>
+            <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+          </Head>
 
-          {/* Insert Link Button */}
-          {isEditing && (
-            <div className="mt-6 flex justify-center">
-              <Button
-                variant="default"
-                size="lg"
-                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-                onClick={() => {
-                  if (linkInsertionTrigger) {
-                    linkInsertionTrigger();
-                  }
-                }}
-              >
-                <Link className="h-5 w-5" />
-                <span>Insert Link</span>
-              </Button>
-            </div>
-          )}
+          <ContentPageHeader
+            title={title}
+            username={username}
+            userId={user?.uid}
+            isLoading={isLoading}
+            scrollDirection="none"
 
-          {/* Writing Ideas Banner - hide when content is provided via URL (e.g., from highlight text -> add to page) */}
-          {isEditing && !searchParams?.get('content') && (
-            <div className="mt-4">
-              <WritingIdeasBanner
-                onIdeaSelect={handleIdeaSelect}
-                selectedTitle={selectedIdea}
-                initialExpanded={searchParams?.get('ideas') === 'true'}
-              />
-            </div>
-          )}
-
-          {/* Custom Date Field */}
-          {isEditing && (
-            <div className="mt-6">
-              <CustomDateField
-                customDate={intendedCustomDate}
-                canEdit={true}
-                onCustomDateChange={handleCustomDateChange}
-              />
-            </div>
-          )}
-
-          {/* Location Field */}
-          {isEditing && (
-            <div className="mt-6">
-              <LocationField
-                location={location}
-                canEdit={true}
-                onLocationChange={setLocation}
-              />
-            </div>
-          )}
-        </div> {/* Close simplified layout container */}
-
-        {/* Page Footer with bottom save bar - moved outside content container */}
-            {isEditing && (
-              <ContentPageFooter
-                page={null} // New page doesn't have existing page data
-                content={editorState}
-                linkedPageIds={[]} // New page doesn't have linked pages yet
-                isEditing={true} // Always editing for new pages
-                canEdit={true} // User can always edit their new page
-                isOwner={true} // User owns their new page
-                title={title}
-                location={location}
-                onTitleChange={handleTitleChange}
-                onLocationChange={setLocation}
-                onSave={async () => {
-                  const success = await handleSave(editorState, 'button');
-                  if (success) {
-                    // Navigation will be handled by handleSave
-                  }
-                }}
-                onCancel={handleBackWithCheck}
-                onDelete={null} // No delete for new pages
-                onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
-                isSaving={isSaving}
-                error={error}
-                titleError={titleError}
-                hasUnsavedChanges={hasUnsavedChanges}
-              />
-            )}
-        {!isEditing && (
-          <AllocationBar
-            pageId="new-page"
-            pageTitle="New Page"
-            authorId={user?.uid}
-            visible={false}
+            isEditing={isEditing}
+            setIsEditing={handleSetIsEditing}
+            onTitleChange={handleTitleChange}
+            titleError={titleError}
+            canEdit={true} // User can always edit their new page
+            isNewPage={true} // Enable auto-focus for new pages
+            isReply={isReply} // Pass reply status for contextual text
+            titlePreFilled={titlePreFilled} // Indicate if title was pre-filled from link
+            onBack={handleBackWithCheck}
           />
-        )}
-      </Layout>
-    </SlideUpPage>
+
+          {/* Simplified layout container - single consistent padding for all elements */}
+          <div className="px-4 pb-4">
+            {/* Content editor - Clean container without unnecessary card wrapper */}
+            {isEditing && (
+              <div
+                className="animate-in fade-in-0 duration-300"
+                // Removed contain: layout style paint as it creates stacking context that breaks modal positioning
+              >
+                <PageProvider>
+                  <ContentDisplay
+                    content={editorState}
+                    isEditable={true}
+                    onChange={handleContentChange}
+                    isSaving={isSaving}
+                    error={error || ""}
+                    isNewPage={true}
+                    placeholder={customPlaceholder}
+                    showToolbar={false}
+                    onInsertLinkRequest={handleInsertLinkRequest}
+                  />
+                </PageProvider>
+              </div>
+            )}
+
+            {/* Insert Link Button */}
+            {isEditing && (
+              <div className="mt-6 flex justify-center">
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+                  onClick={() => {
+                    if (linkInsertionTrigger) {
+                      linkInsertionTrigger();
+                    }
+                  }}
+                >
+                  <Link className="h-5 w-5" />
+                  <span>Insert Link</span>
+                </Button>
+              </div>
+            )}
+
+            {/* Writing Ideas Banner - hide when content is provided via URL (e.g., from highlight text -> add to page) */}
+            {isEditing && !searchParams?.get('content') && (
+              <div className="mt-4">
+                <WritingIdeasBanner
+                  onIdeaSelect={handleIdeaSelect}
+                  selectedTitle={selectedIdea}
+                  initialExpanded={searchParams?.get('ideas') === 'true'}
+                />
+              </div>
+            )}
+
+            {/* Custom Date Field */}
+            {isEditing && (
+              <div className="mt-6">
+                <CustomDateField
+                  customDate={intendedCustomDate}
+                  canEdit={true}
+                  onCustomDateChange={handleCustomDateChange}
+                />
+              </div>
+            )}
+
+            {/* Location Field */}
+            {isEditing && (
+              <div className="mt-6">
+                <LocationField
+                  location={location}
+                  canEdit={true}
+                  onLocationChange={setLocation}
+                />
+              </div>
+            )}
+          </div> {/* Close simplified layout container */}
+
+          {/* Page Footer with bottom save bar - moved outside content container */}
+              {isEditing && (
+                <ContentPageFooter
+                  page={null} // New page doesn't have existing page data
+                  content={editorState}
+                  linkedPageIds={[]} // New page doesn't have linked pages yet
+                  isEditing={true} // Always editing for new pages
+                  canEdit={true} // User can always edit their new page
+                  isOwner={true} // User owns their new page
+                  title={title}
+                  location={location}
+                  onTitleChange={handleTitleChange}
+                  onLocationChange={setLocation}
+                  onSave={async () => {
+                    const success = await handleSave(editorState, 'button');
+                    if (success) {
+                      // Navigation will be handled by handleSave
+                    }
+                  }}
+                  onCancel={handleBackWithCheck}
+                  onDelete={null} // No delete for new pages
+                  onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
+                  isSaving={isSaving}
+                  error={error}
+                  titleError={titleError}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                />
+              )}
+          {!isEditing && (
+            <AllocationBar
+              pageId="new-page"
+              pageTitle="New Page"
+              authorId={user?.uid}
+              visible={false}
+            />
+          )}
+        </Layout>
+      </SlideUpPage>
+    </motion.div>
   );
 }
 

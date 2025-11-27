@@ -91,6 +91,7 @@ export function SlideUpPage({
   const handleAnimationComplete = () => {
     console.log('SlideUpPage: Animation completed');
     setIsAnimationComplete(true);
+    setShouldAnimate(false); // unmount fixed overlay to restore scrolling
   };
 
   // If animation is disabled or not needed, render normally with text selection enabled
@@ -126,7 +127,7 @@ export function SlideUpPage({
             onAnimationComplete={handleAnimationComplete}
             style={{
               // Prevent any layout shifts
-              overflow: 'hidden'
+              overflow: 'auto'
             }}
           >
             {/* Solid background to prevent any content bleeding */}

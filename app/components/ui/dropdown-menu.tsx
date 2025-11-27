@@ -242,11 +242,10 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
     <div
       ref={contentRef}
       className={cn(
-        // Use universal card system with floating variant
+        // Use universal card system with floating variant and glassmorphism
         "wewrite-card wewrite-floating",
-        "min-w-[8rem] overflow-hidden rounded-2xl",
-        /* Shadow removed - user prefers no shadows */
-        "p-2",
+        "min-w-[12rem] overflow-hidden rounded-2xl border border-border/70 bg-card/90 backdrop-blur-lg shadow-2xl",
+        "p-3",
         getAnimationClasses(),
         className
       )}

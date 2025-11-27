@@ -7,6 +7,7 @@ import RandomPages from '../components/features/RandomPages';
 import { Shuffle, MoreHorizontal, Grid3X3, UserX } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
+import { Input } from '../components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,12 @@ export default function RandomPagesPage() {
     }
     return false;
   });
+  const [excludeUsername, setExcludeUsername] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('randomPages_excludeUsername') || '';
+    }
+    return '';
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -47,6 +54,9 @@ export default function RandomPagesPage() {
       if (savedDenseModePreference === 'true') {
         setDenseMode(true);
       }
+
+      const savedExcludeUsername = localStorage.getItem('randomPages_excludeUsername') || '';
+      setExcludeUsername(savedExcludeUsername);
 
       // Note: excludeOwnPages is already initialized from localStorage in useState
       // No need to set it again here to avoid double state updates
@@ -84,7 +94,44 @@ export default function RandomPagesPage() {
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
       detail: {
         includePrivate: false,
-        excludeOwnPages: newValue
+        excludeOwnPages: newValue,
+        excludeUsername
+      }
+    });
+    window.dispatchEvent(shuffleEvent);
+  };
+
+  const applyExcludeUsername = () => {
+    const value = excludeUsername.trim();
+    const includeValue = includeUsername.trim();
+
+    if (filterMode === 'include') {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('randomPages_includeUsername', includeValue);
+        localStorage.setItem('randomPages_filterMode', 'include');
+      }
+      const shuffleEvent = new CustomEvent('shuffleRandomPages', {
+        detail: {
+          includePrivate: false,
+          excludeOwnPages,
+          excludeUsername: '',
+          includeUsername: includeValue
+        }
+      });
+      window.dispatchEvent(shuffleEvent);
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('randomPages_excludeUsername', value);
+      localStorage.setItem('randomPages_filterMode', 'exclude');
+    }
+    const shuffleEvent = new CustomEvent('shuffleRandomPages', {
+      detail: {
+        includePrivate: false,
+        excludeOwnPages,
+        excludeUsername: value,
+        includeUsername: ''
       }
     });
     window.dispatchEvent(shuffleEvent);
@@ -96,7 +143,9 @@ export default function RandomPagesPage() {
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
       detail: {
         includePrivate: false,
-        excludeOwnPages: excludeOwnPages
+        excludeOwnPages: excludeOwnPages,
+        excludeUsername: filterMode === 'exclude' ? excludeUsername : '',
+        includeUsername: filterMode === 'include' ? includeUsername : ''
       }
     });
     window.dispatchEvent(shuffleEvent);
@@ -224,11 +273,11 @@ export default function RandomPagesPage() {
                       Show only page titles as pill links
                     </span>
                   </div>
-                </div>
-                <div className="flex-shrink-0 ml-3">
-                  <Switch
-                    checked={denseMode}
-                    onCheckedChange={(checked) => {
+              </div>
+              <div className="flex-shrink-0 ml-3">
+                <Switch
+                  checked={denseMode}
+                  onCheckedChange={(checked) => {
                       console.log('🔍 Dense mode switch toggled to:', checked);
                       handleDenseModeToggle();
                     }}
@@ -237,15 +286,43 @@ export default function RandomPagesPage() {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    aria-label="Toggle dense mode"
-                  />
-                </div>
+                  aria-label="Toggle dense mode"
+                />
               </div>
             </div>
-          </>
-        )}
-      </div>
-    );
+
+            <div className="h-px bg-border my-2" />
+
+            <div className="space-y-2 py-2">
+              <div className="text-sm font-medium">Exclude username</div>
+              <Input
+                value={excludeUsername}
+                onChange={(e) => setExcludeUsername(e.target.value)}
+                placeholder="Enter username"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyExcludeUsername();
+                  }
+                }}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  applyExcludeUsername();
+                }}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
   };
 
   return (
@@ -279,6 +356,25 @@ export default function RandomPagesPage() {
                       onCheckedChange={handleDenseModeToggle}
                       aria-label="Toggle dense mode"
                     />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Exclude username</span>
+                    <Input
+                      value={excludeUsername}
+                      onChange={(e) => setExcludeUsername(e.target.value)}
+                      placeholder="Enter username"
+                      className="h-8 w-44"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          applyExcludeUsername();
+                        }
+                      }}
+                    />
+                    <Button variant="secondary" size="sm" onClick={applyExcludeUsername}>
+                      Apply
+                    </Button>
                   </div>
                 </div>
 
