@@ -552,31 +552,34 @@ const FilteredSearchResults = forwardRef(({
       <div className="relative flex-shrink-0 mb-3 min-w-0">
         <div className="relative">
           {isLinkEditor ? (
-            <div className="relative">
-              <ClearableInput
-                ref={ref || searchInputRef}
-                type="text"
-                placeholder={placeholder}
-                value={search}
-                onChange={handleSearchChange}
-                onClear={handleClear}
-                className={cn("w-full", (rightButtons || onFilterToggle) ? "pr-20" : "")}
-                autoComplete="off"
-              />
-              {/* Right buttons inside input */}
-              {(rightButtons || onFilterToggle) && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <ClearableInput
+                  ref={ref || searchInputRef}
+                  type="text"
+                  placeholder={placeholder}
+                  value={search}
+                  onChange={handleSearchChange}
+                  onClear={handleClear}
+                  className="w-full"
+                  autoComplete="off"
+                />
+              </div>
+              {/* Filter button outside the input container */}
+              {onFilterToggle && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`h-9 w-9 p-0 flex-shrink-0 ${showFilters ? 'bg-muted' : ''}`}
+                >
+                  <Filter className="h-4 w-4" />
+                </Button>
+              )}
+              {/* Additional right buttons outside the input container */}
+              {rightButtons && (
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {rightButtons}
-                  {onFilterToggle && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFilters(!showFilters)}
-                      className={`h-6 w-6 p-0 ${showFilters ? 'bg-muted' : ''}`}
-                    >
-                      <Filter className="h-3 w-3" />
-                    </Button>
-                  )}
                 </div>
               )}
             </div>

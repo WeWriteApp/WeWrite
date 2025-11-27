@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '.
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import logger from '../../utils/logger';
 import { ANIMATION_DURATIONS, MODAL_CONFIG, UI_TEXT, TABS, LINK_TYPES } from './constants';
+import PillLink from '../utils/PillLink';
+import { UsernameBadge } from '../ui/UsernameBadge';
 
 interface LinkEditorModalProps {
   isOpen: boolean;
@@ -44,6 +46,7 @@ export default function LinkEditorModal({
   const [activeTab, setActiveTab] = useState(TABS.PAGES);
   const [externalUrl, setExternalUrl] = useState('');
   const [displayText, setDisplayText] = useState('');
+  const [externalCustomText, setExternalCustomText] = useState('');
   const [showAuthor, setShowAuthor] = useState(false);
   const [customText, setCustomText] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
@@ -53,15 +56,20 @@ export default function LinkEditorModal({
   const customTextInputRef = useRef<HTMLInputElement>(null);
   const externalCustomTextInputRef = useRef<HTMLInputElement>(null);
 
-  // Modal title based on editing state
-  const modalTitle = isEditing ? UI_TEXT.MODAL_TITLES.EDIT_LINK : UI_TEXT.MODAL_TITLES.CREATE_LINK;
+  // REMOVED: Focus lock mechanism that was interfering with input behavior
+  // const [focusLocked, setFocusLocked] = useState(false);
+
+  // Modal title based on editing state and link type
+  const modalTitle = isEditing
+    ? `Edit ${editingLink?.type === 'external' ? 'External' : 'Internal'} Link`
+    : UI_TEXT.MODAL_TITLES.CREATE_LINK;
   const buttonText = isEditing ? 'Update Link' : 'Create Link';
 
-  // Mobile detection
+  // Mobile detection (optimized to prevent unnecessary re-renders)
   useEffect(() => {
     const checkMobile = () => {
       const isMobileSize = window.innerWidth < MODAL_CONFIG.MOBILE_BREAKPOINT;
-      setIsMobile(isMobileSize);
+      setIsMobile(prev => prev !== isMobileSize ? isMobileSize : prev); // Only update if changed
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -69,106 +77,189 @@ export default function LinkEditorModal({
   }, []);
 
   // Initialize modal state when it opens
+  // CRITICAL FIX: Move initialization to useEffect to prevent constant re-renders
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Initialize state when modal opens - FIXED: Remove selectedText from dependencies to prevent re-initialization during typing
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen && !hasInitialized) {
+      if (editingLink) {
+        // EDITING MODE: Pre-populate fields from existing link
+        const { type, data } = editingLink;
+        console.log('🔥 EDITING LINK DATA:', { type, data });
 
-    if (editingLink) {
-      // EDITING MODE: Pre-populate fields from existing link
-      const { type, data } = editingLink;
-      console.log('🔥 EDITING LINK DATA:', { type, data });
+        if (type === 'external') {
+          setActiveTab('external');
+          setExternalUrl(data.url || '');
 
-      if (type === 'external') {
-        setActiveTab('external');
-        setExternalUrl(data.url || '');
-        setDisplayText(data.currentDisplayText || data.text || data.url || '');
-        setCustomText(!!data.text);
-      } else {
-        // Page, user, or compound link
-        setActiveTab('pages');
-        setSelectedPage(data);
-        setDisplayText(data.currentDisplayText || data.text || data.title || '');
-        setCustomText(!!data.text);
-        setShowAuthor(type === 'compound');
-      }
-    } else {
-      // NEW LINK MODE: Reset to defaults
-      setActiveTab('pages');
-      setExternalUrl('');
-      setDisplayText(selectedText || '');
-      setShowAuthor(false);
-      setCustomText(false);
-      setSelectedPage(null);
-    }
-  }, [isOpen, editingLink, selectedText]);
+          // Initialize external link with canonical LinkNode structure
+          const isCustomTextLink = data.isCustomText === true;
+          const customTextValue = isCustomTextLink ? (data.customText || '') : '';
 
-  // Focus the external URL input when external tab is selected
-  useEffect(() => {
-    if (isOpen && activeTab === 'external') {
-      // Small delay to ensure the tab content is rendered
-      const timer = setTimeout(() => {
-        if (externalUrlInputRef.current) {
-          externalUrlInputRef.current.focus();
+          console.log('🔧 [MODAL INIT] External link initialization:', {
+            isCustomTextLink,
+            customTextValue,
+            dataCustomText: data.customText,
+            dataIsCustomText: data.isCustomText
+          });
+
+          // For external links, displayText is not used for the custom text input
+          // externalCustomText is used instead
+          setDisplayText(''); // Not used for external links
+          setExternalCustomText(customTextValue);
+          setCustomText(isCustomTextLink);
+
+          // Additional debugging to verify state is set correctly
+          console.log('🔧 [MODAL INIT] External states being set:', {
+            displayText: '',
+            externalCustomText: customTextValue,
+            customText: isCustomTextLink
+          });
+        } else {
+          // Page, user, or compound link
+          setActiveTab('pages');
+          setSelectedPage(data);
+
+          // Initialize internal link with canonical LinkNode structure
+          const isCustomTextLink = data.isCustomText === true;
+          const customTextValue = isCustomTextLink ? (data.customText || '') : '';
+
+          console.log('🔧 [MODAL INIT] Internal link initialization:', {
+            isCustomTextLink,
+            customTextValue,
+            dataCustomText: data.customText,
+            dataIsCustomText: data.isCustomText,
+            pageTitle: data.pageTitle || data.title,
+            pageId: data.pageId
+          });
+
+          // CRITICAL FIX: Set states in the correct order and ensure they're applied
+          setDisplayText(customTextValue);
+          setCustomText(isCustomTextLink);
+          setShowAuthor(type === 'compound');
+
+          // Additional debugging to verify state is set correctly
+          console.log('🔧 [MODAL INIT] States being set:', {
+            displayText: customTextValue,
+            customText: isCustomTextLink,
+            showAuthor: type === 'compound'
+          });
         }
-      }, ANIMATION_DURATIONS.FOCUS_DELAY);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, activeTab]);
+      } else {
+        // NEW LINK MODE: Reset to defaults only when first opening
+        setActiveTab('pages');
+        setExternalUrl('');
+        setExternalCustomText('');
+        setShowAuthor(false);
+        setCustomText(false);
+        setSelectedPage(null);
+        setDisplayText(selectedText || '');
+      }
 
-  // Handle tab change with proper focus management
+      setHasInitialized(true);
+    }
+  }, [isOpen, hasInitialized, editingLink]); // CRITICAL FIX: Removed selectedText from dependencies
+
+  // Reset initialization flag when modal closes
+  useEffect(() => {
+    if (!isOpen && hasInitialized) {
+      setHasInitialized(false);
+    }
+  }, [isOpen, hasInitialized]);
+
+  // Focus the external URL input when external tab is selected (DISABLED to prevent focus stealing)
+  // useEffect(() => {
+  //   if (isOpen && activeTab === 'external') {
+  //     // Small delay to ensure the tab content is rendered
+  //     const timer = setTimeout(() => {
+  //       if (externalUrlInputRef.current) {
+  //         externalUrlInputRef.current.focus();
+  //       }
+  //     }, ANIMATION_DURATIONS.FOCUS_DELAY);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [isOpen, activeTab]);
+
+  // Handle tab change (FIXED: removed state resets that were causing focus loss)
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
 
-    // Reset selections when switching tabs
-    setSelectedPage(null);
-    setExternalUrl('');
-    setDisplayText('');
-
-    // Focus appropriate input when tab changes
-    if (newTab === 'external') {
-      setTimeout(() => {
-        if (externalUrlInputRef.current) {
-          externalUrlInputRef.current.focus();
-        }
-      }, 100);
-    } else if (newTab === 'pages') {
-      setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
-      }, 100);
+    // REMOVED: State resets that were causing input fields to lose focus and values
+    // Only reset selections when switching tabs, not input values
+    if (newTab !== activeTab) {
+      setSelectedPage(null);
+      // DON'T reset externalUrl or displayText - let users keep their input
     }
+
+    // Focus management disabled to prevent focus stealing from input fields
+    // Users can manually click on inputs when they want to type
   };
 
-  // Handle custom text toggle change
-  const handleCustomTextToggle = (enabled: boolean) => {
+  // Handle custom text toggle change - OPTIMIZED: Use useCallback to prevent re-renders
+  const handleCustomTextToggle = useCallback((enabled: boolean) => {
+    console.log('🔧 [TOGGLE] Custom text toggle changed:', { enabled, currentState: customText });
     setCustomText(enabled);
 
     if (enabled) {
-      // When enabling custom text, pre-fill with appropriate default text
-      if (!displayText) {
-        const defaultText = getDefaultDisplayText();
-        if (defaultText) {
-          setDisplayText(defaultText);
+      // When enabling custom text, pre-fill with current display text if available
+      if (activeTab === 'external') {
+        // For external links, pre-fill with current display text or URL
+        if (!externalCustomText) {
+          const currentDisplayText = editingLink?.element?.children?.[0]?.text || externalUrl;
+          if (currentDisplayText && currentDisplayText !== externalUrl) {
+            setExternalCustomText(currentDisplayText);
+          }
+        }
+      } else {
+        // For internal links, pre-fill with current display text or page title
+        if (!displayText) {
+          const currentDisplayText = editingLink?.element?.children?.[0]?.text || selectedPage?.title || '';
+          setDisplayText(currentDisplayText);
         }
       }
 
-      // Focus and select the custom text input after animation completes
-      setTimeout(() => {
-        const inputRef = activeTab === 'external' ? externalCustomTextInputRef : customTextInputRef;
-        if (inputRef.current) {
-          // Blur any currently focused element first
-          if (document.activeElement && document.activeElement !== inputRef.current) {
-            (document.activeElement as HTMLElement).blur();
-          }
-          inputRef.current.focus();
-          inputRef.current.select();
-        }
-      }, 350); // Wait for animation to complete (300ms + 50ms buffer)
+      // Focus management disabled to prevent focus stealing from input fields
+      // Users can manually click on the custom text input when they want to type
     } else {
       // When disabling custom text, clear the display text to revert to auto-generated
-      setDisplayText('');
+      if (activeTab === 'external') {
+        setExternalCustomText('');
+      } else {
+        setDisplayText('');
+      }
     }
-  };
+  }, [activeTab, externalCustomText, displayText, editingLink, externalUrl, selectedPage]);
+
+  // OPTIMIZED: Memoized onChange handlers to prevent unnecessary re-renders
+  const handleDisplayTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setDisplayText(e.target.value);
+  }, []);
+
+  const handleExternalCustomTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setExternalCustomText(e.target.value);
+  }, []);
+
+  const handleExternalUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setExternalUrl(e.target.value);
+  }, []);
+
+  // DISABLED: Focus management that was causing focus stealing after typing
+  // Users can manually click on the custom text input when they want to type
+  // useEffect(() => {
+  //   if (customText) {
+  //     const timer = setTimeout(() => {
+  //       if (activeTab === 'external' && externalCustomTextInputRef.current) {
+  //         externalCustomTextInputRef.current.focus();
+  //       } else if (activeTab === 'pages' && customTextInputRef.current) {
+  //         customTextInputRef.current.focus();
+  //       }
+  //     }, 150); // Slightly longer delay to ensure animation completes
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [customText, activeTab]);
 
   // Helper function to get default display text based on current context
   const getDefaultDisplayText = () => {
@@ -186,14 +277,22 @@ export default function LinkEditorModal({
     return '';
   };
 
-  // Helper function to create consistent link data
-  const createLinkData = (page: any, customDisplayText?: string) => {
+  // CRITICAL FIX: Create link data with proper custom text handling
+  const createLinkData = useCallback((page: any, customDisplayText?: string) => {
+    const pageId = page.id || page.pageId;
+    const pageTitle = page.title || page.pageTitle;
+    // Determine if we have custom text - respect the user's toggle choice
+    const isCustomTextValue = customText; // Use the toggle state directly
+    const finalCustomText = isCustomTextValue ? (customDisplayText?.trim() || pageTitle) : '';
+
     const linkData = {
       type: showAuthor ? 'compound' : 'page',
-      pageId: page.id,
-      pageTitle: page.title,
-      originalPageTitle: page.title,
-      text: customDisplayText || '', // Empty string means revert to auto-generated
+      pageId,
+      pageTitle,
+      originalPageTitle: pageTitle,
+      text: finalCustomText, // Use the final custom text (or empty if not custom)
+      isCustomText: isCustomTextValue, // STANDARDIZED: Use only isCustomText for consistency
+      customText: isCustomTextValue ? finalCustomText : undefined, // Set customText field
       showAuthor,
       authorUsername: page.username,
       authorUserId: page.userId,
@@ -204,14 +303,29 @@ export default function LinkEditorModal({
       isEditing,
       element: editingLink?.element,
       isNew: page.isNew,
-      url: `/${page.id}` // Add URL for consistency
+      url: pageId ? `/${pageId}` : undefined // Add URL for consistency
     };
 
-    return linkData;
-  };
+    console.log('🔗 [MODAL DEBUG] Creating link data:', {
+      customTextToggle: customText,
+      customDisplayText: customDisplayText,
+      finalCustomText: finalCustomText,
+      isCustomTextValue: isCustomTextValue,
+      linkDataPreview: {
+        isCustomText: linkData.isCustomText,
+        text: linkData.text,
+        customText: linkData.customText,
+        pageTitle: linkData.pageTitle
+      },
+      isEditing: isEditing,
+      editingElement: editingLink?.element
+    });
 
-  // Handle page selection from search results
-  const handlePageSelect = (page: any) => {
+    return linkData;
+  }, [showAuthor, customText, isEditing, editingLink]);
+
+  // CRITICAL FIX: Memoize page selection to prevent React state errors
+  const handlePageSelect = useCallback((page: any) => {
     setSelectedPage(page);
 
     // If custom text and show author are both disabled, create the link immediately
@@ -227,32 +341,46 @@ export default function LinkEditorModal({
         onClose();
       }, 50);
     }
-  };
+  }, [customText, showAuthor, createLinkData, onInsertLink, onClose]);
 
-  // Handle external link creation
-  const handleCreateExternalLink = () => {
+  // CRITICAL FIX: Create external link with proper custom text handling
+  const handleCreateExternalLink = useCallback(() => {
     if (!externalUrl.trim()) {
       toast.error('Please enter a URL');
       return;
     }
 
+    // Determine if we have custom text
+    const hasCustomTextValue = customText && externalCustomText && externalCustomText.trim() !== '';
+
     const linkData = {
       type: 'external',
       url: externalUrl.trim(),
-      text: customText ? displayText.trim() : '',
+      text: hasCustomTextValue ? externalCustomText.trim() : '', // Only set text if we have custom text
+      hasCustomText: hasCustomTextValue, // Only true if we actually have custom text
+      isCustomText: hasCustomTextValue, // For LinkNode compatibility
+      customText: hasCustomTextValue ? externalCustomText.trim() : undefined, // Set customText field
+      isExternal: true,
       isEditing,
       element: editingLink?.element
     };
+
+    console.log('🔗 Creating external link data:', {
+      hasCustomText: hasCustomTextValue,
+      customText: externalCustomText,
+      finalText: linkData.text,
+      url: externalUrl
+    });
 
     onInsertLink(linkData);
     // Small delay to ensure Slate operations complete before modal closes
     setTimeout(() => {
       onClose();
     }, 50);
-  };
+  }, [externalUrl, customText, externalCustomText, isEditing, editingLink, onInsertLink, onClose]);
 
-  // Handle page link creation
-  const handleCreatePageLink = () => {
+  // CRITICAL FIX: Memoize page link creation to prevent React state errors
+  const handleCreatePageLink = useCallback(() => {
     if (!selectedPage) {
       toast.error('Please select a page');
       return;
@@ -261,41 +389,187 @@ export default function LinkEditorModal({
     const customDisplayText = customText ? displayText.trim() : '';
     const linkData = createLinkData(selectedPage, customDisplayText);
 
+    console.log('🔗 [MODAL DEBUG] About to save link:', {
+      selectedPage: selectedPage,
+      customText: customText,
+      displayText: displayText,
+      customDisplayText: customDisplayText,
+      finalLinkData: linkData,
+      isEditing: isEditing
+    });
+
     onInsertLink(linkData);
+
+    console.log('🔗 [MODAL DEBUG] Called onInsertLink with data:', linkData);
+
     // Small delay to ensure Slate operations complete before modal closes
     setTimeout(() => {
       onClose();
     }, 50);
-  };
+  }, [selectedPage, customText, displayText, createLinkData, onInsertLink, onClose]);
 
-  // Shared content component for both Dialog and Sheet
-  const ModalContent = () => (
+  // CRITICAL FIX: Remove problematic memoization that was causing React state errors
+  // Focus is now maintained through proper event handling and useCallback optimization
+
+  // Generate preview data for the link preview section
+  const generatePreviewData = useCallback(() => {
+    console.log('🔧 [PREVIEW] Generating preview data:', {
+      activeTab,
+      customText,
+      displayText,
+      externalCustomText,
+      hasInitialized,
+      isEditing,
+      editingLinkData: editingLink?.data
+    });
+
+    if (activeTab === 'external') {
+      // External link preview
+      const linkText = customText && externalCustomText.trim()
+        ? externalCustomText.trim()
+        : externalUrl || 'External Link';
+
+      return {
+        type: 'external',
+        text: linkText,
+        url: externalUrl,
+        showAuthor: false
+      };
+    } else {
+      // Internal page link preview - FIXED: Show custom text when enabled, page title when disabled
+      // CRITICAL FIX: For editing mode, always check original data first, then fall back to state
+      let linkText;
+
+      // Follow canonical LinkNode structure for preview
+      if (customText && displayText.trim()) {
+        // Custom text is enabled and has content
+        linkText = displayText.trim();
+      } else if (isEditing && editingLink?.data) {
+        // Editing mode: use original page title
+        linkText = editingLink.data.pageTitle || editingLink.data.title || selectedPage?.title || 'Link';
+      } else {
+        // New link mode: use selected page title
+        linkText = selectedPage?.title || 'Select a page';
+      }
+
+      // CRITICAL FIX: Improve author data resolution for editing mode
+      let authorUsername, authorUserId;
+
+      if (selectedPage) {
+        // Use selected page data
+        authorUsername = selectedPage.username;
+        authorUserId = selectedPage.userId;
+      } else if (isEditing && editingLink?.data) {
+        // Use editing link data - check multiple possible fields
+        authorUsername = editingLink.data.authorUsername || editingLink.data.username;
+        authorUserId = editingLink.data.authorUserId || editingLink.data.userId;
+      } else {
+        // Fallback to current user
+        authorUsername = user?.username;
+        authorUserId = user?.uid;
+      }
+
+      return {
+        type: 'page',
+        text: linkText,
+        pageId: selectedPage?.id || (isEditing ? editingLink?.data?.pageId : null),
+        url: selectedPage?.id ? `/${selectedPage.id}` : (isEditing ? editingLink?.data?.url : '#'),
+        showAuthor: showAuthor,
+        authorUsername,
+        authorUserId
+      };
+    }
+  }, [activeTab, customText, externalCustomText, externalUrl, displayText, selectedPage, showAuthor, isEditing, editingLink, user, hasInitialized]);
+
+  const modalContent = (
     <>
-      {/* Link Type Selection - Fixed at top */}
-      <div className="flex-shrink-0 mb-4">
-        <SegmentedControl value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
-          <SegmentedControlList className="grid w-full grid-cols-2 min-w-0">
-            <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">WeWrite </span>Pages
-            </SegmentedControlTrigger>
-            <SegmentedControlTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
-              External<span className="hidden sm:inline"> Link</span>
-            </SegmentedControlTrigger>
-          </SegmentedControlList>
-        </SegmentedControl>
+      {/* Link Preview Section */}
+      <div className="flex-shrink-0 mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+        <Label className="text-sm font-medium text-foreground mb-2 block">
+          Link Preview
+        </Label>
+        <div className="flex items-center gap-2">
+          {(() => {
+            const preview = generatePreviewData();
+
+            if (preview.type === 'external') {
+              return (
+                <PillLink
+                  href={preview.url || '#'}
+                  isPublic={true}
+                  className="external-link-preview"
+                  clickable={false}
+                >
+                  {preview.text}
+                </PillLink>
+              );
+            } else {
+              // Internal page link preview
+              if (preview.showAuthor && preview.authorUsername) {
+                return (
+                  <>
+                    <PillLink
+                      href={preview.url || '#'}
+                      isPublic={true}
+                      className="page-link-preview"
+                      clickable={false}
+                    >
+                      {preview.text}
+                    </PillLink>
+                    <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
+                    <UsernameBadge
+                      userId={preview.authorUserId || ''}
+                      username={preview.authorUsername?.replace(/^@/, '') || 'Loading...'}
+                      size="sm"
+                      variant="pill"
+                      pillVariant="secondary"
+                    />
+                  </>
+                );
+              } else {
+                return (
+                  <PillLink
+                    href={preview.url || '#'}
+                    isPublic={true}
+                    className="page-link-preview"
+                    clickable={false}
+                  >
+                    {preview.text}
+                  </PillLink>
+                );
+              }
+            }
+          })()}
+        </div>
       </div>
 
+      {/* Link Type Selection - Only show when creating new links */}
+      {!isEditing && (
+        <div className="flex-shrink-0 mb-4">
+          <SegmentedControl value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
+            <SegmentedControlList className="grid w-full grid-cols-2 min-w-0">
+              <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">WeWrite </span>Pages
+              </SegmentedControlTrigger>
+              <SegmentedControlTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+                External<span className="hidden sm:inline"> Link</span>
+              </SegmentedControlTrigger>
+            </SegmentedControlList>
+          </SegmentedControl>
+        </div>
+      )}
+
       {/* Main Content Area - Scrollable */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <SegmentedControl value={activeTab} onValueChange={handleTabChange} className="h-full">
-        <SegmentedControlContent value="pages" className="h-full flex flex-col transition-all duration-200 ease-out">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {activeTab === 'pages' ? (
+          <div className="h-full flex flex-col transition-all duration-200 ease-out">
           {/* Link Options - Always visible horizontal row */}
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <label htmlFor="custom-text-settings" className="text-sm font-medium">
+                <label htmlFor="custom-text-settings" className="text-sm font-medium text-foreground">
                   Custom link text
                 </label>
                 <Switch
@@ -306,7 +580,7 @@ export default function LinkEditorModal({
               </div>
 
               <div className="flex items-center gap-2">
-                <label htmlFor="show-author-settings" className="text-sm font-medium">
+                <label htmlFor="show-author-settings" className="text-sm font-medium text-foreground">
                   Show author
                 </label>
                 <Switch
@@ -318,79 +592,135 @@ export default function LinkEditorModal({
             </div>
           </div>
 
-          {/* Custom Text Input - Show when enabled with smooth animation */}
-          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            customText ? 'max-h-20 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'
-          }`}>
-            <div className="flex-shrink-0">
-              <Input
-                ref={customTextInputRef}
-                id="display-text"
-                value={displayText}
-                onChange={(e) => setDisplayText(e.target.value)}
-                placeholder="Enter custom display text"
-                className="w-full min-w-0"
-                autoComplete="off"
-              />
-            </div>
+          {/* Page Link Header - Moved below toggle switches */}
+          <div className="mb-3">
+            <Label className="text-sm font-medium text-foreground">
+              Link Target
+            </Label>
           </div>
 
-          {/* Search Results - scrollable area */}
-          <div className="flex-1 min-h-0 w-full overflow-hidden">
-            <FilteredSearchResults
-              ref={searchInputRef}
-              onSelect={handlePageSelect}
-              userId={user?.uid}
-              placeholder="Search for pages..."
-              initialSearch={
-                // When editing, pre-fill with current page title for easy replacement
-                editingLink && (editingLink.type === 'page' || editingLink.type === 'compound')
-                  ? editingLink.data.title || selectedText
-                  : selectedText
-              }
-              autoFocus={!selectedText && !editingLink}
-              className="h-full"
-              preventRedirect={true}
-              linkedPageIds={linkedPageIds}
-              currentPageId={currentPageId}
-              hideCreateButton={isEditing}
-              onFilterToggle={(showFilters) => {
-                // Filter toggle is handled internally by FilteredSearchResults
-                // We just need to pass a callback to enable the filter button
-                return true;
-              }}
-            />
-          </div>
-
-          {/* Action Button - Show when custom text is enabled, show author is enabled, or when editing */}
-          {(customText || showAuthor || isEditing) && (
-            <div className="flex-shrink-0 mt-3">
-              <Button
-                onClick={() => handleCreatePageLink()}
-                disabled={!selectedPage}
-                className="w-full"
-              >
-                <Link className="h-4 w-4 mr-2" />
-                {isEditing ? 'Update Link' : 'Save'}
-              </Button>
+          {/* Custom Text Input - Show when enabled */}
+          {customText && (
+            <div className="flex-shrink-0 mb-3 animate-in slide-in-from-top-2 duration-200" style={{ pointerEvents: 'auto' }}>
+              <div className="space-y-2">
+                <Input
+                  ref={customTextInputRef}
+                  id="display-text"
+                  value={displayText}
+                  onChange={handleDisplayTextChange}
+                  placeholder="Enter custom link text"
+                  className="w-full min-w-0"
+                  autoComplete="off"
+                  onFocus={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onBlur={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onInput={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                />
+              </div>
             </div>
           )}
+
+          {/* Search Results with Current Link Inside Input - scrollable area */}
+          <div className="flex-1 min-h-0 w-full overflow-hidden">
+            {/* Simplified Current Link Input - Styled to match other form inputs */}
+            {isEditing && editingLink && editingLink.type !== 'external' ? (
+              <div className="mb-3">
+                <div className="flex items-center gap-2 p-3 rounded-md bg-muted/40 border border-border/80 min-h-[40px] focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                  <PillLink
+                    href={editingLink.data?.url || '#'}
+                    isPublic={true}
+                    className="current-link-pill text-sm"
+                    clickable={false}
+                  >
+                    {editingLink.data?.title || editingLink.data?.pageTitle || 'Link'}
+                  </PillLink>
+                  {editingLink.data?.showAuthor && (editingLink.data?.authorUsername || editingLink.data?.username) && (
+                    <>
+                      <span className="text-muted-foreground text-sm">by</span>
+                      <UsernameBadge
+                        userId={editingLink.data?.authorUserId || editingLink.data?.userId || ''}
+                        username={(editingLink.data?.authorUsername || editingLink.data?.username || 'Loading...').replace(/^@/, '')}
+                        size="sm"
+                        variant="pill"
+                        pillVariant="secondary"
+                      />
+                    </>
+                  )}
+                  <div className="flex-1"></div>
+                  <button
+                    onClick={() => {
+                      // Clear the selected page to enable search
+                      setSelectedPage(null);
+                      // Close the modal - let parent handle editingLink state
+                      onClose();
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="Clear current link"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Regular Search for New Links */
+              <FilteredSearchResults
+                ref={searchInputRef}
+                onSelect={handlePageSelect}
+                userId={user?.uid}
+                placeholder="Search for pages..."
+                initialSearch={
+                  // When editing, pre-fill with current page title for easy replacement
+                  editingLink && (editingLink.type === 'page' || editingLink.type === 'compound')
+                    ? editingLink.data.title || selectedText
+                    : selectedText
+                }
+                autoFocus={false} // DISABLED: Prevents focus stealing from custom text input
+                className="h-full"
+                preventRedirect={true}
+                linkedPageIds={linkedPageIds}
+                currentPageId={currentPageId}
+                hideCreateButton={isEditing}
+                onFilterToggle={(showFilters) => {
+                  // Filter toggle is handled internally by FilteredSearchResults
+                  // We just need to pass a callback to enable the filter button
+                  return true;
+                }}
+              />
+            )}
+          </div>
 
           {!customText && !showAuthor && !isEditing && (
             <p className="text-xs text-muted-foreground text-center mt-3">
               Click on a page to create link immediately
             </p>
           )}
-        </SegmentedControlContent>
-
-        <SegmentedControlContent value="external" className="h-full flex flex-col space-y-4 transition-all duration-200 ease-out">
+          </div>
+        ) : (
+          <div className="h-full flex flex-col space-y-3 transition-all duration-200 ease-out overflow-y-auto">
           <div className="space-y-2">
             <Label htmlFor="external-url">URL</Label>
             <Input
               ref={externalUrlInputRef}
               id="external-url"
               value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
+              onChange={handleExternalUrlChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && externalUrl.trim() && !customText) {
                   e.preventDefault();
@@ -407,48 +737,87 @@ export default function LinkEditorModal({
             />
           </div>
 
-          {/* Custom Text Input - Show when enabled with smooth animation */}
-          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            customText ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
-          }`}>
-            <div className="space-y-2">
-              <Input
-                ref={externalCustomTextInputRef}
-                id="display-text-external"
-                value={displayText}
-                onChange={(e) => setDisplayText(e.target.value)}
-                placeholder="Enter custom display text"
-                className="w-full min-w-0"
-                autoComplete="off"
-              />
+          {/* Custom Text Switch */}
+          <div className="flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <label htmlFor="custom-text-external" className="text-sm font-medium text-foreground">
+                  Custom link text
+                </label>
+                <Switch
+                  id="custom-text-external"
+                  checked={customText}
+                  onCheckedChange={handleCustomTextToggle}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Spacer to push button to bottom */}
-          <div className="flex-1"></div>
-
-          {/* Action Button - Always show for external links */}
-          <div className="flex-shrink-0">
-            <Button
-              onClick={handleCreateExternalLink}
-              disabled={!externalUrl.trim()}
-              className="w-full"
-            >
-              <Link className="h-4 w-4 mr-2" />
-              {isEditing ? 'Update Link' : 'Save'}
-            </Button>
-          </div>
-
-          {!customText && externalUrl.trim() && (
-            <p className="text-xs text-muted-foreground text-center">
-              Press Enter to create link
-            </p>
+          {/* Custom Text Input - Show when enabled */}
+          {customText && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+              <Input
+                ref={externalCustomTextInputRef}
+                id="display-text-external"
+                value={externalCustomText}
+                onChange={handleExternalCustomTextChange}
+                placeholder="Enter custom link text"
+                className="w-full min-w-0"
+                autoComplete="off"
+                onFocus={(e) => {
+                  e.stopPropagation();
+                  console.log('🔒 FOCUS on external custom text input');
+                }}
+                onBlur={(e) => {
+                  e.stopPropagation();
+                  console.log('🔓 BLUR from external custom text input');
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyUp={(e) => {
+                  e.stopPropagation();
+                }}
+                onInput={(e) => {
+                  e.stopPropagation();
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              />
+            </div>
           )}
-        </SegmentedControlContent>
-        </SegmentedControl>
+
+
+          </div>
+        )}
       </div>
 
-
+      {/* Sticky Footer with Action Button */}
+      <div className="flex-shrink-0 border-t border-border bg-background/95 backdrop-blur-sm p-4 mt-4 pb-6">
+        {activeTab === 'pages' ? (
+          <Button
+            onClick={handleCreatePageLink}
+            disabled={!selectedPage}
+            className="w-full"
+          >
+            <Link className="h-4 w-4 mr-2" />
+            {isEditing ? 'Update Link' : 'Create Link'}
+          </Button>
+        ) : (
+          <Button
+            onClick={handleCreateExternalLink}
+            disabled={!externalUrl.trim()}
+            className="w-full"
+          >
+            <Link className="h-4 w-4 mr-2" />
+            {isEditing ? 'Update Link' : 'Create Link'}
+          </Button>
+        )}
+      </div>
     </>
   );
 
@@ -460,13 +829,61 @@ export default function LinkEditorModal({
           onClose();
         }
       }}>
-        <DrawerContent height="85vh" className="border-t-2 border-border">
+        <DrawerContent
+          height="85vh"
+          className="border-t-2 border-border"
+          tabIndex={-1}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => {
+            // Prevent drawer from closing when clicking on input fields
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          onInteractOutside={(e) => {
+            // Prevent drawer from handling interactions with input fields
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          onFocusOutside={(e) => {
+            // Prevent focus from being managed by the drawer
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
+              console.log('🚫 PREVENTING FOCUS OUTSIDE - Input field detected');
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          // REMOVED: onFocus handler that was stealing focus from custom text input
+        >
           <DrawerHeader>
             <DrawerTitle>{modalTitle}</DrawerTitle>
           </DrawerHeader>
 
-          <div className="flex-1 min-h-0 flex flex-col px-4 pb-4">
-            <ModalContent />
+          <div
+            className="flex-1 min-h-0 flex flex-col px-4 pb-4"
+            onMouseDown={(e) => {
+              // CRITICAL FIX: Prevent drawer content wrapper from stealing focus from input fields
+              const target = e.target as HTMLElement;
+              if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea')) {
+                e.stopPropagation();
+              }
+            }}
+            onClick={(e) => {
+              // CRITICAL FIX: Prevent drawer content wrapper from stealing focus from input fields
+              const target = e.target as HTMLElement;
+              if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea')) {
+                e.stopPropagation();
+              }
+            }}
+          >
+            {modalContent}
           </div>
         </DrawerContent>
       </Drawer>
@@ -479,7 +896,41 @@ export default function LinkEditorModal({
         onClose();
       }
     }}>
-      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-hidden p-4 sm:p-6 transition-all duration-200 ease-out flex flex-col">
+      <DialogContent
+        className="w-[95vw] max-w-2xl max-h-[90vh] overflow-hidden p-4 sm:p-6 transition-all duration-200 ease-out flex flex-col"
+        tabIndex={-1}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          // Don't auto-focus to prevent interference with custom text input
+        }}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+          // Prevent dialog from closing when clicking on input fields
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        onInteractOutside={(e) => {
+          // Prevent dialog from handling interactions with input fields
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        onFocusOutside={(e) => {
+          // Prevent focus from being managed by the dialog
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
+            console.log('🚫 PREVENTING FOCUS OUTSIDE - Input field detected');
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        // REMOVED: onFocus handler that was stealing focus from custom text input
+      >
         <DialogHeader className="relative flex-shrink-0">
           <DialogTitle>{modalTitle}</DialogTitle>
           <DialogClose className="absolute right-0 top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
@@ -487,8 +938,24 @@ export default function LinkEditorModal({
             <span className="sr-only">Close</span>
           </DialogClose>
         </DialogHeader>
-        <div className="flex-1 min-h-0 flex flex-col">
-          <ModalContent />
+        <div
+          className="flex-1 min-h-0 flex flex-col"
+          onMouseDown={(e) => {
+            // CRITICAL FIX: Prevent modal content wrapper from stealing focus from input fields
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea')) {
+              e.stopPropagation();
+            }
+          }}
+          onClick={(e) => {
+            // CRITICAL FIX: Prevent modal content wrapper from stealing focus from input fields
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea')) {
+              e.stopPropagation();
+            }
+          }}
+        >
+          {modalContent}
         </div>
       </DialogContent>
     </Dialog>

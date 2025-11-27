@@ -82,13 +82,13 @@ export default function ContentPageStats({
           viewData: Array(24).fill(0),
           recentChanges: 0,
           changeData: Array(24).fill(0),
-          supporterCount: 0,
-          supporterData: Array(24).fill(0),
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+      supporterCount: 0,
+      supporterData: Array(24).fill(0),
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchPageStats();
   }, [pageId]);
@@ -134,7 +134,7 @@ export default function ContentPageStats({
   }
 
   // Determine grid layout based on available data
-  const hasSupporters = stats.supporterCount > 0;
+  const hasSupporters = stats.supporterCount > 0 || (stats.supporterData && stats.supporterData.some(v => v > 0));
 
   // Calculate grid columns based on available cards
   let gridCols = "md:grid-cols-2"; // Default: views + changes
@@ -215,7 +215,7 @@ export default function ContentPageStats({
 
       {/* Supporters Card - only show if data is provided */}
       {hasSupporters && (
-        <div className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+        <div className="wewrite-card flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Heart className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm font-medium">Supporters</span>

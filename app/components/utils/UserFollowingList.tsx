@@ -175,7 +175,14 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
   return (
     <div className="space-y-4">
       <div className="flex flex-col space-y-2">
-        {followedUsers.map(followedUser => (
+        {followedUsers.map(followedUser => {
+          const bioText = typeof followedUser.bio === 'string'
+            ? followedUser.bio
+            : Array.isArray(followedUser.bio)
+              ? followedUser.bio.map((n: any) => n.text || '').join(' ')
+              : '';
+
+          return (
           <div
             key={followedUser.id}
             className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
@@ -195,8 +202,8 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
                   showBadge={true}
                   className="font-medium"
                 />
-                {followedUser.bio && (
-                  <p className="text-xs text-muted-foreground line-clamp-1">{followedUser.bio}</p>
+                {bioText && (
+                  <p className="text-xs text-muted-foreground line-clamp-1">{bioText}</p>
                 )}
               </div>
             </Link>
@@ -218,7 +225,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
               </Button>
             )}
           </div>
-        ))}
+        );})}
       </div>
 
       {hasMore && (

@@ -38,6 +38,13 @@ export interface EarningsData {
   lastMonthEarnings?: number;
   monthlyChange?: number;
   pendingAllocations?: any[]; // Earnings sources data for the breakdown component
+  earningsHistory?: Array<{
+    month: string; // YYYY-MM
+    netEarnings?: number;
+    totalEarnings?: number;
+    grossEarnings?: number;
+    paidOut?: number;
+  }>;
 }
 
 export interface UsdDataFetchResult {
@@ -247,7 +254,8 @@ export class UsdDataService {
         hasEarnings: data.earnings.hasEarnings || false,
         lastMonthEarnings: 0, // TODO: Calculate from history if needed
         monthlyChange: 0, // TODO: Calculate from history if needed
-        pendingAllocations: data.earnings.pendingAllocations || [] // Pass through earnings sources data
+        pendingAllocations: data.earnings.pendingAllocations || [], // Pass through earnings sources data
+        earningsHistory: data.earnings.earningsHistory || []
       };
 
       return {

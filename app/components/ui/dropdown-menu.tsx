@@ -259,7 +259,9 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
   );
 
   // Use portal to render outside of any stacking context
-  return createPortal(dropdownContent, document.body);
+  return typeof document !== 'undefined'
+    ? createPortal(dropdownContent, document.body)
+    : dropdownContent;
 };
 
 const DropdownMenuItem = ({ children, className, onClick, ...props }: any) => {

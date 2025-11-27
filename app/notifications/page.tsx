@@ -79,9 +79,7 @@ function NotificationsContent() {
           <p className="text-muted-foreground">Stay updated with your latest activity</p>
         </div>
         <div className="flex items-center gap-2">
-          {notifications.length > 0 && (
-            <NotificationsHeaderButton />
-          )}
+          <NotificationsHeaderButton />
         </div>
       </div>
 

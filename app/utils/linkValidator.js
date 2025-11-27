@@ -191,7 +191,6 @@ export function validateLink(linkData) {
 
       // CRITICAL FIX: Validate pageId and prevent invalid values like '#'
       if (link.pageId && (link.pageId === '#' || link.pageId.trim() === '' || link.pageId.includes('#'))) {
-        console.warn('Invalid pageId detected and removed:', link.pageId);
         delete link.pageId;
         // If this was supposed to be a page link but has invalid pageId, convert to external link
         if (link.url && link.url !== '#') {
@@ -212,11 +211,7 @@ export function validateLink(linkData) {
         if (titleFromText && titleFromText !== 'Link' && titleFromText.trim()) {
           link.pageTitle = titleFromText.trim();
           link.originalPageTitle = titleFromText.trim();
-          console.log('BACKWARDS_COMPATIBILITY: Set pageTitle from text for legacy link:', {
-            pageId: link.pageId,
-            pageTitle: link.pageTitle,
-            url: link.url
-          });
+
         }
       }
     } else if (isExternalLink) {

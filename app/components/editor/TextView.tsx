@@ -874,13 +874,23 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
 
   // Helper function to render child nodes
   const renderChild = (child, i) => {
+    console.log('🔍 TextView renderChild: Processing child:', {
+      childType: child?.type,
+      childText: child?.text,
+      childIndex: i,
+      isLink: child?.type === 'link',
+      fullChild: JSON.stringify(child)
+    });
+
     // Handle link nodes with error handling
     if (child.type === 'link') {
       try {
-        console.log('PARAGRAPH_LINK_DEBUG: Rendering link in paragraph:', JSON.stringify(child));
-        return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
+        console.log('🔗 PARAGRAPH_LINK_DEBUG: Rendering link in paragraph:', JSON.stringify(child));
+        const linkComponent = <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
+        console.log('🔗 PARAGRAPH_LINK_DEBUG: LinkNode component created successfully');
+        return linkComponent;
       } catch (error) {
-        console.error('PARAGRAPH_LINK_ERROR: Error rendering link in paragraph:', error);
+        console.error('🚨 PARAGRAPH_LINK_ERROR: Error rendering link in paragraph:', error);
         return <span key={i} className="text-red-500">[Link Error]</span>;
       }
     }
@@ -890,6 +900,7 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
       if (child.bold) className += ' font-bold';
       if (child.italic) className += ' italic';
       if (child.underline) className += ' underline';
+      if ((child as any).metadata?.pasted) className += ' hover:bg-accent/20 rounded-sm transition-colors';
 
       // Add diff highlighting classes if showDiff is true
       if (showDiff) {

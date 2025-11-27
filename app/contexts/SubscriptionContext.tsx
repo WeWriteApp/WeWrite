@@ -173,7 +173,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const contextValue: SubscriptionContextType = {
     subscription,
     hasActiveSubscription: adminPaywallOverride ? false : hasActiveSubscription,
-    subscriptionAmount: subscription?.amount || 0,
+    subscriptionAmount: subscription?.status === 'active' ? (subscription.amount || 0) : 0,
     isLoading,
     lastUpdated,
     refreshSubscription,
@@ -204,7 +204,10 @@ export function useSubscription(): SubscriptionContextType {
  */
 export function useSubscriptionAmount(): number {
   const { subscription } = useSubscription();
-  return subscription?.amount || 0;
+  if (!subscription || subscription.status !== 'active') {
+    return 0;
+  }
+  return subscription.amount || 0;
 }
 
 /**

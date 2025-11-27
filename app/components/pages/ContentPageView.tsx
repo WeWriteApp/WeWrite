@@ -131,6 +131,7 @@ export default function ContentPageView({
   const [page, setPage] = useState<Page | null>(null);
   const [editorState, setEditorState] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasOptimisticPage, setHasOptimisticPage] = useState(false);
   const [isEditing, setIsEditing] = useState(false); // MY page = always true, NOT my page = always false
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -145,6 +146,8 @@ export default function ContentPageView({
     console.log('🔍 UNSAVED CHANGES: hasUnsavedChanges state changed to:', hasUnsavedChanges);
   }, [hasUnsavedChanges]);
   const [title, setTitle] = useState('');
+  const authorUsername = page?.username || (page as any)?.authorUsername || (page as any)?.user?.username || '';
+  const authorUserId = page?.userId || (page as any)?.authorUserId || (page as any)?.user?.id || '';
   const [customDate, setCustomDate] = useState<string | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   // Removed complex loading timeout logic - using UnifiedLoader now
@@ -347,6 +350,41 @@ export default function ContentPageView({
     }
   }, [params, unwrappedParams]);
 
+  // Optimistic page hydrate when coming from /new save to avoid skeleton flash
+  useEffect(() => {
+    if (!pageId || typeof window === 'undefined') return;
+    const key = `wewrite:optimisticPage:${pageId}`;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return;
+
+    try {
+      const optimistic = JSON.parse(raw);
+      const fallbackTitle = optimistic.title || 'Untitled';
+      const fallbackContent = optimistic.content || [{ type: 'paragraph', children: [{ text: '' }] }];
+
+      setPage({
+        id: pageId,
+        title: fallbackTitle,
+        userId: optimistic.userId,
+        username: optimistic.username,
+        content: fallbackContent,
+        createdAt: optimistic.createdAt,
+        lastModified: optimistic.lastModified,
+        isPublic: !!optimistic.isPublic,
+        deleted: !!optimistic.deleted
+      } as any);
+
+      setEditorState(fallbackContent);
+      setTitle(fallbackTitle);
+      setIsLoading(false);
+      setHasOptimisticPage(true);
+      sessionStorage.removeItem(key);
+    } catch (optimisticError) {
+      console.warn('Failed to apply optimistic page cache (non-fatal):', optimisticError);
+      sessionStorage.removeItem(key);
+    }
+  }, [pageId]);
+
   // Version loading functions - declared before useEffect to avoid hoisting issues
   const loadVersionData = async () => {
     try {
@@ -492,7 +530,7 @@ export default function ContentPageView({
     // SIMPLIFIED: No complex timing logic needed with unified cache
 
     pageLogger.debug('Starting page load', { pageId, userId: user?.uid });
-    setIsLoading(true);
+    setIsLoading(!hasOptimisticPage);
     setError(null);
 
     // Declare fallbackTimeout in the proper scope
@@ -670,37 +708,18 @@ export default function ContentPageView({
                 fullContent: parsedContent
               });
 
-              // Validate that we have proper content structure
-              if (!Array.isArray(parsedContent)) {
-                console.warn('📄 PageView: Content is not an array, converting to array format');
-                if (typeof parsedContent === 'string') {
-                  // Legacy string content
-                  setEditorState([{ type: "paragraph", children: [{ text: parsedContent }] }]);
-                } else if (parsedContent && typeof parsedContent === 'object') {
-                  // Try to extract text from object
-                  const text = parsedContent.text || parsedContent.content || JSON.stringify(parsedContent);
-                  setEditorState([{ type: "paragraph", children: [{ text }] }]);
-                } else {
-                  // Fallback
-                  setEditorState([{ type: "paragraph", children: [{ text: "Content format not recognized" }] }]);
-                }
-              } else {
-                console.log('🔍 PageView: Setting editorState with parsed content array');
-                setEditorState(parsedContent);
-              }
+              // SIMPLIFIED: Pass raw content to components - let them handle conversion
+              console.log('🔍 SIMPLIFIED: Setting raw parsed content - components will handle format');
+              setEditorState(parsedContent);
             } catch (error) {
               console.error("📄 PageView: Error parsing content:", error, { contentToUse });
-              // Try to use raw content as text if JSON parsing fails
-              if (typeof contentToUse === 'string') {
-                console.log('📄 PageView: Using raw string content as fallback');
-                setEditorState([{ type: "paragraph", children: [{ text: contentToUse }] }]);
-              } else {
-                setEditorState([{ type: "paragraph", children: [{ text: "Error loading content - please refresh the page" }] }]);
-              }
+              // SIMPLIFIED: Pass raw content even on error - components will handle it
+              console.log('📄 SIMPLIFIED: Using raw content as fallback');
+              setEditorState(contentToUse || null);
             }
           } else {
-            console.log('📄 PageView: No content found in page or version, using empty content');
-            setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
+            console.log('📄 SIMPLIFIED: No content found, setting null - components will handle empty state');
+            setEditorState(null);
           }
 
           setIsLoading(false);
@@ -1146,12 +1165,20 @@ export default function ContentPageView({
           statusText: response.statusText
         });
 
-        let errorData = {};
+        let errorData: Record<string, any> = {};
         try {
           errorData = await response.json();
           console.error('🔴 PAGE SAVE: Error response data', errorData);
         } catch (parseError) {
           console.error('🔴 PAGE SAVE: Failed to parse error response', parseError);
+          try {
+            const text = await response.text();
+            if (text) {
+              errorData = { error: text };
+            }
+          } catch {
+            // ignore
+          }
         }
 
         // Simplified LogRocket error logging (reduced to prevent performance issues)
@@ -1255,9 +1282,11 @@ export default function ContentPageView({
         }
 
         // Check for error message in the correct field - API uses 'error' field, not 'message'
-        const errorMessage = errorData.error || errorData.message || `API request failed: ${response.status} ${response.statusText}`;
-        console.error('🔴 PAGE SAVE: Throwing error', errorMessage);
-        throw new Error(errorMessage);
+        const rawMessage = errorData.error || errorData.message;
+        const errorMessage = rawMessage || `API request failed: ${response.status} ${response.statusText}`;
+        const detailedMessage = `${errorMessage}${errorData.code ? ` [code: ${errorData.code}]` : ''}`;
+        console.error('🔴 PAGE SAVE: Throwing error', detailedMessage);
+        throw new Error(detailedMessage);
       }
 
       console.log('🔵 PAGE SAVE: Parsing successful response');
@@ -1402,11 +1431,20 @@ export default function ContentPageView({
       }
 
       pageLogger.error('Page save failed', { pageId, error: error.message, title });
-      setError("Failed to save page. Please try again.");
+      setError(`Failed to save page: ${error?.message || 'Please try again.'}`);
     } finally {
       setIsSaving(false);
     }
   }, [page, pageId, editorState, title, location]);
+
+  const lastSavedContentRef = useRef<any>(null);
+
+  // Track last saved state whenever editorState updates from save/load
+  useEffect(() => {
+    if (editorState && !isSaving) {
+      lastSavedContentRef.current = editorState;
+    }
+  }, [editorState, isSaving]);
 
   const handleCancel = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -1414,10 +1452,13 @@ export default function ContentPageView({
       if (!confirmCancel) return;
     }
 
-    // Refresh the page to show the reverted state from the database
-    // This ensures the page content is properly reverted to the saved state
-    window.location.reload();
-  }, [hasUnsavedChanges]);
+    // Revert to last saved content without a full page reload
+    if (lastSavedContentRef.current) {
+      setEditorState(lastSavedContentRef.current);
+    }
+    setHasUnsavedChanges(false);
+    setError(null);
+  }, [hasUnsavedChanges, setEditorState]);
 
   // BULLETPROOF: Simplified keyboard shortcuts with extensive debugging
   useEffect(() => {
@@ -1493,17 +1534,25 @@ export default function ContentPageView({
     }
   }, [page, pageId, router]);
 
-  // DEAD SIMPLE: Always load fresh content from database (no cache bullshit)
+  // ARCHITECTURAL SIMPLIFICATION: Remove complex content processing
+  // Let ContentDisplay components handle their own content conversion
   useEffect(() => {
     if (!page?.content) return;
 
-    console.log('🔄 FRESH_CONTENT: Setting editor content from fresh database data');
+    console.log('🔄 SIMPLIFIED: Setting raw content from database - let components handle conversion');
+    console.log('🔄 SIMPLIFIED: Raw content:', {
+      content: page.content,
+      type: typeof page.content,
+      isArray: Array.isArray(page.content)
+    });
+
+    // SIMPLIFIED: Pass raw content directly - no preprocessing
     setEditorState(page.content);
-    console.log('✅ FRESH_CONTENT: Editor content set from database');
+    console.log('✅ SIMPLIFIED: Raw content set - components will handle conversion');
   }, [page?.content]); // Update whenever page content changes
 
   // Progressive loading state - show page structure immediately
-  if (isLoading) {
+  if (isLoading && !page) {
     return (
       <PublicLayout>
         <div className="min-h-screen">
@@ -1550,7 +1599,7 @@ export default function ContentPageView({
         showGoBack={true}
         showGoHome={true}
         showTryAgain={true}
-        onRetry={() => window.location.reload()}
+                    onRetry={() => setError(null)}
       />
     );
   }
@@ -1585,6 +1634,8 @@ export default function ContentPageView({
 
       <PageProvider>
         <div className="w-full max-w-none box-border">
+          {/* Sentinel element used by ContentPageHeader to detect scroll position reliably */}
+          <div data-header-sentinel aria-hidden className="h-px w-full" />
           <ContentPageHeader
             title={title}
             username={page?.username}
@@ -1621,9 +1672,13 @@ export default function ContentPageView({
                 enableCopy={true}
                 enableShare={true}
                 enableAddToPage={true}
-                username={user?.username}
+                username={authorUsername}
+                userId={authorUserId}
+                pageId={page?.id}
+                pageTitle={page?.title}
+                canEdit={canEdit}
               >
-                <div ref={contentRef}>
+                <div ref={contentRef} data-page-content>
                     <UnifiedErrorBoundary fallback={({ error, resetError }) => (
                       <div className="p-4 text-muted-foreground">
                         <p>Unable to display page content. The page may have formatting issues.</p>

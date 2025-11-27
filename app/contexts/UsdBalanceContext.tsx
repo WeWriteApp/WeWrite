@@ -7,6 +7,8 @@ import { UsdDataService, type UsdBalance } from '../services/usdDataService';
 import { usdBalanceCache } from '../utils/simplifiedCache';
 import { useSubscription } from './SubscriptionContext';
 import { useShouldUseDemoBalance } from './DemoBalanceContext';
+import { createNotification } from '../services/notificationsApi';
+import { getCurrentMonth } from '../utils/usdConstants';
 
 /**
  * Simplified USD Balance Context
@@ -42,6 +44,7 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const fetchingRef = useRef<Promise<void> | null>(null);
+  const notified90Ref = useRef<string | null>(null);
 
   const fetchUsdBalance = useCallback(async (forceRefresh = false): Promise<void> => {
     // Only fetch real balance for authenticated users with subscriptions
@@ -94,6 +97,38 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
         // Cache the result
         if (balanceData) {
           usdBalanceCache.set(user.uid, balanceData);
+        }
+
+        // Threshold notification: 90% allocation warning (once per month)
+        try {
+          if (balanceData && balanceData.totalUsdCents > 0) {
+            const allocationRatio = balanceData.allocatedUsdCents / balanceData.totalUsdCents;
+            const monthKey = `${user.uid}_${getCurrentMonth()}`;
+            notified90Ref.current = notified90Ref.current || localStorage.getItem('wewrite_notified_90');
+
+            if (allocationRatio >= 0.9) {
+              const alreadyNotifiedKey = localStorage.getItem('wewrite_notified_90_key');
+              if (alreadyNotifiedKey !== monthKey) {
+                await createNotification({
+                  userId: user.uid,
+                  type: 'allocation_threshold',
+                  title: 'You have used 90% of your monthly funds',
+                  message: 'Top off or adjust allocations to keep supporting pages.',
+                  criticality: 'normal',
+                  metadata: {
+                    allocatedUsdCents: balanceData.allocatedUsdCents,
+                    totalUsdCents: balanceData.totalUsdCents,
+                    threshold: 0.9,
+                    month: getCurrentMonth()
+                  }
+                });
+                localStorage.setItem('wewrite_notified_90', 'true');
+                localStorage.setItem('wewrite_notified_90_key', monthKey);
+              }
+            }
+          }
+        } catch (notifyError) {
+          console.warn('[UsdBalanceContext] Failed to emit 90% allocation notification:', notifyError);
         }
 
 

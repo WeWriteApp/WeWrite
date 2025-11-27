@@ -1,3 +1,7 @@
+/**
+ * WHY: Wraps page/content areas with a single text-selection context so copy/share
+ * behavior (including attribution metadata) stays consistent across the app.
+ */
 "use client";
 
 import React, { createContext, useContext, useEffect } from 'react';
@@ -31,6 +35,10 @@ interface TextSelectionProviderProps {
   enableShare?: boolean;
   enableAddToPage?: boolean;
   username?: string;
+  userId?: string;
+  pageId?: string;
+  pageTitle?: string;
+  canEdit?: boolean;
 }
 
 export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
@@ -39,21 +47,34 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
   enableCopy = true,
   enableShare = true,
   enableAddToPage = true,
-  username
+  username,
+  userId,
+  pageId,
+  pageTitle,
+  canEdit = true
 }) => {
+  const [forceMenu, setForceMenu] = React.useState(false);
   const {
     selectedText,
+    selectedHtml,
     position,
     isVisible,
     selectionRange,
     clearSelection,
     copyToClipboard,
-    createShareableLink
+    createShareableLink,
+    setIsModalOpen
   } = useTextSelection({
     contentRef,
     enableCopy,
     enableShare,
-    enableAddToPage
+    enableAddToPage,
+    attribution: {
+      username,
+      userId,
+      pageId,
+      pageTitle
+    }
   });
 
   const contextValue: TextSelectionContextType = {
@@ -64,6 +85,8 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
     clearSelection,
     copyToClipboard,
     createShareableLink};
+
+  const shouldRenderMenu = (isVisible && position && selectedText) || forceMenu;
 
   // Debug logging for visibility changes
   useEffect(() => {
@@ -78,17 +101,28 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
   return (
     <TextSelectionContext.Provider value={contextValue}>
       {children}
-      {isVisible && position && selectedText && (
+      {shouldRenderMenu && (
         <UnifiedTextSelectionMenu
           selectedText={selectedText}
+          selectedHtml={selectedHtml}
           position={position}
           onClose={clearSelection}
           onCopy={copyToClipboard}
           onCreateLink={createShareableLink}
+          selectedHtml={selectedHtml}
+          selectedHtml={(selectionRange as any)?.selectedHtml || ''}
           enableCopy={enableCopy}
           enableShare={enableShare}
           enableAddToPage={enableAddToPage}
           username={username}
+          userId={userId}
+          pageId={pageId}
+          pageTitle={pageTitle}
+          canEdit={canEdit}
+          setSelectionModalOpen={(open) => {
+            setForceMenu(open);
+            setIsModalOpen(open);
+          }}
         />
       )}
     </TextSelectionContext.Provider>

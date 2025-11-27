@@ -192,7 +192,9 @@ export class ServerUsdService {
       const balanceData = balanceDoc.data();
 
       // Log subscription data for debugging
-      if (subscriptionData && subscriptionData.status === 'active') {
+      const hasActiveSubscription = subscriptionData && subscriptionData.status === 'active';
+
+      if (hasActiveSubscription) {
         console.log(`[USD BALANCE] Found subscription for user ${userId}:`, {
           amount: subscriptionData?.amount,
           status: subscriptionData?.status
@@ -209,7 +211,7 @@ export class ServerUsdService {
       let monthlyAllocationCents = balanceData?.monthlyAllocationCents || 0;
 
       // Calculate expected USD cents from subscription amount
-      if (subscriptionData && subscriptionData.amount) {
+      if (hasActiveSubscription && subscriptionData?.amount) {
         const expectedUsdCents = dollarsToCents(subscriptionData.amount);
 
         // Use calculated USD cents from amount (source of truth)
@@ -225,6 +227,24 @@ export class ServerUsdService {
             availableUsdCents: expectedUsdCents - actualAllocatedUsdCents,
             updatedAt: FieldValue.serverTimestamp()
           });
+        }
+      } else if (!hasActiveSubscription) {
+        // Inactive subscription: treat balance as unfunded (overspent against zero)
+        if (totalUsdCents !== 0 || monthlyAllocationCents !== 0) {
+          console.log(`[USD BALANCE] Normalizing inactive subscription balance for user ${userId} to $0 to reflect unfunded state`);
+          totalUsdCents = 0;
+          monthlyAllocationCents = 0;
+
+          try {
+            await balanceRef.update({
+              totalUsdCents: 0,
+              monthlyAllocationCents: 0,
+              availableUsdCents: -actualAllocatedUsdCents,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+          } catch (updateError) {
+            console.warn(`[USD BALANCE] Failed to normalize inactive balance for user ${userId}:`, updateError);
+          }
         }
       }
 

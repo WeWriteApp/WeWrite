@@ -31,7 +31,8 @@ export function PaymentMethodsOverview() {
     }
 
     fetchPaymentMethods();
-  }, [, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   const fetchPaymentMethods = async () => {
     try {

@@ -15,7 +15,8 @@ import {
   Coins,
   Palette,
   Wallet,
-  Loader2
+  Loader2,
+  Bell
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 
@@ -88,6 +89,12 @@ export default function SettingsIndexPage() {
       title: 'Appearance',
       icon: Palette,
       href: '/settings/appearance'
+    },
+    {
+      id: 'notifications',
+      title: 'Notifications',
+      icon: Bell,
+      href: '/settings/notifications'
     },
     {
       id: 'deleted',

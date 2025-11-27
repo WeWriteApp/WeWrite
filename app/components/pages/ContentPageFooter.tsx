@@ -123,7 +123,7 @@ export default function ContentPageFooter({
   if (!canEdit && !hasUnsavedChanges) return null;
 
   return (
-    <div className="pb-6 px-4 space-y-4">
+    <div className="pb-4 px-4 space-y-4">
       {/* Show PageActions only for existing pages (not for new pages or bios) */}
       {page && (
         <ContentPageActions

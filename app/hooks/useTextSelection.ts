@@ -1,9 +1,15 @@
+/**
+ * WHY: Centralized text-selection logic so view-mode pages allow copying/attribution
+ * while ignoring UI chrome. Keeps a single selection menu and prepares clipboard
+ * payloads with WeWrite attribution metadata for downstream paste handling.
+ */
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 
 interface TextSelectionState {
   selectedText: string;
+  selectedHtml: string;
   position: { x: number; y: number } | null;
   isVisible: boolean;
   selectionRange: Range | null;
@@ -14,11 +20,18 @@ interface TextSelectionOptions {
   enableShare?: boolean;
   enableAddToPage?: boolean;
   contentRef?: React.RefObject<HTMLElement>;
+  attribution?: {
+    username?: string;
+    userId?: string;
+    pageId?: string;
+    pageTitle?: string;
+  };
 }
 
 export const useTextSelection = (options: TextSelectionOptions = {}) => {
   const [selectionState, setSelectionState] = useState<TextSelectionState>({
     selectedText: '',
+    selectedHtml: '',
     position: null,
     isVisible: false,
     selectionRange: null});
@@ -29,12 +42,28 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
   const handleSelectionChange = useCallback(() => {
     const selection = window.getSelection();
 
+    if (isModalOpen) {
+      // Preserve selection visibility while modal is open
+      return;
+    }
+
     if (!selection || selection.rangeCount === 0) {
       setSelectionState(prev => ({ ...prev, isVisible: false, selectionRange: null }));
       return;
     }
 
-    const selectedText = selection.toString().trim();
+    const selectedText = selection.toString();
+    let selectedHtml = '';
+
+    try {
+      const range = selection.getRangeAt(0);
+      const cloned = range.cloneContents();
+      const tempDiv = document.createElement('div');
+      tempDiv.appendChild(cloned);
+      selectedHtml = tempDiv.innerHTML;
+    } catch (err) {
+      selectedHtml = selectedText;
+    }
 
     if (selectedText.length === 0) {
       setSelectionState(prev => ({ ...prev, isVisible: false, selectionRange: null }));
@@ -122,6 +151,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
 
     setSelectionState({
       selectedText,
+      selectedHtml,
       position,
       isVisible: true,
       selectionRange: selectionRange.cloneRange(), // Store a copy of the range
@@ -143,15 +173,61 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
   }, []);
 
   // Utility functions for text selection actions
-  const copyToClipboard = useCallback(async (text: string = selectionState.selectedText) => {
+  const copyToClipboard = useCallback(async (text: string = selectionState.selectedText, htmlOverride?: string) => {
+    const author = options.attribution || {};
+    const cleanUsername = (author.username || 'unknown').replace(/^@/, '');
+    const meta = {
+      username: cleanUsername,
+      userId: author.userId || 'unknown',
+      pageId: author.pageId || 'unknown',
+      pageTitle: author.pageTitle || '',
+      copiedAt: Date.now()
+    };
+
+    const quotedText = `“${text}” — by ${cleanUsername || 'unknown'}`;
+    const escapeHtml = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const attributionHref = cleanUsername ? `/@${cleanUsername}` : '#';
+    const selectionHtml = htmlOverride || selectionState.selectedHtml || escapeHtml(text);
+    const htmlPayload = `
+      <blockquote data-wewrite-attribution='${encodeURIComponent(JSON.stringify(meta))}'>
+        ${selectionHtml}
+      </blockquote>
+      <p data-wewrite-attribution='${encodeURIComponent(JSON.stringify(meta))}'>
+        — by <a href="${attributionHref}" data-user-id="${escapeHtml(meta.userId)}" class="user-link pill-link" data-wewrite-attribution='${encodeURIComponent(JSON.stringify(meta))}'>${escapeHtml(cleanUsername || 'Unknown')}</a>
+      </p>
+    `;
+
     try {
-      await navigator.clipboard.writeText(text);
-      return { success: true, message: 'Text copied to clipboard' };
+      const canWriteRich =
+        typeof navigator !== 'undefined' &&
+        !!navigator.clipboard?.write &&
+        typeof ClipboardItem !== 'undefined';
+
+      if (canWriteRich) {
+        const items: Record<string, Blob> = {
+          'text/plain': new Blob([quotedText], { type: 'text/plain' }),
+          'text/html': new Blob([htmlPayload], { type: 'text/html' })
+        };
+        await navigator.clipboard.write([new ClipboardItem(items)]);
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(quotedText);
+      } else {
+        throw new Error('Clipboard API not available');
+      }
+      return { success: true, message: 'Text copied with attribution' };
     } catch (error) {
       console.error('Failed to copy text:', error);
-      return { success: false, message: 'Failed to copy text' };
+      // Fallback to plain text copy
+      try {
+        await navigator.clipboard.writeText(quotedText);
+        return { success: true, message: 'Text copied (plain)' };
+      } catch (err) {
+        return { success: false, message: 'Failed to copy text' };
+      }
     }
-  }, [selectionState.selectedText]);
+  }, [selectionState.selectedText, options.attribution]);
 
   const createShareableLink = useCallback((text: string = selectionState.selectedText, range: Range | null = selectionState.selectionRange) => {
     if (!text || !range) {
@@ -194,6 +270,19 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     
     // Add event listener for clicks to clear selection
     const handleClick = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const isInputField = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.tagName === 'SELECT';
+
+      // CRITICAL FIX: Allow input fields to work normally regardless of modal state
+      if (isInputField) {
+        console.log('🔗 USE_TEXT_SELECTION: Input field clicked - allowing normal behavior', {
+          tagName: target.tagName,
+          id: target.id,
+          className: target.className
+        });
+        return; // Let the input field handle the click normally
+      }
+
       // Check if any modal is open by looking for dialog elements
       const hasOpenModal = document.querySelector('[role="dialog"][data-state="open"]') ||
                           document.querySelector('[data-radix-dialog-content]') ||
@@ -206,8 +295,8 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
         hasOpenModal: !!hasOpenModal
       });
 
-      // Don't clear selection if any modal is open
-      if (hasOpenModal) {
+      // Don't clear selection if any modal is open (but input fields are already handled above)
+      if (hasOpenModal || isModalOpen) {
         console.log('🔗 USE_TEXT_SELECTION: Modal is open, preserving selection');
         return;
       }
@@ -216,7 +305,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
       // Small delay to allow selection to be processed first
       setTimeout(() => {
         const selection = window.getSelection();
-        const hasSelection = selection && selection.toString().trim().length > 0;
+        const hasSelection = selection && selection.toString().length > 0;
         console.log('🔗 USE_TEXT_SELECTION: Selection check result:', {
           hasSelection,
           selectionText: selection?.toString()
@@ -237,13 +326,15 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     };
   }, [handleSelectionChange]);
 
-  return {
+    return {
     selectedText: selectionState.selectedText,
+    selectedHtml: selectionState.selectedHtml,
     position: selectionState.position,
     isVisible: selectionState.isVisible,
     selectionRange: selectionState.selectionRange,
     clearSelection,
     copyToClipboard,
     createShareableLink,
-    options};
+    options,
+    setIsModalOpen};
 };

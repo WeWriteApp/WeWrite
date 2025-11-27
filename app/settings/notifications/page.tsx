@@ -61,6 +61,10 @@ export default function NotificationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const allPushEnabled = NOTIFICATION_TYPES.every((type) => preferences[type.id]?.push);
+  const allInAppEnabled = NOTIFICATION_TYPES.every((type) => preferences[type.id]?.inApp);
+  const allEnabled = allPushEnabled && allInAppEnabled;
+
   // Initialize default preferences
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -87,6 +91,42 @@ export default function NotificationSettingsPage() {
       [typeId]: {
         ...prev[typeId],
         [channel]: enabled
+      }
+    }));
+  };
+
+  const handleToggleAll = (channel: 'push' | 'inApp', enabled: boolean) => {
+    setPreferences((prev) => {
+      const updated: NotificationPreferences = { ...prev };
+      NOTIFICATION_TYPES.forEach((type) => {
+        updated[type.id] = {
+          ...(updated[type.id] || { push: false, inApp: false }),
+          [channel]: enabled
+        };
+      });
+      return updated;
+    });
+  };
+
+  const handleToggleAllChannels = (enabled: boolean) => {
+    setPreferences((prev) => {
+      const updated: NotificationPreferences = { ...prev };
+      NOTIFICATION_TYPES.forEach((type) => {
+        updated[type.id] = {
+          push: enabled,
+          inApp: enabled
+        };
+      });
+      return updated;
+    });
+  };
+
+  const handleToggleTypeAll = (typeId: string, enabled: boolean) => {
+    setPreferences((prev) => ({
+      ...prev,
+      [typeId]: {
+        push: enabled,
+        inApp: enabled
       }
     }));
   };
@@ -176,37 +216,57 @@ export default function NotificationSettingsPage() {
               <CardContent>
                 <div className="space-y-4">
                   {/* Column Headers */}
-                  <div className="flex items-center justify-between pb-2 border-b border-border">
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-muted-foreground">Notification Type</span>
+                  <div className="grid grid-cols-3 md:grid-cols-4 items-start pb-2 border-b border-border text-center gap-3">
+                    <div className="text-sm font-medium text-muted-foreground text-left md:text-left">
+                      Notification Type
                     </div>
-                    <div className="flex items-center gap-6 ml-4">
-                      {/* Push Notifications Header */}
-                      <div className="flex items-center gap-2 w-16 justify-center">
-                        <Smartphone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-muted-foreground">Push</span>
-                      </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Smartphone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Push</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Monitor className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">In-App</span>
+                    </div>
+                    <div className="hidden md:flex flex-col items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant={allEnabled ? 'secondary' : 'outline'}
+                        className="px-3 h-8"
+                        onClick={() => handleToggleAllChannels(!allEnabled)}
+                        aria-label={allEnabled ? 'Turn off all notifications' : 'Turn on all notifications'}
+                      >
+                        {allEnabled ? 'Turn all off' : 'Turn all on'}
+                      </Button>
+                    </div>
+                  </div>
 
-                      {/* In-App Alerts Header */}
-                      <div className="flex items-center gap-2 w-16 justify-center">
-                        <Monitor className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-muted-foreground">In-App</span>
-                      </div>
-                    </div>
+                  {/* Mobile all toggle */}
+                  <div className="flex md:hidden justify-end">
+                    <Button
+                      size="sm"
+                      variant={allEnabled ? 'secondary' : 'outline'}
+                      className="px-3 h-8"
+                      onClick={() => handleToggleAllChannels(!allEnabled)}
+                      aria-label={allEnabled ? 'Turn off all notifications' : 'Turn on all notifications'}
+                    >
+                      {allEnabled ? 'All off' : 'All on'}
+                    </Button>
                   </div>
 
                   {/* Notification Rows */}
                   <div className="space-y-4">
                     {NOTIFICATION_TYPES.map((type, index) => (
                       <div key={type.id}>
-                        <div className="flex items-start justify-between py-2">
-                          <div className="flex-1">
-                            <h4 className="font-medium">{type.title}</h4>
-                            <p className="text-sm text-muted-foreground">{type.description}</p>
-                          </div>
-                          <div className="flex items-center gap-6 ml-4">
+                      <div className="flex items-start justify-between py-2">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{type.title}</h4>
+                          <p className="text-sm text-muted-foreground">{type.description}</p>
+                        </div>
+                        <div className="flex flex-col gap-2 items-end">
+                          <div className="grid grid-cols-2 gap-4 w-48 sm:w-56 md:w-64 justify-items-center">
                             {/* Push Notifications Toggle */}
-                            <div className="flex items-center justify-center w-16">
+                            <div className="flex items-center justify-center">
                               <Switch
                                 checked={preferences[type.id]?.push || false}
                                 onCheckedChange={(checked) =>
@@ -217,7 +277,7 @@ export default function NotificationSettingsPage() {
                             </div>
 
                             {/* In-App Alerts Toggle */}
-                            <div className="flex items-center justify-center w-16">
+                            <div className="flex items-center justify-center">
                               <Switch
                                 checked={preferences[type.id]?.inApp || false}
                                 onCheckedChange={(checked) =>
@@ -227,7 +287,28 @@ export default function NotificationSettingsPage() {
                               />
                             </div>
                           </div>
+                          <div className="flex gap-2 text-xs">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2"
+                              onClick={() => handleToggleTypeAll(type.id, true)}
+                              aria-label={`Turn all ${type.title} notifications on`}
+                            >
+                              All on
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2"
+                              onClick={() => handleToggleTypeAll(type.id, false)}
+                              aria-label={`Turn all ${type.title} notifications off`}
+                            >
+                              All off
+                            </Button>
+                          </div>
                         </div>
+                      </div>
                         {index < NOTIFICATION_TYPES.length - 1 && (
                           <Separator className="mt-2" />
                         )}

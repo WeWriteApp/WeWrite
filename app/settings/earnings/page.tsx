@@ -8,6 +8,7 @@ import { DollarSign, Wallet } from 'lucide-react';
 import SimpleEarningsDashboard from '../../components/payments/SimpleEarningsDashboard';
 import EarningsBreakdownCard from '../../components/payments/EarningsBreakdownCard';
 import EarningsSourceBreakdown from '../../components/payments/EarningsSourceBreakdown';
+import EarningsHistoryChart from '../../components/payments/EarningsHistoryChart';
 
 export default function EarningsPage() {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ export default function EarningsPage() {
         </SegmentedControlList>
 
         <SegmentedControlContent value="earnings" className="space-y-4 sm:space-y-6">
+          <EarningsHistoryChart />
           <EarningsBreakdownCard />
           <EarningsSourceBreakdown />
         </SegmentedControlContent>

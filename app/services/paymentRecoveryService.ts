@@ -3,7 +3,7 @@
  * Implements intelligent retry scheduling with exponential backoff for failed payments
  */
 
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import Stripe from 'stripe';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
@@ -92,9 +92,13 @@ export class PaymentRecoveryService {
     
     // Determine failure type for intelligent retry strategy
     const failureType = this.categorizeFailure(failureReason);
-    
-    // Generate retry schedule
-    const retrySchedule = this.generateRetrySchedule(failureCount, failureType);
+    const strategy = this.getRetryStrategy(failureType);
+
+    // Once we've reached the max attempts, stop scheduling retries and mark as abandoned/inactive
+    const hasAttemptsRemaining = failureCount < strategy.maxAttempts;
+    const retrySchedule = hasAttemptsRemaining
+      ? this.generateRetrySchedule(failureCount, failureType)
+      : [];
     
     const failureRecord: PaymentFailureRecord = {
       id: existingRecord?.id || `failure_${userId}_${subscriptionId}_${Date.now()}`,
@@ -128,7 +132,12 @@ export class PaymentRecoveryService {
     });
 
     // Update subscription with failure tracking
-    await this.updateSubscriptionFailureStatus(userId, failureCount, failureRecord.nextRetryAt);
+    await this.updateSubscriptionFailureStatus(
+      userId,
+      failureCount,
+      failureRecord.nextRetryAt,
+      !hasAttemptsRemaining
+    );
 
     // Schedule next retry if applicable
     if (failureRecord.nextRetryAt) {
@@ -311,9 +320,55 @@ export class PaymentRecoveryService {
    * Get existing failure record for user/subscription
    */
   private async getFailureRecord(userId: string, subscriptionId: string): Promise<PaymentFailureRecord | null> {
-    // Implementation would query for existing active failure record
-    // For now, return null to create new record each time
-    return null;
+    try {
+      const failuresRef = collection(db, 'paymentFailures');
+
+      const constraints = [
+        where('userId', '==', userId),
+        where('status', '==', 'active'),
+        orderBy('lastFailureAt', 'desc'),
+        limit(1)
+      ];
+
+      // If a subscriptionId is provided, include it in the query, otherwise return the latest failure for the user
+      if (subscriptionId) {
+        constraints.splice(1, 0, where('subscriptionId', '==', subscriptionId));
+      }
+
+      const q = query(failuresRef, ...constraints);
+
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const docSnap = snapshot.docs[0];
+      const data = docSnap.data() as PaymentFailureRecord;
+
+      const toDateSafe = (value: any): Date | null => {
+        if (!value) return null;
+        if (value instanceof Date) return value;
+        if (typeof value.toDate === 'function') return value.toDate();
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      };
+
+      return {
+        ...data,
+        id: docSnap.id,
+        lastFailureAt: toDateSafe(data.lastFailureAt) || new Date(),
+        nextRetryAt: toDateSafe(data.nextRetryAt),
+        retrySchedule: Array.isArray(data.retrySchedule)
+          ? data.retrySchedule.map(attempt => ({
+            ...attempt,
+              scheduledAt: toDateSafe(attempt.scheduledAt) || new Date()
+            }))
+          : []
+      };
+    } catch (error) {
+      console.error('[PAYMENT RECOVERY] Failed to load existing failure record:', error);
+      return null;
+    }
   }
 
   /**
@@ -334,13 +389,14 @@ export class PaymentRecoveryService {
   private async updateSubscriptionFailureStatus(
     userId: string, 
     failureCount: number, 
-    nextRetryAt: Date | null
+    nextRetryAt: Date | null,
+    forceInactive: boolean = false
   ): Promise<void> {
     const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
     const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
     
     await updateDoc(subscriptionRef, {
-      status: 'past_due',
+      status: forceInactive ? 'inactive' : 'past_due',
       failureCount,
       nextRetryAt: nextRetryAt ? nextRetryAt : null,
       lastFailureProcessedAt: serverTimestamp()
@@ -351,7 +407,8 @@ export class PaymentRecoveryService {
    * Clear subscription failure status on successful payment
    */
   async clearSubscriptionFailureStatus(userId: string): Promise<void> {
-    const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscription', 'current');
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
 
     await updateDoc(subscriptionRef, {
       status: 'active',

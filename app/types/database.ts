@@ -434,6 +434,9 @@ export type NotificationType =
   | 'payment_failed_warning'    // Payment failure warning
   | 'payment_failed_final'      // Final payment failure notice
 
+  // Allocation warnings
+  | 'allocation_threshold'      // User has consumed >= threshold of monthly funds
+
   // Payout notifications
   | 'payout_initiated'          // Payout has been started
   | 'payout_processing'         // Payout is being processed

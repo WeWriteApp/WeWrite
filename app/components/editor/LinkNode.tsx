@@ -7,6 +7,7 @@ import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { getPageTitle } from "../../utils/pageUtils";
+import { LinkMigrationHelper } from "../../types/linkNode";
 
 // Type definitions
 interface LinkNodeProps {
@@ -14,22 +15,38 @@ interface LinkNodeProps {
   canEdit?: boolean;
   isEditing?: boolean;
   onEditLink?: () => void; // Add callback for editing links
+  // Slate.js attributes for editor integration
+  [key: string]: any;
 }
 
 /**
  * LinkNode Component - Renders different types of links in the editor
- * 
+ *
  * Handles:
  * - Internal page links (with optional author attribution)
  * - External links (with confirmation modal)
  * - Protocol links (special WeWrite protocol links)
  * - Compound links (page + author)
  */
-const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = false, onEditLink }) => {
+const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = false, onEditLink, ...attributes }) => {
+
+  // Check if we have Slate.js attributes (for editor mode) or not (for viewer mode)
+  const hasSlateAttributes = attributes && Object.keys(attributes).length > 0;
+
+  // Create wrapper props - use Slate attributes if available, otherwise use basic props
+  const wrapperProps = hasSlateAttributes
+    ? {
+        ...attributes,
+        contentEditable: false,
+        style: { userSelect: 'none' }
+      }
+    : {
+        style: { userSelect: 'none' }
+      };
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [linkNode, setLinkNode] = useState(node);
 
-  // Update linkNode when node prop changes (this handles title updates from SlateEditor)
+  // Update linkNode when node prop changes (this handles title updates from Editor)
   useEffect(() => {
     setLinkNode(node);
   }, [node]);
@@ -52,8 +69,16 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   // This ensures links created with any version of the editor will render correctly
   let validatedNode;
   try {
+    // MIGRATION: Apply migration for legacy links that don't have isCustomText property
+    let nodeToValidate = linkNode;
+    if (linkNode.isCustomText === undefined && linkNode.type === 'link') {
+      console.log('🔄 [LINKNODE] Migrating legacy link:', linkNode);
+      nodeToValidate = LinkMigrationHelper.migrateOldLink(linkNode);
+      console.log('🔄 [LINKNODE] Migrated to:', nodeToValidate);
+    }
+
     // First try to validate the node directly
-    validatedNode = validateLink(linkNode);
+    validatedNode = validateLink(nodeToValidate);
 
     // If validation failed or returned null, try to extract a link object from the node
     if (!validatedNode && linkNode.children) {
@@ -141,16 +166,9 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   const pageId = validatedNode.pageId;
   const isExternal = validatedNode.isExternal === true;
 
-  // Debug logging for external links
-  if (isExternal || validatedNode.className?.includes('external-link')) {
-    console.log('🔍 TextView rendering external link:', {
-      isExternal,
-      href,
-      className: validatedNode.className,
-      validatedNode,
-      canEdit,
-      isEditing
-    });
+  // Essential monitoring for external links
+  if (isExternal && !validatedNode.url) {
+    console.warn('⚠️ External link missing URL:', validatedNode);
   }
   const isPageLink = validatedNode.isPageLink === true;
 
@@ -191,10 +209,14 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     // NOTE: Compound links are now handled separately in the rendering logic,
     // so this function only extracts the base text without compound formatting
 
+    // Essential monitoring for text extraction issues
+    if (!node.children && !node.text && !node.displayText && !node.pageTitle) {
+      console.warn('⚠️ Link node missing all text sources:', node);
+    }
+
     // CRITICAL FIX: Check for direct text property first (legacy links)
     // This handles legacy links that have a direct "text" property
     if (node.text && node.text.trim() && node.text !== 'Link' && node.text !== 'Page Link') {
-      console.log('LEGACY_TEXT_DEBUG: Found direct text property:', node.text);
       return node.text.trim();
     }
 
@@ -216,7 +238,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
 
     // 3. Check for explicit displayText property (backup for custom text)
     if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
-      console.log('CUSTOM_TEXT_DEBUG: Found displayText:', node.displayText);
       return node.displayText;
     }
 
@@ -250,31 +271,41 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     return null; // Return null so we can handle it explicitly
   };
 
-  // Get display text with improved extraction
-  let displayText = getTextFromNode(validatedNode);
+  // SIMPLIFIED: Use the clean LinkNode structure for display text
+  let displayText;
 
-  // If displayText is still empty or null, use appropriate fallbacks
-  if (!displayText) {
-    if (pageId) {
-      // BACKWARDS COMPATIBILITY FIX: Use fetched page title if available
-      displayText = validatedNode.pageTitle ||
-                   validatedNode.originalPageTitle ||
-                   fetchedPageTitle ||
-                   (isFetchingTitle ? 'Loading...' : `Page: ${pageId}`);
-    } else if (isExternal) {
-      // For external links, check for custom text fields first
-      displayText = validatedNode.customText ||
-                   validatedNode.displayText ||
-                   href;
-    } else {
-      displayText = 'Link';
-    }
+  if (validatedNode.isCustomText && validatedNode.customText) {
+    // Custom text link - use the custom text
+    displayText = validatedNode.customText;
+  } else if (validatedNode.children && validatedNode.children[0] && validatedNode.children[0].text) {
+    // Use text from children (this is the actual rendered text)
+    displayText = validatedNode.children[0].text;
+  } else if (pageId) {
+    // Auto link - use page title
+    displayText = validatedNode.pageTitle ||
+                 validatedNode.originalPageTitle ||
+                 fetchedPageTitle ||
+                 (isFetchingTitle ? 'Loading...' : `Page: ${pageId}`);
+  } else if (isExternal) {
+    // External link fallback
+    displayText = href;
+  } else {
+    displayText = 'Link';
+  }
+
+  // Essential monitoring for display text issues
+  if (!displayText || displayText.trim() === '') {
+    console.warn('⚠️ Link has empty display text:', validatedNode);
+    displayText = 'Link';
   }
 
   // For protocol links, use a special component - no tooltip in view mode
   if (isProtocolLink) {
     return (
-      <span className="inline-block">
+      <span
+        {...wrapperProps}
+        className="inline-block"
+      >
         <PillLink
           href="/protocol"
           isPublic={true}
@@ -299,15 +330,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
                               validatedNode.data?.originalPageTitle ||
                               null;
 
-    // Debug all link rendering
-    console.log('🔥 LINK NODE RENDERING:', {
-      nodeType: validatedNode.type,
-      showAuthor: validatedNode.showAuthor,
-      authorUsername: validatedNode.authorUsername,
-      authorUserId: validatedNode.authorUserId,
-      hasAuthorInfo: !!(validatedNode.authorUsername || validatedNode.authorUserId),
-      willRenderCompound: validatedNode.showAuthor && (validatedNode.authorUsername || validatedNode.authorUserId)
-    });
+    // Essential monitoring for compound link issues
+    if (validatedNode.showAuthor && !validatedNode.authorUsername && !validatedNode.authorUserId) {
+      console.warn('⚠️ Compound link missing author info:', validatedNode);
+    }
 
     // Check if this is a compound link with author attribution
     if (validatedNode.showAuthor && (validatedNode.authorUsername || validatedNode.authorUserId)) {
@@ -343,8 +369,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       // In view mode, normal navigation behavior
       return (
         <span
-          className="compound-link-container"
+          {...wrapperProps}
+          className="compound-link-container inline-block"
           style={{
+            ...wrapperProps.style,
             display: 'inline-block',
             whiteSpace: 'nowrap',
             verticalAlign: 'baseline'
@@ -439,7 +467,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
 
     return (
       <>
-        <span className="inline-block">
+        <span
+          {...wrapperProps}
+          className="inline-block"
+        >
           <PillLink
             href={href}
             isPublic={true}
@@ -487,7 +518,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
   // TextView is now for viewing only - editing is handled by Editor component
   // Always render in view mode - normal navigation behavior
   return (
-    <span className="inline-block">
+    <span
+      {...wrapperProps}
+      className="inline-block"
+    >
       <PillLink
         href={href}
         isPublic={true}

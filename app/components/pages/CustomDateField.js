@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAccentColor, ACCENT_COLOR_VALUES } from '../../contexts/AccentColorContext';
 import { useDateFormat } from '../../contexts/DateFormatContext';
+import { X } from 'lucide-react';
 import {
   format,
   startOfMonth,
@@ -24,28 +26,31 @@ import {
  * A visual calendar grid for date selection
  */
 function CalendarGrid({ selectedDate, onDateSelect, accentColorValue }) {
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    if (selectedDate) {
-      try {
-        return new Date(selectedDate);
-      } catch (e) {
-        return new Date();
-      }
+  const parseLocalDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    if (typeof value === 'string' && value.includes('-')) {
+      const [y, m, d] = value.split('-').map(Number);
+      return new Date(y, (m || 1) - 1, d || 1);
     }
-    return new Date();
+    try {
+      const parsed = new Date(value);
+      return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const normalizedSelected = parseLocalDate(selectedDate);
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    return normalizedSelected || new Date();
   });
 
   // Update current month when selected date changes
   useEffect(() => {
-    if (selectedDate) {
-      try {
-        const newDate = new Date(selectedDate);
-        if (!isNaN(newDate.getTime())) {
-          setCurrentMonth(newDate);
-        }
-      } catch (e) {
-        // Invalid date, keep current month
-      }
+    if (normalizedSelected) {
+      setCurrentMonth(normalizedSelected);
     }
   }, [selectedDate]);
 
@@ -65,7 +70,7 @@ function CalendarGrid({ selectedDate, onDateSelect, accentColorValue }) {
     for (let i = 0; i < 7; i++) {
       formattedDate = format(day, dateFormat);
       const cloneDay = day;
-      const isSelected = selectedDate && isSameDay(day, new Date(selectedDate));
+      const isSelected = normalizedSelected && isSameDay(day, normalizedSelected);
       const isCurrentMonth = isSameMonth(day, monthStart);
       const isTodayDate = isToday(day);
 
@@ -164,7 +169,12 @@ export default function CustomDateField({
 }) {
   const { accentColor, customColors } = useAccentColor();
   const { formatDateString } = useDateFormat();
+  const [localDate, setLocalDate] = useState(customDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  useEffect(() => {
+    setLocalDate(customDate);
+  }, [customDate]);
 
   // Get the actual color value based on the selected accent color
   const getAccentColorValue = () => {
@@ -186,24 +196,23 @@ export default function CustomDateField({
 
   const handleDateChange = (event) => {
     const newDate = event.target.value;
-    if (onCustomDateChange) {
-      onCustomDateChange(newDate); // Allow empty string to clear the date
-    }
+    setLocalDate(newDate || null);
+    onCustomDateChange?.(newDate || null); // Allow empty string to clear the date
     setShowDatePicker(false);
   };
 
   const handleCalendarDateSelect = (date) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    if (onCustomDateChange) {
-      onCustomDateChange(formattedDate);
-    }
+    // Normalize to local date without timezone offset issues
+    const normalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const formattedDate = format(normalized, 'yyyy-MM-dd');
+    setLocalDate(formattedDate);
+    onCustomDateChange?.(formattedDate);
     setShowDatePicker(false);
   };
 
   const handleClearDate = () => {
-    if (onCustomDateChange) {
-      onCustomDateChange(null); // Clear the custom date
-    }
+    setLocalDate(null);
+    onCustomDateChange?.(null); // Clear the custom date
     setShowDatePicker(false);
   };
 
@@ -232,9 +241,9 @@ export default function CustomDateField({
         </div>
 
         <div className="flex items-center gap-2">
-          {customDate ? (
+          {localDate ? (
             <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
-              {formatCustomDate(customDate) || customDate}
+              {formatCustomDate(localDate) || localDate}
             </div>
           ) : (
             <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
@@ -244,13 +253,22 @@ export default function CustomDateField({
         </div>
 
         {/* Enhanced Date picker overlay */}
-        {showDatePicker && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDatePicker(false)}>
-            <div className="wewrite-card max-w-md w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        {showDatePicker && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={() => setShowDatePicker(false)}>
+            <div
+              className="wewrite-card card-100 border border-border shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col relative z-[10000]"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Header - Fixed */}
-              <div className="flex-shrink-0 mb-6">
-                <h3 className="text-lg font-semibold mb-2">Select custom date</h3>
-                <p className="text-sm text-muted-foreground">Choose a date for this page</p>
+              <div className="flex items-start justify-between gap-2 flex-shrink-0 mb-6">
+                <h3 className="text-lg font-semibold">Select custom date</h3>
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="p-2 rounded-md hover:bg-muted text-muted-foreground"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               {/* Scrollable Content */}
@@ -258,7 +276,7 @@ export default function CustomDateField({
                 {/* Calendar Interface with Card Container */}
                 <div className="wewrite-card card-100">
                   <CalendarGrid
-                    selectedDate={customDate}
+                    selectedDate={localDate}
                     onDateSelect={handleCalendarDateSelect}
                     accentColorValue={accentColorValue}
                   />
@@ -284,67 +302,21 @@ export default function CustomDateField({
                   </button>
                 </div>
 
-                {/* Date input field for manual entry */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Or enter date manually (YYYY-MM-DD):</label>
-                  <input
-                    type="date"
-                    value={customDate || ''}
-                    onChange={handleDateChange}
-                    className="wewrite-input w-full px-3 py-2 rounded-md"
-                  />
-                </div>
-
-                {/* Quick action buttons */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Quick actions:</label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        if (onCustomDateChange) {
-                          onCustomDateChange(today);
-                        }
-                        setShowDatePicker(false);
-                      }}
-                      className="px-3 py-2 text-sm border border-border rounded hover:bg-muted flex-1"
-                      style={{
-                        borderColor: accentColorValue + '40',
-                        color: accentColorValue
-                      }}
-                    >
-                      Today
-                    </button>
-                    <button
-                      onClick={() => {
-                        const yesterday = new Date();
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yesterdayString = yesterday.toISOString().split('T')[0];
-                        if (onCustomDateChange) {
-                          onCustomDateChange(yesterdayString);
-                        }
-                        setShowDatePicker(false);
-                      }}
-                      className="px-3 py-2 text-sm border border-border rounded hover:bg-muted flex-1"
-                    >
-                      Yesterday
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {/* Sticky Action Buttons */}
-              <div className="flex-shrink-0 border-t border-neutral-20 pt-4 mt-4 bg-[var(--card-bg)] backdrop-blur-md">
+              <div className="flex-shrink-0 border-t border-neutral-20 pt-4 mt-4">
                 <div className="flex gap-2 justify-end">
                   {customDate && (
                     <button
                       onClick={handleClearDate}
-                      className="px-4 py-2 text-sm border border-destructive text-destructive rounded hover:bg-destructive/10"
+                      className="px-4 py-2 text-sm border border-border rounded hover:bg-muted"
                     >
                       Clear
                     </button>
                   )}
                   <button
+                    type="button"
                     onClick={() => setShowDatePicker(false)}
                     className="px-4 py-2 text-sm border border-border rounded hover:bg-muted"
                   >
@@ -363,7 +335,8 @@ export default function CustomDateField({
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

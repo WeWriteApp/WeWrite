@@ -619,6 +619,8 @@ export async function POST(request: NextRequest) {
 
 // PUT endpoint - Update an existing page
 export async function PUT(request: NextRequest) {
+  let body: any = null; // Declare body outside try block for error handling
+
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
@@ -628,7 +630,7 @@ export async function PUT(request: NextRequest) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
 
-    const body = await request.json();
+    body = await request.json();
     const { id, title, content, location, groupId, customDate } = body;
 
     console.log('🔵 API: Request body parsed', {
@@ -809,6 +811,26 @@ export async function PUT(request: NextRequest) {
           hasContent: !!content,
           contentLength: JSON.stringify(content).length
         }, 'PAGE_SAVE');
+
+        // Essential monitoring for save operations
+        const findLinks = (nodes: any[]): any[] => {
+          const links: any[] = [];
+          const traverse = (node: any) => {
+            if (node.type === 'link') {
+              links.push(node);
+            }
+            if (node.children) {
+              node.children.forEach(traverse);
+            }
+          };
+          nodes.forEach(traverse);
+          return links;
+        };
+
+        const linksInContent = findLinks(content);
+        if (linksInContent.some(link => link.isCustomText === true && link.customText && link.children?.[0]?.text !== link.customText)) {
+          console.warn('⚠️ Saving content with unsynchronized custom text links');
+        }
 
         // Save new version (this creates activity records and updates lastDiff)
         console.log('🔵 API: Calling saveNewVersionServer', {

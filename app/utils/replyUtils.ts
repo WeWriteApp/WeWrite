@@ -24,7 +24,7 @@ interface ReplyOptions {
   pageTitle?: string;
   userId?: string;
   username?: string;
-  replyType?: string;
+  replyType?: 'agree' | 'disagree' | 'standard' | null | string;
 }
 
 /**
@@ -62,43 +62,48 @@ export const createReplyContent = ({
   replyType = "standard"
 }: ReplyOptions): EditorNode[] => {
   // This structure allows for future reply types (agree/disagree/etc.)
-  switch (replyType) {
-    case "standard":
-    default:
-      // Ensure we have a valid username to display
-      const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+  const normalizedType = replyType === 'agree' || replyType === 'disagree' ? replyType : null;
 
-      // Create attribution paragraph with explicit flags
-      const attributionParagraph = {
-        type: "paragraph",
-        isAttribution: true, // Add a flag to identify this as an attribution paragraph
-        attributionType: "reply", // Specify the type of attribution
-        children: [
-          { text: `Replying to ` },
-          {
-            type: "link",
-            url: `/pages/${pageId}`,
-            pageId: pageId,
-            pageTitle: pageTitle || "Untitled",
-            className: "page-link",
-            isPageLink: true,
-            children: [{ text: pageTitle || "Untitled" }]
-          },
-          { text: ` by ` },
-          {
-            type: "link",
-            url: `/user/${userId || "anonymous"}`,
-            isUser: true,
-            userId: userId || "anonymous",
-            username: displayUsername,
-            className: "user-link",
-            children: [{ text: displayUsername }]
-          }
-        ]
-      };
+  // Ensure we have a valid username to display
+  const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
 
-      return [attributionParagraph];
-  }
+  const sentimentText = normalizedType === 'agree'
+    ? 'I agree with '
+    : normalizedType === 'disagree'
+      ? 'I disagree with '
+      : 'Replying to ';
+
+  // Create attribution paragraph with explicit flags and replyType metadata
+  const attributionParagraph = {
+    type: "paragraph",
+    isAttribution: true,
+    attributionType: "reply",
+    replyType: normalizedType || null,
+    children: [
+      { text: sentimentText },
+      {
+        type: "link",
+        url: `/pages/${pageId}`,
+        pageId: pageId,
+        pageTitle: pageTitle || "Untitled",
+        className: "page-link",
+        isPageLink: true,
+        children: [{ text: pageTitle || "Untitled" }]
+      },
+      { text: ` by ` },
+      {
+        type: "link",
+        url: `/user/${userId || "anonymous"}`,
+        isUser: true,
+        userId: userId || "anonymous",
+        username: displayUsername,
+        className: "user-link",
+        children: [{ text: displayUsername }]
+      }
+    ]
+  };
+
+  return [attributionParagraph];
 };
 
 /**

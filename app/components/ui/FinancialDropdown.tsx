@@ -74,6 +74,26 @@ function useSoloDropdown(id: string) {
     }
   }, [id]);
 
+  // Close on scroll/wheel/touchmove anywhere on the page (treat as outside interaction)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutsideScroll = () => {
+      setIsOpen(false);
+      closeDropdown();
+    };
+
+    window.addEventListener('scroll', handleOutsideScroll, true);
+    window.addEventListener('wheel', handleOutsideScroll, { passive: true, capture: true });
+    window.addEventListener('touchmove', handleOutsideScroll, { passive: true, capture: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleOutsideScroll, true);
+      window.removeEventListener('wheel', handleOutsideScroll, true as any);
+      window.removeEventListener('touchmove', handleOutsideScroll, true as any);
+    };
+  }, [isOpen]);
+
   return { isOpen, handleOpenChange };
 }
 
@@ -137,7 +157,13 @@ export function FinancialDropdown({
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChangeWithCallback}>
       <DropdownMenuTrigger asChild>
-        <div className={cn("cursor-pointer flex items-center", className)}>
+        <div
+          className={cn("cursor-pointer flex items-center", className)}
+          onClick={(e) => {
+            e.preventDefault();
+            handleOpenChangeWithCallback(!isOpen);
+          }}
+        >
           {trigger}
         </div>
       </DropdownMenuTrigger>
@@ -212,7 +238,7 @@ export function SpendBreakdown({
   return (
     <div className="space-y-2 text-sm">
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Total:</span>
+        <span className="text-muted-foreground">Monthly subscription:</span>
         <span className="font-medium">{formatUsdCents(totalUsdCents)}</span>
       </div>
       <div className="flex justify-between">
@@ -222,7 +248,7 @@ export function SpendBreakdown({
         </span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Available:</span>
+        <span className="text-muted-foreground">Available to spend:</span>
         <span className={`font-medium ${isOutOfFunds ? 'text-warn' : 'text-success'}`}>
           {isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents)}
         </span>

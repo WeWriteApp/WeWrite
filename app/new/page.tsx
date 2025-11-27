@@ -13,6 +13,7 @@ import { auth } from "../firebase/config";
 import { useRecentPages } from "../contexts/RecentPagesContext";
 // import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
+import { createReplyContent } from "../utils/replyUtils";
 import { useAuth } from '../providers/AuthProvider';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import ContentPageHeader from "../components/pages/ContentPageHeader";
@@ -44,7 +45,7 @@ import { WritingIdeasBanner } from "../components/writing/WritingIdeasBanner";
  */
 function NewPageLoadingState({ title, isReply }: { title: string; isReply: boolean }) {
   return (
-    <SlideUpPage>
+    <SlideUpPage className="min-h-screen bg-background pb-24 md:pb-12">
       <Head>
         <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
       </Head>
@@ -126,7 +127,6 @@ function NewPageContent() {
   // Page-like state for consistency with SinglePageView
   const [page, setPage] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   // State for tracking changes and saving (mimics EditPage)
   const [editorContent, setEditorContent] = useState<EditorNode[]>([]);
@@ -232,24 +232,6 @@ function NewPageContent() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Initialize the page after a brief delay to prevent layout shift
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitializing(false);
-
-      // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
-      // Track page creation started
-      // trackPageCreationFlow.started({
-      //   is_reply: isReply,
-      //   is_daily_note: isDailyNote,
-      //   has_initial_content: !!(searchParams?.get('content') || searchParams?.get('initialContent')),
-      //   has_initial_title: !!searchParams?.get('title')
-      // });
-    }, 150); // Brief delay to ensure smooth rendering
-
-    return () => clearTimeout(timer);
-  }, []);
-
   // Track if title was pre-filled from URL (for focus management)
   const [titlePreFilled, setTitlePreFilled] = useState(false);
 
@@ -309,6 +291,7 @@ function NewPageContent() {
       const pageTitle = searchParams.get('page') || '';
       const username = searchParams.get('username') || '';
       const replyToId = searchParams.get('replyTo') || '';
+       const replyTypeParam = searchParams.get('replyType');
       const contentParam = searchParams.get('initialContent');
 
       setTitle("");
@@ -316,6 +299,28 @@ function NewPageContent() {
       if (contentParam) {
         try {
           const parsedContent = JSON.parse(decodeURIComponent(contentParam));
+
+          // If a replyType is provided but the parsed content doesn't include it, rebuild with sentiment
+          const needsSentiment =
+            replyTypeParam &&
+            (replyTypeParam === 'agree' || replyTypeParam === 'disagree') &&
+            (!parsedContent?.[0]?.replyType || parsedContent[0].replyType === 'standard');
+
+          if (needsSentiment) {
+        const rebuilt = [
+          ...createReplyContent({
+            pageId: replyToId,
+            pageTitle,
+            userId: searchParams.get('pageUserId') || user?.uid || '',
+            username: decodeURIComponent(searchParams.get('pageUsername') || '') || username,
+            replyType: replyTypeParam as 'agree' | 'disagree'
+          }),
+          { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
+        ];
+            setEditorState(rebuilt);
+            return;
+          }
+
           let completeContent = [...parsedContent];
           if (completeContent.length < 2) {
             completeContent.push({ type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." });
@@ -327,19 +332,34 @@ function NewPageContent() {
         }
       }
 
-      const attribution = createReplyAttribution({
-        pageId: replyToId,
-        pageTitle: pageTitle,
-        userId: user?.uid || '',
-        username: username
-      });
-
-      const replyContent = [
-        attribution,
-        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
-      ];
-
-      setEditorState(replyContent);
+      // Fallback: build reply content with sentiment if provided
+      try {
+        const sentiment = replyTypeParam === 'agree' || replyTypeParam === 'disagree' ? replyTypeParam : null;
+        const replyContent = [
+          ...createReplyContent({
+            pageId: replyToId,
+            pageTitle,
+            userId: user?.uid || '',
+            username,
+            replyType: sentiment || "standard"
+          }),
+          { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
+        ];
+        setEditorState(replyContent);
+      } catch (error) {
+        console.error("Error building reply content:", error);
+        const attribution = createReplyAttribution({
+          pageId: replyToId,
+          pageTitle: pageTitle,
+          userId: user?.uid || '',
+          username: username
+        });
+        const replyContent = [
+          attribution,
+          { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
+        ];
+        setEditorState(replyContent);
+      }
     } else if (searchParams) {
       const titleParam = searchParams.get('title');
       const contentParam = searchParams.get('initialContent');
@@ -993,22 +1013,35 @@ function NewPageContent() {
           console.log('🔵 DEBUG: Setting isSaving to false...');
           setIsSaving(false);
 
-          // CRITICAL FIX: Longer delay to ensure database consistency before redirect
-          // This prevents 404 errors when navigating to newly created pages
-          setTimeout(() => {
-            try {
-              // Use window.location for more reliable navigation that doesn't trigger React errors
-              window.location.href = `/${pageId}`;
-            } catch (routerError) {
-              console.error('Error during post-save redirect (non-fatal):', routerError);
-              // If redirect fails, show success message and let user navigate manually
-              toast({
-                title: "Page Created Successfully",
-                description: `Your page "${title}" has been created. You can find it in your pages.`,
-                variant: "default"
-              });
+          // Store optimistic payload so the destination page can render instantly without skeleton
+          try {
+            const optimisticPage = {
+              id: pageId,
+              title: pageTitle,
+              userId,
+              username,
+              content: finalContent,
+              createdAt: new Date().toISOString(),
+              lastModified: new Date().toISOString(),
+              isPublic: true,
+              deleted: false
+            };
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(`wewrite:optimisticPage:${pageId}`, JSON.stringify(optimisticPage));
             }
-          }, 1500); // Increased delay to ensure save is fully processed
+          } catch (storageError) {
+            console.warn('Failed to persist optimistic page payload (non-fatal):', storageError);
+          }
+
+          // Warm the route before navigating to minimize loading flashes
+          try {
+            await router.prefetch(`/${pageId}`);
+          } catch (prefetchError) {
+            console.warn('Prefetch failed (non-fatal):', prefetchError);
+          }
+
+          // Redirect to the new page without a full reload to reduce flicker
+          router.push(`/${pageId}`);
 
           return true;
         } else {
@@ -1153,14 +1186,9 @@ function NewPageContent() {
   // Get username for display
   const username = user?.username || user?.displayName || 'Anonymous';
 
-  // Show loading state if still initializing
-  if (isInitializing) {
-    return <NewPageLoadingState title={title} isReply={isReply} />;
-  }
-
   // Render using the exact same structure as SinglePageView
   return (
-    <SlideUpPage>
+    <SlideUpPage className="min-h-screen bg-background pb-32 md:pb-28">
       {/* Sticky Save Header - slides down from top when there are unsaved changes */}
       <StickySaveHeader
         hasUnsavedChanges={hasUnsavedChanges}
@@ -1193,7 +1221,7 @@ function NewPageContent() {
         />
 
         {/* Simplified layout container - single consistent padding for all elements */}
-        <div className="px-4 pb-32">
+        <div className="px-4 pb-4">
           {/* Content editor - Clean container without unnecessary card wrapper */}
           {isEditing && (
             <div

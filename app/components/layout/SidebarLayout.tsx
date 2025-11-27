@@ -34,7 +34,7 @@ export default function SidebarLayout({ children, className }: SidebarLayoutProp
   const contentPushWidth = isAdminDashboard ? 0 : (isExpanded ? sidebarWidth : sidebarWidth > 0 ? 64 : 0);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen pb-24 md:pb-8 bg-background">
       {/* Sidebar spacer - only on desktop, only pushes content for persistent expanded state */}
       <div
         className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"

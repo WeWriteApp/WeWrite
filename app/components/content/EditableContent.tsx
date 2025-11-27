@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import SlateEditor from '../editor/SlateEditor';
+import Editor from '../editor/Editor';
 
 /**
  * EditableContent - Pure Editing Component
  * 
  * This component handles all editing functionality for WeWrite content.
- * It's a clean wrapper around SlateEditor with consistent styling and
+ * It's a clean wrapper around Editor with consistent styling and
  * clear responsibilities.
  * 
  * Responsibilities:
@@ -71,25 +71,55 @@ const EditableContent: React.FC<EditableContentProps> = ({
   className = ''
 }) => {
   // 🎯 ELEGANT: No forced re-renders needed - LinkNode components auto-update via events
+
   return (
     <div className={`wewrite-editable-content ${className}`}>
-      <SlateEditor
+      {/* Toolbar and controls - temporarily removed for simplified editor */}
+      {showToolbar && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Ctrl+K to insert links</span>
+          {onSave && (
+            <button
+              onClick={() => onSave()}
+              disabled={isSaving}
+              className="ml-auto px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          )}
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="px-3 py-1 border rounded text-sm"
+            >
+              Cancel
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-sm"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded">
+          {error}
+        </div>
+      )}
+
+      <Editor
         initialContent={content}
         onChange={onChange}
-        onEmptyLinesChange={onEmptyLinesChange}
         placeholder={placeholder}
         readOnly={false}
-        location={location}
-        setLocation={setLocation}
-        onSave={onSave}
-        onCancel={onCancel}
-        onDelete={onDelete}
-        isSaving={isSaving}
-        error={error}
-        isNewPage={isNewPage}
-        showToolbar={showToolbar}
-        onInsertLinkRequest={onInsertLinkRequest}
         pageId={pageId}
+        className="min-h-[200px]"
+        onInsertLinkRequest={onInsertLinkRequest}
       />
     </div>
   );

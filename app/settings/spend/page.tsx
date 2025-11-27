@@ -76,7 +76,8 @@ export default function SpendPage() {
         const data = await response.json();
         console.log('🎯 Spend: Subscription data:', data);
         // Get the actual subscription amount, not the USD balance total
-        const amount = data.fullData?.amount || 0;
+        const isActive = data.status === 'active';
+        const amount = isActive ? (data.fullData?.amount || 0) : 0;
         setSubscriptionAmount(amount);
       } else {
         console.error('🎯 Spend: Subscription API error:', response.status, response.statusText);

@@ -39,7 +39,7 @@
 @media (max-width: 767px) {
   main {
     padding-top: 72px;
-    padding-bottom: 140px;
+    padding-bottom: 20px;
     transition: padding-top 300ms ease-in-out;
   }
 

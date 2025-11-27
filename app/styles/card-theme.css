@@ -231,7 +231,7 @@
 .wewrite-card.wewrite-daily-notes {
   display: flex;
   flex-direction: column;
-  min-height: 16rem; /* h-64 */
+  min-height: 13rem; /* h-52 */
 
   /* FIXED: Use consistent blur variable instead of opacity-based calculation */
   backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));

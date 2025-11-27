@@ -8,6 +8,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2, CheckCircle } from 'lucide-react';
+import { PaymentMethodsOverview } from '../../components/payments/PaymentMethodsOverview';
 
 export default function FundAccountPage() {
   const { user } = useAuth();
@@ -206,6 +207,11 @@ export default function FundAccountPage() {
           currentSubscription={currentSubscription}
           showCurrentOption={true}
         />
+      </div>
+
+      {/* Payment methods visibility/management */}
+      <div>
+        <PaymentMethodsOverview />
       </div>
 
       {/* Subscription History */}

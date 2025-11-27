@@ -48,6 +48,14 @@ User Subscription → USD Balance → Allocations → Creator Earnings → Payou
 - **Direct USD Allocations**: No virtual currency conversion
 - **Monthly Tracking**: Allocations tracked by month (YYYY-MM)
 - **Real-time Updates**: Optimistic UI with background API calls
+
+#### 4. Rich Text Editor System
+- **Single Editor Implementation**: One canonical `Editor` component (formerly SimplifiedSlateEditor)
+- **Inline Pill Links**: Links rendered as interactive pill components using `LinkNode`
+- **LinkNodeHelper Integration**: Consistent link creation using documented helper functions
+- **Slate.js Foundation**: Built on Slate.js with React integration
+- **No Fallback Editors**: Single, reliable implementation eliminates complexity
+- **Error Recovery**: Graceful handling of content normalization and DOM sync issues
 - **Batch Operations**: Efficient multi-allocation updates
 
 #### 4. Earnings Processing

@@ -1,7 +1,13 @@
+/**
+ * WHY: Single text-selection menu for all surfaces (view + edit) to avoid
+ * competing toolbars. Hooks into clipboard actions so attribution metadata
+ * is consistently applied when users copy shared content.
+ */
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Plus, FileText, Type, Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from '../ui/use-toast';
@@ -12,9 +18,12 @@ import {
   DialogTitle} from "../ui/dialog";
 import LinkEditorModal from '../editor/LinkEditorModal';
 import { createPortal } from 'react-dom';
+import FilteredSearchResults from '../search/FilteredSearchResults';
+import { useAuth } from '../../providers/AuthProvider';
 
 interface UnifiedTextSelectionMenuProps {
   selectedText: string;
+  selectedHtml?: string;
   position: { x: number; y: number };
   onClose: () => void;
   onCopy?: (text: string) => Promise<{ success: boolean; message: string }>;
@@ -23,19 +32,34 @@ interface UnifiedTextSelectionMenuProps {
   enableShare?: boolean;
   enableAddToPage?: boolean;
   username?: string;
+  userId?: string;
+  pageId?: string;
+  pageTitle?: string;
+  canEdit?: boolean;
+  setSelectionModalOpen?: (open: boolean) => void;
 }
 
 interface AddToPageModalProps {
   selectedText: string;
+  selectedHtml: string;
   isOpen: boolean;
   onClose: () => void;
+  sourcePageId?: string;
+  sourcePageTitle?: string;
+  modalRef?: React.RefObject<HTMLDivElement>;
+  username?: string;
+  sourceUserId?: string;
 }
 
-const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, onClose }) => {
+const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedHtml, isOpen, onClose, sourcePageId, sourcePageTitle, modalRef, username, sourceUserId }) => {
   const router = useRouter();
   const params = useParams();
   const currentPageId = params?.id;
   const wordCount = selectedText.trim().split(/\s+/).length;
+  const [selectedPage, setSelectedPage] = useState<any | null>(null);
+  const [newPageTitle, setNewPageTitle] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const handleAddAsTitle = () => {
     const encodedText = encodeURIComponent(selectedText);
@@ -53,11 +77,291 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
     onClose();
   };
 
+  const buildContentFromSelection = (html: string, text: string, attributionMeta: any) => {
+    const paragraphs: any[] = [];
+    const markPasted = (nodes: any[]) =>
+      nodes.map((n) => {
+        if (!n) return n;
+        const node = { ...n };
+        node.metadata = { ...(node.metadata || {}), pasted: true };
+        if (node.children) {
+          node.children = markPasted(node.children);
+        }
+        return node;
+      });
+    if (html && typeof DOMParser !== 'undefined') {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+        const container = doc.body.firstChild as HTMLElement | null;
+        let currentChildren: any[] = [];
+
+        const pushParagraph = () => {
+          if (currentChildren.length > 0) {
+            paragraphs.push({ type: 'paragraph', children: currentChildren });
+            currentChildren = [];
+          }
+        };
+
+        const processNode = (node: Node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent && node.textContent.length > 0) {
+              currentChildren.push({ text: node.textContent });
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+
+            if (tag === 'br') {
+              pushParagraph();
+              return;
+            }
+
+            if (tag === 'p' || tag === 'div') {
+              // Start a new paragraph for block elements
+              const savedChildren: any[] = [];
+              const prevChildren = currentChildren;
+              currentChildren = [];
+              el.childNodes.forEach(processNode);
+              pushParagraph();
+              currentChildren = prevChildren;
+              return;
+            }
+
+            if (tag === 'a' || el.dataset.linkType || el.classList.contains('page-link') || el.classList.contains('user-link')) {
+              const href = el.getAttribute('href') || el.dataset.url || '#';
+              const pageId = el.dataset.pageId || (href?.match(/^\/([^\/#]+)/)?.[1]);
+              const userIdAttr = el.dataset.userId;
+              const isUser = !!userIdAttr;
+              const linkText = el.textContent || href;
+              const linkNode: any = {
+                type: 'link',
+                url: href,
+                isCustomText: true,
+                customText: linkText,
+                children: [{ text: linkText }]
+              };
+              if (isUser) {
+                linkNode.isUser = true;
+                linkNode.userId = userIdAttr;
+              } else if (pageId) {
+                linkNode.pageId = pageId;
+                linkNode.pageTitle = linkText;
+              } else {
+                linkNode.isExternal = href.startsWith('http');
+              }
+              currentChildren.push(linkNode);
+              return;
+            }
+
+            // Fallback: process children recursively
+            el.childNodes.forEach(processNode);
+          }
+        };
+
+        if (container) {
+          container.childNodes.forEach(processNode);
+          pushParagraph();
+        }
+      } catch (err) {
+        console.warn('Failed to parse selection HTML, falling back to plain text', err);
+      }
+    }
+
+    // Fallback to plain text paragraphs if no HTML parsed
+    if (paragraphs.length === 0 && text) {
+      const lines = text.split('\n');
+      lines.forEach((line) => {
+        paragraphs.push({ type: 'paragraph', children: [{ text: line }] });
+      });
+    }
+
+    // Apply pasted metadata and add quotes around first/last text nodes in each paragraph
+    const quotedParagraphs = paragraphs.map((para) => {
+      const p = { ...para };
+      p.children = markPasted(p.children || []);
+      const children = p.children;
+      if (children && children.length > 0) {
+        // Add opening quote to first text child
+        for (let i = 0; i < children.length; i++) {
+          if (children[i].text) {
+            children[i] = { ...children[i], text: `“${children[i].text}` };
+            break;
+          }
+        }
+        // Add closing quote to last text child
+        for (let i = children.length - 1; i >= 0; i--) {
+          if (children[i].text) {
+            children[i] = { ...children[i], text: `${children[i].text}”` };
+            break;
+          }
+        }
+      }
+      p.children = children;
+      return p;
+    });
+
+    // Append attribution paragraph (suffix only)
+    quotedParagraphs.push({
+      type: 'paragraph',
+      children: [
+        { text: '— text from ', metadata: { pasted: true } },
+        {
+          type: 'link',
+          pageId: attributionMeta.sourcePageId,
+          pageTitle: attributionMeta.sourcePageTitle,
+          url: `/${attributionMeta.sourcePageId}`,
+          isCustomText: true,
+          customText: attributionMeta.sourcePageTitle,
+          children: [{ text: attributionMeta.sourcePageTitle }],
+          metadata: { pasted: true }
+        },
+        { text: ' by ', metadata: { pasted: true } },
+        {
+          type: 'link',
+          isExternal: true,
+          url: `/@${attributionMeta.sourceUsername}`,
+          isCustomText: true,
+          customText: attributionMeta.sourceUsername,
+          data: { userId: attributionMeta.sourceUserId },
+          children: [{ text: attributionMeta.sourceUsername }],
+          metadata: { pasted: true }
+        }
+      ]
+    });
+
+    return quotedParagraphs;
+  };
+
+  const appendToPage = async (page: any) => {
+    if (!page) {
+      toast.error('Select a page first');
+      return;
+    }
+
+    if (user && page.userId && page.userId !== user.uid) {
+      toast.error('You can only append to your own pages');
+      return;
+    }
+
+    const targetPageId = page.id || page.pageId || page.docId;
+    if (!targetPageId) {
+      toast.error('Could not determine target page id');
+      return;
+    }
+
+    const authorUsername = username || user?.username || 'unknown';
+
+    setIsSubmitting(true);
+    try {
+      const attributionMeta = {
+        sourcePageId: sourcePageId || currentPageId,
+        sourcePageTitle: sourcePageTitle || 'Source',
+        sourceUsername: authorUsername,
+        sourceUserId: sourceUserId || user?.uid || 'unknown',
+        pastedAt: Date.now()
+      };
+
+      const selectionContent = buildContentFromSelection(selectedHtml, selectedText, attributionMeta);
+
+      const body = {
+        sourcePageData: {
+          id: attributionMeta.sourcePageId,
+          title: attributionMeta.sourcePageTitle,
+          content: selectionContent,
+          userId: user?.uid || null
+        }
+      };
+
+      const res = await fetch(`/api/pages/${targetPageId}/append-reference`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error('🔗 TEXT_SELECTION: Append failed', { status: res.status, data });
+        toast.error(data.error || `Failed to append (status ${res.status})`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log('🔗 TEXT_SELECTION: Append succeeded', { targetPageId });
+      toast.success(`Appended to "${page.title || 'page'}"`);
+      // Redirect to target page in edit mode to show the appended quote
+      const targetUrl = `/${targetPageId}?edit=true#appended`;
+      console.log('🔗 TEXT_SELECTION: Redirecting to appended page', { targetPageId, targetUrl });
+      // Use both router.push and hard redirect as a safety net
+      try {
+        await router.push(targetUrl);
+        // Ensure navigation even if router is blocked
+        setTimeout(() => {
+          window.location.href = targetUrl;
+        }, 300);
+      } catch (navError) {
+        console.warn('Router navigation failed, falling back to hard redirect', navError);
+        window.location.href = targetUrl;
+      }
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to append');
+      console.error('🔗 TEXT_SELECTION: Append threw error', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateNewPage = async () => {
+    if (!newPageTitle.trim()) {
+      toast.error('Title is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newPageTitle.trim(),
+          content: [
+            {
+              type: 'paragraph',
+              children: [{ text: selectedText }]
+            }
+          ]
+        })
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create page');
+      }
+
+      const data = await res.json();
+      const newPageId = data?.pageId || data?.id;
+      toast.success('New page created');
+      if (newPageId) {
+        await router.push(`/${newPageId}?edit=true#appended`);
+      }
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create page');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className="sm:max-w-md"
         aria-describedby="add-to-page-modal-description"
+        ref={modalRef}
+        data-text-selection-modal
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <DialogHeader>
           <DialogTitle>Add to New Page</DialogTitle>
@@ -67,11 +371,63 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
             <p id="add-to-page-modal-description" className="text-sm text-muted-foreground mb-2">Selected text:</p>
             <p className="text-sm font-medium line-clamp-3">"{selectedText}"</p>
           </div>
-          
-          {wordCount <= 2 ? (
+
+          {/* Append to existing page */}
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Append to existing page</p>
+            <FilteredSearchResults
+              onSelect={async (page, event) => {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                setSelectedPage(page);
+                await appendToPage(page);
+              }}
+              placeholder="Search your pages..."
+              preventRedirect={true}
+              className="h-full"
+              hideCreateButton={true}
+              userId={user?.uid || null}
+              editableOnly={true}
+              onFilterToggle={() => true}
+            />
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                appendToPage(selectedPage);
+              }}
+              disabled={!selectedPage || isSubmitting}
+              className="w-full"
+              variant="secondary"
+            >
+              {isSubmitting ? 'Appending...' : selectedPage ? `Append to "${selectedPage.title}"` : 'Select a page'}
+            </Button>
+          </div>
+
+          {/* Create new page */}
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Create new page</p>
+            <Input
+              value={newPageTitle}
+              onChange={(e) => setNewPageTitle(e.target.value)}
+              placeholder="New page title (required)"
+              className="w-full"
+            />
+            <Button
+              onClick={handleCreateNewPage}
+              disabled={isSubmitting}
+              className="w-full"
+            >
+              {isSubmitting ? 'Creating...' : 'Create new page with selection'}
+            </Button>
+          </div>
+
+          {/* Quick actions for tiny selections */}
+          {wordCount <= 2 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                How would you like to use this text?
+                Quick actions for short selections
               </p>
               <div className="grid grid-cols-1 gap-2">
                 <Button
@@ -81,8 +437,8 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
                 >
                   <Type className="h-4 w-4" />
                   <div className="text-left">
-                    <div className="font-medium">Add as Title</div>
-                    <div className="text-xs text-muted-foreground">Use as page title with empty content</div>
+                    <div className="font-medium">Use as Title</div>
+                    <div className="text-xs text-muted-foreground">Start a new page titled with this text</div>
                   </div>
                 </Button>
                 <Button
@@ -92,21 +448,11 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
                 >
                   <FileText className="h-4 w-4" />
                   <div className="text-left">
-                    <div className="font-medium">Add as Body Text</div>
-                    <div className="text-xs text-muted-foreground">Use as page content</div>
+                    <div className="font-medium">Use as Body Text</div>
+                    <div className="text-xs text-muted-foreground">Start a new page using this as content</div>
                   </div>
                 </Button>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                This text will be added as the content of a new page.
-              </p>
-              <Button onClick={handleAddAsBody} className="w-full">
-                <FileText className="h-4 w-4 mr-2" />
-                Create New Page
-              </Button>
             </div>
           )}
         </div>
@@ -117,6 +463,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
 
 const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   selectedText,
+  selectedHtml = '',
   position,
   onClose,
   onCopy,
@@ -124,12 +471,18 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   enableCopy = true,
   enableShare = true,
   enableAddToPage = true,
-  username
+  username,
+  userId,
+  pageId,
+  pageTitle,
+  canEdit = true,
+  setSelectionModalOpen
 }) => {
   const params = useParams();
   const currentPageId = params?.id as string;
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   // Debug effect to track modal state changes
   useEffect(() => {
@@ -178,12 +531,21 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       console.log('🔗 TEXT_SELECTION: Click outside handler triggered', {
         showLinkModal,
+        showModal,
         target: event.target,
         targetClass: (event.target as Element)?.className
       });
       // Don't close if link modal is open
       if (showLinkModal) {
         console.log('🔗 TEXT_SELECTION: Link modal is open, not closing menu');
+        return;
+      }
+      // Keep menu open while add-to-page modal is open
+      if (showModal) {
+        // If click is inside the add-to-page dialog, ignore
+        if (modalRef.current && modalRef.current.contains(event.target as Node)) {
+          return;
+        }
         return;
       }
 
@@ -205,7 +567,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     };
 
     // Temporarily disable click outside when link modal might be opening
-    if (!showLinkModal) {
+    if (!showLinkModal && !showModal) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     document.addEventListener('keydown', handleEscape);
@@ -214,7 +576,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [onClose, showLinkModal]);
+  }, [onClose, showLinkModal, showModal]);
 
   // Check overflow on mount and when content changes
   useEffect(() => {
@@ -261,6 +623,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   };
 
   const handleAddToPage = () => {
+    setSelectionModalOpen?.(true);
     setShowModal(true);
   };
 
@@ -277,6 +640,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
 
   const handleModalClose = () => {
     setShowModal(false);
+    setSelectionModalOpen?.(false);
     onClose();
   };
 
@@ -315,10 +679,16 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   };
 
   // Calculate menu position to ensure it stays within viewport
+  const safeX = position ? Math.max(10, Math.min(position.x, window.innerWidth - 200)) : window.innerWidth / 2;
+  const safeY = position ? Math.max(10, position.y) : 100;
   const menuStyle = {
-    left: `${Math.max(10, Math.min(position.x, window.innerWidth - 200))}px`,
-    top: `${Math.max(10, position.y)}px`,
-    transform: 'translate(-50%, -100%)'};
+    left: `${safeX}px`,
+    top: `${safeY}px`,
+    transform: 'translate(-50%, -100%)'
+  };
+
+  // If we somehow lost position, don't render the menu
+  if (!position) return null;
 
   return (
     <>
@@ -363,15 +733,17 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
               </Button>
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenLinkModal}
-              className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
-            >
-              <Link className="h-3 w-3" />
-              Link
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleOpenLinkModal}
+                className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
+              >
+                <Link className="h-3 w-3" />
+                Link
+              </Button>
+            )}
 
             {enableShare && (
               <Button
@@ -413,8 +785,14 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
 
       <AddToPageModal
         selectedText={selectedText}
+        selectedHtml={selectedHtml}
         isOpen={showModal}
         onClose={handleModalClose}
+        sourcePageId={pageId}
+        sourcePageTitle={pageTitle}
+        modalRef={modalRef}
+        username={username}
+        sourceUserId={userId}
       />
 
       {showLinkModal && typeof document !== 'undefined' && createPortal(

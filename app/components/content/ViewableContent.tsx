@@ -54,6 +54,16 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
   lineMode = LINE_MODES.NORMAL,
   className = ''
 }) => {
+  // DEBUG: Log the actual content structure
+  console.log('🔍 ViewableContent: Raw content received:', {
+    content,
+    type: typeof content,
+    isArray: Array.isArray(content),
+    length: content?.length,
+    firstItem: content?.[0],
+    stringified: JSON.stringify(content, null, 2)
+  });
+
   return (
     <div className={`wewrite-viewable-content ${className}`}>
       <TextView

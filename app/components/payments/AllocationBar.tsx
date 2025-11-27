@@ -188,9 +188,8 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     // Use optimistic allocation for current page (if available)
     const currentPageCents = allocationState.optimisticAllocation ?? allocationState.currentAllocationCents;
 
-    // Calculate other pages allocation - this should remain constant during optimistic updates
-    // We use the original allocation state to avoid the squeeze effect
-    const otherPagesCents = Math.max(0, originalAllocatedCents - allocationState.currentAllocationCents);
+    // Other pages allocation: everything except this page
+    const otherPagesCents = Math.max(0, originalAllocatedCents - currentPageCents);
 
     // Calculate optimistic available by subtracting the allocation difference from original available
     const allocationDifference = currentPageCents - allocationState.currentAllocationCents;
@@ -387,61 +386,54 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   </Button>
 
                   {/* Composition Bar */}
-                  <div className="flex-1 h-12 flex gap-1 items-center bg-muted rounded-lg p-1">
+                  <div className="flex-1 h-12 flex gap-1 items-center bg-muted rounded-lg p-1 relative overflow-hidden">
                     {/* Always show composition - even when out of funds */}
                     <>
                       {/* Other pages - use neutral color system */}
-                      {compositionData.otherPagesPercentage > 0 && (
-                        <div
-                          className={`h-full ${ALLOCATION_BAR_STYLES.sections.other}`}
-                          style={{ width: `${compositionData.otherPagesPercentage}%` }}
-                        />
-                      )}
+                      <div
+                        className={`h-full ${ALLOCATION_BAR_STYLES.sections.other}`}
+                        style={{ width: `${compositionData.otherPagesPercentage}%` }}
+                      />
 
                       {/* Current page - funded portion with game-like animations */}
-                      {compositionData.currentPageFundedPercentage > 0 && (
-                        <div
-                          className={cn(
-                            "h-full bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
-                            showPulse && "animate-allocation-pulse"
-                          )}
-                          style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-                        >
-                          {/* Pulse animation overlay */}
-                          <PulseAnimation
-                            trigger={showPulse}
-                            onComplete={() => setShowPulse(false)}
-                            className="bg-primary rounded-md"
-                            intensity={1.05}
-                          />
+                      <div
+                        className={cn(
+                          "h-full bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
+                          showPulse && "animate-allocation-pulse"
+                        )}
+                        style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
+                      >
+                        {/* Pulse animation overlay */}
+                        <PulseAnimation
+                          trigger={showPulse}
+                          onComplete={() => setShowPulse(false)}
+                          className="bg-primary rounded-md"
+                          intensity={1.05}
+                        />
 
-                          {/* Particle animation */}
-                          <ParticleAnimation
-                            trigger={showParticles}
-                            onComplete={() => setShowParticles(false)}
-                            particleCount={6}
-                            duration={800}
-                            color="hsl(var(--primary))"
-                          />
-                        </div>
-                      )}
+                        {/* Particle animation */}
+                        <ParticleAnimation
+                          trigger={showParticles}
+                          onComplete={() => setShowParticles(false)}
+                          particleCount={6}
+                          duration={800}
+                          color="hsl(var(--primary))"
+                        />
+                      </div>
 
                       {/* Current page - overfunded portion */}
-                      {compositionData.currentPageOverfundedPercentage > 0 && (
-                        <div
-                          className={`h-full ${ALLOCATION_BAR_STYLES.sections.overspent}`}
-                          style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
-                        />
-                      )}
+                      <div
+                        className={`h-full ${ALLOCATION_BAR_STYLES.sections.overspent}`}
+                        style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
+                      />
 
                       {/* Available/Remaining - use neutral color system */}
-                      {compositionData.availablePercentage > 0 && (
-                        <div
-                          className="h-full bg-muted rounded-md transition-all duration-300 ease-out"
-                          style={{ width: `${compositionData.availablePercentage}%` }}
-                        />
-                      )}
+                      <div
+                        className="h-full bg-muted rounded-md transition-all duration-300 ease-out"
+                        style={{ width: `${compositionData.availablePercentage}%` }}
+                      />
                     </>
+
                   </div>
 
                   <Button

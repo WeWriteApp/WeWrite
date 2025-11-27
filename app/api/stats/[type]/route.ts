@@ -360,6 +360,44 @@ async function fetchPageStats(pageId: string) {
       uniqueEditors: uniqueEditors.size
     });
 
+    // Supporters: query USD allocations for this page (current month active allocations)
+    let supporterCount = 0;
+    let supporterData = Array(24).fill(0);
+    try {
+      const allocationsRef = db.collection(getCollectionName('usdAllocations'));
+      const allocationsSnap = await allocationsRef
+        .where('resourceId', '==', pageId)
+        .where('resourceType', '==', 'page')
+        .where('status', '==', 'active')
+        .get();
+
+      const uniqueSupporters = new Set<string>();
+      const nowTs = Date.now();
+      const supportersByHour: { [hour: number]: Set<string> } = {};
+
+      allocationsSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.userId) {
+          uniqueSupporters.add(data.userId);
+        }
+        const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt ? new Date(data.createdAt) : null;
+        if (createdAt) {
+          const diffMs = nowTs - createdAt.getTime();
+          const hoursAgo = Math.floor(diffMs / (1000 * 60 * 60));
+          if (hoursAgo >= 0 && hoursAgo < 24) {
+            const bucket = 23 - hoursAgo;
+            if (!supportersByHour[bucket]) supportersByHour[bucket] = new Set();
+            supportersByHour[bucket].add(data.userId);
+          }
+        }
+      });
+
+      supporterCount = uniqueSupporters.size;
+      supporterData = supporterData.map((_, idx) => supportersByHour[idx]?.size || 0);
+    } catch (supporterError) {
+      console.warn('📊 [PAGE_STATS] Supporter stats fallback:', supporterError);
+    }
+
     return {
       pageId,
       totalViews: 0, // TODO: Implement view tracking
@@ -370,9 +408,9 @@ async function fetchPageStats(pageId: string) {
       editorsCount: uniqueEditors.size,
       liveReaders: 0, // TODO: Implement live reader tracking
       totalReaders: 0,
-      supporterCount: 0, // TODO: Implement supporter tracking
+      supporterCount,
       totalPledgedTokens: 0,
-      supporterData: Array(24).fill(0),
+      supporterData,
       uniqueSponsors: [],
       lastUpdated: Date.now(),
       cached: false

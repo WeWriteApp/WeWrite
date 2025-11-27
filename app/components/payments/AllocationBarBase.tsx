@@ -63,38 +63,24 @@ function useCompositionBar(
 
     const totalCents = usdBalance.totalUsdCents;
 
-    // CRITICAL FIX: Avoid double-counting optimistic updates
-    // The global balance might already include optimistic updates, so we need to work backwards
-    // to get the original state and then apply only the page-specific optimistic allocation
-
     // Use optimistic allocation for current page (if available)
     const currentPageCents = optimisticAllocation ?? currentAllocationCents;
-    const originalCurrentPageCents = currentAllocationCents; // Original page allocation before optimistic updates
 
-    // Calculate the change in current page allocation
-    const pageAllocationChange = currentPageCents - originalCurrentPageCents;
+    // Other pages allocation: everything except this page
+    const otherPagesCents = Math.max(0, usdBalance.allocatedUsdCents - currentPageCents);
 
-    // Calculate other pages allocation from the current global state
-    // If we have an optimistic page allocation, we need to account for it
-    const currentGlobalAllocatedCents = usdBalance.allocatedUsdCents;
-    const otherPagesCents = Math.max(0, currentGlobalAllocatedCents - originalCurrentPageCents);
-
-    // Calculate available funds for current page (funds not allocated to other pages)
+    // Funds available for this page after other allocations
     const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
 
     // Split current page allocation into funded and overfunded portions
-    // The funded portion cannot exceed available funds for this page
     const currentPageFundedCents = Math.min(currentPageCents, availableFundsForCurrentPage);
     const currentPageOverfundedCents = Math.max(0, currentPageCents - availableFundsForCurrentPage);
 
-    // Calculate available funds correctly with optimistic updates:
-    // Available = Total - Other Pages - Current Page Funded
-    // Note: overfunded amounts don't consume available funds (they're "borrowed" from future budget)
+    // Available funds after accounting for funded portion of this page
     const optimisticAvailableCents = Math.max(0, totalCents - otherPagesCents - currentPageFundedCents);
     const isOutOfFunds = optimisticAvailableCents <= 0 && totalCents > 0;
 
-    // For display purposes, show all sections proportionally
-    // The display total should be the subscription amount plus any overspent amount
+    // Display proportions (include overfunded in display total so slices remain visible)
     const displayTotal = totalCents + currentPageOverfundedCents;
 
     const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;

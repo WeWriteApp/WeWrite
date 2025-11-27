@@ -92,8 +92,7 @@ export const createUserLink = ({
     displayUsername = username.trim();
   }
 
-  // Log the username being used
-  console.log(`Creating user link with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
+
 
   return {
     type: "link",
@@ -128,7 +127,7 @@ export const createReplyAttribution = ({
     displayUsername = username.trim();
   }
 
-  console.log(`Creating reply attribution with username: ${displayUsername} (original: ${username})`);
+
 
   // Create the user link with explicit username
   const userLink = createUserLink({ userId, username: displayUsername });

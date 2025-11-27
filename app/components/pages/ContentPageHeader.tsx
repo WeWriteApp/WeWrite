@@ -273,24 +273,13 @@ export default function ContentPageHeader({
   // Auto-resize textarea when editing title starts
   React.useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
+      // Ensure multi-line titles expand naturally
       const textarea = titleInputRef.current;
       const minHeight = 64; // 64px to match CSS height
-      const content = textarea.value;
-
-      // Check if content needs more than one line
-      const lineCount = (content.match(/\n/g) || []).length + 1;
-
-      if (lineCount > 1) {
-        // Multi-line: use normal line-height and auto-resize
-        textarea.style.lineHeight = '1.2';
-        textarea.style.height = 'auto';
-        const newHeight = Math.max(textarea.scrollHeight, minHeight);
-        textarea.style.height = `${newHeight}px`;
-      } else {
-        // Single line: use centered line-height and fixed height
-        textarea.style.lineHeight = `${minHeight - 24}px`; // 64px - 1.5rem padding
-        textarea.style.height = `${minHeight}px`;
-      }
+      textarea.style.height = 'auto';
+      textarea.style.lineHeight = '1.3';
+      const newHeight = Math.max(textarea.scrollHeight, minHeight);
+      textarea.style.height = `${newHeight}px`;
     }
   }, [isEditingTitle]);
 
@@ -430,31 +419,19 @@ export default function ContentPageHeader({
     handleTitleSubmit();
   };
 
+  const resizeTitleField = (textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return;
+    const minHeight = 64; // match design height
+    textarea.style.height = 'auto';
+    textarea.style.lineHeight = '1.3';
+    const newHeight = Math.max(textarea.scrollHeight, minHeight);
+    textarea.style.height = `${newHeight}px`;
+  };
+
   const handleTitleFocus = () => {
     setIsTitleFocused(true);
     setIsEditorFocused(false);
-    // Auto-resize textarea to fit content while maintaining minimum height
-    if (titleInputRef.current) {
-      const textarea = titleInputRef.current;
-      const minHeight = 64; // 64px to match CSS height
-      const content = textarea.value;
-
-      // Check if content needs more than one line
-      const lineCount = (content.match(/\n/g) || []).length + 1;
-      const hasWrapping = textarea.scrollWidth > textarea.clientWidth;
-
-      if (lineCount > 1 || hasWrapping) {
-        // Multi-line: use normal line-height and auto-resize
-        textarea.style.lineHeight = '1.2';
-        textarea.style.height = 'auto';
-        const newHeight = Math.max(textarea.scrollHeight, minHeight);
-        textarea.style.height = `${newHeight}px`;
-      } else {
-        // Single line: use centered line-height and fixed height
-        textarea.style.lineHeight = `${minHeight - 24}px`; // 64px - 1.5rem padding
-        textarea.style.height = `${minHeight}px`;
-      }
-    }
+    resizeTitleField(titleInputRef.current);
   };
 
 
@@ -463,28 +440,7 @@ export default function ContentPageHeader({
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newTitle = e.target.value;
     setEditingTitle(newTitle);
-
-    // Auto-resize textarea to fit content while maintaining minimum height
-    const textarea = e.target;
-    const minHeight = 64; // 64px to match CSS height
-
-    // Check if content needs more than one line
-    const lineCount = (newTitle.match(/\n/g) || []).length + 1;
-    const hasWrapping = textarea.scrollWidth > textarea.clientWidth;
-
-    if (lineCount > 1 || hasWrapping) {
-      // Multi-line: use normal line-height and auto-resize
-      textarea.style.lineHeight = '1.2';
-      textarea.style.height = 'auto';
-      const newHeight = Math.max(textarea.scrollHeight, minHeight);
-      textarea.style.height = `${newHeight}px`;
-    } else {
-      // Single line: use centered line-height and fixed height
-      textarea.style.lineHeight = `${minHeight - 24}px`; // 64px - 1.5rem padding
-      textarea.style.height = `${minHeight}px`;
-    }
-
-
+    resizeTitleField(e.target);
 
     // Also call the parent's onTitleChange for real-time updates
     if (onTitleChange) {
@@ -549,17 +505,41 @@ export default function ContentPageHeader({
       return; // No scroll listener needed
     }
 
-    // View mode only: Use scroll handler for collapse behavior
+    // Observer-based detection to avoid missing scroll events on iOS/embedded scroll containers
+    const sentinel = document.querySelector('[data-header-sentinel]');
+    let observer: IntersectionObserver | null = null;
+
+    if (sentinel && !canEdit) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          // When sentinel leaves the viewport, collapse header
+          setIsScrolled(!entry.isIntersecting);
+        },
+        {
+          threshold: 0.99,
+          rootMargin: `-${(bannerOffset || 0) + 60}px 0px 0px 0px`
+        }
+      );
+      observer.observe(sentinel);
+    }
+
+    // View mode only: Use scroll handler for progress bar and padding transitions
+    // Use the primary scroll container (document.scrollingElement) for accuracy on iOS/embedded layouts
+    const scrollElement = document.scrollingElement || document.documentElement;
     let lastScrollY = 0;
     let ticking = false;
 
     const handleScroll = () => {
-      lastScrollY = window.scrollY;
+      lastScrollY = scrollElement?.scrollTop || window.scrollY || 0;
 
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const shouldBeScrolled = lastScrollY > 50; // Require 50px scroll before collapsing
-          if (shouldBeScrolled !== isScrolled) {
+          // Prefer measuring against content position to avoid sticky header masking scrollTop
+          const contentEl = document.querySelector('[data-page-content]') as HTMLElement | null;
+          const contentTop = contentEl ? contentEl.getBoundingClientRect().top : Infinity;
+          const viewportThreshold = (bannerOffset || 0) + 40;
+          const shouldBeScrolled = contentTop < viewportThreshold || lastScrollY > 50;
+          if (shouldBeScrolled !== isScrolled && !canEdit) {
             setIsScrolled(shouldBeScrolled);
           }
 
@@ -591,13 +571,16 @@ export default function ContentPageHeader({
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    (scrollElement || window).addEventListener("scroll", handleScroll, { passive: true });
     handleScroll(); // Set initial state
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      (scrollElement || window).removeEventListener("scroll", handleScroll);
+      if (observer && sentinel) {
+        observer.unobserve(sentinel);
+      }
     };
-  }, [isEditing, isScrolled]);
+  }, [isEditing, isScrolled, canEdit, bannerOffset]);
 
   // Create page object for handlers
   const pageObject = React.useMemo(() => {

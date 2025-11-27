@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import { Loader2, AlertTriangle, ArrowLeft, CreditCard } from 'lucide-react';
 import Link from 'next/link';
+import { apiClient } from '../../../utils/unifiedApiClient';
 
 interface Subscription {
   id: string;
@@ -32,17 +33,12 @@ export default function CancelSubscriptionPage() {
 
     const loadSubscription = async () => {
       try {
-        const response = await fetch('/api/account-subscription');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.hasSubscription && data.fullData) {
-            setSubscription(data.fullData);
-          } else {
-            // No subscription to cancel
-            router.push('/settings/fund-account');
-          }
+        const data = await apiClient.get('/api/account-subscription');
+        if (data.hasSubscription && data.fullData) {
+          setSubscription(data.fullData);
         } else {
-          setError('Failed to load subscription information');
+          // No subscription to cancel
+          router.push('/settings/fund-account');
         }
       } catch (err) {
         setError('Error loading subscription');
@@ -65,20 +61,12 @@ export default function CancelSubscriptionPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/subscription/cancel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscriptionId: subscription.stripeSubscriptionId,
-          cancelImmediately: false // Cancel at period end
-        }),
+      const data = await apiClient.post('/api/subscription/cancel', {
+        subscriptionId: subscription.stripeSubscriptionId,
+        cancelImmediately: false // Cancel at period end
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         // Success - redirect to cancellation success page
         router.push('/settings/fund-account/cancelled');
       } else {

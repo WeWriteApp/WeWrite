@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X, Link } from "lucide-react";
+import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X, Link, ThumbsUp, ThumbsDown } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
@@ -38,6 +38,8 @@ import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from '../utils/ConfirmationModal';
 import { navigateAfterPageDeletion } from "../../utils/postDeletionNavigation";
+import { getAnalyticsService } from "../../utils/analytics-service";
+import { useMediaQuery } from "../../hooks/use-media-query";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 
 // Dynamically import AddToPageButton to avoid SSR issues
@@ -117,10 +119,39 @@ export function ContentPageActions({
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const analytics = getAnalyticsService();
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isReplyPickerOpen, setIsReplyPickerOpen] = useState(false);
+  const [pageOwnerUsername, setPageOwnerUsername] = useState(page.username || '');
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
 
   // Use confirmation modal hook
   const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
+
+  // Resolve page owner's display username to avoid showing userId/UUID
+  useEffect(() => {
+    const resolveUsername = async () => {
+      try {
+        if (page.username && page.username !== page.userId) {
+          setPageOwnerUsername(page.username);
+          return;
+        }
+        if (page.userId) {
+          const profile = await getUserProfile(page.userId);
+          if (profile?.username) {
+            setPageOwnerUsername(profile.username);
+            return;
+          }
+        }
+        setPageOwnerUsername('');
+      } catch (error) {
+        console.error('Error resolving page owner username:', error);
+        setPageOwnerUsername('');
+      }
+    };
+
+    resolveUsername();
+  }, [page.userId, page.username]);
 
   // Use line settings for paragraph mode toggle
   const { lineMode, setLineMode } = useLineSettings();
@@ -189,10 +220,10 @@ export function ContentPageActions({
   };
 
   /**
-   * Creates a reply to the current page
+   * Creates a reply to the current page with an optional reply type
    * For non-authenticated users, stores the draft reply and redirects to login
    */
-  const handleReply = async () => {
+  const startReplyFlow = async (replyType: 'agree' | 'disagree' | 'standard' | null = null) => {
     // Check if user is authenticated
     if (!user) {
       // User is not authenticated, store draft reply and redirect to login
@@ -204,7 +235,7 @@ export function ContentPageActions({
           pageTitle: page.title || "Untitled",
           userId: page.userId || "",
           username: page.username || "Anonymous",
-          replyType: "standard"
+          replyType: replyType || "standard"
         });
 
         // Create the return URL that would be used after authentication
@@ -316,7 +347,8 @@ export function ContentPageActions({
 
         // CONSOLIDATION FIX: Use unified /new route for all page creation
         // Include the page title as a separate parameter to ensure it's available for attribution
-        const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&title=${params.title}&initialContent=${params.content}&username=${params.username}`;
+        const ownerUsername = pageOwnerUsername || page.username || username;
+        const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&pageUserId=${page.userId || ''}&pageUsername=${encodeURIComponent(ownerUsername || '')}&title=${params.title}&initialContent=${params.content}&username=${params.username}&replyType=${replyType || 'standard'}`;
         router.push(replyUrl);
       } catch (error) {
         console.error("Error navigating to direct-reply page:", error);
@@ -334,6 +366,13 @@ export function ContentPageActions({
         variant: "destructive"
       });
     }
+  };
+
+  // Wrapper that logs analytics then starts flow
+  const handleReply = (replyType: 'agree' | 'disagree' | 'standard' | null = null) => {
+    analytics?.trackContentEvent('reply', { replyType: replyType || 'standard' });
+    setIsReplyPickerOpen(false);
+    startReplyFlow(replyType);
   };
 
   return (
@@ -372,15 +411,51 @@ export function ContentPageActions({
 
           {/* Reply button - available to all users when not editing */}
           {!isEditing && (
-            <Button
-              variant="default"
-              size="lg"
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-              onClick={handleReply}
-            >
-              <Reply className="h-5 w-5" />
-              <span>Reply</span>
-            </Button>
+            <>
+              <Button
+                variant="default"
+                size="lg"
+                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+                onClick={() => setIsReplyPickerOpen(true)}
+              >
+                <Reply className="h-5 w-5" />
+                <span>Reply</span>
+              </Button>
+
+              <Dialog open={isReplyPickerOpen} onOpenChange={setIsReplyPickerOpen}>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Select reply type</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-2 pt-2">
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-start gap-2"
+                      onClick={() => handleReply('agree')}
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                      Agree
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-start gap-2"
+                      onClick={() => handleReply('disagree')}
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                      Disagree
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-start gap-2"
+                      onClick={() => handleReply(null)}
+                    >
+                      <Reply className="h-4 w-4" />
+                      Just reply
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
 

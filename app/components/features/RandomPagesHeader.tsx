@@ -103,7 +103,18 @@ const RandomPagesHeader = () => {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72 p-2">
+        <DropdownMenuContent
+          align="end"
+          sideOffset={8}
+          className="w-72 p-3 text-foreground border border-theme-strong shadow-3xl rounded-2xl z-[200000] bg-popover"
+          style={{
+            position: 'relative',
+            zIndex: 200000,
+            backgroundColor: 'rgba(12, 12, 12, 0.98)',
+            backdropFilter: 'blur(10px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(10px) saturate(160%)'
+          }}
+        >
           {/* Privacy and "Not mine" filters using reusable component */}
 
           <DropdownMenuItem

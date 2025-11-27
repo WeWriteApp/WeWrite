@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { subscriptionId, newTier, newAmount, paymentMethodId } = body;
+    const { subscriptionId, newTier, newAmount, paymentMethodId, applyImmediately = false } = body;
 
     if (!subscriptionId || !newAmount) {
       return NextResponse.json({ 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount}`);
+    console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount} (applyImmediately: ${applyImmediately})`);
 
     // Check if this is a test subscription or development environment
     const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
             id: currentSubscription.items.data[0].id,
             price: newPrice.id,
           }],
-          proration_behavior: 'create_prorations',
+          proration_behavior: applyImmediately ? 'create_prorations' : 'none',
+          billing_cycle_anchor: 'unchanged'
         });
 
         // Update payment method if provided

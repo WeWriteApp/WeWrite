@@ -29,6 +29,9 @@ export const DEFAULT_CRITICALITY_LEVELS: Record<NotificationType, NotificationCr
   'payment_failed': 'device',
   'payment_failed_warning': 'device',
   'payment_failed_final': 'device',
+
+  // Allocation warnings
+  'allocation_threshold': 'normal',
   
   // Payout notifications - important but not critical
   'payout_initiated': 'normal',

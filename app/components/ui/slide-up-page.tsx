@@ -133,7 +133,7 @@ export function SlideUpPage({
             <div className="absolute inset-0 bg-background z-0" />
 
             {/* Page content */}
-            <div className="relative z-10 min-h-full">
+            <div className="relative z-10 min-h-full flex flex-col">
               {children}
             </div>
           </motion.div>

@@ -26,6 +26,7 @@ import { payoutStatusService } from './payoutStatusService';
 import { payoutRetryService } from './payoutRetryService';
 import { payoutErrorLogger, PayoutErrorCategory, PayoutErrorSeverity } from './payoutErrorLogger';
 import { stripeApiRateLimiter, checkStripeApiLimit, delay } from '../utils/rateLimiter';
+import { stripeStorageBalanceService } from './stripeStorageBalanceService';
 import type {
   Payout,
   PayoutRecipient,
@@ -88,7 +89,7 @@ class StripePayoutService {
         };
       }
 
-      // Create Stripe transfer
+      // Create Stripe transfer from STORAGE BALANCE to the connected account
       const transferResult = await this.createStripeTransfer(
         recipient.stripeConnectedAccountId,
         payout.amount,
@@ -177,23 +178,29 @@ class StripePayoutService {
 
       // Record API call for rate limiting
       await stripeApiRateLimiter.checkLimit('stripe:api');
-      // Convert to cents for Stripe
-      const amountInCents = Math.round(amount * 100);
 
-      const transfer = await this.stripe.transfers.create({
-        amount: amountInCents,
-        currency: currency.toLowerCase(),
-        destination: connectedAccountId,
-        metadata: {
-          ...metadata,
-          source: 'wewrite_payout'
-        }
-      });
+      // STORAGE BALANCE MODEL: pull funds from Stripe Storage Balance
+      const payoutResult = await stripeStorageBalanceService.processPayoutFromStorage(
+        amount,
+        connectedAccountId,
+        metadata?.recipientId || 'unknown',
+        metadata?.description || 'WeWrite payout'
+      );
+
+      if (!payoutResult.success || !payoutResult.transferId) {
+        return {
+          success: false,
+          error: payoutResult.error || 'Failed to create transfer from storage balance'
+        };
+      }
+
+      // Retrieve transfer for full metadata
+      const transfer = await this.stripe.transfers.retrieve(payoutResult.transferId);
 
       return {
         success: true,
         data: transfer,
-        message: 'Transfer created successfully'
+        message: 'Transfer created successfully from storage balance'
       };
 
     } catch (error: any) {

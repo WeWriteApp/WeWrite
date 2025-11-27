@@ -21,12 +21,8 @@ export interface PageStats {
   totalPledgedUsdCents: number;
 }
 
-export interface Subscription {
-  id: string;
-  status: string;
-  amount: number;
-  tier: string;
-}
+// Re-export Subscription interface from index types
+export type { Subscription } from './index';
 
 // ============================================================================
 // Component Props Interfaces

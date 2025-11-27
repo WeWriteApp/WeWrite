@@ -18,7 +18,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-[1100] bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -28,7 +28,7 @@ const DrawerOverlay = React.forwardRef<
 DrawerOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const drawerVariants = cva(
-  "fixed z-50 bg-background border-border",
+  "fixed z-[1100] bg-background border-border",
   {
     variants: {
       side: {
@@ -58,6 +58,12 @@ const DrawerContent = React.forwardRef<
   const contentRef = React.useRef<HTMLDivElement>(null)
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't handle touch events on input fields or interactive elements
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"]')) {
+      return
+    }
+
     setIsDragging(true)
     setStartY(e.touches[0].clientY)
     setDragY(0)
@@ -70,6 +76,12 @@ const DrawerContent = React.forwardRef<
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return
+
+    // Don't handle touch events on input fields or interactive elements
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"]')) {
+      return
+    }
 
     const currentY = e.touches[0].clientY
     const deltaY = Math.max(0, currentY - startY) // Only allow dragging down
@@ -131,6 +143,7 @@ const DrawerContent = React.forwardRef<
           className
         )}
         style={{ height }}
+        tabIndex={-1}
         {...props}
       >
         <div

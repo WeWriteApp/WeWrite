@@ -6,10 +6,93 @@ import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 
 /**
+ * Clean link elements by removing the 'text' property
+ * This ensures compatibility with Slate.js which requires inline elements to only have 'children', not 'text'
+ */
+function cleanLinkElements(content: any[]): any[] {
+  return content.map(element => {
+    if (element.type === 'link') {
+      let cleanElement = element;
+
+      // Remove invalid 'text' property from link elements
+      if ('text' in element) {
+        console.log('🔧 API NORMALIZATION: Removing text property from link element:', element.text);
+        const { text, ...elementWithoutText } = element;
+        cleanElement = elementWithoutText;
+      }
+
+      // 🔧 CRITICAL FIX: Synchronize children array with custom text
+      // This fixes the persistence issue where custom text is saved but children array is not updated
+      if (cleanElement.isCustomText === true && cleanElement.customText && cleanElement.children && cleanElement.children[0]) {
+        const currentChildrenText = cleanElement.children[0].text;
+        if (currentChildrenText !== cleanElement.customText) {
+          console.log('🔧 API NORMALIZATION: Synchronizing children with custom text:', {
+            pageTitle: cleanElement.pageTitle,
+            customText: cleanElement.customText,
+            oldChildrenText: currentChildrenText,
+            fixing: true
+          });
+
+          cleanElement = {
+            ...cleanElement,
+            children: [{ text: cleanElement.customText }]
+          };
+        }
+      }
+
+      // 🔧 CRITICAL FIX: Repair links with undefined pageId
+      if (cleanElement.type === 'link' && cleanElement.pageId === undefined && cleanElement.pageTitle) {
+        console.warn('🔧 [NAVIGATION REPAIR] Found link with undefined pageId, attempting repair:', {
+          pageTitle: cleanElement.pageTitle,
+          customText: cleanElement.customText,
+          isCustomText: cleanElement.isCustomText,
+          url: cleanElement.url
+        });
+
+        // TODO: Implement actual repair logic here
+        // For now, we'll mark these for manual repair
+        cleanElement = {
+          ...cleanElement,
+          needsRepair: true,
+          repairReason: 'undefined_pageId'
+        };
+      }
+
+      // Monitor for any remaining navigation issues after repair
+      if (cleanElement.type === 'link' && cleanElement.pageId === undefined && cleanElement.url === '/undefined') {
+        console.warn('⚠️ [NAVIGATION] Link still has undefined pageId after repair:', cleanElement.pageTitle);
+      }
+
+      // Essential monitoring for custom text synchronization issues
+      if (cleanElement.type === 'link' && cleanElement.isCustomText === true && cleanElement.customText && cleanElement.children?.[0]?.text !== cleanElement.customText) {
+        console.warn('⚠️ Link custom text synchronization issue detected:', {
+          pageTitle: cleanElement.pageTitle,
+          customText: cleanElement.customText,
+          childrenText: cleanElement.children?.[0]?.text
+        });
+      }
+
+      return cleanElement;
+    }
+
+    // Recursively clean children
+    if (element.children && Array.isArray(element.children)) {
+      return {
+        ...element,
+        children: cleanLinkElements(element.children)
+      };
+    }
+
+    return element;
+  });
+}
+
+/**
  * Fetch page data directly using Firebase Admin
  * This avoids circular calls and properly handles production data headers
  */
 async function fetchPageDirectly(pageId: string, userId: string | null, request: NextRequest) {
+  console.log('🔧 FETCH PAGE DIRECTLY: Starting for page', pageId);
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
@@ -85,6 +168,14 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
         // If parsing fails, wrap in paragraph
         processedPageData.content = [{ type: "paragraph", children: [{ text: processedPageData.content }] }];
       }
+    }
+
+    // CRITICAL FIX: Remove 'text' property from link elements
+    // This ensures compatibility with Slate.js which requires inline elements to only have 'children', not 'text'
+    if (processedPageData.content && Array.isArray(processedPageData.content)) {
+      console.log('🔧 API NORMALIZATION: About to clean link elements for page', pageId);
+      processedPageData.content = cleanLinkElements(processedPageData.content);
+      console.log('🔧 API NORMALIZATION: Finished cleaning link elements for page', pageId);
     }
 
     // Fetch username if userId exists
@@ -229,6 +320,32 @@ export async function GET(
 
     const responseTime = Date.now() - startTime;
     console.log(`✅ [Page API] Successfully fetched ${pageId} (${responseTime}ms)`);
+
+    // Essential monitoring for loaded content
+    if (result.pageData?.content && Array.isArray(result.pageData.content)) {
+      const findLinks = (nodes: any[]): any[] => {
+        const links: any[] = [];
+        const traverse = (node: any) => {
+          if (node.type === 'link') {
+            links.push(node);
+          }
+          if (node.children) {
+            node.children.forEach(traverse);
+          }
+        };
+        nodes.forEach(traverse);
+        return links;
+      };
+
+      const linksInLoadedContent = findLinks(result.pageData.content);
+      const unsyncedLinks = linksInLoadedContent.filter(link =>
+        link.isCustomText === true && link.customText && link.children?.[0]?.text !== link.customText
+      );
+
+      if (unsyncedLinks.length > 0) {
+        console.warn('⚠️ Loaded content contains unsynchronized custom text links:', unsyncedLinks.length);
+      }
+    }
 
     // Return successful result with enhanced cache headers
     const response = NextResponse.json({

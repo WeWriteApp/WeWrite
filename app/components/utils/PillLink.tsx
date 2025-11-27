@@ -3,6 +3,8 @@
 import React, { useState, forwardRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Users, Trash2 } from "lucide-react";
+import { Element, Node as SlateNode, Transforms } from 'slate';
+import { ReactEditor } from 'slate-react';
 import { ShimmerEffect } from "../ui/skeleton";
 import { useAuth } from '../../providers/AuthProvider';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../../utils/linkFormatters";
@@ -82,6 +84,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const [pageData, setPageData] = useState(null);
   const [displayTitle, setDisplayTitle] = useState(children);
   const [isPageDeleted, setIsPageDeleted] = useState(false);
+
   // Fetch page data for permission checking (only for page links)
   // CIRCUIT BREAKER: Add error tracking to prevent infinite loops
   const [fetchAttempts, setFetchAttempts] = useState(0);
@@ -97,6 +100,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const isExternalLinkType = isExternalLink(href);
   // Use prop pageId if available, otherwise extract from href
   const pageId = propPageId || href.split('/').pop();
+
+  // Debug logging removed to prevent React reconciliation issues
 
   // CRITICAL FIX: Generate proper href for page links when href is invalid
   const effectiveHref = useMemo(() => {
@@ -511,7 +516,37 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         onDeleteLink={() => {
           // Handle delete link action
           console.log('🗑️ Delete link clicked for:', href);
-          // TODO: Implement link deletion logic
+
+          // Find and delete the link element from the Slate editor
+          if (editor && ReactEditor.isFocused(editor)) {
+            try {
+              // Find all link nodes that match this element
+              const linkNodes = Array.from(SlateNode.nodes(editor, {
+                match: n => Element.isElement(n) && n.type === 'link' && (
+                  n.pageId === element.pageId ||
+                  n.url === element.url ||
+                  (n.pageTitle === element.pageTitle && n.customText === element.customText)
+                )
+              }));
+
+              if (linkNodes.length > 0) {
+                // Delete the first matching link
+                const [, linkPath] = linkNodes[0];
+                Transforms.removeNodes(editor, { at: linkPath });
+                console.log('🗑️ Link deleted via context menu:', {
+                  pageId: element.pageId,
+                  pageTitle: element.pageTitle,
+                  url: element.url
+                });
+              } else {
+                console.warn('🗑️ Could not find link to delete');
+              }
+            } catch (error) {
+              console.error('🗑️ Error deleting link:', error);
+            }
+          }
+
+          setShowContextMenu(false);
         }}
         canEdit={canEdit}
         isDeleted={deleted}

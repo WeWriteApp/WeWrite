@@ -22,11 +22,5 @@ export interface Pledge {
   updatedAt: any; // Firebase Timestamp
 }
 
-// User interface for user profile data
-export interface User {
-  uid: string;
-  email: string | null;
-  username: string | null;
-  photoURL: string | null;
-  emailVerified: boolean;
-}
+// Re-export User interface from database types
+export type { User } from './database';

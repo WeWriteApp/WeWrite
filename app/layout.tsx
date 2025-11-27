@@ -71,7 +71,7 @@ export default function RootLayout({
         {/* Preload critical API routes */}
         <link rel="prefetch" href="/api/pages" />
       </head>
-      <body suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
         {/* Early Firebase error suppression - must run before any other scripts */}
         <Script
           src="/firebase-error-suppression.js"

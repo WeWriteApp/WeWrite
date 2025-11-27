@@ -25,6 +25,7 @@ User Subscription → USD Balance → Allocations → Creator Earnings → Payou
 - Users pay monthly subscriptions via Stripe
 - Subscription amounts: $10, $20, or $30 per month
 - Funds go to WeWrite's Stripe account
+- **Downgrades**: By default we schedule the lower amount for the next billing cycle (no immediate proration/credit) to avoid surprise card prompts. An optional “apply now” path can be enabled, but defaults to next-cycle.
 
 ### 2. USD Allocation
 - Users allocate their subscription funds to creators

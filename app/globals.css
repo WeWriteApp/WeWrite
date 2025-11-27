@@ -14,6 +14,11 @@
 /* Import unified content display styles */
 @import './styles/content-display.css';
 
+/* Global background & typography baseline */
+html, body {
+  @apply min-h-screen bg-background text-foreground;
+}
+
 /* Clean paragraph styling for viewer content */
 .viewer-paragraph {
   @apply flex items-start gap-3 py-2;
@@ -304,6 +309,30 @@
     pointer-events: auto !important;
   }
 
+  /* CRITICAL FIX: Ensure input fields in modals/drawers remain interactive */
+  [role="dialog"] input,
+  [role="dialog"] textarea,
+  [role="dialog"] select,
+  [role="dialog"] button,
+  [role="dialog"] [role="button"],
+  [data-radix-dialog-content] input,
+  [data-radix-dialog-content] textarea,
+  [data-radix-dialog-content] select,
+  [data-radix-dialog-content] button,
+  [data-radix-dialog-content] [role="button"],
+  .drawer-content input,
+  .drawer-content textarea,
+  .drawer-content select,
+  .drawer-content button,
+  .drawer-content [role="button"] {
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+
 
 }
 
@@ -313,6 +342,7 @@ body .paragraph-number {
   font-weight: 400;
   opacity: var(--paragraph-number-opacity);
   font-size: 1em; /* Same size as body text */
+  user-select: none;
 }
 
 /* Normal mode: Add space after paragraph numbers */
@@ -2099,27 +2129,26 @@ body::before {
 .content-area,
 .unified-text-content,
 .prose,
-/* GLOBAL TEXT SELECTION PREVENTION */
-/* Disable text selection for EVERYTHING by default */
-* {
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+/* UI chrome should not be selectable (buttons/nav/headers) */
+header, nav, .sidebar, .navigation, .menu, .toolbar,
+button, [role="button"], .button, .btn,
+.pill-link, .compound-link-container, .username-badge-link {
+  -webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
 }
 
-/* ONLY ALLOW TEXT SELECTION FOR SPECIFIC CONTENT */
-/* Page titles */
+/* Content areas MUST be selectable */
 h1, h2, h3, h4, h5, h6,
 .page-title, .content-title, .page-header h1, .page-header h2,
-/* Page body content */
 p, .page-content, .editor-content, .content-area, .prose,
 [data-page-content], .unified-text-content, .text-view-content,
 .paragraph-content, .wewrite-content-display, .wewrite-viewer-content,
 .wewrite-paragraph-content, [data-slate-node="text"], [data-slate-leaf],
 .slate-text, .wewrite-dense-content-flow, .wewrite-normal-content-flow,
-/* Form inputs and editable content */
+.unified-paragraph, .unified-text-content span,
 input, textarea, select, [contenteditable="true"],
 input[type="text"], input[type="email"], input[type="password"],
 input[type="search"], input[type="url"], input[type="tel"] {
@@ -2129,6 +2158,7 @@ input[type="search"], input[type="url"], input[type="tel"] {
   -ms-user-select: text !important;
   user-select: text !important;
 }
+
 
 
 
@@ -3243,5 +3273,3 @@ body.has-sticky-save-header .page-header-edit-mode {
 body.has-sticky-save-header header[data-component="main-header"] + div {
   height: unset;
 }
-
-

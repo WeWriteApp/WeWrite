@@ -1,9 +1,7 @@
 /**
- * Paste Handler Utilities for WeWrite Editor
- * 
- * Handles automatic formatting removal when pasting text, while preserving:
- * - Links (automatically converted to URLs)
- * - WeWrite custom formatting for internal pages
+ * WHY: Keep pasted content clean while preserving WeWrite-specific data (links,
+ * pill styling, and attribution metadata). This lets copied quotes with
+ * attribution remain intact for downstream UI, even if visible text is edited.
  */
 
 /**
@@ -18,6 +16,7 @@ function isWeWriteContent(html: string): boolean {
          html.includes('class="pill-link"') ||
          html.includes('data-page-id') ||
          html.includes('data-user-id') ||
+         html.includes('data-wewrite-attribution') ||
          html.includes('wewrite.app') || // Domain check for WeWrite URLs
          html.includes('unified-paragraph'); // WeWrite paragraph structure
 }
@@ -94,6 +93,7 @@ function stripFormatting(html: string): string {
           const element = node as Element;
           // Preserve WeWrite links and line breaks
           if (element.hasAttribute('data-link-type') || 
+              element.hasAttribute('data-wewrite-attribution') ||
               element.classList.contains('pill-link') ||
               element.tagName === 'BR' ||
               element.tagName === 'P' ||

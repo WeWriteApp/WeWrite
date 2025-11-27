@@ -6,6 +6,19 @@ WeWrite's notification system provides real-time updates to users about importan
 
 ## Notification Types
 
+The canonical type union lives in `app/types/database.ts` (`NotificationType`). Current in-app notification types:
+
+- `follow` — user started following you
+- `link` — your page was linked from another page
+- `append` — your page was added/embedded into another page
+- `system_announcement` — platform-wide announcement
+- `email_verification` — prompt to verify email
+- `allocation_threshold` — you’ve used ≥90% of this month’s subscription funds
+- `payment_failed` | `payment_failed_warning` | `payment_failed_final` — subscription charge issues
+- `payout_initiated` | `payout_processing` | `payout_completed` | `payout_failed` | `payout_retry_scheduled` | `payout_cancelled` | `payout_processed` — payout lifecycle events
+
+All types above are present in `NotificationType`. `allocation_threshold` currently fires from `UsdBalanceContext` when allocations reach 90% of the monthly fund; it records once per month per user (keyed by `uid` + month) and includes usage metrics in `metadata`.
+
 ### User Interaction Notifications
 
 #### 1. User Follow (`follow`)
@@ -47,6 +60,12 @@ WeWrite's notification system provides real-time updates to users about importan
 - **Variants**: 
   - `payment_failed_warning` - First failure
   - `payment_failed_final` - Final notice before cancellation
+
+#### 6b. Allocation Usage Warning (`allocation_threshold`)
+- **Trigger**: When a user allocates 90% or more of their monthly subscription funds
+- **Message**: "You have used 90% of your monthly funds. Top off or adjust allocations."
+- **Criticality**: `normal`
+- **Notes**: Fired once per month per user; reset on a new billing month.
 
 ### Payout Notifications
 

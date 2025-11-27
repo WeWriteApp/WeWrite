@@ -538,7 +538,7 @@ export default function DailyNotesCarousel({
           {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
-              className="flex-shrink-0 w-48 h-[200px] bg-muted/50 rounded-xl animate-pulse border-theme-light"
+              className="flex-shrink-0 w-48 h-52 bg-muted/50 rounded-xl animate-pulse border-theme-light"
             />
           ))}
         </div>

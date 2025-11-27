@@ -4,16 +4,8 @@
  * This file defines the types for the authentication system.
  */
 
-export interface User {
-  uid: string;
-  email: string;
-  username: string;
-  displayName: string;
-  photoURL?: string;
-  emailVerified: boolean;
-  createdAt: string;
-  lastLoginAt: string;
-}
+// Re-export User interface from database types
+export type { User } from './database';
 
 export interface AuthState {
   user: User | null;
