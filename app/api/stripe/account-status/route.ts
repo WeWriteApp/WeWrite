@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
 
     const stripeConnectedAccountId = userData?.stripeConnectedAccountId;
+    const lastKnownBank = userData?.lastKnownBank || null;
 
     if (!stripeConnectedAccountId) {
       console.log('[Account Status API] No Stripe Connect account found');
@@ -38,7 +39,8 @@ export async function POST(request: NextRequest) {
           charges_enabled: false,
           details_submitted: false,
           requirements: { currently_due: [], pending_verification: [], past_due: [] },
-          bankAccount: null
+          bankAccount: null,
+          lastKnownBank
         },
         needsSetup: true
       });
@@ -71,6 +73,20 @@ export async function POST(request: NextRequest) {
         isConnected: false,
         isVerified: false
       };
+      // Surface last known bank data if we have it
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: stripeConnectedAccountId,
+          payouts_enabled: account.payouts_enabled,
+          charges_enabled: account.charges_enabled,
+          details_submitted: account.details_submitted,
+          requirements: account.requirements,
+          bankAccount: null,
+          lastKnownBank
+        },
+        needsSetup: true
+      });
     } else {
       // Get the first (primary) bank account
       const bankAccount = externalAccounts.data[0] as Stripe.BankAccount;
@@ -90,6 +106,18 @@ export async function POST(request: NextRequest) {
         stripeAccountId: stripeConnectedAccountId,
         account: account
       };
+
+      // Cache masked bank info for diagnostics and fallback
+      await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).set({
+        lastKnownBank: {
+          bankName: bankAccount.bank_name,
+          last4: bankAccount.last4,
+          accountType: bankAccount.account_type,
+          stripeAccountId: stripeConnectedAccountId,
+          payoutsEnabled: account.payouts_enabled,
+          updatedAt: new Date().toISOString()
+        }
+      }, { merge: true });
     }
 
     if (!bankStatus.isConnected) {
