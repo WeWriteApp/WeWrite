@@ -227,6 +227,12 @@ export const handleReply = async (page: Page, user: User | null, router: Router)
  * @param title - The page title
  * @param user - The current user object (optional, for analytics)
  */
+const isLikelyUserId = (value?: string | null) => {
+  if (!value) return false;
+  // Heuristic: long, no spaces, mostly UID-like
+  return value.length >= 20 && !value.includes('@') && /^[A-Za-z0-9_-]+$/.test(value);
+};
+
 export const handleShare = (page: Page, title?: string, user?: User | null): void => {
   if (!page) {
     console.error("No page data provided to handleShare");
@@ -234,7 +240,30 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
   }
 
   const pageUrl = `${window.location.origin}/${page.id}`;
-  const shareText = `"${title || page.title || "Untitled"}" by ${page.username || "Anonymous"}`;
+  const userName = user?.username || user?.displayName;
+
+  const candidateAuthors = [
+    (page as any).authorUsername,
+    (page as any).username,
+    (page as any).user?.username,
+    page.userId && user?.uid === page.userId ? userName : null,
+    "Unknown user"
+  ];
+
+  const fallbackAuthor =
+    (page as any).authorUsername ||
+    (page as any).username ||
+    (page as any).user?.username ||
+    (page as any).user?.displayName ||
+    userName ||
+    "Unknown user";
+
+  const shareAuthor =
+    candidateAuthors.find((name) => !!name && !isLikelyUserId(name)) ||
+    candidateAuthors.find((name) => !!name) ||
+    fallbackAuthor;
+
+  const shareText = `${title || page.title || "Untitled"} by ${shareAuthor} on WeWrite`;
   const analytics = getAnalyticsService();
 
   if (navigator.share) {
@@ -247,17 +276,17 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
       analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
         page_id: page.id,
         share_method: 'native_share',
-        user_id: session?.uid || null,
+        user_id: user?.uid || null,
         page_title: title || page.title || "Untitled",
-        page_author: page.username || "Anonymous"
+        page_author: shareAuthor
       });
 
       // Also track in Firestore for dashboard analytics
       SharesTrackingService.trackShareSucceeded(
         page.id,
         'native_share',
-        session?.uid,
-        session?.displayName || session?.username,
+        user?.uid,
+        userName,
         title || page.title,
         page.username
       );
@@ -270,9 +299,9 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'native_share',
-          user_id: session?.uid || null,
+          user_id: user?.uid || null,
           page_title: title || page.title || "Untitled",
-          page_author: page.username || "Anonymous",
+          page_author: shareAuthor,
           abort_reason: 'user_cancelled'
         });
 
@@ -281,8 +310,8 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
           page.id,
           'native_share',
           'user_cancelled',
-          session?.uid,
-          session?.displayName || session?.username,
+          user?.uid,
+          userName,
           title || page.title,
           page.username
         );
@@ -291,9 +320,9 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'native_share',
-          user_id: session?.uid || null,
+          user_id: user?.uid || null,
           page_title: title || page.title || "Untitled",
-          page_author: page.username || "Anonymous",
+          page_author: shareAuthor,
           abort_reason: 'share_error'
         });
 
@@ -302,19 +331,19 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
           page.id,
           'native_share',
           'share_error',
-          session?.uid,
-          session?.displayName || session?.username,
+          user?.uid,
+          userName,
           title || page.title,
           page.username
         );
 
         // Fallback to clipboard
-        fallbackShare(pageUrl, shareText, page, session, title);
+        fallbackShare(pageUrl, shareText, shareAuthor, page, user, title);
       }
     });
   } else {
     // Fallback to clipboard
-    fallbackShare(pageUrl, shareText, page, session, title);
+    fallbackShare(pageUrl, shareText, shareAuthor, page, user, title);
   }
 };
 
@@ -327,8 +356,16 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
  * @param user - The current user object (for analytics)
  * @param title - The page title (for analytics)
  */
-const fallbackShare = (url: string, text: string, page?: Page, user?: User | null, title?: string): void => {
+const fallbackShare = (
+  url: string,
+  text: string,
+  shareAuthor: string,
+  page?: Page,
+  user?: User | null,
+  title?: string
+): void => {
   const analytics = getAnalyticsService();
+  const userName = user?.username || user?.displayName;
 
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).then(() => {
@@ -339,17 +376,17 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
           page_id: page.id,
           share_method: 'copy_link',
-          user_id: session?.uid || null,
+          user_id: user?.uid || null,
           page_title: title || page.title || "Untitled",
-          page_author: page.username || "Anonymous"
+          page_author: shareAuthor
         });
 
         // Also track in Firestore for dashboard analytics
         SharesTrackingService.trackShareSucceeded(
           page.id,
           'copy_link',
-          session?.uid,
-          session?.displayName || session?.username,
+          user?.uid,
+          userName,
           title || page.title,
           page.username
         );
@@ -362,9 +399,9 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'copy_link',
-          user_id: session?.uid || null,
+          user_id: user?.uid || null,
           page_title: title || page.title || "Untitled",
-          page_author: page.username || "Anonymous",
+          page_author: shareAuthor,
           abort_reason: 'clipboard_error'
         });
 
@@ -373,8 +410,8 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page.id,
           'copy_link',
           'clipboard_error',
-          session?.uid,
-          session?.displayName || session?.username,
+          user?.uid,
+          userName,
           title || page.title,
           page.username
         );
@@ -397,17 +434,17 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
           page_id: page.id,
           share_method: 'copy_link_legacy',
-          user_id: session?.uid || null,
+          user_id: user?.uid || null,
           page_title: title || page.title || "Untitled",
-          page_author: page.username || "Anonymous"
+          page_author: shareAuthor
         });
 
         // Also track in Firestore for dashboard analytics
         SharesTrackingService.trackShareSucceeded(
           page.id,
           'copy_link_legacy',
-          session?.uid,
-          session?.displayName || session?.username,
+          user?.uid,
+          userName,
           title || page.title,
           page.username
         );
@@ -420,9 +457,9 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'copy_link_legacy',
-          user_id: session?.uid || null,
+          user_id: user?.uid || null,
           page_title: title || page.title || "Untitled",
-          page_author: page.username || "Anonymous",
+          page_author: shareAuthor,
           abort_reason: 'legacy_clipboard_error'
         });
 
@@ -431,8 +468,8 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page.id,
           'copy_link_legacy',
           'legacy_clipboard_error',
-          session?.uid,
-          session?.displayName || session?.username,
+          user?.uid,
+          userName,
           title || page.title,
           page.username
         );

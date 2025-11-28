@@ -56,6 +56,8 @@ export default function AdminUsersPage() {
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<User | null>(null);
   const [resetUserId, setResetUserId] = useState<User | null>(null);
+  const [editUsernameUser, setEditUsernameUser] = useState<User | null>(null);
+  const [newUsername, setNewUsername] = useState("");
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
@@ -104,6 +106,28 @@ export default function AdminUsersPage() {
         <div className="space-y-1 whitespace-nowrap">
           <div className="font-medium">{u.email}</div>
           <div className="text-xs text-muted-foreground">{u.username || "—"}</div>
+        </div>
+      )
+    },
+    {
+      id: "username",
+      label: "Username",
+      sortable: true,
+      render: (u) => (
+        <div className="flex items-center gap-2">
+          <span className="whitespace-nowrap font-medium">{u.username || "—"}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            disabled={loadingAction !== null}
+            onClick={() => {
+              setEditUsernameUser(u);
+              setNewUsername(u.username || "");
+            }}
+          >
+            Edit
+          </Button>
         </div>
       )
     },
@@ -280,6 +304,8 @@ export default function AdminUsersPage() {
     switch (id) {
       case "user":
         return u.email || "";
+      case "username":
+        return u.username || "";
       case "subscription":
         return u.financial?.subscriptionAmount ?? 0;
       case "admin":
@@ -439,6 +465,34 @@ export default function AdminUsersPage() {
     } finally {
       setLoadingAction(null);
       setResetUserId(null);
+    }
+  };
+
+  const handleUsernameSave = async () => {
+    if (!editUsernameUser) return;
+    setStatus(null);
+    setLoadingAction('username');
+    try {
+      const res = await fetch('/api/admin/users/update-username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: editUsernameUser.uid, username: newUsername.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Username update failed');
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === editUsernameUser.uid ? { ...u, username: data.username } : u
+        )
+      );
+      setStatus({ type: 'success', message: 'Username updated' });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || 'Username update failed' });
+    } finally {
+      setLoadingAction(null);
+      setEditUsernameUser(null);
+      setNewUsername('');
     }
   };
 
@@ -748,6 +802,40 @@ export default function AdminUsersPage() {
               disabled={loadingAction !== null}
             >
               {loadingAction === 'reset' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editUsernameUser} onOpenChange={(open) => !open && setEditUsernameUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change username</DialogTitle>
+            <DialogDescription>
+              Update the username for {editUsernameUser?.email}. Please confirm to avoid accidental changes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              autoFocus
+              placeholder="Enter new username"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setEditUsernameUser(null)}
+              disabled={loadingAction !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUsernameSave}
+              disabled={loadingAction !== null || newUsername.trim().length < 3}
+            >
+              {loadingAction === 'username' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -23,17 +23,32 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   // Safely handle the error object to prevent "frame.join is not a function" errors
   let safeError: Error;
   try {
+    const messageSource = (error as any)?.message ?? (error as any)?.reason?.message;
+    const stackSource = (error as any)?.stack ?? (error as any)?.reason?.stack;
+
+    const rawMessage =
+      typeof messageSource === 'string'
+        ? messageSource
+        : Array.isArray(messageSource)
+          ? messageSource.join('\n')
+          : String(messageSource || 'Unknown error occurred');
+
+    const rawStack =
+      typeof stackSource === 'string'
+        ? stackSource
+        : Array.isArray(stackSource)
+          ? stackSource.join('\n')
+          : stackSource
+            ? JSON.stringify(stackSource, null, 2)
+            : 'No stack trace available';
+
     // Ensure we have a proper Error object
-    if (error && typeof error === 'object') {
-      safeError = {
-        name: error.name || 'Error',
-        message: error.message || 'Unknown error occurred',
-        stack: typeof error.stack === 'string' ? error.stack : 'No stack trace available',
-        digest: error.digest
-      } as Error & { digest?: string };
-    } else {
-      safeError = new Error('Unknown error occurred');
-    }
+    safeError = {
+      name: (error as any)?.name || 'Error',
+      message: rawMessage,
+      stack: rawStack,
+      digest: (error as any)?.digest
+    } as Error & { digest?: string };
   } catch (e) {
     // Fallback if error processing fails
     safeError = new Error('Critical error occurred during error processing');

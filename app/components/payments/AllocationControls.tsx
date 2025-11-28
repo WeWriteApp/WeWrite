@@ -196,8 +196,18 @@ export function AllocationControls({
   };
 
   // Long press handlers for quick allocation
+  const closeIntervalModal = () => {
+    isLongPressing.current = false;
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    setShowIntervalModal(false);
+  };
+
   const handleMouseDown = (event: React.MouseEvent) => {
     event.preventDefault();
+    event.stopPropagation();
     isLongPressing.current = false;
     
     longPressTimer.current = setTimeout(() => {
@@ -206,7 +216,8 @@ export function AllocationControls({
     }, 500);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -234,6 +245,8 @@ export function AllocationControls({
 
   // Handle button click (only if not long pressing)
   const handleButtonClick = (direction: 1 | -1, event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
     if (isLongPressing.current) {
       isLongPressing.current = false;
       return;
@@ -366,7 +379,7 @@ export function AllocationControls({
       {/* Allocation Interval Modal */}
       <AllocationIntervalModal
         isOpen={showIntervalModal}
-        onClose={() => setShowIntervalModal(false)}
+        onClose={closeIntervalModal}
       />
 
       <UsdAllocationModal

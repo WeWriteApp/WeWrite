@@ -1639,6 +1639,12 @@ export default function ContentPageView({
           <ContentPageHeader
             title={title}
             username={page?.username}
+            authorUsername={
+              page?.username ||
+              (page as any)?.authorUsername ||
+              (page as any)?.user?.username ||
+              (page as any)?.user?.displayName
+            }
             userId={page?.userId}
             isLoading={isLoading}
             isEditing={isEditing}

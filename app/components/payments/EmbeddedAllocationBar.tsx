@@ -206,6 +206,10 @@ export function EmbeddedAllocationBar({
     console.log('🔵 EmbeddedAllocationBar: Button clicked!', { direction, pageId, authorId });
     e.preventDefault();
     e.stopPropagation();
+    if (isLongPressing.current) {
+      isLongPressing.current = false;
+      return;
+    }
 
     // Allow all users (including page owners) to allocate
     // Use our shared allocation change handler - it handles both logged-in and logged-out users
@@ -216,6 +220,15 @@ export function EmbeddedAllocationBar({
   };
 
   // Long press handlers
+  const closeIntervalModal = () => {
+    isLongPressing.current = false;
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    setShowIntervalModal(false);
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -226,16 +239,18 @@ export function EmbeddedAllocationBar({
     }, 500);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
     }
-    isLongPressing.current = false;
   };
 
   const handleMouseLeave = () => {
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
     }
     isLongPressing.current = false;
   };
@@ -364,7 +379,7 @@ export function EmbeddedAllocationBar({
       {/* Allocation Interval Modal */}
       <AllocationIntervalModal
         isOpen={showIntervalModal}
-        onClose={() => setShowIntervalModal(false)}
+        onClose={closeIntervalModal}
       />
 
       <UsdAllocationModal
