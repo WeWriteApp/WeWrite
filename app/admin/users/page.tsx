@@ -138,6 +138,17 @@ export default function AdminUsersPage() {
       render: (u) => renderSubscription(u.financial)
     },
     {
+      id: "emailVerified",
+      label: "Email verified",
+      sortable: true,
+      render: (u) =>
+        u.emailVerified ? (
+          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Verified</Badge>
+        ) : (
+          <Badge className="bg-red-500/15 text-red-500 border border-red-500/30">Unverified</Badge>
+        )
+    },
+    {
       id: "admin",
       label: "Admin",
       sortable: true,
@@ -308,6 +319,8 @@ export default function AdminUsersPage() {
         return u.username || "";
       case "subscription":
         return u.financial?.subscriptionAmount ?? 0;
+      case "emailVerified":
+        return u.emailVerified ? 1 : 0;
       case "admin":
         return u.isAdmin ? 1 : 0;
       case "payouts":
@@ -674,6 +687,14 @@ export default function AdminUsersPage() {
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Subscription</span>
                           {renderSubscription(u.financial)}
+                        </div>
+                        <div className="flex items-center justify-between py-1.5">
+                          <span className="text-muted-foreground">Email verified</span>
+                          {u.emailVerified ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Verified</Badge>
+                          ) : (
+                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30">Unverified</Badge>
+                          )}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Admin</span>
