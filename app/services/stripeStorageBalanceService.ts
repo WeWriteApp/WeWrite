@@ -210,7 +210,10 @@ export class StripeStorageBalanceService {
       const balance = await this.stripe.balance.retrieve();
       
       // Find storage balance (if it exists)
-      const storageBalance = balance.available.find(b => b.source_types?.includes('storage'));
+      const storageBalance = balance.available.find(b => {
+        const sourceTypes = (b as any).source_types || {};
+        return typeof sourceTypes.storage === 'number' || (Array.isArray(sourceTypes) && sourceTypes.includes('storage'));
+      });
       
       if (storageBalance) {
         return {
@@ -235,7 +238,12 @@ export class StripeStorageBalanceService {
       const balance = await this.stripe.balance.retrieve();
       
       // Main available balance (excluding storage)
-      const paymentsBalance = balance.available.find(b => b.currency === 'usd' && !b.source_types?.includes('storage'));
+      const paymentsBalance = balance.available.find(b => {
+        if (b.currency !== 'usd') return false;
+        const sourceTypes = (b as any).source_types || {};
+        const hasStorage = typeof sourceTypes.storage === 'number' || (Array.isArray(sourceTypes) && sourceTypes.includes('storage'));
+        return !hasStorage;
+      });
       
       if (paymentsBalance) {
         return {

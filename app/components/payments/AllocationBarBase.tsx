@@ -66,8 +66,10 @@ function useCompositionBar(
     // Use optimistic allocation for current page (if available)
     const currentPageCents = optimisticAllocation ?? currentAllocationCents;
 
-    // Other pages allocation: everything except this page
-    const otherPagesCents = Math.max(0, usdBalance.allocatedUsdCents - currentPageCents);
+    // Other pages allocation: reconcile allocated vs (total - available) to avoid stale data
+    const otherFromAllocated = Math.max(0, usdBalance.allocatedUsdCents - currentPageCents);
+    const otherFromBalances = Math.max(0, usdBalance.totalUsdCents - usdBalance.availableUsdCents - currentPageCents);
+    const otherPagesCents = Math.max(otherFromAllocated, otherFromBalances);
 
     // Funds available for this page after other allocations
     const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
@@ -80,8 +82,11 @@ function useCompositionBar(
     const optimisticAvailableCents = Math.max(0, totalCents - otherPagesCents - currentPageFundedCents);
     const isOutOfFunds = optimisticAvailableCents <= 0 && totalCents > 0;
 
-    // Display proportions (include overfunded in display total so slices remain visible)
-    const displayTotal = totalCents + currentPageOverfundedCents;
+    // Display proportions (include overfunded and available so slices remain consistent)
+    const displayTotal = Math.max(
+      otherPagesCents + currentPageFundedCents + currentPageOverfundedCents + optimisticAvailableCents,
+      1
+    );
 
     const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
     const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
@@ -152,6 +157,9 @@ export function AllocationBarBase({
     usdBalance,
     allocationState.isOptimistic ? allocationState.currentAllocationCents : null
   );
+  const otherWidth = compositionData.otherPagesPercentage > 0
+    ? `max(${compositionData.otherPagesPercentage}%, 4px)`
+    : '0%';
 
   // Game-like animation state for allocation increases
   const [showParticles, setShowParticles] = useState(false);
@@ -247,7 +255,7 @@ export function AllocationBarBase({
                 {compositionData.otherPagesPercentage > 0 && (
                   <div
                     className={ALLOCATION_BAR_STYLES.sections.other}
-                    style={{ width: `${compositionData.otherPagesPercentage}%` }}
+                    style={{ width: otherWidth }}
                   />
                 )}
 

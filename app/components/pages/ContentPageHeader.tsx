@@ -509,82 +509,63 @@ export default function ContentPageHeader({
       return; // No scroll listener needed
     }
 
-    // Observer-based detection to avoid missing scroll events on iOS/embedded scroll containers
-    const sentinel = document.querySelector('[data-header-sentinel]');
-    let observer: IntersectionObserver | null = null;
-
-    if (sentinel && !canEdit) {
-      observer = new IntersectionObserver(
-        ([entry]) => {
-          // When sentinel leaves the viewport, collapse header
-          setIsScrolled(!entry.isIntersecting);
-        },
-        {
-          threshold: 0.99,
-          rootMargin: `-${(bannerOffset || 0) + 60}px 0px 0px 0px`
-        }
-      );
-      observer.observe(sentinel);
-    }
-
-    // View mode only: Use scroll handler for progress bar and padding transitions
-    // Use the primary scroll container (document.scrollingElement) for accuracy on iOS/embedded layouts
     const scrollElement = document.scrollingElement || document.documentElement;
-    let lastScrollY = 0;
+    const collapseThreshold = Math.max(48, (bannerOffset || 0) + 8);
+    const hysteresis = 12; // Prevent rapid flip/flop near threshold
     let ticking = false;
 
     const handleScroll = () => {
-      lastScrollY = scrollElement?.scrollTop || window.scrollY || 0;
+      if (ticking) return;
+      ticking = true;
 
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          // Prefer measuring against content position to avoid sticky header masking scrollTop
-          const contentEl = document.querySelector('[data-page-content]') as HTMLElement | null;
-          const contentTop = contentEl ? contentEl.getBoundingClientRect().top : Infinity;
-          const viewportThreshold = (bannerOffset || 0) + 40;
-          const shouldBeScrolled = contentTop < viewportThreshold || lastScrollY > 50;
-          if (shouldBeScrolled !== isScrolled && !canEdit) {
-            setIsScrolled(shouldBeScrolled);
-          }
+      window.requestAnimationFrame(() => {
+        const currentScroll = Math.max(0, (scrollElement?.scrollTop ?? window.scrollY ?? 0));
 
-          // Transition padding based on scroll
-          const paddingTransitionDistance = 50;
-          const minPadding = 4;
-          const maxPadding = 8;
-          const scrollRatio = Math.min(lastScrollY / paddingTransitionDistance, 1);
-          const newPadding = maxPadding - (maxPadding - minPadding) * scrollRatio;
-          setHeaderPadding(newPadding);
-
-          // Calculate scroll progress
-          const windowHeight = window.innerHeight;
-          const mainContentElement = document.querySelector('[data-page-content]');
-          let maxScroll = document.documentElement.scrollHeight - windowHeight;
-
-          if (mainContentElement) {
-            const mainContentRect = mainContentElement.getBoundingClientRect();
-            const mainContentBottom = mainContentRect.bottom + window.scrollY;
-            maxScroll = Math.max(0, mainContentBottom - windowHeight);
-          }
-
-          const progress = maxScroll > 0 ? (lastScrollY / maxScroll) * 100 : 0;
-          setScrollProgress(Math.min(progress, 100));
-
-          ticking = false;
+        // Collapse purely based on scroll position with hysteresis so we do not get stuck
+        setIsScrolled((prev) => {
+          if (currentScroll > collapseThreshold) return true;
+          if (currentScroll < Math.max(0, collapseThreshold - hysteresis)) return false;
+          return prev;
         });
-        ticking = true;
-      }
+
+        // Transition padding based on scroll
+        const paddingTransitionDistance = 50;
+        const minPadding = 4;
+        const maxPadding = 8;
+        const scrollRatio = Math.min(currentScroll / paddingTransitionDistance, 1);
+        const newPadding = maxPadding - (maxPadding - minPadding) * scrollRatio;
+        setHeaderPadding(newPadding);
+
+        // Calculate scroll progress
+        const windowHeight = window.innerHeight;
+        const mainContentElement = document.querySelector('[data-page-content]');
+        let maxScroll = document.documentElement.scrollHeight - windowHeight;
+
+        if (mainContentElement) {
+          const mainContentRect = mainContentElement.getBoundingClientRect();
+          const mainContentBottom = mainContentRect.bottom + window.scrollY;
+          maxScroll = Math.max(0, mainContentBottom - windowHeight);
+        }
+
+        const progress = maxScroll > 0 ? (currentScroll / maxScroll) * 100 : 0;
+        setScrollProgress(Math.min(progress, 100));
+
+        ticking = false;
+      });
     };
 
-    (scrollElement || window).addEventListener("scroll", handleScroll, { passive: true });
+    const targets: (Element | Window)[] = [window];
+    if (scrollElement && scrollElement !== document.documentElement && scrollElement !== document.body) {
+      targets.push(scrollElement);
+    }
+
+    targets.forEach(target => target.addEventListener("scroll", handleScroll, { passive: true } as any));
     handleScroll(); // Set initial state
 
     return () => {
-      (scrollElement || window).removeEventListener("scroll", handleScroll);
-      if (observer && sentinel) {
-        observer.unobserve(sentinel);
-      }
+      targets.forEach(target => target.removeEventListener("scroll", handleScroll, { passive: true } as any));
     };
-  }, [isEditing, isScrolled, canEdit, bannerOffset]);
+  }, [isEditing, bannerOffset]);
 
   // Create page object for handlers
   const pageObject = React.useMemo(() => {

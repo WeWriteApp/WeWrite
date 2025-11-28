@@ -188,8 +188,12 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     // Use optimistic allocation for current page (if available)
     const currentPageCents = allocationState.optimisticAllocation ?? allocationState.currentAllocationCents;
 
-    // Other pages allocation: everything except this page
-    const otherPagesCents = Math.max(0, originalAllocatedCents - currentPageCents);
+    // Other pages allocation: derive from allocated minus current, but also
+    // reconcile with (total - available - current) to avoid stale data hiding
+    // the "other" slice.
+    const otherFromAllocated = Math.max(0, originalAllocatedCents - currentPageCents);
+    const otherFromBalances = Math.max(0, totalCents - originalAvailableCents - currentPageCents);
+    const otherPagesCents = Math.max(otherFromAllocated, otherFromBalances);
 
     // Calculate optimistic available by subtracting the allocation difference from original available
     const allocationDifference = currentPageCents - allocationState.currentAllocationCents;
@@ -205,8 +209,11 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     const currentPageFundedCents = Math.min(currentPageCents, availableFundsForCurrentPage);
     const currentPageOverfundedCents = Math.max(0, currentPageCents - availableFundsForCurrentPage);
 
-    // Calculate percentages for composition bar based on total allocated (which may exceed totalCents)
-    const displayTotal = Math.max(totalCents, totalAllocatedCents);
+    // Calculate percentages for composition bar ensuring slices sum to a sane total
+    const displayTotal = Math.max(
+      otherPagesCents + currentPageFundedCents + currentPageOverfundedCents + optimisticAvailableCents,
+      1
+    );
     const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
     const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
     const currentPageOverfundedPercentage = displayTotal > 0 ? (currentPageOverfundedCents / displayTotal) * 100 : 0;
@@ -224,6 +231,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   };
 
   const compositionData = getCompositionData();
+  const otherWidth = compositionData.otherPagesPercentage > 0
+    ? `max(${compositionData.otherPagesPercentage}%, 4px)`
+    : '0%';
 
   // Handle allocation bar click
   const handleAllocationBarClick = () => {
@@ -392,7 +402,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                       {/* Other pages - use neutral color system */}
                       <div
                         className={`h-full ${ALLOCATION_BAR_STYLES.sections.other}`}
-                        style={{ width: `${compositionData.otherPagesPercentage}%` }}
+                        style={{ width: otherWidth }}
                       />
 
                       {/* Current page - funded portion with game-like animations */}
@@ -503,8 +513,20 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
         pageTitle={pageTitle}
         authorId={authorId}
         currentAllocation={allocationState.currentAllocationCents}
-        onAllocationChange={(newAllocationCents: number) => {
-          setOptimisticAllocation(newAllocationCents);
+        onAllocationChange={async (newAllocationCents: number) => {
+          // Persist the change instead of only optimistically updating.
+          setOptimisticAllocation((prev) => {
+            // Use the last optimistic value when available to avoid races.
+            const previous = typeof prev === 'number' ? prev : allocationState.currentAllocationCents;
+            const delta = newAllocationCents - previous;
+
+            if (delta !== 0) {
+              // Re-use the same handler so animations and server mutations stay consistent.
+              handleAllocationChange(delta);
+            }
+
+            return newAllocationCents;
+          });
         }}
       />
 

@@ -210,7 +210,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       {/* Settings Header - handles mobile/desktop logic */}
       <SettingsHeader />
 
-      <div className="lg:flex h-[calc(100vh-3.5rem)]">
+      <div className="lg:flex h-[calc(100vh-3.5rem)] pt-20 lg:pt-0">
         {/* Desktop Persistent Sidebar */}
         <div className="hidden lg:block lg:w-64 lg:border-r-only">
           <div className="flex flex-col h-full">

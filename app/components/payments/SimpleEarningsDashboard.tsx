@@ -61,6 +61,11 @@ export default function SimpleEarningsDashboard() {
   const [payoutHistory, setPayoutHistory] = useState<SimplePayout[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const bankData: any = bankStatus?.data;
+  const isBankConnected = bankStatus?.isConnected ?? !!bankData?.bankAccount;
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  const stripeAccountId = bankData?.id;
 
   useEffect(() => {
     if (user?.uid) {
@@ -144,6 +149,38 @@ export default function SimpleEarningsDashboard() {
     }
   };
 
+  const openStripeAccountLink = async (type: 'account_onboarding' | 'account_update' = 'account_update') => {
+    if (!user?.uid) return;
+    try {
+      setLinkLoading(true);
+      const currentUrl = window.location.href;
+      const res = await fetch('/api/stripe/account-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          type,
+          returnUrl: currentUrl,
+          refreshUrl: currentUrl
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Failed to create Stripe link');
+      }
+      window.open(data.url, '_blank');
+    } catch (error: any) {
+      console.error('[SimpleEarningsDashboard] Error creating account link:', error);
+      toast({
+        title: 'Stripe link failed',
+        description: error?.message || 'Unable to open Stripe account link.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
@@ -222,21 +259,87 @@ export default function SimpleEarningsDashboard() {
         </Card>
       </div>
 
-      {/* Bank Account Status */}
-      <Card>
-        <CardContent className="pt-6">
-          {bankStatus?.isConnected ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{bankStatus.bankName}</p>
-                <p className="text-sm text-muted-foreground">****{bankStatus.last4}</p>
+      {/* Stripe Connected Account & Bank */}
+      <Card className="border-border bg-card">
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Stripe payouts & bank</p>
+              <p className="text-xs text-muted-foreground">Status of your connected account and payout destination.</p>
+            </div>
+            <Badge className={(bankStatus?.data?.payouts_enabled || bankStatus?.data?.charges_enabled) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100' : 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100'}>
+              {(bankStatus?.data?.payouts_enabled || bankStatus?.data?.charges_enabled) ? 'Ready' : 'Action needed'}
+            </Badge>
+          </div>
+
+          {stripeAccountId && (
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(stripeAccountId).then(() => {
+                  setCopiedId(true);
+                  setTimeout(() => setCopiedId(false), 1500);
+                });
+              }}
+              className="w-full text-left text-sm text-foreground break-all rounded-lg border border-border bg-muted/20 px-3 py-2 hover:bg-muted/30 transition"
+              aria-label="Copy connected account id"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate">Account: {stripeAccountId}</span>
+                <span className="text-primary text-xs font-medium">{copiedId ? 'Copied!' : 'Copy'}</span>
               </div>
-              <Badge className="bg-green-100 text-green-800">
+            </button>
+          )}
+
+          <div className="flex flex-wrap gap-2 text-xs">
+            <Badge className={bankStatus?.data?.payouts_enabled ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100' : 'bg-muted text-muted-foreground'}>
+              Payouts {bankStatus?.data?.payouts_enabled ? 'enabled' : 'disabled'}
+            </Badge>
+            <Badge className={bankStatus?.data?.charges_enabled ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100' : 'bg-muted text-muted-foreground'}>
+              Charges {bankStatus?.data?.charges_enabled ? 'enabled' : 'disabled'}
+            </Badge>
+            <Badge className={bankStatus?.data?.details_submitted ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100' : 'bg-muted text-muted-foreground'}>
+              Details {bankStatus?.data?.details_submitted ? 'submitted' : 'incomplete'}
+            </Badge>
+          </div>
+
+          {isBankConnected && (
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+              <div>
+                <p className="font-medium">{bankStatus?.bankName || bankData?.bankAccount?.bankName || 'Bank account'}</p>
+                <p className="text-sm text-muted-foreground">
+                  ****{bankStatus?.last4 || bankData?.bankAccount?.last4 || '----'}
+                </p>
+              </div>
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100">
                 <CheckCircle className="w-3 h-3 mr-1" />Connected
               </Badge>
             </div>
-          ) : (
-            <SimpleBankAccountManager />
+          )}
+
+          {bankStatus?.data?.requirements?.currently_due?.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-900/50 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+              <div className="font-semibold mb-1">Action required</div>
+              <ul className="list-disc list-inside space-y-1">
+                {bankStatus.data.requirements.currently_due.map((item: string) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!isBankConnected && (
+            <div className="pt-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                onClick={() => openStripeAccountLink('account_onboarding')}
+                disabled={linkLoading}
+              >
+                {linkLoading ? 'Opening...' : 'Connect payouts in Stripe'}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

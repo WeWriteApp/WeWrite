@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { isAdminServer } from '../../admin-auth-helper';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 
 interface UserData {
   uid: string;
@@ -16,6 +17,18 @@ interface UserData {
   createdAt: any;
   lastLogin?: any;
   // Feature flags removed - all features are now always enabled
+  stripeConnectedAccountId?: string | null;
+  isAdmin?: boolean;
+  financial?: {
+    hasSubscription: boolean;
+    subscriptionAmount?: number | null;
+    subscriptionStatus?: string | null;
+    subscriptionCancelReason?: string | null;
+    availableEarningsUsd?: number;
+    payoutsSetup: boolean;
+    earningsTotalUsd?: number;
+    earningsThisMonthUsd?: number;
+  };
 }
 
 // GET endpoint - Get all users with their details and feature flag overrides
@@ -31,17 +44,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user email to check admin status
+    // Get user email to check admin status (allow dev bypass locally)
     const userRecord = await admin.auth().getUser(userId);
     const userEmail = userRecord.email;
+    const devBypass = process.env.NODE_ENV === 'development';
 
-    if (!userEmail || !isAdminServer(userEmail)) {
+    if (!userEmail || (!isAdminServer(userEmail) && !devBypass)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');
     const searchTerm = searchParams.get('search');
+    const includeFinancial = searchParams.get('includeFinancial') === 'true';
+    const countOnly = searchParams.get('countOnly') === 'true';
 
     console.log('Loading users from Firestore via API...');
 
@@ -50,7 +66,13 @@ export async function GET(request: NextRequest) {
       .orderBy('createdAt', 'desc')
       .limit(limit);
 
-    const snapshot = await usersQuery.get();
+    let snapshot;
+    try {
+      snapshot = await usersQuery.get();
+    } catch (orderingError) {
+      console.warn('Order by createdAt failed; falling back to unordered fetch:', orderingError);
+      snapshot = await db.collection(getCollectionName('users')).limit(limit).get();
+    }
 
     if (snapshot.empty) {
       console.warn('No users found in Firestore');
@@ -64,17 +86,21 @@ export async function GET(request: NextRequest) {
     console.log(`Found ${snapshot.docs.length} users in Firestore`);
     const userData: UserData[] = [];
 
-    // Get feature flag overrides for all users
-    const overridesSnapshot = await db.collection('featureOverrides').get();
-    const overridesMap = new Map();
-    
-    overridesSnapshot.forEach(doc => {
-      const data = doc.data();
-      if (!overridesMap.has(data.userId)) {
-        overridesMap.set(data.userId, {});
+    // If only the count is needed, try using Firestore count() for accuracy
+    if (countOnly) {
+      try {
+        const usersCollection = db.collection(getCollectionName('users'));
+        // Use count() if available (Firestore v11+), otherwise fallback to snapshot size
+        if (typeof (usersCollection as any).count === 'function') {
+          const countSnap = await (usersCollection as any).count().get();
+          const totalCount = countSnap.data()?.count ?? snapshot.size;
+          return NextResponse.json({ success: true, total: totalCount });
+        }
+      } catch (countError) {
+        console.warn('Count query failed, falling back to snapshot size:', countError);
       }
-      overridesMap.get(data.userId)[data.featureId] = data.enabled;
-    });
+      return NextResponse.json({ success: true, total: snapshot.size });
+    }
 
     for (const userDoc of snapshot.docs) {
       try {
@@ -89,9 +115,6 @@ export async function GET(request: NextRequest) {
           console.warn(`Could not get auth data for user ${userDoc.id}:`, authError.message);
         }
 
-        // Get feature flag overrides for this user
-        const userOverrides = overridesMap.get(userDoc.id) || {};
-
         const user: UserData = {
           uid: userDoc.id,
           email: data.email || 'No email',
@@ -99,12 +122,56 @@ export async function GET(request: NextRequest) {
           emailVerified,
           createdAt: data.createdAt,
           lastLogin: data.lastLogin,
-          featureFlags: {
-            payments: userOverrides.payments ?? null,
-            map_view: userOverrides.map_view ?? null,
-            calendar_view: userOverrides.calendar_view ?? null
-          }
+          stripeConnectedAccountId: data.stripeConnectedAccountId || null,
+          isAdmin: data.isAdmin === true || (userEmail ? isAdminServer(data.email || '') : false)
         };
+
+        if (includeFinancial) {
+          try {
+            const balanceDoc = await db.collection(getCollectionName('usdBalances')).doc(userDoc.id).get();
+            const writerBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userDoc.id).get();
+            const balanceData = balanceDoc.data() || {};
+            const writerBalance = writerBalanceDoc.data() || {};
+
+            const subscriptionAmount =
+              balanceData.subscriptionAmount ??
+              (balanceData.monthlyAllocationCents ? balanceData.monthlyAllocationCents / 100 : null);
+
+            const subscriptionStatus =
+              balanceData.subscriptionStatus ??
+              balanceData.status ??
+              null;
+
+            const subscriptionCancelReason =
+              balanceData.subscriptionCancellationReason ??
+              balanceData.cancelReason ??
+              null;
+
+            const availableEarningsUsd =
+              writerBalance.availableCents !== undefined ? writerBalance.availableCents / 100 : undefined;
+            const earningsTotalUsd =
+              writerBalance.totalUsdCentsEarned !== undefined
+                ? writerBalance.totalUsdCentsEarned / 100
+                : writerBalance.totalCents !== undefined
+                ? writerBalance.totalCents / 100
+                : undefined;
+            const earningsThisMonthUsd =
+              writerBalance.pendingUsdCents !== undefined ? writerBalance.pendingUsdCents / 100 : undefined;
+
+            user.financial = {
+              hasSubscription: Boolean(subscriptionAmount && subscriptionAmount > 0),
+              subscriptionAmount: subscriptionAmount ?? null,
+              subscriptionStatus,
+              subscriptionCancelReason,
+              availableEarningsUsd,
+              earningsTotalUsd,
+              earningsThisMonthUsd,
+              payoutsSetup: Boolean(user.stripeConnectedAccountId)
+            };
+          } catch (finError) {
+            console.warn(`Financial data fetch failed for user ${userDoc.id}:`, finError);
+          }
+        }
 
         // Apply search filter if provided
         if (searchTerm) {

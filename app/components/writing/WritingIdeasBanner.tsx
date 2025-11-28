@@ -195,16 +195,9 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
               onScroll={updateScrollButtons}
               className="overflow-x-auto no-scrollbar"
             >
-              <div
-                className="grid gap-2"
-                style={{
-                  gridAutoFlow: 'column',
-                  gridAutoColumns: 'max-content',
-                  gridTemplateRows: 'repeat(2, minmax(0, auto))',
-                  alignContent: 'flex-start',
-                  paddingBottom: '4px'
-                }}
-              >
+              {/* NOTE: keep this flex-wrap lane (not grid). Grid caused uneven gaps when chips had varied widths,
+                  and was previously reverted. Flex + gap keeps gutters consistent regardless of label length. */}
+              <div className="flex flex-wrap gap-2 pb-1 items-start">
                 {isLoading || allIdeas.length === 0 ? (
                   <div className="flex items-center justify-center w-full h-full">
                     <div className="text-center">

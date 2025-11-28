@@ -805,14 +805,14 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   if (isFullscreen) {
     return (
       <div
-        className="fixed inset-0 z-[9999] wewrite-card animate-in fade-in-0 duration-300"
+        className="fixed inset-0 z-[9999] animate-in fade-in-0 duration-300 bg-background text-foreground"
         style={{
           touchAction: 'manipulation',
           pointerEvents: 'auto'
         }}
       >
         {/* Header with controls */}
-        <div className="absolute top-0 left-0 right-0 z-20 wewrite-card wewrite-floating border-b border-neutral-15 p-4">
+        <div className="absolute top-0 left-0 right-0 z-20 bg-background border-b border-border p-4 shadow-sm">
           {/* Top row: Title and controls */}
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold">Graph view</h3>
@@ -864,20 +864,25 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         </div>
 
         {/* Graph container */}
-        <SubscriptionGate
-          featureName="graph"
-          className={`wewrite-card ${isViewSettingsOpen ? 'h-1/2 mt-20' : 'h-full pt-20'} transition-all duration-300`}
-          allowInteraction={true}
-        >
-          <div ref={containerRef} className="w-full h-full">
-            <svg ref={svgRef} className="w-full h-full" />
-          </div>
-        </SubscriptionGate>
+        <div className={`absolute inset-0 pt-20 ${isViewSettingsOpen ? 'pb-1/2' : ''}`}>
+          <SubscriptionGate
+            featureName="graph"
+            className={`h-full ${isViewSettingsOpen ? 'pb-[50%]' : ''}`}
+            allowInteraction={true}
+          >
+            <div
+              ref={containerRef}
+              className="w-full h-full bg-background"
+            >
+              <svg ref={svgRef} className="w-full h-full" />
+            </div>
+          </SubscriptionGate>
+        </div>
 
         {/* Settings panel (bottom half when open) */}
         {isViewSettingsOpen && (
           <div
-            className="absolute bottom-0 left-0 right-0 h-1/2 wewrite-card border-t border-neutral-15 overflow-y-auto"
+            className="absolute bottom-0 left-0 right-0 h-1/2 bg-background border-t border-border overflow-y-auto shadow-[0_-6px_12px_rgba(0,0,0,0.08)]"
             style={{
               touchAction: 'manipulation',
               pointerEvents: 'auto'

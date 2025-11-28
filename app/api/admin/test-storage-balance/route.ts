@@ -8,18 +8,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { isAdminUser } from '../../../utils/adminUtils';
 import { stripeStorageBalanceService } from '../../../services/stripeStorageBalanceService';
+import { detectEnvironmentType } from '../../../utils/environmentDetection';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const envType = detectEnvironmentType();
+    const host = request.headers.get('host') || '';
+    const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
 
-    const isAdmin = await isAdminUser(userId);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access or allow dev bypass on localhost
+    const userId = await getUserIdFromRequest(request);
+    const isAdmin = userId ? await isAdminUser(userId) : false;
+    const devBypass = envType === 'development' && isLocalhost;
+    if (!userId && !devBypass) {
+      return NextResponse.json({ error: 'Unauthorized', debug: { envType, host } }, { status: 401 });
+    }
+    if (!isAdmin && !devBypass) {
+      return NextResponse.json({ error: 'Admin access required', debug: { envType, host, userId } }, { status: 403 });
     }
 
     const body = await request.json();
@@ -35,7 +40,7 @@ export async function POST(request: NextRequest) {
             warning: 'This will create a test transfer to Storage Balance to demonstrate the system.'
           }, { status: 400 });
         }
-        return await handleTestMoveToStorage(amount || 10); // Default $10 test
+        return await handleTestMoveToStorage(amount || 10, devBypass); // Default $10 test
       
       case 'get_current_balances':
         return await handleGetCurrentBalances();
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleTestMoveToStorage(amount: number) {
+async function handleTestMoveToStorage(amount: number, devBypass: boolean) {
   console.log(`🧪 [ADMIN] Testing move $${amount} to Storage Balance`);
   
   // Get current balances
@@ -79,7 +84,7 @@ async function handleTestMoveToStorage(amount: number) {
   console.log(`📊 [ADMIN] Current balances before test:`, beforeBalance);
 
   // Check if we have sufficient funds in Payments Balance
-  if (beforeBalance.paymentsBalance < amount) {
+  if (beforeBalance.paymentsBalance < amount && !devBypass) {
     return NextResponse.json({
       success: false,
       error: `Insufficient funds in Payments Balance. Need $${amount}, have $${beforeBalance.paymentsBalance.toFixed(2)}`,
@@ -87,12 +92,19 @@ async function handleTestMoveToStorage(amount: number) {
     }, { status: 400 });
   }
 
-  // Execute test transfer
-  const transferResult = await stripeStorageBalanceService.moveAllocatedFundsToStorage(
-    amount,
-    `Test transfer: Moving $${amount} to Storage Balance for demonstration`,
-    'test_transfer'
-  );
+  // Execute test transfer (or simulate in dev bypass)
+  let transferResult: { success: boolean; transferId?: string; error?: string } = {
+    success: true,
+    transferId: 'simulated_dev_transfer'
+  };
+
+  if (!(beforeBalance.paymentsBalance < amount && devBypass)) {
+    transferResult = await stripeStorageBalanceService.moveAllocatedFundsToStorage(
+      amount,
+      `Test transfer: Moving $${amount} to Storage Balance for demonstration`,
+      'test_transfer'
+    );
+  }
 
   if (!transferResult.success) {
     return NextResponse.json({

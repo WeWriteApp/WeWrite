@@ -20,6 +20,7 @@ import Link from 'next/link';
 // UserManagement import removed - users tab deleted
 
 import { isAdmin } from '../utils/isAdmin';
+import { FloatingHeader } from '../components/ui/FloatingCard';
 
 interface User {
   id: string;
@@ -56,6 +57,11 @@ export default function AdminPage() {
         console.log('Writing ideas API response status:', response.status);
 
         if (!response.ok) {
+          // Do not block the page or spam console if this endpoint is restricted in dev
+          if (response.status === 401 || response.status === 403) {
+            setWritingIdeasCount(0);
+            return;
+          }
           console.error('Writing ideas API failed:', response.status, response.statusText);
           setWritingIdeasCount(0);
           return;
@@ -135,6 +141,7 @@ export default function AdminPage() {
     platformFeeGrowth: 0,
     averageFeePerPayout: 0
   });
+  const [usersCount, setUsersCount] = useState<number | null>(null);
 
 
   // Feature flags have been removed - all features are now always enabled
@@ -174,6 +181,26 @@ export default function AdminPage() {
     });
   };
 
+  // Load user count for quick overview
+  useEffect(() => {
+    const loadUserCount = async () => {
+      try {
+        const res = await fetch('/api/admin/users?countOnly=true');
+        const data = await res.json();
+        if (res.ok && data?.total !== undefined) {
+          setUsersCount(data.total);
+        } else {
+          setUsersCount(null);
+        }
+      } catch {
+        setUsersCount(null);
+      }
+    };
+    if (user && !authLoading) {
+      loadUserCount();
+    }
+  }, [user, authLoading]);
+
   // Feature flags have been removed
 
   // Enhanced loading and error states
@@ -211,29 +238,25 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-5xl">
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              Admin Panel
-            </h1>
-            <p className="text-muted-foreground">
-              Administrative tools and dashboard access
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/')}
-            className="h-10 w-10"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+      <FloatingHeader className="fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-40 px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
+        <div>
+          <h1 className="text-3xl font-bold leading-tight">Admin Panel</h1>
+          <p className="text-muted-foreground">
+            Administrative tools and dashboard access
+          </p>
         </div>
-      </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.push('/')}
+          className="h-10 w-10"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+      </FloatingHeader>
 
       {/* Simplified admin interface - no tabs needed */}
-      <div className="space-y-6">
+      <div className="space-y-6 pt-24 lg:pt-0">
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-2">Admin Tools</h2>
           <p className="text-muted-foreground">Administrative dashboard and testing utilities</p>
@@ -266,6 +289,27 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Users</h3>
+                <Users className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                {usersCount !== null ? `${usersCount} users total` : 'User count unavailable'}
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/users')}
+                >
+                  <Users className="h-4 w-4" />
+                  View users
+                </Button>
+              </div>
+            </div>
+
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">PWA Testing</h3>
@@ -383,6 +427,27 @@ export default function AdminPage() {
                 >
                   <ImageIcon className="h-4 w-4" />
                   Manage Backgrounds
+                </Button>
+              </div>
+            </div>
+
+            {/* Financial Test Harness */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Financial Tests</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Admin-only simulation of earnings and payouts (test-mode only, no live funds touched).
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/financial-tests')}
+                >
+                  <DollarSign className="h-4 w-4" />
+                  Open Financial Tests
                 </Button>
               </div>
             </div>

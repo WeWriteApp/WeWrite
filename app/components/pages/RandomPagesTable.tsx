@@ -254,7 +254,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
             </div>
 
             {/* Embedded Allocation Bar */}
-            <div className="pt-2 border-t border-border/20">
+            <div className="pt-2">
               <EmbeddedAllocationBar
                 pageId={page.id}
                 authorId={page.userId}

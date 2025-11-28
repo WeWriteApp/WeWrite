@@ -1,16 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shuffle, MoreHorizontal, Grid3X3, UserX } from 'lucide-react';
+import { Shuffle } from 'lucide-react';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator} from '../ui/dropdown-menu';
 import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
 
 /**
@@ -62,26 +56,6 @@ const RandomPagesHeader = () => {
     window.dispatchEvent(denseModeEvent);
   };
 
-  // Handle "Not mine" toggle change
-  const handleExcludeOwnToggle = () => {
-    const newValue = !excludeOwnPages;
-    setExcludeOwnPages(newValue);
-
-    // Persist to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('randomPages_excludeOwnPages', String(newValue));
-    }
-
-    // Trigger shuffle with new filter setting
-    const shuffleEvent = new CustomEvent('shuffleRandomPages', {
-      detail: {
-        includePrivate: false,
-        excludeOwnPages: newValue
-      }
-    });
-    window.dispatchEvent(shuffleEvent);
-  };
-
   // Handle shuffle button click
   const handleShuffle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -95,132 +69,18 @@ const RandomPagesHeader = () => {
     window.dispatchEvent(shuffleEvent);
   };
 
-  const renderPrivacyMenu = () => {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="h-8 w-8 rounded-2xl hover:bg-muted/80 transition-colors"
-            aria-label="Random pages options"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          sideOffset={8}
-          className="w-72 p-3 z-[200000] text-foreground"
-        >
-          {/* Privacy and "Not mine" filters using reusable component */}
+  const handleFiltersChange = (filters: { includePrivate?: boolean; excludeOwnPages?: boolean; excludeUsername?: string; }) => {
+    setExcludeOwnPages(!!filters.excludeOwnPages);
+    setExcludeUsername(filters.excludeUsername || '');
 
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              handleExcludeOwnToggle();
-            }}
-            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
-          >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="flex-shrink-0">
-                <UserX className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="font-medium text-sm">Not mine</span>
-                <span className="text-xs text-muted-foreground leading-relaxed">
-                  Exclude pages you authored
-                </span>
-              </div>
-            </div>
-            <div className="flex-shrink-0 ml-3">
-              <Switch
-                checked={excludeOwnPages}
-                onCheckedChange={(checked) => {
-                  if (checked !== excludeOwnPages) {
-                    handleExcludeOwnToggle();
-                  }
-                }}
-                aria-label="Toggle exclude own pages"
-              />
-            </div>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator className="my-2" />
-
-          {/* Dense mode toggle - specific to random pages section */}
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDenseModeToggle();
-            }}
-            className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"
-          >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="flex-shrink-0">
-                <Grid3X3 className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="font-medium text-sm">Dense Mode</span>
-                <span className="text-xs text-muted-foreground leading-relaxed">
-                  Show only page titles as pill links
-                </span>
-              </div>
-            </div>
-            <div className="flex-shrink-0 ml-3">
-              <Switch
-                checked={denseMode}
-                onCheckedChange={(checked) => {
-                  if (checked !== denseMode) {
-                    handleDenseModeToggle();
-                  }
-                }}
-                aria-label="Toggle dense mode"
-              />
-            </div>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator className="my-2" />
-
-          <div className="p-2 space-y-2">
-            <div className="text-sm font-medium text-foreground">Exclude username</div>
-            <input
-              className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-              value={excludeUsername}
-              onChange={(e) => setExcludeUsername(e.target.value)}
-              placeholder="Enter username"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleShuffle(e as any);
-                }
-              }}
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('randomPages_excludeUsername', excludeUsername.trim());
-                }
-                const shuffleEvent = new CustomEvent('shuffleRandomPages', {
-                  detail: {
-                    includePrivate: false,
-                    excludeOwnPages,
-                    excludeUsername: excludeUsername.trim()
-                  }
-                });
-                window.dispatchEvent(shuffleEvent);
-              }}
-            >
-              Apply
-            </Button>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
+    const shuffleEvent = new CustomEvent('shuffleRandomPages', {
+      detail: {
+        includePrivate: false,
+        excludeOwnPages: !!filters.excludeOwnPages,
+        excludeUsername: filters.excludeUsername || ''
+      }
+    });
+    window.dispatchEvent(shuffleEvent);
   };
 
   return (
@@ -252,8 +112,22 @@ const RandomPagesHeader = () => {
             </Button>
           </>
 
-          {/* Privacy Menu */}
-          {renderPrivacyMenu()}
+          {/* Filters + Dense toggle */}
+          <div className="flex items-center gap-2">
+            <RandomPageFilterMenu
+              onFiltersChange={handleFiltersChange}
+              className="opacity-100"
+              size="md"
+            />
+            <div className="flex items-center gap-2 rounded-2xl border border-border px-2 py-1 bg-background/80 backdrop-blur-md">
+              <Switch
+                checked={denseMode}
+                onCheckedChange={handleDenseModeToggle}
+                aria-label="Toggle dense mode"
+              />
+              <span className="text-xs text-muted-foreground">Dense mode</span>
+            </div>
+          </div>
         </div>
       }
     />

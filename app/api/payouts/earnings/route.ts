@@ -4,8 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { payoutService } from '../../../services/payoutService';
-import { SimplePayoutService } from '../../../services/simplePayoutService';
+import { PayoutService } from '../../../services/payoutServiceUnified';
 import { db } from '../../../firebase/config';
 import {
   collection,
@@ -185,8 +184,8 @@ export async function POST(request: NextRequest) {
     const { action, period } = body;
 
     if (action === 'request_payout') {
-      // Use SimplePayoutService for payout request
-      const result = await SimplePayoutService.requestPayout(userId);
+      // Use unified PayoutService for payout request
+      const result = await PayoutService.requestPayout(userId);
 
       if (result.success) {
         return NextResponse.json({

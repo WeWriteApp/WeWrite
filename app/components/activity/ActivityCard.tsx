@@ -480,7 +480,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
         {/* Dollar allocation UI - show for all users' pages when not viewing your own */}
         {activity.userId && activity.pageId && (!user || user.uid !== activity.userId) && (
-          <div className="pt-3 border-t border-neutral-20 mt-3">
+          <div className="pt-3 mt-3">
             <AllocationControls
               pageId={activity.pageId}
               authorId={activity.userId}

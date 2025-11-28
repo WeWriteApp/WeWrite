@@ -31,6 +31,7 @@ import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { AllocationControlsProps, CompositionBarData } from '../../types/allocation';
 import { getLoggedOutPageAllocation, getUserPageAllocation } from '../../utils/simulatedUsd';
+import { UsdAllocationModal } from './UsdAllocationModal';
 
 export function AllocationControls({
   pageId,
@@ -49,6 +50,7 @@ export function AllocationControls({
   const { toast } = useToast();
 
   const [showIntervalModal, setShowIntervalModal] = useState(false);
+  const [showAllocationModal, setShowAllocationModal] = useState(false);
 
   // Long press handling
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -118,9 +120,11 @@ export function AllocationControls({
       const optimisticAvailableCents = Math.max(0, totalCents - otherPagesCents - currentPageFundedCents);
       const isOutOfFunds = optimisticAvailableCents <= 0 && totalCents > 0;
 
-      // For display purposes, show all sections proportionally
-      // The display total should be the subscription amount plus any overspent amount
-      const displayTotal = totalCents + currentPageOverfundedCents;
+      // For display purposes, show all sections proportionally and ensure slices sum correctly.
+      const displayTotal = Math.max(
+        otherPagesCents + currentPageFundedCents + currentPageOverfundedCents + recalculatedAvailableCents,
+        1
+      );
 
       const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
       const currentPageFundedPercentage = displayTotal > 0 ? (currentPageFundedCents / displayTotal) * 100 : 0;
@@ -140,7 +144,9 @@ export function AllocationControls({
       const allocatedCents = currentBalance.allocatedUsdCents;
       const availableCents = currentBalance.availableUsdCents;
 
-      const otherPagesCents = Math.max(0, allocatedCents - currentPageCents);
+      const otherFromAllocated = Math.max(0, allocatedCents - currentPageCents);
+      const otherFromBalances = Math.max(0, totalCents - availableCents - currentPageCents);
+      const otherPagesCents = Math.max(otherFromAllocated, otherFromBalances);
 
       // Split current page allocation into funded and overfunded portions
       const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
@@ -211,6 +217,18 @@ export function AllocationControls({
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+    }
+  };
+
+  const otherWidth = compositionData.otherPagesPercentage > 0
+    ? `max(${compositionData.otherPagesPercentage}%, 4px)`
+    : '0%';
+
+  const handleModalAllocationChange = async (newAllocationCents: number) => {
+    const delta = newAllocationCents - allocationState.currentAllocationCents;
+    setOptimisticAllocation(newAllocationCents);
+    if (delta !== 0) {
+      await handleAllocationChange(delta, undefined as any);
     }
   };
 
@@ -290,6 +308,7 @@ export function AllocationControls({
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
+          setShowAllocationModal(true);
         }}
       >
         {/* Background composition bar with smooth transitions */}
@@ -298,7 +317,7 @@ export function AllocationControls({
           {compositionData.otherPagesPercentage > 0 && (
             <div
               className={ALLOCATION_BAR_STYLES.sections.other}
-              style={{ width: `${compositionData.otherPagesPercentage}%` }}
+              style={{ width: otherWidth }}
             />
           )}
 
@@ -348,6 +367,16 @@ export function AllocationControls({
       <AllocationIntervalModal
         isOpen={showIntervalModal}
         onClose={() => setShowIntervalModal(false)}
+      />
+
+      <UsdAllocationModal
+        isOpen={showAllocationModal}
+        onClose={() => setShowAllocationModal(false)}
+        pageId={pageId}
+        pageTitle={pageTitle}
+        authorId={authorId}
+        currentAllocation={allocationState.currentAllocationCents}
+        onAllocationChange={handleModalAllocationChange}
       />
     </div>
   );

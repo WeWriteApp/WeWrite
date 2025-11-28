@@ -6,8 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
-import { payoutService } from '../../services/payoutService';
 import { payoutRateLimiter } from '../../utils/rateLimiter';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName, USD_COLLECTIONS } from '../../utils/environmentConfig';
+import { PayoutService } from '../../services/payoutServiceUnified';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,49 +36,52 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get payout recipient info
-    const recipient = await payoutService.getPayoutRecipient(userId);
-    
-    if (!recipient) {
-      return NextResponse.json({
-        hasPayoutSetup: false,
-        message: 'Payout setup required',
-        setupUrl: '/api/payouts/setup'
-      });
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
+    const db = admin.firestore();
 
-    // Get recent payouts
-    const recentPayouts = await payoutService.getRecentPayouts(userId, 10);
+    // Get user doc for connected account id
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+    const userData = userDoc.data() || {};
+    const stripeConnectedAccountId = userData.stripeConnectedAccountId || null;
 
-    // Get payout summary
+    // Get balances
+    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId).get();
+    const balance = balanceDoc.data() || {};
+    const availableCents = balance.availableCents || 0;
+    const totalEarnedCents = balance.totalUsdCentsEarned || balance.totalCents || 0;
+
+    // Get recent payouts from unified service
+    const recentPayouts = await PayoutService.getPayoutHistory(userId);
     const summary = {
-      availableBalance: recipient.availableBalance,
-      pendingPayouts: recentPayouts.filter(p => p.status === 'pending' || p.status === 'processing').length,
+      availableBalance: availableCents / 100,
+      pendingPayouts: recentPayouts.filter(p => p.status === 'pending').length,
       completedPayouts: recentPayouts.filter(p => p.status === 'completed').length,
       failedPayouts: recentPayouts.filter(p => p.status === 'failed').length,
-      totalEarnings: recipient.totalEarnings || 0,
+      totalEarnings: totalEarnedCents / 100,
       lastPayoutDate: recentPayouts.find(p => p.status === 'completed')?.completedAt || null
     };
 
     return NextResponse.json({
-      hasPayoutSetup: true,
+      hasPayoutSetup: !!stripeConnectedAccountId,
       recipient: {
-        id: recipient.id,
-        stripeConnectedAccountId: recipient.stripeConnectedAccountId,
-        accountStatus: recipient.accountStatus,
-        availableBalance: recipient.availableBalance,
-        currency: recipient.currency,
-        payoutPreferences: recipient.payoutPreferences
+        id: userId,
+        stripeConnectedAccountId,
+        availableBalance: availableCents / 100,
+        currency: 'usd'
       },
       summary,
       recentPayouts: recentPayouts.map(payout => ({
         id: payout.id,
-        amount: payout.amount,
-        currency: payout.currency,
+        amount: payout.amountCents / 100,
+        currency: 'usd',
         status: payout.status,
-        createdAt: payout.createdAt,
+        createdAt: payout.requestedAt,
         completedAt: payout.completedAt,
-        failureReason: payout.failureReason
+        failureReason: payout.failureReason,
+        stripePayoutId: payout.stripePayoutId
       }))
     });
 

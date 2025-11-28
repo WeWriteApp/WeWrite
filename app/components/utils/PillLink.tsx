@@ -41,6 +41,7 @@ interface PillLinkProps {
   clickable?: boolean;
   isEditing?: boolean; // New prop to indicate if we're in edit mode
   onClick?: (e: React.MouseEvent) => void;
+  customOnClick?: (e: React.MouseEvent) => void;
   onEditLink?: () => void;
   onConfirmSuggestion?: () => void; // New prop for confirming suggestions
   onDismissSuggestion?: () => void; // New prop for dismissing suggestions
@@ -67,7 +68,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   isSuggestion = false,
   clickable = true,
   isEditing = false, // Default to false (view mode)
-  onClick: customOnClick,
+  onClick: customOnClickFromOnClick,
+  customOnClick: customOnClickProp,
   onEditLink,
   onConfirmSuggestion,
   onDismissSuggestion,
@@ -75,6 +77,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   onLinkEditorSelect,
   ...otherProps
 }, ref) => {
+  const customOnClick = customOnClickProp || customOnClickFromOnClick;
   // Hooks
   const { user } = useAuth();
   const { getPillStyleClasses, pillStyle } = usePillStyle();

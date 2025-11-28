@@ -182,11 +182,11 @@ export function UsdAllocationModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0 duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md flex flex-col max-h-[90vh]"
+        className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md flex flex-col max-h-[90vh] animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -244,7 +244,10 @@ export function UsdAllocationModal({
               const originalAllocatedCents = currentBalance.allocatedUsdCents;
 
               // Calculate other pages allocation (all allocations except current page)
-              const otherPagesCents = Math.max(0, originalAllocatedCents - currentAllocation);
+              // Use both allocated and balance-based to avoid underreporting
+              const otherFromAllocated = Math.max(0, originalAllocatedCents - currentAllocation);
+              const otherFromBalances = Math.max(0, totalCents - currentBalance.availableUsdCents - newAllocationCents);
+              const otherPagesCents = Math.max(otherFromAllocated, otherFromBalances);
 
               // Calculate available funds for current page
               const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
@@ -271,7 +274,7 @@ export function UsdAllocationModal({
                     {/* OTHER - Other pages (grey, leftmost) */}
                     {otherPagesPercentage > 0 && (
                       <div
-                        className={`${ALLOCATION_BAR_STYLES.sections.other} transition-all duration-300`}
+                        className={`${ALLOCATION_BAR_STYLES.sections.other} transition-all duration-300 rounded-l-md`}
                         style={{ width: `${otherPagesPercentage}%` }}
                       />
                     )}
@@ -295,7 +298,7 @@ export function UsdAllocationModal({
                     {/* AVAILABLE - Available funds (empty, rightmost) */}
                     {availablePercentage > 0 && (
                       <div
-                        className="bg-muted-foreground/10 transition-all duration-300"
+                        className="bg-muted-foreground/10 transition-all duration-300 rounded-r-md"
                         style={{ width: `${availablePercentage}%` }}
                       />
                     )}
@@ -304,7 +307,7 @@ export function UsdAllocationModal({
                   {/* Legend with values from the bar */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-muted-foreground/30 rounded-full"></div>
+                      <div className={`w-3 h-3 ${ALLOCATION_BAR_STYLES.sections.other} rounded-full`}></div>
                       <span className="text-muted-foreground">Other: {formatUsdCents(otherPagesCents)}</span>
                     </div>
                     <div className="flex items-center space-x-1">

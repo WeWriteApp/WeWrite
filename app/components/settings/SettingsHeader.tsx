@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { ChevronLeft, X } from 'lucide-react';
+import { FloatingHeader } from '../ui/FloatingCard';
 
 interface SettingsHeaderProps {
   title?: string;
@@ -44,52 +45,54 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
   return (
     <>
       {/* Mobile Header - Always visible on mobile */}
-      <div className="lg:hidden sticky top-0 z-50 wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding" data-component="main-header">
-        <div className="flex items-center justify-between h-14 px-4">
-          {/* Left: Back button */}
-          <div className="flex items-center">
-            {isMainSettings ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push('/')}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Back to Home"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push('/settings')}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Back to Settings"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-            )}
-          </div>
-
-          {/* Center: Title */}
-          <div className="flex-1 text-center">
-            <h1 className="text-lg font-semibold text-foreground">{pageTitle}</h1>
-          </div>
-
-          {/* Right: Close button */}
-          <div className="flex items-center">
+      <FloatingHeader
+        className="lg:hidden fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-50 px-4 py-3 flex items-center justify-between"
+        noShadowAtTop
+        data-component="main-header"
+      >
+        {/* Left: Back button */}
+        <div className="flex items-center">
+          {isMainSettings ? (
             <Button
               variant="ghost"
               size="icon"
               onClick={() => router.push('/')}
               className="text-muted-foreground hover:text-foreground"
-              aria-label="Close Settings"
+              aria-label="Back to Home"
             >
-              <X className="h-5 w-5" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
-          </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/settings')}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Back to Settings"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
         </div>
-      </div>
+
+        {/* Center: Title */}
+        <div className="flex-1 text-center">
+          <h1 className="text-lg font-semibold text-foreground">{pageTitle}</h1>
+        </div>
+
+        {/* Right: Close button */}
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/')}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Close Settings"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      </FloatingHeader>
 
       {/* Desktop: No header needed since we have sidebar context */}
     </>
