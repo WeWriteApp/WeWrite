@@ -122,7 +122,7 @@ export function AllocationControls({
 
       // For display purposes, show all sections proportionally and ensure slices sum correctly.
       const displayTotal = Math.max(
-        otherPagesCents + currentPageFundedCents + currentPageOverfundedCents + recalculatedAvailableCents,
+        otherPagesCents + currentPageFundedCents + currentPageOverfundedCents + optimisticAvailableCents,
         1
       );
 
