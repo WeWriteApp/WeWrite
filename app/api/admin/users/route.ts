@@ -16,6 +16,7 @@ interface UserData {
   emailVerified: boolean;
   createdAt: any;
   lastLogin?: any;
+  totalPages?: number;
   // Feature flags removed - all features are now always enabled
   stripeConnectedAccountId?: string | null;
   isAdmin?: boolean;
@@ -100,6 +101,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, total: snapshot.size });
     }
 
+    // Reuse pages collection reference for counts
+    const pagesCollection = db.collection(getCollectionName('pages'));
+
     for (const userDoc of snapshot.docs) {
       try {
         const data = userDoc.data();
@@ -123,6 +127,20 @@ export async function GET(request: NextRequest) {
           stripeConnectedAccountId: data.stripeConnectedAccountId || null,
           isAdmin: data.isAdmin === true || (userEmail ? isAdminServer(data.email || '') : false)
         };
+
+        // Total pages (non-deleted) for this user
+        try {
+          const pagesQuery = pagesCollection.where('userId', '==', userDoc.id);
+          if (typeof (pagesQuery as any).count === 'function') {
+            const countSnap = await (pagesQuery as any).count().get();
+            user.totalPages = countSnap.data()?.count ?? 0;
+          } else {
+            const pagesSnap = await pagesQuery.get();
+            user.totalPages = pagesSnap.size;
+          }
+        } catch (pagesErr) {
+          console.warn(`Could not count pages for user ${userDoc.id}:`, pagesErr);
+        }
 
         if (includeFinancial) {
           try {

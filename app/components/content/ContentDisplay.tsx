@@ -95,10 +95,13 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
   onRenderComplete,
   className = ''
 }) => {
-  const { lineMode } = useLineSettings();
+  const { lineMode, lineFeaturesEnabled } = useLineSettings();
   
   // Force normal mode when editing (as per existing behavior)
-  const effectiveMode = isEditable ? LINE_MODES.NORMAL : lineMode;
+  const effectiveMode = isEditable
+    ? LINE_MODES.NORMAL
+    : (lineFeaturesEnabled ? lineMode : LINE_MODES.NORMAL);
+  const effectiveShowLineNumbers = showLineNumbers && lineFeaturesEnabled;
   
   if (isEditable) {
     // EDITING MODE: Use EditableContent component
@@ -129,7 +132,7 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
       <ViewableContent
         content={content}
         showDiff={showDiff}
-        showLineNumbers={showLineNumbers}
+        showLineNumbers={effectiveShowLineNumbers}
         isSearch={isSearch}
         onRenderComplete={onRenderComplete}
         lineMode={effectiveMode}

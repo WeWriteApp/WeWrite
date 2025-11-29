@@ -159,8 +159,7 @@ const TextView: React.FC<TextViewProps> = ({
   const [language, setLanguage] = useState<string | null>(null);
 
   // Get the full context to ensure we're subscribed to all updates
-  const lineSettingsContext = useLineSettings();
-  const { lineMode, setLineMode: contextSetLineMode } = lineSettingsContext;
+  const { lineMode, lineFeaturesEnabled } = useLineSettings();
 
   const [loadedParagraphs, setLoadedParagraphs] = useState<number[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
@@ -948,9 +947,9 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
     return null;
   };
 
-  // Use LineSettings context to determine current mode
-  const { lineMode } = useLineSettings();
-  const effectiveMode = lineMode || LINE_MODES.NORMAL;
+  // Use LineSettings context to determine current mode and whether line numbers are allowed
+  const effectiveMode = isEditing ? LINE_MODES.NORMAL : (lineFeaturesEnabled ? (lineMode || LINE_MODES.NORMAL) : LINE_MODES.NORMAL);
+  const shouldShowLineNumber = lineFeaturesEnabled && showLineNumbers;
 
   // Render paragraph with proper structure
   return (
@@ -973,10 +972,12 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Paragraph number - always show in normal mode */}
-      <span className="paragraph-number">
-        {index + 1}
-      </span>
+      {/* Paragraph number - gated behind admin-only line feature flag */}
+      {shouldShowLineNumber && (
+        <span className="paragraph-number">
+          {index + 1}
+        </span>
+      )}
 
       {/* Paragraph content */}
       <span className="unified-text-content">

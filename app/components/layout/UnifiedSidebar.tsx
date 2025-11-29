@@ -350,6 +350,8 @@ function UnifiedSidebarContent({
           "hidden md:flex fixed left-0 top-0 h-screen z-fixed-toolbar flex-col",
           // Use full wewrite-card system (includes glassmorphism backdrop blur)
           "wewrite-card border-r border-[var(--card-border)]",
+          // Slightly higher opacity in light mode when expanded/hovered to match toolbar behavior
+          showContent && "bg-white dark:bg-[var(--card-bg)]",
           // Remove rounded corners for sidebar
           "!rounded-none",
           "sidebar-smooth-transition overflow-hidden", // Prevent any overflow

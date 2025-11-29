@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
-import { DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 // Use API calls instead of complex services
 import { SimpleBankAccountManager } from './SimpleBankAccountManager';
 
@@ -149,7 +149,10 @@ export default function SimpleEarningsDashboard() {
     }
   };
 
-  const openStripeAccountLink = async (type: 'account_onboarding' | 'account_update' = 'account_update') => {
+  const openStripeAccountLink = async (
+    type: 'account_onboarding' | 'account_update' = 'account_update',
+    allowRetry = true
+  ) => {
     if (!user?.uid) return;
     try {
       setLinkLoading(true);
@@ -166,7 +169,13 @@ export default function SimpleEarningsDashboard() {
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Failed to create Stripe link');
+        // If account_update isn't allowed, fall back to onboarding once
+        const message = data.error || 'Failed to create Stripe link';
+        const cannotUpdate = message?.toLowerCase().includes('account_update');
+        if (allowRetry && cannotUpdate) {
+          return openStripeAccountLink('account_onboarding', false);
+        }
+        throw new Error(message);
       }
       window.open(data.url, '_blank');
     } catch (error: any) {
@@ -211,85 +220,37 @@ export default function SimpleEarningsDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Earnings Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Available Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${earnings?.availableBalance?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">Ready for payout</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Clock className="w-4 h-4 mr-2" />
-              Pending Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${earnings?.pendingBalance?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">This month's earnings</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Total Earned
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${earnings?.totalEarnings?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Stripe Connected Account & Bank */}
+      {/* Stripe Connected Account & Bank - moved to top */}
       <Card className="border-border bg-card">
         <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Stripe payouts & bank</p>
-              <p className="text-xs text-muted-foreground">Status of your connected account and payout destination.</p>
-            </div>
-            <Badge className={(bankStatus?.data?.payouts_enabled || bankStatus?.data?.charges_enabled) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100' : 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100'}>
-              {(bankStatus?.data?.payouts_enabled || bankStatus?.data?.charges_enabled) ? 'Ready' : 'Action needed'}
-            </Badge>
+          <div>
+            <p className="font-medium text-lg">Stripe payouts & bank</p>
+            <p className="text-xs text-muted-foreground">Status of your connected account and payout destination.</p>
           </div>
 
-          {stripeAccountId && (
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(stripeAccountId).then(() => {
-                  setCopiedId(true);
-                  setTimeout(() => setCopiedId(false), 1500);
-                });
-              }}
-              className="w-full text-left text-sm text-foreground break-all rounded-lg border border-border bg-muted/20 px-3 py-2 hover:bg-muted/30 transition"
-              aria-label="Copy connected account id"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate">Account: {stripeAccountId}</span>
-                <span className="text-primary text-xs font-medium">{copiedId ? 'Copied!' : 'Copy'}</span>
-              </div>
-            </button>
-          )}
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Account ID</p>
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+              <span className="text-sm font-medium truncate flex-1">
+                {stripeAccountId || 'Not connected'}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (stripeAccountId) {
+                    navigator.clipboard.writeText(stripeAccountId);
+                    setCopiedId(true);
+                    setTimeout(() => setCopiedId(false), 1500);
+                  }
+                }}
+                disabled={!stripeAccountId}
+                aria-label="Copy account ID"
+              >
+                {copiedId ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
 
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge className={bankStatus?.data?.payouts_enabled ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100' : 'bg-muted text-muted-foreground'}>
@@ -341,8 +302,66 @@ export default function SimpleEarningsDashboard() {
               </Button>
             </div>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => openStripeAccountLink('account_update')}
+            disabled={linkLoading}
+          >
+            {linkLoading ? 'Opening...' : 'Edit bank in Stripe'}
+          </Button>
         </CardContent>
       </Card>
+
+      {/* Earnings Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <DollarSign className="w-4 h-4 mr-2" />
+              Available Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${earnings?.availableBalance?.toFixed(2) || '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground">Ready for payout</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Clock className="w-4 h-4 mr-2" />
+              Pending Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${earnings?.pendingBalance?.toFixed(2) || '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground">This month's earnings</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Total Earned
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${earnings?.totalEarnings?.toFixed(2) || '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Payout Action */}
       {earnings?.availableBalance && earnings.availableBalance > 0 && bankStatus?.isConnected && (

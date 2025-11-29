@@ -74,8 +74,8 @@ export function FloatingCard({
   const variantClasses = {
     default: "",
     toolbar: cn(
-      // Enhanced background when expanded - use CSS variables
-      isExpanded && "bg-[var(--card-floating-bg-hover)]"
+      // Enhanced background only in light mode when expanded (dark stays unchanged)
+      isExpanded && "bg-white border border-border/60 dark:bg-[var(--card-bg)] dark:border-border"
     ),
     header: "",
     overlay: cn(

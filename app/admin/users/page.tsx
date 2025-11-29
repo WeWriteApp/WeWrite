@@ -34,6 +34,7 @@ type User = {
   username?: string;
   createdAt?: any;
   lastLogin?: any;
+  totalPages?: number;
   stripeConnectedAccountId?: string | null;
   isAdmin?: boolean;
   financial?: FinancialInfo;
@@ -236,7 +237,7 @@ export default function AdminUsersPage() {
       id: "totalPages",
       label: "Total pages",
       sortable: true,
-      render: () => "—" // TODO: add backend support
+      render: (u) => u.totalPages !== undefined ? u.totalPages : "—"
     },
     {
       id: "allocated",
@@ -351,6 +352,8 @@ export default function AdminUsersPage() {
         return u.createdAt?.toDate ? u.createdAt.toDate().getTime() : 0;
       case "lastLogin":
         return u.lastLogin?.toDate ? u.lastLogin.toDate().getTime() : 0;
+      case "totalPages":
+        return u.totalPages ?? 0;
       default:
         return 0;
     }

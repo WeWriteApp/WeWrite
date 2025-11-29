@@ -2,7 +2,7 @@
 
 import React from 'react';
 import TextView from '../editor/TextView';
-import { LINE_MODES } from '../../contexts/LineSettingsContext';
+import { LINE_MODES, useLineSettings } from '../../contexts/LineSettingsContext';
 
 /**
  * ViewableContent - Pure Viewing Component
@@ -54,6 +54,11 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
   lineMode = LINE_MODES.NORMAL,
   className = ''
 }) => {
+  const { lineFeaturesEnabled } = useLineSettings();
+
+  const effectiveMode = lineFeaturesEnabled ? lineMode : LINE_MODES.NORMAL;
+  const effectiveShowLineNumbers = showLineNumbers && lineFeaturesEnabled;
+
   // DEBUG: Log the actual content structure
   console.log('🔍 ViewableContent: Raw content received:', {
     content,
@@ -69,12 +74,13 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
       <TextView
         content={content}
         showDiff={showDiff}
-        showLineNumbers={showLineNumbers}
+        showLineNumbers={effectiveShowLineNumbers}
         isSearch={isSearch}
         onRenderComplete={onRenderComplete}
         canEdit={false} // VIEWING ONLY - no editing capabilities
         viewMode="normal"
         isEditing={false}
+        lineMode={effectiveMode}
       />
     </div>
   );

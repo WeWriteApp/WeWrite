@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../providers/AuthProvider';
 
 /**
  * LINE_MODES - Constants for paragraph display modes
@@ -30,6 +31,8 @@ interface LineSettingsContextType {
   lineMode: LineMode;
   setLineMode: (mode: LineMode) => void;
   isEditMode: boolean;
+  lineFeaturesEnabled: boolean;
+  setLineFeaturesEnabled: (enabled: boolean) => void;
 }
 
 interface LineSettingsProviderProps {
@@ -40,7 +43,9 @@ interface LineSettingsProviderProps {
 const LineSettingsContext = createContext<LineSettingsContextType>({
   lineMode: LINE_MODES.NORMAL,
   setLineMode: () => {},
-  isEditMode: false
+  isEditMode: false,
+  lineFeaturesEnabled: false,
+  setLineFeaturesEnabled: () => {}
 });
 
 /**
@@ -51,16 +56,28 @@ const LineSettingsContext = createContext<LineSettingsContextType>({
  * Dense mode is only available in view mode - edit mode always uses normal mode.
  */
 export function LineSettingsProvider({ children, isEditMode = false }: LineSettingsProviderProps) {
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.isAdmin);
   // Generate unique ID for this provider instance
   const providerId = useMemo(() => Math.random().toString(36).substr(2, 9), []);
 
   // Initialize with default mode to avoid SSR issues
   const [lineMode, setLineModeState] = useState<LineMode>(LINE_MODES.NORMAL);
+  const [lineFeaturesEnabled, setLineFeaturesEnabledState] = useState<boolean>(false);
 
   // Load setting from localStorage on mount (client-side only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedMode = localStorage.getItem('lineMode');
+      const savedFeatureFlag = localStorage.getItem('lineFeaturesEnabled') === 'true';
+
+      // Only allow line number features for admins; everyone else is forced off
+      if (isAdmin) {
+        setLineFeaturesEnabledState(Boolean(savedFeatureFlag));
+      } else {
+        setLineFeaturesEnabledState(false);
+        localStorage.removeItem('lineFeaturesEnabled');
+      }
 
       // Handle migration from legacy mode names (one-time migration)
       if (savedMode === 'default' || savedMode === 'spaced' || savedMode === 'wrapped') {
@@ -72,10 +89,19 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
         setLineModeState(savedMode as LineMode);
       }
     }
-  }, []);
+  }, [isAdmin]);
 
   // Client-side mode switching function that preserves unsaved content
   const setLineModeWithoutRefresh = (mode: LineMode): void => {
+    if (!lineFeaturesEnabled) {
+      // If features are disabled, force normal mode regardless of caller
+      setLineModeState(LINE_MODES.NORMAL);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lineMode', LINE_MODES.NORMAL);
+      }
+      return;
+    }
+
     // Validate the mode before setting it (both normal and dense modes supported)
     if (!Object.values(LINE_MODES).includes(mode)) {
       console.error(`Invalid line mode: ${mode}`);
@@ -98,10 +124,30 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
     }
   }, [lineMode]);
 
+  // Save line feature toggle to localStorage (admin only)
+  const setLineFeaturesEnabled = (enabled: boolean) => {
+    if (!isAdmin) {
+      setLineFeaturesEnabledState(false);
+      return;
+    }
+    setLineFeaturesEnabledState(enabled);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lineFeaturesEnabled', enabled ? 'true' : 'false');
+    }
+    if (!enabled) {
+      setLineModeState(LINE_MODES.NORMAL);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lineMode', LINE_MODES.NORMAL);
+      }
+    }
+  };
+
   const contextValue = {
     lineMode,
     setLineMode: setLineModeWithoutRefresh,
-    isEditMode
+    isEditMode,
+    lineFeaturesEnabled,
+    setLineFeaturesEnabled
   };
 
   return (

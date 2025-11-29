@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
+import { useRouter } from 'next/navigation';
 import { CreditCard, Plus, Settings, AlertTriangle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -20,6 +21,7 @@ interface PaymentMethod {
 
 export function PaymentMethodsOverview() {
   const { user } = useAuth();
+  const router = useRouter();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,8 +171,8 @@ export function PaymentMethodsOverview() {
 
             {/* Manage Button */}
             <div className="pt-2">
-              <Button variant="secondary" className="w-full" asChild>
-                <Link href="/settings/subscription">
+              <Button asChild variant="secondary" className="w-full">
+                <Link href="/settings/subscription" prefetch={false}>
                   <Settings className="h-4 w-4 mr-2" />
                   Manage All Payment Methods
                 </Link>

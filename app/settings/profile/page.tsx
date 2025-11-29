@@ -46,7 +46,6 @@ export default function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showPasswordPreview, setShowPasswordPreview] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
@@ -458,27 +457,14 @@ export default function ProfilePage() {
               </Label>
               {!isEditingPassword ? (
                 <div className="flex gap-3 items-center">
-                  <div className="flex-1 relative">
+                  <div className="flex-1">
                     <Input
                       id="password"
-                      type={showPasswordPreview ? "text" : "password"}
-                      value={showPasswordPreview ? 'We never store your password. Use Change to set a new one.' : '••••••••'}
+                      type="password"
+                      value="••••••••"
                       disabled={true}
-                      className="border-theme-light bg-muted/30 text-muted-foreground pr-10"
+                      className="border-theme-light bg-muted/30 text-muted-foreground"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPasswordPreview(!showPasswordPreview)}
-                    >
-                      {showPasswordPreview ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
                   </div>
                   <div className="flex gap-2">
                     <Button

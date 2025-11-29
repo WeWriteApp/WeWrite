@@ -211,6 +211,9 @@ import { FloatingCard, FloatingToolbar } from '../ui/FloatingCard';
 - **`toolbar`**: For mobile bottom navigation with expanded states
 - **`overlay`**: For modals and overlays with stronger shadows
 
+**Active state opacity (light mode only):**
+- When the bottom toolbar or desktop sidebar is expanded, bump light-mode opacity to ~90% white to improve contrast. Dark mode keeps the default glass values. This is applied via `isExpanded` on `FloatingToolbar` and `showContent` on the sidebar container.
+
 ### **Shadow System**
 1. **Standard floating**: `0_8px_32px_rgba(0,0,0,0.1)` (light) / `0_8px_32px_rgba(0,0,0,0.3)` (dark)
 2. **Overlay elements**: `0_12px_40px_rgba(0,0,0,0.15)` (light) / `0_12px_40px_rgba(0,0,0,0.4)` (dark)
