@@ -4,7 +4,7 @@
 
 WeWrite is a modern content platform built with Next.js 15, featuring a sophisticated allocation system that allows users to financially support content creators through monthly USD allocations.
 
-## Architecture
+## Architecture (quick view)
 
 ### Technology Stack
 
@@ -16,61 +16,46 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **Styling**: Tailwind CSS
 - **Testing**: Jest + React Testing Library
 
-### System Architecture
+## Documentation Index (start here)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Next.js 15                           │
-│                   (Framework & API Routes)                  │
-├─────────────────────────────────────────────────────────────┤
-│                    TanStack Query v5                        │
-│              (Data Fetching & Caching Layer)                │
-├─────────────────────────────────────────────────────────────┤
-│                   Shared Hook System                        │
-│           (Business Logic & State Management)               │
-├─────────────────────────────────────────────────────────────┤
-│                  Component Architecture                     │
-│              (Reusable UI Components)                       │
-└─────────────────────────────────────────────────────────────┘
-```
+### Start here (core context)
+- **[CURRENT_ARCHITECTURE.md](./CURRENT_ARCHITECTURE.md)** – High-level system map
+- **[ENVIRONMENT_QUICK_REFERENCE.md](./ENVIRONMENT_QUICK_REFERENCE.md)** – Dev vs preview vs prod behavior
+- **[AUTHENTICATION_ARCHITECTURE.md](./AUTHENTICATION_ARCHITECTURE.md)** – Auth/session pipeline
+- **[ALLOCATION_SYSTEM.md](./ALLOCATION_SYSTEM.md)** + **[ALLOCATION_API_REFERENCE.md](./ALLOCATION_API_REFERENCE.md)** – Funding/allocations core
+- **[PAYMENT_SYSTEM_GUIDE.md](./PAYMENT_SYSTEM_GUIDE.md)** + **[PAYOUT_SYSTEM_INDEX.md](./PAYOUT_SYSTEM_INDEX.md)** + **[STORAGE_BALANCE_GUIDE.md](./STORAGE_BALANCE_GUIDE.md)** – Payments, payouts, storage balance
+- **[NOTIFICATION_SYSTEM.md](./NOTIFICATION_SYSTEM.md)** – Notification types and delivery
+- **[TEXT_SELECTION_AND_ATTRIBUTION.md](./TEXT_SELECTION_AND_ATTRIBUTION.md)** – Cross-page selection, attribution, copy rules
+- **[HEADER_SYSTEM.md](./HEADER_SYSTEM.md)** + **[SETTINGS_NAVIGATION_SYSTEM.md](./SETTINGS_NAVIGATION_SYSTEM.md)** – Header and settings UX patterns
+- **[RECENT_EDITS_SYSTEM.md](./RECENT_EDITS_SYSTEM.md)** – Diffing and recent activity expectations
 
-## Documentation Index
+### Design & theming
+- **[THEME_SYSTEM_ARCHITECTURE.md](./THEME_SYSTEM_ARCHITECTURE.md)**, **[COMPLETE_COLOR_SYSTEM.md](./COMPLETE_COLOR_SYSTEM.md)**, **[OKLCH_COLOR_SYSTEM.md](./OKLCH_COLOR_SYSTEM.md)** – Tokens and theming
+- **[DESIGN_SYSTEM_ARCHITECTURE.md](./DESIGN_SYSTEM_ARCHITECTURE.md)** – Cards, overlays, glassmorphism guidelines
 
-### 🏗️ Core Architecture
-- **[Page Data & Versions](./PAGE_DATA_AND_VERSIONS.md)** - **🏛️ AUTHORITATIVE**: Page data structure and version system
-- **[Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md)** - Environment configuration and data separation
-- **[Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md)** - Quick environment behavior matrix
-- **[Logged-Out User Production Data](./LANDING_PAGE_PRODUCTION_DATA.md)** - Production data system for logged-out users
-- **[Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md)** - User authentication and session management
-- **[Landing Page Architecture](./LANDING_PAGE_ARCHITECTURE.md)** - Landing page components and structure
+### Performance, logging, and ops
+- **[FIREBASE_OPTIMIZATION_GUIDE.md](./FIREBASE_OPTIMIZATION_GUIDE.md)**, **[PERFORMANCE_OPTIMIZATION_GUIDE.md](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** – Perf/cost
+- **[LOGGING_NOISE_REDUCTION.md](./LOGGING_NOISE_REDUCTION.md)** – Flags and practices to keep logs sane
+- **[ENVIRONMENT_AWARE_API_ARCHITECTURE.md](./ENVIRONMENT_AWARE_API_ARCHITECTURE.md)** – API patterns by env
+- **[CRON_JOB_SETUP.md](./CRON_JOB_SETUP.md)** – Scheduled jobs
 
-### ⚡ Critical Performance Requirements
-- **[Immediate Updates](./IMMEDIATE_UPDATES.md)** - **CRITICAL**: Page updates must appear immediately after save (within 1-2 seconds)
+### Admin, security, and data
+- **[ADMIN_ACCOUNT_SETUP.md](./ADMIN_ACCOUNT_SETUP.md)**, **[AUTH_CLEANUP_GUIDE.md](./AUTH_CLEANUP_GUIDE.md)** – Admin and auth hygiene
+- **[COLLECTION_NAMING_STANDARDS.md](./COLLECTION_NAMING_STANDARDS.md)** – Data layout
+- **[SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md)**, **[SECURITY_INCIDENT_RESPONSE.md](./SECURITY_INCIDENT_RESPONSE.md)** – Security posture
+- **[USERNAME_VS_ID.md](./USERNAME_VS_ID.md)**, **[USERNAME_SECURITY_GUIDELINES.md](./USERNAME_SECURITY_GUIDELINES.md)** – Identity and naming
 
-### 💰 Payment & Financial Systems
-- **[USD Payment System](./USD_PAYMENT_SYSTEM.md)** - Comprehensive USD payment architecture
-- **[Allocation System](./ALLOCATION_SYSTEM.md)** - Fund allocation mechanics and API
-- **[Allocation Rollover System](./allocation-rollover-system.md)** - **🏛️ AUTHORITATIVE**: Automatic allocation rollover for sustainable writer income
-- **[Subscription System](./SUBSCRIPTION_SYSTEM.md)** - Subscription management and billing
-- **[Payout System Index](./PAYOUT_SYSTEM_INDEX.md)** - Creator payout processes
-- **[Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md)** - Financial data structure
+### Testing & troubleshooting
+- **[PAYMENT_FLOW_TESTING_GUIDE.md](./PAYMENT_FLOW_TESTING_GUIDE.md)**, **[STORAGE_BALANCE_TESTING_GUIDE.md](./STORAGE_BALANCE_TESTING_GUIDE.md)** – Financial test flows
+- **[PAYOUT_TROUBLESHOOTING_GUIDE.md](./PAYOUT_TROUBLESHOOTING_GUIDE.md)**, **[PAYMENT_FAILURE_TRACKING.md](./PAYMENT_FAILURE_TRACKING.md)** – Common issues
+- **[RECENT_CHANGES_SUMMARY.md](./RECENT_CHANGES_SUMMARY.md)** – Latest notable changes
 
-### 🚀 Performance & Optimization
-- **[Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md)** - Comprehensive Firebase cost and performance optimization
-- **[Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - General performance tuning
-- **[Environment Aware API Architecture](./ENVIRONMENT_AWARE_API_ARCHITECTURE.md)** - API architecture and optimization
-
-### 🎨 Design & Color System
-- **[OKLCH Color System](./OKLCH_COLOR_SYSTEM.md)** - Professional 3-color OKLCH system with true component independence
-- **[Design System Architecture](./DESIGN_SYSTEM_ARCHITECTURE.md)** - Universal card system and design tokens
-- **[Customization System Architecture](./CUSTOMIZATION_SYSTEM_ARCHITECTURE.md)** - OKLCH-based user personalization system
-- **[Theme System Architecture](./THEME_SYSTEM_ARCHITECTURE.md)** - Theme architecture and customization
-
-### 🔧 Development Guides
-- **[Dependency Management Standards](./DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management best practices
-- **[Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md)** - Authentication system cleanup reference
-- **[Security Guidelines](./USERNAME_SECURITY_GUIDELINES.md)** - Security best practices
-- **[Recent Changes Summary](./RECENT_CHANGES_SUMMARY.md)** - Major changes and improvements
+### Archives / legacy
+- Older or superseded docs live in `docs/archive/`. Prefer the files listed above; move new legacy material into `docs/archive/` with a brief pointer here.
+- Recently archived (still searchable if needed):
+  - `archive/BACKFILL_README.md` (legacy backfill steps)
+  - `archive/DEMO_BALANCE_SYSTEM.md` (old demo flows)
+  - `archive/NATIVE_APP_PLAN.md` (superseded mobile plan)
 
 ## Key Features
 
