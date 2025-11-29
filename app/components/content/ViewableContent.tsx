@@ -54,7 +54,8 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
   lineMode = LINE_MODES.NORMAL,
   className = ''
 }) => {
-  const { lineFeaturesEnabled } = useLineSettings();
+  // Guard against missing provider in static/unauthenticated contexts
+  const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
 
   const effectiveMode = lineFeaturesEnabled ? lineMode : LINE_MODES.NORMAL;
   const effectiveShowLineNumbers = showLineNumbers && lineFeaturesEnabled;

@@ -159,7 +159,7 @@ const TextView: React.FC<TextViewProps> = ({
   const [language, setLanguage] = useState<string | null>(null);
 
   // Get the full context to ensure we're subscribed to all updates
-  const { lineMode, lineFeaturesEnabled } = useLineSettings();
+  const { lineMode = LINE_MODES.NORMAL, lineFeaturesEnabled = false } = useLineSettings() ?? {};
 
   const [loadedParagraphs, setLoadedParagraphs] = useState<number[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);

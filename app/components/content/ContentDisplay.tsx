@@ -95,7 +95,8 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
   onRenderComplete,
   className = ''
 }) => {
-  const { lineMode, lineFeaturesEnabled } = useLineSettings();
+  // Defensive defaults so logged-out/static views never crash if context is unavailable
+  const { lineMode = LINE_MODES.NORMAL, lineFeaturesEnabled = false } = useLineSettings() ?? {};
   
   // Force normal mode when editing (as per existing behavior)
   const effectiveMode = isEditable
