@@ -5,6 +5,7 @@ import { User, AuthContextValue, AuthState, AuthError, AuthErrorCode } from '../
 import { getEnvironmentType } from '../utils/environmentConfig';
 import { identifyUser } from '../utils/logrocket';
 import { useRouter } from 'next/navigation';
+import { isAdmin } from '../utils/isAdmin';
 
 // Create context
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -60,33 +61,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Set user state
   const setUser = useCallback((user: User | null) => {
+    // Always derive admin flag from email allowlist to avoid missing server flags
+    const enrichedUser = user
+      ? {
+          ...user,
+          isAdmin: user.isAdmin === true || isAdmin(user.email),
+        }
+      : null;
+
     setAuthState(prev => ({
       ...prev,
-      user,
-      isAuthenticated: !!user,
+      user: enrichedUser,
+      isAuthenticated: !!enrichedUser,
       isLoading: false,
       error: null
     }));
 
     // Identify user in LogRocket when user logs in
-    if (user) {
+    if (enrichedUser) {
       try {
         console.log('🔍 AuthProvider: Attempting to identify user in LogRocket:', {
-          uid: user.uid,
-          username: user.username,
-          email: user.email,
-          hasUsername: !!user.username,
-          hasEmail: !!user.email
+          uid: enrichedUser.uid,
+          username: enrichedUser.username,
+          email: enrichedUser.email,
+          hasUsername: !!enrichedUser.username,
+          hasEmail: !!enrichedUser.email,
+          isAdmin: enrichedUser.isAdmin
         });
 
         identifyUser({
-          id: user.uid,
-          username: user.username,
-          email: user.email,
+          id: enrichedUser.uid,
+          username: enrichedUser.username,
+          email: enrichedUser.email,
           accountType: 'user',
-          createdAt: user.createdAt
+          createdAt: enrichedUser.createdAt,
+          isAdmin: enrichedUser.isAdmin
         });
-        console.log('✅ LogRocket user identified successfully:', user.username || user.email);
+        console.log('✅ LogRocket user identified successfully:', enrichedUser.username || enrichedUser.email);
       } catch (error) {
         console.error('❌ Failed to identify user in LogRocket:', error);
       }

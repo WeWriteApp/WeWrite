@@ -46,6 +46,7 @@ export default function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordPreview, setShowPasswordPreview] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
@@ -179,7 +180,15 @@ export default function ProfilePage() {
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        await showSuccess('Success', 'Password updated successfully!');
+        await showSuccess('Success', 'Password updated successfully! Save this password in your password manager.');
+        // Hint browsers/password managers this was an intentional change
+        try {
+          if (typeof navigator !== 'undefined' && (navigator as any).credentials?.preventSilentAccess) {
+            await (navigator as any).credentials.preventSilentAccess();
+          }
+        } catch (err) {
+          console.warn('Password manager hint not available:', err);
+        }
       } else {
         setPasswordError(result.error?.message || 'Failed to update password');
       }
@@ -449,14 +458,27 @@ export default function ProfilePage() {
               </Label>
               {!isEditingPassword ? (
                 <div className="flex gap-3 items-center">
-                  <div className="flex-1">
+                  <div className="flex-1 relative">
                     <Input
                       id="password"
-                      type="password"
-                      value="••••••••"
+                      type={showPasswordPreview ? "text" : "password"}
+                      value={showPasswordPreview ? 'We never store your password. Use Change to set a new one.' : '••••••••'}
                       disabled={true}
-                      className="border-theme-light bg-muted/30 text-muted-foreground"
+                      className="border-theme-light bg-muted/30 text-muted-foreground pr-10"
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPasswordPreview(!showPasswordPreview)}
+                    >
+                      {showPasswordPreview ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -484,6 +506,7 @@ export default function ProfilePage() {
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="Enter current password"
+                        autoComplete="current-password"
                         className="pr-10 border-primary ring-1 ring-primary/20 bg-background"
                       />
                       <Button
@@ -514,6 +537,7 @@ export default function ProfilePage() {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Enter new password"
+                        autoComplete="new-password"
                         className="pr-10 border-primary ring-1 ring-primary/20 bg-background"
                       />
                       <Button
@@ -544,6 +568,7 @@ export default function ProfilePage() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm new password"
+                        autoComplete="new-password"
                         className="pr-10 border-primary ring-1 ring-primary/20 bg-background"
                       />
                       <Button

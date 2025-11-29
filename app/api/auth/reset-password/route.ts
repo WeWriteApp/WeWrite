@@ -127,7 +127,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Step 3: Generate password reset link with environment-aware configuration
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app';
+      // Prefer configured app URL, otherwise fall back to current request origin
+      const requestOrigin = request.nextUrl?.origin;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || requestOrigin || 'https://www.getwewrite.app';
       const actionCodeSettings = {
         url: `${baseUrl}/auth/reset-password`,
         handleCodeInApp: false
@@ -161,6 +163,11 @@ export async function POST(request: NextRequest) {
         } else if (linkError.code === 'auth/invalid-email') {
           return createErrorResponse('BAD_REQUEST',
             'Invalid email address format. Please enter a valid email address.'
+          );
+        } else if (linkError.code === 'auth/invalid-continue-uri' || linkError.code === 'auth/unauthorized-continue-uri') {
+          return createErrorResponse(
+            'INTERNAL_ERROR',
+            'Reset link domain is not authorized. Please try again later or contact support so we can update the allowed domains.'
           );
         } else if (linkError.code === 'auth/configuration-not-found') {
           console.error('🔐 [Password Reset API] Firebase email templates not configured');
