@@ -6,6 +6,7 @@ import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 /**
  * RandomPagesHeader Component
@@ -17,6 +18,8 @@ import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
  * - Persistent toggle state in localStorage
  */
 const RandomPagesHeader = () => {
+  const { isEnabled } = useFeatureFlags();
+  const lineFeaturesEnabled = isEnabled('line_numbers');
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);
   const [excludeUsername, setExcludeUsername] = useState('');
@@ -25,7 +28,7 @@ const RandomPagesHeader = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
-      if (savedDenseModePreference === 'true') {
+      if (lineFeaturesEnabled && savedDenseModePreference === 'true') {
         setDenseMode(true);
       }
 
@@ -41,6 +44,7 @@ const RandomPagesHeader = () => {
 
   // Handle dense mode toggle change
   const handleDenseModeToggle = () => {
+    if (!lineFeaturesEnabled) return;
     const newValue = !denseMode;
     setDenseMode(newValue);
 
@@ -119,14 +123,16 @@ const RandomPagesHeader = () => {
               className="opacity-100"
               size="md"
             />
-            <div className="flex items-center gap-2 rounded-2xl border border-border px-2 py-1 bg-background/80 backdrop-blur-md">
-              <Switch
-                checked={denseMode}
-                onCheckedChange={handleDenseModeToggle}
-                aria-label="Toggle dense mode"
-              />
-              <span className="text-xs text-muted-foreground">Dense mode</span>
-            </div>
+            {lineFeaturesEnabled && (
+              <div className="flex items-center gap-2 rounded-2xl border border-border px-2 py-1 bg-background/80 backdrop-blur-md">
+                <Switch
+                  checked={denseMode}
+                  onCheckedChange={handleDenseModeToggle}
+                  aria-label="Toggle dense mode"
+                />
+                <span className="text-xs text-muted-foreground">Dense mode</span>
+              </div>
+            )}
           </div>
         </div>
       }

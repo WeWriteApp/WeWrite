@@ -21,6 +21,7 @@ import Link from 'next/link';
 
 import { isAdmin } from '../utils/isAdmin';
 import { FloatingHeader } from '../components/ui/FloatingCard';
+import { Flag } from 'lucide-react';
 
 interface User {
   id: string;
@@ -306,6 +307,27 @@ export default function AdminPage() {
                 >
                   <Users className="h-4 w-4" />
                   View users
+                </Button>
+              </div>
+            </div>
+
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Feature Flags</h3>
+                <Flag className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                View and manage gated features (e.g., line numbers). Admin-only controls.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/feature-flags')}
+                >
+                  <Flag className="h-4 w-4" />
+                  Open feature flags
                 </Button>
               </div>
             </div>

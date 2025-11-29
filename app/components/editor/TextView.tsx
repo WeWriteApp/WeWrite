@@ -680,6 +680,8 @@ const TextView: React.FC<TextViewProps> = ({
               clickPosition={clickPosition}
               isEditing={isEditing}
               handleEditLink={handleEditLink}
+              lineFeaturesEnabled={lineFeaturesEnabled}
+              showLineNumbers={showLineNumbers}
             />
           )}
         </div>
@@ -724,7 +726,38 @@ const TextView: React.FC<TextViewProps> = ({
   }
 };
 
-export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null, isEditing = false, handleEditLink }) => {
+export const RenderContent = (props: {
+  contents: any;
+  loadedParagraphs: number[];
+  effectiveMode: LINE_MODES;
+  canEdit?: boolean;
+  activeLineIndex?: number | null;
+  onActiveLine?: ((idx: number) => void) | null;
+  showDiff?: boolean;
+  clickPosition?: { x: number; y: number; clientX: number; clientY: number } | null;
+  isEditing?: boolean;
+  handleEditLink?: () => void;
+  lineFeaturesEnabled?: boolean;
+  showLineNumbers?: boolean;
+}) => {
+  const {
+    contents,
+    loadedParagraphs,
+    effectiveMode,
+    canEdit = false,
+    activeLineIndex = null,
+    onActiveLine = null,
+    showDiff = false,
+    clickPosition = null,
+    isEditing = false,
+    handleEditLink,
+    lineFeaturesEnabled: lineFeaturesEnabledProp = false,
+    showLineNumbers = true
+  } = props;
+
+  // Explicitly coerce the flag to avoid any undefined reference issues in compiled output.
+  const lineFeaturesEnabled = Boolean(lineFeaturesEnabledProp);
+  const effectiveShowLineNumbers = lineFeaturesEnabled && showLineNumbers;
   // Wrap in try-catch to handle any rendering errors
   try {
     if (!contents) return null;
@@ -779,15 +812,17 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
               const actualIndex = paragraphNodes.indexOf(node);
               return (
                 <React.Fragment key={actualIndex}>
-                  <span
-                    className="paragraph-number"
-                    style={{
-                      animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`,
-                      display: 'inline'
-                    }}
-                  >
-                    {actualIndex + 1}
-                  </span>
+                  {effectiveShowLineNumbers && (
+                    <span
+                      className="paragraph-number"
+                      style={{
+                        animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`,
+                        display: 'inline'
+                      }}
+                    >
+                      {actualIndex + 1}
+                    </span>
+                  )}
                   <span
                     className="dense-paragraph-content"
                     style={{
@@ -823,6 +858,9 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                 isEditing={isEditing}
                 animationDelay={index * ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY}
                 handleEditLink={handleEditLink}
+                lineMode={effectiveMode}
+                lineFeaturesEnabled={lineFeaturesEnabled}
+                showLineNumbers={effectiveShowLineNumbers}
               />
             );
           })}
@@ -857,7 +895,35 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
  * SimpleParagraphNode - Renders a paragraph as a simple div
  * CSS handles dense mode styling automatically via container classes
  */
-const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false, animationDelay = 0, handleEditLink }) => {
+const SimpleParagraphNode = (props: {
+  node: any;
+  index?: number;
+  canEdit?: boolean;
+  isActive?: boolean;
+  onActiveLine?: ((idx: number) => void) | null;
+  showDiff?: boolean;
+  isEditing?: boolean;
+  animationDelay?: number;
+  handleEditLink?: () => void;
+  lineMode?: LINE_MODES;
+  lineFeaturesEnabled?: boolean;
+  showLineNumbers?: boolean;
+}) => {
+  const {
+    node,
+    index = 0,
+    canEdit = false,
+    isActive = false,
+    onActiveLine = null,
+    showDiff = false,
+    isEditing = false,
+    animationDelay = 0,
+    handleEditLink,
+    lineMode = LINE_MODES.NORMAL,
+    lineFeaturesEnabled: lineFeaturesEnabledProp = false,
+    showLineNumbers = true
+  } = props;
+  const lineFeaturesEnabled = Boolean(lineFeaturesEnabledProp);
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
 
@@ -947,9 +1013,11 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
     return null;
   };
 
-  // Use LineSettings context to determine current mode and whether line numbers are allowed
-  const effectiveMode = isEditing ? LINE_MODES.NORMAL : (lineFeaturesEnabled ? (lineMode || LINE_MODES.NORMAL) : LINE_MODES.NORMAL);
-  const shouldShowLineNumber = lineFeaturesEnabled && showLineNumbers;
+  // Use line settings (passed down) to determine current mode and whether line numbers are allowed
+  const effectiveMode = isEditing
+    ? LINE_MODES.NORMAL
+    : (lineFeaturesEnabled ? (lineMode || LINE_MODES.NORMAL) : LINE_MODES.NORMAL);
+  const shouldShowLineNumber = lineFeaturesEnabled && !!showLineNumbers;
 
   // Render paragraph with proper structure
   return (

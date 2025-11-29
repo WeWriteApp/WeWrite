@@ -290,40 +290,84 @@ function NewPageContent() {
   // Initialize content based on page type
   useEffect(() => {
     if (isReply && searchParams) {
-      const pageTitle = searchParams.get('page') || '';
-      const username = searchParams.get('username') || '';
+      const pageTitleParam = searchParams.get('page') || '';
       const replyToId = searchParams.get('replyTo') || '';
-       const replyTypeParam = searchParams.get('replyType');
+      const replyTypeParam = searchParams.get('replyType');
       const contentParam = searchParams.get('initialContent');
 
+      // Decode values defensively so we never end up with empty attribution text
+      const pageTitle = (() => {
+        try {
+          return pageTitleParam ? decodeURIComponent(pageTitleParam) : '';
+        } catch {
+          return pageTitleParam || '';
+        }
+      })();
+
+      const pageUsername = (() => {
+        const raw = searchParams.get('pageUsername') || '';
+        try {
+          return raw ? decodeURIComponent(raw) : '';
+        } catch {
+          return raw || '';
+        }
+      })();
+
+      const authorUsername = (() => {
+        const raw = searchParams.get('username') || '';
+        try {
+          return raw ? decodeURIComponent(raw) : '';
+        } catch {
+          return raw || '';
+        }
+      })();
+
       setTitle("");
+
+      const sentiment = replyTypeParam === 'agree' || replyTypeParam === 'disagree' ? replyTypeParam : null;
+      const buildPrefilledContent = (replyTypeOverride: 'agree' | 'disagree' | 'standard' | null = sentiment || "standard") => ([
+        ...createReplyContent({
+          pageId: replyToId,
+          pageTitle: pageTitle || "Untitled",
+          userId: searchParams.get('pageUserId') || user?.uid || '',
+          username: pageUsername || authorUsername || "Anonymous",
+          replyType: replyTypeOverride || "standard"
+        }),
+        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
+      ]);
+
+      const prefilled = buildPrefilledContent();
 
       if (contentParam) {
         try {
           const parsedContent = JSON.parse(decodeURIComponent(contentParam));
+          const first = parsedContent?.[0];
 
           // If a replyType is provided but the parsed content doesn't include it, rebuild with sentiment
           const needsSentiment =
             replyTypeParam &&
             (replyTypeParam === 'agree' || replyTypeParam === 'disagree') &&
-            (!parsedContent?.[0]?.replyType || parsedContent[0].replyType === 'standard');
+            (!first?.replyType || first.replyType === 'standard');
 
-          if (needsSentiment) {
-        const rebuilt = [
-          ...createReplyContent({
-            pageId: replyToId,
-            pageTitle,
-            userId: searchParams.get('pageUserId') || user?.uid || '',
-            username: decodeURIComponent(searchParams.get('pageUsername') || '') || username,
-            replyType: replyTypeParam as 'agree' | 'disagree'
-          }),
-          { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
-        ];
-            setEditorState(rebuilt);
+          // If the first block has no visible text, treat it as missing prefill
+          const missingPrefill = !first?.children?.some((child: any) => {
+            if (!child) return false;
+            if (typeof child.text === 'string' && child.text.trim()) return true;
+            if (child.children?.[0]?.text && child.children[0].text.trim()) return true;
+            return false;
+          });
+
+          if (needsSentiment || missingPrefill) {
+            setEditorState(buildPrefilledContent(needsSentiment ? replyTypeParam as 'agree' | 'disagree' : sentiment || "standard"));
             return;
           }
 
-          let completeContent = [...parsedContent];
+          // Ensure replyType metadata stays on the attribution block
+          if (!first.replyType && sentiment) {
+            first.replyType = sentiment;
+          }
+
+          let completeContent = Array.isArray(parsedContent) ? [...parsedContent] : [];
           if (completeContent.length < 2) {
             completeContent.push({ type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." });
           }
@@ -334,27 +378,16 @@ function NewPageContent() {
         }
       }
 
-      // Fallback: build reply content with sentiment if provided
+      // Fallback: always build the prefilled reply content
       try {
-        const sentiment = replyTypeParam === 'agree' || replyTypeParam === 'disagree' ? replyTypeParam : null;
-        const replyContent = [
-          ...createReplyContent({
-            pageId: replyToId,
-            pageTitle,
-            userId: user?.uid || '',
-            username,
-            replyType: sentiment || "standard"
-          }),
-          { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
-        ];
-        setEditorState(replyContent);
+        setEditorState(prefilled);
       } catch (error) {
         console.error("Error building reply content:", error);
         const attribution = createReplyAttribution({
           pageId: replyToId,
-          pageTitle: pageTitle,
+          pageTitle: pageTitle || "Untitled",
           userId: user?.uid || '',
-          username: username
+          username: pageUsername || authorUsername || "Anonymous"
         });
         const replyContent = [
           attribution,
@@ -387,7 +420,7 @@ function NewPageContent() {
         } catch {}
       }
     }
-  }, [isReply, searchParams]);
+  }, [isReply, searchParams, user]);
 
   // For replies, consider the draft "dirty" immediately so the save banner is visible on open
   useEffect(() => {

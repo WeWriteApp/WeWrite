@@ -31,6 +31,8 @@ import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import { UnifiedErrorBoundary } from "../utils/UnifiedErrorBoundary";
 import TextView from "../editor/TextView";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import Link from "next/link";
 
 import DenseModeToggle from "../viewer/DenseModeToggle";
 import UnifiedLoader from "../ui/unified-loader";
@@ -85,7 +87,21 @@ interface Page {
   updatedAt: any;
   isDeleted?: boolean;
   deletedAt?: any;
+  replyTo?: string | null;
+  replyType?: 'agree' | 'disagree' | 'neutral';
+  replyToTitle?: string | null;
+  replyToUsername?: string | null;
 }
+
+const extractReplyType = (content: any): 'agree' | 'disagree' | 'neutral' => {
+  try {
+    const raw = content?.replyType || content?.metadata?.replyType;
+    if (raw === 'agree' || raw === 'disagree') return raw;
+  } catch (e) {
+    // ignore parsing errors and fall back to neutral
+  }
+  return 'neutral';
+};
 
 /**
  * PageView - Consolidated TypeScript page viewing component
@@ -150,6 +166,12 @@ export default function ContentPageView({
   const authorUserId = page?.userId || (page as any)?.authorUserId || (page as any)?.user?.id || '';
   const [customDate, setCustomDate] = useState<string | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
+  const replyTypeForGraph = useMemo<'agree' | 'disagree' | 'neutral'>(() => {
+    if (!page) return 'neutral';
+    const explicit = page.replyType;
+    if (explicit === 'agree' || explicit === 'disagree') return explicit;
+    return extractReplyType(page.content);
+  }, [page]);
   // Removed complex loading timeout logic - using UnifiedLoader now
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [versionData, setVersionData] = useState<any>(null);
@@ -1290,18 +1312,23 @@ export default function ContentPageView({
       }
 
       console.log('🔵 PAGE SAVE: Parsing successful response');
-      const result = await response.json();
+      let result: any = { success: true };
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        console.warn('⚠️ PAGE SAVE: Response had no/invalid JSON, treating as success', jsonError);
+      }
       console.log('🔵 PAGE SAVE: Response parsed successfully', {
         success: result.success,
         hasData: !!result.data,
         message: result.message,
         titleChanged: result.titleChanged,
-        resultKeys: Object.keys(result)
+        resultKeys: result ? Object.keys(result) : []
       });
 
       pageLogger.debug('API response success: PUT /api/pages', { status: response.status, result });
 
-      if (!result.success) {
+      if (result.success === false) {
         console.error('🔴 PAGE SAVE: Result indicates failure', result);
         throw new Error(result.message || 'Failed to update page');
       }
@@ -1431,7 +1458,14 @@ export default function ContentPageView({
       }
 
       pageLogger.error('Page save failed', { pageId, error: error.message, title });
-      setError(`Failed to save page: ${error?.message || 'Please try again.'}`);
+
+      // If local state thinks there are no unsaved changes, avoid scaring the user with an error toast.
+      const shouldShowError = hasUnsavedChanges || isSaving;
+      if (shouldShowError) {
+        setError(`Failed to save page: ${error?.message || 'Please try again.'}`);
+      } else {
+        console.warn('⚠️ Save error occurred but no unsaved changes remain; suppressing user-facing error.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -1789,8 +1823,50 @@ export default function ContentPageView({
                 <PageGraphView
                   pageId={page.id}
                   pageTitle={page.title}
+                  replyToId={page.replyTo || null}
+                  replyType={replyTypeForGraph}
                   onRefreshReady={handleGraphRefreshReady}
                 />
+
+                {page.replyTo && (
+                  <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Reply to</p>
+                        <Link
+                          href={`/${page.replyTo}`}
+                          className="font-semibold underline-offset-4 hover:underline"
+                        >
+                          {page.replyToTitle || "View page"}
+                        </Link>
+                      </div>
+                      {canEdit && (
+                        <div className="min-w-[160px]">
+                          <p className="text-sm text-muted-foreground mb-1">Reply type</p>
+                          <Select
+                            value={replyTypeForGraph}
+                            onValueChange={(val) => {
+                              setPage((prev) => {
+                                if (!prev) return prev;
+                                return { ...prev, replyType: val as 'agree' | 'disagree' | 'neutral' };
+                              });
+                              setHasUnsavedChanges(true);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="neutral">Neutral reply</SelectItem>
+                              <SelectItem value="agree">Agree</SelectItem>
+                              <SelectItem value="disagree">Disagree</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <RelatedPagesSection
                   page={page}

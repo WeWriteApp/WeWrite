@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator
 } from '../components/ui/dropdown-menu';
 import { RandomPagesSkeleton } from '../components/ui/skeleton-loaders';
+import { useFeatureFlags } from '../contexts/FeatureFlagContext';
 
 /**
  * Random Pages Full Page Experience
@@ -28,6 +29,8 @@ import { RandomPagesSkeleton } from '../components/ui/skeleton-loaders';
  */
 export default function RandomPagesPage() {
   const { user, isAuthenticated } = useAuth();
+  const { isEnabled } = useFeatureFlags();
+  const lineFeaturesEnabled = isEnabled('line_numbers');
   const [mounted, setMounted] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
@@ -44,6 +47,32 @@ export default function RandomPagesPage() {
     }
     return '';
   });
+  const [includeUsername, setIncludeUsername] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('randomPages_includeUsername') || '';
+    }
+    return '';
+  });
+  const [filterMode, setFilterMode] = useState<'exclude' | 'include'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('randomPages_filterMode');
+      return savedMode === 'include' ? 'include' : 'exclude';
+    }
+    return 'exclude';
+  });
+  const usernameLabel = filterMode === 'include' ? 'Include username' : 'Exclude username';
+  const usernamePlaceholder =
+    filterMode === 'include'
+      ? 'Enter username to include'
+      : 'Enter username to exclude';
+  const usernameInputValue = filterMode === 'include' ? includeUsername : excludeUsername;
+  const handleUsernameChange = (value: string) => {
+    if (filterMode === 'include') {
+      setIncludeUsername(value);
+    } else {
+      setExcludeUsername(value);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -51,7 +80,7 @@ export default function RandomPagesPage() {
     // Load preferences from localStorage on mount
     if (typeof window !== 'undefined') {
       const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
-      if (savedDenseModePreference === 'true') {
+      if (lineFeaturesEnabled && savedDenseModePreference === 'true') {
         setDenseMode(true);
       }
 
@@ -65,6 +94,7 @@ export default function RandomPagesPage() {
 
   // Handle dense mode toggle change
   const handleDenseModeToggle = () => {
+    if (!lineFeaturesEnabled) return;
     const newValue = !denseMode;
     setDenseMode(newValue);
 
@@ -101,13 +131,21 @@ export default function RandomPagesPage() {
     window.dispatchEvent(shuffleEvent);
   };
 
-  const applyExcludeUsername = () => {
-    const value = excludeUsername.trim();
-    const includeValue = includeUsername.trim();
+  const handleFilterModeChange = (mode: 'exclude' | 'include') => {
+    setFilterMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('randomPages_filterMode', mode);
+    }
+  };
+
+  const applyUsernameFilter = () => {
+    const trimmedExclude = excludeUsername.trim();
+    const trimmedInclude = includeUsername.trim();
 
     if (filterMode === 'include') {
+      setIncludeUsername(trimmedInclude);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('randomPages_includeUsername', includeValue);
+        localStorage.setItem('randomPages_includeUsername', trimmedInclude);
         localStorage.setItem('randomPages_filterMode', 'include');
       }
       const shuffleEvent = new CustomEvent('shuffleRandomPages', {
@@ -115,22 +153,23 @@ export default function RandomPagesPage() {
           includePrivate: false,
           excludeOwnPages,
           excludeUsername: '',
-          includeUsername: includeValue
+          includeUsername: trimmedInclude
         }
       });
       window.dispatchEvent(shuffleEvent);
       return;
     }
 
+    setExcludeUsername(trimmedExclude);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('randomPages_excludeUsername', value);
+      localStorage.setItem('randomPages_excludeUsername', trimmedExclude);
       localStorage.setItem('randomPages_filterMode', 'exclude');
     }
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
       detail: {
         includePrivate: false,
         excludeOwnPages,
-        excludeUsername: value,
+        excludeUsername: trimmedExclude,
         includeUsername: ''
       }
     });
@@ -253,56 +292,79 @@ export default function RandomPagesPage() {
 
               <div className="h-px bg-border my-2" />
 
-              <div
-                className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 text-left"
-                onClick={(e) => {
-                  console.log('🔍 Dense mode item clicked!');
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleDenseModeToggle();
-                  // Don't close dropdown immediately to allow user to see the change
-                }}
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="flex-shrink-0">
-                    <Grid3X3 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col flex-1">
-                    <span className="font-medium text-sm whitespace-nowrap">Dense Mode</span>
-                    <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
-                      Show only page titles as pill links
-                    </span>
-                  </div>
+              {lineFeaturesEnabled && (
+                <div
+                  className="flex items-center justify-between cursor-pointer py-4 px-3 rounded-lg hover:bg-muted/50 text-left"
+                  onClick={(e) => {
+                    console.log('🔍 Dense mode item clicked!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDenseModeToggle();
+                    // Don't close dropdown immediately to allow user to see the change
+                  }}
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="flex-shrink-0">
+                      <Grid3X3 className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex flex-col flex-1">
+                      <span className="font-medium text-sm whitespace-nowrap">Dense Mode</span>
+                      <span className="text-xs text-muted-foreground leading-relaxed whitespace-nowrap">
+                        Show only page titles as pill links
+                      </span>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 ml-3">
+                  <Switch
+                    checked={denseMode}
+                    onCheckedChange={(checked) => {
+                        console.log('🔍 Dense mode switch toggled to:', checked);
+                        handleDenseModeToggle();
+                      }}
+                      onClick={(e) => {
+                        console.log('🔍 Dense mode switch clicked!');
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    aria-label="Toggle dense mode"
+                  />
+                </div>
               </div>
-              <div className="flex-shrink-0 ml-3">
-                <Switch
-                  checked={denseMode}
-                  onCheckedChange={(checked) => {
-                      console.log('🔍 Dense mode switch toggled to:', checked);
-                      handleDenseModeToggle();
-                    }}
-                    onClick={(e) => {
-                      console.log('🔍 Dense mode switch clicked!');
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  aria-label="Toggle dense mode"
-                />
-              </div>
-            </div>
+              )}
 
             <div className="h-px bg-border my-2" />
 
             <div className="space-y-2 py-2">
-              <div className="text-sm font-medium">Exclude username</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-medium">{usernameLabel}</div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant={filterMode === 'exclude' ? 'secondary' : 'ghost'}
+                    size="xs"
+                    className="px-3"
+                    onClick={() => handleFilterModeChange('exclude')}
+                  >
+                    Exclude
+                  </Button>
+                  <Button
+                    variant={filterMode === 'include' ? 'secondary' : 'ghost'}
+                    size="xs"
+                    className="px-3"
+                    onClick={() => handleFilterModeChange('include')}
+                  >
+                    Include
+                  </Button>
+                </div>
+              </div>
               <Input
-                value={excludeUsername}
-                onChange={(e) => setExcludeUsername(e.target.value)}
-                placeholder="Enter username"
+                value={usernameInputValue}
+                onChange={(e) => handleUsernameChange(e.target.value)}
+                placeholder={usernamePlaceholder}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    applyExcludeUsername();
+                    e.stopPropagation();
+                    applyUsernameFilter();
                   }
                 }}
               />
@@ -312,7 +374,7 @@ export default function RandomPagesPage() {
                 className="w-full"
                 onClick={(e) => {
                   e.stopPropagation();
-                  applyExcludeUsername();
+                  applyUsernameFilter();
                 }}
               >
                 Apply
@@ -348,33 +410,57 @@ export default function RandomPagesPage() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Dense Mode</span>
-                    <Switch
-                      checked={denseMode}
-                      onCheckedChange={handleDenseModeToggle}
-                      aria-label="Toggle dense mode"
-                    />
-                  </div>
+                  {lineFeaturesEnabled && (
+                    <div className="flex items-center gap-2">
+                      <Grid3X3 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Dense Mode</span>
+                      <Switch
+                        checked={denseMode}
+                        onCheckedChange={handleDenseModeToggle}
+                        aria-label="Toggle dense mode"
+                      />
+                    </div>
+                  )}
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Exclude username</span>
-                    <Input
-                      value={excludeUsername}
-                      onChange={(e) => setExcludeUsername(e.target.value)}
-                      placeholder="Enter username"
-                      className="h-8 w-44"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          applyExcludeUsername();
-                        }
-                      }}
-                    />
-                    <Button variant="secondary" size="sm" onClick={applyExcludeUsername}>
-                      Apply
-                    </Button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{usernameLabel}</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant={filterMode === 'exclude' ? 'secondary' : 'ghost'}
+                          size="xs"
+                          className="px-3"
+                          onClick={() => handleFilterModeChange('exclude')}
+                        >
+                          Exclude
+                        </Button>
+                        <Button
+                          variant={filterMode === 'include' ? 'secondary' : 'ghost'}
+                          size="xs"
+                          className="px-3"
+                          onClick={() => handleFilterModeChange('include')}
+                        >
+                          Include
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={usernameInputValue}
+                        onChange={(e) => handleUsernameChange(e.target.value)}
+                        placeholder={usernamePlaceholder}
+                        className="h-8 w-44"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            applyUsernameFilter();
+                          }
+                        }}
+                      />
+                      <Button variant="secondary" size="sm" onClick={applyUsernameFilter}>
+                        Apply
+                      </Button>
+                    </div>
                   </div>
                 </div>
 

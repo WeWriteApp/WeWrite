@@ -37,6 +37,16 @@ const NOTIFICATION_TYPES = [
     description: 'When there are issues with your payouts'
   },
   {
+    id: 'payout_setup_reminder',
+    title: 'Payout Setup Reminder',
+    description: 'Reminders to connect your payout method when funds are available'
+  },
+  {
+    id: 'payout_setup_final_notice',
+    title: 'Payout Setup Final Notice',
+    description: 'Final reminder before unclaimed funds deadlines'
+  },
+  {
     id: 'email_verification',
     title: 'Account Verification',
     description: 'Important account security notifications'

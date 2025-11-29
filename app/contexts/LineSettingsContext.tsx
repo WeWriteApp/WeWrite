@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { useFeatureFlags } from './FeatureFlagContext';
 
 /**
  * LINE_MODES - Constants for paragraph display modes
@@ -57,7 +58,7 @@ const LineSettingsContext = createContext<LineSettingsContextType>({
  */
 export function LineSettingsProvider({ children, isEditMode = false }: LineSettingsProviderProps) {
   const { user } = useAuth();
-  const isAdmin = Boolean(user?.isAdmin);
+  const { isEnabled } = useFeatureFlags();
   // Generate unique ID for this provider instance
   const providerId = useMemo(() => Math.random().toString(36).substr(2, 9), []);
 
@@ -69,15 +70,6 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedMode = localStorage.getItem('lineMode');
-      const savedFeatureFlag = localStorage.getItem('lineFeaturesEnabled') === 'true';
-
-      // Only allow line number features for admins; everyone else is forced off
-      if (isAdmin) {
-        setLineFeaturesEnabledState(Boolean(savedFeatureFlag));
-      } else {
-        setLineFeaturesEnabledState(false);
-        localStorage.removeItem('lineFeaturesEnabled');
-      }
 
       // Handle migration from legacy mode names (one-time migration)
       if (savedMode === 'default' || savedMode === 'spaced' || savedMode === 'wrapped') {
@@ -89,7 +81,20 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
         setLineModeState(savedMode as LineMode);
       }
     }
-  }, [isAdmin]);
+  }, [user?.uid]);
+
+  // Keep line number features in sync with admin-controlled feature flags
+  useEffect(() => {
+    const enabledByFlag = isEnabled('line_numbers');
+    setLineFeaturesEnabledState(enabledByFlag);
+
+    if (!enabledByFlag) {
+      setLineModeState(LINE_MODES.NORMAL);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lineMode', LINE_MODES.NORMAL);
+      }
+    }
+  }, [isEnabled]);
 
   // Client-side mode switching function that preserves unsaved content
   const setLineModeWithoutRefresh = (mode: LineMode): void => {
@@ -125,21 +130,10 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
   }, [lineMode]);
 
   // Save line feature toggle to localStorage (admin only)
-  const setLineFeaturesEnabled = (enabled: boolean) => {
-    if (!isAdmin) {
-      setLineFeaturesEnabledState(false);
-      return;
-    }
-    setLineFeaturesEnabledState(enabled);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lineFeaturesEnabled', enabled ? 'true' : 'false');
-    }
-    if (!enabled) {
-      setLineModeState(LINE_MODES.NORMAL);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('lineMode', LINE_MODES.NORMAL);
-      }
-    }
+  const setLineFeaturesEnabled = (_enabled: boolean) => {
+    // Line number visibility is controlled via admin feature flags.
+    // This setter is retained for backward compatibility but now acts as a no-op.
+    console.warn('[LineSettings] lineFeaturesEnabled is controlled by feature flags and cannot be toggled here.');
   };
 
   const contextValue = {

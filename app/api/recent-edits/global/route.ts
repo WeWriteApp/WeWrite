@@ -182,18 +182,64 @@ export async function GET(request: NextRequest) {
     // Convert to edits format
     const edits = filteredPages
       .slice(0, limit)
-      .map(page => ({
-        id: page.id,
-        title: page.title || 'Untitled',
-        userId: page.userId,
-        username: page.username,
-        displayName: page.displayName,
-        lastModified: page.lastModified,
-        totalPledged: page.totalPledged || 0,
-        pledgeCount: page.pledgeCount || 0,
-        lastDiff: page.lastDiff,
-        source: 'pages-collection'
-      }));
+      .map(page => {
+        // Derive a friendly preview for reply/agree/disagree pages
+        const deriveReplyPreview = () => {
+          const isReply = page.isReply || !!page.replyTo;
+          if (!isReply) return null;
+
+          // Try to read replyType from the stored content attribution block
+          let replyType: string | null = page.replyType || null;
+          if (!replyType && Array.isArray(page.content) && page.content.length > 0) {
+            replyType = page.content[0]?.replyType || page.content[0]?.reply_type || null;
+          }
+          if (!replyType && typeof page.content === 'string') {
+            try {
+              const parsed = JSON.parse(page.content);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                replyType = parsed[0]?.replyType || parsed[0]?.reply_type || null;
+              }
+            } catch (_err) {
+              // ignore parse errors
+            }
+          }
+
+          const author = page.username || 'Unknown user';
+          const pageTitle = page.title || 'Untitled';
+          const targetTitle = page.replyToTitle || 'the original page';
+
+          let action = 'as a reply to';
+          if (replyType === 'agree') action = 'to agree with';
+          if (replyType === 'disagree') action = 'to disagree with';
+
+          const message = `${pageTitle} was created by ${author} ${action} ${targetTitle}`;
+
+          return {
+            beforeContext: '',
+            addedText: message,
+            removedText: '',
+            afterContext: '',
+            hasAdditions: true,
+            hasRemovals: false
+          };
+        };
+
+        const replyPreview = deriveReplyPreview();
+
+        return {
+          id: page.id,
+          title: page.title || 'Untitled',
+          userId: page.userId,
+          username: page.username,
+          displayName: page.displayName,
+          lastModified: page.lastModified,
+          totalPledged: page.totalPledged || 0,
+          pledgeCount: page.pledgeCount || 0,
+          lastDiff: page.lastDiff,
+          diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null,
+          source: 'pages-collection'
+        };
+      });
 
     console.log(`🔍 [GLOBAL_RECENT_EDITS] Final edits: ${edits.length}`);
     if (edits.length > 0) {

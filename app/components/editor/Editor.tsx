@@ -25,6 +25,7 @@ import { cn } from '../../lib/utils';
 import { LinkElement, LinkNodeHelper } from '../../types/linkNode';
 import LinkNode from './LinkNode';
 import LinkEditorModal from './LinkEditorModal';
+import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { createPortal } from 'react-dom';
 
 // Simple error boundary - no complex recovery mechanisms
@@ -86,6 +87,7 @@ const Editor: React.FC<EditorProps> = ({
   onInsertLinkRequest,
   initialSelectionPath
 }) => {
+  const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
   // Simple state management - no complex state
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [editingLink, setEditingLink] = useState<any>(null);
@@ -241,26 +243,48 @@ const Editor: React.FC<EditorProps> = ({
 
   // Optionally place the cursor at a specific path on mount (e.g., the blank paragraph after attribution)
   useEffect(() => {
-    if (initialSelectionPath && !readOnly) {
-      requestAnimationFrame(() => {
+    if (readOnly || !initialSelectionPath) return;
+
+    const resolveInitialPoint = () => {
+      if (initialSelectionPath) {
         try {
-          const point = { path: initialSelectionPath, offset: 0 };
-          Transforms.select(editor, { anchor: point, focus: point });
-          ReactEditor.focus(editor);
-        } catch (e) {
-          console.error('Error setting initial selection:', e);
+          if (SlateNode.has(editor, initialSelectionPath)) {
+            // Use start of the target path so we always land on a valid text node
+            return SlateEditor.start(editor, initialSelectionPath);
+          }
+          console.warn('Editor: initialSelectionPath missing in value, falling back', initialSelectionPath);
+        } catch (error) {
+          console.warn('Editor: failed to resolve initial selection path, falling back', error);
         }
-      });
-    }
+      }
+
+      // Fallback to end of document to keep focus inside the editor
+      try {
+        return SlateEditor.end(editor, []);
+      } catch {
+        return null;
+      }
+    };
+
+    const point = resolveInitialPoint();
+    if (!point) return;
+
+    requestAnimationFrame(() => {
+      try {
+        Transforms.select(editor, { anchor: point, focus: point });
+        ReactEditor.focus(editor);
+      } catch (e) {
+        console.error('Error setting initial selection:', e);
+      }
+    });
   }, [editor, initialSelectionPath, readOnly]);
 
   // Safe initial value with proper normalization
-  const safeInitialValue = useMemo(() => {
-    if (!initialContent || !Array.isArray(initialContent) || initialContent.length === 0) {
+  const normalizeContent = useCallback((content: any): Descendant[] => {
+    if (!content || !Array.isArray(content) || content.length === 0) {
       return [{ type: 'paragraph', children: [{ text: '' }] }];
     }
 
-    // Normalize the content to ensure it's valid for Slate
     const normalizeNode = (node: any): any => {
       if (typeof node === 'string') {
         return { text: node };
@@ -270,27 +294,20 @@ const Editor: React.FC<EditorProps> = ({
         return { text: '' };
       }
 
-      // Handle text nodes
       if (node.text !== undefined) {
         return { text: node.text || '' };
       }
 
-      // Handle element nodes
       if (node.type) {
         const normalizedChildren = Array.isArray(node.children)
           ? node.children.map(normalizeNode).filter(child => child !== null)
           : [{ text: '' }];
 
-        // Ensure children array is not empty
         if (normalizedChildren.length === 0) {
           normalizedChildren.push({ text: '' });
         }
 
-        // Handle link nodes specifically
         if (node.type === 'link') {
-          // CRITICAL FIX: Remove 'text' property from link elements
-          // In Slate.js, inline elements should NOT have a 'text' property
-          // The text content is stored in the children array
           const linkElement = {
             type: 'link',
             pageId: node.pageId,
@@ -303,27 +320,22 @@ const Editor: React.FC<EditorProps> = ({
             children: normalizedChildren
           };
 
-          // Explicitly delete any 'text' property that might exist from database
           delete (linkElement as any).text;
-
           return linkElement;
         }
 
-        // Handle other element types
         return {
           type: node.type || 'paragraph',
           children: normalizedChildren
         };
       }
 
-      // Fallback for unknown structures
       return { text: '' };
     };
 
     try {
-      const normalized = initialContent.map(normalizeNode);
+      const normalized = content.map(normalizeNode);
 
-      // Ensure we have at least one paragraph
       if (normalized.length === 0) {
         console.log('🔧 Editor: Empty content, using default paragraph');
         return [{ type: 'paragraph', children: [{ text: '' }] }];
@@ -331,7 +343,6 @@ const Editor: React.FC<EditorProps> = ({
 
       console.log('🔧 Editor: Normalized content:', normalized);
 
-      // Validate the normalized content structure
       const validated = normalized.map((node, index) => {
         if (!node || typeof node !== 'object') {
           console.warn(`🔧 Editor: Invalid node at index ${index}, replacing with paragraph`);
@@ -349,18 +360,29 @@ const Editor: React.FC<EditorProps> = ({
       return validated;
     } catch (error) {
       console.error('🚫 Error normalizing initial content:', error);
-      console.error('🚫 Original content that caused error:', initialContent);
+      console.error('🚫 Original content that caused error:', content);
       return [{ type: 'paragraph', children: [{ text: '' }] }];
     }
-  }, [initialContent]);
+  }, []);
+
+  const normalizedInitialContent = useMemo(
+    () => normalizeContent(initialContent ?? []),
+    [initialContent, normalizeContent]
+  );
+
+  const [editorValue, setEditorValue] = useState<Descendant[]>(normalizedInitialContent);
+
+  useEffect(() => {
+    setEditorValue(normalizedInitialContent);
+  }, [normalizedInitialContent]);
 
   // Simple change handler - no complex error recovery
   const handleChange = useCallback((newValue: Descendant[]) => {
+    setEditorValue(newValue);
     try {
       onChange(newValue);
     } catch (error) {
       console.error('Error in onChange:', error);
-      // Simple fallback - just log the error, don't try to recover
     }
   }, [onChange]);
 
@@ -683,14 +705,22 @@ const Editor: React.FC<EditorProps> = ({
     return <span {...props.attributes}>{children}</span>;
   }, []);
 
+  if (!editorValue || !Array.isArray(editorValue)) {
+    console.warn('Editor skipping Slate render because value is invalid', editorValue);
+    return (
+      <div className="min-h-[200px] w-full rounded-lg p-4 bg-muted/10" />
+    );
+  }
+
   return (
     <SimpleErrorBoundary>
       <div className={cn("relative", className)}>
         <Slate
           editor={editor}
-          initialValue={safeInitialValue}
+          initialValue={normalizedInitialContent}
+          // Slate only applies initialValue on mount, so the key forces a remount when it changes
+          key={JSON.stringify(normalizedInitialContent)}
           onChange={handleChange}
-          key={JSON.stringify(safeInitialValue)} // Force re-render on content change
         >
           <div className={cn(
             "wewrite-input min-h-[200px] w-full rounded-lg p-4",
@@ -698,17 +728,19 @@ const Editor: React.FC<EditorProps> = ({
             "transition-all duration-200"
           )}>
             <div className="flex">
-              {/* Line numbers */}
-              <div className="flex-shrink-0 pr-4 text-right text-base text-muted-foreground/60 select-none font-mono leading-relaxed">
-                {Array.from({ length: (safeInitialValue?.length || 1) }, (_, i) => (
-                  <div
-                    key={i + 1}
-                    className="flex items-start justify-end leading-relaxed mb-3 last:mb-0"
-                  >
-                    {i + 1}
-                  </div>
-                ))}
-              </div>
+              {/* Line numbers (hidden when feature flag is disabled) */}
+              {lineFeaturesEnabled && (
+                <div className="flex-shrink-0 pr-4 text-right text-base text-muted-foreground/60 select-none font-mono leading-relaxed">
+                  {Array.from({ length: (editorValue?.length || 1) }, (_, i) => (
+                    <div
+                      key={i + 1}
+                      className="flex items-start justify-end leading-relaxed mb-3 last:mb-0"
+                    >
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Editor content */}
               <div className="flex-1 min-w-0">

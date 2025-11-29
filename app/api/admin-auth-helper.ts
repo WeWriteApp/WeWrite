@@ -8,11 +8,14 @@ import { getUserIdFromRequest } from './auth-helper';
 import { getFirebaseAdmin } from '../firebase/admin';
 
 // Define admin user IDs - ONLY these emails have admin access
+// Keep this list in sync with app/utils/isAdmin.ts to avoid mismatched UX/API behavior.
 const ADMIN_USER_IDS = [
   'jamiegray2234@gmail.com',
   'admin.test@wewrite.app', // Secure admin test account for production data access
   'jamie@wewrite.app', // Development admin user
-  'admin@local.dev' // Local development admin user
+  'admin@local.dev', // Local development admin user
+  'test1@wewrite.dev', // Dev admin (UX already shows admin for this account)
+  'test2@wewrite.dev' // Dev admin: testuser2
 ];
 
 /**

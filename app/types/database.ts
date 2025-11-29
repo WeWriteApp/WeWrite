@@ -444,7 +444,10 @@ export type NotificationType =
   | 'payout_failed'             // Payout failed
   | 'payout_retry_scheduled'    // Payout retry scheduled
   | 'payout_cancelled'          // Payout was cancelled
-  | 'payout_processed';         // Payout processed (legacy)
+  | 'payout_processed'          // Payout processed (legacy)
+  | 'payout_setup_reminder'     // Reminder to finish payout setup
+  | 'payout_setup_final_notice' // Final reminder before unclaimed funds rules
+  | 'payout_unclaimed_warning'; // Approaching unclaimed property deadline
 
 // Feature flags have been removed - all features are now always enabled
 

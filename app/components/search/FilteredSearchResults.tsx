@@ -56,7 +56,8 @@ const FilteredSearchResults = forwardRef(({
   currentPageId = null,
   hideCreateButton = false,
   rightButtons = null,
-  onFilterToggle = null}, ref) => {
+  onFilterToggle = null,
+  maxResults = undefined}, ref) => {
   const { user } = useAuth();
   const router = useRouter();
   const { formatDate: formatDateString } = useDateFormat();
@@ -314,15 +315,16 @@ const FilteredSearchResults = forwardRef(({
           console.log('[FilteredSearchResults] Filtered out current page:', currentPageId, 'remaining:', filteredPages.length);
         }
 
-        setPages(filteredPages);
+        const limitedPages = maxResults ? filteredPages.slice(0, maxResults) : filteredPages;
+        setPages(limitedPages);
         setUsers([]); // Clear users for regular search
         setGroups([]); // Clear groups for regular search
 
         // Fetch subscription data for page authors
-        fetchUserSubscriptionData(filteredPages);
+        fetchUserSubscriptionData(limitedPages);
 
-        console.log('[FilteredSearchResults] Set filtered pages:', filteredPages.length, 'pages');
-        console.log('[FilteredSearchResults] Pages state updated:', filteredPages);
+        console.log('[FilteredSearchResults] Set filtered pages:', limitedPages.length, 'pages');
+        console.log('[FilteredSearchResults] Pages state updated:', limitedPages);
       }
 
     } catch (error) {

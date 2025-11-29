@@ -116,6 +116,50 @@ export async function GET(request: NextRequest) {
     // Enhance pages with user and subscription data
     const enhancedPages = sortedPages.map(page => {
       const userData = batchUserData[page.userId];
+
+      // Derive reply/agree/disagree preview, mirroring the global recent edits logic
+      const deriveReplyPreview = () => {
+        // Attempt to read replyType from page or first block of content
+        let replyType: string | null = page.replyType || null;
+        if (!replyType && Array.isArray(page.content) && page.content.length > 0) {
+          replyType = page.content[0]?.replyType || page.content[0]?.reply_type || null;
+        }
+        if (!replyType && typeof page.content === 'string') {
+          try {
+            const parsed = JSON.parse(page.content);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              replyType = parsed[0]?.replyType || parsed[0]?.reply_type || null;
+            }
+          } catch (_err) {
+            // ignore parse errors
+          }
+        }
+
+        // Only generate when we have a target
+        if (!page.replyToTitle && !replyType) return null;
+
+        const author = page.username || 'Unknown user';
+        const pageTitle = page.title || 'Untitled';
+        const targetTitle = page.replyToTitle || 'the original page';
+
+        let action = 'as a reply to';
+        if (replyType === 'agree') action = 'to agree with';
+        if (replyType === 'disagree') action = 'to disagree with';
+
+        const message = `${pageTitle} was created by ${author} ${action} ${targetTitle}`;
+
+        return {
+          beforeContext: '',
+          addedText: message,
+          removedText: '',
+          afterContext: '',
+          hasAdditions: true,
+          hasRemovals: false
+        };
+      };
+
+      const replyPreview = deriveReplyPreview();
+
       return {
         ...page,
         // Use username from user data if available, fallback to page username
@@ -127,7 +171,7 @@ export async function GET(request: NextRequest) {
         subscriptionStatus: userData?.subscriptionStatus || null,
         // Include diff data that's already stored on the page
         lastDiff: page.lastDiff,
-        diffPreview: page.diffPreview
+        diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null
       };
     });
 

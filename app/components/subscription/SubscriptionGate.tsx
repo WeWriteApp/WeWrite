@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useSubscription } from '../../contexts/SubscriptionContext';
-import { Loader2, Lock } from 'lucide-react';
+import { useAuth } from '../../providers/AuthProvider';
+import { Loader2, Lock, LogIn } from 'lucide-react';
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
@@ -30,6 +31,8 @@ export default function SubscriptionGate({
   allowInteraction = false
 }: SubscriptionGateProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
   const { hasActiveSubscription, isLoading } = useSubscription();
 
   // Show loading state while checking subscription
@@ -68,6 +71,11 @@ export default function SubscriptionGate({
     router.push('/settings/fund-account');
   };
 
+  const handleLoginClick = () => {
+    const redirect = pathname || '/';
+    router.push(`/auth/login?redirect=${encodeURIComponent(redirect)}`);
+  };
+
   return (
     <div className={`relative ${className}`}>
       {/* Blurred content */}
@@ -80,23 +88,35 @@ export default function SubscriptionGate({
         <div className="text-center max-w-sm mx-auto p-6">
           <div className="mb-4">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              <Lock className="h-8 w-8 text-primary" />
+              {user?.uid ? <Lock className="h-8 w-8 text-primary" /> : <LogIn className="h-8 w-8 text-primary" />}
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              Subscribe to view other people's {featureName}s
+              {user?.uid ? `Subscribe to view other people's ${featureName}s` : `Log in to view ${featureName}`}
             </h3>
             <p className="text-sm text-muted-foreground mb-6">
-              You can view your own {featureName}s anytime. Subscribe to explore other creators' {featureName}s and support the WeWrite community.
+              {user?.uid
+                ? `You can view your own ${featureName}s anytime. Subscribe to explore other creators' ${featureName}s and support the WeWrite community.`
+                : `Create an account or log in to access this ${featureName}. Once you're logged in, you'll be prompted to subscribe to explore other creators' ${featureName}s.`}
             </p>
           </div>
           
-          <Button 
-            onClick={handleSubscribeClick}
-            className="w-full"
-            size="lg"
-          >
-            Subscribe now
-          </Button>
+          {user?.uid ? (
+            <Button 
+              onClick={handleSubscribeClick}
+              className="w-full"
+              size="lg"
+            >
+              Subscribe now
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleLoginClick}
+              className="w-full"
+              size="lg"
+            >
+              Log in
+            </Button>
+          )}
         </div>
       </div>
     </div>

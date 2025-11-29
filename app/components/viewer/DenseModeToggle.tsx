@@ -18,10 +18,10 @@ interface DenseModeToggleProps {
 const DenseModeToggle: React.FC<DenseModeToggleProps> = ({
   className = ''
 }) => {
-  const { lineMode, setLineMode, isEditMode } = useLineSettings();
+  const { lineMode, setLineMode, isEditMode, lineFeaturesEnabled } = useLineSettings();
 
-  // Don't show toggle in edit mode
-  if (isEditMode) {
+  // Hide entirely when the line-number feature flag is off or while editing
+  if (isEditMode || !lineFeaturesEnabled) {
     return null;
   }
 

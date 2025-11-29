@@ -5,10 +5,10 @@
  */
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Plus, FileText, Type, Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from '../ui/use-toast';
 import {
@@ -55,10 +55,10 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
   const router = useRouter();
   const params = useParams();
   const currentPageId = params?.id;
-  const wordCount = selectedText.trim().split(/\s+/).length;
   const [selectedPage, setSelectedPage] = useState<any | null>(null);
   const [newPageTitle, setNewPageTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pageMode, setPageMode] = useState<'existing' | 'create'>('existing');
   const { user } = useAuth();
 
   const handleAddAsTitle = () => {
@@ -356,105 +356,109 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-md"
+        className="relative sm:max-w-md w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col"
         aria-describedby="add-to-page-modal-description"
         ref={modalRef}
         data-text-selection-modal
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        <DialogHeader>
-          <DialogTitle>Add to New Page</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="p-3 bg-muted rounded-lg">
-            <p id="add-to-page-modal-description" className="text-sm text-muted-foreground mb-2">Selected text:</p>
-            <p className="text-sm font-medium line-clamp-3">"{selectedText}"</p>
-          </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-2 top-2 z-10"
+          onClick={() => onClose()}
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </Button>
 
-          {/* Append to existing page */}
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Append to existing page</p>
-            <FilteredSearchResults
-              onSelect={async (page, event) => {
-                event?.preventDefault?.();
-                event?.stopPropagation?.();
-                setSelectedPage(page);
-                await appendToPage(page);
-              }}
-              placeholder="Search your pages..."
-              preventRedirect={true}
-              className="h-full"
-              hideCreateButton={true}
-              userId={user?.uid || null}
-              editableOnly={true}
-              onFilterToggle={() => true}
-            />
-            <Button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                appendToPage(selectedPage);
-              }}
-              disabled={!selectedPage || isSubmitting}
-              className="w-full"
-              variant="secondary"
-            >
-              {isSubmitting ? 'Appending...' : selectedPage ? `Append to "${selectedPage.title}"` : 'Select a page'}
-            </Button>
-          </div>
+        <div className="flex flex-col h-full min-h-0">
+          <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
+            <DialogTitle>Add selected text to page</DialogTitle>
+          </DialogHeader>
 
-          {/* Create new page */}
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Create new page</p>
-            <Input
-              value={newPageTitle}
-              onChange={(e) => setNewPageTitle(e.target.value)}
-              placeholder="New page title (required)"
-              className="w-full"
-            />
-            <Button
-              onClick={handleCreateNewPage}
-              disabled={isSubmitting}
-              className="w-full"
-            >
-              {isSubmitting ? 'Creating...' : 'Create new page with selection'}
-            </Button>
-          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <p id="add-to-page-modal-description" className="text-sm text-muted-foreground mb-2">Selected text:</p>
+              <p className="text-sm font-medium break-words whitespace-normal">"{selectedText}"</p>
+            </div>
 
-          {/* Quick actions for tiny selections */}
-          {wordCount <= 2 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Quick actions for short selections
-              </p>
-              <div className="grid grid-cols-1 gap-2">
+            {/* Mode toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
+                  pageMode === 'existing' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted border-border text-foreground'
+                }`}
+                onClick={() => setPageMode('existing')}
+              >
+                Existing
+              </button>
+              <button
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
+                  pageMode === 'create' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted border-border text-foreground'
+                }`}
+                onClick={() => setPageMode('create')}
+              >
+                Create New
+              </button>
+            </div>
+
+            {pageMode === 'existing' && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Append to existing page</p>
+                <FilteredSearchResults
+                  onSelect={async (page, event) => {
+                    event?.preventDefault?.();
+                    event?.stopPropagation?.();
+                    setSelectedPage(page);
+                    await appendToPage(page);
+                  }}
+                  placeholder="Search your pages..."
+                  preventRedirect={true}
+                  className="h-full"
+                  hideCreateButton={true}
+                  userId={user?.uid || null}
+                  editableOnly={true}
+                  onFilterToggle={() => true}
+                  maxResults={10}
+                />
                 <Button
-                  onClick={handleAddAsTitle}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    appendToPage(selectedPage);
+                  }}
+                  disabled={!selectedPage || isSubmitting}
+                  className="w-full"
                   variant="secondary"
-                  className="justify-start gap-2 h-auto p-3"
                 >
-                  <Type className="h-4 w-4" />
-                  <div className="text-left">
-                    <div className="font-medium">Use as Title</div>
-                    <div className="text-xs text-muted-foreground">Start a new page titled with this text</div>
-                  </div>
-                </Button>
-                <Button
-                  onClick={handleAddAsBody}
-                  variant="secondary"
-                  className="justify-start gap-2 h-auto p-3"
-                >
-                  <FileText className="h-4 w-4" />
-                  <div className="text-left">
-                    <div className="font-medium">Use as Body Text</div>
-                    <div className="text-xs text-muted-foreground">Start a new page using this as content</div>
-                  </div>
+                  {isSubmitting ? 'Appending...' : selectedPage ? `Append to "${selectedPage.title}"` : 'Select a page'}
                 </Button>
               </div>
-            </div>
-          )}
+            )}
+
+            {pageMode === 'create' && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Create new page</p>
+                <Input
+                  value={newPageTitle}
+                  onChange={(e) => setNewPageTitle(e.target.value)}
+                  placeholder="New page title (required)"
+                  className="w-full"
+                />
+                <Button
+                  onClick={handleCreateNewPage}
+                  disabled={!newPageTitle.trim() || isSubmitting}
+                  className="w-full"
+                  variant="secondary"
+                >
+                  {isSubmitting ? 'Creating...' : 'Create new page with selection'}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -495,6 +499,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
   const [showRightChevron, setShowRightChevron] = useState(false);
+  const [pageMode, setPageMode] = useState<'existing' | 'create'>('existing');
 
   // Check for overflow and update chevron visibility
   const checkOverflow = () => {
@@ -678,14 +683,44 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     onClose();
   };
 
-  // Calculate menu position to ensure it stays within viewport
-  const safeX = position ? Math.max(10, Math.min(position.x, window.innerWidth - 200)) : window.innerWidth / 2;
-  const safeY = position ? Math.max(10, position.y) : 100;
-  const menuStyle = {
-    left: `${safeX}px`,
-    top: `${safeY}px`,
-    transform: 'translate(-50%, -100%)'
-  };
+  // Calculate and clamp menu position within viewport
+  const viewportPadding = 12;
+  const [menuStyle, setMenuStyle] = useState(() => {
+    const safeX = position ? position.x : window.innerWidth / 2;
+    const safeY = position ? position.y : 100;
+    return {
+      left: `${safeX}px`,
+      top: `${safeY}px`,
+      transform: 'translate(-50%, -100%)',
+      maxWidth: `calc(100vw - ${viewportPadding * 2}px)`
+    };
+  });
+
+  useLayoutEffect(() => {
+    if (!position || !menuRef.current) return;
+    const menu = menuRef.current;
+    const width = menu.offsetWidth || 0;
+    const availableWidth = window.innerWidth - viewportPadding * 2;
+    const clampedWidth = Math.min(width || availableWidth, availableWidth);
+    const half = clampedWidth / 2;
+
+    let left = position.x;
+    if (width > availableWidth) {
+      left = window.innerWidth / 2;
+    } else {
+      if (left - half < viewportPadding) left = viewportPadding + half;
+      if (left + half > window.innerWidth - viewportPadding) left = window.innerWidth - viewportPadding - half;
+    }
+
+    const safeY = Math.max(viewportPadding, position.y);
+
+    setMenuStyle({
+      left: `${left}px`,
+      top: `${safeY}px`,
+      transform: 'translate(-50%, -100%)',
+      maxWidth: `calc(100vw - ${viewportPadding * 2}px)`
+    });
+  }, [position, viewportPadding]);
 
   // If we somehow lost position, don't render the menu
   if (!position) return null;

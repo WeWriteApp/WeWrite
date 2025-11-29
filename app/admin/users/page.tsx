@@ -59,8 +59,11 @@ export default function AdminUsersPage() {
   const [deleteUserId, setDeleteUserId] = useState<User | null>(null);
   const [resetUserId, setResetUserId] = useState<User | null>(null);
   const [editUsernameUser, setEditUsernameUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [verifyUser, setVerifyUser] = useState<User | null>(null);
+  const [userNotifications, setUserNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
@@ -422,6 +425,13 @@ export default function AdminUsersPage() {
     );
   };
 
+  const formatDateTime = (value: any) => {
+    if (!value) return "—";
+    const dateObj = value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value);
+    if (isNaN(dateObj.getTime())) return "—";
+    return dateObj.toLocaleString();
+  };
+
   const renderPayout = (fin?: FinancialInfo, acct?: string | null) => {
     if (fin?.payoutsSetup || acct) {
       return (
@@ -527,6 +537,52 @@ export default function AdminUsersPage() {
       setNewUsername('');
     }
   };
+
+  const refreshUserNotifications = async (uid: string) => {
+    setLoadingNotifications(true);
+    try {
+      const res = await fetch(`/api/admin/users/notifications?uid=${uid}&limit=25`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to load notifications");
+      setUserNotifications(data.notifications || []);
+    } catch (err) {
+      console.error("Admin users: failed to load notifications", err);
+      setUserNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const handleSendPayoutReminder = async (user: User) => {
+    setStatus(null);
+    setLoadingAction("notify");
+    try {
+      const res = await fetch("/api/admin/users/send-payout-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.uid,
+          amountUsd: user.financial?.availableEarningsUsd
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to send reminder");
+      setStatus({ type: "success", message: data.message || "Reminder sent" });
+      await refreshUserNotifications(user.uid);
+    } catch (err: any) {
+      setStatus({ type: "error", message: err.message || "Failed to send reminder" });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedUser?.uid) {
+      refreshUserNotifications(selectedUser.uid);
+    } else {
+      setUserNotifications([]);
+    }
+  }, [selectedUser?.uid]);
 
   return (
     <div className="p-4 pt-4 space-y-4">
@@ -665,7 +721,11 @@ export default function AdminUsersPage() {
                   </TableHeader>
                   <TableBody className="[&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:align-top">
                     {sorted.map((u) => (
-                      <TableRow key={u.uid}>
+                      <TableRow
+                        key={u.uid}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => setSelectedUser(u)}
+                      >
                         {activeColumns.map((col) => (
                           <TableCell
                             key={col.id}
@@ -778,7 +838,10 @@ export default function AdminUsersPage() {
                           size="sm"
                           className="text-xs"
                           disabled={loadingAction !== null}
-                          onClick={() => setResetUserId(u)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setResetUserId(u);
+                          }}
                         >
                           Reset password
                         </Button>
@@ -787,7 +850,10 @@ export default function AdminUsersPage() {
                           size="sm"
                           className="text-xs"
                           disabled={loadingAction !== null}
-                          onClick={() => setDeleteUserId(u)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteUserId(u);
+                          }}
                         >
                           Delete
                         </Button>
@@ -900,6 +966,156 @@ export default function AdminUsersPage() {
               disabled={loadingAction !== null}
             >
               {loadingAction === 'verify' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send verification'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User detail modal */}
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>User details</DialogTitle>
+            <DialogDescription>
+              View subscription, payout, and account metadata for {selectedUser?.email || 'user'}.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 text-sm">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <div className="text-muted-foreground">Email</div>
+                  <div className="font-medium">{selectedUser.email}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Username</div>
+                  <div className="font-medium">{selectedUser.username || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Admin</div>
+                  {selectedUser.isAdmin ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Admin</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground border-border/60">Not admin</Badge>
+                  )}
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Email verified</div>
+                  {selectedUser.emailVerified ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Verified</Badge>
+                  ) : (
+                    <Badge className="bg-red-500/15 text-red-500 border border-red-500/30">Unverified</Badge>
+                  )}
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Created</div>
+                  <div className="font-medium">{formatDateTime(selectedUser.createdAt)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Last login</div>
+                  <div className="font-medium">{formatDateTime(selectedUser.lastLogin)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Total pages</div>
+                  <div className="font-medium">{selectedUser.totalPages ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Stripe account</div>
+                  <div className="font-medium break-all">{selectedUser.stripeConnectedAccountId || '—'}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="font-medium">Subscription</div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {renderSubscription(selectedUser.financial)}
+                  {selectedUser.financial?.subscriptionAmount ? (
+                    <span className="text-muted-foreground text-xs">
+                      ${selectedUser.financial.subscriptionAmount.toFixed(2)} / mo
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="font-medium">Payouts</div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {renderPayout(selectedUser.financial, selectedUser.stripeConnectedAccountId)}
+                  <span className="text-muted-foreground text-xs">
+                    Available: {selectedUser.financial?.availableEarningsUsd !== undefined
+                      ? `$${selectedUser.financial.availableEarningsUsd.toFixed(2)}`
+                      : '—'}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    Total: {selectedUser.financial?.earningsTotalUsd !== undefined
+                      ? `$${selectedUser.financial.earningsTotalUsd.toFixed(2)}`
+                      : '—'}
+                  </span>
+                </div>
+                {(selectedUser.financial?.availableEarningsUsd ?? 0) > 0 && !(selectedUser.financial?.payoutsSetup || selectedUser.stripeConnectedAccountId) && (
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={loadingAction !== null}
+                      onClick={() => handleSendPayoutReminder(selectedUser)}
+                    >
+                      {loadingAction === "notify" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send payout reminder"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Sends a notification reminding them to add a bank for payouts.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="font-medium">Subscription history</div>
+                <div className="text-muted-foreground text-xs">
+                  History data not yet wired. (TODO: pull from billing events.)
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="font-medium">Payout history</div>
+                <div className="text-muted-foreground text-xs">
+                  History data not yet wired. (TODO: pull from payout events/transfers.)
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">Recent notifications</div>
+                  {loadingNotifications && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                {userNotifications.length === 0 && !loadingNotifications ? (
+                  <div className="text-sm text-muted-foreground">No notifications found.</div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                    {userNotifications.map((n) => (
+                      <div key={n.id} className="rounded-md border border-border/60 p-2 text-sm space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium">{n.title || n.type}</div>
+                          <span className="text-xs text-muted-foreground">
+                            {n.createdAt ? (n.createdAt._seconds ? new Date(n.createdAt._seconds * 1000).toLocaleString() : '') : ''}
+                          </span>
+                        </div>
+                        <div className="text-muted-foreground text-sm">{n.message}</div>
+                        {n.metadata?.availableUsd !== undefined && (
+                          <div className="text-xs text-muted-foreground">
+                            Available: ${Number(n.metadata.availableUsd).toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setSelectedUser(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

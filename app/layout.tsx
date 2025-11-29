@@ -43,6 +43,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
 import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
+import { FeatureFlagProvider } from "./contexts/FeatureFlagContext"
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
@@ -90,11 +91,12 @@ export default function RootLayout({
                       <MobileProvider>
                       <DataProvider>
                         <DateFormatProvider>
-                          <AccentColorProvider>
-                            <NeutralColorProvider>
-                              <SubscriptionProvider>
-                                <AppBackgroundProvider>
-                                  <PillStyleProvider>
+                                  <AccentColorProvider>
+                                    <NeutralColorProvider>
+                                      <SubscriptionProvider>
+                                        <AppBackgroundProvider>
+                                          <PillStyleProvider>
+                                <FeatureFlagProvider>
                                 <LineSettingsProvider>
                                   <RecentPagesProvider>
                                     <AllocationIncrementProvider>
@@ -118,6 +120,7 @@ export default function RootLayout({
                                     </AllocationIncrementProvider>
                                   </RecentPagesProvider>
                                 </LineSettingsProvider>
+                                </FeatureFlagProvider>
                                   </PillStyleProvider>
                                 </AppBackgroundProvider>
                               </SubscriptionProvider>

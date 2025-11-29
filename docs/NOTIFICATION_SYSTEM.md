@@ -41,9 +41,11 @@ All types above are present in `NotificationType`. `allocation_threshold` curren
 - **Criticality**: `normal`
 
 ### Payout setup & unclaimed funds reminders
-- **Trigger**: Creator has earnings in storage but payout setup is incomplete (missing bank/Stripe or unverified email).
-- **Cadence**: Weekly reminders for the first month, then monthly until resolved; stop when payouts are enabled.
+- **Trigger**: Creator has earnings in storage but payout setup is incomplete (missing bank/Stripe or unverified email). Admin tools can also trigger an immediate reminder for a user with available earnings and no payouts configured.
+- **Cadence**: Weekly reminders for the first month, then monthly until resolved; stop when payouts are enabled. Admin-triggered reminders respect the same safeguards (e.g., last reminder timestamp).
 - **Message**: "You have funds waiting. Connect payouts and verify your email to receive them." with deep-links to payout setup + email verification.
+- **User controls**: Users can toggle `payout_setup_reminder` and `payout_setup_final_notice` in Settings → Notifications (push + in-app).
+- **Admin visibility**: Admin user detail view shows recently sent payout reminders (title/body/timestamp/available amount) and provides a “Send payout reminder” action when a user has available earnings and no payout setup.
 - **Unclaimed/Escheat**: Track first-accrual date for unpaid funds. Send `payout_unclaimed_warning` as the statutory dormancy window approaches. After the legal deadline, funds are locked for escheat and cannot be paid out; record the transfer to the state.
 
 ### System Notifications

@@ -301,8 +301,8 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        title={showSuccess ? 'Page Added Successfully' : 'Add this page to another page'}
-        className="sm:max-w-md max-h-[80vh] w-[95vw] sm:w-full overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card"
+        title={showSuccess ? 'Page Added Successfully' : 'Add selected text to page'}
+        className="sm:max-w-md w-[95vw] sm:w-full rounded-lg border-theme-strong bg-card"
         showCloseButton={true}
       >
 
@@ -469,11 +469,11 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
             <button
               key={page.id}
               onClick={() => handlePageSelect(page)}
-              className="w-full text-left p-3 rounded-md border border-input hover:bg-accent transition-colors"
+              className="w-full text-left p-3 rounded-md border border-input hover:bg-accent transition-colors break-words whitespace-normal"
             >
-              <div className="font-medium">{page.title || 'Untitled'}</div>
+              <div className="font-medium break-words whitespace-normal">{page.title || 'Untitled'}</div>
               {page.username && (
-                <div className="text-sm text-muted-foreground">by {page.username}</div>
+                <div className="text-sm text-muted-foreground break-words whitespace-normal">by {page.username}</div>
               )}
             </button>
           ))}

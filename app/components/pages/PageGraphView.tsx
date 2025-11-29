@@ -31,6 +31,7 @@ interface GraphLink {
   source: string | GraphNode;
   target: string | GraphNode;
   type: 'outgoing' | 'incoming' | 'bidirectional';
+  sentiment?: 'agree' | 'disagree';
 }
 
 interface PageGraphViewProps {
@@ -38,6 +39,8 @@ interface PageGraphViewProps {
   pageTitle: string;
   className?: string;
   onRefreshReady?: (refreshFn: () => void) => void;
+  replyToId?: string | null;
+  replyType?: 'agree' | 'disagree' | 'standard' | 'neutral' | null;
 }
 
 /**
@@ -52,7 +55,14 @@ interface PageGraphViewProps {
  * - Styled with current pill link style
  * - Visual key shows different hop levels
  */
-export default function PageGraphView({ pageId, pageTitle, className = "", onRefreshReady }: PageGraphViewProps) {
+export default function PageGraphView({
+  pageId,
+  pageTitle,
+  className = "",
+  onRefreshReady,
+  replyToId,
+  replyType
+}: PageGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
@@ -150,6 +160,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   // Build graph when connections data changes
   useEffect(() => {
     if (loading || relatedLoading) return;
+    const sentiment = replyType === 'agree' || replyType === 'disagree' ? replyType : null;
 
     // Create center node
     const centerNode: GraphNode = {
@@ -224,27 +235,30 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     // Level 1 connections (center to/from direct connections)
     allConnections.forEach(connection => {
       const direction = getLinkDirection(pageId, connection.id, incoming, outgoing);
-
+      const sentimentMatch = sentiment && replyToId && connection.id === replyToId ? sentiment : null;
       if (direction === 'bidirectional') {
         // Create bidirectional link
         allLinks.push({
           source: pageId,
           target: connection.id,
-          type: 'bidirectional'
+          type: 'bidirectional',
+          sentiment: sentimentMatch || undefined
         });
       } else if (direction === 'outgoing') {
         // Center links TO this page
         allLinks.push({
           source: pageId,
           target: connection.id,
-          type: 'outgoing'
+          type: 'outgoing',
+          sentiment: sentimentMatch || undefined
         });
       } else {
         // This page links TO center
         allLinks.push({
           source: connection.id,
           target: pageId,
-          type: 'incoming'
+          type: 'incoming',
+          sentiment: sentimentMatch || undefined
         });
       }
     });
@@ -346,6 +360,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
     // Define arrow markers for different link types
     const defs = svg.append("defs");
+    const agreeColor = "hsl(var(--success, var(--green-500, 140 76% 44%)))";
+    const disagreeColor = "hsl(var(--destructive, var(--red-500, 0 72% 51%)))";
 
     // Outgoing arrow (from center)
     defs.append("marker")
@@ -385,6 +401,32 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .append("path")
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "hsl(var(--primary) / 0.8)");
+
+    // Agree arrow
+    defs.append("marker")
+      .attr("id", "arrow-agree")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 20)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", agreeColor);
+
+    // Disagree arrow
+    defs.append("marker")
+      .attr("id", "arrow-disagree")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 20)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", disagreeColor);
 
     // Initialize node positions for better distribution
     const centerNodes = nodes.filter(n => n.level === 0);
@@ -558,6 +600,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .data(links)
       .enter().append("line")
       .attr("stroke", d => {
+        if (d.sentiment === 'agree') return agreeColor;
+        if (d.sentiment === 'disagree') return disagreeColor;
         if (d.type === 'bidirectional') return "oklch(var(--primary) / 0.9)"; // Strong primary for bidirectional
         if (d.type === 'outgoing') return "oklch(var(--primary))"; // Primary for outgoing (to the right)
         if (d.type === 'incoming') return "oklch(var(--secondary))"; // Secondary for incoming (to the left)
@@ -570,6 +614,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         return 1.5;
       })
       .attr("marker-end", d => {
+        if (d.sentiment === 'agree') return "url(#arrow-agree)";
+        if (d.sentiment === 'disagree') return "url(#arrow-disagree)";
         if (d.type === 'bidirectional') return "url(#arrow-bidirectional)";
         if (d.type === 'outgoing') return "url(#arrow-outgoing)";
         return "url(#arrow-incoming)";
