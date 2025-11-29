@@ -22,6 +22,7 @@ interface PreloadConfig {
  * Uses intelligent preloading based on user behavior and current route.
  */
 export function useNavigationPreloader() {
+  const debugLogging = process.env.NEXT_PUBLIC_DEBUG_NAV_PRELOAD === 'true';
   const { user } = useAuth();
   const router = useRouter();
 
@@ -43,7 +44,9 @@ export function useNavigationPreloader() {
         });
       }
 
-      console.log(`🚀 OPTIMIZED: Preloaded profile for ${userId} with deduplication`);
+      if (debugLogging) {
+        console.log(`🚀 OPTIMIZED: Preloaded profile for ${userId} with deduplication`);
+      }
     } catch (error) {
       console.warn(`Navigation preloader: Failed to preload profile for ${userId}:`, error);
     }
@@ -63,7 +66,9 @@ export function useNavigationPreloader() {
         console.warn('Navigation preloader: Home data preload failed:', error);
       });
 
-      console.log('🚀 Navigation preloader: Preloaded home data');
+      if (debugLogging) {
+        console.log('🚀 Navigation preloader: Preloaded home data');
+      }
     } catch (error) {
       console.warn('Navigation preloader: Failed to preload home data:', error);
     }
@@ -83,7 +88,9 @@ export function useNavigationPreloader() {
         console.warn('Navigation preloader: Notifications preload failed:', error);
       });
 
-      console.log('🚀 Navigation preloader: Preloaded notifications');
+      if (debugLogging) {
+        console.log('🚀 Navigation preloader: Preloaded notifications');
+      }
     } catch (error) {
       console.warn('Navigation preloader: Failed to preload notifications:', error);
     }
@@ -101,7 +108,9 @@ export function useNavigationPreloader() {
         console.warn('Navigation preloader: Recent pages preload failed:', error);
       });
 
-      console.log('🚀 Navigation preloader: Preloaded recent pages');
+      if (debugLogging) {
+        console.log('🚀 Navigation preloader: Preloaded recent pages');
+      }
     } catch (error) {
       console.warn('Navigation preloader: Failed to preload recent pages:', error);
     }
@@ -119,7 +128,9 @@ export function useNavigationPreloader() {
         console.warn('Navigation preloader: Trending pages preload failed:', error);
       });
 
-      console.log('🚀 Navigation preloader: Preloaded trending pages');
+      if (debugLogging) {
+        console.log('🚀 Navigation preloader: Preloaded trending pages');
+      }
     } catch (error) {
       console.warn('Navigation preloader: Failed to preload trending pages:', error);
     }
@@ -139,7 +150,9 @@ export function useNavigationPreloader() {
         console.warn('Navigation preloader: Search data preload failed:', error);
       });
 
-      console.log('🚀 Navigation preloader: Preloaded search data');
+      if (debugLogging) {
+        console.log('🚀 Navigation preloader: Preloaded search data');
+      }
     } catch (error) {
       console.warn('Navigation preloader: Failed to preload search data:', error);
     }
@@ -149,7 +162,9 @@ export function useNavigationPreloader() {
   useEffect(() => {
     if (!user?.uid) return;
 
-    console.log('🚀 OPTIMIZED: Smart preloading enabled with rate limiting and caching');
+    if (debugLogging) {
+      console.log('🚀 OPTIMIZED: Smart preloading enabled with rate limiting and caching');
+    }
 
     const timeouts: NodeJS.Timeout[] = [];
 
@@ -190,7 +205,9 @@ export function useNavigationPreloader() {
 
     // Rate limit: Only preload if not preloaded in last 5 minutes
     if (lastPreload && (now - parseInt(lastPreload)) < 5 * 60 * 1000) {
-      console.log(`🚀 OPTIMIZED: Skipping preload for ${route} (recently preloaded)`);
+      if (debugLogging) {
+        console.log(`🚀 OPTIMIZED: Skipping preload for ${route} (recently preloaded)`);
+      }
       return;
     }
 

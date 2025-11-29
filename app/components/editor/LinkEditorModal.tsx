@@ -88,13 +88,28 @@ export default function LinkEditorModal({
         const { type, data } = editingLink;
         console.log('🔥 EDITING LINK DATA:', { type, data });
 
+        // Normalize custom-text flags across legacy fields
+        const inferredCustomTextFlag =
+          data?.isCustomText === true ||
+          data?.hasCustomText === true ||
+          (typeof data?.customText === 'string' && data.customText.trim().length > 0) ||
+          (typeof data?.text === 'string' && data.text.trim().length > 0);
+
+        // Prefer explicit customText, then text (fallback), otherwise empty
+        const resolvedCustomText =
+          typeof data?.customText === 'string' && data.customText.trim().length > 0
+            ? data.customText
+            : typeof data?.text === 'string'
+              ? data.text
+              : '';
+
         if (type === 'external') {
           setActiveTab('external');
           setExternalUrl(data.url || '');
 
           // Initialize external link with canonical LinkNode structure
-          const isCustomTextLink = data.isCustomText === true;
-          const customTextValue = isCustomTextLink ? (data.customText || '') : '';
+          const isCustomTextLink = inferredCustomTextFlag;
+          const customTextValue = isCustomTextLink ? resolvedCustomText : '';
 
           console.log('🔧 [MODAL INIT] External link initialization:', {
             isCustomTextLink,
@@ -121,8 +136,8 @@ export default function LinkEditorModal({
           setSelectedPage(data);
 
           // Initialize internal link with canonical LinkNode structure
-          const isCustomTextLink = data.isCustomText === true;
-          const customTextValue = isCustomTextLink ? (data.customText || '') : '';
+          const isCustomTextLink = inferredCustomTextFlag;
+          const customTextValue = isCustomTextLink ? resolvedCustomText : '';
 
           console.log('🔧 [MODAL INIT] Internal link initialization:', {
             isCustomTextLink,

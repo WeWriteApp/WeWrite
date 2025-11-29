@@ -49,8 +49,21 @@ export function AllocationIntervalModal({ isOpen, onClose }: AllocationIntervalM
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog
+      open={isOpen}
+      // Only handle close events; opening is controlled by parent
+      onOpenChange={(open) => {
+        if (!open) {
+          handleCancel();
+        }
+      }}
+    >
+      <DialogContent
+        className="sm:max-w-md"
+        // Prevent clicks from bubbling to underlying cards/links to avoid accidental navigation
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Allocation Interval</DialogTitle>
         </DialogHeader>

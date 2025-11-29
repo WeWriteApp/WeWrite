@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin } from '../../firebase/admin';
 import { getUserIdFromRequest } from '../auth-helper';
+import { getCollectionName } from '../../utils/environmentConfig';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 
 
 // Initialize Firebase Admin lazily
 let db: any;
+const debugLogging = process.env.PAYMENT_METHODS_DEBUG === 'true';
+const debugLog = (...args: unknown[]) => {
+  if (debugLogging) console.log(...args);
+};
 
 function initializeFirebase() {
   if (db) return { db }; // Already initialized
@@ -35,7 +40,7 @@ const stripe = new Stripe(stripeSecretKey, {
 
 // GET /api/payment-methods - Get all payment methods for the current user (v4)
 export async function GET(request: NextRequest) {
-  console.log('🔥🔥🔥 PAYMENT METHODS API CALLED v4 🔥🔥🔥');
+  debugLog('🔥 PAYMENT METHODS API CALLED v4');
   try {
     // Initialize Firebase lazily
     const { db: firestore } = initializeFirebase();
@@ -60,25 +65,25 @@ export async function GET(request: NextRequest) {
     const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
 
-    console.log('[PAYMENT METHODS] User data:', { userId, hasUserData: !!userData, stripeCustomerId: userData?.stripeCustomerId });
+    debugLog('[PAYMENT METHODS] User data:', { userId, hasUserData: !!userData, stripeCustomerId: userData?.stripeCustomerId });
 
     if (!userData || !userData.stripeCustomerId) {
-      console.log('[PAYMENT METHODS] No Stripe customer ID found, returning empty array');
+      debugLog('[PAYMENT METHODS] No Stripe customer ID found, returning empty array');
       return NextResponse.json({ paymentMethods: [] }, { status: 200 });
     }
 
     // Get the user's payment methods from Stripe
-    console.log('[PAYMENT METHODS] Fetching payment methods from Stripe for customer:', userData.stripeCustomerId);
+    debugLog('[PAYMENT METHODS] Fetching payment methods from Stripe for customer:', userData.stripeCustomerId);
     const paymentMethods = await stripe.paymentMethods.list({
       customer: userData.stripeCustomerId,
       type: 'card'});
 
-    console.log('[PAYMENT METHODS] Stripe response:', { count: paymentMethods.data.length, methods: paymentMethods.data.map(pm => ({ id: pm.id, last4: pm.card?.last4, brand: pm.card?.brand })) });
+    debugLog('[PAYMENT METHODS] Stripe response:', { count: paymentMethods.data.length, methods: paymentMethods.data.map(pm => ({ id: pm.id, last4: pm.card?.last4, brand: pm.card?.brand })) });
 
     // Get the user's payment methods metadata from Firestore
-    const paymentMethodsDoc = await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').get();
+    const paymentMethodsDoc = await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').get();
     const paymentMethodsData = paymentMethodsDoc.exists ? paymentMethodsDoc.data() : { primary: null, order: [] };
-    console.log('[PAYMENT METHODS] Firestore metadata:', paymentMethodsData);
+    debugLog('[PAYMENT METHODS] Firestore metadata:', paymentMethodsData);
 
     // Format the payment methods
     const formattedPaymentMethods = paymentMethods.data.map(method => {
@@ -139,12 +144,26 @@ export async function GET(request: NextRequest) {
       return aIndex - bIndex;
     });
 
-    console.log('[PAYMENT METHODS] Returning payment methods:', { count: formattedPaymentMethods.length, methods: formattedPaymentMethods });
+    debugLog('[PAYMENT METHODS] Returning payment methods:', { count: formattedPaymentMethods.length, methods: formattedPaymentMethods });
     return NextResponse.json({ paymentMethods: formattedPaymentMethods }, { status: 200 });
   } catch (error: any) {
     console.error('[PAYMENT METHODS] Error getting payment methods:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
+}
+
+// HEAD handler to avoid 405s from health checks/preflight
+export async function HEAD(request: NextRequest) {
+  return new NextResponse(null, { status: 200, headers: { 'Allow': 'GET,POST,DELETE,HEAD,OPTIONS' } });
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return NextResponse.json({}, { status: 200, headers: { 'Allow': 'GET,POST,DELETE,HEAD,OPTIONS' } });
+}
+
+// POST /api/payment-methods - Mirror GET for clients that still POST
+export async function POST(request: NextRequest) {
+  return GET(request);
 }
 
 // DELETE /api/payment-methods - Delete a payment method

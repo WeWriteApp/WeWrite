@@ -7,6 +7,7 @@ import { addUsername, updateEmail as updateFirebaseEmail, updatePassword, checkU
 import { db } from "../../firebase/database";
 import { validateUsernameFormat } from '../../utils/usernameValidation';
 import { useRouter } from 'next/navigation';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 import { Button } from "../../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../../components/ui/card";
@@ -48,26 +49,37 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
+    // Wait for auth to finish resolving before attempting to load profile data
+    if (isLoading) return;
+
     if (!isAuthenticated) {
       router.push('/auth/login');
       return;
     }
 
     loadUserData();
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, isLoading, user, router]);
 
   const loadUserData = async () => {
     if (!user) return;
 
+    // Start with auth-sourced values so we always show something even if the doc is missing
+    const authUsername = user.username || (user as any).displayName || '';
+    const authEmail = user.email || '';
+    setUsername(authUsername);
+    setTempUsername(authUsername);
+    setEmail(authEmail);
+    setTempEmail(authEmail);
+
     try {
       // Load user profile data
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, getCollectionName('users'), user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        const currentUsername = userData.username || '';
-        const currentEmail = user.email || '';
+        const currentUsername = userData.username || authUsername;
+        const currentEmail = userData.email || authEmail;
         setUsername(currentUsername);
         setEmail(currentEmail);
         setTempUsername(currentUsername);

@@ -151,20 +151,6 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   useEffect(() => {
     if (loading || relatedLoading) return;
 
-    console.log('🎯 PageGraphView: Building graph with consolidated data:', {
-      pageId,
-      pageTitle,
-      incoming: incoming.length,
-      outgoing: outgoing.length,
-      bidirectional: bidirectional.length,
-      secondHop: secondHopConnections.length,
-      thirdHop: thirdHopConnections.length,
-      related: relatedPages.length,
-      allConnectionIds: allConnections.map(c => c.id),
-      hasAnyConnections: allConnections.length > 0 || secondHopConnections.length > 0 || thirdHopConnections.length > 0,
-      hasRelatedPages: relatedPages.length > 0
-    });
-
     // Create center node
     const centerNode: GraphNode = {
       id: pageId,
@@ -328,16 +314,6 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     const width = container.clientWidth;
     const height = isFullscreen ? window.innerHeight : 400;
 
-    console.log('🎯 PageGraphView: Container dimensions:', {
-      width,
-      height,
-      centerX: width / 2,
-      centerY: height / 2,
-      containerClientWidth: container.clientWidth,
-      containerClientHeight: container.clientHeight,
-      isFullscreen
-    });
-
     svg.attr("width", width).attr("height", height);
 
     // Create zoom behavior - only enable in fullscreen mode
@@ -395,7 +371,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "#999");
+      .attr("fill", "hsl(var(--muted-foreground))");
 
     // Bidirectional arrows
     defs.append("marker")
@@ -421,7 +397,6 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           // Center node in the middle
           node.x = width / 2;
           node.y = height / 2;
-          console.log('🎯 PageGraphView: Positioning center node at:', { x: node.x, y: node.y, nodeId: node.id });
         } else if (node.level === 1) {
           // Connected nodes in inner circle
           const connectedIndex = connectedNodes.indexOf(node);
@@ -586,7 +561,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         if (d.type === 'bidirectional') return "oklch(var(--primary) / 0.9)"; // Strong primary for bidirectional
         if (d.type === 'outgoing') return "oklch(var(--primary))"; // Primary for outgoing (to the right)
         if (d.type === 'incoming') return "oklch(var(--secondary))"; // Secondary for incoming (to the left)
-        return "#999";
+        return "hsl(var(--muted-foreground) / 0.6)";
       })
       .attr("stroke-opacity", 0.7)
       .attr("stroke-width", d => {
@@ -660,7 +635,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           if (isOutgoing) return "oklch(var(--primary) / 0.8)"; // Lighter primary for outgoing
           if (isIncoming) return "oklch(var(--secondary))"; // Secondary for incoming
         }
-        return "#fff";
+        return "hsl(var(--foreground))";
       })
       .attr("stroke-width", d => {
         if (d.level === 1) return 3; // Thicker border for first-level nodes
@@ -694,7 +669,6 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       event.stopPropagation();
 
       if (d.id !== pageId) {
-        console.log('🎯 PageGraphView: Navigating to page:', d.id, 'from current page:', pageId);
         router.push(`/${d.id}`);
       }
     });

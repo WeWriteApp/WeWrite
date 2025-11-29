@@ -25,6 +25,7 @@ const ADMIN_EMAILS = [
   'contact@jamiegray.net', // Jamie's primary email from GitHub
   'jamie@wewrite.app',
   'test1@wewrite.dev', // Current dev session email
+  'test2@wewrite.dev', // Dev admin: testuser2
   // Add other admin emails here as needed
 ];
 
@@ -176,9 +177,14 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
       return { isAdmin: false, userId: null, userEmail: null, auditId };
     }
     
-    // Get user email for verification
+    // Get user email for verification (Firestore first, then request header fallback)
     userEmail = await getUserEmail(userId);
-    console.log('🔐 [ADMIN AUTH] User email:', userEmail);
+    if (!userEmail) {
+      // Middleware sets this from the session cookie; helps in dev where the user doc may be missing email
+      userEmail = request.headers.get('x-user-email');
+    }
+
+    console.log('🔐 [ADMIN AUTH] User email (resolved):', userEmail);
 
     // Check admin status using both user ID and email for security
     const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
@@ -265,8 +271,9 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
     const userEmail = await getUserEmail(userId);
     const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
     const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
-    
-    return isAdminByUserId && isAdminByEmail;
+
+    // Allow admin by either verified email or userId (email is the primary source of truth)
+    return isAdminByUserId || isAdminByEmail;
   } catch (error) {
     console.error('[SECURITY] Error in simple admin check:', error);
     return false;

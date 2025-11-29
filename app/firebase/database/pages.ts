@@ -137,6 +137,78 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         username: username || "Anonymous" // Also store username in version data for consistency
       };
 
+      // Compute initial diff so recent edits and activity cards have previews for new pages/replies
+      let initialDiff: {
+        added: number;
+        removed: number;
+        hasChanges: boolean;
+        preview: any;
+      } | null = null;
+
+      try {
+        const { calculateDiff } = await import('../../utils/diffService');
+        const diffResult = await calculateDiff(versionData.content, '');
+        initialDiff = {
+          added: diffResult.added || 0,
+          removed: diffResult.removed || 0,
+          hasChanges: diffResult.hasChanges || (diffResult.added || 0) > 0 || (diffResult.removed || 0) > 0 || true, // new page => always treated as change
+          preview: diffResult.preview
+        };
+        // Attach diff data to the initial version for consistency with subsequent saves
+        (versionData as any).diff = {
+          added: initialDiff.added,
+          removed: initialDiff.removed,
+          hasChanges: initialDiff.hasChanges
+        };
+        (versionData as any).diffPreview = diffResult.preview || null;
+      } catch (diffError) {
+        console.error('⚠️ createPage: Failed to calculate initial diff (non-fatal):', diffError);
+      }
+
+      // Fallback preview if diff service failed to produce one
+      if (initialDiff?.preview === undefined) {
+        try {
+          const { extractTextContent } = await import('../../utils/text-extraction');
+          const snippet = extractTextContent(versionData.content).slice(0, 200);
+          initialDiff = initialDiff || {
+            added: snippet.length,
+            removed: 0,
+            hasChanges: true,
+            preview: null
+          };
+          if (!initialDiff.preview) {
+            initialDiff.preview = {
+              beforeContext: '',
+              addedText: snippet,
+              removedText: '',
+              afterContext: '',
+              hasAdditions: true,
+              hasRemovals: false
+            };
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ createPage: Failed to build fallback diff preview:', fallbackError);
+        }
+      }
+
+      // Persist lastDiff on the page for recent edits feeds
+      if (initialDiff) {
+        (pageData as any).lastDiff = {
+          added: initialDiff.added,
+          removed: initialDiff.removed,
+          hasChanges: initialDiff.hasChanges,
+          preview: initialDiff.preview
+        };
+
+        // Ensure the version carries the same diff metadata (covers fallback path too)
+        (versionData as any).diff = (versionData as any).diff || {
+          added: initialDiff.added,
+          removed: initialDiff.removed,
+          hasChanges: initialDiff.hasChanges
+        };
+        (versionData as any).diffPreview = (versionData as any).diffPreview ?? initialDiff.preview ?? null;
+      }
+
       try {
         // create a subcollection for versions with timeout
         console.log("🔍 DEBUG: Creating version document...");
