@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
+import { isAdmin as isAdminByEmail } from '../../../utils/isAdmin';
 
 /**
  * Session API Endpoint
@@ -120,6 +121,11 @@ export async function GET(request: NextRequest) {
       }
     } catch (e) {
       console.warn('[Session] Failed to enrich user from Firestore:', e);
+    }
+
+    // Fallback admin check by email allowlist to avoid missing flags in Firestore
+    if (!user.isAdmin && isAdminByEmail(user.email)) {
+      user.isAdmin = true;
     }
 
     console.log(`[Session] Simple session valid for: ${user.email}`);
