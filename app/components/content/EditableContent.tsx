@@ -30,6 +30,7 @@ interface EditableContentProps {
   onChange: (content: any[]) => void;
   onEmptyLinesChange?: (count: number) => void;
   placeholder?: string;
+  initialSelectionPath?: import('slate').Path;
 
   // Enhanced editing functionality
   location?: { lat: number; lng: number } | null;
@@ -68,6 +69,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
   showToolbar = false,
   onInsertLinkRequest,
   pageId,
+  initialSelectionPath,
   className = ''
 }) => {
   // 🎯 ELEGANT: No forced re-renders needed - LinkNode components auto-update via events
@@ -120,6 +122,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
         pageId={pageId}
         className="min-h-[200px]"
         onInsertLinkRequest={onInsertLinkRequest}
+        initialSelectionPath={initialSelectionPath}
       />
     </div>
   );

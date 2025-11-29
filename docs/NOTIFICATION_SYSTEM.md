@@ -16,6 +16,8 @@ The canonical type union lives in `app/types/database.ts` (`NotificationType`). 
 - `allocation_threshold` — you’ve used ≥90% of this month’s subscription funds
 - `payment_failed` | `payment_failed_warning` | `payment_failed_final` — subscription charge issues
 - `payout_initiated` | `payout_processing` | `payout_completed` | `payout_failed` | `payout_retry_scheduled` | `payout_cancelled` | `payout_processed` — payout lifecycle events
+- `payout_setup_reminder` | `payout_setup_final_notice` — reminders to finish payout setup when earnings exist
+- `payout_unclaimed_warning` — approaching unclaimed property deadlines
 
 All types above are present in `NotificationType`. `allocation_threshold` currently fires from `UsdBalanceContext` when allocations reach 90% of the monthly fund; it records once per month per user (keyed by `uid` + month) and includes usage metrics in `metadata`.
 
@@ -37,6 +39,12 @@ All types above are present in `NotificationType`. `allocation_threshold` curren
 - **Trigger**: When a user adds your page to their page content
 - **Message**: "{username} added your page '{source_page}' to '{target_page}'"
 - **Criticality**: `normal`
+
+### Payout setup & unclaimed funds reminders
+- **Trigger**: Creator has earnings in storage but payout setup is incomplete (missing bank/Stripe or unverified email).
+- **Cadence**: Weekly reminders for the first month, then monthly until resolved; stop when payouts are enabled.
+- **Message**: "You have funds waiting. Connect payouts and verify your email to receive them." with deep-links to payout setup + email verification.
+- **Unclaimed/Escheat**: Track first-accrual date for unpaid funds. Send `payout_unclaimed_warning` as the statutory dormancy window approaches. After the legal deadline, funds are locked for escheat and cannot be paid out; record the transfer to the state.
 
 ### System Notifications
 

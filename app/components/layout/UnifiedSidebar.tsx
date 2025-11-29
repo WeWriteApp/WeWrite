@@ -223,8 +223,8 @@ function UnifiedSidebarContent({
   // Logout confirmation modal state
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Check if account is admin
-  const isUserAdmin = user?.email === 'jamiegray2234@gmail.com' || user?.email === 'jamie@wewrite.app' || user?.email === 'admin.test@wewrite.app';
+  // Check if account is admin (from user payload)
+  const isUserAdmin = user?.isAdmin === true;
 
   // Handle logout confirmation
   const handleLogoutClick = async () => {

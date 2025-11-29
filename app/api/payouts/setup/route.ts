@@ -8,6 +8,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { payoutService } from '../../../services/payoutService';
 import { stripePayoutService } from '../../../services/stripePayoutService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 const admin = getFirebaseAdmin();
 
@@ -30,8 +31,24 @@ export async function POST(request: NextRequest) {
 
     // Verify the connected account belongs to this user
     const db = admin.firestore();
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
+
+    // Require verified email before proceeding with payouts
+    try {
+      const authUser = await admin.auth().getUser(userId);
+      if (!authUser.emailVerified) {
+        return NextResponse.json({
+          error: 'Email not verified. Please verify your email before setting up payouts.',
+          emailVerified: false
+        }, { status: 403 });
+      }
+    } catch (authErr) {
+      console.warn('Could not fetch auth user for email verification check:', authErr);
+      return NextResponse.json({
+        error: 'Unable to verify email status. Please try again.',
+      }, { status: 500 });
+    }
 
     if (userData?.stripeConnectedAccountId !== stripeConnectedAccountId) {
       return NextResponse.json({

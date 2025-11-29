@@ -16,9 +16,8 @@ export async function POST(request: NextRequest) {
 
     const requesterRecord = await admin.auth().getUser(requesterId);
     const requesterEmail = requesterRecord.email;
-    const devBypass = process.env.NODE_ENV === 'development';
 
-    if (!requesterEmail || (!isAdminServer(requesterEmail) && !devBypass)) {
+    if (!requesterEmail || !isAdminServer(requesterEmail)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -44,6 +43,21 @@ export async function POST(request: NextRequest) {
       await admin.auth().updateUser(uid, { displayName: newUsername });
     } catch (authErr) {
       console.warn('Auth displayName update failed (continuing):', authErr);
+    }
+
+    // Propagate username to pages owned by this user for consistency in dev
+    try {
+      const pagesSnap = await db.collection(getCollectionName('pages'))
+        .where('userId', '==', uid)
+        .get();
+
+      const batch = db.batch();
+      pagesSnap.forEach((doc) => {
+        batch.set(doc.ref, { username: newUsername }, { merge: true });
+      });
+      await batch.commit();
+    } catch (pageErr) {
+      console.warn('Page username propagation failed (continuing):', pageErr);
     }
 
     return NextResponse.json({ success: true, username: newUsername });

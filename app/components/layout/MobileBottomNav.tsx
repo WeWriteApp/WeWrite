@@ -704,13 +704,7 @@ export default function MobileBottomNav() {
                 <div className="grid grid-cols-5 gap-2">
                   {sidebarOrder
                     .filter(itemId => !mobileOrder.includes(itemId))
-                    .filter(itemId => {
-                      // Hide admin button for non-admin users
-                      if (itemId === 'admin' && !isAdmin(user?.email)) {
-                        return false;
-                      }
-                      return true;
-                    })
+                    .filter(itemId => !(itemId === 'admin' && user?.isAdmin !== true))
                     .map((itemId) => {
                       const item = expandedNavigationItems[itemId];
                       if (!item) return null;

@@ -389,6 +389,14 @@ function NewPageContent() {
     }
   }, [isReply, searchParams]);
 
+  // For replies, consider the draft "dirty" immediately so the save banner is visible on open
+  useEffect(() => {
+    if (isReply && editorState.length > 0) {
+      setHasContentChanged(true);
+      setHasUnsavedChanges(true);
+    }
+  }, [isReply, editorState]);
+
   // Handle back navigation
   const handleBack = () => {
     let backUrl = '/';
@@ -1252,6 +1260,7 @@ function NewPageContent() {
                     placeholder={customPlaceholder}
                     showToolbar={false}
                     onInsertLinkRequest={handleInsertLinkRequest}
+                    initialSelectionPath={isReply ? [1, 0] : undefined}
                   />
                 </PageProvider>
               </div>
@@ -1276,8 +1285,8 @@ function NewPageContent() {
               </div>
             )}
 
-            {/* Writing Ideas Banner - hide when content is provided via URL (e.g., from highlight text -> add to page) */}
-            {isEditing && !searchParams?.get('content') && (
+            {/* Writing Ideas Banner - not shown during reply flow */}
+            {isEditing && !isReply && !searchParams?.get('content') && (
               <div className="mt-4">
                 <WritingIdeasBanner
                   onIdeaSelect={handleIdeaSelect}

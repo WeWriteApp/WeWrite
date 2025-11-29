@@ -18,7 +18,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createEditor, Descendant, Editor as SlateEditor, Element, Element as SlateElement, Node as SlateNode, Range, Text, Transforms } from 'slate';
+import { createEditor, Descendant, Editor as SlateEditor, Element, Element as SlateElement, Node as SlateNode, Range, Text, Transforms, Path } from 'slate';
 import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { cn } from '../../lib/utils';
@@ -73,6 +73,7 @@ interface EditorProps {
   pageId?: string;
   className?: string;
   onInsertLinkRequest?: (triggerFn: () => void) => void;
+  initialSelectionPath?: Path; // Optional initial cursor position
 }
 
 const Editor: React.FC<EditorProps> = ({
@@ -82,7 +83,8 @@ const Editor: React.FC<EditorProps> = ({
   readOnly = false,
   pageId,
   className,
-  onInsertLinkRequest
+  onInsertLinkRequest,
+  initialSelectionPath
 }) => {
   // Simple state management - no complex state
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -97,6 +99,34 @@ const Editor: React.FC<EditorProps> = ({
       const { selection } = editor;
 
       if (selection && Range.isCollapsed(selection)) {
+        // Prevent merging into attribution rows (reply prefill) which can corrupt structure
+        try {
+          const blockEntry = SlateEditor.above(editor, {
+            at: selection.anchor,
+            match: n => SlateEditor.isBlock(editor, n)
+          });
+
+          if (blockEntry) {
+            const [blockNode, blockPath] = blockEntry;
+            if (SlateEditor.isStart(editor, selection.anchor, blockPath)) {
+              const prevBlockEntry = SlateEditor.previous(editor, {
+                at: blockPath,
+                match: n => SlateEditor.isBlock(editor, n)
+              });
+
+              if (prevBlockEntry) {
+                const [prevBlock] = prevBlockEntry;
+                if ((prevBlock as any)?.isAttribution) {
+                  // Simply ignore backspace at the start of the paragraph after attribution
+                  return;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // fallback to normal behavior if path lookup fails
+        }
+
         // Only delete link if cursor is IMMEDIATELY after it (offset 0 in next text node)
         try {
         const [parentNode, parentPath] = SlateEditor.parent(editor, selection);
@@ -208,6 +238,21 @@ const Editor: React.FC<EditorProps> = ({
 
     return baseEditor;
   }, [withLinkDeletion]);
+
+  // Optionally place the cursor at a specific path on mount (e.g., the blank paragraph after attribution)
+  useEffect(() => {
+    if (initialSelectionPath && !readOnly) {
+      requestAnimationFrame(() => {
+        try {
+          const point = { path: initialSelectionPath, offset: 0 };
+          Transforms.select(editor, { anchor: point, focus: point });
+          ReactEditor.focus(editor);
+        } catch (e) {
+          console.error('Error setting initial selection:', e);
+        }
+      });
+    }
+  }, [editor, initialSelectionPath, readOnly]);
 
   // Safe initial value with proper normalization
   const safeInitialValue = useMemo(() => {
@@ -562,6 +607,8 @@ const Editor: React.FC<EditorProps> = ({
             node={linkElementWithText}
             canEdit={!readOnly}
             isEditing={!readOnly}
+            // Pass Slate children through so DOM mapping remains intact for selection
+            children={children}
             onEditLink={() => {
               // Determine link type based on element properties
               let linkType: 'page' | 'user' | 'external' | 'compound' = 'page';

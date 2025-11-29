@@ -47,9 +47,7 @@ export async function GET(request: NextRequest) {
     // Get user email to check admin status (allow dev bypass locally)
     const userRecord = await admin.auth().getUser(userId);
     const userEmail = userRecord.email;
-    const devBypass = process.env.NODE_ENV === 'development';
-
-    if (!userEmail || (!isAdminServer(userEmail) && !devBypass)) {
+    if (!userEmail || !isAdminServer(userEmail)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

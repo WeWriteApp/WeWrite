@@ -37,6 +37,7 @@ type User = {
   stripeConnectedAccountId?: string | null;
   isAdmin?: boolean;
   financial?: FinancialInfo;
+  emailVerified?: boolean;
 };
 
 type Column = {
@@ -58,6 +59,7 @@ export default function AdminUsersPage() {
   const [resetUserId, setResetUserId] = useState<User | null>(null);
   const [editUsernameUser, setEditUsernameUser] = useState<User | null>(null);
   const [newUsername, setNewUsername] = useState("");
+  const [verifyUser, setVerifyUser] = useState<User | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
@@ -71,11 +73,11 @@ export default function AdminUsersPage() {
       setError(null);
       try {
         const res = await fetch("/api/admin/users?includeFinancial=true&limit=300");
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || "Failed to load users");
-        }
-        setUsers(data.users || []);
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      throw new Error(data.error || "Failed to load users");
+    }
+    setUsers(data.users || []);
       } catch (err: any) {
         setError(err.message || "Failed to load users");
       } finally {
@@ -141,12 +143,26 @@ export default function AdminUsersPage() {
       id: "emailVerified",
       label: "Email verified",
       sortable: true,
-      render: (u) =>
-        u.emailVerified ? (
-          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Verified</Badge>
-        ) : (
-          <Badge className="bg-red-500/15 text-red-500 border border-red-500/30">Unverified</Badge>
-        )
+      render: (u) => (
+        <div className="relative inline-flex">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={() => setVerifyUser(u)}
+          >
+            <Badge
+              className={`border ${
+                u.emailVerified
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  : 'bg-red-500/15 text-red-500 border-red-500/30'
+              }`}
+            >
+              {u.emailVerified ? 'Verified' : 'Unverified'}
+            </Badge>
+          </Button>
+        </div>
+      )
     },
     {
       id: "admin",
@@ -510,75 +526,60 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="p-4 pt-4 max-w-6xl mx-auto space-y-4">
+    <div className="p-4 pt-4 space-y-4">
       <AdminSubpageHeader
         title="Users"
         description="View user accounts and their subscription/payout setup status."
       />
 
-      <Card>
-        <CardContent className="p-4 space-y-3">
-            <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-              <div className="text-sm text-muted-foreground">
-                Showing {filtered.length} of {users.length} users
-              </div>
-              <Input
-                placeholder="Search by email or username"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="max-w-sm"
-              />
-              <div className="relative">
-                <Button variant="outline" size="sm" onClick={() => setShowColumnConfig((v) => !v)}>
-                  Columns
-                </Button>
-                {showColumnConfig && (
-                  <div className="absolute right-0 mt-2 z-50 rounded-lg border border-border/60 bg-popover p-3 shadow-lg w-56 space-y-2">
-                    <div className="text-sm font-medium">Visible columns</div>
-                    <div className="flex flex-col gap-2 max-h-72 overflow-auto">
-                      {visibleColumns.map((colId) => {
-                        const col = columns.find((c) => c.id === colId);
-                        if (!col) return null;
-                        return (
-                          <div
-                            key={col.id}
-                            className={`flex items-center justify-between gap-2 text-xs px-2 py-1 rounded hover:bg-muted/50 ${
-                              columnDragOverId === col.id ? 'ring-1 ring-primary' : ''
-                            } ${columnDragId === col.id ? 'opacity-60' : ''}`}
-                            draggable
-                            onDragStart={() => setColumnDragId(col.id)}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = "move";
-                              setColumnDragOverId(col.id);
-                            }}
-                            onDrop={() => {
-                              if (columnDragId && columnDragId !== col.id) {
-                                moveColumn(columnDragId, col.id);
-                              }
-                              setColumnDragId(null);
-                              setColumnDragOverId(null);
-                            }}
-                            onDragEnd={() => {
-                              setColumnDragId(null);
-                              setColumnDragOverId(null);
-                            }}
-                          >
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={visibleColumns.includes(col.id)}
-                                onChange={() => toggleColumn(col.id)}
-                              />
-                              {col.label}
-                            </label>
-                            <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
-                          </div>
-                        );
-                      })}
-                      {/* Hidden columns appear below for toggling visibility */}
-                      {columns.filter(c => !visibleColumns.includes(c.id)).map((col) => (
-                        <label key={col.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-muted/50">
+      <div className="space-y-3">
+        <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {filtered.length} of {users.length} users
+          </div>
+          <Input
+            placeholder="Search by email or username"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-sm"
+          />
+          <div className="relative">
+            <Button variant="outline" size="sm" onClick={() => setShowColumnConfig((v) => !v)}>
+              Columns
+            </Button>
+            {showColumnConfig && (
+              <div className="absolute right-0 mt-2 z-50 rounded-lg border border-border/60 bg-popover p-3 shadow-lg w-56 space-y-2">
+                <div className="text-sm font-medium">Visible columns</div>
+                <div className="flex flex-col gap-2 max-h-72 overflow-auto">
+                  {visibleColumns.map((colId) => {
+                    const col = columns.find((c) => c.id === colId);
+                    if (!col) return null;
+                    return (
+                      <div
+                        key={col.id}
+                        className={`flex items-center justify-between gap-2 text-xs px-2 py-1 rounded hover:bg-muted/50 ${
+                          columnDragOverId === col.id ? 'ring-1 ring-primary' : ''
+                        } ${columnDragId === col.id ? 'opacity-60' : ''}`}
+                        draggable
+                        onDragStart={() => setColumnDragId(col.id)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          setColumnDragOverId(col.id);
+                        }}
+                        onDrop={() => {
+                          if (columnDragId && columnDragId !== col.id) {
+                            moveColumn(columnDragId, col.id);
+                          }
+                          setColumnDragId(null);
+                          setColumnDragOverId(null);
+                        }}
+                        onDragEnd={() => {
+                          setColumnDragId(null);
+                          setColumnDragOverId(null);
+                        }}
+                      >
+                        <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             checked={visibleColumns.includes(col.id)}
@@ -586,12 +587,26 @@ export default function AdminUsersPage() {
                           />
                           {col.label}
                         </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                        <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
+                      </div>
+                    );
+                  })}
+                  {/* Hidden columns appear below for toggling visibility */}
+                  {columns.filter(c => !visibleColumns.includes(c.id)).map((col) => (
+                    <label key={col.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        checked={visibleColumns.includes(col.id)}
+                        onChange={() => toggleColumn(col.id)}
+                      />
+                      {col.label}
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
           {status && (
             <div className={status.type === 'success' ? 'text-sm text-emerald-500' : 'text-sm text-destructive'}>
@@ -780,8 +795,7 @@ export default function AdminUsersPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
 
       <Dialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
         <DialogContent>
@@ -861,6 +875,51 @@ export default function AdminUsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!verifyUser} onOpenChange={(open) => !open && setVerifyUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send verification email</DialogTitle>
+            <DialogDescription>
+              Send a verification email to {verifyUser?.email}. The user must verify before payouts are allowed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setVerifyUser(null)}
+              disabled={loadingAction !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => verifyUser && handleSendEmailVerification(verifyUser)}
+              disabled={loadingAction !== null}
+            >
+              {loadingAction === 'verify' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send verification'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+  const handleSendEmailVerification = async (user: User) => {
+    setStatus(null);
+    setLoadingAction('verify');
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid, email: user.email })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to send verification');
+      setStatus({ type: 'success', message: 'Verification email sent' });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || 'Failed to send verification' });
+    } finally {
+      setLoadingAction(null);
+      setVerifyUser(null);
+    }
+  };

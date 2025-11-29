@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
         photoURL: sessionData.photoURL || null,
         emailVerified: sessionData.emailVerified !== false,
         createdAt: sessionData.createdAt || new Date().toISOString(),
-        lastLoginAt: sessionData.lastLoginAt || new Date().toISOString()
+        lastLoginAt: sessionData.lastLoginAt || new Date().toISOString(),
+        isAdmin: sessionData.isAdmin === true
       };
     } catch (parseError) {
       // If JSON parsing fails, check for legacy format (plain string for dev users)
@@ -80,7 +81,8 @@ export async function GET(request: NextRequest) {
             photoURL: null,
             emailVerified: true,
             createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString()
+            lastLoginAt: new Date().toISOString(),
+            isAdmin: false
           };
         } else { // dev_test_user_1
           user = {
@@ -91,13 +93,33 @@ export async function GET(request: NextRequest) {
             photoURL: null,
             emailVerified: true,
             createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString()
+            lastLoginAt: new Date().toISOString(),
+            isAdmin: false
           };
         }
       } else {
         console.log('[Session] Invalid session format');
         return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
       }
+    }
+
+    // Enrich from Firestore (authoritative username/isAdmin)
+    try {
+      const admin = initAdmin();
+      const db = admin.firestore();
+      const userDoc = await db.collection(getCollectionName('users')).doc(user.uid).get();
+      if (userDoc.exists) {
+        const data = userDoc.data() || {};
+        if (data.username) {
+          user.username = data.username;
+          if (!user.displayName) user.displayName = data.username;
+        }
+        if (data.isAdmin === true || data.role === 'admin') {
+          user.isAdmin = true;
+        }
+      }
+    } catch (e) {
+      console.warn('[Session] Failed to enrich user from Firestore:', e);
     }
 
     console.log(`[Session] Simple session valid for: ${user.email}`);

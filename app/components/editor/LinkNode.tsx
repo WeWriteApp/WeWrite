@@ -15,6 +15,7 @@ interface LinkNodeProps {
   canEdit?: boolean;
   isEditing?: boolean;
   onEditLink?: () => void; // Add callback for editing links
+  children?: React.ReactNode; // Slate children (must be rendered for DOM mapping)
   // Slate.js attributes for editor integration
   [key: string]: any;
 }
@@ -28,7 +29,7 @@ interface LinkNodeProps {
  * - Protocol links (special WeWrite protocol links)
  * - Compound links (page + author)
  */
-const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = false, onEditLink, ...attributes }) => {
+const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = false, onEditLink, children, ...attributes }) => {
 
   // Check if we have Slate.js attributes (for editor mode) or not (for viewer mode)
   const hasSlateAttributes = attributes && Object.keys(attributes).length > 0;
@@ -38,10 +39,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     ? {
         ...attributes,
         contentEditable: false,
-        style: { userSelect: 'none' }
+        style: { userSelect: 'none', display: 'inline-block', verticalAlign: 'baseline' }
       }
     : {
-        style: { userSelect: 'none' }
+        style: { userSelect: 'none', display: 'inline-block', verticalAlign: 'baseline' }
       };
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [linkNode, setLinkNode] = useState(node);
@@ -315,6 +316,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
         >
           {displayText || "WeWrite Protocol"}
         </PillLink>
+        <span style={{ display: 'none' }}>{children}</span>
       </span>
     );
   }
@@ -400,6 +402,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
             pillVariant="secondary"
             className="author-portion"
           />
+          <span style={{ display: 'none' }}>{children}</span>
         </span>
       );
     }
@@ -423,7 +426,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     });
 
     return (
-      <span className="inline-block">
+      <span className="inline-block" {...wrapperProps}>
         <InternalLinkWithTitle
           pageId={pageId}
           href={formattedHref}
@@ -435,6 +438,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
           isEditing={isEditing}
           onEditLink={onEditLink}
         />
+        <span style={{ display: 'none' }}>{children}</span>
       </span>
     );
   }
@@ -482,6 +486,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
             {truncatedDisplayText}
             {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
           </PillLink>
+          <span style={{ display: 'none' }}>{children}</span>
         </span>
 
         <ExternalLinkPreviewModal
@@ -531,6 +536,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       >
         {displayText}
       </PillLink>
+      <span style={{ display: 'none' }}>{children}</span>
     </span>
   );
 };
