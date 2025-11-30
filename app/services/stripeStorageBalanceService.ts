@@ -153,12 +153,16 @@ export class StripeStorageBalanceService {
     amount: number,
     destinationAccountId: string,
     userId: string,
-    description: string
-  ): Promise<{ success: boolean; transferId?: string; error?: string }> {
+    description: string,
+    platformFeeAmount?: number,
+    payoutFeeCents?: number
+  ): Promise<{ success: boolean; transferId?: string; feeTransferId?: string; error?: string }> {
     try {
       console.log(`💸 [STORAGE BALANCE] Processing payout of ${formatUsdCents(amount * 100)} from storage to ${destinationAccountId}`);
 
       const amountInCents = Math.round(amount * 100);
+      const feeInCents = platformFeeAmount ? Math.round(platformFeeAmount * 100) : 0;
+      const payoutFee = payoutFeeCents ? Math.round(payoutFeeCents) : 0;
 
       // Create transfer from storage balance to connected account
       const transfer = await this.stripe.transfers.create({
@@ -170,9 +174,38 @@ export class StripeStorageBalanceService {
         metadata: {
           type: 'payout_from_storage',
           userId,
+          payoutAmountCents: amountInCents.toString(),
+          platformFeeCents: feeInCents.toString(),
+          platformFeeUsd: feeInCents ? formatUsdCents(feeInCents) : '0.00',
+          payoutFeeCents: payoutFee.toString(),
+          payoutFeeUsd: payoutFee ? formatUsdCents(payoutFee) : '0.00',
           fundHoldingModel: 'storage_balance'
         }
       });
+
+      let feeTransferId: string | undefined;
+
+      // Route platform fee back to payments balance (platform revenue)
+      if (feeInCents > 0) {
+        const feeTransfer = await this.stripe.transfers.create({
+          amount: feeInCents,
+          currency: 'usd',
+          destination: null as any, // to platform’s payments balance
+          source_transaction: 'storage',
+          description: `Platform fee for payout ${transfer.id}`,
+          metadata: {
+            type: 'platform_fee_from_storage',
+            relatedPayout: transfer.id,
+            userId,
+            platformFeeCents: feeInCents.toString(),
+            platformFeeUsd: formatUsdCents(feeInCents),
+            payoutFeeCents: payoutFee.toString(),
+            payoutFeeUsd: payoutFee ? formatUsdCents(payoutFee) : '0.00',
+            fundHoldingModel: 'storage_balance'
+          }
+        });
+        feeTransferId = feeTransfer.id;
+      }
 
       // Record the operation
       await this.recordStorageBalanceOperation({
@@ -186,11 +219,25 @@ export class StripeStorageBalanceService {
         status: 'completed'
       });
 
+      if (feeTransferId) {
+        await this.recordStorageBalanceOperation({
+          id: feeTransferId,
+          type: 'payout_from_storage',
+          amount: platformFeeAmount || 0,
+          userId,
+          description: `Platform fee for payout ${transfer.id}`,
+          stripeTransferId: feeTransferId,
+          createdAt: new Date(),
+          status: 'completed'
+        });
+      }
+
       console.log(`✅ [STORAGE BALANCE] Successfully processed payout ${transfer.id}`);
 
       return {
         success: true,
-        transferId: transfer.id
+        transferId: transfer.id,
+        feeTransferId
       };
 
     } catch (error) {

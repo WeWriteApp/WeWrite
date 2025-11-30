@@ -136,11 +136,19 @@ export class PayoutService {
       }
 
       const amountDollars = payout.amountCents / 100;
+      // Platform fee: keep it configurable; default to 7% held as platform revenue
+      const PLATFORM_FEE_RATE = 0.07;
+      const platformFeeAmount = amountDollars * PLATFORM_FEE_RATE;
+      // Payout fee (audit metadata only; charged by Stripe) – standard $0.25
+      const PAYOUT_FEE_CENTS = 25;
+
       const payoutResult = await stripeStorageBalanceService.processPayoutFromStorage(
         amountDollars,
         stripeAccountId,
         payout.userId,
-        `Payout ${payoutId}`
+        `Payout ${payoutId}`,
+        platformFeeAmount,
+        PAYOUT_FEE_CENTS
       );
 
       if (!payoutResult.success || !payoutResult.transferId) {

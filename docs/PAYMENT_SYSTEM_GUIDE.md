@@ -2,7 +2,7 @@
 
 ## Overview
 
-WeWrite uses a **simplified USD-based payment system** that enables writers to receive real money from supporters. This guide covers the complete payment architecture, from subscriptions to payouts.
+WeWrite uses a **USD-based payment system** with Stripe Payments + Storage Balances to keep platform revenue and creator obligations separated and auditable. This guide covers the complete payment architecture, from subscriptions to payouts.
 
 ## 🏗️ System Architecture
 
@@ -16,33 +16,33 @@ WeWrite uses a **simplified USD-based payment system** that enables writers to r
 ### Data Flow
 
 ```
-User Subscription → USD Balance → Allocations → Creator Earnings → Payouts
+Subscription → Monthly allocation ledger (ServerUsdService) → Month-end storage/payments balance transfer → Creator earnings → Payouts (platform fee retained in payments balance)
 ```
 
 ## 💰 How Money Flows
 
-### 1. Subscription Payment
-- Users pay monthly subscriptions via Stripe
-- Subscription amounts: $10, $20, or $30 per month
-- Funds go to WeWrite's Stripe account
-- **Downgrades**: By default we schedule the lower amount for the next billing cycle (no immediate proration/credit) to avoid surprise card prompts. An optional “apply now” path can be enabled, but defaults to next-cycle.
+### 1) Subscription Payment
+- Users pay monthly subscriptions via Stripe Checkout.
+- Subscription amount is recorded as a **monthly allocation balance** in `ServerUsdService`; no immediate transfer between Stripe balances is performed at checkout time.
+- **Downgrades**: Lower amount is scheduled for the next billing cycle (no refunds). Upgrades collect the delta on the next billing; existing valid payment method is reused to avoid extra friction.
 
-### 2. USD Allocation
-- Users allocate their subscription funds to creators
-- Each dollar allocated goes directly to the creator
-- Allocations are tracked monthly
+### 2) Month-End Storage/Payments Transfer
+- Cron endpoint: `POST /api/cron/storage-balance-processing` (API key protected; supports `?dryRun=true`).
+- At month close, we sum allocations for the month:
+  - **Allocated funds** → moved from platform payments to **Stripe Storage Balance** (`processMonthlyStorageBalance`).
+  - **Unallocated funds** → stay in / move to **Stripe Payments Balance** as platform revenue.
+- Metadata on transfers remains labeled for audit.
 
-### 3. Creator Earnings
-- Creators accumulate USD earnings from allocations
-- Earnings start as "pending" (current month)
-- At month-end, pending earnings become "available"
+### 3) USD Allocation / Creator Earnings
+- Users allocate their monthly balance to creators throughout the month; tracked per month (`usdAllocations`).
+- Allocated amounts roll into creator earnings for that month.
+- Earnings start as "pending" and become "available" after month-end processing.
 
-### 4. Payouts
-- Creators can request payouts of available earnings
-- Minimum payout: $25.00
-- Platform fee: 10%
-- Stripe fee: $0.25 per transfer
-- Money goes to creator's connected bank account
+### 4) Payouts
+- Payouts are sourced **from Storage Balance** to the creator’s connected account.
+- Platform fee: **7%** retained in Payments Balance; Stripe payout fee: $0.25/transfer.
+- Minimum payout: $25.00.
+- Status tracked: pending → processing → completed.
 
 ## 🗄️ Database Schema
 
@@ -118,14 +118,15 @@ interface WriterUsdEarnings {
 
 1. **Lock Allocations** - Current month allocations are locked
 2. **Calculate Earnings** - Sum allocations per creator
-3. **Update Status** - Move earnings from "pending" to "available"
-4. **Process Payouts** - Eligible creators receive automatic payouts
-5. **Platform Revenue** - Unallocated funds become platform revenue
+3. **Move Balances** - Month-end storage balance processing moves allocated → Storage Balance and unallocated → Payments Balance (platform revenue)
+4. **Update Status** - Move earnings from "pending" to "available"
+5. **Process Payouts** - Eligible creators receive automatic payouts
 
 ### Automated Processing
 
-- **Trigger**: Cron job on 1st of each month
-- **Endpoint**: `/api/usd/process-writer-earnings`
+- **Triggers**:
+  - `/api/cron/storage-balance-processing` (allocated → storage, unallocated → payments; supports `dryRun`)
+  - `/api/usd/process-writer-earnings` (earnings availability + payout prep)
 - **Authentication**: API key required
 - **Dry Run**: Available for testing
 
@@ -141,15 +142,15 @@ interface WriterUsdEarnings {
 
 1. Creator requests payout via UI
 2. System validates eligibility and amount
-3. Platform fee (10%) calculated and deducted
-4. Stripe transfer initiated to creator's bank
+3. Platform fee (7%) calculated and retained in Payments Balance
+4. Stripe transfer initiated from Storage Balance to creator's bank
 5. Status tracked: pending → processing → completed
 
 ### Fee Structure
 
-- **Platform Fee**: 10% of gross earnings
+- **Platform Fee**: 7% of gross earnings (retained in Payments Balance)
 - **Stripe Fee**: $0.25 per transfer
-- **Example**: $100 earnings → $90 after platform fee → $89.75 after Stripe fee
+- **Example**: $100 earnings → $93 after platform fee → $92.75 after Stripe fee
 
 ## 🔧 API Endpoints
 
@@ -163,6 +164,7 @@ interface WriterUsdEarnings {
 - `POST /api/earnings/user` - Request payout
 
 ### Admin/Cron
+- `POST /api/cron/storage-balance-processing` - Month-end transfer (allocated → storage, unallocated → payments)
 - `POST /api/usd/process-writer-earnings` - Monthly processing
 - `GET /api/debug/earnings-status` - Debug earnings status
 

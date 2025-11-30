@@ -28,26 +28,26 @@ WeWrite now uses **Stripe's Storage Balance** system for perfect fund separation
 
 ## 🔄 **How Funds Flow**
 
-### **1. Subscription Payment**
+### **1. Subscription Payment (Start of Month)**
 ```
-User pays $10 subscription → Payments Balance (+$10)
-```
-
-### **2. User Allocates Funds**
-```
-User allocates $7 to creators → Storage Balance (+$7)
-                              → Payments Balance (-$7)
+User pays $10 subscription → Recorded as monthly allocation balance (funds initially land in Stripe Payments Balance)
 ```
 
-### **3. Month-End "Use It or Lose It"**
+### **2. Allocations (Ledger-Only During Month)**
 ```
-Unallocated $3 → Stays in Payments Balance (platform revenue)
+User allocates $7 to creators → Recorded in usdAllocations + ServerUsdService (no Stripe balance movement yet)
+```
+
+### **3. Month-End Storage/Payments Transfer**
+```
+Allocated $7  → Moved to Storage Balance (cron: /api/cron/storage-balance-processing)
+Unallocated $3 → Remains in Payments Balance as platform revenue
 ```
 
 ### **4. Monthly Payouts**
 ```
 Storage Balance ($7) → Creator bank accounts
-Storage Balance → $0 (after payouts)
+Platform fee (7%) → Retained in Payments Balance
 ```
 
 ---
@@ -55,15 +55,16 @@ Storage Balance → $0 (after payouts)
 ## 📊 **Monthly Processing Cycle**
 
 ### **Throughout the Month:**
-- **Subscriptions** → Payments Balance
-- **User allocations** → Storage Balance (escrowed)
-- **Unallocated funds** → Stay in Payments Balance
+- **Subscriptions** → Payments Balance (settle at checkout) + recorded as monthly allocation balances
+- **User allocations** → Ledger only (usdAllocations + ServerUsdService); Stripe balances unchanged until month-end
+- **Unallocated funds** → Remain in Payments Balance
 
 ### **Month-End Processing:**
 1. **Lock allocations** (no more changes allowed)
-2. **Calculate earnings** (with 7% platform fee)
-3. **Process payouts** from Storage Balance
-4. **Platform revenue** remains in Payments Balance
+2. **Storage/Payments transfer** (`/api/cron/storage-balance-processing`): allocated → Storage Balance; unallocated → Payments Balance
+3. **Calculate earnings** (with 7% platform fee)
+4. **Process payouts** from Storage Balance
+5. **Platform revenue** remains in Payments Balance
 
 ### **Result:**
 - **Storage Balance** → Near $0 (after payouts)

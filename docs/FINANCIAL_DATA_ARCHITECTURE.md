@@ -4,6 +4,13 @@
 
 The WeWrite financial data system has been **refactored into separated, focused contexts** that each handle a specific domain of financial data. This eliminates the complexity of a monolithic context and provides clear separation of concerns with dedicated caching and state management.
 
+## Stripe Balance Flows (Source of Truth)
+
+- **Subscription payments**: Land in Stripe Payments Balance and are recorded as monthly allocation balances in `ServerUsdService` (no immediate storage transfer).
+- **Month-end processing**: Cron `POST /api/cron/storage-balance-processing` aggregates the month via `ServerUsdService.getMonthlyAllocationSummary` and moves **allocated** amounts to **Stripe Storage Balance** while keeping **unallocated** amounts in **Payments Balance** as platform revenue.
+- **Payouts**: Paid **from Storage Balance** to connected accounts; **platform fee (7%)** is retained in **Payments Balance** (with metadata on transfers for auditability).
+- **Writer earnings availability**: `/api/usd/process-writer-earnings` promotes pending → available after month-end transfer completes.
+
 ## Separated Context Architecture
 
 The financial system now consists of **four dedicated contexts**:

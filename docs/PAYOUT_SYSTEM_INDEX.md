@@ -6,6 +6,11 @@ WeWrite's payout system enables content creators to convert earned USD into real
 
 **🎉 IMPLEMENTATION COMPLETE**: The simplified payout system is production-ready with automatic monthly processing, real-time status updates, and streamlined architecture.
 
+**Stripe balance flow (audit)**:
+- Subscription payments land in **Payments Balance** and are recorded as monthly allocation balances (no immediate storage movement).
+- Month-end cron (`/api/cron/storage-balance-processing`) moves **allocated** amounts to **Storage Balance**; **unallocated** amounts stay in **Payments Balance** as platform revenue.
+- Payouts transfer **from Storage Balance** to connected accounts; the **platform fee (7%)** is retained in **Payments Balance**.
+
 ## Core Documentation
 
 ### System Architecture
@@ -49,7 +54,7 @@ WeWrite's payout system enables content creators to convert earned USD into real
 
 ### Fee Structure
 
-**WeWrite Platform Fee**: 10% of gross earnings (updated August 2025)
+**WeWrite Platform Fee**: 7% of gross earnings (retained in Payments Balance)
 **Stripe Payout Fees**:
 - Standard: $0.25 per transfer
 - Instant: 1.5% + $0.25 per transfer
