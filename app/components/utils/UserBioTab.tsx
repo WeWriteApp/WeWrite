@@ -94,7 +94,90 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     }));
   }, [parseTextToNodes]);
 
-  const viewBioContent = useMemo(() => linkifyBioContent(bioContent), [bioContent, linkifyBioContent]);
+  // Deep linkify existing structured content (arrays) so URLs become real links in all environments
+  const linkifyStructuredContent = useCallback((content: any): any => {
+    if (!Array.isArray(content)) return content;
+
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+
+    const linkifyChildren = (children: any[]): any[] => {
+      const result: any[] = [];
+
+      children.forEach((child) => {
+        // If child already a link element, keep as-is
+        if (child?.type === 'link') {
+          result.push(child);
+          return;
+        }
+
+        // If child has nested children, recurse
+        if (Array.isArray(child?.children)) {
+          result.push({
+            ...child,
+            children: linkifyChildren(child.children),
+          });
+          return;
+        }
+
+        // If plain text node, split into text + link nodes
+        if (typeof child?.text === 'string') {
+          const text = child.text;
+          let lastIndex = 0;
+          let match;
+          const segments: any[] = [];
+
+          while ((match = urlRegex.exec(text)) !== null) {
+            const [rawUrl] = match;
+            const start = match.index;
+
+            if (start > lastIndex) {
+              segments.push({ text: text.slice(lastIndex, start) });
+            }
+
+            const href = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+            segments.push({
+              type: 'link',
+              url: href,
+              isExternal: true,
+              children: [{ text: rawUrl }],
+            });
+
+            lastIndex = start + rawUrl.length;
+          }
+
+          if (lastIndex < text.length) {
+            segments.push({ text: text.slice(lastIndex) });
+          }
+
+          result.push(
+            segments.length > 0
+              ? { ...child, children: segments, text: undefined }
+              : child
+          );
+        } else {
+          result.push(child);
+        }
+      });
+
+      return result;
+    };
+
+    return content.map((node) => {
+      if (Array.isArray(node?.children)) {
+        return { ...node, children: linkifyChildren(node.children) };
+      }
+      return node;
+    });
+  }, []);
+
+  const viewBioContent = useMemo(() => {
+    if (typeof bioContent === 'string') {
+      return linkifyBioContent(bioContent);
+    }
+
+    // For structured content, ensure any raw URLs become link nodes
+    return linkifyStructuredContent(bioContent);
+  }, [bioContent, linkifyBioContent, linkifyStructuredContent]);
 
   // Enhanced setIsEditing function that captures click position
   // For always-editing mode, this doesn't change the editing state for owners
