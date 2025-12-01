@@ -27,7 +27,6 @@ interface RecentEdit {
   title: string;
   userId: string;
   username: string;
-  displayName?: string;
   lastModified: string;
   isPublic: boolean;
   totalPledged?: number;
@@ -388,7 +387,6 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
               pageName: edit.title || 'Untitled',
               userId: edit.userId,
               username: edit.username,
-              displayName: edit.displayName,
               timestamp: new Date(edit.lastModified),
               isPublic: edit.isPublic || false,
               isNewPage: false,

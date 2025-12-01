@@ -8,6 +8,8 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useBanner } from '../../providers/BannerProvider';
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
+import { sendEmailVerification } from 'firebase/auth';
+import { auth } from '../../firebase/config';
 
 const STORAGE_KEYS = {
   EMAIL_BANNER_DISMISSED: 'wewrite_email_banner_dismissed',
@@ -86,15 +88,8 @@ export default function VerifyEmailBanner() {
         label: 'Resend_Email'
       });
 
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}), // Empty body - will use authenticated user's email
-      });
-
-      if (response.ok) {
+      if (auth?.currentUser) {
+        await sendEmailVerification(auth.currentUser);
         // Increment attempts and set cooldown
         const newAttempts = resendAttempts + 1;
         setResendAttempts(newAttempts);
@@ -117,9 +112,9 @@ export default function VerifyEmailBanner() {
         }, 1000);
 
         // Show success feedback
-        console.log('Verification email sent successfully');
+        console.log('Verification email sent successfully via Firebase client SDK');
       } else {
-        console.error('Failed to resend verification email');
+        console.warn('No authenticated user; cannot resend verification email');
       }
     } catch (error) {
       console.error('Error resending verification email:', error);

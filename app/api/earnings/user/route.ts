@@ -19,6 +19,7 @@ import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../
 // Use simple database queries instead of complex services
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 // 🚨 CRITICAL COST OPTIMIZATION: Aggressive caching for earnings data
 const earningsCache = new Map<string, { data: any; timestamp: number }>();
@@ -188,7 +189,11 @@ async function getIncomingAllocationsForUser(userId: string) {
         const userDoc = await db.collection(getCollectionName('users')).doc(allocation.userId).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          fromUsername = userData?.username || userData?.displayName || 'Anonymous';
+          fromUsername = sanitizeUsername(
+            userData?.username || userData?.displayName || userData?.email || 'Anonymous',
+            'User',
+            `user_${allocation.userId.slice(0, 8)}`
+          );
         }
       } catch (error) {
         console.warn(`[EARNINGS] Error fetching username for ${allocation.userId}:`, error);

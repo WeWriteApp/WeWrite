@@ -13,14 +13,13 @@ export interface UserData {
   uid?: string;
   email?: string | null;
   username?: string | null;
-  displayName?: string | null;
   [key: string]: any;
 }
 
 export interface UsernameCheckResult {
   hasUsername: boolean;
   username: string | null;
-  source: 'username' | 'displayName' | 'email' | 'none';
+  source: 'username' | 'email' | 'none';
   needsUsername: boolean;
   reason?: string;
 }
@@ -181,7 +180,7 @@ export const generateUsernameSuggestions = (username: string): string[] => {
   const suggestions: string[] = [];
   const baseClean = suggestCleanUsername(username);
 
-  if (baseClean && baseClean !== username) {
+  if (baseClean) {
     suggestions.push(baseClean);
 
     // Add variations with numbers

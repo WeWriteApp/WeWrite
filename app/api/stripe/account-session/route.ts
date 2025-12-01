@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -75,12 +76,17 @@ export async function POST(request: NextRequest) {
       // Get username for better account identification
       let username = 'Unknown User';
       try {
-        if (userData?.username) {
-          username = userData.username;
-        } else if (userData?.displayName) {
-          username = userData.displayName;
-        } else if (userEmail) {
-          username = userEmail.split('@')[0];
+        const emailLocalPart = userEmail ? userEmail.split('@')[0] : null;
+        username = sanitizeUsername(
+          userData?.username || userData?.displayName || null,
+          'User',
+          'User'
+        );
+        if (!username || username === 'User') {
+          username = `user_${userId.substring(0, 8)}`;
+        }
+        if (emailLocalPart) {
+          console.log('Using email_local_part for backend metadata only');
         }
       } catch (error) {
         console.warn('Could not determine username for Stripe account:', error);

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
+import React, { useState, useEffect, useCallback, useContext, useRef, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Edit, Save, X, Loader, AlertTriangle } from "lucide-react";
 import { getUserProfile } from "../../utils/apiClient";
@@ -42,6 +42,59 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
   // Track if content has changed
   const hasUnsavedChanges = isEditing && bioContent !== originalContent;
+
+  // Helper: convert plain-text bios with URLs into link nodes for proper styling
+  const parseTextToNodes = useCallback((text: string) => {
+    const nodes: any[] = [];
+    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkPattern.exec(text)) !== null) {
+      const [fullMatch, mdText, mdUrl, rawUrl] = match;
+      const start = match.index;
+
+      if (start > lastIndex) {
+        nodes.push({ text: text.slice(lastIndex, start) });
+      }
+
+      const href = mdUrl || rawUrl || '';
+      const isExternal = /^https?:\/\//i.test(href) || href.startsWith('www.');
+      const normalizedHref = href.startsWith('http')
+        ? href
+        : href.startsWith('www.')
+          ? `https://${href}`
+          : href;
+
+      nodes.push({
+        type: 'link',
+        url: normalizedHref,
+        isExternal,
+        children: [{ text: mdText || rawUrl || href }]
+      });
+
+      lastIndex = start + fullMatch.length;
+    }
+
+    if (lastIndex < text.length) {
+      nodes.push({ text: text.slice(lastIndex) });
+    }
+
+    return nodes.length > 0 ? nodes : [{ text }];
+  }, []);
+
+  const linkifyBioContent = useCallback((content: EditorContent | string) => {
+    if (typeof content !== 'string') return content;
+
+    const paragraphs = content.split(/\n{2,}/).map(p => p.replace(/\n+/g, ' '));
+
+    return paragraphs.map(paragraph => ({
+      type: 'paragraph',
+      children: parseTextToNodes(paragraph)
+    }));
+  }, [parseTextToNodes]);
+
+  const viewBioContent = useMemo(() => linkifyBioContent(bioContent), [bioContent, linkifyBioContent]);
 
   // Enhanced setIsEditing function that captures click position
   // For always-editing mode, this doesn't change the editing state for owners
@@ -325,7 +378,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           <div className="max-w-none">
             {bioContent ? (
               <ContentDisplay
-                content={bioContent}
+                content={viewBioContent}
                 isEditable={false}
                 showToolbar={false}
                 showLineNumbers={false}

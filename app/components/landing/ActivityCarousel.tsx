@@ -65,7 +65,6 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
           pageName: edit.title,
           userId: edit.userId,
           username: edit.username,
-          displayName: edit.displayName,
           timestamp: edit.lastModified,
           lastModified: edit.lastModified,
           diff: edit.lastDiff,

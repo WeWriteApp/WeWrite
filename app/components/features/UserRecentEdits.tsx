@@ -11,7 +11,6 @@ interface RecentEdit {
   title: string;
   userId: string;
   username: string;
-  displayName?: string;
   lastModified: string;
   isPublic: boolean;
   totalPledged?: number;
@@ -97,7 +96,6 @@ export default function UserRecentEdits({
         title: page.title || 'Untitled',
         userId: page.userId,
         username: page.username || 'Unknown',
-        displayName: page.displayName,
         lastModified: page.lastModified,
         isPublic: page.isPublic || false,
         totalPledged: page.totalPledged,

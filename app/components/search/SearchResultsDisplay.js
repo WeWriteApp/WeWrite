@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { getBatchUserData } from '../../utils/apiDeduplication';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 import PerformanceMonitor from '../utils/PerformanceMonitor';
 
 import { useAuth } from '../../providers/AuthProvider';
@@ -51,12 +52,16 @@ const SearchResultsDisplay = React.memo(({
 
     // Create a combined array of all results
     let combined = [
-      ...(results.users || []).map(user => ({
-        ...user,
-        type: 'user',
-        displayName: user?.username,
-        url: `/user/${user.id}`
-      })),
+      ...(results.users || []).map(user => {
+        const username = sanitizeUsername(user?.username || user?.displayName || user?.email || `user_${user?.id?.slice(0, 8)}`);
+        return {
+          ...user,
+          type: 'user',
+          displayName: username,
+          username,
+          url: `/user/${user.id}`
+        };
+      }),
       ...(results.pages || []).map(page => ({
         ...page,
         type: 'page',

@@ -1032,7 +1032,7 @@ export default function ContentPageView({
           title: pageRef.title,
           content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
           userId: user.uid,
-          username: user.username || user.displayName || 'Anonymous',
+          username: user.username || 'Anonymous',
           lastModified: new Date().toISOString(),
           isReply: false,
           groupId: null,
@@ -1677,7 +1677,7 @@ export default function ContentPageView({
               page?.username ||
               (page as any)?.authorUsername ||
               (page as any)?.user?.username ||
-              (page as any)?.user?.displayName
+              null
             }
             userId={page?.userId}
             isLoading={isLoading}

@@ -5,6 +5,7 @@ import { getCollectionNameAsync, getSubCollectionPath, PAYMENT_COLLECTIONS } fro
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackQuery } from '../../../utils/costOptimizationMonitor';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 // EMERGENCY COST OPTIMIZATION: Global cache for recent edits
 const globalRecentEditsCache = new Map<string, { data: any; timestamp: number }>();
@@ -154,10 +155,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const pages = pagesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const pages = pagesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      const safeUsername = sanitizeUsername(
+        (data as any).username || (data as any).displayName || (data as any).authorName || (data as any).email,
+        'User',
+        `user_${doc.id.slice(0, 8)}`
+      );
+      return {
+        id: doc.id,
+        ...data,
+        username: safeUsername
+      };
+    });
 
     // Filter pages based on criteria (same logic as homepage)
     const filteredPages = pages.filter(page => {
@@ -231,7 +241,6 @@ export async function GET(request: NextRequest) {
           title: page.title || 'Untitled',
           userId: page.userId,
           username: page.username,
-          displayName: page.displayName,
           lastModified: page.lastModified,
           totalPledged: page.totalPledged || 0,
           pledgeCount: page.pledgeCount || 0,
@@ -261,7 +270,6 @@ export async function GET(request: NextRequest) {
         ...edit,
         // Use username from user data if available, fallback to page username
         username: userData?.username || edit.username,
-        displayName: userData?.displayName || edit.displayName,
         hasActiveSubscription: userData?.hasActiveSubscription || false,
         subscriptionTier: userData?.tier || null,
         subscriptionAmount: userData?.subscriptionAmount || null

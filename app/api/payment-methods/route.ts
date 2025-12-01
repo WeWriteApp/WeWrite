@@ -72,13 +72,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ paymentMethods: [] }, { status: 200 });
     }
 
-    // Get the user's payment methods from Stripe
+    // Get the user's payment methods from Stripe (card, Link, bank, SEPA)
     debugLog('[PAYMENT METHODS] Fetching payment methods from Stripe for customer:', userData.stripeCustomerId);
-    const paymentMethods = await stripe.paymentMethods.list({
-      customer: userData.stripeCustomerId,
-      type: 'card'});
+    const paymentMethodTypes: Stripe.PaymentMethodListParams.Type[] = ['card', 'link', 'us_bank_account', 'sepa_debit'];
+    const stripeMethods: Stripe.PaymentMethod[] = [];
 
-    debugLog('[PAYMENT METHODS] Stripe response:', { count: paymentMethods.data.length, methods: paymentMethods.data.map(pm => ({ id: pm.id, last4: pm.card?.last4, brand: pm.card?.brand })) });
+    for (const pmType of paymentMethodTypes) {
+      try {
+        const response = await stripe.paymentMethods.list({
+          customer: userData.stripeCustomerId,
+          type: pmType
+        });
+        stripeMethods.push(...response.data);
+      } catch (listError) {
+        console.warn(`[PAYMENT METHODS] Failed to list payment methods of type ${pmType}:`, listError);
+      }
+    }
+
+    debugLog('[PAYMENT METHODS] Stripe response:', { count: stripeMethods.length, methods: stripeMethods.map(pm => ({ id: pm.id, type: pm.type, last4: pm.card?.last4, brand: pm.card?.brand })) });
 
     // Get the user's payment methods metadata from Firestore
     const paymentMethodsDoc = await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').get();
@@ -86,8 +97,11 @@ export async function GET(request: NextRequest) {
     debugLog('[PAYMENT METHODS] Firestore metadata:', paymentMethodsData);
 
     // Format the payment methods
-    const formattedPaymentMethods = paymentMethods.data.map(method => {
-      const isPrimary = method.id === paymentMethodsData.primary;
+    const formattedPaymentMethods = stripeMethods.map((method, index) => {
+      // Determine primary: explicit metadata, otherwise fall back to first method
+      const isPrimary = paymentMethodsData.primary
+        ? method.id === paymentMethodsData.primary
+        : index === 0;
 
       // Handle different payment method types
       if (method.type === 'card' && method.card) {
@@ -98,6 +112,17 @@ export async function GET(request: NextRequest) {
           last4: method.card.last4 || '****',
           expMonth: method.card.exp_month || 0,
           expYear: method.card.exp_year || 0,
+          isPrimary
+        };
+      } else if (method.type === 'link') {
+        return {
+          id: method.id,
+          type: 'link',
+          brand: method.card?.brand || 'Link',
+          last4: method.card?.last4 || '****',
+          expMonth: method.card?.exp_month || 0,
+          expYear: method.card?.exp_year || 0,
+          email: method.link?.email || undefined,
           isPrimary
         };
       } else if (method.type === 'us_bank_account' && method.us_bank_account) {
@@ -195,8 +220,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Payment method ID is required' }, { status: 400 });
     }
 
-    // Get the user's customer ID from Firestore
-    const userDoc = await db.collection('users').doc(userId).get();
+    // Get the user's customer ID from Firestore (environment-aware collections)
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
 
     if (!userData || !userData.stripeCustomerId) {
@@ -204,7 +229,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get the payment methods metadata
-    const paymentMethodsDoc = await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').get();
+    const paymentMethodsDoc = await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').get();
     const paymentMethodsData = paymentMethodsDoc.exists ? paymentMethodsDoc.data() : { primary: null, order: [] };
 
     // Check if this is the primary payment method
@@ -222,7 +247,7 @@ export async function DELETE(request: NextRequest) {
       updatedPrimary = updatedOrder.length > 0 ? updatedOrder[0] : null;
     }
 
-    await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').set({
+    await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').set({
       primary: updatedPrimary,
       order: updatedOrder}, { merge: true });
 

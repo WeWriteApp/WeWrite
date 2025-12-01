@@ -240,6 +240,37 @@ export default function SpendPage() {
     }
   };
 
+  const handleSetAllocationAmount = async (allocation: UsdAllocation, newAmountCents: number) => {
+    const delta = newAmountCents - allocation.usdCents;
+    if (delta === 0) return;
+
+    // Optimistic update
+    setAllocations(prev => prev.map(a =>
+      a.id === allocation.id
+        ? { ...a, usdCents: newAmountCents }
+        : a
+    ));
+
+    await refreshUsdBalance();
+
+    try {
+      const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
+      const body = allocation.resourceType === 'user'
+        ? { recipientUserId: allocation.resourceId, usdCentsChange: delta }
+        : { pageId: allocation.resourceId, usdCentsChange: delta };
+
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).catch(error => {
+        console.error('Error setting allocation (background):', error);
+      });
+    } catch (error) {
+      console.error('Error setting allocation amount:', error);
+    }
+  };
+
   // Update countdown every second
   useEffect(() => {
     const updateCountdown = () => {
@@ -389,38 +420,6 @@ export default function SpendPage() {
               />
             </div>
 
-            {/* Allocation Settings Section */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Allocation Settings
-              </h2>
-              <div className="bg-muted/30 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium">Allocation Interval</div>
-                    <div className="text-lg font-semibold">
-                      {formatUsdCents(allocationIntervalCents)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      per button press
-                    </div>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowIntervalModal(true)}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Change
-                  </Button>
-                </div>
-                <div className="mt-3 p-2 bg-muted/30 rounded text-xs text-muted-foreground">
-                  <strong>Tip:</strong> Long-press any + or - button to quickly change this setting
-                </div>
-              </div>
-            </div>
-
             {/* Payment Schedule Section */}
             <div>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -462,6 +461,8 @@ export default function SpendPage() {
                 onViewResource={handleViewResource}
                 onIncreaseAllocation={handleIncreaseAllocation}
                 onDecreaseAllocation={handleDecreaseAllocation}
+                onSetAllocationAmount={handleSetAllocationAmount}
+                onOpenIntervalModal={() => setShowIntervalModal(true)}
                 showSectionHeader={false} // Don't show header since we have our own
               />
             </div>

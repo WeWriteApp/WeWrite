@@ -4,27 +4,32 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
-import { useRouter } from 'next/navigation';
-import { CreditCard, Plus, Settings, AlertTriangle } from 'lucide-react';
+import { CreditCard, AlertTriangle, EllipsisVertical, Trash2, CheckCircle2, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import Link from 'next/link';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { cn } from '../../lib/utils';
 
 interface PaymentMethod {
+  type: string;
   id: string;
-  brand: string;
-  last4: string;
-  expMonth: number;
-  expYear: number;
+  brand?: string;
+  last4?: string;
+  expMonth?: number;
+  expYear?: number;
+  bankName?: string;
+  accountType?: string;
+  email?: string;
   isPrimary: boolean;
 }
 
 export function PaymentMethodsOverview() {
   const { user } = useAuth();
-  const router = useRouter();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -42,9 +47,9 @@ export function PaymentMethodsOverview() {
       setError(null);
 
       const response = await fetch('/api/payment-methods', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid })});
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -61,12 +66,78 @@ export function PaymentMethodsOverview() {
     }
   };
 
-  const getCardBrandIcon = (brand: string) => {
+  const getCardBrandIcon = (type: string) => {
+    if (type === 'us_bank_account' || type === 'sepa_debit') {
+      return <CreditCard className="h-4 w-4" />;
+    }
     return <CreditCard className="h-4 w-4" />;
+  };
+
+  const getDisplayLabel = (method: PaymentMethod) => {
+    switch (method.type) {
+      case 'card':
+      case 'link':
+        return `${(method.brand || 'Card').charAt(0).toUpperCase()}${(method.brand || 'Card').slice(1)} •••• ${method.last4 || '••••'}`;
+      case 'us_bank_account':
+        return `${method.bankName || 'Bank'} •••• ${method.last4 || '••••'}${method.accountType ? ` (${method.accountType})` : ''}`;
+      case 'sepa_debit':
+        return `SEPA •••• ${method.last4 || '••••'}`;
+      default:
+        return `${method.type} •••• ${method.last4 || '••••'}`;
+    }
   };
 
   const primaryMethod = paymentMethods.find(method => method.isPrimary);
   const otherMethods = paymentMethods.filter(method => !method.isPrimary);
+
+  const confirmAndDelete = async (paymentMethodId: string) => {
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm('Delete this payment method? This cannot be undone.')
+      : false;
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(paymentMethodId);
+      setError(null);
+      const response = await fetch('/api/payment-methods', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethodId })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete payment method');
+      }
+      await fetchPaymentMethods();
+    } catch (err) {
+      console.error('Error deleting payment method:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete payment method');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const makePrimary = async (paymentMethodId: string) => {
+    try {
+      setActionLoading(paymentMethodId);
+      setError(null);
+      const response = await fetch('/api/payment-methods/primary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethodId })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update primary payment method');
+      }
+      await fetchPaymentMethods();
+    } catch (err) {
+      console.error('Error setting primary payment method:', err);
+      setError(err instanceof Error ? err.message : 'Failed to set primary payment method');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,12 +177,12 @@ export function PaymentMethodsOverview() {
         )}
 
         {paymentMethods.length === 0 ? (
-          <div className="text-center py-6">
-            <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No payment methods</h3>
-            <p className="text-muted-foreground mb-4">
-              Add a payment method to start subscribing and supporting pages.
-            </p>
+          <div className="wewrite-card border border-dashed border-border/70 p-4 text-center space-y-3 shadow-none">
+            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+              <AlertTriangle className="h-5 w-5" />
+              <p className="font-medium text-foreground">Add a payment method</p>
+              <p>Needed to fund your account and process subscriptions.</p>
+            </div>
             <Button asChild>
               <Link href="/settings/subscription">
                 <Plus className="h-4 w-4 mr-2" />
@@ -123,61 +194,94 @@ export function PaymentMethodsOverview() {
           <div className="space-y-3">
             {/* Primary Payment Method */}
             {primaryMethod && (
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                <div className="flex items-center gap-3">
-                  {getCardBrandIcon(primaryMethod.brand)}
+              <div className={cn("wewrite-card p-3 flex items-start justify-between gap-3 shadow-sm")}>
+                <div className="flex items-start gap-3">
+                  {getCardBrandIcon(primaryMethod.type)}
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">
-                        {primaryMethod.brand.charAt(0).toUpperCase() + primaryMethod.brand.slice(1)} •••• {primaryMethod.last4}
-                      </p>
+                      <p className="font-medium">{getDisplayLabel(primaryMethod)}</p>
                       <Badge variant="default" className="text-xs">
                         Primary
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Expires {primaryMethod.expMonth.toString().padStart(2, '0')}/{primaryMethod.expYear}
-                    </p>
+                    {primaryMethod.expMonth && primaryMethod.expYear && (
+                      <p className="text-sm text-muted-foreground">
+                        Expires {primaryMethod.expMonth.toString().padStart(2, '0')}/{primaryMethod.expYear}
+                      </p>
+                    )}
+                    {primaryMethod.email && (
+                      <p className="text-sm text-muted-foreground">
+                        Link email: {primaryMethod.email}
+                      </p>
+                    )}
                   </div>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <EllipsisVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      disabled={actionLoading === primaryMethod.id}
+                      onClick={() => confirmAndDelete(primaryMethod.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete payment method
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
 
-            {/* Other Payment Methods (show max 2) */}
-            {otherMethods.slice(0, 2).map((method) => (
-              <div key={method.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  {getCardBrandIcon(method.brand)}
+            {/* Other Payment Methods */}
+            {otherMethods.map((method) => (
+              <div key={method.id} className={cn("wewrite-card p-3 flex items-start justify-between gap-3 shadow-sm")}>
+                <div className="flex items-start gap-3">
+                  {getCardBrandIcon(method.type)}
                   <div>
-                    <p className="font-medium">
-                      {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last4}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires {method.expMonth.toString().padStart(2, '0')}/{method.expYear}
-                    </p>
+                    <p className="font-medium">{getDisplayLabel(method)}</p>
+                    {method.expMonth && method.expYear && (
+                      <p className="text-sm text-muted-foreground">
+                        Expires {method.expMonth.toString().padStart(2, '0')}/{method.expYear}
+                      </p>
+                    )}
+                    {method.email && (
+                      <p className="text-sm text-muted-foreground">
+                        Link email: {method.email}
+                      </p>
+                    )}
                   </div>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <EllipsisVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      disabled={actionLoading === method.id}
+                      onClick={() => makePrimary(method.id)}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Make primary
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={actionLoading === method.id}
+                      onClick={() => confirmAndDelete(method.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete payment method
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
 
-            {/* Show count if there are more methods */}
-            {otherMethods.length > 2 && (
-              <div className="text-center py-2">
-                <p className="text-sm text-muted-foreground">
-                  +{otherMethods.length - 2} more payment method{otherMethods.length - 2 !== 1 ? 's' : ''}
-                </p>
-              </div>
-            )}
-
-            {/* Manage Button */}
-            <div className="pt-2">
-              <Button asChild variant="secondary" className="w-full">
-                <Link href="/settings/subscription" prefetch={false}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Manage All Payment Methods
-                </Link>
-              </Button>
-            </div>
           </div>
         )}
       </CardContent>

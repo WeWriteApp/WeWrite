@@ -76,6 +76,11 @@ Located in `app/utils/usernameSecurity.ts`:
 - **Returns**: Safe username with proper loading handling
 - **Usage**: Use when you have loading state information
 
+#### Display Name vs Username
+- **Usernames** are the only intended public identifier on WeWrite.
+- **Display names** are legacy/cosmetic only; we now mirror them to `username` for compatibility.
+- When you show a name, always use `username` (sanitized). Do not use or persist a separate `displayName`.
+
 #### `isEmailAddress(username)`
 - **Purpose**: Detects if a string is an email address
 - **Returns**: Boolean indicating if string contains '@'

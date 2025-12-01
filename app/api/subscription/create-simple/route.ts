@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[CREATE SIMPLE] Successfully created subscription ${subscription.id} for user ${userId} with status: ${subscription.status}`);
 
-    // Validate subscription status
+    // Validate subscription status (may be incomplete until payment succeeds)
     SubscriptionValidationService.validateSubscriptionStatus(subscription, 'active');
 
     // Save subscription to Firestore
@@ -199,6 +199,8 @@ export async function POST(request: NextRequest) {
       console.warn('[CREATE SIMPLE] Failed to log audit event:', auditError);
       // Don't fail the request if audit logging fails
     }
+
+    // Do not allocate funds here; wait for payment success webhook
 
     return NextResponse.json({
       success: true,

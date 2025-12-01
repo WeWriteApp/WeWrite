@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionNameAsync } from '../../utils/environmentConfig';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,9 +37,14 @@ export async function GET(request: NextRequest) {
 
     for (const userDoc of usersSnapshot.docs) {
       const userData = userDoc.data();
-      
-      // Skip users without usernames
-      if (!userData.username) continue;
+      const username = sanitizeUsername(
+        userData.username || userData.displayName || userData.email || `user_${userDoc.id.slice(0, 8)}`,
+        'User',
+        `user_${userDoc.id.slice(0, 8)}`
+      );
+
+      // Skip users without usable usernames
+      if (!username) continue;
 
       // Get recent pages by this user
       const pagesCollectionName = await getCollectionNameAsync('pages');
@@ -63,8 +69,8 @@ export async function GET(request: NextRequest) {
 
           suggestions.push({
             id: userData.id,
-            username: userData.username,
-            displayName: userData.displayName,
+            username,
+            displayName: username,
             recentPages
           });
         }

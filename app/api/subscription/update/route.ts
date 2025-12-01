@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { subscriptionId, newTier, newAmount, paymentMethodId, applyImmediately = false } = body;
+    const { subscriptionId, newTier, newAmount, paymentMethodId } = body;
 
     if (!subscriptionId || !newAmount) {
       return NextResponse.json({ 
@@ -69,13 +69,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount} (applyImmediately: ${applyImmediately})`);
+    console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount}`);
 
     // Check if this is a test subscription or development environment
     const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
                                process.env.NODE_ENV === 'development';
     
     let updatedSubscription;
+    const oldAmount = oldSubscriptionData?.amount || 0;
+    const isUpgrade = newAmount > oldAmount;
+    const prorationBehavior: 'create_prorations' | 'none' = isUpgrade ? 'create_prorations' : 'none';
     
     if (isTestSubscription) {
       // Handle test subscription - skip Stripe API calls
@@ -116,8 +119,9 @@ export async function POST(request: NextRequest) {
             id: currentSubscription.items.data[0].id,
             price: newPrice.id,
           }],
-          proration_behavior: applyImmediately ? 'create_prorations' : 'none',
-          billing_cycle_anchor: 'unchanged'
+          proration_behavior: prorationBehavior,
+          billing_cycle_anchor: 'unchanged',
+          payment_behavior: 'allow_incomplete'
         });
 
         // Update payment method if provided
@@ -182,9 +186,8 @@ export async function POST(request: NextRequest) {
     // Update subscription in Firestore
     await subscriptionRef.update(subscriptionData);
 
-    // Update user's USD allocation to reflect new subscription amount
-    console.log(`[SUBSCRIPTION UPDATE] Updating USD allocation for user ${userId}: $${newAmount}`);
-    await ServerUsdService.updateMonthlyUsdAllocation(userId, newAmount);
+    // Do not allocate funds here; wait for the next successful payment to set balances
+    console.log(`[SUBSCRIPTION UPDATE] Skipping USD allocation update until payment succeeds for user ${userId}`);
 
     // Log subscription update to audit trail for proper history
     try {

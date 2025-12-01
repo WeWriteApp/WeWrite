@@ -16,6 +16,7 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -33,7 +34,9 @@ const SingleProfileView = ({ profile }) => {
   const handleShareProfile = () => {
     // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
     const profileUrl = window.location.href;
-    const shareText = `${profile.username || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
+    // SECURITY: Never expose email local parts; sanitize username for sharing
+    const safeShareName = sanitizeUsername(profile.username || profile.displayName, 'User', 'User');
+    const shareText = `${safeShareName || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
 
     // Check if the Web Share API is available
     if (navigator.share) {

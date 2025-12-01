@@ -18,6 +18,7 @@ import { UsdAllocation } from '../../types/database';
 import { PillLink } from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
+import { UsdAllocationModal } from './UsdAllocationModal';
 
 // Enhanced allocation with page/user details
 interface EnhancedUsdAllocation extends UsdAllocation {
@@ -34,6 +35,8 @@ interface UsdAllocationBreakdownProps {
   onViewResource?: (allocation: EnhancedUsdAllocation) => void;
   onIncreaseAllocation?: (allocation: EnhancedUsdAllocation) => void;
   onDecreaseAllocation?: (allocation: EnhancedUsdAllocation) => void;
+  onSetAllocationAmount?: (allocation: EnhancedUsdAllocation, newAmountCents: number) => void;
+  onOpenIntervalModal?: () => void;
   className?: string;
   showActions?: boolean;
   maxVisible?: number;
@@ -48,6 +51,8 @@ export function UsdAllocationBreakdown({
   onViewResource,
   onIncreaseAllocation,
   onDecreaseAllocation,
+  onSetAllocationAmount,
+  onOpenIntervalModal,
   className = '',
   showActions = true,
   maxVisible = 5,
@@ -56,6 +61,9 @@ export function UsdAllocationBreakdown({
   const [showAll, setShowAll] = useState(false);
   const [stableSortedOrder, setStableSortedOrder] = useState<string[]>([]);
   const sortTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeAllocation, setActiveAllocation] = useState<EnhancedUsdAllocation | null>(null);
+  const [showAllocationModal, setShowAllocationModal] = useState(false);
 
   // Function to get the correct sort order
   const getSortedOrder = (allocs: EnhancedUsdAllocation[]) => {
@@ -97,6 +105,9 @@ export function UsdAllocationBreakdown({
     return () => {
       if (sortTimeoutRef.current) {
         clearTimeout(sortTimeoutRef.current);
+      }
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
       }
     };
   }, [allocations, stableSortedOrder]);
@@ -257,13 +268,31 @@ export function UsdAllocationBreakdown({
                   className="h-8 w-8 p-0 flex-shrink-0"
                   title="Decrease allocation"
                   onClick={() => onDecreaseAllocation?.(allocation)}
+                  onMouseDown={(e) => {
+                    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+                    longPressTimeoutRef.current = setTimeout(() => {
+                      onOpenIntervalModal?.();
+                    }, 500);
+                  }}
+                  onMouseUp={() => {
+                    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+                  }}
+                  onMouseLeave={() => {
+                    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+                  }}
                   disabled={!onDecreaseAllocation}
                 >
                   <Minus className="h-3 w-3" />
                 </Button>
 
                 {/* Three-part composition bar in middle */}
-                <div className="flex-1 h-8 relative bg-muted/20 rounded-md overflow-hidden">
+                <div
+                  className="flex-1 h-8 relative bg-muted/20 rounded-md overflow-hidden cursor-pointer"
+                  onClick={() => {
+                    setActiveAllocation(allocation);
+                    setShowAllocationModal(true);
+                  }}
+                >
                   {/* Background composition bar with three sections */}
                   <div className="absolute inset-0 flex gap-1 p-1">
                     {/* Other allocations (left section) - muted */}
@@ -293,6 +322,18 @@ export function UsdAllocationBreakdown({
                   className="h-8 w-8 p-0 flex-shrink-0"
                   title="Increase allocation"
                   onClick={() => onIncreaseAllocation?.(allocation)}
+                  onMouseDown={(e) => {
+                    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+                    longPressTimeoutRef.current = setTimeout(() => {
+                      onOpenIntervalModal?.();
+                    }, 500);
+                  }}
+                  onMouseUp={() => {
+                    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+                  }}
+                  onMouseLeave={() => {
+                    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+                  }}
                   disabled={!onIncreaseAllocation}
                 >
                   <Plus className="h-3 w-3" />
@@ -379,10 +420,54 @@ export function UsdAllocationBreakdown({
         <CardContent className="space-y-3 px-3 sm:px-4 pb-3">
           {content}
         </CardContent>
+        {activeAllocation && (
+          <UsdAllocationModal
+            isOpen={showAllocationModal}
+            onClose={() => {
+              setShowAllocationModal(false);
+              setActiveAllocation(null);
+            }}
+            pageId={activeAllocation.resourceId}
+            pageTitle={activeAllocation.pageTitle || activeAllocation.resourceId}
+            authorId={activeAllocation.authorId}
+            currentAllocation={activeAllocation.usdCents}
+            onAllocationChange={async (newAmountCents) => {
+              if (onSetAllocationAmount && activeAllocation) {
+                await onSetAllocationAmount(activeAllocation, newAmountCents);
+              }
+            }}
+            isUserAllocation={activeAllocation.resourceType === 'user'}
+            username={activeAllocation.authorUsername}
+          />
+        )}
       </Card>
     );
   }
 
   // Non-card version for section layout
-  return <div className={className}>{content}</div>;
+  return (
+    <div className={className}>
+      {content}
+      {activeAllocation && (
+        <UsdAllocationModal
+          isOpen={showAllocationModal}
+          onClose={() => {
+            setShowAllocationModal(false);
+            setActiveAllocation(null);
+          }}
+          pageId={activeAllocation.resourceId}
+          pageTitle={activeAllocation.pageTitle || activeAllocation.resourceId}
+          authorId={activeAllocation.authorId}
+          currentAllocation={activeAllocation.usdCents}
+          onAllocationChange={async (newAmountCents) => {
+            if (onSetAllocationAmount && activeAllocation) {
+              await onSetAllocationAmount(activeAllocation, newAmountCents);
+            }
+          }}
+          isUserAllocation={activeAllocation.resourceType === 'user'}
+          username={activeAllocation.authorUsername}
+        />
+      )}
+    </div>
+  );
 }

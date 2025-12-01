@@ -57,11 +57,11 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'customer.subscription.created':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, event.type, event.data.previous_attributes);
         break;
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, event.type, event.data.previous_attributes);
         break;
 
       case 'customer.subscription.deleted':
@@ -117,7 +117,7 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
     // Update subscription with the latest data from Stripe
-    await handleSubscriptionUpdated(subscription);
+    await handleSubscriptionUpdated(subscription, 'checkout.session.completed');
 
     console.log(`[SUBSCRIPTION WEBHOOK] Processed checkout completion for user ${userId}, subscription status: ${subscription.status}`);
 
@@ -127,7 +127,11 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
   }
 }
 
-export async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+export async function handleSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+  eventType: string = 'customer.subscription.updated',
+  previousAttributes?: Record<string, any> | null
+) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
@@ -195,18 +199,8 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
         createdAt: serverTimestamp()});
     }
 
-    // Update user's USD allocation (primary system) - funds stay in platform account
-    if (subscription.status === 'active') {
-      console.log(`[SUBSCRIPTION WEBHOOK] Updating USD allocation for user ${userId}: $${amount} (funds held in platform account)`);
-      await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
-
-      // Also maintain backward compatibility with token system during migration
-      console.log(`[SUBSCRIPTION WEBHOOK] Maintaining token system compatibility for user ${userId}`);
-      await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
-
-      // Add transfer_group to subscription metadata for tracking (no immediate transfer)
-      console.log(`[SUBSCRIPTION WEBHOOK] Subscription funds held in platform account for month-end processing`);
-    }
+    // Do NOT allocate funds on subscription status change alone; wait for payment success
+    // Token compatibility is handled on payment success; skipped here intentionally
 
     console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
 
@@ -333,16 +327,35 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     try {
       const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
 
-      if (existingData) {
-        // This is an update - log with before/after states
-        await subscriptionAuditService.logSubscriptionUpdated(userId, existingData, subscriptionData, {
+      const previousAmount = (() => {
+        const prevItems = (previousAttributes as any)?.items?.data || [];
+        const prevPrice = prevItems[0]?.price;
+        if (typeof prevPrice?.unit_amount === 'number') {
+          return prevPrice.unit_amount / 100;
+        }
+        return null;
+      })();
+
+      const previousStatus = (previousAttributes as any)?.status;
+      const hasExistingDoc = !!existingData && Object.keys(existingData).length > 0;
+      const isCreationEvent = eventType === 'customer.subscription.created' || eventType === 'checkout.session.completed';
+
+      if (hasExistingDoc || !isCreationEvent) {
+        // Treat as update (upgrade/downgrade/status change)
+        const beforeState = {
+          amount: existingData?.amount ?? previousAmount ?? amount,
+          status: existingData?.status ?? previousStatus ?? currentStatus ?? 'unknown',
+          tier: existingData?.tier ?? tier
+        };
+
+        await subscriptionAuditService.logSubscriptionUpdated(userId, beforeState, { ...subscriptionData, tier }, {
           source: 'stripe',
           correlationId: `webhook_${subscription.id}_${Date.now()}`,
           metadata: {
-            webhookEventType: 'customer.subscription.updated',
+            webhookEventType: eventType,
             stripeSubscriptionId: subscription.id,
             statusTransition: `${currentStatus} -> ${newStatus}`,
-            amountChange: existingData.amount !== amount
+            amountChange: beforeState.amount !== amount
           }
         });
         console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription update to audit trail`);
@@ -352,7 +365,7 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
           source: 'stripe',
           correlationId: `webhook_${subscription.id}_${Date.now()}`,
           metadata: {
-            webhookEventType: 'customer.subscription.created',
+            webhookEventType: eventType,
             stripeSubscriptionId: subscription.id,
             initialStatus: newStatus
           }
@@ -567,6 +580,14 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
     // Create enhanced notification with retry information
     await createFailedPaymentNotification(userId, failureRecord.failureCount, invoice, failureRecord);
+
+    // Revoke allocations until a successful payment occurs
+    try {
+      console.log(`[PAYMENT FAILED] Clearing USD allocation for user ${userId} to prevent unfunded payouts`);
+      await ServerUsdService.updateMonthlyUsdAllocation(userId, 0);
+    } catch (allocError) {
+      console.warn('[PAYMENT FAILED] Failed to clear USD allocation after failure:', allocError);
+    }
 
     console.log(`[ENHANCED PAYMENT RECOVERY] Payment failed for user ${userId}`, {
       failureCount: failureRecord.failureCount,

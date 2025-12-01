@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from "../../../utils/environmentConfig";
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 /**
  * USER RECENT EDITS API
@@ -68,10 +69,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const pages = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const pages = snapshot.docs.map(doc => {
+      const data = doc.data();
+      const safeUsername = sanitizeUsername(
+        (data as any).username || (data as any).displayName || (data as any).authorName || (data as any).email,
+        'User',
+        `user_${doc.id.slice(0, 8)}`
+      );
+      return {
+        id: doc.id,
+        ...data,
+        username: safeUsername
+      };
+    });
 
     // Filter pages using the same logic as homepage
     const filteredPages = pages.filter(page => {
@@ -160,16 +170,19 @@ export async function GET(request: NextRequest) {
 
       const replyPreview = deriveReplyPreview();
 
+      const username = sanitizeUsername(
+        userData?.username || userData?.displayName || userData?.email || page.username,
+        'User',
+        `user_${page.userId?.slice(0, 8) || 'unknown'}`
+      );
       return {
         ...page,
-        // Use username from user data if available, fallback to page username
-        username: userData?.username || page.username,
-        displayName: userData?.displayName || page.displayName,
+        username,
+        displayName: username,
         hasActiveSubscription: userData?.hasActiveSubscription || false,
         subscriptionTier: userData?.tier || null,
         subscriptionAmount: userData?.subscriptionAmount || null,
         subscriptionStatus: userData?.subscriptionStatus || null,
-        // Include diff data that's already stored on the page
         lastDiff: page.lastDiff,
         diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null
       };

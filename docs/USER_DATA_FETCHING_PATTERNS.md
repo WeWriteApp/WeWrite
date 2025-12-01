@@ -100,7 +100,6 @@ const userData = {
   "user1": {
     uid: "user1",
     username: "john_doe",
-    displayName: "John Doe", 
     tier: "tier1",
     subscriptionStatus: "active",
     subscriptionAmount: 10,
@@ -122,6 +121,7 @@ When implementing user data display in any component:
 - [ ] Subscription badges receive `tier`, `subscriptionStatus`, `subscriptionAmount`
 - [ ] 🔒 **SECURITY**: All usernames are sanitized using `sanitizeUsername()`
 - [ ] 🔒 **SECURITY**: No email addresses are used as username fallbacks
+- [ ] **Display names are optional only**: use `username` for identity; if you show a `displayName`, sanitize it and never fall back to email or email prefixes
 - [ ] 🔒 **SECURITY**: Loading states show "Loading..." not email addresses
 
 ## Benefits

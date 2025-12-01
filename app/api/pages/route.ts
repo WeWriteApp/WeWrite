@@ -12,6 +12,7 @@ import { cachedQuery } from '../../utils/globalCache';
 import { cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
 import { trackFirebaseRead } from '../../utils/costMonitor';
 import { pagesListCache } from '../../utils/pagesListCache';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 // SIMPLE SOLUTION: Update all links to a page when its title changes
 async function updateAllLinksToPage(pageId: string, oldTitle: string, newTitle: string) {
@@ -421,9 +422,18 @@ export async function POST(request: NextRequest) {
         username = currentUserId.replace('dev_', '').replace('_user', '');
       }
     } else {
-      // In production, get user info from Firebase Auth
+      // In production, prefer stored username/displayName; never expose email local part
       const userRecord = await admin.auth().getUser(currentUserId);
-      username = userRecord.email?.split('@')[0] || 'Anonymous';
+      const userDoc = await db.collection(getCollectionName('users')).doc(currentUserId).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      username = sanitizeUsername(
+        userData?.username || userData?.displayName || null,
+        'User',
+        'User'
+      );
+      if (!username || username === 'User') {
+        username = `user_${currentUserId.substring(0, 8)}`;
+      }
     }
 
     // Create page data - ensure content is properly stringified

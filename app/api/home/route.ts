@@ -3,6 +3,7 @@ import { executeDeduplicatedOperation } from '../../utils/serverRequestDeduplica
 import { initAdmin } from '../../firebase/admin';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../utils/environmentConfig';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 // Enhanced multi-tier caching system for home data
 const homeCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -162,7 +163,7 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     // Define home page fields to reduce document size by 60-70%
     // Include lastDiff for recent edits functionality
     const homePageFields = [
-      'title', 'isPublic', 'userId', 'username', 'displayName',
+      'title', 'isPublic', 'userId', 'username',
       'lastModified', 'createdAt', 'totalPledged', 'pledgeCount', 'deleted', 'lastDiff'
     ];
 
@@ -190,10 +191,19 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     const snapshot = await pagesQuery.get();
     console.log(`🏠 [HOME_API] Raw query returned ${snapshot.size} documents`);
 
-    const pages = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const pages = snapshot.docs.map(doc => {
+      const data = doc.data();
+      const safeUsername = sanitizeUsername(
+        (data as any).username || (data as any).displayName || (data as any).authorName || (data as any).email,
+        'User',
+        `user_${doc.id.slice(0, 8)}`
+      );
+      return {
+        id: doc.id,
+        ...data,
+        username: safeUsername
+      };
+    });
 
     console.log(`🏠 [HOME_API] Raw pages analysis:`, {
       totalDocs: snapshot.size,

@@ -347,33 +347,7 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to save subscription: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`);
     }
 
-    // Initialize user's USD balance - funds stay in platform account until month-end payout
-    if (subscription.status === 'active') {
-      console.log(`[CREATE SUBSCRIPTION] Updating USD allocation directly (funds held in platform account)...`);
-      try {
-        // Initialize USD balance using the new USD service - no immediate transfers
-        await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
-        console.log(`[CREATE SUBSCRIPTION] Successfully updated USD allocation: $${amount} (held in platform account)`);
-
-        // Also maintain backward compatibility with token system during migration
-        console.log(`[CREATE SUBSCRIPTION] Maintaining token system compatibility...`);
-        try {
-          const { ServerTokenService } = await import('../../../services/tokenService.server');
-          await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
-          console.log(`[CREATE SUBSCRIPTION] Successfully updated legacy token allocation`);
-
-          // Convert unfunded tokens to funded tokens (legacy support)
-          const convertResult = await ServerTokenService.convertUnfundedTokens(userId);
-          console.log(`[CREATE SUBSCRIPTION] Successfully converted ${convertResult.convertedCount} unfunded token allocations`);
-        } catch (tokenError) {
-          console.warn(`[CREATE SUBSCRIPTION] Error with legacy token system:`, tokenError);
-          // Don't fail subscription creation if token conversion fails
-        }
-      } catch (tokenError) {
-        console.warn(`[CREATE SUBSCRIPTION] Failed to update token allocation:`, tokenError);
-        // Don't throw here - subscription was created successfully, token update is secondary
-      }
-    }
+    // Do not allocate funds here; wait for payment success webhook to credit balances
 
     console.log(`[CREATE SUBSCRIPTION] Successfully created subscription for user ${userId}, status: ${subscription.status}`);
 

@@ -50,7 +50,7 @@ function CollapsibleColorCard({
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
           <div
-            className="w-12 h-8 rounded-lg border border-border shadow-sm"
+            className="w-10 h-10 rounded-md border border-border shadow-sm"
             style={{ backgroundColor: color }}
           />
         </div>
@@ -67,7 +67,7 @@ function CollapsibleColorCard({
 }
 
 export default function ColorSystemManager({ className }: ColorSystemManagerProps) {
-  const { accentColor, setAccentColor } = useAccentColor();
+  const { accentColor, setAccentColor, getCurrentThemeColor } = useAccentColor();
   const { neutralColor, setNeutralColor } = useNeutralColor();
   const { background, setBackground, lastUploadedImage, backgroundBlur, setBackgroundBlur } = useAppBackground();
   const { theme } = useTheme();
@@ -103,11 +103,18 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
 
   // Initialize from current accent color
   useEffect(() => {
+    // Prefer theme-specific accent color for the swatch
+    const themeColor = getCurrentThemeColor();
+    if (themeColor) {
+      setAccentOklch(themeColor);
+      return;
+    }
+
     const converted = hexToOklch(accentColor);
     if (converted) {
       setAccentOklch(converted);
     }
-  }, [accentColor]);
+  }, [accentColor, getCurrentThemeColor]);
 
   // Initialize from current neutral color - always update when neutralColor changes
   useEffect(() => {

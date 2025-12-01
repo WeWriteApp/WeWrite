@@ -11,6 +11,7 @@ import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/enviro
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { userCache } from '../../../utils/userCache';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 interface UserData {
   uid: string;
@@ -182,7 +183,7 @@ async function fetchBatchUserDataInternal(
 
       try {
         // Fetch user profiles from Firestore
-        const usersQuery = db.collection('users').where('__name__', 'in', batch);
+          const usersQuery = db.collection('users').where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
         // Fetch subscription data in parallel using environment-aware paths
@@ -225,10 +226,15 @@ async function fetchBatchUserDataInternal(
 
 
 
+          const safeUsername = sanitizeUsername(
+            userData.username || userData.displayName || userData.email || `user_${doc.id.slice(0, 8)}`,
+            'User',
+            `user_${doc.id.slice(0, 8)}`
+          );
+
           const user: UserData = {
             uid: doc.id,
-            username: userData.username,
-            displayName: userData.displayName,
+            username: safeUsername,
             email: userData.email,
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,

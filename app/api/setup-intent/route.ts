@@ -5,6 +5,7 @@ import { initAdmin } from '../../firebase/admin';
 import { getUserIdFromRequest } from '../auth-helper';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 // Initialize Firebase Admin lazily
 let auth: any;
@@ -67,13 +68,24 @@ export async function POST(request: NextRequest) {
       // Get user email from Firebase Auth
       const userRecord = await auth.getUser(userId);
 
-      // Get username from Firestore
+      // Get username from Firestore (never expose email local part)
       let username = 'Unknown User';
       try {
         const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          username = userData?.username || userRecord.email?.split('@')[0] || 'Unknown User';
+        const userData = userDoc.exists() ? userDoc.data() : null;
+        const emailLocalPart = userRecord.email ? userRecord.email.split('@')[0] : null;
+        username = sanitizeUsername(
+          userData?.username || userData?.displayName || null,
+          'User',
+          'User'
+        );
+        if (!username || username === 'User') {
+          username = `user_${userId.substring(0, 8)}`;
+        }
+        // Keep email local part only for backend metadata clarity, never surface as username
+        const email_local_part = emailLocalPart || undefined;
+        if (email_local_part) {
+          console.log('Using email_local_part for Stripe metadata only');
         }
       } catch (error) {
         console.warn('Could not fetch username for Stripe customer:', error);

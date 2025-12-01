@@ -22,7 +22,6 @@ const SupporterBadge = dynamic(() => import('../payments/SupporterBadge'), {
 interface OptimizedProfileData {
   uid: string;
   username?: string;
-  displayName?: string;
   bio?: string;
   tier?: string | null;
   subscriptionStatus?: string | null;
@@ -100,7 +99,7 @@ export default function OptimizedSingleProfileView({
       {/* Avatar - use optimized image loading */}
       <div className="w-24 h-24 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center">
         <span className="text-2xl font-bold text-muted-foreground">
-          {(profile.username || profile.displayName || 'U')[0].toUpperCase()}
+          {(profile.username || 'U')[0].toUpperCase()}
         </span>
       </div>
       

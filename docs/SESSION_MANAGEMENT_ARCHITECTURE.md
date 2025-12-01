@@ -172,7 +172,7 @@ function MyComponent() {
   if (isLoading) return <LoadingSpinner />;
   if (!isAuthenticated) return <LoginPrompt />;
 
-  return <div>Welcome, {user.displayName}!</div>;
+  return <div>Welcome, {user.username}!</div>;
 }
 ```
 
@@ -248,7 +248,7 @@ function MyComponent() {
   if (isLoading) return <div>Loading...</div>;
   if (!isAuthenticated) return <div>Please log in</div>;
 
-  return <div>Welcome, {user.displayName}!</div>;
+  return <div>Welcome, {user.username}!</div>;
 }
 ```
 
@@ -388,7 +388,7 @@ This architecture replaces the complex multi-auth system with a simple, reliable
 interface User {
   uid: string;
   email: string;
-  displayName: string;
+  username: string;
   photoURL?: string;
   emailVerified: boolean;
   username?: string;

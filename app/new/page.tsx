@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Head from "next/head";
 import { motion } from "framer-motion";
+import { Path } from "slate";
 import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
 import { auth } from "../firebase/config";
@@ -37,6 +38,7 @@ import CustomDateField from "../components/pages/CustomDateField";
 import { useLogRocket } from "../providers/LogRocketProvider";
 import LocationField from "../components/pages/LocationField";
 import { WritingIdeasBanner } from "../components/writing/WritingIdeasBanner";
+import { sanitizeUsername } from "../utils/usernameSecurity";
 
 
 
@@ -100,6 +102,9 @@ interface PageData {
  */
 function NewPageContent() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const safeUsername = sanitizeUsername(
+    user?.username || (user as any)?.displayName || user?.email || `user_${user?.uid?.slice(0, 8) || 'unknown'}`
+  );
 
   // CRITICAL: Check loading states BEFORE calling any other hooks to prevent hooks rule violations
   if (authLoading) {
@@ -163,6 +168,36 @@ function NewPageContent() {
   // Track selected writing idea
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const replyInitialSelectionPath = useMemo<Path | undefined>(() => (isReply ? [1, 0] : undefined), [isReply]);
+
+  // Ensure reply view starts at the top (avoid starting mid-scroll)
+  useEffect(() => {
+    if (!isReply) return;
+    const originalScrollRestoration = typeof window !== 'undefined' ? window.history.scrollRestoration : undefined;
+    if (typeof window !== 'undefined' && window.history.scrollRestoration) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    const scrollToTop = () => {
+      try {
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Kick to next frame and again after short delay to override browser scroll restoration
+    const rafId = requestAnimationFrame(scrollToTop);
+    const timeoutId = window.setTimeout(scrollToTop, 50);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+      if (originalScrollRestoration) {
+        window.history.scrollRestoration = originalScrollRestoration;
+      }
+    };
+  }, [isReply]);
 
   // Listen for focus changes to coordinate with title focus
   useEffect(() => {
@@ -279,7 +314,7 @@ function NewPageContent() {
 
       location: location,
       userId: user?.uid || 'anonymous',
-      username: user?.username || user?.displayName || 'Anonymous',
+      username: safeUsername,
       content: JSON.stringify(editorState),
       lastModified: new Date().toISOString(),
       isReply: isReply
@@ -671,7 +706,7 @@ function NewPageContent() {
     setError(null);
 
     try {
-      const username = user?.username || user?.displayName || 'Anonymous';
+      const username = safeUsername;
       const userId = user.uid;
 
       // CRITICAL FIX: Add detailed logging for content validation debugging
@@ -1232,7 +1267,7 @@ function NewPageContent() {
   const Layout = user ? React.Fragment : PublicLayout;
 
   // Get username for display
-  const username = user?.username || user?.displayName || 'Anonymous';
+  const username = safeUsername;
 
   // Render using the exact same structure as SinglePageView
   return (
@@ -1293,7 +1328,7 @@ function NewPageContent() {
                     placeholder={customPlaceholder}
                     showToolbar={false}
                     onInsertLinkRequest={handleInsertLinkRequest}
-                    initialSelectionPath={isReply ? [1, 0] : undefined}
+                    initialSelectionPath={replyInitialSelectionPath}
                   />
                 </PageProvider>
               </div>

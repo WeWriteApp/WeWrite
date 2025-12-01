@@ -32,6 +32,7 @@ import {
   TooltipTrigger
 } from "../components/ui/tooltip";
 import { PillLink } from "../components/utils/PillLink";
+import { sanitizeUsername } from "../utils/usernameSecurity";
 
 // Type definitions
 interface User {
@@ -43,7 +44,6 @@ interface User {
 
 interface UserData {
   username?: string;
-  displayName?: string;
   photoURL?: string;
 }
 
@@ -153,12 +153,19 @@ export default function LeaderboardPage() {
                     console.log("Leaderboard: Processing user data");
 
                     // Process users with their page counts
-                    const usersArray: User[] = Object.entries(data).map(([id, userData]) => ({
-                      id,
-                      username: userData.username || userData.displayName || "Unknown User",
-                      photoURL: userData.photoURL,
-                      pageCount: pageCountsByUser[id] || 0
-                    }));
+                    const usersArray: User[] = Object.entries(data).map(([id, userData]) => {
+                      const username = sanitizeUsername(
+                        userData.username || (userData as any).displayName || (userData as any).email || `user_${id.slice(0, 8)}`,
+                        'User',
+                        `user_${id.slice(0, 8)}`
+                      );
+                      return {
+                        id,
+                        username,
+                        photoURL: userData.photoURL,
+                        pageCount: pageCountsByUser[id] || 0
+                      };
+                    });
 
                     // Sort users by page count (including users with 0 pages)
                     const sortedUsers = usersArray

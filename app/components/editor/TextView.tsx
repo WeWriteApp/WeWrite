@@ -102,6 +102,54 @@ const ANIMATION_CONSTANTS = {
   SPRING_MASS: 1
 } as const;
 
+// Helper: linkify plain text segments (for legacy bios/raw text)
+const renderLinkifiedText = (text: string, className = ''): React.ReactNode[] | null => {
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  const segments: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    const [rawUrl] = match;
+    const start = match.index;
+
+    if (start > lastIndex) {
+      segments.push(
+        <span key={`text-${start}`} className={className || undefined}>
+          {text.slice(lastIndex, start)}
+        </span>
+      );
+    }
+
+    const href = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+    segments.push(
+      <a
+        key={`link-${start}`}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${className} text-primary underline underline-offset-2 break-words`.trim()}
+      >
+        {rawUrl}
+      </a>
+    );
+
+    lastIndex = start + rawUrl.length;
+  }
+
+  if (segments.length === 0) return null;
+
+  if (lastIndex < text.length) {
+    segments.push(
+      <span key={`text-${lastIndex}`} className={className || undefined}>
+        {text.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return segments;
+};
+
 // Function to extract page ID from URL
 // CRITICAL FIX: Use the standardized utility function from linkValidator.js
 const extractPageId = (url: string): string | null => {
@@ -797,6 +845,15 @@ export const RenderContent = (props: {
               );
             }
 
+            const linkifiedSegments = renderLinkifiedText(child.text, className.trim());
+            if (linkifiedSegments) {
+              return (
+                <React.Fragment key={i}>
+                  {linkifiedSegments}
+                </React.Fragment>
+              );
+            }
+
             return (
               <span key={i} className={className || undefined}>
                 {child.text}
@@ -984,6 +1041,15 @@ const SimpleParagraphNode = (props: {
         );
       }
 
+      const linkifiedSegments = renderLinkifiedText(child.text, className.trim());
+      if (linkifiedSegments) {
+        return (
+          <React.Fragment key={i}>
+            {linkifiedSegments}
+          </React.Fragment>
+        );
+      }
+
       return (
         <span key={i} className={className || undefined}>
           {child.text}
@@ -1002,6 +1068,15 @@ const SimpleParagraphNode = (props: {
               if (grandchild.bold) className += ' font-bold';
               if (grandchild.italic) className += ' italic';
               if (grandchild.underline) className += ' underline';
+
+              const linkifiedSegments = renderLinkifiedText(grandchild.text, className.trim());
+              if (linkifiedSegments) {
+                return (
+                  <React.Fragment key={`${i}-${grandchildIndex}`}>
+                    {linkifiedSegments}
+                  </React.Fragment>
+                );
+              }
 
               return <span key={`${i}-${grandchildIndex}`} className={className || undefined}>{grandchild.text}</span>;
             }

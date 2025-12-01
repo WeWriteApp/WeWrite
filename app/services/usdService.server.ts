@@ -319,6 +319,60 @@ export class ServerUsdService {
   }
 
   /**
+   * Aggregate monthly allocation summary across all users.
+   * Used by storage-balance cron to route allocated vs unallocated funds.
+   */
+  static async getMonthlyAllocationSummary(month: string = getCurrentMonth()): Promise<{
+    month: string;
+    totalAllocatedCents: number;
+    totalUnallocatedCents: number;
+    totalSubscriptionCents: number;
+    userCount: number;
+  }> {
+    const { db } = getFirebaseAdminAndDb();
+
+    const balancesRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
+    const snapshot = await balancesRef.get();
+
+    let totalAllocatedCents = 0;
+    let totalUnallocatedCents = 0;
+    let totalSubscriptionCents = 0;
+    let userCount = 0;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const userId = doc.id;
+
+      // Use stored allocation fields first; fall back to recalculation if missing
+      let allocatedCents = typeof data.allocatedUsdCents === 'number'
+        ? data.allocatedUsdCents
+        : await this.calculateActualAllocatedUsdCents(userId);
+
+      // Total subscription for the month (monthly allocation is authoritative)
+      const monthlyCents = typeof data.monthlyAllocationCents === 'number'
+        ? data.monthlyAllocationCents
+        : (typeof data.totalUsdCents === 'number' ? data.totalUsdCents : 0);
+
+      // Clamp negative values to zero to avoid skew
+      allocatedCents = Math.max(0, allocatedCents);
+      const unallocatedCents = Math.max(0, monthlyCents - allocatedCents);
+
+      totalAllocatedCents += allocatedCents;
+      totalUnallocatedCents += unallocatedCents;
+      totalSubscriptionCents += monthlyCents;
+      userCount += 1;
+    }
+
+    return {
+      month,
+      totalAllocatedCents,
+      totalUnallocatedCents,
+      totalSubscriptionCents,
+      userCount
+    };
+  }
+
+  /**
    * Get current page allocation in USD cents
    */
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {

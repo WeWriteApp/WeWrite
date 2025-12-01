@@ -6,6 +6,7 @@ import { trackFirebaseRead } from '../../../../utils/costMonitor';
 import { userCache } from '../../../../utils/userCache';
 import { recordProductionRead } from '../../../../utils/productionReadMonitor';
 import { getDocWithTimeout } from '../../../../utils/firebaseTimeout';
+import { sanitizeUsername } from '../../../../utils/usernameSecurity';
 
 /**
  * Optimized User Data API
@@ -39,6 +40,12 @@ export async function GET(
       const responseTime = Date.now() - startTime;
       console.log(`🚀 [User API] Cache hit for ${userId} (${responseTime}ms)`);
 
+      const safeUsername = sanitizeUsername(
+        cachedUserData.username || cachedUserData.displayName || cachedUserData.email || `user_${userId.slice(0, 8)}`,
+        'User',
+        `user_${userId.slice(0, 8)}`
+      );
+
       // Record cache hit for production monitoring
       recordProductionRead('/api/users/profile-data', 'user-profile-cached', 0, {
         userId: currentUserId,
@@ -51,8 +58,8 @@ export async function GET(
       // Filter data based on access permissions
       const publicUserData = {
         id: cachedUserData.id,
-        username: cachedUserData.username,
-        displayName: cachedUserData.displayName,
+        username: safeUsername,
+        displayName: safeUsername,
         bio: cachedUserData.bio,
         profilePicture: cachedUserData.profilePicture,
         isVerified: cachedUserData.isVerified || false,
@@ -119,11 +126,17 @@ export async function GET(
       );
     }
 
+    const safeUsername = sanitizeUsername(
+      userData.username || userData.displayName || userData.email || `user_${userId.slice(0, 8)}`,
+      'User',
+      `user_${userId.slice(0, 8)}`
+    );
+
     // Return only public user information
     const publicUserData = {
       id: userDoc.id,
-      username: userData.username,
-      displayName: userData.displayName,
+      username: safeUsername,
+      displayName: safeUsername,
       bio: userData.bio,
       profilePicture: userData.profilePicture,
       isVerified: userData.isVerified || false,
@@ -137,7 +150,7 @@ export async function GET(
     };
 
     // Cache the result in enhanced cache system
-    userCache.set(userId, userData, 'profile');
+    userCache.set(userId, { ...userData, username: safeUsername, displayName: safeUsername }, 'profile');
 
     const responseTime = Date.now() - startTime;
     console.log(`✅ [User API] Successfully fetched ${userId} (${responseTime}ms)`);

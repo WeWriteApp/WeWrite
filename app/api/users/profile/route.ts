@@ -5,6 +5,7 @@ import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { userCache } from '../../../utils/userCache';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { getDocWithTimeout, queryWithTimeout } from '../../../utils/firebaseTimeout';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 /**
  * GET /api/users/profile?id=userId&username=username
@@ -99,12 +100,18 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('NOT_FOUND', 'User not found');
     }
 
-    // Prepare user profile data
+    const safeUsername = sanitizeUsername(
+      userData.username || userData.displayName || userData.email || `user_${userId?.slice(0, 8)}`,
+      'User',
+      `user_${userId?.slice(0, 8)}`
+    );
+
+    // Prepare user profile data (displayName is mirrored to username for compatibility)
     const profileData = {
       uid: userId,
       id: userId,
-      username: userData.username,
-      displayName: userData.displayName || userData.username,
+      username: safeUsername,
+      displayName: safeUsername,
       bio: userData.bio || '',
       createdAt: userData.createdAt,
       lastModified: userData.lastModified,

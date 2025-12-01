@@ -82,13 +82,16 @@ SUBSCRIPTION_ENV=development/production
 
 #### `/api/subscription/create-with-payment-method` ✅ *Duplicate-safe*
 - **Purpose**: Create subscription after payment method setup
-- **Flow**: Validates no existing subscription → creates subscription → updates Firestore → allocates USD credits
+- **Flow**: Validates no existing subscription → creates subscription → updates Firestore → **defers USD credits until `invoice.payment_succeeded` webhook** (no funds granted on creation alone)
 - **Validation**: Uses `SubscriptionValidationService` to prevent duplicates
 
 #### `/api/subscription/update`
 - **Purpose**: Modify existing subscription amount/tier
 - **Test Handling**: Detects `sub_test_` IDs and skips Stripe calls
-- **Stripe Best Practice**: Uses `stripe.subscriptions.update()` with proration
+- **Stripe Best Practice**: Uses `stripe.subscriptions.update()` with proration rules
+  - Upgrades → `proration_behavior: create_prorations` (charge only the top-off mid-cycle)
+  - Downgrades → `proration_behavior: none` (no refunds/credits; lower price starts next cycle)
+- **Funding Rule**: No USD allocation here; funding happens only on successful payments
 
 #### `/api/subscription/reactivate`
 - **Purpose**: Reactivate cancelled subscriptions
@@ -206,6 +209,12 @@ if (subscription.status !== 'active') {
   throw new Error(`Subscription creation failed with status: ${subscription.status}`);
 }
 ```
+
+## Funding & Proration Guardrails (2025-11 Hardened)
+- **Funding only on payment success**: USD credits are granted exclusively via the `invoice.payment_succeeded` webhook. Subscription creation/update does not credit funds.
+- **Failure safety**: On `invoice.payment_failed`, USD allocation is cleared to prevent unfunded payouts.
+- **Upgrade proration**: `/api/subscription/update` uses `proration_behavior: create_prorations` for upgrades (only the top-off is charged mid-cycle) and `none` for downgrades (no refunds/credits; lower price starts next cycle).
+- **No balance changes on status-only events**: Subscription status changes without payment do not adjust balances.
 
 **New Subscription Creation Flow**:
 1. User submits checkout form with payment method

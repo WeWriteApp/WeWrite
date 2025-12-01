@@ -11,6 +11,8 @@ import { Button } from '../ui/button';
 import { dismissEmailVerificationNotifications } from '../../services/emailVerificationNotifications';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { updateNotificationCriticality, type NotificationCriticality } from '../../services/notificationsApi';
+import { sendEmailVerification } from 'firebase/auth';
+import { auth } from '../../firebase/config';
 
 /**
  * NotificationItem Component
@@ -246,24 +248,14 @@ export default function NotificationItem({ notification }) {
                   e.stopPropagation();
                   e.preventDefault();
                   try {
-                    // Use API to resend verification email
-                    const response = await fetch('/api/auth/verify-email', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      credentials: 'include',
-                      body: JSON.stringify({}), // Empty body - will use authenticated user's email
-                    });
-
-                    if (response.ok) {
-                      console.log('Verification email resent');
+                    if (auth?.currentUser) {
+                      await sendEmailVerification(auth.currentUser);
+                      console.log('Verification email sent via Firebase client SDK');
                     } else {
-                      const result = await response.json();
-                      console.error('Failed to resend verification email:', result.error);
+                      console.warn('No authenticated user to send verification email');
                     }
                   } catch (error) {
-                    console.error('Error resending verification email:', error);
+                    console.error('Error sending verification email:', error);
                   }
                 }}
                 className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"

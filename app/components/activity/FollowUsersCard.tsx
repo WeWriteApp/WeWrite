@@ -12,7 +12,6 @@ import Link from 'next/link';
 interface UserSuggestion {
   id: string;
   username: string;
-  displayName?: string;
   recentPages: {
     id: string;
     title: string;
@@ -132,9 +131,6 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h4 className="font-medium">@{suggestion.username}</h4>
-                  {suggestion.displayName && (
-                    <p className="text-sm text-muted-foreground">{suggestion.displayName}</p>
-                  )}
                 </div>
               </div>
 

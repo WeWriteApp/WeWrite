@@ -73,6 +73,8 @@ npm run test:payment-flows:e2e
 - Subscription state changes (active, cancelled, failed)
 - Billing cycle processing
 - Token balance updates
+- Upgrade/downgrade proration (upgrade charges only prorated delta; downgrade defers to next cycle without refund)
+- Funding gate: allocations only on `invoice.payment_succeeded`; allocations cleared on `invoice.payment_failed` and restored on recovery
 
 ### 3. Token Allocation
 **File**: `app/tests/tokenAllocation.test.ts`

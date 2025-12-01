@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Use Firebase Admin to generate custom verification email
+    // Generate verification link
     try {
       // Generate email verification link with proper action code settings
       const actionCodeSettings = {
@@ -76,14 +76,13 @@ export async function POST(request: NextRequest) {
         actionCodeSettings
       );
 
-      // Firebase Admin generateEmailVerificationLink automatically sends the email
-      // when called with proper configuration
-      console.log('✅ Email verification sent via Firebase to:', targetEmail);
-
       return createApiResponse({
-        message: 'Verification email sent successfully',
+        // NOTE: Firebase Admin only generates the link; client should call sendEmailVerification for actual delivery.
+        message: 'Verification link generated. Use Firebase client SDK sendEmailVerification to deliver.',
         email: targetEmail,
-        emailVerified: false
+        emailVerified: false,
+        emailSent: false,
+        verificationLink: emailVerificationLink // returned for client to deliver
       });
 
     } catch (emailError: any) {

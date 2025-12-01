@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 /**
  * User Following API Route
@@ -46,10 +47,15 @@ export async function GET(request: NextRequest) {
             const userDoc = await db.collection(getCollectionName('users')).doc(followedUserId).get();
             if (userDoc.exists) {
               const userData = userDoc.data();
+              const username = sanitizeUsername(
+                userData?.username || userData?.displayName || userData?.email || `user_${userDoc.id.slice(0, 8)}`,
+                'User',
+                `user_${userDoc.id.slice(0, 8)}`
+              );
               return {
                 id: userDoc.id,
-                username: userData?.username,
-                displayName: userData?.displayName,
+                username,
+                displayName: username,
                 photoURL: userData?.photoURL,
                 bio: userData?.bio
               };

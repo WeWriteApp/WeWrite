@@ -8,130 +8,199 @@ import { loadStripe } from '@stripe/stripe-js';
 import { getStripePublishableKey } from '../../../utils/stripeConfig';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { Button } from '../../../components/ui/button';
-import { Loader2, ChevronLeft } from 'lucide-react';
-import { Logo } from '../../../components/ui/Logo';
+import { Loader2, CreditCard, Building2 } from 'lucide-react';
 
 
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
-function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subscriptionId: string) => void }) {
+interface PaymentMethod {
+  id: string;
+  type: string;
+  brand?: string;
+  last4: string;
+  expMonth?: number;
+  expYear?: number;
+  bankName?: string;
+  accountType?: string;
+  isPrimary?: boolean;
+}
+
+function CheckoutForm({
+  amount,
+  clientSecret,
+  onSuccess
+}: {
+  amount: number;
+  clientSecret: string;
+  onSuccess: (subscriptionId: string) => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const { user } = useAuth();
-  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFormComplete, setIsFormComplete] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+  const [useExistingPayment, setUseExistingPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+
+  // Fetch saved payment methods so upgrades/downgrades don't re-collect details
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      if (!user?.uid) {
+        setLoadingPaymentMethods(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/payment-methods', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const methods: PaymentMethod[] = data.paymentMethods || [];
+        setPaymentMethods(methods);
+
+        if (methods.length > 0) {
+          const primary = methods.find((pm) => pm.isPrimary) || methods[0];
+          setSelectedPaymentMethod(primary.id);
+          setUseExistingPayment(true);
+          setIsFormComplete(true);
+        }
+      } catch (fetchError) {
+        console.error('Error fetching payment methods:', fetchError);
+      } finally {
+        setLoadingPaymentMethods(false);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, [user?.uid]);
+
+  const getPaymentMethodDisplay = (method: PaymentMethod | null) => {
+    if (!method) return 'No payment method selected';
+    switch (method.type) {
+      case 'card':
+        return `${method.brand?.charAt(0).toUpperCase()}${method.brand?.slice(1)} •••• ${method.last4}`;
+      case 'us_bank_account':
+        return `${method.bankName || 'Bank'} •••• ${method.last4} (${method.accountType || 'Account'})`;
+      default:
+        return `${method.type} •••• ${method.last4}`;
+    }
+  };
+
+  const getPaymentMethodExpiry = (method: PaymentMethod | null) => {
+    if (!method) return null;
+    if (method.type === 'card' && method.expMonth && method.expYear) {
+      return `Expires ${method.expMonth.toString().padStart(2, '0')}/${method.expYear}`;
+    }
+    return null;
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!stripe || !elements) return;
 
     setIsProcessing(true);
     setError(null);
 
     try {
+      // Fast path: user already has a payment method, so don't prompt for details again
+      if (useExistingPayment && selectedPaymentMethod) {
+        const response = await fetch('/api/subscription/create-with-payment-method', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethodId: selectedPaymentMethod,
+            tier: 'custom',
+            amount,
+            tierName: `$${amount}/month`
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to update subscription with saved payment method');
+        }
+
+        onSuccess(data.subscriptionId);
+        return;
+      }
+
+      if (!stripe || !elements) {
+        throw new Error('Payment form is not ready. Please try again.');
+      }
+
+      const billingEmail = (user?.email || '').trim();
+      if (!billingEmail) {
+        throw new Error('We need an email on your account before completing payment. Please add one in settings and retry.');
+      }
+
       const { error: submitError } = await elements.submit();
       if (submitError) {
         throw new Error(submitError.message);
       }
 
-      const response = await fetch('/api/subscription/create-simple', {
+      if (!clientSecret) {
+        throw new Error('Payment form is not ready. Please refresh and try again.');
+      }
+
+      // Confirm the setup intent tied to the PaymentElement
+      const { error, setupIntent } = await stripe.confirmSetup({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
+          payment_method_data: {
+            billing_details: {
+              email: billingEmail
+            }
+          }
+        },
+        redirect: 'if_required'
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!setupIntent || setupIntent.status !== 'succeeded') {
+        throw new Error('Payment setup was not completed');
+      }
+
+      // After setup intent is confirmed, create the subscription
+      const subscriptionResponse = await fetch('/api/subscription/create-after-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.uid,
-          amount: amount
+          amount: amount,
+          setupIntentId: setupIntent.id
         }),
       });
 
-      const data = await response.json();
-      console.log('Initial subscription creation response:', data);
+      const subscriptionData = await subscriptionResponse.json();
+      console.log('Subscription creation response:', subscriptionData);
 
-      if (!response.ok) {
+      if (!subscriptionResponse.ok) {
         // Handle the case where user already has an active subscription
-        if (response.status === 409 && data.shouldUpdate) {
+        if (subscriptionResponse.status === 409 && subscriptionData.shouldUpdate) {
           console.log('User already has active subscription, redirecting to update flow');
           // Redirect to update the existing subscription instead
-          window.location.href = `/settings/fund-account?update=${data.existingSubscriptionId}&amount=${amount}`;
+          window.location.href = `/settings/fund-account?update=${subscriptionData.existingSubscriptionId}&amount=${amount}`;
           return;
         }
-        throw new Error(data.error || 'Failed to create subscription');
+        throw new Error(subscriptionData.error || 'Failed to create subscription after setup');
       }
 
-      if (data.clientSecret) {
-        // Check if this is a SetupIntent or PaymentIntent based on the client secret
-        const isSetupIntent = data.clientSecret.startsWith('seti_');
-
-        if (isSetupIntent) {
-          // Use confirmSetup for SetupIntents
-          const { error } = await stripe.confirmSetup({
-            elements,
-            clientSecret: data.clientSecret,
-            confirmParams: {
-              return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
-            },
-            redirect: 'if_required'
-          });
-
-          if (error) {
-            throw new Error(error.message);
-          }
-
-          console.log('Setup intent confirmed, creating subscription with setupIntentId:', data.setupIntentId);
-
-          // After setup intent is confirmed, create the subscription
-          const subscriptionResponse = await fetch('/api/subscription/create-after-setup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user?.uid,
-              amount: amount,
-              setupIntentId: data.setupIntentId
-            }),
-          });
-
-          const subscriptionData = await subscriptionResponse.json();
-          console.log('Subscription creation response:', subscriptionData);
-
-          if (!subscriptionResponse.ok) {
-            // Handle the case where user already has an active subscription
-            if (subscriptionResponse.status === 409 && subscriptionData.shouldUpdate) {
-              console.log('User already has active subscription, redirecting to update flow');
-              // Redirect to update the existing subscription instead
-              window.location.href = `/settings/fund-account?update=${subscriptionData.existingSubscriptionId}&amount=${amount}`;
-              return;
-            }
-            throw new Error(subscriptionData.error || 'Failed to create subscription after setup');
-          }
-
-          // With error_if_incomplete, subscription should be active immediately
-          // If there's an error, it will be thrown by the API call above
-
-          console.log('Calling onSuccess with subscriptionId:', subscriptionData.subscriptionId);
-          onSuccess(subscriptionData.subscriptionId);
-        } else {
-          // Use confirmPayment for PaymentIntents
-          const { error } = await stripe.confirmPayment({
-            elements,
-            clientSecret: data.clientSecret,
-            confirmParams: {
-              return_url: `${window.location.origin}/settings/fund-account/success?amount=${amount}`,
-            },
-            redirect: 'if_required'
-          });
-
-          if (error) {
-            throw new Error(error.message);
-          }
-
-          onSuccess(data.subscriptionId);
-        }
-      } else {
-        // Direct subscription creation (when payment method already exists)
-        onSuccess(data.subscriptionId);
-      }
+      console.log('Calling onSuccess with subscriptionId:', subscriptionData.subscriptionId);
+      onSuccess(subscriptionData.subscriptionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed');
     } finally {
@@ -147,29 +216,121 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
       <main className="flex-1 p-4 pb-24 overflow-hidden">
         <div className="max-w-md mx-auto w-full">
           <div className="w-full overflow-hidden">
-            <PaymentElement
-            options={{
-              layout: 'tabs',
-              paymentMethodOrder: ['link', 'card', 'apple_pay', 'google_pay'],
-              fields: {
-                billingDetails: {
-                  email: 'auto'
-                }
-              },
-              wallets: {
-                applePay: 'auto',
-                googlePay: 'auto'
-              }
-            }}
-            onChange={(event) => {
-              setIsFormComplete(event.complete);
-              if (event.error) {
-                setError(event.error.message);
-              } else {
-                setError(null);
-              }
-            }}
-          />
+            {loadingPaymentMethods ? (
+              <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Loading your payment methods…</span>
+              </div>
+            ) : paymentMethods.length > 0 ? (
+              <div className="p-4 rounded-lg border border-border bg-muted/30 mb-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    {(() => {
+                      const method = paymentMethods.find((pm) => pm.id === selectedPaymentMethod);
+                      const icon =
+                        method?.type === 'us_bank_account'
+                          ? <Building2 className="h-4 w-4 text-muted-foreground" />
+                          : <CreditCard className="h-4 w-4 text-muted-foreground" />;
+                      return (
+                        <>
+                          <div className="mt-1">{icon}</div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Current payment method</p>
+                            <p className="text-sm font-medium">{getPaymentMethodDisplay(method || paymentMethods[0])}</p>
+                            {getPaymentMethodExpiry(method || paymentMethods[0]) && (
+                              <p className="text-xs text-muted-foreground">
+                                {getPaymentMethodExpiry(method || paymentMethods[0])}
+                              </p>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      const nextUseExisting = !useExistingPayment;
+                      setUseExistingPayment(nextUseExisting);
+                      setIsFormComplete(nextUseExisting ? !!selectedPaymentMethod : false);
+                      setError(null);
+                    }}
+                  >
+                    {useExistingPayment ? 'Use a different method' : 'Keep this method'}
+                  </Button>
+                </div>
+                {useExistingPayment && paymentMethods.length > 1 && (
+                  <div className="space-y-2 pt-2 border-t border-border/60">
+                    <p className="text-xs text-muted-foreground">Choose a saved payment method</p>
+                    <div className="space-y-2">
+                      {paymentMethods.map((method) => (
+                        <button
+                          key={method.id}
+                          onClick={() => {
+                            setSelectedPaymentMethod(method.id);
+                            setIsFormComplete(true);
+                          }}
+                          className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-left transition ${
+                            selectedPaymentMethod === method.id
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-muted/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {method.type === 'us_bank_account' ? (
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <div>
+                              <p className="text-sm font-medium">{getPaymentMethodDisplay(method)}</p>
+                              {getPaymentMethodExpiry(method) && (
+                                <p className="text-xs text-muted-foreground">{getPaymentMethodExpiry(method)}</p>
+                              )}
+                            </div>
+                          </div>
+                          {method.isPrimary && (
+                            <span className="text-[11px] px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                              Primary
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="w-full overflow-hidden">
+            {useExistingPayment && paymentMethods.length > 0 ? null : (
+              <PaymentElement
+                options={{
+                  layout: 'tabs',
+                  paymentMethodOrder: ['link', 'card', 'apple_pay', 'google_pay'],
+                  fields: {
+                    billingDetails: {
+                      email: 'never',
+                      phone: 'auto'
+                    }
+                  },
+                  wallets: {
+                    applePay: 'auto',
+                    googlePay: 'auto'
+                  }
+                }}
+                onChange={(event) => {
+                  setIsFormComplete(event.complete);
+                  if (event.error) {
+                    setError(event.error.message);
+                  } else {
+                    setError(null);
+                  }
+                }}
+              />
+            )}
           </div>
 
           {error && (
@@ -186,7 +347,11 @@ function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (subsc
           <Button
             onClick={handleSubmit}
             className="w-full h-12 text-base font-medium"
-            disabled={!stripe || isProcessing || !isFormComplete}
+            disabled={
+              isProcessing ||
+              loadingPaymentMethods ||
+              (useExistingPayment ? !selectedPaymentMethod : (!stripe || !isFormComplete))
+            }
           >
             {isProcessing ? (
               <>
@@ -305,6 +470,7 @@ export default function FundAccountCheckoutPage() {
     >
       <CheckoutForm
         amount={amount}
+        clientSecret={clientSecret}
         onSuccess={(subscriptionId) => {
           router.push(`/settings/fund-account/success?subscription=${subscriptionId}&amount=${amount}`);
         }}
