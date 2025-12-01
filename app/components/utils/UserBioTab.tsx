@@ -322,13 +322,14 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
             </PageProvider>
           </div>
         ) : (
-          <div className="prose dark:prose-invert max-w-none">
+          <div className="max-w-none">
             {bioContent ? (
-              <HoverEditContent
+              <ContentDisplay
                 content={bioContent}
-                canEdit={isProfileOwner}
-                setIsEditing={handleSetIsEditing}
-                showLineNumbers={false} // Bio doesn't need line numbers
+                isEditable={false}
+                showToolbar={false}
+                showLineNumbers={false}
+                className="prose dark:prose-invert max-w-none"
               />
             ) : (
               <EmptyContentState

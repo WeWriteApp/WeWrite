@@ -169,8 +169,8 @@ const FilteredSearchResults = forwardRef(({
       // Choose the appropriate API based on mode and filter
       let queryUrl;
       if (isLinkEditor) {
-        // Use unified search API for link editor context
-        queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${user.uid}&context=link_editor&maxResults=25&titleOnly=true&includeUsers=false`;
+        // Use unified search API for link editor context (now includes users)
+        queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${user.uid}&context=link_editor&maxResults=25&titleOnly=true&includeUsers=true`;
 
         // Add current page ID to exclude it from results if available
         const currentPageId = new URLSearchParams(window.location.search).get('currentPageId');
