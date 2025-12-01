@@ -1004,6 +1004,16 @@ const SimpleParagraphNode = (props: {
       fullChild: JSON.stringify(child)
     });
 
+    // Legacy link fallback: treat nodes with a url but missing type as links
+    if (!child.type && child.url) {
+      child = {
+        type: 'link',
+        url: child.url,
+        isExternal: /^https?:\/\//i.test(child.url),
+        children: [{ text: child.text || child.displayText || child.url }]
+      };
+    }
+
     // Handle link nodes with error handling
     if (child.type === 'link') {
       try {
@@ -1061,15 +1071,26 @@ const SimpleParagraphNode = (props: {
       return (
         <React.Fragment key={i}>
           {child.children.map((grandchild, grandchildIndex) => {
-            if (grandchild.type === 'link') {
-              return <LinkNode key={`${i}-${grandchildIndex}`} node={grandchild} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
-            } else if (grandchild.text) {
-              let className = '';
-              if (grandchild.bold) className += ' font-bold';
-              if (grandchild.italic) className += ' italic';
-              if (grandchild.underline) className += ' underline';
+            // Legacy link fallback for nested children
+            let nodeToRender = grandchild;
+            if (!nodeToRender.type && nodeToRender?.url) {
+              nodeToRender = {
+                type: 'link',
+                url: nodeToRender.url,
+                isExternal: /^https?:\/\//i.test(nodeToRender.url),
+                children: [{ text: nodeToRender.text || nodeToRender.displayText || nodeToRender.url }]
+              };
+            }
 
-              const linkifiedSegments = renderLinkifiedText(grandchild.text, className.trim());
+            if (nodeToRender.type === 'link') {
+              return <LinkNode key={`${i}-${grandchildIndex}`} node={nodeToRender} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
+            } else if (nodeToRender.text) {
+              let className = '';
+              if (nodeToRender.bold) className += ' font-bold';
+              if (nodeToRender.italic) className += ' italic';
+              if (nodeToRender.underline) className += ' underline';
+
+              const linkifiedSegments = renderLinkifiedText(nodeToRender.text, className.trim());
               if (linkifiedSegments) {
                 return (
                   <React.Fragment key={`${i}-${grandchildIndex}`}>
@@ -1078,7 +1099,7 @@ const SimpleParagraphNode = (props: {
                 );
               }
 
-              return <span key={`${i}-${grandchildIndex}`} className={className || undefined}>{grandchild.text}</span>;
+              return <span key={`${i}-${grandchildIndex}`} className={className || undefined}>{nodeToRender.text}</span>;
             }
             return null;
           })}
