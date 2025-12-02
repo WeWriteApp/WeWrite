@@ -2,12 +2,12 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10.24.0",
   "engines": {
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3000 --webpack",
     "dev:https": "node scripts/start-https-dev.js",
     "dev:https:setup": "node scripts/setup-https-dev.js",
     "dev:console": "concurrently \"pnpm run console:listen\" \"pnpm run dev\" --names \"CONSOLE,DEV\" --prefix-colors \"cyan,green\"",
@@ -15,7 +15,7 @@
     "dev:turbo": "./scripts/start-turbo.sh",
     "dev:safe": "./scripts/start-dev.sh",
     "dev:port": "./scripts/ensure-port-3000.sh",
-    "build": "rm -rf .next && BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096 --require ./global-polyfill.js' next build",
+    "build": "rm -rf .next && BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096 --require ./global-polyfill.js' next build --webpack",
     "seo:audit": "node scripts/seo-audit.js",
     "subscription:cleanup": "node scripts/subscription-cleanup.js",
     "subscription:cleanup:dry": "node scripts/subscription-cleanup.js --dry-run",

@@ -96,11 +96,6 @@ const nextConfig = {
     ignoreBuildErrors: true, // Temporarily ignore for Vercel build
   },
 
-  // Enable ESLint during builds
-  eslint: {
-    ignoreDuringBuilds: true, // Temporarily ignore for Vercel build
-  },
-
   // Experimental features for better error reporting
   experimental: {
     forceSwcTransforms: false,
@@ -124,12 +119,6 @@ const nextConfig = {
   // Reduce server-side request logging
   async rewrites() {
     return [];
-  },
-
-  // Custom server configuration for enhanced development logging
-  serverRuntimeConfig: {
-    // Increase server logging verbosity for development
-    logLevel: process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
   },
 
   // Security headers for Stripe Connect embedded components
