@@ -1,5 +1,5 @@
 // WeWrite Service Worker - Optimized for poor network connections
-// Version 2.1 - Enhanced caching and offline support
+// Version 2.2 - Enhanced caching with deployment-aware invalidation
 
 // Safety check: Only run in service worker context
 if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
@@ -11,12 +11,21 @@ if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
   throw new Error('This script must run in a service worker context');
 }
 
-const CACHE_NAME = 'wewrite-v2.1';
-const STATIC_CACHE = 'wewrite-static-v2.1';
-const DYNAMIC_CACHE = 'wewrite-dynamic-v2.1';
-const API_CACHE = 'wewrite-api-v2.1';
-const IMAGE_CACHE = 'wewrite-images-v2.1';
-const FONT_CACHE = 'wewrite-fonts-v2.1';
+// Cache version - increment this on major changes to force cache clear
+// The service worker will also check for updates on each page load
+const CACHE_VERSION = '2.2';
+
+const CACHE_NAME = `wewrite-v${CACHE_VERSION}`;
+const STATIC_CACHE = `wewrite-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `wewrite-dynamic-v${CACHE_VERSION}`;
+const API_CACHE = `wewrite-api-v${CACHE_VERSION}`;
+const IMAGE_CACHE = `wewrite-images-v${CACHE_VERSION}`;
+const FONT_CACHE = `wewrite-fonts-v${CACHE_VERSION}`;
+
+// Max age for API cache entries (in milliseconds)
+// User-specific data (bios, profiles) should have shorter TTL
+const API_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes for general APIs
+const USER_DATA_CACHE_MAX_AGE = 60 * 1000; // 1 minute for user-specific data
 
 // Critical resources to cache immediately
 const CRITICAL_RESOURCES = [
@@ -69,12 +78,13 @@ const CACHEABLE_APIS = [
   '/api/daily-notes',
 ];
 
-// Network-first strategies for these patterns
+// Network-first strategies for these patterns (user-specific data that should be fresh)
 const NETWORK_FIRST_PATTERNS = [
   '/api/tokens/',
   '/api/subscription/',
   '/api/payment',
   '/api/user-',
+  '/bio',  // User bios should always be fresh
 ];
 
 // Payment-related patterns that should never be cached
@@ -280,16 +290,42 @@ async function networkFirstStrategy(request, cacheName, timeout = 3000) {
   }
 }
 
-// Stale-while-revalidate strategy for APIs
+// Stale-while-revalidate strategy for APIs with time-based expiration
 async function staleWhileRevalidateStrategy(request, cacheName) {
   const cache = await caches.open(cacheName);
+  const url = new URL(request.url);
+  
+  // Determine max age based on endpoint type
+  const isUserData = url.pathname.includes('/users/') || url.pathname.includes('/bio');
+  const maxAge = isUserData ? USER_DATA_CACHE_MAX_AGE : API_CACHE_MAX_AGE;
+  
+  // Check cache with expiration
   const cachedResponse = await cache.match(request);
+  let cacheIsValid = false;
+  
+  if (cachedResponse) {
+    const cachedAt = cachedResponse.headers.get('sw-cached-at');
+    if (cachedAt) {
+      const cacheAge = Date.now() - parseInt(cachedAt, 10);
+      cacheIsValid = cacheAge < maxAge;
+    }
+  }
   
   // Always try to update cache in background
   const fetchPromise = fetch(request).then((networkResponse) => {
     if (networkResponse.ok) {
       try {
-        cache.put(request, networkResponse.clone());
+        // Clone and add cache timestamp
+        const headers = new Headers(networkResponse.headers);
+        headers.set('sw-cached-at', Date.now().toString());
+        
+        const responseToCache = new Response(networkResponse.clone().body, {
+          status: networkResponse.status,
+          statusText: networkResponse.statusText,
+          headers: headers
+        });
+        
+        cache.put(request, responseToCache);
       } catch (cacheError) {
         // Silently ignore cache errors to reduce console noise
       }
@@ -299,12 +335,12 @@ async function staleWhileRevalidateStrategy(request, cacheName) {
     // Ignore network errors for background updates
   });
   
-  // Return cached version immediately if available
-  if (cachedResponse) {
+  // Return cached version immediately if available AND not expired
+  if (cachedResponse && cacheIsValid) {
     return cachedResponse;
   }
   
-  // If no cache, wait for network
+  // If cache is stale or missing, wait for network
   return await fetchPromise;
 }
 
