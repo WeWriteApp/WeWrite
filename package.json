@@ -127,7 +127,6 @@
     "firebase:cleanup:execute": "node -r dotenv/config scripts/cleanup-firebase-collections.js dotenv_config_path=.env.local -- --execute --force"
   },
   "dependencies": {
-
     "@google-cloud/bigquery": "^8.1.0",
     "@google-cloud/logging": "^11.2.0",
     "@heroicons/react": "^2.2.0",
@@ -137,7 +136,6 @@
     "@radix-ui/react-radio-group": "^1.3.7",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slider": "^1.3.5",
-
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.3.0",
     "@tanstack/react-query": "^5.84.1",
@@ -161,7 +159,7 @@
     "lodash.debounce": "^4.0.8",
     "logrocket": "^10.1.0",
     "lucide-react": "^0.525.0",
-    "next": "^15.5.4",
+    "next": "^16.0.6",
     "next-themes": "^0.4.6",
     "prismjs": "^1.30.0",
     "react": "^19.1.1",
@@ -186,7 +184,6 @@
     "web-vitals": "^5.0.3"
   },
   "devDependencies": {
-
     "@jest/globals": "^30.0.3",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
