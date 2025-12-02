@@ -86,7 +86,12 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const linkifyBioContent = useCallback((content: EditorContent | string) => {
     if (typeof content !== 'string') return content;
 
-    const paragraphs = content.split(/\n{2,}/).map(p => p.replace(/\n+/g, ' '));
+    // Normalize simple HTML anchors to markdown-style for consistent parsing
+    const normalized = content.replace(/<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, (_m, href, text) => {
+      return `[${text}](${href})`;
+    });
+
+    const paragraphs = normalized.split(/\n{2,}/).map(p => p.replace(/\n+/g, ' '));
 
     return paragraphs.map(paragraph => ({
       type: 'paragraph',
@@ -107,6 +112,17 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         // If child already a link element, keep as-is
         if (child?.type === 'link') {
           result.push(child);
+          return;
+        }
+
+        // Handle legacy shapes where link data lives on href/url without type
+        if (!child.type && (child.url || child.href)) {
+          result.push({
+            type: 'link',
+            url: child.url || child.href,
+            isExternal: /^https?:\/\//i.test(child.url || child.href),
+            children: child.children || [{ text: child.text || child.displayText || child.url || child.href }]
+          });
           return;
         }
 

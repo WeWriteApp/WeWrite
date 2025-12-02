@@ -75,7 +75,7 @@ export function FloatingCard({
     default: "",
     toolbar: cn(
       // Enhanced background only in light mode when expanded (dark stays unchanged)
-      isExpanded && "bg-white border border-border/60 dark:bg-[var(--card-bg)] dark:border-border"
+      isExpanded && "bg-white/90 hover:bg-white/95 border border-border/70 dark:bg-[var(--card-bg)] dark:border-border"
     ),
     header: "",
     overlay: cn(

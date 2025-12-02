@@ -48,8 +48,13 @@ export async function GET(
 
     const userData = userDoc.data();
 
+    // Normalize Firestore data to plain JSON to avoid environment differences
+    const normalizedBio = userData?.bio
+      ? JSON.parse(JSON.stringify(userData.bio))
+      : '';
+
     return createApiResponse({
-      bio: userData?.bio || '',
+      bio: normalizedBio,
       bioLastEditor: userData?.bioLastEditor || null,
       bioLastEditTime: userData?.bioLastEditTime || null
     });
