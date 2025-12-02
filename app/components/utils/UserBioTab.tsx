@@ -43,158 +43,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   // Track if content has changed
   const hasUnsavedChanges = isEditing && bioContent !== originalContent;
 
-  // Helper: convert plain-text bios with URLs into link nodes for proper styling
-  const parseTextToNodes = useCallback((text: string) => {
-    const nodes: any[] = [];
-    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-    let lastIndex = 0;
-    let match;
-
-    while ((match = linkPattern.exec(text)) !== null) {
-      const [fullMatch, mdText, mdUrl, rawUrl] = match;
-      const start = match.index;
-
-      if (start > lastIndex) {
-        nodes.push({ text: text.slice(lastIndex, start) });
-      }
-
-      const href = mdUrl || rawUrl || '';
-      const isExternal = /^https?:\/\//i.test(href) || href.startsWith('www.');
-      const normalizedHref = href.startsWith('http')
-        ? href
-        : href.startsWith('www.')
-          ? `https://${href}`
-          : href;
-
-      nodes.push({
-        type: 'link',
-        url: normalizedHref,
-        isExternal,
-        children: [{ text: mdText || rawUrl || href }]
-      });
-
-      lastIndex = start + fullMatch.length;
-    }
-
-    if (lastIndex < text.length) {
-      nodes.push({ text: text.slice(lastIndex) });
-    }
-
-    return nodes.length > 0 ? nodes : [{ text }];
-  }, []);
-
-  const linkifyBioContent = useCallback((content: EditorContent | string) => {
-    if (typeof content !== 'string') return content;
-
-    // Normalize simple HTML anchors to markdown-style for consistent parsing
-    const normalized = content.replace(/<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, (_m, href, text) => {
-      return `[${text}](${href})`;
-    });
-
-    const paragraphs = normalized.split(/\n{2,}/).map(p => p.replace(/\n+/g, ' '));
-
-    return paragraphs.map(paragraph => ({
-      type: 'paragraph',
-      children: parseTextToNodes(paragraph)
-    }));
-  }, [parseTextToNodes]);
-
-  // Deep linkify existing structured content (arrays) so URLs become real links in all environments
-  const linkifyStructuredContent = useCallback((content: any): any => {
-    if (!Array.isArray(content)) return content;
-
-    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-
-    const linkifyChildren = (children: any[]): any[] => {
-      const result: any[] = [];
-
-      children.forEach((child) => {
-        // If child already a link element, keep as-is
-        if (child?.type === 'link') {
-          result.push(child);
-          return;
-        }
-
-        // Handle legacy shapes where link data lives on href/url without type
-        if (!child.type && (child.url || child.href)) {
-          result.push({
-            type: 'link',
-            url: child.url || child.href,
-            isExternal: /^https?:\/\//i.test(child.url || child.href),
-            children: child.children || [{ text: child.text || child.displayText || child.url || child.href }]
-          });
-          return;
-        }
-
-        // If child has nested children, recurse
-        if (Array.isArray(child?.children)) {
-          result.push({
-            ...child,
-            children: linkifyChildren(child.children),
-          });
-          return;
-        }
-
-        // If plain text node, split into text + link nodes
-        if (typeof child?.text === 'string') {
-          const text = child.text;
-          let lastIndex = 0;
-          let match;
-          const segments: any[] = [];
-
-          while ((match = urlRegex.exec(text)) !== null) {
-            const [rawUrl] = match;
-            const start = match.index;
-
-            if (start > lastIndex) {
-              segments.push({ text: text.slice(lastIndex, start) });
-            }
-
-            const href = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
-            segments.push({
-              type: 'link',
-              url: href,
-              isExternal: true,
-              children: [{ text: rawUrl }],
-            });
-
-            lastIndex = start + rawUrl.length;
-          }
-
-          if (lastIndex < text.length) {
-            segments.push({ text: text.slice(lastIndex) });
-          }
-
-          result.push(
-            segments.length > 0
-              ? { ...child, children: segments, text: undefined }
-              : child
-          );
-        } else {
-          result.push(child);
-        }
-      });
-
-      return result;
-    };
-
-    return content.map((node) => {
-      if (Array.isArray(node?.children)) {
-        return { ...node, children: linkifyChildren(node.children) };
-      }
-      return node;
-    });
-  }, []);
-
-  const viewBioContent = useMemo(() => {
-    if (typeof bioContent === 'string') {
-      return linkifyBioContent(bioContent);
-    }
-
-    // For structured content, ensure any raw URLs become link nodes
-    return linkifyStructuredContent(bioContent);
-  }, [bioContent, linkifyBioContent, linkifyStructuredContent]);
-
   // Enhanced setIsEditing function that captures click position
   // For always-editing mode, this doesn't change the editing state for owners
   const handleSetIsEditing = (editing: boolean, position: { x: number; y: number; clientX: number; clientY: number } | null = null) => {
@@ -217,9 +65,19 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         // Use API route for bio loading to handle environment-aware operations
         const response = await fetch(`/api/users/${profile.uid}/bio`);
 
+        console.log('🔍 UserBioTab: API response status:', response.status);
+
         if (response.ok) {
           const bioResponse = await response.json();
           const bioData = bioResponse.data; // Extract data from API response
+
+          console.log('🔍 UserBioTab: API response data:', {
+            hasBio: !!bioData.bio,
+            bioType: typeof bioData.bio,
+            bioIsArray: Array.isArray(bioData.bio),
+            bioLength: bioData.bio ? (Array.isArray(bioData.bio) ? bioData.bio.length : bioData.bio.length) : 0,
+            bioSample: typeof bioData.bio === 'string' ? bioData.bio.substring(0, 100) : JSON.stringify(bioData.bio).substring(0, 100)
+          });
 
           if (bioData.bio) {
             setBioContent(bioData.bio);
@@ -477,7 +335,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           <div className="max-w-none">
             {bioContent ? (
               <ContentDisplay
-                content={viewBioContent}
+                content={bioContent}
                 isEditable={false}
                 showToolbar={false}
                 showLineNumbers={false}
