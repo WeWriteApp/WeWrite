@@ -637,14 +637,15 @@ function DashboardRow({
   // Use the hook for this row
   const hookResult = row.hook(dateRange, granularity, globalFilters);
   const { data, loading, error } = hookResult;
+  const normalizedData = Array.isArray(data) ? data : [];
   const stats = hookResult.stats; // For platform fee metrics
   const metadata = hookResult.metadata; // For payout analytics
 
   // Calculate current value
-  const currentValue = data && data.length > 0 ? row.valueFormatter(data, stats, metadata) : '0';
+  const currentValue = normalizedData.length > 0 ? row.valueFormatter(normalizedData, stats, metadata) : '0';
   
   // Calculate trend
-  const trend = calculateTrend(data);
+  const trend = calculateTrend(normalizedData);
   
   return (
     <div
@@ -676,7 +677,7 @@ function DashboardRow({
         <div className="flex items-center gap-2">
           {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
           {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
-          {!loading && !error && data.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+          {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
         </div>
       </div>
       
@@ -690,12 +691,12 @@ function DashboardRow({
           <div className="h-full flex items-center justify-center text-red-500">
             Error loading data
           </div>
-        ) : data.length === 0 ? (
+        ) : normalizedData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             No data available
           </div>
         ) : (
-          <row.chartComponent data={data} height={height} globalFilters={globalFilters} />
+          <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} />
         )}
       </div>
     </div>

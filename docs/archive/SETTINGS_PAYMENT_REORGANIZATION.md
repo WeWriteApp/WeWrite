@@ -1,4 +1,6 @@
-# WeWrite Settings Page Payment Sections Reorganization
+# ARCHIVED — see `docs/PAYMENTS_AND_ALLOCATIONS.md`
+
+## WeWrite Settings Page Payment Sections Reorganization
 
 ## Overview
 

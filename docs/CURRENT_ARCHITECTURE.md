@@ -46,7 +46,8 @@ User Subscription → USD Balance → Allocations → Creator Earnings → Payou
 
 #### 3. USD Allocation System
 - **Direct USD Allocations**: No virtual currency conversion
-- **Monthly Tracking**: Allocations tracked by month (YYYY-MM)
+- **Persistent Monthly Intent**: User-set allocations stay in effect every month until the user changes them
+- **Monthly Tracking**: Allocations tracked by month (YYYY-MM) for reporting/locking, not to reset user intent
 - **Real-time Updates**: Optimistic UI with background API calls
 
 #### 4. Rich Text Editor System

@@ -46,12 +46,12 @@ export interface UserAllocationSnapshot {
   allocations: {
     pageId?: string;
     recipientUserId?: string;
-    amount: number;
+    amount: number; // stored in cents for snapshot consistency
     allocatedAt: Date;
   }[];
-  totalAllocated: number;
-  subscriptionAmount: number;
-  unallocatedAmount: number;
+  totalAllocated: number; // dollars for legacy consumers
+  subscriptionAmount: number; // dollars for legacy consumers
+  unallocatedAmount: number; // dollars for legacy consumers
   lockedAt: Date;
   status: 'locked';
 }
@@ -84,7 +84,7 @@ export class MonthlyAllocationLockService {
     triggeredBy: 'manual' | 'automated' = 'automated'
   ): Promise<{ success: boolean; lockStatus?: AllocationLockStatus; error?: string }> {
     const lockStartTime = Date.now();
-    
+
     try {
       console.log(`🔒 [ALLOCATION LOCK] Starting monthly allocation lock for ${month}`);
 
@@ -120,51 +120,89 @@ export class MonthlyAllocationLockService {
       const userSnapshots: UserAllocationSnapshot[] = [];
       let totalUsers = 0;
       let totalAllocations = 0;
-      let totalAmountLocked = 0;
+      let totalAmountLockedCents = 0;
       const errors: string[] = [];
 
-      // Process each user's allocations
-      for (const fundRecord of fundRecords) {
-        try {
-          // Create user allocation snapshot
-          const snapshot: UserAllocationSnapshot = {
-            userId: fundRecord.userId,
-            month,
-            allocations: fundRecord.allocations.map(alloc => ({
-              pageId: alloc.pageId,
-              recipientUserId: alloc.recipientUserId,
-              amount: alloc.amount,
-              allocatedAt: alloc.allocatedAt
-            })),
-            totalAllocated: fundRecord.allocations.reduce((sum, alloc) => sum + alloc.amount, 0),
-            subscriptionAmount: fundRecord.amount,
-            unallocatedAmount: fundRecord.amount - fundRecord.allocations.reduce((sum, alloc) => sum + alloc.amount, 0),
-            lockedAt: new Date(),
-            status: 'locked'
-          };
+      // Load active allocations for the target month and group by user
+      const allocationsSnapshot = await getDocs(
+        query(
+          collection(db, getCollectionName('usdAllocations')),
+          where('month', '==', month),
+          where('status', '==', 'active')
+        )
+      );
 
-          // Save user allocation snapshot
-          const snapshotRef = doc(db, getCollectionName('userAllocationSnapshots'), `${fundRecord.userId}_${month}`);
-          batch.set(snapshotRef, {
-            ...snapshot,
-            lockedAt: serverTimestamp()
-          });
-
-          userSnapshots.push(snapshot);
-          totalUsers++;
-          totalAllocations += snapshot.allocations.length;
-          totalAmountLocked += snapshot.totalAllocated;
-
-          console.log(`🔒 [ALLOCATION LOCK] Processed user ${fundRecord.userId}: ${formatUsdCents(snapshot.totalAllocated * 100)} allocated`);
-
-        } catch (error) {
-          const errorMsg = `Failed to process user ${fundRecord.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          errors.push(errorMsg);
-          console.error(`❌ [ALLOCATION LOCK] ${errorMsg}`);
+      const allocationsByUser = new Map<
+        string,
+        {
+          allocations: {
+            pageId?: string;
+            recipientUserId?: string;
+            resourceType?: string;
+            resourceId?: string;
+            amountCents: number;
+            allocatedAt: Date;
+          }[];
         }
-      }
+      >();
 
-      // Allocation locking completed (fund tracking removed for simplicity)
+      allocationsSnapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const userId = data.userId;
+        const amountCents = data.usdCents || 0;
+        const allocation = {
+          pageId: data.resourceType === 'page' ? data.resourceId : undefined,
+          recipientUserId: data.recipientUserId,
+          resourceType: data.resourceType,
+          resourceId: data.resourceId,
+          amountCents,
+          allocatedAt: data.updatedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date()
+        };
+
+        const entry = allocationsByUser.get(userId) || { allocations: [] };
+        entry.allocations.push(allocation);
+        allocationsByUser.set(userId, entry);
+      });
+
+      // Create snapshots without altering live allocations
+      for (const [userId, data] of allocationsByUser.entries()) {
+        const totalAllocatedCents = data.allocations.reduce((sum, a) => sum + a.amountCents, 0);
+
+        const snapshot: UserAllocationSnapshot = {
+          userId,
+          month,
+          allocations: data.allocations.map(alloc => ({
+            pageId: alloc.pageId,
+            recipientUserId: alloc.recipientUserId,
+            amount: alloc.amountCents,
+            allocatedAt: alloc.allocatedAt
+          })),
+          totalAllocated: totalAllocatedCents / 100,
+          subscriptionAmount: totalAllocatedCents / 100,
+          unallocatedAmount: 0,
+          lockedAt: new Date(),
+          status: 'locked'
+        };
+
+        const snapshotRef = doc(
+          db,
+          getCollectionName('userAllocationSnapshots'),
+          `${userId}_${month}`
+        );
+        batch.set(snapshotRef, {
+          ...snapshot,
+          lockedAt: serverTimestamp()
+        });
+
+        userSnapshots.push(snapshot);
+        totalUsers++;
+        totalAllocations += snapshot.allocations.length;
+        totalAmountLockedCents += totalAllocatedCents;
+
+        console.log(
+          `🔒 [ALLOCATION LOCK] Processed user ${userId}: ${formatUsdCents(totalAllocatedCents)} allocated`
+        );
+      }
 
       // Commit batch operations
       await batch.commit();
@@ -176,7 +214,7 @@ export class MonthlyAllocationLockService {
         lockedAt: new Date(),
         totalUsers,
         totalAllocations,
-        totalAmountLocked,
+        totalAmountLocked: totalAmountLockedCents / 100, // store dollars for compatibility with existing logs
         errors,
         metadata: {
           ...lockStatus.metadata,
@@ -232,49 +270,17 @@ export class MonthlyAllocationLockService {
       const nextMonth = this.getNextMonth(currentMonth);
       console.log(`🚀 [MONTH TRANSITION] Opening allocation window for ${nextMonth}`);
 
-      // Get all users who had subscriptions in the current month
-      const userSnapshots = await this.getUserAllocationSnapshots(currentMonth);
-      
       const transition: MonthTransition = {
         fromMonth: currentMonth,
         toMonth: nextMonth,
         transitionDate: new Date(),
-        usersAffected: userSnapshots.length,
+        usersAffected: 0,
         totalFundsTransitioned: 0,
         status: 'completed',
-        errors: []
+        errors: ['rollover disabled: allocations persist automatically until changed']
       };
 
-      // For each user, roll over their allocations to the next month
-      for (const snapshot of userSnapshots) {
-        try {
-          console.log(`🚀 [MONTH TRANSITION] Processing user ${snapshot.userId} for ${nextMonth}`);
-
-          // Check if user has an active subscription for the next month
-          const hasActiveSubscription = await this.checkUserSubscriptionStatus(snapshot.userId, nextMonth);
-
-          if (hasActiveSubscription) {
-            // Roll over allocations to next month - this creates sustainable income for writers
-            const rolloverResult = await this.rolloverUserAllocations(snapshot, nextMonth);
-
-            if (rolloverResult.success) {
-              transition.totalFundsTransitioned += rolloverResult.totalRolledOver;
-              console.log(`✅ [MONTH TRANSITION] Rolled over ${formatUsdCents(rolloverResult.totalRolledOver)} in allocations for user ${snapshot.userId}`);
-            } else {
-              transition.errors.push(`Failed to rollover allocations for user ${snapshot.userId}: ${rolloverResult.error}`);
-            }
-          } else {
-            console.log(`⚠️ [MONTH TRANSITION] User ${snapshot.userId} has no active subscription for ${nextMonth}, skipping rollover`);
-          }
-
-        } catch (error) {
-          const errorMsg = `Failed to transition user ${snapshot.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          transition.errors.push(errorMsg);
-          console.error(`❌ [MONTH TRANSITION] ${errorMsg}`);
-        }
-      }
-
-      // Save transition record
+      // Save transition record (no data mutation; persistence is automatic)
       await setDoc(doc(db, getCollectionName('monthTransitions'), `${currentMonth}_to_${nextMonth}`), {
         ...transition,
         transitionDate: serverTimestamp()

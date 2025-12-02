@@ -1,4 +1,6 @@
-# Enhanced Payment Error Messaging
+# ARCHIVED — see `docs/PAYMENTS_AND_ALLOCATIONS.md`
+
+## Enhanced Payment Error Messaging
 
 This document describes the comprehensive payment error messaging system implemented to provide detailed, user-friendly explanations for card declines and payment failures.
 

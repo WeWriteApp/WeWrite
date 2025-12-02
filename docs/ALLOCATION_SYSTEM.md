@@ -2,7 +2,7 @@
 
 ## Overview
 
-The WeWrite allocation system allows users to allocate USD funds to content pages on a monthly basis. This document describes the modern, unified architecture implemented to replace the previous duplicated component system.
+The WeWrite allocation system allows users to allocate USD funds to content pages on a monthly basis. Allocations are **persistent**—the amounts a supporter sets remain in effect every month until they choose to change them. Month labels exist for reporting, analytics, and payout locking, not for resetting user intent. This document describes the modern, unified architecture implemented to replace the previous duplicated component system.
 
 ## Architecture Stack
 

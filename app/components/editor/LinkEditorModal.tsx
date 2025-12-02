@@ -182,6 +182,21 @@ export default function LinkEditorModal({
     }
   }, [isOpen, hasInitialized]);
 
+  // Auto-focus the primary input when opening
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      if (activeTab === 'external' && externalUrlInputRef.current) {
+        externalUrlInputRef.current.focus();
+      } else if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, activeTab]);
+
   // Focus the external URL input when external tab is selected (DISABLED to prevent focus stealing)
   // useEffect(() => {
   //   if (isOpen && activeTab === 'external') {
@@ -713,7 +728,7 @@ export default function LinkEditorModal({
                         ? editingLink.data.title || selectedText
                         : selectedText
                     }
-                    autoFocus={false} // DISABLED: Prevents focus stealing from custom text input
+                    autoFocus={true}
                     className="h-full"
                     preventRedirect={true}
                     linkedPageIds={linkedPageIds}

@@ -1,4 +1,6 @@
-# Payment Failure Tracking and Audit System
+# ARCHIVED — see `docs/PAYMENTS_AND_ALLOCATIONS.md`
+
+## Payment Failure Tracking and Audit System
 
 ## Overview
 

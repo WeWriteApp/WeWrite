@@ -54,6 +54,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
+  const layoutRef = useRef<{ width: number; height: number }>({ width: 800, height: 500 });
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,12 +109,12 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
 
   const handleResetSettings = () => {
     const defaultSettings = {
-      chargeStrength: -150,    // Further reduced repulsion for tighter clustering
-      linkDistance: 60,        // Even shorter links to keep nodes compact
-      centerStrength: 0.8,     // Strong center force to pull nodes toward middle
-      collisionRadius: 20,     // Smaller collision radius for tighter layout
+      chargeStrength: -60,     // Softer repulsion so nodes don’t hug the edges
+      linkDistance: 60,        // Short links to keep nodes compact
+      centerStrength: 1.2,     // Strong center pull
+      collisionRadius: 18,     // Slightly smaller collision for tighter layout
       alphaDecay: 0.0228,
-      velocityDecay: 0.5       // Higher damping for more stable positioning
+      velocityDecay: 0.5       // Higher damping for stability
     };
     handleSettingsChange(defaultSettings);
   };
@@ -242,6 +243,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
     // Set up dimensions
     const width = container.clientWidth;
     const height = isFullscreen ? window.innerHeight : 500;
+    layoutRef.current = { width, height };
     
     svg.attr("width", width).attr("height", height);
 
@@ -299,27 +301,9 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
         .distance(settings.linkDistance))
       .force("charge", d3.forceManyBody().strength(settings.chargeStrength))
       .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
+      .force("radial", d3.forceRadial(Math.min(width, height) / 4, width / 2, height / 2).strength(0.08))
       .force("collision", d3.forceCollide().radius(settings.collisionRadius))
-      .force("boundary", () => {
-        // Keep nodes within container bounds with stronger constraints
-        const padding = 40;
-        nodes.forEach(node => {
-          if (node.x !== undefined && node.y !== undefined) {
-            // Apply stronger boundary forces to keep nodes in view
-            if (node.x < padding) {
-              node.vx = (node.vx || 0) + (padding - node.x) * 0.3;
-            } else if (node.x > width - padding) {
-              node.vx = (node.vx || 0) + (width - padding - node.x) * 0.3;
-            }
-
-            if (node.y < padding) {
-              node.vy = (node.vy || 0) + (padding - node.y) * 0.3;
-            } else if (node.y > height - padding) {
-              node.vy = (node.vy || 0) + (height - padding - node.y) * 0.3;
-            }
-          }
-        });
-      })
+      // Removed boundary push so nodes can settle toward the center naturally
       .alphaDecay(settings.alphaDecay)
       .velocityDecay(settings.velocityDecay);
 
@@ -455,6 +439,14 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
     simulation
       .force("charge", d3.forceManyBody().strength(settings.chargeStrength))
       .force("center", d3.forceCenter().strength(settings.centerStrength))
+      .force(
+        "radial",
+        d3.forceRadial(
+          Math.min(layoutRef.current.width, layoutRef.current.height) / 4,
+          layoutRef.current.width / 2,
+          layoutRef.current.height / 2
+        ).strength(0.08)
+      )
       .force("collision", d3.forceCollide().radius(settings.collisionRadius))
       .alphaDecay(settings.alphaDecay)
       .velocityDecay(settings.velocityDecay);

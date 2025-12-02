@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useSimplePages from "../../hooks/useSimplePages";
 import UsernameHistory from "../auth/UsernameHistory";
 import FollowingList from './FollowingList';
+import { Input } from "../ui/input";
 
 import UserBioTab from './UserBioTab';
 
@@ -76,14 +77,12 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
 
   return (
     <div className="space-y-4">
-      <div className="relative wewrite-card">
-        <input
-          type="text"
-          placeholder={`Search ${username}'s pages...`}
-          className="w-full px-3 py-2 border-0 bg-transparent rounded-md"
-          onChange={(e) => performSearch(e.target.value)}
-        />
-      </div>
+      <Input
+        type="search"
+        placeholder={`Search ${username}'s pages...`}
+        className="w-full"
+        onChange={(e) => performSearch(e.target.value)}
+      />
 
       {isLoading && (
         <div className="text-center py-4">

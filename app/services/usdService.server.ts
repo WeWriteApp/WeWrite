@@ -52,6 +52,129 @@ function getFirebaseAdminAndDb() {
 
 export class ServerUsdService {
   /**
+   * Ensure the current month has active allocations by rolling forward the most recent month.
+   * This prevents allocations from appearing empty when the month-end cron fails to copy data.
+   */
+  private static async backfillCurrentMonthAllocations(userId: string): Promise<{
+    copied: boolean;
+    sourceMonth?: string;
+    allocationsCopied: number;
+    totalUsdCents: number;
+  }> {
+    try {
+      const { db } = getFirebaseAdminAndDb();
+      const currentMonth = getCurrentMonth();
+      const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+      const allocationsRef = db.collection(allocationsCollectionName);
+
+      // If we already have active allocations for this month, nothing to do.
+      const currentSnapshot = await allocationsRef
+        .where('userId', '==', userId)
+        .where('month', '==', currentMonth)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+
+      if (!currentSnapshot.empty) {
+        return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
+      }
+
+      // Look up the latest month with active allocations for this user.
+      const priorSnapshot = await allocationsRef
+        .where('userId', '==', userId)
+        .where('status', '==', 'active')
+        .get();
+
+      if (priorSnapshot.empty) {
+        return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
+      }
+
+      const allocationsByMonth = new Map<string, any[]>();
+      for (const doc of priorSnapshot.docs) {
+        const data = doc.data();
+        const month = data.month;
+        if (!month || month === currentMonth) continue;
+        allocationsByMonth.set(month, [...(allocationsByMonth.get(month) || []), { ...data }]);
+      }
+
+      let sourceMonth = '';
+      for (const month of allocationsByMonth.keys()) {
+        if (!sourceMonth || month > sourceMonth) {
+          sourceMonth = month;
+        }
+      }
+
+      const sourceAllocations = (sourceMonth && allocationsByMonth.get(sourceMonth)) || [];
+      if (!sourceMonth || sourceAllocations.length === 0) {
+        return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
+      }
+
+      const batch = db.batch();
+      let totalUsdCents = 0;
+
+      for (const allocation of sourceAllocations) {
+        const usdCents = allocation.usdCents || 0;
+        totalUsdCents += usdCents;
+        const { createdAt, updatedAt, id: _id, month: _month, ...rest } = allocation;
+        const newRef = allocationsRef.doc();
+        batch.set(newRef, {
+          ...rest,
+          usdCents,
+          month: currentMonth,
+          status: 'active',
+          rolledOverFrom: sourceMonth,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      }
+
+      await batch.commit();
+
+      // Best-effort balance normalization so summaries stay consistent.
+      try {
+        const balanceCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
+        const balanceRef = db.collection(balanceCollectionName).doc(userId);
+        const balanceDoc = await balanceRef.get();
+        if (balanceDoc.exists) {
+          const balanceData = balanceDoc.data() || {};
+          const totalUsdCentsBalance =
+            typeof balanceData.totalUsdCents === 'number'
+              ? balanceData.totalUsdCents
+              : typeof balanceData.monthlyAllocationCents === 'number'
+                ? balanceData.monthlyAllocationCents
+                : 0;
+
+          await balanceRef.update({
+            allocatedUsdCents: totalUsdCents,
+            availableUsdCents: totalUsdCentsBalance - totalUsdCents,
+            lastAllocationDate: currentMonth,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+        }
+      } catch (balanceError) {
+        console.warn(
+          `[USD ALLOCATION] Balance normalization skipped after rollover for user ${userId}:`,
+          balanceError
+        );
+      }
+
+      console.log(
+        `[USD ALLOCATION] Rolled forward ${sourceAllocations.length} allocations from ${sourceMonth} to ${currentMonth} for user ${userId}`
+      );
+
+      return {
+        copied: true,
+        sourceMonth,
+        allocationsCopied: sourceAllocations.length,
+        totalUsdCents
+      };
+    } catch (error) {
+      console.error('[USD ALLOCATION] Failed to backfill current month allocations:', error);
+      return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
+    }
+  }
+
+  /**
    * Initialize user's monthly USD allocation (server-side with admin permissions)
    */
   static async updateMonthlyUsdAllocation(
@@ -105,6 +228,9 @@ export class ServerUsdService {
   static async getUserUsdBalance(userId: string): Promise<UsdBalance | null> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
+
+      // Ensure we carry forward previous allocations into the current month before computing balances.
+      await this.backfillCurrentMonthAllocations(userId);
 
       // Use the subscription source to get current balance
       let subscriptionData = null;
@@ -277,6 +403,7 @@ export class ServerUsdService {
   static async calculateActualAllocatedUsdCents(userId: string): Promise<number> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
+      await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
       console.log(`[USD CALCULATION] Calculating actual allocated cents for user ${userId}, month ${currentMonth}`);
@@ -378,6 +505,7 @@ export class ServerUsdService {
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
+      await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
       const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
@@ -410,6 +538,7 @@ export class ServerUsdService {
   static async getUserUsdAllocations(userId: string): Promise<UsdAllocation[]> {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
+      await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
       const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
@@ -458,6 +587,7 @@ export class ServerUsdService {
       }
 
       const { admin, db } = getFirebaseAdminAndDb();
+      await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
       const usdDollarsChange = centsToDollars(usdCentsChange);
       console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${usdDollarsChange} USD`);

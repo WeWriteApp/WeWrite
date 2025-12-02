@@ -1,4 +1,6 @@
-# WeWrite Platform Fee Update - August 2025
+# ARCHIVED — see `docs/PAYMENTS_AND_ALLOCATIONS.md`
+
+## WeWrite Platform Fee Update - August 2025
 
 ## Summary
 

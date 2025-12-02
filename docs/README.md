@@ -23,7 +23,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **[ENVIRONMENT_QUICK_REFERENCE.md](./ENVIRONMENT_QUICK_REFERENCE.md)** – Dev vs preview vs prod behavior
 - **[AUTHENTICATION_ARCHITECTURE.md](./AUTHENTICATION_ARCHITECTURE.md)** – Auth/session pipeline
 - **[ALLOCATION_SYSTEM.md](./ALLOCATION_SYSTEM.md)** + **[ALLOCATION_API_REFERENCE.md](./ALLOCATION_API_REFERENCE.md)** – Funding/allocations core
-- **[PAYMENT_SYSTEM_GUIDE.md](./PAYMENT_SYSTEM_GUIDE.md)** + **[PAYOUT_SYSTEM_INDEX.md](./PAYOUT_SYSTEM_INDEX.md)** + **[STORAGE_BALANCE_GUIDE.md](./STORAGE_BALANCE_GUIDE.md)** – Payments, payouts, storage balance
+- **[PAYMENTS_AND_ALLOCATIONS.md](./PAYMENTS_AND_ALLOCATIONS.md)** – Single entry for subscriptions, allocations, storage balance, payouts, fees, and troubleshooting
 - **[NOTIFICATION_SYSTEM.md](./NOTIFICATION_SYSTEM.md)** – Notification types and delivery
 - **[TEXT_SELECTION_AND_ATTRIBUTION.md](./TEXT_SELECTION_AND_ATTRIBUTION.md)** – Cross-page selection, attribution, copy rules
 - **[HEADER_SYSTEM.md](./HEADER_SYSTEM.md)** + **[SETTINGS_NAVIGATION_SYSTEM.md](./SETTINGS_NAVIGATION_SYSTEM.md)** – Header and settings UX patterns
@@ -47,7 +47,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 
 ### Testing & troubleshooting
 - **[PAYMENT_FLOW_TESTING_GUIDE.md](./PAYMENT_FLOW_TESTING_GUIDE.md)**, **[STORAGE_BALANCE_TESTING_GUIDE.md](./STORAGE_BALANCE_TESTING_GUIDE.md)** – Financial test flows
-- **[PAYOUT_TROUBLESHOOTING_GUIDE.md](./PAYOUT_TROUBLESHOOTING_GUIDE.md)**, **[PAYMENT_FAILURE_TRACKING.md](./PAYMENT_FAILURE_TRACKING.md)** – Common issues
+- **[PAYOUT_TROUBLESHOOTING_GUIDE.md](./PAYOUT_TROUBLESHOOTING_GUIDE.md)** – Common issues
 - **[RECENT_CHANGES_SUMMARY.md](./RECENT_CHANGES_SUMMARY.md)** – Latest notable changes
 
 ### Archives / legacy
@@ -55,6 +55,10 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - Recently archived (still searchable if needed):
   - `archive/BACKFILL_README.md` (legacy backfill steps)
   - `archive/DEMO_BALANCE_SYSTEM.md` (old demo flows)
+  - `archive/ENHANCED_PAYMENT_ERROR_MESSAGING.md` (superseded by Payments & Allocations handbook)
+  - `archive/PAYMENT_FAILURE_TRACKING.md` (superseded)
+  - `archive/SETTINGS_PAYMENT_REORGANIZATION.md` (one-off layout note)
+  - `archive/PLATFORM_FEE_UPDATE_AUGUST_2025.md` (dated announcement)
   - `archive/NATIVE_APP_PLAN.md` (superseded mobile plan)
 
 ## Key Features
