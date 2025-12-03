@@ -246,3 +246,11 @@ The architecture supports easy addition of new features:
 2. **Documentation**: All public methods and props must be documented
 3. **Testing**: New features require unit tests
 4. **Accessibility**: All components must support keyboard navigation and screen readers
+
+## Related Documentation
+
+- [Editor Requirements](./EDITOR_REQUIREMENTS.md) - Editor requirements
+- [Editor Viewer Separation](./EDITOR_VIEWER_SEPARATION.md) - Component separation
+- [Line Based Editor](./LINE_BASED_EDITOR.md) - Editor implementation
+- [Theme System Architecture](./THEME_SYSTEM_ARCHITECTURE.md) - Theme integration
+- [Design System Architecture](./DESIGN_SYSTEM_ARCHITECTURE.md) - Card and overlay system

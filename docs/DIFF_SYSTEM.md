@@ -250,3 +250,10 @@ clearDiffCache();
 - **Visual Diffing**: Side-by-side comparison views
 - **Diff Annotations**: Inline comments and explanations
 - **Performance Optimization**: WebAssembly for large diffs
+
+## Related Documentation
+
+- [Recent Edits System](./RECENT_EDITS_SYSTEM.md) - Recent activity and diffing
+- [Editor Requirements](./EDITOR_REQUIREMENTS.md) - Editor functional requirements
+- [Line Based Editor](./LINE_BASED_EDITOR.md) - Line-based implementation
+- [Page Data and Versions](./PAGE_DATA_AND_VERSIONS.md) - Version storage

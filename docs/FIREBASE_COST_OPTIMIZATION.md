@@ -69,3 +69,11 @@ costMonitor.trackRead('pages', 'query', documentCount, 'api/home');
 1. **Delete unused indexes**: Run `firebase firestore:indexes` to see all
 2. **Review PROD_ collections**: If not using PROD_ prefix, remove those indexes
 3. **Add monitoring**: Track reads per API endpoint to find hotspots
+
+## Related Documentation
+
+- [Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md) - Comprehensive optimization strategies
+- [Firebase Index Optimization](./FIREBASE_INDEX_OPTIMIZATION.md) - Index management
+- [Collection Naming Standards](./COLLECTION_NAMING_STANDARDS.md) - Collection naming patterns
+- [Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md) - General performance tuning
+- [Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md) - Environment-specific collections

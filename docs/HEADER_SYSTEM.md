@@ -221,3 +221,10 @@ interface ContentPageHeaderProps {
 - WeWrite logo serves as both brand identifier and home navigation
 - All duplicate header components have been removed
 - Clear distinction between ContentPages (individual content) and NavPages (navigation/utility pages)
+
+## Related Documentation
+
+- [Header Collapse Behavior](./HEADER_COLLAPSE_BEHAVIOR.md) - Collapse animations
+- [Settings Navigation System](./SETTINGS_NAVIGATION_SYSTEM.md) - Settings UX patterns
+- [Save Header System](./SAVE_HEADER_SYSTEM.md) - Save state in headers
+- [Banner System Guide](./BANNER_SYSTEM_GUIDE.md) - Banner positioning

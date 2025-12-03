@@ -204,3 +204,10 @@ After deploying these indexes, you should see:
 - Better user experience with instant search
 - More efficient subscription and payment processing
 - Improved analytics query performance
+
+## Related Documentation
+
+- [Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md) - Comprehensive optimization
+- [Firebase Cost Optimization](./FIREBASE_COST_OPTIMIZATION.md) - Cost reduction strategies
+- [Collection Naming Standards](./COLLECTION_NAMING_STANDARDS.md) - Collection standards
+- [Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md) - General performance

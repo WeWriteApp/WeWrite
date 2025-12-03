@@ -422,3 +422,12 @@ className={`transition-all duration-300 ease-in-out ${
 **Last Updated**: 2025-08-28 (Major subscription flow fixes and UI improvements)
 **Maintainer**: Development Team
 **Review Schedule**: Monthly or after major subscription changes
+
+## Related Documentation
+
+- [Payment System Guide](./PAYMENT_SYSTEM_GUIDE.md) - Complete payment flow overview
+- [Payments and Allocations](./PAYMENTS_AND_ALLOCATIONS.md) - Payment and allocation handbook
+- [Allocation System](./ALLOCATION_SYSTEM.md) - How allocations connect to subscriptions
+- [USD Payment System](./USD_PAYMENT_SYSTEM.md) - USD system implementation
+- [Webhook Setup Guide](./WEBHOOK_SETUP_GUIDE.md) - Stripe webhook configuration
+- [Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md) - Context architecture

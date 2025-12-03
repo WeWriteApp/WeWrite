@@ -323,3 +323,10 @@ For questions about border styling or theme integration, refer to the existing i
 - `app/components/ui/card.tsx`
 - `app/components/ui/button.tsx`
 - `app/components/subscription/TokenAllocationBreakdown.tsx`
+
+## Related Documentation
+
+- [Theme System Architecture](./THEME_SYSTEM_ARCHITECTURE.md) - Complete theme system
+- [Design System Architecture](./DESIGN_SYSTEM_ARCHITECTURE.md) - Card and overlay styling
+- [OKLCH Color System](./OKLCH_COLOR_SYSTEM.md) - Color system integration
+- [Complete Color System](./COMPLETE_COLOR_SYSTEM.md) - Color tokens reference

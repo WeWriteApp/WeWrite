@@ -609,3 +609,11 @@ A new `SimplifiedSlateEditor.tsx` has been created that addresses these issues:
 - Ensure keyboard shortcuts (Ctrl+K, Ctrl+S) function properly
 - Validate error recovery and data preservation
 - Clear code documentation
+
+## Related Documentation
+
+- [Editor Viewer Separation](./EDITOR_VIEWER_SEPARATION.md) - Component architecture
+- [Line Based Editor](./LINE_BASED_EDITOR.md) - Line-based implementation
+- [Content Display Architecture](./CONTENT_DISPLAY_ARCHITECTURE.md) - Display system
+- [Link Suggestion System](./LINK_SUGGESTION_SYSTEM.md) - Autocomplete for links
+- [Diff System](./DIFF_SYSTEM.md) - Version diffing

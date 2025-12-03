@@ -256,3 +256,10 @@ The architecture is designed to support easy rollback with minimal code changes.
 3. **Update Configurations**: Implement project-specific configurations
 4. **Test Migration**: Validate data separation and functionality
 5. **Execute Migration**: Deploy to production with new architecture
+
+## Related Documentation
+
+- [Collection Naming Standards](./COLLECTION_NAMING_STANDARDS.md) - Collection naming conventions
+- [Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md) - Environment configuration
+- [Environment Architecture](./ENVIRONMENT_ARCHITECTURE.md) - Full environment details
+- [Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md) - Optimization strategies

@@ -400,3 +400,10 @@ interface User {
 **Last Updated**: 2025-01-22
 **Maintainer**: WeWrite Development Team
 **Status**: ACTIVE - This is the current simplified authentication system
+
+## Related Documentation
+
+- [Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md) - Auth system overview
+- [Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md) - Legacy auth cleanup
+- [Auth System Audit Results](./AUTH_SYSTEM_AUDIT_RESULTS.md) - Audit status
+- [Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md) - Environment behavior

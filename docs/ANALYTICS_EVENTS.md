@@ -528,3 +528,10 @@ All events automatically include:
 | `source` | Action origin (e.g., 'modal', 'header') |
 | `method` | How action was performed (e.g., 'keyboard', 'button') |
 
+
+## Related Documentation
+
+- [Current Architecture](./CURRENT_ARCHITECTURE.md) - System overview
+- [Notification System](./NOTIFICATION_SYSTEM.md) - User notifications
+- [LogRocket Integration](./LOGROCKET_INTEGRATION.md) - Session recording
+- [Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md) - Performance monitoring

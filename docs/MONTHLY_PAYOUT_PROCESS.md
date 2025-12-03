@@ -196,3 +196,11 @@ node scripts/fix-stuck-pending-earnings.js            # Apply fix
 - [Payout System Audit](./PAYOUT_SYSTEM_AUDIT.md)
 - [Storage Balance Guide](./STORAGE_BALANCE_GUIDE.md)
 - [Platform Fee Management](./PLATFORM_FEE_MANAGEMENT_SYSTEM.md)
+
+## Related Documentation
+
+- [Payout Troubleshooting Guide](./PAYOUT_TROUBLESHOOTING_GUIDE.md) - Common issues
+- [Payout System Audit](./PAYOUT_SYSTEM_AUDIT.md) - Audit findings
+- [Payment System Guide](./PAYMENT_SYSTEM_GUIDE.md) - Money flow overview
+- [Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md) - Data structure
+- [Cron Job Setup](./CRON_JOB_SETUP.md) - Scheduled jobs

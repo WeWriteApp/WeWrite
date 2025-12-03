@@ -220,3 +220,9 @@ When updating existing code:
 2. Update `follow` notifications to reference users, not pages
 3. Use `link` type for page mentions instead of `page_mention`
 4. Ensure all notification creation goes through the API service
+
+## Related Documentation
+
+- [Current Architecture](./CURRENT_ARCHITECTURE.md) - System overview
+- [Analytics Events](./ANALYTICS_EVENTS.md) - Event tracking
+- [Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md) - Real-time listener optimization

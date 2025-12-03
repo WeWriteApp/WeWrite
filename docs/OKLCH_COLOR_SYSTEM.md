@@ -392,3 +392,10 @@ console.log('Lightness gradient reflects current C/H:', gradients.lightness);
 - [OKLCH Color Space Explanation](https://evilmartians.com/chronicles/oklch-in-css-why-quit-rgb-hsl)
 - [WCAG Contrast Guidelines](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)
 - [CSS Color Module Level 4](https://www.w3.org/TR/css-color-4/)
+
+## Related Documentation
+
+- [Complete Color System](./COMPLETE_COLOR_SYSTEM.md) - Full color token reference
+- [Theme System Architecture](./THEME_SYSTEM_ARCHITECTURE.md) - Theme integration
+- [Design System Architecture](./DESIGN_SYSTEM_ARCHITECTURE.md) - Design system overview
+- [Border Styling Guidelines](./BORDER_STYLING_GUIDELINES.md) - Border system

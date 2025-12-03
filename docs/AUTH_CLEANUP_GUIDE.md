@@ -377,3 +377,10 @@ If cleanup breaks something:
 
 **Last Updated**: 2025-01-22
 **Status**: ACTIVE - Use this guide for ongoing auth cleanup
+
+## Related Documentation
+
+- [Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md) - Current auth system
+- [Auth System Audit Results](./AUTH_SYSTEM_AUDIT_RESULTS.md) - Audit findings
+- [Session Management Architecture](./SESSION_MANAGEMENT_ARCHITECTURE.md) - Session system
+- [Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md) - Environment-specific auth behavior

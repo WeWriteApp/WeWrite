@@ -305,3 +305,10 @@ ERROR (Red Semantic)
 ```
 
 This system provides complete design flexibility while maintaining semantic meaning and ensuring all colors work harmoniously together over any background.
+
+## Related Documentation
+
+- [OKLCH Color System](./OKLCH_COLOR_SYSTEM.md) - OKLCH implementation details
+- [Theme System Architecture](./THEME_SYSTEM_ARCHITECTURE.md) - Theme tokens and switching
+- [Design System Architecture](./DESIGN_SYSTEM_ARCHITECTURE.md) - Card system integration
+- [Border Styling Guidelines](./BORDER_STYLING_GUIDELINES.md) - Theme-aware borders

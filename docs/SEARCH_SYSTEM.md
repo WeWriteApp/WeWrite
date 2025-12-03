@@ -196,3 +196,9 @@ function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch 
   // Additional scoring logic...
 }
 ```
+
+## Related Documentation
+
+- [Search Performance Optimizations](./SEARCH_PERFORMANCE_OPTIMIZATIONS.md) - Performance tuning
+- [Firebase Index Optimization](./FIREBASE_INDEX_OPTIMIZATION.md) - Search indexes
+- [Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md) - General performance

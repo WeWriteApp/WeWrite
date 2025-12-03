@@ -271,3 +271,11 @@ All collection naming inconsistencies have been fixed. The codebase now uses:
 2. **Automated Scripts** - Use audit scripts to detect future inconsistencies
 3. **Documentation** - This comprehensive guide prevents future confusion
 4. **Constants Usage** - Always use COLLECTIONS constants instead of string literals
+
+## Related Documentation
+
+- [Firebase Migration Architecture](./FIREBASE_MIGRATION_ARCHITECTURE.md) - Environment-aware architecture
+- [Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md) - Dev vs prod collections
+- [Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md) - Financial collections
+- [USD Payment System](./USD_PAYMENT_SYSTEM.md) - USD-related collections
+- [Firebase Optimization Guide](./FIREBASE_OPTIMIZATION_GUIDE.md) - Query optimization

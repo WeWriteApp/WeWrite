@@ -428,3 +428,10 @@ import { renderWithAllocationProviders, createMockAllocationData } from '@/test-
 ```
 
 This API reference provides comprehensive documentation for developers working with the allocation system. All components, hooks, and utilities follow these established patterns for consistency and maintainability.
+
+## Related Documentation
+
+- [Allocation System Architecture](./ALLOCATION_SYSTEM.md) - System architecture and design principles
+- [Payments and Allocations](./PAYMENTS_AND_ALLOCATIONS.md) - Complete payment flow overview
+- [Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md) - Context separation patterns
+- [Collection Naming Standards](./COLLECTION_NAMING_STANDARDS.md) - Database collection names for allocations

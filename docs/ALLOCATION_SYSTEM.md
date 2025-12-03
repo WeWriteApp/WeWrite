@@ -307,3 +307,14 @@ For questions about the allocation system:
 - Refer to the comprehensive test suite
 
 The allocation system is now production-ready with professional-grade architecture, performance optimizations, and maintainable code structure.
+
+
+## Related Documentation
+
+- [Allocation API Reference](./ALLOCATION_API_REFERENCE.md) - Detailed API documentation for hooks and components
+- [Payments and Allocations](./PAYMENTS_AND_ALLOCATIONS.md) - Complete payment flow overview
+- [Payment System Guide](./PAYMENT_SYSTEM_GUIDE.md) - Money flow architecture
+- [Subscription System](./SUBSCRIPTION_SYSTEM.md) - Subscription tiers and billing
+- [Financial Data Architecture](./FINANCIAL_DATA_ARCHITECTURE.md) - Separated context architecture
+- [USD Payment System](./USD_PAYMENT_SYSTEM.md) - USD system overview
+- [Collection Naming Standards](./COLLECTION_NAMING_STANDARDS.md) - Database collection naming conventions
