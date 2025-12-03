@@ -1,22 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useDebounce } from './useDebounce';
 import { type DateRange } from '../components/admin/DateRangeFilter';
-
-// Debounce utility (copied from useDashboardAnalytics.ts)
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
 
 interface TokenAnalyticsData {
   unfundedLoggedOut: {

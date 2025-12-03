@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useDebounce } from './useDebounce';
 
 // Types for analytics data
 export interface DateRange {
@@ -28,23 +29,6 @@ export interface DashboardMetrics {
   contentChangesAnalytics: ChartDataPoint[];
   pwaInstallsAnalytics: ChartDataPoint[];
   liveVisitorsCount: number;
-}
-
-// Debounce utility
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
 }
 
 interface UseDashboardAnalyticsReturn {
