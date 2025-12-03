@@ -18,8 +18,6 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
-import { trackInteractionEvent } from '../../utils/analytics-service';
-import { SHARE_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -37,68 +35,24 @@ const SingleProfileView = ({ profile }) => {
   const handleShareProfile = () => {
     const profileUrl = window.location.href;
 
-    // Track share started
-    trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_STARTED, EVENT_CATEGORIES.SHARE, {
-      profile_id: profile.uid,
-      profile_username: profile.username,
-      is_own_profile: isCurrentUser
-    });
-
     // Check if the Web Share API is available
     if (navigator.share) {
       // Share URL only - no extra text, so it can be easily pasted into a URL bar
       navigator.share({
         url: profileUrl
-      }).then(() => {
-        // Track successful share
-        trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
-          profile_id: profile.uid,
-          profile_username: profile.username,
-          share_method: 'native_share',
-          is_own_profile: isCurrentUser
-        });
       }).catch((error) => {
-        // Track cancelled or failed share
-        if (error.name === 'AbortError') {
-          trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_CANCELLED, EVENT_CATEGORIES.SHARE, {
-            profile_id: profile.uid,
-            profile_username: profile.username,
-            share_method: 'native_share',
-            is_own_profile: isCurrentUser
-          });
-        } else {
-          trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_FAILED, EVENT_CATEGORIES.SHARE, {
-            profile_id: profile.uid,
-            profile_username: profile.username,
-            share_method: 'native_share',
-            error_message: error.message,
-            is_own_profile: isCurrentUser
-          });
+        // User cancelled or error - silently ignore
+        if (error.name !== 'AbortError') {
+          console.error('Error sharing:', error);
         }
-        console.error('Error sharing:', error);
       });
     } else {
       // Fallback: copy the URL to clipboard
-      try {
-        navigator.clipboard.writeText(profileUrl);
+      navigator.clipboard.writeText(profileUrl).then(() => {
         toast.success('Profile link copied to clipboard!');
-        // Track successful clipboard copy
-        trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
-          profile_id: profile.uid,
-          profile_username: profile.username,
-          share_method: 'copy_link',
-          is_own_profile: isCurrentUser
-        });
-      } catch (clipboardError) {
-        trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_FAILED, EVENT_CATEGORIES.SHARE, {
-          profile_id: profile.uid,
-          profile_username: profile.username,
-          share_method: 'copy_link',
-          error_message: clipboardError.message,
-          is_own_profile: isCurrentUser
-        });
+      }).catch((clipboardError) => {
         console.error('Error copying link:', clipboardError);
-      }
+      });
     }
   };
 
@@ -139,9 +93,14 @@ const SingleProfileView = ({ profile }) => {
 
               {/* Share button */}
               <Button
+                type="button"
                 variant="outline"
-                size="md"
-                onClick={handleShareProfile}
+                size="default"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleShareProfile();
+                }}
                 className="flex items-center gap-2 w-full sm:w-auto min-w-[140px] h-10"
                 title="Share profile"
               >

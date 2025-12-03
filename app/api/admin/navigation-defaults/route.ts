@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
-import { isAdmin } from '../../../utils/isAdmin';
-import { cookies } from 'next/headers';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 /**
  * Navigation Defaults API
@@ -63,12 +62,11 @@ const ALL_NAV_ITEMS = [
 export async function GET(request: NextRequest) {
   try {
     // Check admin auth
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('wewrite_user_email')?.value;
-    
-    if (!sessionCookie || !isAdmin(sessionCookie)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await checkAdminPermissions(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 });
     }
+    const userEmail = authResult.userEmail;
 
     const admin = initAdmin();
     const db = admin.firestore();
@@ -115,12 +113,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Check admin auth
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('wewrite_user_email')?.value;
-    
-    if (!sessionCookie || !isAdmin(sessionCookie)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await checkAdminPermissions(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 });
     }
+    const userEmail = authResult.userEmail;
 
     const body = await request.json();
     const { mobileToolbar, desktopSidebar, unifiedMobile } = body;
@@ -167,7 +164,7 @@ export async function POST(request: NextRequest) {
     // Update navigation defaults
     const updateData: Record<string, any> = {
       lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-      updatedBy: sessionCookie
+      updatedBy: userEmail
     };
 
     if (mobileToolbar) updateData.mobileToolbar = mobileToolbar;
@@ -176,7 +173,7 @@ export async function POST(request: NextRequest) {
 
     await docRef.set(updateData, { merge: true });
 
-    console.log(`📱 Navigation defaults updated by ${sessionCookie}`);
+    console.log(`📱 Navigation defaults updated by ${userEmail}`);
 
     return NextResponse.json({
       success: true,
