@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TaxReportingService } from '../../../services/taxReportingService';
 import { TaxInformationService } from '../../../services/taxInformationService';
 import { FinancialUtils } from '../../../types/financial';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 // POST endpoint for tax reporting actions
 export async function POST(request: NextRequest) {
@@ -17,15 +17,13 @@ export async function POST(request: NextRequest) {
   
   try {
     // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
       return NextResponse.json({
-        error: 'Authentication required',
+        error: adminCheck.error || 'Admin access required',
         correlationId
-      }, { status: 401 });
+      }, { status: 403 });
     }
-
-    // TODO: Add admin role verification here
     
     const body = await request.json();
     const { 

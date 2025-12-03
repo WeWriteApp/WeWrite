@@ -9,7 +9,7 @@ import { PayoutMonitoringService } from '../../../services/payoutMonitoringServi
 import { PayoutSchedulerService } from '../../../services/payoutSchedulerService';
 import { AutomatedPayoutService } from '../../../services/automatedPayoutService';
 import { FinancialUtils } from '../../../types/financial';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 // GET endpoint for monitoring dashboard data
 export async function GET(request: NextRequest) {
@@ -17,16 +17,13 @@ export async function GET(request: NextRequest) {
   
   try {
     // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
       return NextResponse.json({
-        error: 'Authentication required',
+        error: adminCheck.error || 'Admin access required',
         correlationId
-      }, { status: 401 });
+      }, { status: 403 });
     }
-
-    // TODO: Add admin role verification here
-    // For now, we'll allow any authenticated user
     
     const { searchParams } = new URL(request.url);
     const includeHistory = searchParams.get('includeHistory') === 'true';
@@ -96,15 +93,13 @@ export async function POST(request: NextRequest) {
   
   try {
     // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
       return NextResponse.json({
-        error: 'Authentication required',
+        error: adminCheck.error || 'Admin access required',
         correlationId
-      }, { status: 401 });
+      }, { status: 403 });
     }
-
-    // TODO: Add admin role verification here
     
     const body = await request.json();
     const { action, ...params } = body;

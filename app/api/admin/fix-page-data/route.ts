@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
@@ -16,13 +16,12 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 export async function POST(request: NextRequest) {
   try {
     // Only allow admin users
-    const currentUserId = await getUserIdFromRequest(request);
-    if (!currentUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
-    // TODO: Add admin check here
-    console.log(`🔧 [FIX PAGE DATA] Starting page data fix for admin: ${currentUserId}`);
+    console.log(`🔧 [FIX PAGE DATA] Starting page data fix by admin`);
 
     const admin = getFirebaseAdmin();
     if (!admin) {

@@ -10,7 +10,7 @@ import { FraudDetectionEngine } from '../../../services/fraudDetectionEngine';
 import { RegulatoryComplianceService, ComplianceFramework } from '../../../services/regulatoryComplianceService';
 import { AuditTrailService } from '../../../services/auditTrailService';
 import { FinancialUtils } from '../../../types/financial';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { db } from '../../../firebase/config';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { getCollectionName } from "../../../utils/environmentConfig";
@@ -21,15 +21,13 @@ export async function GET(request: NextRequest) {
   
   try {
     // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
       return NextResponse.json({
-        error: 'Authentication required',
+        error: adminCheck.error || 'Admin access required',
         correlationId
-      }, { status: 401 });
+      }, { status: 403 });
     }
-
-    // TODO: Add admin role verification here
     
     console.log(`[ADMIN] Security metrics request [${correlationId}]`);
     

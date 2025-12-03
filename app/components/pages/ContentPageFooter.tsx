@@ -9,6 +9,7 @@ import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Reply, Save, RotateCcw, Trash2, Check, Link } from "lucide-react";
+import { useToast } from "../ui/use-toast";
 
 
 // Dynamically import AddToPageButton to avoid SSR issues
@@ -96,6 +97,7 @@ export default function ContentPageFooter({
   canEdit
 }: PageFooterProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
 
   // Animation state for save card
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
@@ -165,7 +167,11 @@ export default function ContentPageFooter({
                 console.log('Custom date updated successfully to:', newDate);
               } catch (error) {
                 console.error('Error updating custom date:', error);
-                // TODO: Show user-friendly error message
+                toast({
+                  title: "Failed to update date",
+                  description: "There was a problem saving the date. Please try again.",
+                  variant: "destructive"
+                });
               }
             }}
           />

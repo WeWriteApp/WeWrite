@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../../auth-helper';
+import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { db } from '../../../../firebase/config';
 import {
   doc,
@@ -17,25 +17,15 @@ import {
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { PayoutErrorCategory, PayoutErrorSeverity } from '../../../../services/payoutErrorLogger';
 
-// Admin user check
-async function isAdmin(userId: string): Promise<boolean> {
-  // TODO: Implement proper admin check
-  return true;
-}
-
 /**
  * GET /api/admin/payouts/errors
  * Get paginated list of payout error logs with filtering
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!(await isAdmin(userId))) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

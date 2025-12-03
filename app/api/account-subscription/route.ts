@@ -58,9 +58,8 @@ export async function GET(request: NextRequest) {
     // Track read operation for monitoring
     trackFirestoreRead(1);
 
-    // Enable verbose logging for debugging subscription issues
-    // TODO: Remove this after fixing subscription status issues
-    const enableDebugLogging = true; // process.env.SUBSCRIPTION_DEBUG === 'true';
+    // Enable verbose logging only when SUBSCRIPTION_DEBUG is set
+    const enableDebugLogging = process.env.SUBSCRIPTION_DEBUG === 'true';
 
     if (enableDebugLogging) {
       console.log(`[ACCOUNT SUBSCRIPTION] 🔍 VERBOSE: Subscription data for user ${targetUserId}:`, {
