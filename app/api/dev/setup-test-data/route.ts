@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
           }]),
           userId: 'dev_test_user_1',
           username: 'testuser',
-          displayName: 'Test User 1',
+          // displayName removed - fully deprecated
           isPublic: true,
           lastModified: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
           }]),
           userId: 'dev_test_user_1',
           username: 'testuser',
-          displayName: 'Test User 1',
+          // displayName removed - fully deprecated
           isPublic: true,
           lastModified: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
           createdAt: new Date(Date.now() - 60000).toISOString(),
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           }]),
           userId: 'dev_test_user_1',
           username: 'testuser',
-          displayName: 'Test User 1',
+          // displayName removed - fully deprecated
           isPublic: true,
           lastModified: new Date(Date.now() - 120000).toISOString(), // 2 minutes ago
           createdAt: new Date(Date.now() - 120000).toISOString(),

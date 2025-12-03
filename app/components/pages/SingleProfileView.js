@@ -17,6 +17,8 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import { trackInteractionEvent } from '../../utils/analytics-service';
+import { SHARE_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -30,39 +32,70 @@ const SingleProfileView = ({ profile }) => {
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
 
-  // Share profile function
+  // Share profile function - shares URL only for easy pasting
   const handleShareProfile = () => {
-    // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
     const profileUrl = window.location.href;
-    // SECURITY: Never expose email local parts; sanitize username for sharing
-    const safeShareName = sanitizeUsername(profile.username || profile.displayName, 'User', 'User');
-    const shareText = `${safeShareName || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
+
+    // Track share started
+    trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_STARTED, EVENT_CATEGORIES.SHARE, {
+      profile_id: profile.uid,
+      profile_username: profile.username,
+      is_own_profile: isCurrentUser
+    });
 
     // Check if the Web Share API is available
     if (navigator.share) {
+      // Share URL only - no extra text, so it can be easily pasted into a URL bar
       navigator.share({
-        title: `${profile.username || 'User'} on WeWrite`,
-        text: shareText,
         url: profileUrl
+      }).then(() => {
+        // Track successful share
+        trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
+          profile_id: profile.uid,
+          profile_username: profile.username,
+          share_method: 'native_share',
+          is_own_profile: isCurrentUser
+        });
       }).catch((error) => {
-        // Silent error handling - no toast
+        // Track cancelled or failed share
+        if (error.name === 'AbortError') {
+          trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_CANCELLED, EVENT_CATEGORIES.SHARE, {
+            profile_id: profile.uid,
+            profile_username: profile.username,
+            share_method: 'native_share',
+            is_own_profile: isCurrentUser
+          });
+        } else {
+          trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_FAILED, EVENT_CATEGORIES.SHARE, {
+            profile_id: profile.uid,
+            profile_username: profile.username,
+            share_method: 'native_share',
+            error_message: error.message,
+            is_own_profile: isCurrentUser
+          });
+        }
         console.error('Error sharing:', error);
       });
     } else {
-      // Create a Twitter share URL as fallback
+      // Fallback: copy the URL to clipboard
       try {
-        // First try to open Twitter share dialog
-        const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-        window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
-      } catch (error) {
-        console.error('Error opening Twitter share:', error);
-
-        // If that fails, copy the URL to clipboard
-        try {
-          navigator.clipboard.writeText(profileUrl);
-        } catch (clipboardError) {
-          console.error('Error copying link:', clipboardError);
-        }
+        navigator.clipboard.writeText(profileUrl);
+        // Track successful clipboard copy
+        trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
+          profile_id: profile.uid,
+          profile_username: profile.username,
+          share_method: 'copy_link',
+          is_own_profile: isCurrentUser
+        });
+      } catch (clipboardError) {
+        trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_FAILED, EVENT_CATEGORIES.SHARE, {
+          profile_id: profile.uid,
+          profile_username: profile.username,
+          share_method: 'copy_link',
+          error_message: clipboardError.message,
+          is_own_profile: isCurrentUser
+        });
+        console.error('Error copying link:', clipboardError);
       }
     }
   };
@@ -131,12 +164,12 @@ const SingleProfileView = ({ profile }) => {
       {!isCurrentUser && (
         <AllocationBar
           pageId={profile.uid}
-          pageTitle={`@${profile.username || profile.displayName || 'User'}`}
+          pageTitle={`@${profile.username || 'User'}`}
           authorId={profile.uid}
           visible={true}
           variant="user"
           isUserAllocation={true}
-          username={profile.username || profile.displayName || 'User'}
+          username={profile.username || 'User'}
         />
       )}
     </ProfilePagesProvider>

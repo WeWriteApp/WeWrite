@@ -95,7 +95,7 @@ export async function GET(
       },
       userData: userData ? {
         username: userData.username || 'MISSING_USERNAME',
-        displayName: userData.displayName,
+        // displayName removed - fully deprecated
         email: userData.email
       } : 'USER_NOT_FOUND',
       versions: {

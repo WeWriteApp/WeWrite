@@ -1,5 +1,5 @@
 // Firebase auth - clean implementation
-import { auth, firestore } from './config';
+import { auth, firestore, rtdb } from './config';
 import {
   type User as FirebaseUser,
   type UserCredential,
@@ -18,6 +18,7 @@ import {
   updateDoc,
   setDoc
 } from 'firebase/firestore';
+import { ref, update as rtdbUpdate } from 'firebase/database';
 import Cookies from 'js-cookie';
 import type { User } from '../types/database';
 import { getCollectionName } from '../utils/environmentConfig';
@@ -258,6 +259,20 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
     await updateDoc(userDocRef, {
       username: username
     });
+
+    // CRITICAL: Also update username in Realtime Database
+    // This is the primary source for username lookups in leaderboard, trending, etc.
+    try {
+      const userRef = ref(rtdb, `users/${userId}`);
+      await rtdbUpdate(userRef, {
+        username: username,
+        lastModified: new Date().toISOString()
+      });
+      console.log(`✅ Username updated in RTDB for user ${userId}`);
+    } catch (rtdbError) {
+      console.error('❌ Failed to update username in RTDB:', rtdbError);
+      // Don't fail the request, but log for monitoring
+    }
 
     // Update auth profile if current user
     if (auth.currentUser && auth.currentUser.uid === userId) {

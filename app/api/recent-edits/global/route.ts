@@ -157,8 +157,9 @@ export async function GET(request: NextRequest) {
 
     const pages = pagesSnapshot.docs.map(doc => {
       const data = doc.data();
+      // Only use username field - displayName and email are deprecated for display
       const safeUsername = sanitizeUsername(
-        (data as any).username || (data as any).displayName || (data as any).authorName || (data as any).email,
+        (data as any).username || (data as any).authorName,
         'User',
         `user_${doc.id.slice(0, 8)}`
       );
@@ -381,9 +382,8 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
 
           results[doc.id] = {
             uid: doc.id,
+            // Only use username field - displayName is deprecated
             username: userData.username,
-            displayName: userData.displayName,
-            email: userData.email,
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,

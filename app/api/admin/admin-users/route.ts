@@ -12,7 +12,7 @@ interface AdminUser {
   id: string;
   email: string;
   username?: string;
-  displayName?: string;
+  // displayName removed - fully deprecated
   isAdmin: boolean;
 }
 
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
             id: adminUserId,
             email: userData?.email || 'No email',
             username: userData?.username,
-            displayName: userData?.displayName,
+            // displayName removed - fully deprecated
             isAdmin: true
           });
         }

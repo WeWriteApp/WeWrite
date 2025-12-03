@@ -23,8 +23,6 @@ import ContentPageFooter from "../components/pages/ContentPageFooter";
 import ContentDisplay from "../components/content/ContentDisplay";
 import StickySaveHeader from "../components/layout/StickySaveHeader";
 
-import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
-import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 
 import AllocationBar from "../components/payments/AllocationBar";
@@ -102,8 +100,9 @@ interface PageData {
  */
 function NewPageContent() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  // Only use username field - displayName is fully deprecated
   const safeUsername = sanitizeUsername(
-    user?.username || (user as any)?.displayName || user?.email || `user_${user?.uid?.slice(0, 8) || 'unknown'}`
+    user?.username || `user_${user?.uid?.slice(0, 8) || 'unknown'}`
   );
 
   // CRITICAL: Check loading states BEFORE calling any other hooks to prevent hooks rule violations
@@ -578,7 +577,7 @@ function NewPageContent() {
           title: pageRef.title,
           content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
           userId: user.uid,
-          username: user.username || user.displayName || 'Anonymous',
+          username: user.username || 'Anonymous',
           lastModified: new Date().toISOString(),
           isReply: false,
           groupId: null,
@@ -1222,16 +1221,6 @@ function NewPageContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Use unsaved changes hook (keeping for other functionality)
-  const {
-    showUnsavedChangesDialog,
-    handleNavigation,
-    handleStayAndSave,
-    handleLeaveWithoutSaving,
-    handleCloseDialog,
-    isHandlingNavigation
-  } = useUnsavedChanges(hasUnsavedChanges, saveChanges);
-
   // Handle back navigation with unsaved changes check
   const handleBackWithCheck = () => {
     let backUrl = '/';
@@ -1353,8 +1342,8 @@ function NewPageContent() {
               </div>
             )}
 
-            {/* Writing Ideas Banner - not shown during reply flow */}
-            {isEditing && !isReply && !searchParams?.get('content') && (
+            {/* Writing Ideas Banner - not shown during reply flow or when title is pre-filled from a link */}
+            {isEditing && !isReply && !searchParams?.get('content') && !searchParams?.get('title') && (
               <div className="mt-4">
                 <WritingIdeasBanner
                   onIdeaSelect={handleIdeaSelect}

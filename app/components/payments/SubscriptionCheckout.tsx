@@ -16,6 +16,9 @@ import { CheckCircle, ArrowLeft, CreditCard, Shield, Zap } from 'lucide-react';
 import { PricingDisplay } from './PricingDisplay';
 import { PaymentStep } from './checkout-steps/PaymentStep';
 import { ConfirmationStep } from './checkout-steps/ConfirmationStep';
+import { getAnalyticsService } from '../../utils/analytics-service';
+import { SUBSCRIPTION_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
+
 // Initialize Stripe
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
@@ -76,14 +79,42 @@ export function SubscriptionCheckout({
   const [error, setError] = useState<string | null>(null);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
 
+  // Analytics service
+  const analytics = getAnalyticsService();
+
   // Plan selection handler
   const handlePlanSelection = async (plan: SelectedPlan) => {
     setSelectedPlan(plan);
     setError(null);
 
+    // Track checkout started and plan selected
+    analytics.trackEvent({
+      category: EVENT_CATEGORIES.SUBSCRIPTION,
+      action: SUBSCRIPTION_EVENTS.CHECKOUT_STARTED,
+      tier: plan.tier,
+      amount: plan.amount,
+      usd_cents: plan.usdCents,
+      is_custom: plan.isCustom
+    });
+
+    analytics.trackEvent({
+      category: EVENT_CATEGORIES.SUBSCRIPTION,
+      action: SUBSCRIPTION_EVENTS.CHECKOUT_PLAN_SELECTED,
+      tier: plan.tier,
+      amount: plan.amount,
+      tier_name: plan.name
+    });
+
     // Create setup intent before moving to payment step
     const success = await createSetupIntent(plan);
     if (success) {
+      // Track payment initiated
+      analytics.trackEvent({
+        category: EVENT_CATEGORIES.SUBSCRIPTION,
+        action: SUBSCRIPTION_EVENTS.CHECKOUT_PAYMENT_INITIATED,
+        tier: plan.tier,
+        amount: plan.amount
+      });
       setCurrentStep('payment');
     }
   };
@@ -157,6 +188,24 @@ export function SubscriptionCheckout({
   // Start directly at payment step
 
   const handlePaymentSuccess = (subscriptionId: string) => {
+    // Track successful payment
+    analytics.trackEvent({
+      category: EVENT_CATEGORIES.SUBSCRIPTION,
+      action: SUBSCRIPTION_EVENTS.CHECKOUT_PAYMENT_SUCCEEDED,
+      subscription_id: subscriptionId,
+      tier: selectedPlan?.tier,
+      amount: selectedPlan?.amount
+    });
+
+    analytics.trackEvent({
+      category: EVENT_CATEGORIES.SUBSCRIPTION,
+      action: SUBSCRIPTION_EVENTS.SUBSCRIPTION_CREATED,
+      subscription_id: subscriptionId,
+      tier: selectedPlan?.tier,
+      amount: selectedPlan?.amount,
+      usd_cents: selectedPlan?.usdCents
+    });
+
     setSubscriptionId(subscriptionId);
     setCurrentStep('confirmation');
     if (onSuccess) {
@@ -168,6 +217,16 @@ export function SubscriptionCheckout({
     if (currentStep === 'confirmation') {
       setCurrentStep('payment');
     } else if (onCancel) {
+      // Track checkout abandoned when user backs out of payment step
+      if (currentStep === 'payment' && selectedPlan) {
+        analytics.trackEvent({
+          category: EVENT_CATEGORIES.SUBSCRIPTION,
+          action: SUBSCRIPTION_EVENTS.CHECKOUT_ABANDONED,
+          tier: selectedPlan.tier,
+          amount: selectedPlan.amount,
+          step: 'payment'
+        });
+      }
       onCancel();
     }
   };

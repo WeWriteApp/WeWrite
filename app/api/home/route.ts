@@ -193,8 +193,9 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
 
     const pages = snapshot.docs.map(doc => {
       const data = doc.data();
+      // Only use username field - displayName is fully deprecated
       const safeUsername = sanitizeUsername(
-        (data as any).username || (data as any).displayName || (data as any).authorName || (data as any).email,
+        (data as any).username || (data as any).authorName,
         'User',
         `user_${doc.id.slice(0, 8)}`
       );

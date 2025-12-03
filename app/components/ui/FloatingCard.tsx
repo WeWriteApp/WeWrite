@@ -23,6 +23,7 @@ interface FloatingCardProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   isExpanded?: boolean;
   noShadowAtTop?: boolean;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -36,7 +37,8 @@ export function FloatingCard({
   variant = 'default',
   size = 'md',
   isExpanded = false,
-  noShadowAtTop = false
+  noShadowAtTop = false,
+  style
 }: FloatingCardProps) {
 
   // Scroll detection for conditional shadow
@@ -106,6 +108,7 @@ export function FloatingCard({
         className
       )}
       data-floating-card={variant}
+      style={style}
     >
       {children}
     </div>

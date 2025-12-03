@@ -228,9 +228,31 @@ html, body {
     touch-action: pan-x pan-y;
   }
 
-  /* Editor-specific zoom prevention */
+  /* Editor-specific zoom prevention and mobile input optimization */
   .wewrite-editor-container, [data-slate-editor], .simple-editor {
     touch-action: pan-x pan-y;
+  }
+  
+  /* MOBILE INPUT OPTIMIZATION: Optimize Slate editor for responsive mobile typing */
+  [data-slate-editor] {
+    /* Use GPU acceleration for smoother scrolling and input */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Prevent layout thrashing during rapid input */
+    contain: layout style;
+    /* Optimize text rendering */
+    text-rendering: optimizeSpeed;
+    /* Ensure caret is always visible during fast typing */
+    caret-color: currentColor;
+  }
+  
+  /* Optimize contenteditable for mobile input */
+  [contenteditable="true"] {
+    /* Prevent unnecessary repaints */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Hint to browser this element changes frequently */
+    will-change: contents;
   }
 
   /* Prevent zoom on images and media */
@@ -868,6 +890,20 @@ input[type="range"]::-moz-range-thumb,
     opacity: 0;
     transform: scale(0.8) translateY(20px);
   }
+}
+
+/* Wiggle animation for rearrangeable toolbar items */
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.25s ease-in-out infinite;
 }
 
 /* Spring animation utility classes */

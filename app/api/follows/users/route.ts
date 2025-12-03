@@ -47,15 +47,15 @@ export async function GET(request: NextRequest) {
             const userDoc = await db.collection(getCollectionName('users')).doc(followedUserId).get();
             if (userDoc.exists) {
               const userData = userDoc.data();
+              // Only use username field - displayName is deprecated
               const username = sanitizeUsername(
-                userData?.username || userData?.displayName || userData?.email || `user_${userDoc.id.slice(0, 8)}`,
+                userData?.username || `user_${userDoc.id.slice(0, 8)}`,
                 'User',
                 `user_${userDoc.id.slice(0, 8)}`
               );
               return {
                 id: userDoc.id,
                 username,
-                displayName: username,
                 photoURL: userData?.photoURL,
                 bio: userData?.bio
               };
@@ -94,8 +94,7 @@ export async function GET(request: NextRequest) {
               const userData = userDoc.data();
               return {
                 id: userDoc.id,
-                username: userData?.username,
-                displayName: userData?.displayName,
+                username: userData?.username || `user_${userDoc.id.slice(0, 8)}`,
                 photoURL: userData?.photoURL,
                 bio: userData?.bio
               };

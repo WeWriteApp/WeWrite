@@ -35,6 +35,8 @@ interface CrossComponentMobileNavButtonProps {
   moveItem?: (dragIndex: number, hoverIndex: number) => void;
   isPressed?: boolean;
   isNavigating?: boolean;
+  editMode?: boolean; // When true, enables drag-and-drop and wiggle animation
+  isPlaceholder?: boolean; // When true, shows as empty drop zone
 }
 
 export default function CrossComponentMobileNavButton({
@@ -51,46 +53,117 @@ export default function CrossComponentMobileNavButton({
   onCrossComponentDrop,
   moveItem,
   isPressed = false,
-  isNavigating = false
+  isNavigating = false,
+  editMode = false,
+  isPlaceholder = false
 }: CrossComponentMobileNavButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
 
-  // Drag functionality
+  // Drag functionality - only enabled when editMode is true
   const [{ isDragging }, drag] = useDrag({
     type: DRAG_TYPES.CROSS_COMPONENT_ITEM,
-    item: () => ({
-      id,
-      index,
-      sourceType: sourceType
-    }),
+    item: () => {
+      console.log('🎯 Drag started:', { id, index, sourceType, editMode });
+      return {
+        id,
+        index,
+        sourceType: sourceType
+      };
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    canDrag: () => {
+      const canDragResult = editMode && !isPlaceholder;
+      console.log('🎯 canDrag check:', { id, editMode, isPlaceholder, result: canDragResult });
+      return canDragResult;
+    },
   });
 
-  // Drop functionality - accept drops from other components
+  // Drop functionality - iOS-style "push" behavior
+  // Items reorder on HOVER, not on drop - this creates the push effect
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: DRAG_TYPES.CROSS_COMPONENT_ITEM,
+    hover: (draggedItem: DragItem, monitor) => {
+      // Only process hover in edit mode
+      if (!editMode || !ref.current) return;
+      
+      // Don't hover on self
+      if (draggedItem.id === id) return;
+      
+      // Only handle same-component reordering on hover (iOS-style push)
+      if (draggedItem.sourceType === sourceType && moveItem) {
+        const dragIndex = draggedItem.index;
+        const hoverIndex = index;
+        
+        // Don't replace items with themselves
+        if (dragIndex === hoverIndex) return;
+        
+        // Determine rectangle on screen
+        const hoverBoundingRect = ref.current.getBoundingClientRect();
+        
+        // Get horizontal middle
+        const hoverMiddleX = (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
+        
+        // Determine mouse position
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+        
+        // Get pixels to the left
+        const hoverClientX = clientOffset.x - hoverBoundingRect.left;
+        
+        // Only perform the move when the mouse has crossed half of the item's width
+        // When dragging right, only move when cursor is past 50%
+        // When dragging left, only move when cursor is before 50%
+        if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) return;
+        if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) return;
+        
+        // Time to actually perform the action - this creates the "push" effect
+        moveItem(dragIndex, hoverIndex);
+        
+        // Note: we're mutating the monitor item here!
+        // Generally it's better to avoid mutations,
+        // but it's good here for the sake of performance
+        // to avoid expensive index searches.
+        draggedItem.index = hoverIndex;
+      }
+    },
     drop: (draggedItem: DragItem) => {
-      if (!ref.current) return;
-
-      // Handle cross-component drops (sidebar to mobile, mobile to sidebar)
-      if (draggedItem.sourceType !== sourceType && onCrossComponentDrop) {
-        const targetType = sourceType === 'mobile' ? 'mobile' : 'sidebar';
-        onCrossComponentDrop(draggedItem, index, targetType);
+      console.log('📦 Drop triggered:', {
+        draggedItem,
+        targetId: id,
+        targetIndex: index,
+        sourceType,
+        editMode,
+        hasRef: !!ref.current,
+        isSameItem: draggedItem.id === id,
+        isCrossComponent: draggedItem.sourceType !== sourceType,
+        hasHandler: !!onCrossComponentDrop
+      });
+      
+      // Cross-component drops still happen on drop (not hover)
+      if (!editMode || !ref.current) {
+        console.log('📦 Drop blocked: editMode or ref issue');
+        return;
+      }
+      if (draggedItem.id === id) {
+        console.log('📦 Drop blocked: same item');
         return;
       }
 
-      // Handle same-component reordering
-      if (draggedItem.sourceType === sourceType && moveItem) {
-        if (draggedItem.index !== index) {
-          moveItem(draggedItem.index, index);
-        }
+      // Handle cross-component drops (sidebar to mobile, mobile to sidebar)
+      if (draggedItem.sourceType !== sourceType && onCrossComponentDrop) {
+        console.log('📦 Calling onCrossComponentDrop');
+        const targetType = sourceType === 'mobile' ? 'mobile' : 'sidebar';
+        onCrossComponentDrop(draggedItem, index, targetType);
+      } else {
+        console.log('📦 Not a cross-component drop or no handler');
       }
     },
     canDrop: (draggedItem: DragItem) => {
-      // Accept drops from different components or same-component reordering
-      return draggedItem.sourceType !== sourceType || draggedItem.sourceType === sourceType;
+      if (!editMode) return false;
+      if (draggedItem.id === id) return false;
+      return true;
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
@@ -131,31 +204,35 @@ export default function CrossComponentMobileNavButton({
       onTouchStart={handleTouchStart}
       className={cn(
         "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-2 relative gap-0.5 group",
-        "transition-all duration-200 ease-out", // Springy transitions
+        // Smooth transitions for the "push" effect - items animate when pushed
+        "transition-all duration-150 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
-        // Drag states
-        isDragging && "opacity-50 scale-95",
-        // Springy scale animations
-        isPressed && "scale-110 duration-75", // Scale up when pressed
-        "active:scale-95 active:duration-75", // Quick scale down on active
+        // Override ghost button's low-opacity active states with more solid feedback
+        "hover:bg-muted/80 active:bg-muted dark:hover:bg-muted/60 dark:active:bg-muted/80",
+        // Drag states - the dragged item becomes semi-transparent
+        isDragging && "opacity-30 scale-90 shadow-lg z-50",
+        // Wiggle animation when in edit mode (but not while dragging)
+        editMode && !isDragging && "animate-wiggle",
+        // Springy scale animations - only apply when not in edit mode
+        !editMode && isPressed && "scale-110 duration-75 bg-muted",
+        !editMode && "active:scale-95 active:duration-75",
         // Base states with enhanced contrast
-        "nav-hover-state nav-active-state",
-        // Active state styling - neutral semi-transparent background to match "more" button
+        "nav-hover-state",
+        // Active state styling
         isActive
           ? "bg-muted text-foreground"
           : "text-muted-foreground hover:text-foreground",
         // Loading state when navigating
         isNavigating && "opacity-75",
-        // Drop zone states
-        isOver && canDrop && "ring-2 ring-border/30 bg-muted/20",
-        isOver && !canDrop && "ring-2 ring-destructive/30 bg-destructive/10"
+        // Drop zone indicator for cross-component drops
+        isOver && canDrop && "ring-2 ring-primary/50 bg-primary/10"
       )}
       aria-label={ariaLabel}
       aria-pressed={isActive}
       disabled={isNavigating && !isPressed}
       style={{
-        cursor: isDragging ? 'grabbing' : 'grab'
+        cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
       }}
     >
       <div className="relative">
@@ -184,12 +261,9 @@ export default function CrossComponentMobileNavButton({
         </div>
       )}
 
-      {/* Drop zone visual feedback */}
+      {/* Cross-component drop zone indicator */}
       {isOver && canDrop && (
-        <div className="absolute inset-0 border-2 border-neutral-30 rounded-lg pointer-events-none animate-pulse" />
-      )}
-      {isOver && !canDrop && (
-        <div className="absolute inset-0 border-2 border-destructive/30 rounded-lg pointer-events-none" />
+        <div className="absolute inset-0 border-2 border-primary/50 rounded-lg pointer-events-none" />
       )}
     </Button>
   );

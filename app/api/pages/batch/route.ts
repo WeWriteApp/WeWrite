@@ -133,8 +133,8 @@ export async function POST(request: NextRequest) {
         title: pageData.title || 'Untitled',
         content: pageData.content || '',
         userId: pageData.userId,
+        // Only use username - displayName is deprecated
         username: authorUsername,
-        displayName: pageData.displayName,
         createdAt: pageData.createdAt,
         lastModified: pageData.lastModified,
         isPublic: pageData.isPublic || false,

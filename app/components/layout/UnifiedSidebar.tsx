@@ -9,7 +9,7 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
-  Clock, Shuffle, LogOut, TrendingUp, Heart, DollarSign
+  Clock, Shuffle, LogOut, TrendingUp, Heart, DollarSign, Trophy
 } from "lucide-react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
@@ -265,6 +265,7 @@ function UnifiedSidebarContent({
     'search': { icon: Search, label: 'Search', href: '/search' },
     'new': { icon: Plus, label: 'New Page', href: '/new' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'leaderboard': { icon: Trophy, label: 'Leaderboard', href: '/leaderboard' },
     'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
     'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
     'following': { icon: Heart, label: 'Following', href: '/following' },

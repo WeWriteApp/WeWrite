@@ -202,8 +202,8 @@ export function RegisterForm({
         body: JSON.stringify({
           email,
           password,
-          username,
-          displayName: username
+          username
+          // displayName removed - only username is used
         })
       })
 

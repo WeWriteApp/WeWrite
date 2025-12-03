@@ -200,8 +200,9 @@ export const getUserProfiles = async (userIds: string[]): Promise<Record<string,
       const batchSize = 10; // Firestore limit for 'in' queries
       
       // Define user profile fields to reduce document size by 50-60%
+      // displayName removed - fully deprecated, only use username
       const userProfileFields = [
-        'username', 'displayName', 'email', 'profilePicture', 'bio',
+        'username', 'email', 'profilePicture', 'bio',
         'createdAt', 'lastActive', 'isVerified', 'totalPages', 'totalEarnings'
       ];
 

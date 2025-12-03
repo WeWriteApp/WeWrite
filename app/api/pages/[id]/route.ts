@@ -178,7 +178,7 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       console.log('🔧 API NORMALIZATION: Finished cleaning link elements for page', pageId);
     }
 
-    // Fetch username if userId exists
+    // Fetch username if userId exists - USE RTDB (primary user store)
     let username = processedPageData.username;
     console.log('📊 [PAGE API] Username fetch attempt:', {
       pageId,
@@ -189,28 +189,31 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
 
     if (processedPageData.userId && !username) {
       try {
-        const userDoc = await db.collection(getCollectionName('users'))
-          .where('uid', '==', processedPageData.userId)
-          .limit(1)
-          .get();
+        // Use RTDB for user data (primary source of truth for usernames)
+        const rtdb = admin.database();
+        const userRef = rtdb.ref(`users/${processedPageData.userId}`);
+        const userSnapshot = await userRef.get();
 
-        console.log('📊 [PAGE API] User query result:', {
+        console.log('📊 [PAGE API] RTDB User query result:', {
           userId: processedPageData.userId,
-          foundUsers: userDoc.size,
-          isEmpty: userDoc.empty
+          exists: userSnapshot.exists()
         });
 
-        if (!userDoc.empty) {
-          const userData = userDoc.docs[0].data();
-          username = userData.username || 'Unknown';
-          console.log('📊 [PAGE API] Username found:', username);
-        } else {
-          console.warn('📊 [PAGE API] No user found for userId:', processedPageData.userId);
-          username = 'Unknown';
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.val();
+          // Only use username field, never displayName or email
+          username = userData.username || null;
+          console.log('📊 [PAGE API] Username found from RTDB:', username);
+        }
+
+        // If still no username, fall back to a safe identifier
+        if (!username) {
+          console.warn('📊 [PAGE API] No username found in RTDB for userId:', processedPageData.userId);
+          username = `user_${processedPageData.userId.slice(0, 8)}`;
         }
       } catch (error) {
-        console.warn('Failed to fetch username for page:', error);
-        username = 'Unknown';
+        console.warn('Failed to fetch username from RTDB:', error);
+        username = `user_${processedPageData.userId.slice(0, 8)}`;
       }
     }
 

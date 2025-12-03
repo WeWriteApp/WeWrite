@@ -122,11 +122,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update user's username
+    // Update user's username in Firestore
     await db.collection(getCollectionName('users')).doc(currentUserId).update({
       username: username,
       lastModified: new Date().toISOString()
     });
+
+    // CRITICAL: Also update username in Realtime Database
+    // This is the primary source for username lookups in leaderboard, trending, etc.
+    try {
+      const rtdb = admin.database();
+      await rtdb.ref(`users/${currentUserId}`).update({
+        username: username,
+        lastModified: new Date().toISOString()
+      });
+      console.log(`✅ Username updated in RTDB for user ${currentUserId}`);
+    } catch (rtdbError) {
+      console.error('❌ Failed to update username in RTDB:', rtdbError);
+      // Don't fail the request, but log for monitoring
+    }
 
     // Also add to usernames collection for faster lookups (if collection exists)
     try {

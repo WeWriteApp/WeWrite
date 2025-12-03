@@ -76,17 +76,14 @@ export async function POST(request: NextRequest) {
       // Get username for better account identification
       let username = 'Unknown User';
       try {
-        const emailLocalPart = userEmail ? userEmail.split('@')[0] : null;
+        // Only use username field - displayName is deprecated
         username = sanitizeUsername(
-          userData?.username || userData?.displayName || null,
+          userData?.username || null,
           'User',
           'User'
         );
         if (!username || username === 'User') {
           username = `user_${userId.substring(0, 8)}`;
-        }
-        if (emailLocalPart) {
-          console.log('Using email_local_part for backend metadata only');
         }
       } catch (error) {
         console.warn('Could not determine username for Stripe account:', error);

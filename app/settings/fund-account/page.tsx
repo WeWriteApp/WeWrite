@@ -9,6 +9,8 @@ import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { PaymentMethodsOverview } from '../../components/payments/PaymentMethodsOverview';
+import { getAnalyticsService } from '../../utils/analytics-service';
+import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
 export default function FundAccountPage() {
   const { user } = useAuth();
@@ -17,6 +19,17 @@ export default function FundAccountPage() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Track page view
+  useEffect(() => {
+    if (user) {
+      const analytics = getAnalyticsService();
+      analytics.trackEvent({
+        category: EVENT_CATEGORIES.SETTINGS,
+        action: SETTINGS_EVENTS.FUND_ACCOUNT_PAGE_VIEWED
+      });
+    }
+  }, [user]);
 
   // Check for success/cancellation messages and update parameters
   const cancelled = searchParams.get('cancelled') === 'true';

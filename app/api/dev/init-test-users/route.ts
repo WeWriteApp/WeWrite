@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
             uid: testUser.uid,
             email: testUser.email,
             password: testUser.password,
-            emailVerified: true,
-            displayName: testUser.username // WeWrite uses usernames, not display names in UI
+            emailVerified: true
+            // displayName removed - WeWrite only uses username field stored in Firestore
           });
           console.log(`✅ Created Firebase Auth user: ${testUser.username}`);
         } catch (authError: any) {

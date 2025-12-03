@@ -4,7 +4,8 @@ import React from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { SidebarProvider } from './UnifiedSidebar';
 
-import MobileBottomNav from './MobileBottomNav';
+// Using the new unified mobile nav with single drag zone
+import MobileBottomNavUnified from './MobileBottomNavUnified';
 import FloatingActionButton from './FloatingActionButton';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
@@ -38,7 +39,7 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
       {/* Floating elements - render outside SidebarLayout to ensure proper viewport positioning */}
       <FloatingFinancialHeader />
-      <MobileBottomNav />
+      <MobileBottomNavUnified />
       <FloatingActionButton />
 
       <SidebarProvider>

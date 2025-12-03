@@ -14,6 +14,14 @@ import { useDateFormat } from '../../contexts/DateFormatContext';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
+import { MoreVertical, UserMinus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { Button } from '../ui/button';
 
 interface RandomPage {
   id: string;
@@ -35,6 +43,7 @@ interface RandomPagesTableProps {
   pages: RandomPage[];
   loading?: boolean;
   denseMode?: boolean;
+  onExcludeUser?: (username: string) => void;
 }
 
 /**
@@ -42,7 +51,7 @@ interface RandomPagesTableProps {
  * Desktop: Table layout with columns for Title, Author, Last Edited
  * Mobile: Stacked cards with same information
  */
-export default function RandomPagesTable({ pages, loading = false, denseMode = false }: RandomPagesTableProps) {
+export default function RandomPagesTable({ pages, loading = false, denseMode = false, onExcludeUser }: RandomPagesTableProps) {
   const { formatDateString } = useDateFormat();
 
   // Note: Batch page data preloading was removed with user management cleanup
@@ -136,17 +145,18 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         )}
 
         <div className="border-b border-theme-medium bg-muted/30 p-4">
-          <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4 text-sm font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1fr_200px_150px_200px_40px] gap-4 text-sm font-medium text-muted-foreground">
             <div>Title</div>
             <div>Author</div>
             <div>Last Edited</div>
             <div>Allocation</div>
+            <div></div>
           </div>
         </div>
         <div className="divide-y divide-theme-medium">
           {pages.map((page) => (
             <div key={page.id} className="p-4 hover:bg-muted/30 transition-colors">
-              <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4 items-center">
+              <div className="grid grid-cols-[1fr_200px_150px_200px_40px] gap-4 items-center">
                 {/* Title Column - Flexible width with proper truncation */}
                 <div className="min-w-0 overflow-hidden">
                   <div className="max-w-full flex items-center gap-2">
@@ -193,6 +203,33 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                     source="RandomPages"
                   />
                 </div>
+
+                {/* Menu Column */}
+                <div className="flex justify-end">
+                  {onExcludeUser && page.username && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full hover:bg-muted"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Page options</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => onExcludeUser(page.username)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          Filter out {page.username}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -218,10 +255,37 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         {pages.map((page) => (
           <div
             key={page.id}
-            className={cn(wewriteCard('interactive'), "space-y-3")}
+            className={cn(wewriteCard('interactive'), "space-y-3 relative")}
           >
+            {/* Menu button in top right */}
+            {onExcludeUser && page.username && (
+              <div className="absolute top-3 right-3 z-10">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full hover:bg-muted"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                      <span className="sr-only">Page options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => onExcludeUser(page.username)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <UserMinus className="h-4 w-4 mr-2" />
+                      Filter out {page.username}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+
             {/* Title */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pr-8">
               <PillLink
                 href={`/${page.id}`}
                 groupId={page.groupId}

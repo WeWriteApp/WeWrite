@@ -422,12 +422,12 @@ export async function POST(request: NextRequest) {
         username = currentUserId.replace('dev_', '').replace('_user', '');
       }
     } else {
-      // In production, prefer stored username/displayName; never expose email local part
-      const userRecord = await admin.auth().getUser(currentUserId);
+      // In production, prefer stored username; never expose email local part
+      // displayName is deprecated - only use username field
       const userDoc = await db.collection(getCollectionName('users')).doc(currentUserId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
       username = sanitizeUsername(
-        userData?.username || userData?.displayName || null,
+        userData?.username || null,
         'User',
         'User'
       );

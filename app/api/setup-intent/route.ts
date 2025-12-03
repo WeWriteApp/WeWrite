@@ -74,8 +74,9 @@ export async function POST(request: NextRequest) {
         const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
         const userData = userDoc.exists() ? userDoc.data() : null;
         const emailLocalPart = userRecord.email ? userRecord.email.split('@')[0] : null;
+        // Only use username field - displayName is fully deprecated
         username = sanitizeUsername(
-          userData?.username || userData?.displayName || null,
+          userData?.username || null,
           'User',
           'User'
         );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield } from 'lucide-react';
+import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield, Pencil, RotateCcw, Check } from 'lucide-react';
 import { DndProvider } from 'react-dnd';
 import FixedPortal from "../utils/FixedPortal";
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -30,6 +30,8 @@ import { WarningDot } from '../ui/warning-dot';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 import { FloatingToolbar } from '../ui/FloatingCard';
 import { isAdmin } from '../../utils/isAdmin';
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
+import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 
 /**
  * MobileBottomNav Component
@@ -77,7 +79,8 @@ export default function MobileBottomNav() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const editorContext = useEditorContext();
-  const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar, sidebarOrder, reorderSidebarItem, clearCache } = useNavigationOrder();
+  const { mobileOrder, reorderMobileItem, swapBetweenMobileAndSidebar, sidebarOrder, reorderSidebarItem, clearCache, setMobileOrder, setSidebarOrder } = useNavigationOrder();
+  const { trackNavigationEvent } = useWeWriteAnalytics();
 
   // 🚀 OPTIMIZATION: Navigation preloader for smooth mobile navigation
   const { handleNavigationFocus } = useNavigationPreloader();
@@ -85,9 +88,16 @@ export default function MobileBottomNav() {
   // Detect if we're on a touch device for drag backend selection
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
   const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
+  
+  // Touch backend options for better cross-component dragging
+  const touchBackendOptions = {
+    enableMouseEvents: true, // Allow mouse for testing on desktop
+    delayTouchStart: 150, // Short delay to distinguish tap from drag
+    ignoreContextMenu: true,
+  };
 
-  // Trust the context - it should always provide exactly 4 items (More button is separate)
-  const safeMobileOrder = mobileOrder.length === 4 ? mobileOrder : ['home', 'search', 'notifications', 'profile'];
+  // Trust the context - it should always provide exactly 3 items (More button is separate, total 4 columns)
+  const safeMobileOrder = mobileOrder.length === 3 ? mobileOrder : ['home', 'search', 'notifications'];
 
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useEarnings();
@@ -129,6 +139,12 @@ export default function MobileBottomNav() {
   const [isPWAMode, setIsPWAMode] = useState(false);
   // SIMPLIFIED: Removed scroll-related state (isVisible, lastScrollY, scrollTimeoutRef)
 
+  // Toolbar edit mode state - controls whether items can be rearranged
+  const [isToolbarEditMode, setIsToolbarEditMode] = useState(false);
+  // Track the original order before editing, so we can restore on cancel
+  const [originalMobileOrder, setOriginalMobileOrder] = useState<string[] | null>(null);
+  const [originalSidebarOrder, setOriginalSidebarOrder] = useState<string[] | null>(null);
+
   // Logout confirmation state
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -146,6 +162,56 @@ export default function MobileBottomNav() {
 
   // Check if we're in edit mode by checking if editor context has editor functions
   const isEditMode = !!(editorContext?.onSave || editorContext?.onCancel);
+
+  // Toolbar edit mode handlers
+  const handleStartToolbarEdit = useCallback(() => {
+    // Save current order before editing
+    setOriginalMobileOrder([...mobileOrder]);
+    setOriginalSidebarOrder([...sidebarOrder]);
+    setIsToolbarEditMode(true);
+    // Track analytics
+    trackNavigationEvent(NAVIGATION_EVENTS.TOOLBAR_EDIT_STARTED, {
+      mobile_order: mobileOrder.join(','),
+      sidebar_item_count: sidebarOrder.filter(id => !mobileOrder.includes(id)).length
+    });
+  }, [mobileOrder, sidebarOrder, trackNavigationEvent]);
+
+  const handleSaveToolbarEdit = useCallback(() => {
+    setIsToolbarEditMode(false);
+    setOriginalMobileOrder(null);
+    setOriginalSidebarOrder(null);
+    // Track analytics
+    trackNavigationEvent(NAVIGATION_EVENTS.TOOLBAR_EDIT_SAVED, {
+      mobile_order: mobileOrder.join(','),
+      sidebar_item_count: sidebarOrder.filter(id => !mobileOrder.includes(id)).length
+    });
+  }, [mobileOrder, sidebarOrder, trackNavigationEvent]);
+
+  const handleCancelToolbarEdit = useCallback(() => {
+    // Restore original order
+    if (originalMobileOrder) {
+      setMobileOrder(originalMobileOrder);
+    }
+    if (originalSidebarOrder) {
+      setSidebarOrder(originalSidebarOrder);
+    }
+    setIsToolbarEditMode(false);
+    setOriginalMobileOrder(null);
+    setOriginalSidebarOrder(null);
+    // Track analytics
+    trackNavigationEvent(NAVIGATION_EVENTS.TOOLBAR_EDIT_CANCELLED, {});
+  }, [originalMobileOrder, originalSidebarOrder, setMobileOrder, setSidebarOrder, trackNavigationEvent]);
+
+  const handleResetToDefault = useCallback(() => {
+    clearCache();
+    setIsToolbarEditMode(false);
+    setOriginalMobileOrder(null);
+    setOriginalSidebarOrder(null);
+    // Track analytics
+    trackNavigationEvent(NAVIGATION_EVENTS.TOOLBAR_RESET_TO_DEFAULT, {});
+    // Reload to apply default order
+    window.location.reload();
+  }, [clearCache, trackNavigationEvent]);
 
   // Check if current route is a ContentPage (should hide mobile nav)
   const isContentPageRoute = useCallback(() => {
@@ -301,7 +367,9 @@ export default function MobileBottomNav() {
   const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
   const shouldHideNav = isEditorPage;
 
-  // Handle cross-component drops (sidebar to mobile) - SWAP mode only
+  // Handle cross-component drops (sidebar <-> mobile) - PUSH mode
+  // When dragging to mobile: displaced item goes to overflow
+  // When dragging to overflow: an item from overflow fills the mobile slot
   const handleCrossComponentDrop = (
     dragItem: { id: string; index: number; sourceType: 'mobile' | 'sidebar' },
     targetIndex: number,
@@ -315,7 +383,7 @@ export default function MobileBottomNav() {
       sidebarOrder
     });
 
-    // Perform the swap
+    // Perform the push/swap
     swapBetweenMobileAndSidebar(
       dragItem.sourceType,
       dragItem.index,
@@ -528,10 +596,12 @@ export default function MobileBottomNav() {
           "flex-shrink-0 min-w-0",
           // Enhanced touch feedback
           "touch-manipulation select-none",
-          // Immediate visual feedback states
-          isPressed && "scale-95 bg-primary/20",
+          // Override ghost button's low-opacity active states - MORE opaque in light mode
+          "hover:bg-muted/80 active:bg-muted dark:hover:bg-muted/60 dark:active:bg-muted/80",
+          // Immediate visual feedback states - solid bg on press
+          isPressed && "scale-95 bg-muted",
           // Base states with enhanced contrast
-          "nav-hover-state nav-active-state",
+          "nav-hover-state",
           // Active state styling - neutral semi-transparent background to match "more" button
           isActive
             ? "bg-muted text-foreground"
@@ -577,7 +647,7 @@ export default function MobileBottomNav() {
   };
 
   return (
-    <DndProvider backend={dndBackend}>
+    <DndProvider backend={dndBackend} options={isTouchDevice ? touchBackendOptions : undefined}>
       {/* Render into fixed portal to avoid ancestor stacking contexts */}
       <FixedPortal>
       {/* Backdrop - only shows when expanded, positioned behind the expanded toolbar */}
@@ -585,8 +655,8 @@ export default function MobileBottomNav() {
         <div
           className="md:hidden fixed inset-0 z-[75] bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
           onClick={(e) => {
-            // Only close if clicking directly on backdrop, not during drag operations
-            if (e.target === e.currentTarget) {
+            // Only close if clicking directly on backdrop, not during drag operations or edit mode
+            if (e.target === e.currentTarget && !isToolbarEditMode) {
               setIsExpanded(false);
             }
           }}
@@ -597,7 +667,8 @@ export default function MobileBottomNav() {
             }
           }}
           style={{
-            pointerEvents: isExpanded ? 'auto' : 'none', // Only enable pointer events when actually expanded
+            // Disable pointer events in edit mode to allow dragging through
+            pointerEvents: isExpanded && !isToolbarEditMode ? 'auto' : 'none',
             // Allow scrolling when expanded but prevent zoom
             touchAction: 'pan-y'
           }}
@@ -633,12 +704,17 @@ export default function MobileBottomNav() {
         {/* Expanded content with smooth animation */}
         <div
           className={cn(
-            "overflow-hidden transition-all duration-300 ease-in-out",
-            isExpanded ? "max-h-[60vh] opacity-100" : "max-h-0 opacity-0"
+            "transition-all duration-300 ease-in-out",
+            // Only use overflow-hidden when collapsed, allow overflow when expanded for drag operations
+            isExpanded ? "max-h-[60vh] opacity-100" : "max-h-0 opacity-0 overflow-hidden"
           )}
         >
           {isExpanded && (
-            <div className="overflow-y-auto max-h-[60vh]">
+            <div className={cn(
+              "max-h-[60vh]",
+              // Disable scrolling when in edit mode to allow drag-and-drop
+              isToolbarEditMode ? "overflow-visible touch-none" : "overflow-y-auto overscroll-contain"
+            )}>
               {/* Account info at top */}
               {user && (
                 <div className="p-3 border-b border-neutral-20">
@@ -678,30 +754,66 @@ export default function MobileBottomNav() {
               )}
 
               {/* Grid of navigation items */}
-              <div className="p-3">
+              <div className="px-3 py-3">
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="text-sm font-medium text-foreground">
                       Overflow menu items
                     </h3>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        clearCache();
-                        window.location.reload();
-                      }}
-                      className="text-xs h-6 px-2"
-                    >
-                      Default
-                    </Button>
+                    {!isToolbarEditMode ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleStartToolbarEdit}
+                        className="text-xs h-6 px-2 gap-1"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleResetToDefault}
+                          className="text-xs h-6 px-2 gap-1 text-muted-foreground"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Reset
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelToolbarEdit}
+                          className="text-xs h-6 px-2"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleSaveToolbarEdit}
+                          className="text-xs h-6 px-2 gap-1"
+                        >
+                          <Check className="h-3 w-3" />
+                          Save
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Drag items into bottom toolbar if you want easier access
+                    {isToolbarEditMode 
+                      ? "Drag items to rearrange. Items wiggle when they can be moved."
+                      : "Tap Edit to rearrange toolbar items"
+                    }
                   </p>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className={cn(
+                  "grid grid-cols-4 gap-1 px-0",
+                  // Disable touch scrolling when in edit mode to allow drag-and-drop
+                  isToolbarEditMode && "touch-none"
+                )}>
                   {sidebarOrder
                     .filter(itemId => !mobileOrder.includes(itemId))
                     .filter(itemId => !(itemId === 'admin' && user?.isAdmin !== true))
@@ -718,8 +830,10 @@ export default function MobileBottomNav() {
                           index={actualSidebarIndex}
                           icon={item.icon}
                           onClick={() => {
-                            setIsExpanded(false); // Close expanded state
-                            router.push(item.href);
+                            if (!isToolbarEditMode) {
+                              setIsExpanded(false); // Close expanded state
+                              router.push(item.href);
+                            }
                           }}
                           onHover={() => {}}
                           isActive={pathname === item.href}
@@ -730,6 +844,7 @@ export default function MobileBottomNav() {
                           moveItem={reorderSidebarItem}
                           isPressed={false}
                           isNavigating={false}
+                          editMode={isToolbarEditMode}
                         >
                           {itemId === 'settings' && criticalSettingsStatus === 'warning' && (
                             <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-background"></div>
@@ -749,8 +864,12 @@ export default function MobileBottomNav() {
           )}
         </div>
 
-        {/* Bottom toolbar - always present with reduced padding */}
-        <div className="flex items-center justify-around px-2 py-1 gap-1">
+        {/* Bottom toolbar - always present, grid layout matches overflow */}
+        <div className={cn(
+          "grid grid-cols-4 gap-1 px-3 py-1",
+          // Disable touch scrolling when in edit mode to allow drag-and-drop
+          isToolbarEditMode && "touch-none"
+        )}>
           {/* More Button - Fixed position, not draggable */}
           <NavButton
             id="more"
@@ -770,7 +889,7 @@ export default function MobileBottomNav() {
             )}
           </NavButton>
 
-          {/* Draggable Navigation Buttons - Always exactly 4 items (More button is separate) */}
+          {/* Draggable Navigation Buttons - Always exactly 3 items (More button is separate, total 4 columns) */}
           {safeMobileOrder.map((buttonId, index) => {
             const buttonConfig = navigationButtons[buttonId];
             if (!buttonConfig) {
@@ -784,15 +903,21 @@ export default function MobileBottomNav() {
                 id={buttonId}
                 index={index}
                 icon={buttonConfig.icon}
-                onClick={buttonConfig.onClick}
+                onClick={() => {
+                  if (!isToolbarEditMode) {
+                    buttonConfig.onClick();
+                  }
+                }}
                 onHover={buttonConfig.onHover}
                 isActive={buttonConfig.isActive}
                 ariaLabel={buttonConfig.ariaLabel}
                 label={buttonConfig.label}
+                sourceType="mobile"
                 onCrossComponentDrop={handleCrossComponentDrop}
                 moveItem={reorderMobileItem}
                 isPressed={isButtonPressed(buttonConfig.id)}
                 isNavigating={isNavigatingTo(pathname)}
+                editMode={isToolbarEditMode}
               >
                 {buttonConfig.children}
               </CrossComponentMobileNavButton>

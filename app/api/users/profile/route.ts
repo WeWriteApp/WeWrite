@@ -100,18 +100,18 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('NOT_FOUND', 'User not found');
     }
 
+    // Only use username field - displayName is fully deprecated
     const safeUsername = sanitizeUsername(
-      userData.username || userData.displayName || userData.email || `user_${userId?.slice(0, 8)}`,
+      userData.username || `user_${userId?.slice(0, 8)}`,
       'User',
       `user_${userId?.slice(0, 8)}`
     );
 
-    // Prepare user profile data (displayName is mirrored to username for compatibility)
+    // Prepare user profile data (username only - displayName removed)
     const profileData = {
       uid: userId,
       id: userId,
       username: safeUsername,
-      displayName: safeUsername,
       bio: userData.bio || '',
       createdAt: userData.createdAt,
       lastModified: userData.lastModified,

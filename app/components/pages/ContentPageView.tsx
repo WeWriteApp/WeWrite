@@ -895,53 +895,18 @@ export default function ContentPageView({
   }, [isEditing]);
 
   // Event handlers
+  // PERFORMANCE FIX: Removed expensive JSON.stringify comparison from the hot path
+  // This was causing input lag on mobile devices due to synchronous serialization on every keystroke
+  // Now we optimistically mark content as changed and update state immediately
   const handleContentChange = useCallback((content: any) => {
-    console.log('🔍 CONTENT CHANGE: handleContentChange called', {
-      hasContent: !!content,
-      contentType: typeof content,
-      contentLength: content ? content.length : 0,
-      hasPageContent: !!page?.content
-    });
-
+    // Update editor state immediately - this is the critical path for responsive typing
     setEditorState(content);
-
-    // Only set unsaved changes if content actually differs from original
-    let originalContent = [];
-
-    if (page?.content) {
-      try {
-        // Handle both string and object formats
-        if (typeof page.content === 'string') {
-          originalContent = JSON.parse(page.content);
-        } else if (Array.isArray(page.content)) {
-          originalContent = page.content;
-        } else {
-          originalContent = [];
-        }
-      } catch (error) {
-        console.warn('🔍 CONTENT CHANGE: Error parsing original content, treating as empty:', error);
-        originalContent = [];
-      }
-    }
-
-    const contentChanged = JSON.stringify(content) !== JSON.stringify(originalContent);
-
-    console.log('🔍 CONTENT CHANGE: Comparing content', {
-      originalContentLength: originalContent.length,
-      newContentLength: content ? content.length : 0,
-      contentChanged,
-      originalContentType: typeof page?.content,
-      originalSample: JSON.stringify(originalContent).substring(0, 100),
-      newSample: content ? JSON.stringify(content).substring(0, 100) : 'null'
-    });
-
-    if (contentChanged) {
-      console.log('✅ CONTENT CHANGE: Setting hasUnsavedChanges to true');
-      setHasUnsavedChanges(true);
-    } else {
-      console.log('⚪ CONTENT CHANGE: No changes detected, not setting hasUnsavedChanges');
-    }
-  }, [page?.content]);
+    
+    // Optimistically mark as having unsaved changes
+    // The actual comparison is expensive and unnecessary on every keystroke
+    // If the user saves and nothing changed, the save operation will handle it
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleTitleChange = useCallback((newTitle: string) => {
     if (newTitle !== title) {

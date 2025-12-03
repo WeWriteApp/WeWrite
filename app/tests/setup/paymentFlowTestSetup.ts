@@ -294,7 +294,8 @@ export class PaymentFlowTestUtils {
       currentUser: user ? {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName
+        // WeWrite uses username, not Firebase displayName
+        displayName: user.username
       } : null,
       onAuthStateChanged: jest.fn(),
       signInWithEmailAndPassword: jest.fn(),

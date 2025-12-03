@@ -15,6 +15,8 @@ import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
 import Link from 'next/link';
 import { getLoggedOutUsdBalance, clearLoggedOutUsd } from '../../utils/simulatedUsd';
+import { getAnalyticsService } from '../../utils/analytics-service';
+import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
 export default function SpendPage() {
   const { user } = useAuth();
@@ -26,6 +28,17 @@ export default function SpendPage() {
   const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
   const [showIntervalModal, setShowIntervalModal] = useState(false);
+
+  // Track page view
+  useEffect(() => {
+    if (user) {
+      const analytics = getAnalyticsService();
+      analytics.trackEvent({
+        category: EVENT_CATEGORIES.SETTINGS,
+        action: SETTINGS_EVENTS.SPEND_PAGE_VIEWED
+      });
+    }
+  }, [user]);
 
   // Convert simulated USD data to real allocations
   const convertSimulatedUsdData = async () => {

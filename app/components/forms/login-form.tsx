@@ -1,15 +1,27 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getEnvironmentType } from '../../utils/environmentConfig';
+
+// Constants for rate limiting
+const MAX_ATTEMPTS_BEFORE_WARNING = 3;
+const MAX_ATTEMPTS_BEFORE_LOCKOUT = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const ATTEMPT_STORAGE_KEY = 'wewrite_login_attempts';
+
+interface LoginAttemptData {
+  count: number;
+  lastAttempt: number;
+  lockedUntil: number | null;
+}
 
 export function LoginForm() {
   const [emailOrUsername, setEmailOrUsername] = useState('');
@@ -17,9 +29,97 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [attemptData, setAttemptData] = useState<LoginAttemptData>({ count: 0, lastAttempt: 0, lockedUntil: null });
 
   const { signIn, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Load attempt data from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(ATTEMPT_STORAGE_KEY);
+    if (stored) {
+      try {
+        const data: LoginAttemptData = JSON.parse(stored);
+        // Reset count if last attempt was more than 30 minutes ago
+        if (Date.now() - data.lastAttempt > 30 * 60 * 1000) {
+          localStorage.removeItem(ATTEMPT_STORAGE_KEY);
+          setAttemptData({ count: 0, lastAttempt: 0, lockedUntil: null });
+        } else {
+          setAttemptData(data);
+          // Check if still locked
+          if (data.lockedUntil && Date.now() < data.lockedUntil) {
+            setCountdown(Math.ceil((data.lockedUntil - Date.now()) / 1000));
+          }
+        }
+      } catch (e) {
+        localStorage.removeItem(ATTEMPT_STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) {
+      if (countdown === 0) {
+        // Lockout expired, reset
+        setCountdown(null);
+        setError('');
+        setAttemptData(prev => ({ ...prev, lockedUntil: null }));
+        localStorage.removeItem(ATTEMPT_STORAGE_KEY);
+      }
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Format countdown as MM:SS
+  const formatCountdown = useCallback((seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  // Record a failed attempt
+  const recordFailedAttempt = useCallback((isRateLimited: boolean = false) => {
+    const now = Date.now();
+    const newData: LoginAttemptData = {
+      count: attemptData.count + 1,
+      lastAttempt: now,
+      lockedUntil: isRateLimited ? now + LOCKOUT_DURATION_MS : attemptData.lockedUntil
+    };
+    setAttemptData(newData);
+    localStorage.setItem(ATTEMPT_STORAGE_KEY, JSON.stringify(newData));
+
+    // Start countdown if rate limited
+    if (isRateLimited) {
+      setCountdown(Math.ceil(LOCKOUT_DURATION_MS / 1000));
+    }
+    // Show warning if approaching limit
+    else if (newData.count >= MAX_ATTEMPTS_BEFORE_WARNING && newData.count < MAX_ATTEMPTS_BEFORE_LOCKOUT) {
+      const remaining = MAX_ATTEMPTS_BEFORE_LOCKOUT - newData.count;
+      setWarning(`Warning: ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before temporary lockout.`);
+    }
+  }, [attemptData]);
+
+  // Clear attempts on successful login
+  const clearAttempts = useCallback(() => {
+    localStorage.removeItem(ATTEMPT_STORAGE_KEY);
+    setAttemptData({ count: 0, lastAttempt: 0, lockedUntil: null });
+    setWarning('');
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -31,8 +131,15 @@ export function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if currently locked out
+    if (countdown !== null && countdown > 0) {
+      return;
+    }
+
     setIsLoading(true);
     setError('');
+    setWarning('');
 
     try {
       // CRITICAL: Trim inputs to prevent whitespace issues on Android PWA
@@ -49,15 +156,30 @@ export function LoginForm() {
       });
 
       await signIn(trimmedEmailOrUsername, trimmedPassword);
+      // Clear attempts on successful login
+      clearAttempts();
       // Use window.location.href for reliable redirect after login
       window.location.href = '/';
     } catch (err: any) {
       console.error('[LoginForm] Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      
+      // Check if this is a rate limit error
+      const isRateLimited = err.message?.includes('Too many failed login attempts') || 
+                           err.code === 'auth/too-many-requests';
+      
+      if (isRateLimited) {
+        recordFailedAttempt(true);
+        setError('Too many failed login attempts. Please wait for the timer below, or use "Forgot Password" to reset your password. Note: Closing and reopening the app will NOT reset this timer - it\'s enforced by our security system.');
+      } else {
+        recordFailedAttempt(false);
+        setError(err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const isLockedOut = countdown !== null && countdown > 0;
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
@@ -68,6 +190,36 @@ export function LoginForm() {
         </p>
       </div>
 
+      {/* Countdown Timer Alert */}
+      {isLockedOut && countdown !== null && (
+        <Alert className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+          <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-700 dark:text-orange-300">
+            <div className="flex flex-col gap-2">
+              <span>Account temporarily locked due to too many failed attempts.</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-lg font-bold">{formatCountdown(countdown)}</span>
+                <span className="text-sm">until you can try again</span>
+              </div>
+              <span className="text-xs opacity-80">
+                Tip: Use "Forgot Password" below to reset your password immediately.
+              </span>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Warning Alert (approaching lockout) */}
+      {warning && !isLockedOut && (
+        <Alert className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+          <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            {warning}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Error Alert */}
       {error && (
         <Alert className="bg-red-50 dark:bg-red-950 border-theme-medium" style={{ borderColor: 'hsl(0 84% 60% / 0.3)' }}>
           <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -88,7 +240,7 @@ export function LoginForm() {
             onBlur={(e) => setEmailOrUsername(e.target.value.trim())} // Trim on blur for Android PWA
             placeholder="Enter your email or username"
             required
-            disabled={isLoading}
+            disabled={isLoading || isLockedOut}
             autoComplete="username"
             autoCapitalize="none"
             autoCorrect="off"
@@ -107,7 +259,7 @@ export function LoginForm() {
               onBlur={(e) => setPassword(e.target.value.trim())} // Trim on blur for Android PWA
               placeholder="Enter your password"
               required
-              disabled={isLoading}
+              disabled={isLoading || isLockedOut}
               autoComplete="current-password"
               autoCapitalize="none"
               autoCorrect="off"
@@ -119,7 +271,7 @@ export function LoginForm() {
               size="sm"
               className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
               onClick={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
+              disabled={isLoading || isLockedOut}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -133,9 +285,9 @@ export function LoginForm() {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading}
+          disabled={isLoading || isLockedOut}
         >
-          {isLoading ? 'Signing in...' : 'Sign In'}
+          {isLoading ? 'Signing in...' : isLockedOut ? `Locked (${formatCountdown(countdown!)})` : 'Sign In'}
         </Button>
       </form>
 

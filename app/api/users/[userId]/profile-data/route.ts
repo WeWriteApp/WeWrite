@@ -40,8 +40,9 @@ export async function GET(
       const responseTime = Date.now() - startTime;
       console.log(`🚀 [User API] Cache hit for ${userId} (${responseTime}ms)`);
 
+      // Only use username field - displayName and email are deprecated for display
       const safeUsername = sanitizeUsername(
-        cachedUserData.username || cachedUserData.displayName || cachedUserData.email || `user_${userId.slice(0, 8)}`,
+        cachedUserData.username || `user_${userId.slice(0, 8)}`,
         'User',
         `user_${userId.slice(0, 8)}`
       );
@@ -59,7 +60,6 @@ export async function GET(
       const publicUserData = {
         id: cachedUserData.id,
         username: safeUsername,
-        displayName: safeUsername,
         bio: cachedUserData.bio,
         profilePicture: cachedUserData.profilePicture,
         isVerified: cachedUserData.isVerified || false,
@@ -126,8 +126,9 @@ export async function GET(
       );
     }
 
+    // Only use username field - displayName is fully deprecated
     const safeUsername = sanitizeUsername(
-      userData.username || userData.displayName || userData.email || `user_${userId.slice(0, 8)}`,
+      userData.username || `user_${userId.slice(0, 8)}`,
       'User',
       `user_${userId.slice(0, 8)}`
     );
@@ -136,7 +137,6 @@ export async function GET(
     const publicUserData = {
       id: userDoc.id,
       username: safeUsername,
-      displayName: safeUsername,
       bio: userData.bio,
       profilePicture: userData.profilePicture,
       isVerified: userData.isVerified || false,
@@ -150,7 +150,7 @@ export async function GET(
     };
 
     // Cache the result in enhanced cache system
-    userCache.set(userId, { ...userData, username: safeUsername, displayName: safeUsername }, 'profile');
+    userCache.set(userId, { ...userData, username: safeUsername }, 'profile');
 
     const responseTime = Date.now() - startTime;
     console.log(`✅ [User API] Successfully fetched ${userId} (${responseTime}ms)`);
@@ -234,9 +234,8 @@ export async function PATCH(
       );
     }
 
-    // Sanitize update data - only allow specific fields
+    // Sanitize update data - only allow specific fields (displayName removed - use username)
     const allowedFields = [
-      'displayName',
       'bio',
       'profilePicture',
       'preferences',

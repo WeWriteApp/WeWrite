@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     for (const userDoc of usersSnapshot.docs) {
       const userData = userDoc.data();
       const username = sanitizeUsername(
-        userData.username || userData.displayName || userData.email || `user_${userDoc.id.slice(0, 8)}`,
+        userData.username || `user_${userDoc.id.slice(0, 8)}`,
         'User',
         `user_${userDoc.id.slice(0, 8)}`
       );
@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
           suggestions.push({
             id: userData.id,
             username,
-            displayName: username,
             recentPages
           });
         }

@@ -226,8 +226,9 @@ async function fetchBatchUserDataInternal(
 
 
 
+          // Only use username field - displayName and email are deprecated for display
           const safeUsername = sanitizeUsername(
-            userData.username || userData.displayName || userData.email || `user_${doc.id.slice(0, 8)}`,
+            userData.username || `user_${doc.id.slice(0, 8)}`,
             'User',
             `user_${doc.id.slice(0, 8)}`
           );

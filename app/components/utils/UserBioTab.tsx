@@ -6,8 +6,6 @@ import { getUserProfile } from "../../utils/apiClient";
 import { toast } from "../ui/use-toast";
 // REMOVED: recordBioEditActivity - bio activity tracking disabled for cost optimization
 import dynamic from "next/dynamic";
-import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
-import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { useAuth } from '../../providers/AuthProvider';
 
 import EmptyContentState from './EmptyContentState';
@@ -129,7 +127,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       // Ensure we're saving the content in the correct format
       // The Editor returns an array of nodes, which we want to preserve
       const contentToSave = bioContent;
-      const editorName = user?.username || user?.displayName || user?.email || "Unknown";
+      const editorName = user?.username || "Unknown";
 
       console.log("Saving bio content:", contentToSave);
 
@@ -174,26 +172,32 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     }
   };
 
-  // Memoized save function for the useUnsavedChanges hook
-  const saveChanges = useCallback(() => {
-    return handleSave();
-  }, [bioContent]);
+  // Handle beforeunload for browser/tab close - uses system dialog
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
 
-  // Use the unsaved changes hook
-  const {
-    showUnsavedChangesDialog,
-    handleNavigation,
-    handleStayAndSave,
-    handleLeaveWithoutSaving,
-    handleCloseDialog,
-    isHandlingNavigation
-  } = useUnsavedChanges(hasUnsavedChanges, saveChanges);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
-  // Handle canceling edits with unsaved changes check
+  // Handle canceling edits with unsaved changes check - uses system dialog
   const handleCancel = () => {
     if (hasUnsavedChanges) {
-      // Show confirmation dialog
-      handleNavigation('/');
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to discard them?'
+      );
+      if (confirmed) {
+        setBioContent(originalContent);
+        if (!isProfileOwner) {
+          handleSetIsEditing(false);
+        }
+      }
     } else {
       // No changes, just revert content (stay in editing mode for owners)
       setBioContent(originalContent);
@@ -353,16 +357,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           </div>
         )}
       </div>
-
-        {/* Unsaved Changes Dialog */}
-        <UnsavedChangesDialog
-          isOpen={showUnsavedChangesDialog}
-          onClose={handleCloseDialog}
-          onStayAndSave={handleStayAndSave}
-          onLeaveWithoutSaving={handleLeaveWithoutSaving}
-          isSaving={isLoading || isHandlingNavigation}
-        />
-
       </div>
     </>
   );

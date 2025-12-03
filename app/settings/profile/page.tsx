@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { doc, getDoc } from "firebase/firestore";
-import { addUsername, updateEmail as updateFirebaseEmail, updatePassword, checkUsernameAvailability } from "../../firebase/auth";
+import { updateEmail as updateFirebaseEmail, updatePassword, checkUsernameAvailability } from "../../firebase/auth";
+import { usernameApi } from "../../utils/apiClient";
 import { db } from "../../firebase/database";
 import { validateUsernameFormat } from '../../utils/usernameValidation';
 import { useRouter } from 'next/navigation';
@@ -64,7 +65,8 @@ export default function ProfilePage() {
     if (!user) return;
 
     // Start with auth-sourced values so we always show something even if the doc is missing
-    const authUsername = user.username || (user as any).displayName || '';
+    // Only use username - displayName is fully deprecated
+    const authUsername = user.username || '';
     const authEmail = user.email || '';
     setUsername(authUsername);
     setTempUsername(authUsername);
@@ -221,7 +223,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
 
-      // Check username availability
+      // Check username availability via API
       const availabilityResult = await checkUsernameAvailability(newUsername);
 
       if (typeof availabilityResult === 'object' && !availabilityResult.isAvailable) {
@@ -232,8 +234,12 @@ export default function ProfilePage() {
         return;
       }
 
-      // Add username to user profile
-      await addUsername(user.uid, newUsername);
+      // Update username via API (this updates both Firestore AND RTDB)
+      const result = await usernameApi.setUsername(newUsername);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update username');
+      }
 
       // Update local state
       setUsername(newUsername);

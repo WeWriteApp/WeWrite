@@ -74,6 +74,7 @@ const FilteredSearchResults = forwardRef(({
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [userSubscriptionData, setUserSubscriptionData] = useState(new Map());
   const [showFilters, setShowFilters] = useState(false);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
 
   // Refs
   const searchInputRef = useRef(null);
@@ -777,24 +778,98 @@ const FilteredSearchResults = forwardRef(({
           <div className="mt-auto pt-4 border-t">
             <Button
               variant="secondary"
-              onClick={() => {
-                // Create a placeholder page object for the link
-                const newPageData = {
-                  id: `new:${search}`, // Special ID to indicate this is a new page
-                  title: search,
-                  isNew: true, // Flag to indicate this is a new page
-                  isPublic: false, // Default to private
-                  userId: user?.uid
-                };
+              disabled={isCreatingPage}
+              onClick={async () => {
+                if (!user?.uid) {
+                  console.error('Cannot create page: user not authenticated');
+                  return;
+                }
 
-                if (onSelect) {
-                  onSelect(newPageData);
+                setIsCreatingPage(true);
+
+                // Create the page immediately in the database
+                try {
+                  const pageData = {
+                    title: search,
+                    content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
+                    userId: user.uid,
+                    username: user.username || 'Anonymous',
+                    lastModified: new Date().toISOString(),
+                    isReply: false,
+                    groupId: null,
+                    customDate: null
+                  };
+
+                  const response = await fetch('/api/pages', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(pageData),
+                    credentials: 'include'
+                  });
+
+                  if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Created new page from link editor:', { title: search, id: result.id });
+
+                    // Return the real page data with actual ID
+                    const newPageData = {
+                      id: result.id, // Use the real page ID from the database
+                      title: search,
+                      isNew: false, // Page already exists now
+                      isPublic: false,
+                      userId: user.uid,
+                      username: user.username || 'Anonymous'
+                    };
+
+                    if (onSelect) {
+                      onSelect(newPageData);
+                    }
+                  } else {
+                    // If creation fails, fall back to the old behavior with placeholder ID
+                    console.error('Failed to create page:', await response.text());
+                    const fallbackPageData = {
+                      id: `new:${search}`,
+                      title: search,
+                      isNew: true,
+                      isPublic: false,
+                      userId: user?.uid
+                    };
+                    if (onSelect) {
+                      onSelect(fallbackPageData);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error creating page:', error);
+                  // Fall back to old behavior
+                  const fallbackPageData = {
+                    id: `new:${search}`,
+                    title: search,
+                    isNew: true,
+                    isPublic: false,
+                    userId: user?.uid
+                  };
+                  if (onSelect) {
+                    onSelect(fallbackPageData);
+                  }
+                } finally {
+                  setIsCreatingPage(false);
                 }
               }}
               className="w-full justify-center"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Create new page: "{search}"
+              {isCreatingPage ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create new page: "{search}"
+                </>
+              )}
             </Button>
           </div>
         )}

@@ -356,9 +356,9 @@ class BackgroundJobOptimizer {
         const userData = userDoc.docs[0].data();
         
         // Update page with denormalized user data
+        // displayName removed - only username is used
         batch.update(pageDoc.ref, {
           username: userData.username,
-          userDisplayName: userData.displayName,
           userPhotoURL: userData.photoURL,
           userDataStale: false,
           userDataUpdated: Timestamp.now()

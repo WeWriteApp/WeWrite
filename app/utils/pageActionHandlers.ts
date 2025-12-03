@@ -240,7 +240,8 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
   }
 
   const pageUrl = `${window.location.origin}/${page.id}`;
-  const userName = user?.username || user?.displayName;
+  // Only use username - displayName is fully deprecated
+  const userName = user?.username;
 
   const candidateAuthors = [
     (page as any).authorUsername,
@@ -254,7 +255,6 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
     (page as any).authorUsername ||
     (page as any).username ||
     (page as any).user?.username ||
-    (page as any).user?.displayName ||
     userName ||
     "Unknown user";
 
@@ -365,7 +365,8 @@ const fallbackShare = (
   title?: string
 ): void => {
   const analytics = getAnalyticsService();
-  const userName = user?.username || user?.displayName;
+  // Only use username - displayName is fully deprecated
+  const userName = user?.username;
 
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).then(() => {

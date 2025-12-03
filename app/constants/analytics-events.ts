@@ -55,19 +55,46 @@ export const INTERACTION_EVENTS = {
   NOTIFICATION_MARKED_UNREAD: 'notification_marked_unread',
   NOTIFICATION_MENU_OPENED: 'notification_menu_opened',
   NOTIFICATIONS_MARK_ALL_READ: 'notifications_mark_all_read',
-  PLEDGE_BAR_CLICKED: 'pledge_bar_clicked',
-  PLEDGE_BAR_HOVERED: 'pledge_bar_hovered',
-  PLEDGE_BAR_USD_ALLOCATED: 'pledge_bar_usd_allocated',
-  PLEDGE_BAR_USD_REMOVED: 'pledge_bar_usd_removed',
-  PLEDGE_BAR_PLUS_CLICKED: 'pledge_bar_plus_clicked',
-  PLEDGE_BAR_MINUS_CLICKED: 'pledge_bar_minus_clicked',
-  PLEDGE_BAR_PROGRESS_HOVERED: 'pledge_bar_progress_hovered',
+  // Allocation Bar Events (formerly pledge_bar)
+  ALLOCATION_BAR_CLICKED: 'allocation_bar_clicked',
+  ALLOCATION_BAR_HOVERED: 'allocation_bar_hovered',
+  ALLOCATION_BAR_USD_ALLOCATED: 'allocation_bar_usd_allocated',
+  ALLOCATION_BAR_USD_REMOVED: 'allocation_bar_usd_removed',
+  ALLOCATION_BAR_PLUS_CLICKED: 'allocation_bar_plus_clicked',
+  ALLOCATION_BAR_MINUS_CLICKED: 'allocation_bar_minus_clicked',
+  ALLOCATION_BAR_PROGRESS_HOVERED: 'allocation_bar_progress_hovered',
+  ALLOCATION_BAR_MODAL_OPENED: 'allocation_bar_modal_opened',
+  ALLOCATION_BAR_MODAL_CLOSED: 'allocation_bar_modal_closed',
+  ALLOCATION_INCREMENT_CHANGED: 'allocation_increment_changed',
   LINK_EDITOR_OPENED: 'link_editor_opened',
   LINK_EDITOR_CLOSED: 'link_editor_closed',
   CUSTOM_TEXT_TOGGLED: 'custom_text_toggled',
   AUTHOR_TOGGLE_CHANGED: 'author_toggle_changed',
   PAGE_SHARE_ABORTED: 'page_share_aborted',
   PAGE_SHARE_SUCCEEDED: 'page_share_succeeded'};
+
+// Subscription/Checkout Events (for GA4 tracking alongside Firestore)
+export const SUBSCRIPTION_EVENTS = {
+  CHECKOUT_STARTED: 'checkout_started',
+  CHECKOUT_PLAN_SELECTED: 'checkout_plan_selected',
+  CHECKOUT_PAYMENT_INITIATED: 'checkout_payment_initiated',
+  CHECKOUT_PAYMENT_SUCCEEDED: 'checkout_payment_succeeded',
+  CHECKOUT_PAYMENT_FAILED: 'checkout_payment_failed',
+  CHECKOUT_ABANDONED: 'checkout_abandoned',
+  SUBSCRIPTION_CREATED: 'subscription_created',
+  SUBSCRIPTION_UPDATED: 'subscription_updated',
+  SUBSCRIPTION_CANCELLED: 'subscription_cancelled'};
+
+// Settings Events
+export const SETTINGS_EVENTS = {
+  SETTINGS_PAGE_VIEWED: 'settings_page_viewed',
+  SETTINGS_SECTION_CLICKED: 'settings_section_clicked',
+  FUND_ACCOUNT_PAGE_VIEWED: 'fund_account_page_viewed',
+  SPEND_PAGE_VIEWED: 'spend_page_viewed',
+  EARNINGS_PAGE_VIEWED: 'earnings_page_viewed',
+  PROFILE_PAGE_VIEWED: 'profile_page_viewed',
+  APPEARANCE_PAGE_VIEWED: 'appearance_page_viewed',
+  NOTIFICATIONS_PAGE_VIEWED: 'notifications_page_viewed'};
 
 
 
@@ -98,13 +125,34 @@ export const NAVIGATION_EVENTS = {
   BACK_BUTTON_USED: 'navigation_back_button',
   BREADCRUMB_CLICKED: 'navigation_breadcrumb',
   MENU_OPENED: 'navigation_menu_opened',
-  SEARCH_INITIATED: 'navigation_search_initiated'};
+  SEARCH_INITIATED: 'navigation_search_initiated',
+  // Mobile toolbar rearrange events
+  TOOLBAR_EDIT_STARTED: 'toolbar_edit_started',
+  TOOLBAR_EDIT_SAVED: 'toolbar_edit_saved',
+  TOOLBAR_EDIT_CANCELLED: 'toolbar_edit_cancelled',
+  TOOLBAR_RESET_TO_DEFAULT: 'toolbar_reset_to_default',
+  TOOLBAR_ITEM_REORDERED: 'toolbar_item_reordered'
+};
 
 // Session Events
 export const SESSION_EVENTS = {
   SESSION_START: 'session_start',
   SESSION_END: 'session_end',
   TIME_ON_PAGE: 'time_on_page'};
+
+// Share Events - Track all share actions with outcomes
+export const SHARE_EVENTS = {
+  // Profile sharing
+  PROFILE_SHARE_STARTED: 'profile_share_started',
+  PROFILE_SHARE_SUCCEEDED: 'profile_share_succeeded',
+  PROFILE_SHARE_CANCELLED: 'profile_share_cancelled',
+  PROFILE_SHARE_FAILED: 'profile_share_failed',
+  // Search sharing
+  SEARCH_SHARE_STARTED: 'search_share_started',
+  SEARCH_SHARE_SUCCEEDED: 'search_share_succeeded',
+  SEARCH_SHARE_CANCELLED: 'search_share_cancelled',
+  SEARCH_SHARE_FAILED: 'search_share_failed'
+};
 
 // All events combined
 export const ANALYTICS_EVENTS = {
@@ -114,10 +162,12 @@ export const ANALYTICS_EVENTS = {
   ...CONTENT_EVENTS,
   ...INTERACTION_EVENTS,
   ...NAVIGATION_EVENTS,
-
   ...FEATURE_EVENTS,
   ...SESSION_EVENTS,
-  ...PWA_EVENTS};
+  ...PWA_EVENTS,
+  ...SUBSCRIPTION_EVENTS,
+  ...SETTINGS_EVENTS,
+  ...SHARE_EVENTS};
 
 // Event categories
 export const EVENT_CATEGORIES = {
@@ -128,10 +178,13 @@ export const EVENT_CATEGORIES = {
   CONTENT: 'Content',
   INTERACTION: 'Interaction',
   NAVIGATION: 'Navigation',
-  // GROUP: 'Group', // Removed: Groups feature has been completely removed
   FEATURE: 'Feature',
   SESSION: 'Session',
   SYSTEM: 'System',
   PWA: 'PWA',
   APP: 'App',
-  ADMIN: 'Admin'};
+  ADMIN: 'Admin',
+  SUBSCRIPTION: 'Subscription',
+  SETTINGS: 'Settings',
+  ALLOCATION: 'Allocation',
+  SHARE: 'Share'};

@@ -26,6 +26,7 @@ interface RandomPage {
 interface RandomPagesProps {
   limit?: number;
   priority?: 'high' | 'medium' | 'low';
+  onExcludeUser?: (username: string) => void;
 }
 
 /**
@@ -34,7 +35,8 @@ interface RandomPagesProps {
  */
 const RandomPages = React.memo(function RandomPages({
   limit = 10,
-  priority = 'low'
+  priority = 'low',
+  onExcludeUser
 }: RandomPagesProps) {
   const { user } = useAuth();
   const [randomPages, setRandomPages] = useState<RandomPage[]>([]);
@@ -301,6 +303,7 @@ const RandomPages = React.memo(function RandomPages({
           pages={randomPages}
           loading={shuffling}
           denseMode={denseMode}
+          onExcludeUser={onExcludeUser}
         />
       </Suspense>
     </div>

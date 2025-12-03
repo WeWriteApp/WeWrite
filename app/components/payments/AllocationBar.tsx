@@ -19,6 +19,8 @@ import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBala
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
+import { INTERACTION_EVENTS } from '../../constants/analytics-events';
 import {
   FloatingAllocationBarProps,
   PageStats,
@@ -57,6 +59,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
   const { demoBalance, isDemoBalance } = useDemoBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
+  const { trackInteractionEvent } = useWeWriteAnalytics();
 
   // Flash animation state
   const [flashType, setFlashType] = useState<'accent' | 'red' | null>(null);
@@ -122,8 +125,21 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       return;
     }
 
-    // Trigger appropriate flash and game-like animations based on whether we're increasing or decreasing
+    // Track analytics for allocation changes
+    const analyticsParams = {
+      page_id: pageId,
+      author_id: authorId,
+      amount_cents: Math.abs(amount),
+      is_demo: isDemoBalance,
+      variant,
+      is_user_allocation: isUserAllocation
+    };
+
     if (amount > 0) {
+      // Track plus button click and USD allocated
+      trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_PLUS_CLICKED, analyticsParams);
+      trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_USD_ALLOCATED, analyticsParams);
+      
       triggerFlash('accent');
       // Trigger game-like animations for increases
       setShowPulse(true);
@@ -132,6 +148,10 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       setTimeout(() => setShowPulse(false), 600);
       setTimeout(() => setShowParticles(false), 1000);
     } else if (amount < 0) {
+      // Track minus button click and USD removed
+      trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_MINUS_CLICKED, analyticsParams);
+      trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_USD_REMOVED, analyticsParams);
+      
       triggerFlash('red');
     }
 
@@ -239,6 +259,18 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const handleAllocationBarClick = () => {
     // Allow both logged out users and logged in users to open the modal
     if (!isPageOwner) {
+      // Track allocation bar clicked
+      trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_CLICKED, {
+        page_id: pageId,
+        author_id: authorId,
+        is_demo: isDemoBalance,
+        variant,
+        is_user_allocation: isUserAllocation
+      });
+      trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_MODAL_OPENED, {
+        page_id: pageId,
+        author_id: authorId
+      });
       setIsModalOpen(true);
     }
   };
@@ -508,7 +540,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       {/* USD Allocation Modal */}
       <UsdAllocationModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          trackInteractionEvent(INTERACTION_EVENTS.ALLOCATION_BAR_MODAL_CLOSED, {
+            page_id: pageId,
+            author_id: authorId
+          });
+          setIsModalOpen(false);
+        }}
         pageId={pageId}
         pageTitle={pageTitle}
         authorId={authorId}

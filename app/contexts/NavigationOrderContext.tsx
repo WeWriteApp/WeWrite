@@ -17,8 +17,8 @@ const ALL_NAVIGATION_ITEMS = [
   'profile'
 ];
 
-// Default mobile toolbar - exactly 4 items (More button is separate)
-const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications', 'profile'];
+// Default mobile toolbar - exactly 3 items (More button is separate, total 4 columns)
+const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications'];
 
 // Default sidebar order - matches the desired order from user screenshot
 const DEFAULT_SIDEBAR_ORDER = [
@@ -76,15 +76,28 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
       const savedMobileOrder = localStorage.getItem('wewrite-mobile-nav-order');
       const savedSidebarOrder = localStorage.getItem('wewrite-sidebar-nav-order');
       
+      // Helper to check for duplicates
+      const hasDuplicates = (arr: string[]) => new Set(arr).size !== arr.length;
+      
       if (savedMobileOrder) {
         try {
           const parsed = JSON.parse(savedMobileOrder);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            // Check for duplicates - if found, clear cache
+            if (hasDuplicates(parsed)) {
+              console.log('🧹 Duplicates found in stored mobile order, clearing cache and using defaults');
+              localStorage.removeItem('wewrite-mobile-nav-order');
+              localStorage.removeItem('wewrite-sidebar-nav-order');
+              setMobileOrder(DEFAULT_MOBILE_ORDER);
+              setSidebarOrder(DEFAULT_SIDEBAR_ORDER);
+              return;
+            }
+            
             // Migration: Remove 'new' item if it exists (now handled by floating action button)
             const migratedMobile = parsed.filter(item => item !== 'new');
 
-            // If we removed 'new', we need to add a replacement item to maintain 4 items
-            if (migratedMobile.length < 4 && parsed.includes('new')) {
+            // If we removed 'new', we need to add a replacement item to maintain 3 items
+            if (migratedMobile.length < 3 && parsed.includes('new')){
               // Add 'random-pages' as replacement if not already present
               if (!migratedMobile.includes('random-pages')) {
                 migratedMobile.push('random-pages');
@@ -95,8 +108,8 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
               }
             }
 
-            // Check if stored data is compatible with 4-item requirement
-            if (migratedMobile.length !== 4) {
+            // Check if stored data is compatible with 3-item requirement
+            if (migratedMobile.length !== 3) {
               console.log('🧹 Stored mobile order wrong length after migration, clearing cache and using defaults');
               localStorage.removeItem('wewrite-mobile-nav-order');
               localStorage.removeItem('wewrite-sidebar-nav-order');
@@ -133,6 +146,15 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
         try {
           const parsed = JSON.parse(savedSidebarOrder);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            // Check for duplicates in sidebar order
+            if (hasDuplicates(parsed)) {
+              console.log('🧹 Duplicates found in stored sidebar order, clearing cache and using defaults');
+              localStorage.removeItem('wewrite-mobile-nav-order');
+              localStorage.removeItem('wewrite-sidebar-nav-order');
+              setMobileOrder(DEFAULT_MOBILE_ORDER);
+              setSidebarOrder(DEFAULT_SIDEBAR_ORDER);
+              return;
+            }
             // Keep 'new' item in sidebar since we want it on desktop
             setSidebarOrder(parsed);
           }
@@ -157,42 +179,55 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
     }
   }, [sidebarOrder]);
 
-  // Reorder mobile items - ensures exactly 4 items
+  // Reorder mobile items - ensures exactly 4 items with no duplicates
   const reorderMobileItem = (dragIndex: number, hoverIndex: number) => {
+    // Prevent reordering to same position
+    if (dragIndex === hoverIndex) return;
+    
     const newOrder = [...mobileOrder];
     const draggedItem = newOrder[dragIndex];
     newOrder.splice(dragIndex, 1);
     newOrder.splice(hoverIndex, 0, draggedItem);
 
-    // Ensure exactly 4 items
-    const ensureFourMobileItems = (mobile: string[]) => {
-      const defaultOrder = ['home', 'search', 'notifications', 'profile'];
+    // Check for duplicates
+    const uniqueItems = new Set(newOrder);
+    if (uniqueItems.size !== newOrder.length) {
+      console.error('❌ Reorder would create duplicates in mobile');
+      return;
+    }
 
-      if (mobile.length === 4) {
-        return mobile;
-      } else if (mobile.length < 4) {
-        // Fill with items from default order that aren't already included
-        const missing = defaultOrder.filter(item => !mobile.includes(item));
-        return [...mobile, ...missing].slice(0, 4);
-      } else {
-        // Take only the first 4
-        return mobile.slice(0, 4);
-      }
-    };
+    // Ensure exactly 3 items
+    if (newOrder.length !== 3) {
+      console.error('❌ Mobile must have exactly 3 items');
+      return;
+    }
 
-    setMobileOrder(ensureFourMobileItems(newOrder));
+    setMobileOrder(newOrder);
   };
 
-  // Reorder sidebar items
+  // Reorder sidebar items - no duplicates allowed
   const reorderSidebarItem = (dragIndex: number, hoverIndex: number) => {
+    // Prevent reordering to same position
+    if (dragIndex === hoverIndex) return;
+    
     const newOrder = [...sidebarOrder];
     const draggedItem = newOrder[dragIndex];
     newOrder.splice(dragIndex, 1);
     newOrder.splice(hoverIndex, 0, draggedItem);
+
+    // Check for duplicates
+    const uniqueItems = new Set(newOrder);
+    if (uniqueItems.size !== newOrder.length) {
+      console.error('❌ Reorder would create duplicates in sidebar');
+      return;
+    }
+
     setSidebarOrder(newOrder);
   };
 
-  // Simple swap between mobile and sidebar
+  // Cross-component move with "push" behavior (iOS-style)
+  // When moving from sidebar to mobile: the displaced mobile item goes to sidebar
+  // When moving from mobile to sidebar: an item from sidebar fills the mobile slot
   const swapBetweenMobileAndSidebar = (
     sourceType: 'mobile' | 'sidebar',
     sourceIndex: number,
@@ -205,22 +240,74 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
     const currentMobile = [...mobileOrder];
     const currentSidebar = [...sidebarOrder];
 
-    // Get the two items to swap
+    // Get the dragged item
     const draggedItem = sourceType === 'mobile' ? currentMobile[sourceIndex] : currentSidebar[sourceIndex];
-    const targetItem = targetType === 'mobile' ? currentMobile[targetIndex] : currentSidebar[targetIndex];
-
-    // Perform the swap
-    if (sourceType === 'mobile' && targetType === 'sidebar') {
-      currentMobile[sourceIndex] = targetItem;
-      currentSidebar[targetIndex] = draggedItem;
-    } else if (sourceType === 'sidebar' && targetType === 'mobile') {
-      currentSidebar[sourceIndex] = targetItem;
-      currentMobile[targetIndex] = draggedItem;
+    
+    // Validate: prevent item from appearing in both places
+    if (sourceType === 'mobile' && currentSidebar.includes(draggedItem)) {
+      console.warn('❌ Item already exists in sidebar, skipping to prevent duplication');
+      return;
+    }
+    if (sourceType === 'sidebar' && currentMobile.includes(draggedItem)) {
+      console.warn('❌ Item already exists in mobile, skipping to prevent duplication');
+      return;
     }
 
-    // Validate: mobile must have exactly 4 items
-    if (currentMobile.length !== 4) {
-      console.error('❌ Mobile would not have 4 items');
+    if (sourceType === 'sidebar' && targetType === 'mobile') {
+      // Dragging FROM sidebar TO mobile toolbar
+      // 1. Remove dragged item from sidebar
+      const draggedIndex = currentSidebar.indexOf(draggedItem);
+      if (draggedIndex === -1) return;
+      currentSidebar.splice(draggedIndex, 1);
+      
+      // 2. Get the item that will be pushed out of mobile
+      const displacedItem = currentMobile[targetIndex];
+      
+      // 3. Insert dragged item into mobile at target position
+      currentMobile[targetIndex] = draggedItem;
+      
+      // 4. Add displaced item back to sidebar (at the beginning for visibility)
+      currentSidebar.unshift(displacedItem);
+      
+    } else if (sourceType === 'mobile' && targetType === 'sidebar') {
+      // Dragging FROM mobile toolbar TO sidebar
+      // 1. Get the item being dragged out of mobile
+      const draggedIndex = sourceIndex;
+      
+      // 2. Get the item from sidebar that will fill the mobile slot
+      // Use the target item if valid, otherwise use first available
+      const replacementItem = currentSidebar[targetIndex] || currentSidebar[0];
+      if (!replacementItem) {
+        console.error('❌ No item available to fill mobile slot');
+        return;
+      }
+      
+      // 3. Remove replacement item from sidebar
+      const replacementIndex = currentSidebar.indexOf(replacementItem);
+      currentSidebar.splice(replacementIndex, 1);
+      
+      // 4. Replace the mobile item with the sidebar item
+      currentMobile[draggedIndex] = replacementItem;
+      
+      // 5. Insert dragged item into sidebar at target position
+      currentSidebar.splice(targetIndex, 0, draggedItem);
+    }
+
+    // Validate: check for duplicates in the result
+    const mobileSet = new Set(currentMobile);
+    const sidebarSet = new Set(currentSidebar);
+    if (mobileSet.size !== currentMobile.length) {
+      console.error('❌ Operation would create duplicates in mobile');
+      return;
+    }
+    if (sidebarSet.size !== currentSidebar.length) {
+      console.error('❌ Operation would create duplicates in sidebar');
+      return;
+    }
+
+    // Validate: mobile must have exactly 3 items
+    if (currentMobile.length !== 3) {
+      console.error('❌ Mobile would not have 3 items');
       return;
     }
 

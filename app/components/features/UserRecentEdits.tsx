@@ -220,7 +220,7 @@ export default function UserRecentEdits({
               pageName: edit.title,
               userId: edit.userId,
               username: edit.username,
-              displayName: edit.displayName,
+              // displayName removed - fully deprecated
               timestamp: new Date(edit.lastModified), // Convert to Date object
               lastModified: edit.lastModified,
               diff: edit.lastDiff,

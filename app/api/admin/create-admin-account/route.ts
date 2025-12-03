@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
           userRecord = await firebaseAdmin.auth().createUser({
             email: adminEmail,
             password: adminPassword,
-            emailVerified: true,
-            displayName: 'Admin Test Account'
+            emailVerified: true
+            // displayName removed - WeWrite only uses username field stored in Firestore
           });
 
           console.log('✅ Admin account created successfully');

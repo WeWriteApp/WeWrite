@@ -1,7 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { getAnalyticsService } from '../utils/analytics-service';
+import { INTERACTION_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { formatUsdCents } from '../utils/formatCurrency';
 
 interface AllocationIntervalContextType {
   allocationIntervalCents: number;
@@ -66,8 +69,8 @@ export function AllocationIntervalProvider({ children }: AllocationIntervalProvi
     loadAllocationInterval();
   }, [user]);
 
-  // Save allocation interval preference
-  const setAllocationInterval = async (cents: number) => {
+  // Save allocation interval preference with analytics tracking
+  const setAllocationInterval = useCallback(async (cents: number) => {
     if (!user) return;
 
     // Validate the interval
@@ -76,7 +79,20 @@ export function AllocationIntervalProvider({ children }: AllocationIntervalProvi
       return;
     }
 
+    // Track the allocation increment change
+    const analytics = getAnalyticsService();
+    analytics.trackEvent({
+      category: EVENT_CATEGORIES.ALLOCATION,
+      action: INTERACTION_EVENTS.ALLOCATION_INCREMENT_CHANGED,
+      label: `${formatUsdCents(allocationIntervalCents)} → ${formatUsdCents(cents)}`,
+      from_cents: allocationIntervalCents,
+      to_cents: cents,
+      from_formatted: formatUsdCents(allocationIntervalCents),
+      to_formatted: formatUsdCents(cents)
+    });
+
     // Optimistic update
+    const previousCents = allocationIntervalCents;
     setAllocationIntervalCents(cents);
 
     try {
@@ -92,15 +108,15 @@ export function AllocationIntervalProvider({ children }: AllocationIntervalProvi
 
       if (!response.ok) {
         // Rollback on error
-        setAllocationIntervalCents(allocationIntervalCents);
+        setAllocationIntervalCents(previousCents);
         console.error('Failed to save allocation interval');
       }
     } catch (error) {
       // Rollback on error
-      setAllocationIntervalCents(allocationIntervalCents);
+      setAllocationIntervalCents(previousCents);
       console.error('Error saving allocation interval:', error);
     }
-  };
+  }, [user, allocationIntervalCents]);
 
   return (
     <AllocationIntervalContext.Provider

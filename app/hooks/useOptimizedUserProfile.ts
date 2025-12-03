@@ -6,7 +6,7 @@ import { useSmartDataFetching } from './useSmartDataFetching';
 interface UserProfile {
   uid: string;
   username?: string;
-  displayName?: string;
+  // displayName removed - fully deprecated, only use username
   email?: string;
   bio?: string;
   profilePicture?: string;

@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
         uid: sessionData.uid,
         email: sessionData.email,
         username: sessionData.username || '',
-          displayName: sessionData.username || '',
         photoURL: sessionData.photoURL || null,
         emailVerified: sessionData.emailVerified !== false,
         createdAt: sessionData.createdAt || new Date().toISOString(),
@@ -78,7 +77,6 @@ export async function GET(request: NextRequest) {
             uid: 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N',
             email: 'jamie@wewrite.app',
             username: 'jamie',
-            displayName: 'admin', // legacy field mirrored to username
             photoURL: null,
             emailVerified: true,
             createdAt: new Date().toISOString(),
@@ -90,7 +88,6 @@ export async function GET(request: NextRequest) {
             uid: 'dev_test_user_1',
             email: 'dev_test_user_1@wewrite.dev',
             username: 'dev_test_user_1',
-            displayName: 'dev_test_user', // legacy field mirrored to username
             photoURL: null,
             emailVerified: true,
             createdAt: new Date().toISOString(),
@@ -113,8 +110,6 @@ export async function GET(request: NextRequest) {
         const data = userDoc.data() || {};
         if (data.username) {
           user.username = data.username;
-          // Mirror legacy displayName to username for compatibility
-          if (!user.displayName) user.displayName = data.username;
         }
         if (data.isAdmin === true || data.role === 'admin') {
           user.isAdmin = true;
@@ -188,7 +183,6 @@ export async function POST(request: NextRequest) {
           uid: payload.user_id || payload.sub,
           email: payload.email || userData.email || '',
           username: userData.username || '',
-          displayName: userData.username || payload.name || '',
           photoURL: userData.photoURL || payload.picture || undefined,
           emailVerified: payload.email_verified || userData.emailVerified || false,
           createdAt: userData.createdAt || new Date().toISOString(),
@@ -201,7 +195,6 @@ export async function POST(request: NextRequest) {
           uid: user.uid,
           email: user.email,
           username: user.username,
-          displayName: user.username, // legacy field mirrored to username
           photoURL: user.photoURL,
           emailVerified: user.emailVerified
         };
@@ -285,7 +278,6 @@ export async function POST(request: NextRequest) {
         uid: decodedToken.uid,
         email: decodedToken.email || '',
         username: userData.username || '',
-        displayName: userData.username || decodedToken.name || '',
         photoURL: userData.photoURL || decodedToken.picture || undefined,
         emailVerified: decodedToken.email_verified || false,
         createdAt: userData.createdAt || new Date().toISOString(),
@@ -298,7 +290,6 @@ export async function POST(request: NextRequest) {
         uid: user.uid,
         email: user.email,
         username: user.username,
-        displayName: user.username, // legacy field mirrored to username
         photoURL: user.photoURL,
         emailVerified: user.emailVerified
       };

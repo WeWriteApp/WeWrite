@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
         userRecord = await auth.createUser({
           email,
           password,
-          emailVerified: true,
-          displayName: username
+          emailVerified: true
+          // displayName removed - WeWrite only uses username field
         });
         
         console.log('✅ User created in Firebase Auth');

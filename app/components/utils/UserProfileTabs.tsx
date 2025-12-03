@@ -540,7 +540,7 @@ export default function UserProfileTabs({ profile }) {
           >
             <UserRecentEdits
               userId={profile?.uid}
-              username={profile?.username || profile?.displayName}
+              username={profile?.username}
               limit={20}
             />
           </TabsContent>

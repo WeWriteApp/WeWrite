@@ -28,6 +28,7 @@ import { EarningsProvider } from "./contexts/EarningsContext"
 import { DemoBalanceProvider } from "./contexts/DemoBalanceContext"
 import { AllocationIntervalProvider } from "./contexts/AllocationIntervalContext"
 import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
+import { UnifiedMobileNavProvider } from "./contexts/UnifiedMobileNavContext"
 // import SimpleNavigationOptimizer from "./components/navigation/SimpleNavigationOptimizer" // Temporarily disabled
 
 import { ThemeProvider } from "./providers/ThemeProvider"
@@ -105,6 +106,7 @@ export default function RootLayout({
                                             <EarningsProvider>
                                               <AllocationIntervalProvider>
                                           <NavigationOrderProvider>
+                                            <UnifiedMobileNavProvider>
                                               <SessionAuthInitializer>
                                                 <SessionMonitor />
                                                 <AutomaticUpdateManager />
@@ -112,6 +114,7 @@ export default function RootLayout({
                                                   {children}
                                                 </GlobalNavigation>
                                               </SessionAuthInitializer>
+                                            </UnifiedMobileNavProvider>
                                             </NavigationOrderProvider>
                                               </AllocationIntervalProvider>
                                             </EarningsProvider>

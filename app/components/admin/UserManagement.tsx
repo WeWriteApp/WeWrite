@@ -50,7 +50,7 @@ interface UserData {
   uid: string;
   email: string;
   username?: string;
-  displayName?: string;
+  // displayName removed - fully deprecated, only use username
   emailVerified?: boolean;  // Fetched from Firebase Auth, not Firestore
   createdAt?: string;
   lastLogin?: string;
@@ -207,8 +207,7 @@ export function UserManagement() {
     } else {
       const filtered = safeUsers.filter(user =>
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
     }

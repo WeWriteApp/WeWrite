@@ -886,8 +886,9 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
     const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
 
     // Define editable page fields to reduce document size by 60-70%
+    // displayName removed - fully deprecated, only use username
     const editablePageFields = [
-      'title', 'isPublic', 'userId', 'authorName', 'displayName',
+      'title', 'isPublic', 'userId', 'authorName', 'username',
       'lastModified', 'createdAt'
     ];
 

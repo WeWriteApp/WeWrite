@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from "../../components/ui/segmented-control";
@@ -9,10 +10,23 @@ import SimpleEarningsDashboard from '../../components/payments/SimpleEarningsDas
 import EarningsBreakdownCard from '../../components/payments/EarningsBreakdownCard';
 import EarningsSourceBreakdown from '../../components/payments/EarningsSourceBreakdown';
 import EarningsHistoryChart from '../../components/payments/EarningsHistoryChart';
+import { getAnalyticsService } from '../../utils/analytics-service';
+import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
 export default function EarningsPage() {
   const { user } = useAuth();
   const router = useRouter();
+
+  // Track page view
+  useEffect(() => {
+    if (user) {
+      const analytics = getAnalyticsService();
+      analytics.trackEvent({
+        category: EVENT_CATEGORIES.SETTINGS,
+        action: SETTINGS_EVENTS.EARNINGS_PAGE_VIEWED
+      });
+    }
+  }, [user]);
 
   if (!user) {
     return null;

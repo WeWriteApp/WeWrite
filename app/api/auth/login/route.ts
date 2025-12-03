@@ -23,7 +23,6 @@ interface LoginResponse {
     uid: string;
     email: string;
     username?: string;
-    displayName: string;
     emailVerified: boolean;
   };
   error?: string;
@@ -98,7 +97,6 @@ export async function POST(request: NextRequest) {
         uid: account.uid,
         email: account.email,
         username: account.username,
-        displayName: account.displayName || account.username,
         emailVerified: true
       };
 
@@ -120,7 +118,6 @@ export async function POST(request: NextRequest) {
         uid: account.uid,
         email: account.email,
         username: account.username,
-        displayName: account.displayName || account.username,
         emailVerified: true
       });
     }
@@ -210,7 +207,6 @@ export async function POST(request: NextRequest) {
       uid: userRecord.uid,
       email: userRecord.email!,
       username: userData?.username,
-      displayName: userData?.displayName || userRecord.displayName || userRecord.email!,
       emailVerified: userRecord.emailVerified
     });
 

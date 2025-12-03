@@ -53,11 +53,11 @@ const SearchResultsDisplay = React.memo(({
     // Create a combined array of all results
     let combined = [
       ...(results.users || []).map(user => {
-        const username = sanitizeUsername(user?.username || user?.displayName || user?.email || `user_${user?.id?.slice(0, 8)}`);
+        // Only use username field - displayName is fully deprecated
+        const username = sanitizeUsername(user?.username || `user_${user?.id?.slice(0, 8)}`);
         return {
           ...user,
           type: 'user',
-          displayName: username,
           username,
           url: `/user/${user.id}`
         };

@@ -190,7 +190,7 @@ async function getIncomingAllocationsForUser(userId: string) {
         if (userDoc.exists) {
           const userData = userDoc.data();
           fromUsername = sanitizeUsername(
-            userData?.username || userData?.displayName || userData?.email || 'Anonymous',
+            userData?.username || 'Anonymous',
             'User',
             `user_${allocation.userId.slice(0, 8)}`
           );

@@ -30,6 +30,8 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { UsdPieChart } from '../components/ui/UsdPieChart';
 import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
 import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextPayoutCountdown';
+import { getAnalyticsService } from '../utils/analytics-service';
+import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
 
 interface SettingsSection {
@@ -209,6 +211,18 @@ export default function SettingsIndexPage() {
     checkSubscriptionStatus();
   }, [user]);
 
+  // Track settings page view
+  useEffect(() => {
+    if (user) {
+      const analytics = getAnalyticsService();
+      analytics.trackEvent({
+        category: EVENT_CATEGORIES.SETTINGS,
+        action: SETTINGS_EVENTS.SETTINGS_PAGE_VIEWED,
+        has_subscription: contextHasActiveSubscription
+      });
+    }
+  }, [user, contextHasActiveSubscription]);
+
   useEffect(() => {
     if (!user) {
       router.push('/auth/login');
@@ -245,7 +259,15 @@ export default function SettingsIndexPage() {
   // Get available sections
   const availableSections = settingsSections;
 
-  const handleSectionClick = (href: string) => {
+  const handleSectionClick = (href: string, sectionId: string) => {
+    // Track section click
+    const analytics = getAnalyticsService();
+    analytics.trackEvent({
+      category: EVENT_CATEGORIES.SETTINGS,
+      action: SETTINGS_EVENTS.SETTINGS_SECTION_CLICKED,
+      section_id: sectionId,
+      section_href: href
+    });
     router.push(href);
   };
 
@@ -272,7 +294,7 @@ export default function SettingsIndexPage() {
             return (
               <div key={section.id} className="relative">
                 <button
-                  onClick={() => handleSectionClick(section.href)}
+                  onClick={() => handleSectionClick(section.href, section.id)}
                   className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none"
                 >
                   <div className="flex items-center">

@@ -37,11 +37,10 @@ export function useAuthState() {
     hasAuthError: !!error,
     authErrorMessage: error || null,
     
-    // User profile completeness
+    // User profile completeness (displayName removed - only username matters)
     hasUsername: !!(user?.username),
-    hasDisplayName: !!(user?.displayName),
     hasPhotoURL: !!(user?.photoURL),
-    isProfileComplete: !!(user?.username && user?.displayName),
+    isProfileComplete: !!(user?.username),
     
     // Permissions (can be extended)
     canCreateContent: isAuthenticated && !!user,

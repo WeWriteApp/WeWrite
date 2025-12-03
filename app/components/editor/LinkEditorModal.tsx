@@ -312,7 +312,7 @@ export default function LinkEditorModal({
     const isUserLink = page.type === 'user' || page.isUser || page.userType === 'user';
     const pageId = page.id || page.pageId || page.userId || page.uid;
     const pageTitle = isUserLink
-      ? (page.username || page.title || page.displayName || page.handle || 'User')
+      ? (page.username || page.title || page.handle || 'User')
       : (page.title || page.pageTitle);
     // Determine if we have custom text - respect the user's toggle choice
     const isCustomTextValue = customText; // Use the toggle state directly

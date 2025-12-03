@@ -71,8 +71,9 @@ export async function GET(request: NextRequest) {
 
     const pages = snapshot.docs.map(doc => {
       const data = doc.data();
+      // Only use username field - displayName and email are deprecated for display
       const safeUsername = sanitizeUsername(
-        (data as any).username || (data as any).displayName || (data as any).authorName || (data as any).email,
+        (data as any).username || (data as any).authorName,
         'User',
         `user_${doc.id.slice(0, 8)}`
       );
@@ -170,15 +171,15 @@ export async function GET(request: NextRequest) {
 
       const replyPreview = deriveReplyPreview();
 
+      // Only use username field - displayName and email are deprecated for display
       const username = sanitizeUsername(
-        userData?.username || userData?.displayName || userData?.email || page.username,
+        userData?.username || page.username,
         'User',
         `user_${page.userId?.slice(0, 8) || 'unknown'}`
       );
       return {
         ...page,
         username,
-        displayName: username,
         hasActiveSubscription: userData?.hasActiveSubscription || false,
         subscriptionTier: userData?.tier || null,
         subscriptionAmount: userData?.subscriptionAmount || null,
@@ -285,8 +286,8 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
           const subscriptionData = subscriptionResults.find(s => s.userId === userId)?.subscription || {};
 
           results[userId] = {
+            // Only use username field - displayName is deprecated
             username: data?.username || null,
-            displayName: data?.displayName || null,
             ...subscriptionData
           };
         });

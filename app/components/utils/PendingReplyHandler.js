@@ -62,7 +62,7 @@ export default function PendingReplyHandler() {
   const handlePendingReply = async (draftReply, pendingAction, session) => {
     try {
       // Get the username from the user object
-      const username = user.username || user.displayName || 'Missing username';
+      const username = user.username || 'Missing username';
 
       // Encode the parameters for the reply URL
       const params = encodeReplyParams({

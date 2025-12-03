@@ -1,4 +1,3 @@
-import { getPageMetadata } from "../firebase/database";
 import Script from 'next/script';
 import type { Metadata } from 'next';
 
@@ -49,12 +48,40 @@ interface SchemaMarkup {
   };
 }
 
+// Server-side page metadata fetching using internal API
+// This ensures usernames are correctly fetched from RTDB
+async function getPageMetadataServer(pageId: string): Promise<any> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    
+    const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
+      cache: 'no-store', // Don't cache to always get fresh data
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`Page metadata fetch failed for ${pageId}: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching page metadata from API:', error);
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: GenerateMetadataProps): Promise<Metadata> {
   try {
     // Properly extract id from params - ensure params is awaited
     const unwrappedParams = await params;
     const { id } = unwrappedParams;
-    const metadata = await getPageMetadata(id);
+    // Use server-side API fetch to get page metadata with correct username from RTDB
+    const metadata = await getPageMetadataServer(id);
 
     if (metadata) {
       // Get page title
@@ -148,7 +175,8 @@ export default async function GlobalIDLayout({ children, params }: LayoutProps) 
     // Properly extract id from params - ensure params is awaited
     const unwrappedParams = await params;
     const { id } = unwrappedParams;
-    const metadata = await getPageMetadata(id);
+    // Use server-side API fetch to get page metadata with correct username from RTDB
+    const metadata = await getPageMetadataServer(id);
 
     if (metadata) {
       // Create schema markup for the page

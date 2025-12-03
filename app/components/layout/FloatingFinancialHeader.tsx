@@ -91,7 +91,7 @@ export default function FloatingFinancialHeader({
       '/', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following',
-      '/user', '/group', '/admin', '/timeline'
+      '/user', '/group', '/admin', '/timeline', '/leaderboard'
     ];
 
     // Hide on content creation pages

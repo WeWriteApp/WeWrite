@@ -1,348 +1,285 @@
 "use client";
-import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { ref, onValue } from "firebase/database";
+
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from '../providers/AuthProvider';
-import { useBanner } from '../providers/BannerProvider';
-import { firestore, rtdb } from "../firebase/config";
-import { getCollectionName } from "../utils/environmentConfig";
 import {
   Trophy,
-  ArrowLeft,
-  AlertTriangle,
-  Info,
-  ChevronUp,
-  ChevronDown,
-  Loader2
+  FileText,
+  Link2,
+  Heart,
+  Eye,
+  Loader2,
+  Medal,
+  Calendar,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
+import { cn } from "../lib/utils";
+import NavPageLayout from "../components/layout/NavPageLayout";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "../components/ui/tooltip";
-import { PillLink } from "../components/utils/PillLink";
-import { sanitizeUsername } from "../utils/usernameSecurity";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
-// Type definitions
-interface User {
-  id: string;
+// Types
+type LeaderboardCategory = 'pages-created' | 'pages-linked' | 'new-sponsors' | 'page-visits';
+type TimePeriod = 'week' | 'month';
+
+interface LeaderboardUser {
+  userId: string;
   username: string;
   photoURL?: string;
-  pageCount: number;
+  count: number;
+  rank: number;
 }
 
-interface UserData {
-  username?: string;
-  photoURL?: string;
+interface CategoryConfig {
+  id: LeaderboardCategory;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  countLabel: string;
 }
 
-interface PageCountsByUser {
-  [userId: string]: number;
-}
+const categories: CategoryConfig[] = [
+  {
+    id: 'pages-created',
+    label: 'Pages Created',
+    icon: FileText,
+    description: 'Most pages written',
+    countLabel: 'pages'
+  },
+  {
+    id: 'pages-linked',
+    label: 'Pages Linked',
+    icon: Link2,
+    description: 'Most links created',
+    countLabel: 'links'
+  },
+  {
+    id: 'new-sponsors',
+    label: 'New Sponsors',
+    icon: Heart,
+    description: 'Most sponsors gained',
+    countLabel: 'sponsors'
+  },
+  {
+    id: 'page-visits',
+    label: 'Page Visits',
+    icon: Eye,
+    description: 'Most views received',
+    countLabel: 'views'
+  }
+];
+
+// Medal colors for top 3
+const getMedalColor = (rank: number): string | null => {
+  switch (rank) {
+    case 1: return 'text-yellow-500';
+    case 2: return 'text-gray-400';
+    case 3: return 'text-amber-600';
+    default: return null;
+  }
+};
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
-  const { bannerOffset } = useBanner();
-  const [loading, setLoading] = useState<boolean>(true);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
-  const [sortDirection, setSortDirection] = useState<"desc" | "asc">("desc");
-  const [error, setError] = useState<Error | null>(null);
-  const [errorDetails, setErrorDetails] = useState<string>("");
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1);
-  const usersPerPage = 100;
-  const hasMore = displayedUsers.length < allUsers.length;
+  const chipsContainerRef = useRef<HTMLDivElement>(null);
+  
+  const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>('pages-created');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleSortDirection = (): void => {
-    setSortDirection(sortDirection === "desc" ? "asc" : "desc");
-  };
-
-  // Apply sorting to displayed users
-  const sortedUsers = [...displayedUsers].sort((a, b) => {
-    if (sortDirection === "desc") {
-      return b.pageCount - a.pageCount;
-    } else {
-      return a.pageCount - b.pageCount;
+  const fetchLeaderboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(
+        `/api/leaderboard?category=${selectedCategory}&period=${selectedPeriod}&limit=10`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch leaderboard');
+      }
+      
+      const data = await response.json();
+      setLeaderboard(data.data?.leaderboard || []);
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      setError('Unable to load leaderboard. Please try again.');
+      setLeaderboard([]);
+    } finally {
+      setLoading(false);
     }
-  });
-
-  const loadMore = (): void => {
-    if (loadingMore || !hasMore) return;
-
-    setLoadingMore(true);
-
-    // Calculate start and end indices
-    const start = page * usersPerPage;
-    const end = start + usersPerPage;
-
-    // Get next batch of users
-    const nextBatch = allUsers.slice(start, end);
-
-    // Update displayed users
-    setDisplayedUsers(prev => [...prev, ...nextBatch]);
-    setPage(prev => prev + 1);
-    setLoadingMore(false);
-  };
+  }, [selectedCategory, selectedPeriod]);
 
   useEffect(() => {
-    const fetchUsersAndPages = async (): Promise<void> => {
-      try {
-        // First, let's check if user auth state is available
-        console.log("Leaderboard: Current auth user state:", user ? `Logged in as ${user.email}` : "Not logged in");
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
 
-        // Try to fetch users from RTDB
-        console.log("Leaderboard: Attempting to fetch users from RTDB");
-        const usersRef = ref(rtdb, 'users');
+  const selectedCategoryConfig = categories.find(c => c.id === selectedCategory)!;
 
-        try {
-          console.log("Leaderboard: Getting snapshot from users ref");
-          onValue(usersRef, (snapshot) => {
-            console.log("Leaderboard: Got snapshot, exists:", snapshot.exists());
-
-            if (!snapshot.exists()) {
-              console.log("Leaderboard: No user data found in snapshot");
-              setAllUsers([]);
-              setDisplayedUsers([]);
-              setLoading(false);
-              return;
-            }
-
-            const data = snapshot.val() as Record<string, UserData>;
-            console.log(`Leaderboard: Retrieved data for ${Object.keys(data).length} users`);
-
-            if (data) {
-              // Create a lookup object to store page counts per user
-              const pageCountsByUser: PageCountsByUser = {};
-
-              // Now get pages from Firestore
-              try {
-                console.log("Leaderboard: Attempting to fetch pages from Firestore");
-
-                // Use an async IIFE to be able to use await inside the onValue callback
-                (async () => {
-                  try {
-                    const pagesRef = collection(firestore, getCollectionName('pages'));
-                    // No limit here as we want to get all pages for accurate counts
-                    const pagesSnapshot = await getDocs(pagesRef);
-
-                    console.log(`Leaderboard: Retrieved ${pagesSnapshot.size} pages from Firestore`);
-
-                    // Count pages by user
-                    pagesSnapshot.forEach((doc) => {
-                      const pageData = doc.data();
-                      const userId = pageData.userId;
-
-                      if (userId) {
-                        // Increment page count for this user
-                        pageCountsByUser[userId] = (pageCountsByUser[userId] || 0) + 1;
-                      }
-                    });
-
-                    console.log("Leaderboard: Processing user data");
-
-                    // Process users with their page counts
-                    const usersArray: User[] = Object.entries(data).map(([id, userData]) => {
-                      const username = sanitizeUsername(
-                        userData.username || (userData as any).displayName || (userData as any).email || `user_${id.slice(0, 8)}`,
-                        'User',
-                        `user_${id.slice(0, 8)}`
-                      );
-                      return {
-                        id,
-                        username,
-                        photoURL: userData.photoURL,
-                        pageCount: pageCountsByUser[id] || 0
-                      };
-                    });
-
-                    // Sort users by page count (including users with 0 pages)
-                    const sortedUsers = usersArray
-                      .sort((a, b) => b.pageCount - a.pageCount);
-
-                    console.log(`Leaderboard: Found ${sortedUsers.length} users`);
-
-                    setAllUsers(sortedUsers);
-                    setDisplayedUsers(sortedUsers.slice(0, usersPerPage));
-                    setLoading(false);
-                    setError(null);
-                  } catch (innerErr: any) {
-                    console.error("Leaderboard: Inner error fetching Firestore pages:", innerErr);
-                    setErrorDetails(`Firestore inner error: ${innerErr.message}`);
-                    setError(innerErr);
-                    setLoading(false);
-                  }
-                })().catch((firestoreErr: any) => {
-                  console.error("Leaderboard: Error fetching Firestore pages:", firestoreErr);
-                  setErrorDetails(`Firestore error: ${firestoreErr.message}`);
-                  setError(firestoreErr);
-                  setLoading(false);
-                });
-              } catch (firestoreErr: any) {
-                console.error("Leaderboard: Error fetching Firestore pages:", firestoreErr);
-                setErrorDetails(`Firestore error: ${firestoreErr.message}`);
-                setError(firestoreErr);
-                setLoading(false);
-              }
-            } else {
-              console.log('Leaderboard: No user data found');
-              setAllUsers([]);
-              setDisplayedUsers([]);
-              setLoading(false);
-            }
-          });
-        } catch (rtdbErr: any) {
-          console.error("Leaderboard: Error getting RTDB snapshot:", rtdbErr);
-          setErrorDetails(`RTDB error: ${rtdbErr.message}`);
-          setError(rtdbErr);
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error("Leaderboard: General error in fetchUsersAndPages:", err);
-        setErrorDetails(`General error: ${err.message}`);
-        setError(err);
-        setLoading(false);
-      }
-    };
-
-    fetchUsersAndPages();
-  }, [user]);
+  const periodLabel = selectedPeriod === 'week' ? 'This Week' : 'This Month';
 
   return (
-    <main
-      className="p-4 md:p-6 space-y-6 max-w-full overflow-hidden"
-      style={{
-        paddingTop: typeof window !== 'undefined' && window.innerWidth < 768
-          ? `${16 + bannerOffset}px`
-          : undefined
-      }}
-    >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-        <Link href="/">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Back to home</span>
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Top Users</h1>
+    <NavPageLayout maxWidth="2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="h-7 w-7 text-yellow-500" />
+          <h1 className="text-2xl font-bold tracking-tight">Leaderboard</h1>
         </div>
+        
+        {/* Period Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">{periodLabel}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              onClick={() => setSelectedPeriod('week')}
+              className="gap-2"
+            >
+              {selectedPeriod === 'week' && <Check className="h-4 w-4" />}
+              <span className={selectedPeriod !== 'week' ? 'ml-6' : ''}>This Week</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setSelectedPeriod('month')}
+              className="gap-2"
+            >
+              {selectedPeriod === 'month' && <Check className="h-4 w-4" />}
+              <span className={selectedPeriod !== 'month' ? 'ml-6' : ''}>This Month</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <div className="border-theme-medium rounded-lg overflow-hidden">
+      {/* Category Chips - Horizontally Scrollable */}
+      <div 
+        ref={chipsContainerRef}
+        className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {categories.map((category) => {
+          const Icon = category.icon;
+          const isSelected = selectedCategory === category.id;
+          
+          return (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={cn(
+                "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0",
+                isSelected
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {category.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Description */}
+      <p className="text-muted-foreground text-sm mt-4 mb-6">
+        {selectedCategoryConfig.description} {periodLabel.toLowerCase()}
+      </p>
+
+      {/* Leaderboard */}
+      <div className="wewrite-card rounded-xl overflow-hidden">
         {loading ? (
-          <div className="flex justify-center items-center p-8 min-h-[300px]">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span>Loading users...</span>
-            </div>
-          </div>
-        ) : error && !user ? (
-          <div className="flex items-center gap-2 p-4 text-sm bg-muted/50 text-muted-foreground">
-            <Info className="h-4 w-4 flex-shrink-0" />
-            <p>Sign in to see the leaderboard</p>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading leaderboard...</p>
           </div>
         ) : error ? (
-          <div className="p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
-            <div className="flex gap-2 items-start">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">There was a problem loading the leaderboard</p>
-                {errorDetails && <p className="mt-1 text-xs opacity-80">{errorDetails}</p>}
-              </div>
-            </div>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={fetchLeaderboard}>
+              Try Again
+            </Button>
           </div>
-        ) : sortedUsers.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground">
-            <p>No users found</p>
+        ) : leaderboard.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Trophy className="h-12 w-12 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              No data available for this {selectedPeriod} yet
+            </p>
           </div>
         ) : (
-          <>
-            <Table className="table-compact">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 px-2">Rank</TableHead>
-                  <TableHead className="px-2">Username</TableHead>
-                  <TableHead
-                    className="w-16 px-2 text-right cursor-pointer"
-                    onClick={toggleSortDirection}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      Pages
-                      {sortDirection === "desc" ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedUsers.map((user, index) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-mono text-muted-foreground px-2 w-12">
-                      {sortDirection === "desc"
-                        ? index + 1
-                        : displayedUsers.length - index}
-                    </TableCell>
-                    <TableCell className="px-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <PillLink
-                              href={`/user/${user.id}`}
-                              className="max-w-[180px] truncate"
-                            >
-                              {user.username}
-                            </PillLink>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span>View user's pages</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell className="text-right font-medium px-2 w-16">{user.pageCount}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            {hasMore && (
-              <div className="p-4 flex justify-center">
-                <Button
-                  onClick={loadMore}
-                  variant="secondary"
-                  disabled={loadingMore}
-                  className="min-w-[200px]"
-                >
-                  {loadingMore ? (
-                    <>
-                      <div className="loader mr-2"></div>
-                      Loading...
-                    </>
-                  ) : (
-                    `Load ${Math.min(usersPerPage, allUsers.length - displayedUsers.length)} More`
+          <div className="divide-y divide-border">
+            {/* Column Header */}
+            <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide bg-muted/30">
+              <div className="w-6 flex-shrink-0 text-center">#</div>
+              <div className="flex-1">User</div>
+              <div className="flex-shrink-0 text-right capitalize">{selectedCategoryConfig.countLabel}</div>
+            </div>
+            
+            {leaderboard.map((entry) => {
+              const medalColor = getMedalColor(entry.rank);
+              const isCurrentUser = user?.uid === entry.userId;
+              
+              return (
+                <Link
+                  key={entry.userId}
+                  href={`/user/${entry.userId}`}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors",
+                    isCurrentUser && "bg-primary/5"
                   )}
-                </Button>
-              </div>
-            )}
-          </>
+                >
+                  {/* Rank */}
+                  <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                    {medalColor ? (
+                      <Medal className={cn("h-5 w-5", medalColor)} />
+                    ) : (
+                      <span className="text-sm font-bold text-muted-foreground">
+                        {entry.rank}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Username */}
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "font-medium truncate text-sm",
+                      isCurrentUser && "text-primary"
+                    )}>
+                      {entry.username}
+                      {isCurrentUser && (
+                        <span className="ml-2 text-xs text-muted-foreground">(you)</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Count */}
+                  <div className="flex-shrink-0 text-right">
+                    <p className="font-bold text-sm">
+                      {entry.count.toLocaleString()}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
-    </main>
+
+      {/* Footer */}
+      <p className="text-center text-xs text-muted-foreground mt-6">
+        Leaderboards update in real-time
+      </p>
+    </NavPageLayout>
   );
 }
