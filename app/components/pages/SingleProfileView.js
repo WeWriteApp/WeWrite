@@ -4,6 +4,7 @@ import { PillLink } from "../utils/PillLink";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataContext } from "../../providers/DataProvider";
+import { toast } from "../ui/use-toast";
 
 import {
   ProfilePagesProvider,
@@ -80,6 +81,7 @@ const SingleProfileView = ({ profile }) => {
       // Fallback: copy the URL to clipboard
       try {
         navigator.clipboard.writeText(profileUrl);
+        toast.success('Profile link copied to clipboard!');
         // Track successful clipboard copy
         trackInteractionEvent(SHARE_EVENTS.PROFILE_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
           profile_id: profile.uid,

@@ -90,7 +90,7 @@ export default function PillLinkContextMenu({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.1 }}
-          className="fixed z-50 bg-background border-border rounded-lg shadow-lg py-1 min-w-[160px]"
+          className="fixed z-50 bg-background border border-border rounded-lg shadow-lg py-1 min-w-[160px] overflow-hidden"
           style={{
             left: adjustedPosition.x,
             top: adjustedPosition.y,
@@ -102,7 +102,7 @@ export default function PillLinkContextMenu({
               onGoToLink();
               onClose();
             }}
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+            className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors first:rounded-t-md"
           >
             <ExternalLink size={14} />
             Go to link
@@ -114,7 +114,7 @@ export default function PillLinkContextMenu({
                 onEditLink();
                 onClose();
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+              className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
             >
               <Edit2 size={14} />
               Edit link
@@ -127,7 +127,7 @@ export default function PillLinkContextMenu({
                 onDeleteLink();
                 onClose();
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors"
+              className="w-full px-3 py-2.5 text-left text-sm hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors last:rounded-b-md"
             >
               <Trash2 size={14} />
               Delete link

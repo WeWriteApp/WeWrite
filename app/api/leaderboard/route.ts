@@ -16,7 +16,7 @@ import { createApiResponse, createErrorResponse } from '../auth-helper';
  */
 
 type LeaderboardCategory = 'pages-created' | 'pages-linked' | 'new-sponsors' | 'page-visits';
-type TimePeriod = 'week' | 'month';
+type TimePeriod = 'week' | 'month' | '6months';
 
 interface LeaderboardUser {
   userId: string;
@@ -35,6 +35,10 @@ function getDateRange(period: TimePeriod): { start: Date; end: Date } {
   if (period === 'week') {
     start = new Date(now);
     start.setDate(start.getDate() - 7);
+  } else if (period === '6months') {
+    // Past 6 months
+    start = new Date(now);
+    start.setMonth(start.getMonth() - 6);
   } else {
     // This month
     start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -56,7 +60,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(limitParam, 1), 100); // Clamp between 1-100
 
     const validCategories: LeaderboardCategory[] = ['pages-created', 'pages-linked', 'new-sponsors', 'page-visits'];
-    const validPeriods: TimePeriod[] = ['week', 'month'];
+    const validPeriods: TimePeriod[] = ['week', 'month', '6months'];
 
     if (!validCategories.includes(category)) {
       return createErrorResponse('BAD_REQUEST', `Invalid category. Valid options: ${validCategories.join(', ')}`);

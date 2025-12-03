@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useAuth } from '../providers/AuthProvider';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Trophy,
   FileText,
@@ -26,7 +27,7 @@ import {
 
 // Types
 type LeaderboardCategory = 'pages-created' | 'pages-linked' | 'new-sponsors' | 'page-visits';
-type TimePeriod = 'week' | 'month';
+type TimePeriod = 'week' | 'month' | '6months';
 
 interface LeaderboardUser {
   userId: string;
@@ -85,15 +86,82 @@ const getMedalColor = (rank: number): string | null => {
   }
 };
 
-export default function LeaderboardPage() {
+// Period display labels
+const periodLabels: Record<TimePeriod, string> = {
+  'week': 'This Week',
+  'month': 'This Month',
+  '6months': 'Past 6 Months'
+};
+
+// Loading fallback component
+function LeaderboardLoading() {
+  return (
+    <NavPageLayout maxWidth="2xl">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="h-7 w-7 text-yellow-500" />
+          <h1 className="text-2xl font-bold tracking-tight">Leaderboard</h1>
+        </div>
+      </div>
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading leaderboard...</p>
+      </div>
+    </NavPageLayout>
+  );
+}
+
+// Main leaderboard content component
+function LeaderboardContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const chipsContainerRef = useRef<HTMLDivElement>(null);
   
-  const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>('pages-created');
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
+  // Initialize from URL params or defaults
+  const getInitialCategory = (): LeaderboardCategory => {
+    const param = searchParams.get('category');
+    const validCategories: LeaderboardCategory[] = ['pages-created', 'pages-linked', 'new-sponsors', 'page-visits'];
+    if (param && validCategories.includes(param as LeaderboardCategory)) {
+      return param as LeaderboardCategory;
+    }
+    return 'pages-created';
+  };
+  
+  const getInitialPeriod = (): TimePeriod => {
+    const param = searchParams.get('period');
+    const validPeriods: TimePeriod[] = ['week', 'month', '6months'];
+    if (param && validPeriods.includes(param as TimePeriod)) {
+      return param as TimePeriod;
+    }
+    return 'month';
+  };
+  
+  const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>(getInitialCategory);
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>(getInitialPeriod);
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Update URL when category or period changes
+  const updateUrl = useCallback((category: LeaderboardCategory, period: TimePeriod) => {
+    const params = new URLSearchParams();
+    params.set('category', category);
+    params.set('period', period);
+    router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  // Handler for category change
+  const handleCategoryChange = useCallback((category: LeaderboardCategory) => {
+    setSelectedCategory(category);
+    updateUrl(category, selectedPeriod);
+  }, [selectedPeriod, updateUrl]);
+
+  // Handler for period change
+  const handlePeriodChange = useCallback((period: TimePeriod) => {
+    setSelectedPeriod(period);
+    updateUrl(selectedCategory, period);
+  }, [selectedCategory, updateUrl]);
 
   const fetchLeaderboard = useCallback(async () => {
     setLoading(true);
@@ -125,7 +193,7 @@ export default function LeaderboardPage() {
 
   const selectedCategoryConfig = categories.find(c => c.id === selectedCategory)!;
 
-  const periodLabel = selectedPeriod === 'week' ? 'This Week' : 'This Month';
+  const periodLabel = periodLabels[selectedPeriod];
 
   return (
     <NavPageLayout maxWidth="2xl">
@@ -146,18 +214,25 @@ export default function LeaderboardPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem 
-              onClick={() => setSelectedPeriod('week')}
+              onClick={() => handlePeriodChange('week')}
               className="gap-2"
             >
               {selectedPeriod === 'week' && <Check className="h-4 w-4" />}
               <span className={selectedPeriod !== 'week' ? 'ml-6' : ''}>This Week</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={() => setSelectedPeriod('month')}
+              onClick={() => handlePeriodChange('month')}
               className="gap-2"
             >
               {selectedPeriod === 'month' && <Check className="h-4 w-4" />}
               <span className={selectedPeriod !== 'month' ? 'ml-6' : ''}>This Month</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handlePeriodChange('6months')}
+              className="gap-2"
+            >
+              {selectedPeriod === '6months' && <Check className="h-4 w-4" />}
+              <span className={selectedPeriod !== '6months' ? 'ml-6' : ''}>Past 6 Months</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -176,7 +251,7 @@ export default function LeaderboardPage() {
           return (
             <button
               key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+              onClick={() => handleCategoryChange(category.id)}
               className={cn(
                 "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0",
                 isSelected
@@ -281,5 +356,14 @@ export default function LeaderboardPage() {
         Leaderboards update in real-time
       </p>
     </NavPageLayout>
+  );
+}
+
+// Default export with Suspense wrapper for useSearchParams
+export default function LeaderboardPage() {
+  return (
+    <Suspense fallback={<LeaderboardLoading />}>
+      <LeaderboardContent />
+    </Suspense>
   );
 }

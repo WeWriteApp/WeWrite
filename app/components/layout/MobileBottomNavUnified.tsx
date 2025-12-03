@@ -296,14 +296,14 @@ export default function MobileBottomNavUnified() {
     unifiedOrder 
   });
 
-  // More button (not draggable) - matches original NavButton sizing
+  // More button (not draggable) - matches increased height for better tap targets
   const MoreButton = () => (
     <Button
       variant="ghost"
       size="lg"
       onClick={() => setIsExpanded(!isExpanded)}
       className={cn(
-        "flex flex-col items-center justify-center h-11 flex-1 rounded-lg py-0.5 px-1 relative gap-0.5 group",
+        "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-1 relative gap-0.5 group",
         "transition-all duration-75 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",

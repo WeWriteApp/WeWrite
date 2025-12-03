@@ -95,8 +95,8 @@ export default function UnifiedNavButton({
     <div 
       ref={ref}
       className={cn(
-        // Base sizing - matches original NavButton  
-        "flex flex-col items-center justify-center h-11 flex-1 rounded-lg py-0.5 px-1 relative gap-0.5",
+        // Base sizing - increased height for better tap targets on mobile
+        "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-1 relative gap-0.5",
         "transition-all duration-150 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
