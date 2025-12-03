@@ -65,7 +65,15 @@ export async function GET(request: NextRequest) {
         data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'pwa_notification_sent');
         break;
       case 'visitors':
-        data = []; // Not implemented yet
+        // Use pageViews data for visitors metric
+        const pageViewsData = await AdminAnalyticsService.getPageViewsAnalytics(dateRange);
+        // Transform to visitor format expected by dashboard
+        data = pageViewsData.map(item => ({
+          ...item,
+          total: item.totalViews || 0,
+          count: item.totalViews || 0,
+          uniquePages: item.uniqueViews || 0
+        }));
         break;
       case 'pageViews':
         data = await AdminAnalyticsService.getPageViewsAnalytics(dateRange);

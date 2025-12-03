@@ -127,7 +127,8 @@ export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyti
         sharesAnalytics: sharesData || [],
         editsAnalytics: editsData || [],
         contentChangesAnalytics: contentChangesData || [],
-        pwaInstallsAnalytics: pwaInstallsData || []
+        pwaInstallsAnalytics: pwaInstallsData || [],
+        liveVisitorsCount: 0 // Live visitors tracked separately
       };
 
       setMetrics(dashboardMetrics);
@@ -503,15 +504,16 @@ export function useContentChangesMetrics(dateRange: DateRange, granularity?: num
       const responseData = result.data?.data || result.data;
       const rawData = Array.isArray(responseData) ? responseData : [];
 
-      // Transform simple count data to content changes format expected by widget
+      // Use real data fields from analytics_events (charactersAdded, charactersDeleted are tracked)
+      // The count represents the number of content_change events per day
       const transformedData = rawData.map(item => ({
         ...item,
-        // Map simple count to content changes format (widget expects charactersAdded/charactersDeleted)
-        charactersAdded: Math.floor((item.count || 0) * 60), // Assume 60 chars added per event
-        charactersDeleted: Math.floor((item.count || 0) * 40), // Assume 40 chars deleted per event
-        netChange: Math.floor((item.count || 0) * 20), // Net change = added - deleted
-        added: Math.floor((item.count || 0) * 0.6), // For mobile list mode
-        deleted: Math.floor((item.count || 0) * 0.4), // For mobile list mode
+        // Use real data if available, otherwise use count as a fallback
+        charactersAdded: item.charactersAdded || item.count || 0,
+        charactersDeleted: item.charactersDeleted || 0,
+        netChange: item.netChange || (item.charactersAdded || item.count || 0) - (item.charactersDeleted || 0),
+        added: item.charactersAdded || item.count || 0,
+        deleted: item.charactersDeleted || 0,
         total: item.count || 0,
         // Keep original fields for backward compatibility
         count: item.count || 0
@@ -765,7 +767,7 @@ export function useCompositePagesMetrics(dateRange: DateRange, granularity?: num
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         type: 'pages',
-        granularity: granularity.toString()
+        granularity: (granularity || 50).toString()
       }), {
         method: 'GET',
         credentials: 'include'
@@ -839,7 +841,7 @@ export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: nu
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         type: 'pages',
-        granularity: granularity.toString()
+        granularity: (granularity || 50).toString()
       }), {
         method: 'GET',
         credentials: 'include'

@@ -9,6 +9,9 @@ import { getCollectionName } from '../utils/environmentConfig';
 // Helper function to get Firestore instance from Firebase Admin
 function getAdminFirestore() {
   const admin = getFirebaseAdmin();
+  if (!admin) {
+    throw new Error('Firebase Admin SDK not initialized');
+  }
   return admin.firestore();
 }
 
@@ -204,6 +207,7 @@ export class AdminAnalyticsService {
 
   /**
    * Get analytics events (shares, content changes, etc.)
+   * For content_change events, also aggregates character counts
    */
   static async getAnalyticsEvents(dateRange: DateRange, eventType?: string): Promise<ChartDataPoint[]> {
     console.log('🔍 [Admin Analytics] Getting analytics events...', { eventType });
@@ -216,8 +220,12 @@ export class AdminAnalyticsService {
       const snapshot = await eventsRef.limit(1000).get();
       console.log(`✅ [Admin Analytics] Found ${snapshot.size} analytics events`);
       
-      // Group by day
-      const dailyCounts = new Map<string, number>();
+      // Group by day - track counts and character totals for content_change
+      const dailyData = new Map<string, { 
+        count: number; 
+        charactersAdded: number; 
+        charactersDeleted: number; 
+      }>();
       let processedEvents = 0;
       let matchedEvents = 0;
       let skippedWrongType = 0;
@@ -253,7 +261,17 @@ export class AdminAnalyticsService {
           // Filter by date range
           if (date >= dateRange.startDate && date <= dateRange.endDate) {
             const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+            
+            const existing = dailyData.get(dayKey) || { count: 0, charactersAdded: 0, charactersDeleted: 0 };
+            existing.count += 1;
+            
+            // For content_change events, aggregate character data
+            if (eventType === 'content_change') {
+              existing.charactersAdded += (data.charactersAdded || 0);
+              existing.charactersDeleted += (data.charactersDeleted || 0);
+            }
+            
+            dailyData.set(dayKey, existing);
             addedToResults++;
           } else {
             skippedOutOfRange++;
@@ -269,13 +287,23 @@ export class AdminAnalyticsService {
       
       while (currentDate <= dateRange.endDate) {
         const dayKey = currentDate.toISOString().split('T')[0];
-        const count = dailyCounts.get(dayKey) || 0;
+        const dayData = dailyData.get(dayKey) || { count: 0, charactersAdded: 0, charactersDeleted: 0 };
         
-        result.push({
+        // Base data point
+        const dataPoint: any = {
           date: dayKey,
-          count,
+          count: dayData.count,
           label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        });
+        };
+        
+        // Add character data for content_change events
+        if (eventType === 'content_change') {
+          dataPoint.charactersAdded = dayData.charactersAdded;
+          dataPoint.charactersDeleted = dayData.charactersDeleted;
+          dataPoint.netChange = dayData.charactersAdded - dayData.charactersDeleted;
+        }
+        
+        result.push(dataPoint);
         
         currentDate.setDate(currentDate.getDate() + 1);
       }

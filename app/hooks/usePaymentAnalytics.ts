@@ -197,7 +197,8 @@ export function useAllPaymentAnalytics(dateRange: DateRange, granularity?: numbe
     conversionFunnel: [],
     subscriptionMetrics: [],
     revenueMetrics: [],
-    tokenAllocationMetrics: []
+    usdAllocationMetrics: [],
+    tokenAllocationMetrics: [] // Legacy support
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -359,65 +360,10 @@ export function useTokenAllocationSummaryStats(dateRange: DateRange) {
 
 /**
  * Hook for platform fee metrics
+ * @deprecated Use usePlatformFeeMetrics from useDashboardAnalytics instead
+ * This is kept for backward compatibility and re-exports the same hook
  */
-export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number, cumulative: boolean = false) {
-  const [data, setData] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    averageFee: 0,
-    totalPayouts: 0,
-    feePercentage: 10
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Debounce date range changes
-  const debouncedDateRange = useDebounce(dateRange, 300);
-
-  const fetchData = useCallback(async () => {
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        startDate: debouncedDateRange.startDate.toISOString(),
-        endDate: debouncedDateRange.endDate.toISOString(),
-        type: 'platform-fees',
-        cumulative: cumulative.toString()
-      });
-
-      if (granularity) {
-        params.append('granularity', granularity.toString());
-      }
-
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch platform fee metrics: ${response.status}`);
-      }
-
-      const result = await response.json();
-      setData(result.data || []);
-      setStats(result.stats || { totalRevenue: 0, averageFee: 0, totalPayouts: 0, feePercentage: 10 });
-    } catch (err) {
-      console.error('Error fetching platform fee metrics:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch platform fee data');
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedDateRange, granularity, cumulative]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return { data, stats, loading, error, refetch: fetchData };
-}
+export { usePlatformFeeMetrics } from './useDashboardAnalytics';
 
 /**
  * Hook for writer payouts metrics
