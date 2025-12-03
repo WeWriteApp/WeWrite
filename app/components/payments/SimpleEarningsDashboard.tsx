@@ -27,7 +27,11 @@ import { DollarSign, Clock, CheckCircle, AlertCircle, Copy, TrendingUp } from 'l
 // Use API calls instead of complex services
 import { SimpleBankAccountManager } from './SimpleBankAccountManager';
 import { Progress } from '../ui/progress';
-import { MINIMUM_PAYOUT_CENTS, MINIMUM_PAYOUT_DOLLARS } from '../../config/platformFee';
+import { PLATFORM_FEE_CONFIG } from '../../config/platformFee';
+
+// Extract constants for easier use
+const MINIMUM_PAYOUT_CENTS = PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_CENTS;
+const MINIMUM_PAYOUT_DOLLARS = PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS;
 
 interface EarningsData {
   totalEarnings: number;
