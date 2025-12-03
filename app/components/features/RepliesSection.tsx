@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '../../lib/utils';
 import PillLink from '../utils/PillLink';
-import { Loader2, MessageCircle, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
+import { Loader2, MessageCircle, ThumbsUp, ThumbsDown, Minus, Reply } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '../ui/button';
 
 interface ReplyInfo {
   id: string;
@@ -77,39 +78,30 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
     }
   }, [activeFilter, allReplies]);
 
-  // Don't render if no replies
-  if (!loading && counts.total === 0) {
-    return null;
-  }
-
-  const filterButtons: { type: FilterType; label: string; icon: React.ReactNode; count: number; color: string }[] = [
+  const filterButtons: { type: FilterType; label: string; icon: React.ReactNode; count: number }[] = [
     { 
       type: 'all', 
       label: 'All', 
       icon: <MessageCircle className="w-3.5 h-3.5" />, 
-      count: counts.total,
-      color: 'bg-muted hover:bg-muted/80'
+      count: counts.total
     },
     { 
       type: 'disagree', 
       label: 'Disagree', 
       icon: <ThumbsDown className="w-3.5 h-3.5" />, 
-      count: counts.disagree,
-      color: 'bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300'
+      count: counts.disagree
     },
     { 
       type: 'agree', 
       label: 'Agree', 
       icon: <ThumbsUp className="w-3.5 h-3.5" />, 
-      count: counts.agree,
-      color: 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300'
+      count: counts.agree
     },
     { 
       type: 'neutral', 
       label: 'Neutral', 
       icon: <Minus className="w-3.5 h-3.5" />, 
-      count: counts.neutral,
-      color: 'bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+      count: counts.neutral
     },
   ];
 
@@ -153,8 +145,8 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                 activeFilter === filter.type
-                  ? cn(filter.color, "ring-2 ring-offset-2 ring-offset-background ring-primary/50")
-                  : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                  ? "bg-muted text-foreground"
+                  : "bg-muted/50 hover:bg-muted/80 text-muted-foreground"
               )}
             >
               {filter.icon}
@@ -211,6 +203,19 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
         {!loading && !error && replies.length === 0 && counts.total > 0 && (
           <div className="text-sm text-muted-foreground py-4 text-center">
             No {activeFilter !== 'all' ? activeFilter : ''} replies found
+          </div>
+        )}
+
+        {/* Empty State - No Replies at All */}
+        {!loading && !error && counts.total === 0 && (
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground mb-3">No replies yet. Be the first to reply!</p>
+            <Link href={`/create?replyTo=${pageId}`}>
+              <Button variant="secondary" size="sm" className="gap-2">
+                <Reply className="w-4 h-4" />
+                Reply
+              </Button>
+            </Link>
           </div>
         )}
       </div>

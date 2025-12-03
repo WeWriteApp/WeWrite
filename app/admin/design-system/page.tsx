@@ -147,6 +147,226 @@ export default function DesignSystemPage() {
             </div>
           </div>
 
+          {/* Color Token Documentation */}
+          <div className="wewrite-card space-y-4">
+            <div className="border-b border-border pb-4">
+              <h3 className="text-lg font-semibold">Color Token Reference</h3>
+              <p className="text-sm text-muted-foreground">app/globals.css</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                How to use color tokens in Tailwind classes throughout the codebase
+              </p>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Primary/Accent Colors */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Primary (Accent) Colors</h4>
+                <p className="text-sm text-muted-foreground">
+                  The primary color is used for interactive elements, links, and emphasis. Use opacity variants for subtle fills.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary rounded flex items-center justify-center text-primary-foreground">primary</div>
+                    <code className="text-muted-foreground">bg-primary</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary-20 rounded flex items-center justify-center">primary-20</div>
+                    <code className="text-muted-foreground">bg-primary-20</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary-10 rounded flex items-center justify-center">primary-10</div>
+                    <code className="text-muted-foreground">bg-primary-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary-5 rounded flex items-center justify-center">primary-5</div>
+                    <code className="text-muted-foreground">bg-primary-5</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Neutral Colors */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Neutral Colors</h4>
+                <p className="text-sm text-muted-foreground">
+                  Neutral colors are derived from the primary hue with low chroma. Use for backgrounds, borders, and secondary UI elements.
+                  <strong className="text-foreground"> The number represents opacity percentage.</strong>
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-30 rounded flex items-center justify-center">30%</div>
+                    <code className="text-muted-foreground">bg-neutral-30</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-20 rounded flex items-center justify-center">20%</div>
+                    <code className="text-muted-foreground">bg-neutral-20</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-15 rounded flex items-center justify-center">15%</div>
+                    <code className="text-muted-foreground">bg-neutral-15</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-10 rounded flex items-center justify-center">10%</div>
+                    <code className="text-muted-foreground">bg-neutral-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-5 rounded flex items-center justify-center">5%</div>
+                    <code className="text-muted-foreground">bg-neutral-5</code>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  <strong>Usage:</strong> <code className="bg-muted px-1 rounded">bg-neutral-5</code> for very subtle fills, 
+                  <code className="bg-muted px-1 rounded ml-1">bg-neutral-10</code> for hover states, 
+                  <code className="bg-muted px-1 rounded ml-1">border-neutral-20</code> for borders.
+                </p>
+              </div>
+
+              {/* Semantic Colors */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Semantic Colors</h4>
+                <p className="text-sm text-muted-foreground">
+                  Success and error colors with opacity variants for backgrounds and subtle fills.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-success rounded flex items-center justify-center text-white">success</div>
+                    <code className="text-muted-foreground">bg-success</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-success-10 rounded flex items-center justify-center text-success">success-10</div>
+                    <code className="text-muted-foreground">bg-success-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-error rounded flex items-center justify-center text-white">error</div>
+                    <code className="text-muted-foreground">bg-error</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-error-10 rounded flex items-center justify-center text-error">error-10</div>
+                    <code className="text-muted-foreground">bg-error-10</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alpha Overlay Colors */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Alpha Overlay Colors ✨</h4>
+                <p className="text-sm text-muted-foreground">
+                  Alpha colors are <strong className="text-foreground">theme-aware overlays</strong> that automatically adapt to light/dark mode.
+                  In light mode they use black (to darken), in dark mode they use white (to brighten).
+                  <strong className="text-foreground"> Use these for hover/active states on any background color.</strong>
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary rounded flex items-center justify-center text-primary-foreground relative overflow-hidden">
+                      <div className="absolute inset-0 bg-alpha-5"></div>
+                      <span className="relative">+5%</span>
+                    </div>
+                    <code className="text-muted-foreground">alpha-5</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary rounded flex items-center justify-center text-primary-foreground relative overflow-hidden">
+                      <div className="absolute inset-0 bg-alpha-10"></div>
+                      <span className="relative">+10%</span>
+                    </div>
+                    <code className="text-muted-foreground">alpha-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary rounded flex items-center justify-center text-primary-foreground relative overflow-hidden">
+                      <div className="absolute inset-0 bg-alpha-15"></div>
+                      <span className="relative">+15%</span>
+                    </div>
+                    <code className="text-muted-foreground">alpha-15</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-primary rounded flex items-center justify-center text-primary-foreground relative overflow-hidden">
+                      <div className="absolute inset-0 bg-alpha-20"></div>
+                      <span className="relative">+20%</span>
+                    </div>
+                    <code className="text-muted-foreground">alpha-20</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Semantic Alpha Overlays */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Semantic Alpha Overlays</h4>
+                <p className="text-sm text-muted-foreground">
+                  Color-matched overlays for success and error buttons. Creates a tinted hover effect that matches the button's color
+                  instead of just darkening/brightening.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-success-10 rounded flex items-center justify-center text-success relative overflow-hidden">
+                      <span className="relative">success-10</span>
+                    </div>
+                    <code className="text-muted-foreground">base</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-success-10 rounded flex items-center justify-center text-success relative overflow-hidden" style={{backgroundImage: 'linear-gradient(var(--success-alpha-10), var(--success-alpha-10))'}}>
+                      <span className="relative">+hover</span>
+                    </div>
+                    <code className="text-muted-foreground">success-alpha-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-error-10 rounded flex items-center justify-center text-error relative overflow-hidden">
+                      <span className="relative">error-10</span>
+                    </div>
+                    <code className="text-muted-foreground">base</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-error-10 rounded flex items-center justify-center text-error relative overflow-hidden" style={{backgroundImage: 'linear-gradient(var(--error-alpha-10), var(--error-alpha-10))'}}>
+                      <span className="relative">+hover</span>
+                    </div>
+                    <code className="text-muted-foreground">error-alpha-10</code>
+                  </div>
+                </div>
+                <div className="wewrite-card p-4 bg-muted/30 mt-3">
+                  <p className="text-sm mb-2"><strong>Usage:</strong></p>
+                  <code className="text-sm block mb-2">hover:success-alpha-10 active:success-alpha-15</code>
+                  <code className="text-sm block">hover:error-alpha-10 active:error-alpha-15</code>
+                </div>
+              </div>
+
+              {/* Usage Patterns */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Common Patterns</h4>
+                <div className="wewrite-card p-4 space-y-3 bg-muted/30">
+                  <div className="text-sm space-y-2">
+                    <p><strong>Solid buttons (primary/success/error):</strong> <code className="bg-muted px-1 rounded">bg-primary hover:alpha-10 active:alpha-15</code></p>
+                    <p><strong>Secondary buttons:</strong> <code className="bg-muted px-1 rounded">bg-neutral-5 hover:alpha-10 active:alpha-15</code></p>
+                    <p><strong>Outline buttons:</strong> <code className="bg-muted px-1 rounded">border border-neutral-20 hover:bg-alpha-5</code></p>
+                    <p><strong>Ghost buttons:</strong> <code className="bg-muted px-1 rounded">hover:bg-alpha-5 active:bg-alpha-10</code></p>
+                    <p><strong>Cards:</strong> <code className="bg-muted px-1 rounded">bg-muted/50 border border-border</code></p>
+                    <p><strong>Active chips:</strong> <code className="bg-muted px-1 rounded">bg-primary-10 text-primary</code></p>
+                    <p><strong>Inactive chips:</strong> <code className="bg-muted px-1 rounded">bg-neutral-5 text-foreground</code></p>
+                    <p><strong>Success-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-success-10 hover:success-alpha-10</code></p>
+                    <p><strong>Destructive-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-error-10 hover:error-alpha-10</code></p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alpha vs Opacity Note */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Alpha vs Opacity: When to Use Which</h4>
+                <div className="wewrite-card p-4 bg-muted/30">
+                  <div className="text-sm space-y-3">
+                    <div>
+                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">alpha-*</code> for neutral hover overlays:</p>
+                      <p className="text-muted-foreground text-xs mt-1">Darkens in light mode, brightens in dark mode. Good for primary, secondary, ghost buttons.</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">success-alpha-*</code> / <code className="bg-muted px-1 rounded">error-alpha-*</code> for semantic buttons:</p>
+                      <p className="text-muted-foreground text-xs mt-1">Color-matched tint for success-secondary and destructive-secondary buttons.</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">primary-10</code> / <code className="bg-muted px-1 rounded">neutral-10</code> for tinted backgrounds:</p>
+                      <p className="text-muted-foreground text-xs mt-1">10% opacity of the color itself. Good for chips, tags, subtle fills.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Buttons */}
           <ComponentShowcase
             title="Button"
@@ -156,6 +376,7 @@ export default function DesignSystemPage() {
             <StateDemo label="Primary Variants">
               <Button variant="default">Default</Button>
               <Button variant="secondary">Secondary</Button>
+              <Button variant="outline">Outline</Button>
               <Button variant="ghost">Ghost</Button>
               <Button variant="link">Link</Button>
             </StateDemo>
@@ -176,7 +397,12 @@ export default function DesignSystemPage() {
               <Button size="sm">Small</Button>
               <Button size="default">Default</Button>
               <Button size="lg">Large</Button>
-              <Button size="icon"><Settings className="h-4 w-4" /></Button>
+            </StateDemo>
+
+            <StateDemo label="Icon Sizes">
+              <Button size="icon-sm"><Settings /></Button>
+              <Button size="icon"><Settings /></Button>
+              <Button size="icon-lg"><Settings /></Button>
             </StateDemo>
             
             <StateDemo label="States">
@@ -202,36 +428,35 @@ export default function DesignSystemPage() {
           <ComponentShowcase
             title="IconButton"
             path="app/components/ui/icon-button.tsx"
-            description="Compact icon-only buttons with enhanced interactive states"
+            description="Wrapper around Button with icon size as default. Inherits all Button variants and styling."
           >
-            <StateDemo label="Primary Variants">
-              <IconButton variant="default"><Settings className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><Search className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><User className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><Mail className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><Heart className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><Star className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><Plus className="h-4 w-4" /></IconButton>
-              <IconButton variant="default"><Check className="h-4 w-4" /></IconButton>
-            </StateDemo>
-
-            <StateDemo label="Variants">
-              <IconButton variant="default"><Settings className="h-4 w-4" /></IconButton>
-              <IconButton variant="destructive"><X className="h-4 w-4" /></IconButton>
-              <IconButton variant="secondary"><Search className="h-4 w-4" /></IconButton>
-              <IconButton variant="ghost"><Heart className="h-4 w-4" /></IconButton>
-              <IconButton variant="link"><Star className="h-4 w-4" /></IconButton>
+            <StateDemo label="All Variants (icon-only)">
+              <IconButton variant="default"><Settings /></IconButton>
+              <IconButton variant="secondary"><Search /></IconButton>
+              <IconButton variant="outline"><User /></IconButton>
+              <IconButton variant="ghost"><Heart /></IconButton>
+              <IconButton variant="destructive"><X /></IconButton>
+              <IconButton variant="destructive-secondary"><X /></IconButton>
+              <IconButton variant="success"><Check /></IconButton>
+              <IconButton variant="success-secondary"><Check /></IconButton>
             </StateDemo>
 
             <StateDemo label="Sizes">
-              <IconButton size="sm"><Settings className="h-3 w-3" /></IconButton>
-              <IconButton size="default"><Settings className="h-4 w-4" /></IconButton>
-              <IconButton size="lg"><Settings className="h-5 w-5" /></IconButton>
+              <IconButton size="icon-sm"><Settings /></IconButton>
+              <IconButton size="icon"><Settings /></IconButton>
+              <IconButton size="icon-lg"><Settings /></IconButton>
             </StateDemo>
 
             <StateDemo label="States">
-              <IconButton><Settings className="h-4 w-4" /></IconButton>
-              <IconButton disabled><Settings className="h-4 w-4" /></IconButton>
+              <IconButton><Settings /></IconButton>
+              <IconButton disabled><Settings /></IconButton>
+            </StateDemo>
+
+            <StateDemo label="Implementation Note">
+              <div className="wewrite-card p-3 text-sm text-muted-foreground">
+                <code className="bg-muted px-1 rounded">IconButton</code> is now a thin wrapper around <code className="bg-muted px-1 rounded">Button</code> with <code className="bg-muted px-1 rounded">size="icon"</code> as default.
+                All styling improvements to Button automatically apply to IconButton.
+              </div>
             </StateDemo>
           </ComponentShowcase>
 
@@ -357,13 +582,31 @@ export default function DesignSystemPage() {
           <ComponentShowcase
             title="Badge"
             path="app/components/ui/badge.tsx"
-            description="Small status indicators and labels"
+            description="Interactive status indicators and labels with hover/active states"
           >
-            <StateDemo label="Variants">
+            <StateDemo label="Interactive Variants (hover me!)">
               <Badge>Default</Badge>
               <Badge variant="secondary">Secondary</Badge>
+              <Badge variant="outline">Outline</Badge>
               <Badge variant="success">Success</Badge>
+              <Badge variant="success-secondary">Success Light</Badge>
               <Badge variant="destructive">Destructive</Badge>
+              <Badge variant="destructive-secondary">Destructive Light</Badge>
+              <Badge variant="warning">Warning</Badge>
+            </StateDemo>
+
+            <StateDemo label="Static Variants (no interaction)">
+              <Badge variant="default-static">Default</Badge>
+              <Badge variant="secondary-static">Secondary</Badge>
+              <Badge variant="outline-static">Outline</Badge>
+              <Badge variant="success-static">Success</Badge>
+              <Badge variant="destructive-static">Destructive</Badge>
+            </StateDemo>
+
+            <StateDemo label="Sizes">
+              <Badge size="sm">Small</Badge>
+              <Badge size="default">Default</Badge>
+              <Badge size="lg">Large</Badge>
             </StateDemo>
 
             <StateDemo label="With Icons">

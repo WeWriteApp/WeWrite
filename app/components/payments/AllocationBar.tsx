@@ -70,7 +70,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollYRef = React.useRef(0);
 
   // Auto-detect pageId from URL if not provided
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
@@ -159,28 +159,103 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
     return originalHandleAllocationChange(amount, event);
   };
 
-  // Scroll detection effect
+  // Scroll detection effect - uses ref to prevent recreating handler
   useEffect(() => {
+    let ticking = false;
+    
+    // Get scroll position using multiple fallback methods for maximum compatibility
+    const getScrollPosition = (): number => {
+      const sources = [
+        window.scrollY,
+        window.pageYOffset,
+        document.documentElement?.scrollTop,
+        document.body?.scrollTop,
+        document.scrollingElement?.scrollTop
+      ];
+      const validSources = sources.filter(s => typeof s === 'number' && !isNaN(s));
+      return Math.max(0, ...validSources);
+    };
+    
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollThreshold = 100;
+      if (ticking) return;
+      ticking = true;
+      
+      requestAnimationFrame(() => {
+        const currentScrollY = getScrollPosition();
+        const lastScrollY = lastScrollYRef.current;
+        const scrollDelta = currentScrollY - lastScrollY;
 
-      if (Math.abs(currentScrollY - lastScrollY) < scrollThreshold) {
-        return;
-      }
-
-      if (currentScrollY > lastScrollY && currentScrollY > 200) {
-        setIsHidden(true);
-      } else if (currentScrollY < lastScrollY) {
-        setIsHidden(false);
-      }
-
-      setLastScrollY(currentScrollY);
+        // Only process if scroll delta is significant (> 5px to catch mobile micro-scrolls)
+        if (Math.abs(scrollDelta) > 5) {
+          if (scrollDelta > 0 && currentScrollY > 100) {
+            // Scrolling down and past threshold - hide
+            setIsHidden(true);
+          } else if (scrollDelta < -30) {
+            // Scrolling up significantly - show
+            setIsHidden(false);
+          }
+          
+          lastScrollYRef.current = currentScrollY;
+        }
+        
+        ticking = false;
+      });
     };
 
+    // Touch event handlers for iOS Safari backup
+    let lastTouchY = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      lastTouchY = e.touches[0]?.clientY ?? 0;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      const currentTouchY = e.touches[0]?.clientY ?? 0;
+      const touchDelta = lastTouchY - currentTouchY; // Positive = scrolling down
+      
+      if (Math.abs(touchDelta) > 10) {
+        const currentScrollY = getScrollPosition();
+        
+        if (touchDelta > 0 && currentScrollY > 100) {
+          // Finger moving up (scrolling down content) - hide bar
+          setIsHidden(true);
+        } else if (touchDelta < -30) {
+          // Finger moving down (scrolling up content) - show bar
+          setIsHidden(false);
+        }
+        
+        lastTouchY = currentTouchY;
+        lastScrollYRef.current = currentScrollY;
+      }
+    };
+
+    // Listen on multiple targets for maximum compatibility
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+    document.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // iOS Safari touch events as backup
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    
+    // Also listen on scrolling element directly
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    if (scrollingElement && scrollingElement !== document.documentElement) {
+      scrollingElement.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    
+    // Periodic check as final fallback
+    const intervalId = setInterval(handleScroll, 300);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      if (scrollingElement && scrollingElement !== document.documentElement) {
+        scrollingElement.removeEventListener('scroll', handleScroll);
+      }
+      clearInterval(intervalId);
+    };
+  }, []);
 
 
 

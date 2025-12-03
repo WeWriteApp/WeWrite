@@ -115,21 +115,25 @@ class PageViewBatcher {
       console.log(`📊 Flushing ${currentBatch.size} batched page views...`);
 
       for (const [pageId, batchedView] of currentBatch) {
-        // Update page view document
+        // Update page view document with aggregated format matching /api/analytics/page-view
+        const dateKey = this.getDateKey(batchedView.lastViewed);
+        const currentHour = batchedView.lastViewed.getHours().toString();
+        
         const pageViewRef = doc(
           db, 
           getCollectionName('pageViews'), 
-          `${pageId}_${this.getDateKey(batchedView.lastViewed)}`
+          `${pageId}_${dateKey}`
         );
 
         batch.set(pageViewRef, {
           pageId,
-          date: this.getDateKey(batchedView.lastViewed),
-          views: increment(batchedView.viewCount),
+          date: dateKey,
+          [`hours.${currentHour}`]: increment(batchedView.viewCount),
+          totalViews: increment(batchedView.viewCount),
           uniqueUsers: increment(batchedView.uniqueUsers.size),
           sessions: increment(batchedView.sessions.size),
           lastViewed: batchedView.lastViewed,
-          updatedAt: serverTimestamp()
+          lastUpdated: serverTimestamp()
         }, { merge: true });
 
         // Update page metadata with total view count

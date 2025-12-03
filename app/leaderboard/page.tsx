@@ -68,7 +68,7 @@ const categories: CategoryConfig[] = [
   },
   {
     id: 'page-visits',
-    label: 'Page Visits',
+    label: 'Page Views',
     icon: Eye,
     description: 'Most views received',
     countLabel: 'views'

@@ -512,17 +512,34 @@ export default function ContentPageHeader({
       return; // No scroll listener needed
     }
 
-    const scrollElement = document.scrollingElement || document.documentElement;
     const collapseThreshold = Math.max(48, (bannerOffset || 0) + 8);
     const hysteresis = 12; // Prevent rapid flip/flop near threshold
     let ticking = false;
+
+    // Get scroll position using multiple fallback methods for maximum compatibility
+    const getScrollPosition = (): number => {
+      // Try all possible scroll position sources
+      const sources = [
+        window.scrollY,
+        window.pageYOffset,
+        document.documentElement?.scrollTop,
+        document.body?.scrollTop,
+        // For iOS Safari PWA mode
+        document.scrollingElement?.scrollTop
+      ];
+      
+      // Return the first valid (non-zero, non-undefined) value, or max of all
+      const validSources = sources.filter(s => typeof s === 'number' && !isNaN(s));
+      return Math.max(0, ...validSources);
+    };
 
     const handleScroll = () => {
       if (ticking) return;
       ticking = true;
 
-      window.requestAnimationFrame(() => {
-        const currentScroll = Math.max(0, (scrollElement?.scrollTop ?? window.scrollY ?? 0));
+      // Use requestAnimationFrame for smooth updates
+      requestAnimationFrame(() => {
+        const currentScroll = getScrollPosition();
 
         // Collapse purely based on scroll position with hysteresis so we do not get stuck
         setIsScrolled((prev) => {
@@ -546,7 +563,7 @@ export default function ContentPageHeader({
 
         if (mainContentElement) {
           const mainContentRect = mainContentElement.getBoundingClientRect();
-          const mainContentBottom = mainContentRect.bottom + window.scrollY;
+          const mainContentBottom = mainContentRect.bottom + currentScroll;
           maxScroll = Math.max(0, mainContentBottom - windowHeight);
         }
 
@@ -557,16 +574,46 @@ export default function ContentPageHeader({
       });
     };
 
-    const targets: (Element | Window)[] = [window];
-    if (scrollElement && scrollElement !== document.documentElement && scrollElement !== document.body) {
-      targets.push(scrollElement);
+    // Create a touch-based scroll detection for iOS
+    let lastTouchY = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      lastTouchY = e.touches[0]?.clientY ?? 0;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      // Trigger scroll handler on touch move as backup
+      handleScroll();
+    };
+
+    // Attach listeners to multiple targets for maximum compatibility
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    document.addEventListener("scroll", handleScroll, { passive: true });
+    
+    // iOS Safari often needs touch events as scroll backup
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
+    
+    // Also listen on the scrolling element directly
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    if (scrollingElement && scrollingElement !== document.documentElement) {
+      scrollingElement.addEventListener("scroll", handleScroll, { passive: true });
     }
 
-    targets.forEach(target => target.addEventListener("scroll", handleScroll, { passive: true } as any));
-    handleScroll(); // Set initial state
+    // Set initial state
+    handleScroll();
+    
+    // Also check periodically for scroll position (catches edge cases)
+    const intervalId = setInterval(handleScroll, 250);
 
     return () => {
-      targets.forEach(target => target.removeEventListener("scroll", handleScroll, { passive: true } as any));
+      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      if (scrollingElement && scrollingElement !== document.documentElement) {
+        scrollingElement.removeEventListener("scroll", handleScroll);
+      }
+      clearInterval(intervalId);
     };
   }, [isEditing, bannerOffset]);
 
@@ -662,96 +709,97 @@ export default function ContentPageHeader({
 
           {/* Header content area - full width in edit mode */}
           <div className={`${isEditing ? 'w-full' : 'flex-1 min-w-0'} relative px-4 header-padding-mobile`}>
-            {/* Collapsed Header Layout - Single Row */}
-            {isScrolled && !isEditing && (
-              <div
-                className="flex items-center justify-center min-h-0 transition-all duration-300 ease-out relative"
-                style={{
-                  paddingTop: `${headerPadding}px`,
-                  paddingBottom: `${headerPadding}px`,
-                  transform: 'translateZ(0)', // Force GPU acceleration
-                  willChange: 'padding'
-                }}
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              >
-                {/* Center: Logo + Title and Byline compound element */}
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-                  {/* Logo to the left of text - clickable to go home */}
-                  <Logo size="sm" priority={true} styled={true} clickable={true} />
+            {/* Unified morphing header layout */}
+            <div
+              className="transition-all duration-300 ease-out"
+              style={{
+                paddingTop: `${headerPadding}px`,
+                paddingBottom: `${headerPadding}px`,
+                transform: 'translateZ(0)', // Force GPU acceleration
+              }}
+            >
+              {/* Row 1: Back Button + Logo + Share Button - morphs based on scroll */}
+              <div className={`flex items-center transition-all duration-300 ease-out ${
+                isScrolled && !isEditing ? 'justify-center' : 'justify-between'
+              }`}>
+                {/* Left: Back Button - fades out when collapsed */}
+                <div className={`flex items-center gap-2 transition-all duration-300 ease-out ${
+                  isScrolled && !isEditing 
+                    ? 'opacity-0 w-0 overflow-hidden pointer-events-none' 
+                    : 'opacity-100 w-10'
+                }`}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-foreground"
+                    onClick={handleBackClick}
+                    title="Go back"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                </div>
 
-                  {/* Title and Byline */}
-                  <div className="flex items-center gap-1 min-w-0">
-                    <h1 className="text-xs font-semibold opacity-90 truncate">
-                      {/* REMOVED: Loading spinner that was showing inappropriately */}
-                      {(
-                        <span className="flex items-center gap-1">
-                          <span className="truncate">
-                            {(isExactDateFormat(title || "") && title !== "Daily note") && title
-                              ? (typeof window !== 'undefined' ? formatDate(title) : title)
-                              : title
-                              ? title
-                              : isNewPage
-                              ? (isReply ? "Give your reply a title..." : "Give your page a title...")
-                              : "Untitled"
-                            }
-                          </span>
-
-                        </span>
-                      )}
-                    </h1>
-
+                {/* Center: Logo + Title (when collapsed) - Logo slides and shrinks */}
+                <div 
+                  className={`flex items-center cursor-pointer transition-all duration-300 ease-out ${
+                    isScrolled && !isEditing ? 'gap-2' : 'gap-0'
+                  }`}
+                  onClick={() => isScrolled && !isEditing ? window.scrollTo({ top: 0, behavior: 'smooth' }) : router.push('/')}
+                >
+                  {/* Logo - transitions between lg and sm size */}
+                  <div className="transition-all duration-300 ease-out">
+                    <Logo 
+                      size={isScrolled && !isEditing ? "sm" : "lg"} 
+                      priority={true} 
+                      styled={true} 
+                      clickable={true} 
+                    />
                   </div>
+                  
+                  {/* Collapsed title - slides in from right */}
+                  <div className={`flex items-center gap-1 min-w-0 transition-all duration-300 ease-out ${
+                    isScrolled && !isEditing 
+                      ? 'opacity-100 max-w-[200px] translate-x-0' 
+                      : 'opacity-0 max-w-0 translate-x-4 overflow-hidden'
+                  }`}>
+                    <h1 className="text-xs font-semibold opacity-90 truncate whitespace-nowrap">
+                      {(isExactDateFormat(title || "") && title !== "Daily note") && title
+                        ? (typeof window !== 'undefined' ? formatDate(title) : title)
+                        : title
+                        ? title
+                        : isNewPage
+                        ? (isReply ? "Give your reply a title..." : "Give your page a title...")
+                        : "Untitled"
+                      }
+                    </h1>
+                  </div>
+                </div>
+
+                {/* Right: Share button - fades out when collapsed */}
+                <div className={`flex items-center gap-2 transition-all duration-300 ease-out ${
+                  isScrolled && !isEditing 
+                    ? 'opacity-0 w-0 overflow-hidden pointer-events-none' 
+                    : 'opacity-100 w-10'
+                }`}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-foreground"
+                    title="Share page"
+                    tabIndex={isNewPage ? 3 : undefined}
+                    onClick={handleShareClick}
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-            )}
 
-            {/* Expanded Header Layout - Always show when editing, or when not scrolled in view mode */}
-            {(!isScrolled || isEditing) && (
-              <div
-                className="space-y-2 transition-all duration-300 ease-out"
-                style={{
-                  paddingTop: `${headerPadding}px`,
-                  paddingBottom: `${headerPadding}px`,
-                  transform: 'translateZ(0)', // Force GPU acceleration
-                  willChange: 'padding'
-                }}
-              >
-                {/* Row 1: Back Button + Logo + Menu */}
-                <div className="flex items-center justify-between">
-                  {/* Left: Back Button */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-foreground"
-                      onClick={handleBackClick}
-                      title="Go back"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                  </div>
-
-                  {/* Center: Logo - clickable to go home */}
-                  <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
-                    <Logo size="lg" priority={true} styled={true} clickable={true} />
-                  </div>
-
-                  {/* Right: Share button */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-foreground"
-                      title="Share page"
-                      tabIndex={isNewPage ? 3 : undefined}
-                      onClick={handleShareClick}
-                    >
-                      <Share2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Row 2: Title */}
+              {/* Row 2: Title - slides up and fades out when collapsed */}
+              <div className={`transition-all duration-300 ease-out overflow-hidden ${
+                isScrolled && !isEditing 
+                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2' 
+                  : 'opacity-100 max-h-[200px] mt-2 translate-y-0'
+              }`}>
                 <div className="flex items-center justify-center">
                   {/* Left navigation chevron for daily notes */}
                   {isDailyNote && (
@@ -772,51 +820,47 @@ export default function ContentPageHeader({
 
                   <div className="flex-1 text-center">
                     <h1 className="text-2xl font-semibold">
-                      {/* REMOVED: Loading spinner that was showing inappropriately */}
-                      {(
-                        <div className="flex items-center justify-center relative">
-                          {isEditing && canEdit && isEditingTitle && !(isExactDateFormat(title || "") && title !== "Daily note") ? (
-                            <textarea
-                              ref={titleInputRef}
-                              value={editingTitle}
-                              onChange={handleTitleChange}
-                              onKeyDown={handleTitleKeyDown}
-                              onBlur={handleTitleBlur}
-                              onFocus={handleTitleFocus}
-                              tabIndex={isNewPage ? 1 : undefined}
-                              className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
-                              placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
-                              rows={1}
-                              style={{ height: 'auto' }}
-                            />
-                          ) : (
-                            <div
-                              className={`${canEdit && isEditing ? "wewrite-input wewrite-title-input min-h-[64px]" : ""} ${titleError ? "border-destructive" : ""} w-full text-2xl font-semibold text-center ${canEdit ? "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2" : ""} transition-all duration-200`}
-                              onClick={handleTitleClick}
-                              title={
-                                (isExactDateFormat(title || "") && title !== "Daily note")
-                                  ? "Click to change date format"
-                                  : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
-                              }
+                      <div className="flex items-center justify-center relative">
+                        {isEditing && canEdit && isEditingTitle && !(isExactDateFormat(title || "") && title !== "Daily note") ? (
+                          <textarea
+                            ref={titleInputRef}
+                            value={editingTitle}
+                            onChange={handleTitleChange}
+                            onKeyDown={handleTitleKeyDown}
+                            onBlur={handleTitleBlur}
+                            onFocus={handleTitleFocus}
+                            tabIndex={isNewPage ? 1 : undefined}
+                            className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
+                            placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
+                            rows={1}
+                            style={{ height: 'auto' }}
+                          />
+                        ) : (
+                          <div
+                            className={`${canEdit && isEditing ? "wewrite-input wewrite-title-input min-h-[64px]" : ""} ${titleError ? "border-destructive" : ""} w-full text-2xl font-semibold text-center ${canEdit ? "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2" : ""} transition-all duration-200`}
+                            onClick={handleTitleClick}
+                            title={
+                              (isExactDateFormat(title || "") && title !== "Daily note")
+                                ? "Click to change date format"
+                                : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
+                            }
+                          >
+                            <span
+                              className={!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}
+                              suppressHydrationWarning={isExactDateFormat(title || "") && title !== "Daily note"}
                             >
-                              <span
-                                className={!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}
-                                suppressHydrationWarning={isExactDateFormat(title || "") && title !== "Daily note"}
-                              >
-                                {(isExactDateFormat(title || "") && title !== "Daily note") && title
-                                  ? (typeof window !== 'undefined' ? formatDate(title) : title)
-                                  : title
-                                  ? title
-                                  : isNewPage
-                                  ? (isReply ? "Give your reply a title..." : "Give your page a title...")
-                                  : "Untitled"
-                                }
-                              </span>
-                            </div>
-                          )}
-
-                        </div>
-                      )}
+                              {(isExactDateFormat(title || "") && title !== "Daily note") && title
+                                ? (typeof window !== 'undefined' ? formatDate(title) : title)
+                                : title
+                                ? title
+                                : isNewPage
+                                ? (isReply ? "Give your reply a title..." : "Give your page a title...")
+                                : "Untitled"
+                              }
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </h1>
                   </div>
 
@@ -846,31 +890,32 @@ export default function ContentPageHeader({
                     </p>
                   </div>
                 )}
+              </div>
 
-
-
-                {/* Row 3: Byline */}
+              {/* Row 3: Byline - slides up and fades out when collapsed */}
+              <div className={`transition-all duration-300 ease-out overflow-hidden ${
+                isScrolled && !isEditing 
+                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2' 
+                  : 'opacity-100 max-h-[50px] mt-2 translate-y-0'
+              }`}>
                 <div className="flex items-center justify-center">
                   <div className="text-sm text-muted-foreground">
-                    {/* REMOVED: Loading spinner that was showing inappropriately */}
-                    {(
-                      <div className="flex items-center gap-1 justify-center">
-                        <span className="whitespace-nowrap flex-shrink-0">by</span>
-                        <UsernameBadge
-                          userId={userId}
-                          username={username}
-                          tier={authorSubscription.tier}
-                          subscriptionStatus={authorSubscription.status}
-                          subscriptionAmount={authorSubscription.amount}
-                          size="sm"
-                          className="text-xs overflow-hidden text-ellipsis"
-                        />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 justify-center">
+                      <span className="whitespace-nowrap flex-shrink-0">by</span>
+                      <UsernameBadge
+                        userId={userId}
+                        username={username}
+                        tier={authorSubscription.tier}
+                        subscriptionStatus={authorSubscription.status}
+                        subscriptionAmount={authorSubscription.amount}
+                        size="sm"
+                        className="text-xs overflow-hidden text-ellipsis"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 

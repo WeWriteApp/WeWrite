@@ -5,6 +5,15 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 /**
  * POST /api/analytics/page-view
  * Record a page view for analytics
+ * 
+ * Document structure for pageViews collection:
+ * - Document ID: {pageId}_{date} (e.g., "abc123_2025-12-03")
+ * - Fields:
+ *   - pageId: string
+ *   - date: string (YYYY-MM-DD format)
+ *   - hours: Record<number, number> (hourly view counts, e.g., { 0: 5, 14: 10 })
+ *   - totalViews: number (sum of all hourly views)
+ *   - lastUpdated: Timestamp
  */
 export async function POST(request: NextRequest) {
   try {
@@ -26,29 +35,62 @@ export async function POST(request: NextRequest) {
     }
 
     const db = admin.firestore();
-    const batch = db.batch();
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentHour = now.getUTCHours();
 
-    // Record page view in environment-aware collection
+    // Use deterministic document ID: {pageId}_{date}
     const pageViewsCollection = getCollectionName('pageViews');
-    const pageViewRef = db.collection(pageViewsCollection).doc();
-    
-    batch.set(pageViewRef, {
-      pageId,
-      userId: userId || null,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      userAgent: request.headers.get('user-agent') || null,
-      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null
+    const docId = `${pageId}_${dateStr}`;
+    const pageViewRef = db.collection(pageViewsCollection).doc(docId);
+
+    // Use transaction to safely increment the hourly view count
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(pageViewRef);
+      
+      if (doc.exists) {
+        // Update existing document
+        const data = doc.data();
+        const hours = data?.hours || {};
+        hours[currentHour] = (hours[currentHour] || 0) + 1;
+        const totalViews = Object.values(hours).reduce((sum: number, count: number) => sum + count, 0);
+        
+        transaction.update(pageViewRef, {
+          hours,
+          totalViews,
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        // Create new document
+        const hours = { [currentHour]: 1 };
+        transaction.set(pageViewRef, {
+          pageId,
+          date: dateStr,
+          hours,
+          totalViews: 1,
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
     });
 
-    // Update page view count
+    // Update page view count on the page document
     const pagesCollection = getCollectionName('pages');
     const pageRef = db.collection(pagesCollection).doc(pageId);
-    batch.update(pageRef, {
-      viewCount: admin.firestore.FieldValue.increment(1),
-      lastViewed: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    await batch.commit();
+    
+    // Use update with merge to handle missing documents gracefully
+    try {
+      await pageRef.update({
+        viewCount: admin.firestore.FieldValue.increment(1),
+        lastViewed: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (updateError: any) {
+      // If page doesn't exist, log but don't fail
+      if (updateError.code === 5) { // NOT_FOUND
+        console.warn(`Page ${pageId} not found when updating view count`);
+      } else {
+        throw updateError;
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

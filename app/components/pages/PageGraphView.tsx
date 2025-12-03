@@ -5,7 +5,7 @@ import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 // import { useGraphSettings } from '../../contexts/GraphSettingsContext';
-import { Loader2, Maximize2, X, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Maximize2, X, Eye, EyeOff, Network } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 import { useRelatedPages } from '../../hooks/useRelatedPages';
@@ -927,7 +927,10 @@ export default function PageGraphView({
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium">Graph view</h3>
+          <div className="flex items-center gap-2">
+            <Network className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">Graph view</h3>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant={isViewSettingsOpen ? "default" : "outline"}
@@ -984,7 +987,7 @@ export default function PageGraphView({
         <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
           <div
             ref={containerRef}
-            className="wewrite-card h-96 transition-all duration-300"
+            className="h-96 transition-all duration-300"
           >
             <svg ref={svgRef} className="w-full h-full" />
 

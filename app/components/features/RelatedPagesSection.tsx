@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import PillLink from "../utils/PillLink";
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, Search } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -178,6 +178,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
       <div className="wewrite-card">
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
+          <Search className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">
             Related pages by others
           </h3>

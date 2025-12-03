@@ -1125,6 +1125,8 @@ const SimpleParagraphNode = (props: {
         isActive ? 'bg-[var(--active-line-highlight)]' : ''
       } ${
         isEditing ? 'editing-mode' : ''
+      } ${
+        !lineFeaturesEnabled ? 'no-line-numbers' : ''
       }`}
       style={{
         animationDelay: `${animationDelay}ms`

@@ -1037,6 +1037,24 @@ input[type="range"]::-moz-range-thumb,
     --accent-l: 60%;
     --accent-color-rgb: 37, 99, 235; /* Default blue RGB values for #2563EB */
 
+    /* Alpha overlay colors - black in light mode for darkening on hover */
+    --alpha-5: rgba(0, 0, 0, 0.05);
+    --alpha-10: rgba(0, 0, 0, 0.10);
+    --alpha-15: rgba(0, 0, 0, 0.15);
+    --alpha-20: rgba(0, 0, 0, 0.20);
+    --alpha-25: rgba(0, 0, 0, 0.25);
+    --alpha-30: rgba(0, 0, 0, 0.30);
+
+    /* Semantic alpha overlays - tinted overlays for colored buttons */
+    /* Success alpha - green tint overlay (darker green in light mode) */
+    --success-alpha-5: rgba(22, 163, 74, 0.15);
+    --success-alpha-10: rgba(22, 163, 74, 0.25);
+    --success-alpha-15: rgba(22, 163, 74, 0.35);
+    /* Error alpha - red tint overlay (darker red in light mode) */
+    --error-alpha-5: rgba(220, 38, 38, 0.15);
+    --error-alpha-10: rgba(220, 38, 38, 0.25);
+    --error-alpha-15: rgba(220, 38, 38, 0.35);
+
     /* Radix Colors - Light Mode */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
@@ -1098,6 +1116,24 @@ input[type="range"]::-moz-range-thumb,
   }
 
   .dark {
+    /* Alpha overlay colors - white in dark mode for brightening on hover */
+    --alpha-5: rgba(255, 255, 255, 0.05);
+    --alpha-10: rgba(255, 255, 255, 0.10);
+    --alpha-15: rgba(255, 255, 255, 0.15);
+    --alpha-20: rgba(255, 255, 255, 0.20);
+    --alpha-25: rgba(255, 255, 255, 0.25);
+    --alpha-30: rgba(255, 255, 255, 0.30);
+
+    /* Semantic alpha overlays - tinted overlays for colored buttons */
+    /* Success alpha - brighter green in dark mode */
+    --success-alpha-5: rgba(74, 222, 128, 0.15);
+    --success-alpha-10: rgba(74, 222, 128, 0.25);
+    --success-alpha-15: rgba(74, 222, 128, 0.35);
+    /* Error alpha - brighter red in dark mode */
+    --error-alpha-5: rgba(248, 113, 113, 0.15);
+    --error-alpha-10: rgba(248, 113, 113, 0.25);
+    --error-alpha-15: rgba(248, 113, 113, 0.35);
+
     /* Radix Colors - Dark Mode */
     --background: 0 0% 0%;
     --foreground: 210 40% 98%;
@@ -2741,6 +2777,63 @@ button.bg-transparent[type] {
 
 .dark .hover\:bg-neutral-alpha-2:hover {
   background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ==========================================================================
+   Alpha Overlay System
+   These classes add a semi-transparent overlay on top of the existing bg color.
+   In light mode: black overlay (darkens)
+   In dark mode: white overlay (brightens)
+   ========================================================================== */
+
+/* Hover alpha overlays - apply on top of any background */
+.hover\:alpha-5:hover {
+  background-image: linear-gradient(var(--alpha-5), var(--alpha-5));
+}
+.hover\:alpha-10:hover {
+  background-image: linear-gradient(var(--alpha-10), var(--alpha-10));
+}
+.hover\:alpha-15:hover {
+  background-image: linear-gradient(var(--alpha-15), var(--alpha-15));
+}
+.hover\:alpha-20:hover {
+  background-image: linear-gradient(var(--alpha-20), var(--alpha-20));
+}
+
+/* Active alpha overlays */
+.active\:alpha-10:active {
+  background-image: linear-gradient(var(--alpha-10), var(--alpha-10));
+}
+.active\:alpha-15:active {
+  background-image: linear-gradient(var(--alpha-15), var(--alpha-15));
+}
+.active\:alpha-20:active {
+  background-image: linear-gradient(var(--alpha-20), var(--alpha-20));
+}
+.active\:alpha-25:active {
+  background-image: linear-gradient(var(--alpha-25), var(--alpha-25));
+}
+
+/* ==========================================================================
+   Semantic Alpha Overlays
+   Color-matched overlays for success and error buttons.
+   Creates a tinted hover effect that matches the button's color.
+   ========================================================================== */
+
+/* Success alpha overlays - green tint */
+.hover\:success-alpha-10:hover {
+  background-image: linear-gradient(var(--success-alpha-10), var(--success-alpha-10));
+}
+.active\:success-alpha-15:active {
+  background-image: linear-gradient(var(--success-alpha-15), var(--success-alpha-15));
+}
+
+/* Error alpha overlays - red tint */
+.hover\:error-alpha-10:hover {
+  background-image: linear-gradient(var(--error-alpha-10), var(--error-alpha-10));
+}
+.active\:error-alpha-15:active {
+  background-image: linear-gradient(var(--error-alpha-15), var(--error-alpha-15));
 }
 
 /* Dotted stroke for inactive supporter icons */

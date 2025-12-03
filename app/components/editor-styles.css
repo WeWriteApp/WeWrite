@@ -141,6 +141,12 @@ a[data-user-id]::before {
   line-height: 1.5;
 }
 
+/* When line numbers are disabled, increase paragraph spacing 
+   to better distinguish between wrapped lines and new paragraphs */
+.unified-paragraph.no-line-numbers {
+  margin-bottom: 1rem;
+}
+
 /* Paragraph number */
 .paragraph-number {
   font-family: monospace;

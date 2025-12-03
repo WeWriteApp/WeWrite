@@ -27,10 +27,22 @@ const config: Config = {
         ring: "oklch(var(--ring))",
         background: "oklch(var(--background))",
         foreground: "oklch(var(--foreground))",
+        // Alpha overlay colors - use black in light mode, white in dark mode
+        // These are meant to be layered ON TOP of other colors for hover/active states
+        alpha: {
+          5: "var(--alpha-5)",
+          10: "var(--alpha-10)",
+          15: "var(--alpha-15)",
+          20: "var(--alpha-20)",
+          25: "var(--alpha-25)",
+          30: "var(--alpha-30)",
+        },
         primary: {
           DEFAULT: "oklch(var(--primary))",
           foreground: "oklch(var(--primary-foreground))",
+          5: "oklch(var(--primary) / 0.05)",
           10: "oklch(var(--primary) / 0.10)",
+          15: "oklch(var(--primary) / 0.15)",
           20: "oklch(var(--primary) / 0.20)",
           30: "oklch(var(--primary) / 0.30)",
           40: "oklch(var(--primary) / 0.40)",
@@ -47,8 +59,11 @@ const config: Config = {
         neutral: {
           DEFAULT: "oklch(var(--neutral))",
           foreground: "oklch(var(--neutral-foreground))",
+          5: "oklch(var(--neutral) / 0.05)",
           10: "oklch(var(--neutral) / 0.10)",
+          15: "oklch(var(--neutral) / 0.15)",
           20: "oklch(var(--neutral) / 0.20)",
+          25: "oklch(var(--neutral) / 0.25)",
           30: "oklch(var(--neutral) / 0.30)",
           40: "oklch(var(--neutral) / 0.40)",
           50: "oklch(var(--neutral) / 0.50)",
