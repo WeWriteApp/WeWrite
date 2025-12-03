@@ -329,7 +329,7 @@ export default function SimpleEarningsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${earnings?.availableBalance?.toFixed(2) || '0.00'}
+              ${(Number(earnings?.availableBalance) || 0).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">Ready for payout</p>
           </CardContent>
@@ -344,7 +344,7 @@ export default function SimpleEarningsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${earnings?.pendingBalance?.toFixed(2) || '0.00'}
+              ${(Number(earnings?.pendingBalance) || 0).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">This month's earnings</p>
           </CardContent>
@@ -359,7 +359,7 @@ export default function SimpleEarningsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${earnings?.totalEarnings?.toFixed(2) || '0.00'}
+              ${(Number(earnings?.totalEarnings) || 0).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">Lifetime earnings</p>
           </CardContent>
@@ -376,7 +376,8 @@ export default function SimpleEarningsDashboard() {
         </CardHeader>
         <CardContent className="space-y-4">
           {(() => {
-            const availableBalance = earnings?.availableBalance || 0;
+            // Ensure we have a valid number for calculations
+            const availableBalance = Number(earnings?.availableBalance) || 0;
             const availableCents = Math.round(availableBalance * 100);
             const progressPercent = Math.min((availableCents / MINIMUM_PAYOUT_CENTS) * 100, 100);
             const isAboveThreshold = availableCents >= MINIMUM_PAYOUT_CENTS;
