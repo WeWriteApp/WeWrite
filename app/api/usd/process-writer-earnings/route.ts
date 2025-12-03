@@ -8,7 +8,62 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ServerUsdEarningsService } from '../../../services/usdEarningsService.server';
 import { getCurrentMonth, getPreviousMonth } from '../../../utils/subscriptionTiers';
 
-// This endpoint should be protected by API key or admin auth in production
+/**
+ * GET handler for Vercel cron jobs
+ * Vercel cron sends GET requests, so this is the primary entry point
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Verify cron secret (Vercel adds this header for cron requests)
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    const cronApiKey = process.env.CRON_API_KEY;
+    
+    // Accept either CRON_SECRET (Vercel's built-in) or CRON_API_KEY (custom)
+    const isAuthorized = 
+      (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+      (cronApiKey && authHeader === `Bearer ${cronApiKey}`);
+
+    if (!isAuthorized) {
+      console.warn('[CRON] Unauthorized access attempt to process-writer-earnings');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Default to previous month for cron jobs
+    const targetPeriod = getPreviousMonth();
+    console.log(`[CRON] Processing writer USD earnings for period: ${targetPeriod}`);
+
+    const result = await ServerUsdEarningsService.processMonthlyDistribution(targetPeriod);
+
+    if (!result) {
+      console.error('[CRON] Failed to process monthly USD distribution');
+      return NextResponse.json({
+        error: 'Failed to process monthly USD distribution'
+      }, { status: 500 });
+    }
+
+    console.log(`[CRON] Successfully processed ${result.processedCount} earnings for ${result.affectedWriters} writers`);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        period: targetPeriod,
+        processedCount: result.processedCount,
+        affectedWriters: result.affectedWriters,
+        message: `Moved ${result.processedCount} pending earnings to available status for ${result.affectedWriters} writers`
+      }
+    });
+
+  } catch (error: any) {
+    console.error('[CRON] Error processing writer USD earnings:', error);
+    return NextResponse.json({
+      error: 'Failed to process writer USD earnings',
+      details: error.message
+    }, { status: 500 });
+  }
+}
+
+// POST handler for manual/admin calls
 export async function POST(request: NextRequest) {
   try {
     // Verify admin access or API key

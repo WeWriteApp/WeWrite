@@ -23,9 +23,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
-import { DollarSign, Clock, CheckCircle, AlertCircle, Copy } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, AlertCircle, Copy, TrendingUp } from 'lucide-react';
 // Use API calls instead of complex services
 import { SimpleBankAccountManager } from './SimpleBankAccountManager';
+import { Progress } from '../ui/progress';
+import { MINIMUM_PAYOUT_CENTS, MINIMUM_PAYOUT_DOLLARS } from '../../config/platformFee';
 
 interface EarningsData {
   totalEarnings: number;
@@ -363,28 +365,86 @@ export default function SimpleEarningsDashboard() {
         </Card>
       </div>
 
-      {/* Payout Action */}
-      {earnings?.availableBalance && earnings.availableBalance > 0 && bankStatus?.isConnected && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Request Payout</h3>
-                <p className="text-sm text-muted-foreground">
-                  You have ${earnings.availableBalance.toFixed(2)} available for payout
-                </p>
-              </div>
-              <Button 
-                onClick={handleRequestPayout}
-                disabled={requesting}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {requesting ? 'Processing...' : 'Request Payout'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Payout Threshold Progress & Action */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Payout Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(() => {
+            const availableBalance = earnings?.availableBalance || 0;
+            const availableCents = Math.round(availableBalance * 100);
+            const progressPercent = Math.min((availableCents / MINIMUM_PAYOUT_CENTS) * 100, 100);
+            const isAboveThreshold = availableCents >= MINIMUM_PAYOUT_CENTS;
+            const amountNeeded = Math.max(0, (MINIMUM_PAYOUT_CENTS - availableCents) / 100);
+            
+            return (
+              <>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      ${availableBalance.toFixed(2)} of ${MINIMUM_PAYOUT_DOLLARS.toFixed(2)} minimum
+                    </span>
+                    <span className="font-medium">{progressPercent.toFixed(0)}%</span>
+                  </div>
+                  <Progress 
+                    value={progressPercent} 
+                    className={`h-3 ${isAboveThreshold ? '[&>div]:bg-green-500' : ''}`}
+                  />
+                  {!isAboveThreshold && (
+                    <p className="text-xs text-muted-foreground">
+                      ${amountNeeded.toFixed(2)} more needed to request a payout
+                    </p>
+                  )}
+                  {isAboveThreshold && (
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      ✓ You've reached the minimum payout threshold!
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div>
+                    <h3 className="font-semibold">Request Payout</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isAboveThreshold 
+                        ? `You have $${availableBalance.toFixed(2)} available for payout`
+                        : `Minimum payout is $${MINIMUM_PAYOUT_DOLLARS.toFixed(2)}`
+                      }
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleRequestPayout}
+                    disabled={requesting || !isAboveThreshold || !isBankConnected}
+                    className={isAboveThreshold && isBankConnected 
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                    }
+                    title={
+                      !isBankConnected 
+                        ? "Connect a bank account first" 
+                        : !isAboveThreshold 
+                          ? `Need $${amountNeeded.toFixed(2)} more to reach minimum` 
+                          : "Request payout"
+                    }
+                  >
+                    {requesting ? 'Processing...' : 'Request Payout'}
+                  </Button>
+                </div>
+
+                {!isBankConnected && isAboveThreshold && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Connect a bank account above to request your payout
+                  </p>
+                )}
+              </>
+            );
+          })()}
+        </CardContent>
+      </Card>
 
       {/* Payout History */}
       {payoutHistory.length > 0 && (

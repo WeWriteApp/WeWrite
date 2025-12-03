@@ -28,7 +28,8 @@ export const CURRENCY_CONFIG = {
   PAYMENT_PROCESSOR: process.env.PAYMENT_PROCESSOR || 'stripe',
   PROCESSOR_CURRENCY_CODE: process.env.PROCESSOR_CURRENCY_CODE || 'usd',
   
-  // Platform fee (as percentage)
+  // Platform fee (as percentage) - DEPRECATED: Use app/config/platformFee.ts instead
+  // This is kept for backward compatibility but platformFee.ts is the source of truth
   PLATFORM_FEE_PERCENTAGE: parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '10.0')
 } as const;
 

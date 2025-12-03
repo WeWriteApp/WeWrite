@@ -13,6 +13,7 @@ import { stripeStorageBalanceService } from './stripeStorageBalanceService';
 import { getStripeSecretKey } from '../utils/stripeConfig';
 import Stripe from 'stripe';
 import { sendUserNotification } from '../utils/notifications';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-12-18.acacia'
@@ -30,7 +31,7 @@ export interface PayoutRecord {
 }
 
 export class PayoutService {
-  private static readonly MINIMUM_PAYOUT = 25; // $25 minimum
+  private static readonly MINIMUM_PAYOUT = PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS;
 
   /**
    * Request a payout and process immediately.
@@ -136,9 +137,8 @@ export class PayoutService {
       }
 
       const amountDollars = payout.amountCents / 100;
-      // Platform fee: keep it configurable; default to 7% held as platform revenue
-      const PLATFORM_FEE_RATE = 0.07;
-      const platformFeeAmount = amountDollars * PLATFORM_FEE_RATE;
+      // Platform fee from centralized config (10%)
+      const platformFeeAmount = amountDollars * PLATFORM_FEE_CONFIG.PERCENTAGE;
       // Payout fee (audit metadata only; charged by Stripe) – standard $0.25
       const PAYOUT_FEE_CENTS = 25;
 

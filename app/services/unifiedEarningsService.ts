@@ -31,6 +31,7 @@ import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
 import { FinancialUtils, FinancialErrorCode } from '../types/financial';
 import { FinancialLogger } from '../utils/financialLogger';
 import { FinancialValidationService } from './financialValidationService';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 
 // Unified data types
 export interface WriterBalance {
@@ -85,8 +86,8 @@ export interface CompleteEarningsData {
 }
 
 export class UnifiedEarningsService {
-  private static readonly MINIMUM_PAYOUT_THRESHOLD = 25; // $25 minimum
-  private static readonly PLATFORM_FEE_PERCENTAGE = 0.10; // 10% platform fee
+  private static readonly MINIMUM_PAYOUT_THRESHOLD = PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS;
+  private static readonly PLATFORM_FEE_PERCENTAGE = PLATFORM_FEE_CONFIG.PERCENTAGE; // From centralized config
 
   /**
    * Get writer's complete balance information

@@ -314,8 +314,19 @@ export async function GET(request: NextRequest) {
       paidOutBalance: balance?.paidOutUsdCents ? balance.paidOutUsdCents / 100 : 0
     };
 
-    // Get earnings sources (incoming allocations)
+    // Get earnings sources (incoming allocations) - this applies funding ratio to show only funded amounts
     const incomingAllocations = await getIncomingAllocationsForUser(userId);
+
+    // CRITICAL: Use the funded pending amount from getIncomingAllocationsForUser, NOT the raw database value
+    // The database stores the full allocation amount, but recipients should only see funded portions
+    // (allocations capped by sponsor's actual subscription amount)
+    const fundedPendingBalance = incomingAllocations.totalUsdValue || 0;
+
+    console.log(`[EARNINGS API] Pending balance comparison:`, {
+      rawFromDatabase: `$${earningsBreakdown.pendingBalance.toFixed(2)}`,
+      fundedCalculated: `$${fundedPendingBalance.toFixed(2)}`,
+      difference: `$${(earningsBreakdown.pendingBalance - fundedPendingBalance).toFixed(2)}`
+    });
 
     const completeData = {
       balance: earningsBreakdown,
@@ -327,7 +338,7 @@ export async function GET(request: NextRequest) {
     console.log(`[EARNINGS API] Simple earnings loaded for user ${userId.substring(0, 8)}...:`, {
       totalEarnings: `$${earningsBreakdown.totalEarnings.toFixed(2)}`,
       availableBalance: `$${earningsBreakdown.availableBalance.toFixed(2)}`,
-      pendingBalance: `$${earningsBreakdown.pendingBalance.toFixed(2)}`
+      pendingBalance: `$${fundedPendingBalance.toFixed(2)} (funded)`
     });
 
     // Use the allocations data we already fetched from getIncomingAllocationsForUser
@@ -337,8 +348,9 @@ export async function GET(request: NextRequest) {
     const earnings = {
       totalEarnings: earningsBreakdown.totalEarnings,
       availableBalance: earningsBreakdown.availableBalance,
-      pendingBalance: earningsBreakdown.pendingBalance,
-      hasEarnings: earningsBreakdown.totalEarnings > 0 || earningsBreakdown.availableBalance > 0 || earningsBreakdown.pendingBalance > 0,
+      // Use funded pending balance - this reflects what they'll actually receive
+      pendingBalance: fundedPendingBalance,
+      hasEarnings: earningsBreakdown.totalEarnings > 0 || earningsBreakdown.availableBalance > 0 || fundedPendingBalance > 0,
       pendingAllocations: pendingAllocations,
       earningsHistory: completeData.earnings,
       payoutHistory: completeData.payouts

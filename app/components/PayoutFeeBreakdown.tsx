@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 
 interface PayoutFeeBreakdownProps {
   grossAmount: number;
@@ -25,10 +26,10 @@ export default function PayoutFeeBreakdown({
 }: PayoutFeeBreakdownProps) {
   
   const calculateFees = (amount: number): FeeCalculation => {
-    // Fee configuration (should match backend)
+    // Fee configuration - uses centralized platform fee config
     const stripeFeePercentage = 2.9; // 2.9%
     const stripeFeeFixed = 0.30; // $0.30
-    const platformFeePercentage = 10; // 10%
+    const platformFeePercentage = PLATFORM_FEE_CONFIG.PERCENTAGE_DISPLAY; // From centralized config
 
     const stripeFee = (amount * stripeFeePercentage) / 100;
     const platformFee = (amount * platformFeePercentage) / 100;

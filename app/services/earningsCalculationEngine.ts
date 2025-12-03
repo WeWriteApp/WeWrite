@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { getCollectionName } from '../utils/environmentConfig';
 import { formatUsdCents } from '../utils/formatCurrency';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 
 export interface UserEarnings {
   userId: string;
@@ -76,7 +77,7 @@ export interface MonthlyEarningsReport {
 
 export class EarningsCalculationEngine {
   private static instance: EarningsCalculationEngine;
-  private readonly PLATFORM_FEE_PERCENTAGE = 7; // 7% platform fee
+  private readonly PLATFORM_FEE_PERCENTAGE = PLATFORM_FEE_CONFIG.PERCENTAGE_DISPLAY; // From centralized config (10%)
 
   static getInstance(): EarningsCalculationEngine {
     if (!this.instance) {

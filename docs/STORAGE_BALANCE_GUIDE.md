@@ -10,7 +10,7 @@ WeWrite now uses **Stripe's Storage Balance** system for perfect fund separation
 
 ### **Payments Balance**
 - **What it contains:** Your platform revenue
-- **Sources:** Platform fees (7%) + unallocated subscription funds
+- **Sources:** Platform fees (10%) + unallocated subscription funds
 - **Usage:** This is your money - transfer to business bank account anytime
 - **Example:** $3,000 in Payments Balance = $3,000 you can keep
 
@@ -47,7 +47,7 @@ Unallocated $3 → Remains in Payments Balance as platform revenue
 ### **4. Monthly Payouts**
 ```
 Storage Balance ($7) → Creator bank accounts
-Platform fee (7%) → Retained in Payments Balance
+Platform fee (10%) → Retained in Payments Balance
 ```
 
 ---
@@ -62,7 +62,7 @@ Platform fee (7%) → Retained in Payments Balance
 ### **Month-End Processing:**
 1. **Lock allocations** (no more changes allowed)
 2. **Storage/Payments transfer** (`/api/cron/storage-balance-processing`): allocated → Storage Balance; unallocated → Payments Balance
-3. **Calculate earnings** (with 7% platform fee)
+3. **Calculate earnings** (with 10% platform fee)
 4. **Process payouts** from Storage Balance
 5. **Platform revenue** remains in Payments Balance
 
@@ -137,7 +137,7 @@ Tracking: Stripe-managed escrow system
 
 ### **Monthly Processing:**
 1. **Allocation Locking** → Automatic on last day of month
-2. **Earnings Calculation** → Automatic with 7% platform fee
+2. **Earnings Calculation** → Automatic with 10% platform fee
 3. **Payout Processing** → Automatic on 1st of next month
 4. **Balance Monitoring** → Continuous monitoring and alerts
 
