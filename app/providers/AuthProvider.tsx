@@ -6,6 +6,7 @@ import { getEnvironmentType } from '../utils/environmentConfig';
 import { identifyUser } from '../utils/logrocket';
 import { useRouter } from 'next/navigation';
 import { isAdmin } from '../utils/isAdmin';
+import { checkEmailVerificationOnStartup } from '../services/emailVerificationNotifications';
 
 // Create context
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -477,6 +478,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           if (data.isAuthenticated && data.user) {
             setUser(data.user);
+            
+            // If user is not email verified, check if we should show a reminder notification
+            if (!data.user.emailVerified) {
+              checkEmailVerificationOnStartup();
+            }
           } else {
             setUser(null);
           }

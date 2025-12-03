@@ -8,7 +8,10 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect, useCallback } from "react"
-// Removed direct Firebase imports - now using API endpoints
+// Firebase imports for email verification after registration
+import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../../firebase/config'
+import { createEmailVerificationNotification } from '../../services/notificationsApi'
 import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
@@ -215,6 +218,22 @@ export function RegisterForm({
           console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
         }
 
+        // Sign in the user to get a Firebase user object, then send verification email
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password)
+          if (userCredential.user) {
+            await sendEmailVerification(userCredential.user)
+            console.log('Verification email sent successfully to:', email)
+            
+            // Create a reminder notification in the notification center
+            await createEmailVerificationNotification(result.data.uid)
+            console.log('Email verification reminder notification created')
+          }
+        } catch (emailError) {
+          // Don't fail registration if email sending fails - user can resend from banner
+          console.error('Failed to send verification email:', emailError)
+        }
+
         // Track user creation event
         trackAuthEvent('USER_CREATED', {
           user_id: result.data.uid,
@@ -229,7 +248,7 @@ export function RegisterForm({
         // Redirect to home page
         console.log("Account created successfully, redirecting to home")
 
-          // Redirect to home page after a short delay - user will see email verification banner
+        // Redirect to home page after a short delay - user will see email verification banner
         setTimeout(() => {
           router.push('/')
         }, 1500)

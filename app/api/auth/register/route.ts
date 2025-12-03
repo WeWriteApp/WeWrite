@@ -97,21 +97,10 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString()
     });
 
-    // Send email verification
-    try {
-      const emailVerificationLink = await auth.generateEmailVerificationLink(email);
-      
-      // In a real application, you would send this via your email service
-      // For now, we'll just log it and return it in the response for development
-      console.log('Email verification link:', emailVerificationLink);
-      
-      // TODO: Integrate with email service to send verification email
-      // await sendVerificationEmail(email, emailVerificationLink);
-      
-    } catch (emailError) {
-      console.error('Failed to generate email verification link:', emailError);
-      // Don't fail the registration if email verification fails
-    }
+    // Note: Email verification is sent client-side after registration
+    // The client signs in and calls sendEmailVerification() from Firebase client SDK
+    // This ensures the email is sent through Firebase's built-in email delivery system
+    console.log('User registered successfully. Client will send verification email.');
 
     return createApiResponse({
       uid: userRecord.uid,

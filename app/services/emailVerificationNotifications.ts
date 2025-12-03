@@ -183,9 +183,9 @@ export const createEmailVerificationNotificationIfNeeded = async (): Promise<boo
     }
     
     const user = auth.currentUser;
-    if (!session) return false;
+    if (!user) return false;
     
-    const notificationId = await createEmailVerificationNotification(session.uid);
+    const notificationId = await createEmailVerificationNotification(user.uid);
     
     if (notificationId) {
       recordNotificationCreated();
