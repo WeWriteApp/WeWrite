@@ -218,7 +218,8 @@ export default function MobileBottomNav() {
     const navPageRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
-      '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
+      '/search', '/notifications', '/random-pages', '/trending-pages', '/following',
+      '/settings', '/leaderboard', '/timeline'
     ];
 
     // Show on settings pages now
@@ -262,9 +263,10 @@ export default function MobileBottomNav() {
     }
 
     // Hide only on ContentPages at /id/ (single segment routes that aren't NavPages)
+    // These pages have the floating allocation bar instead
     const segments = pathname.split('/').filter(Boolean);
     return segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`);
-  }, [pathname]);
+  }, [pathname, user?.uid]);
 
   // Check PWA mode on mount and window resize, track analytics
   useEffect(() => {

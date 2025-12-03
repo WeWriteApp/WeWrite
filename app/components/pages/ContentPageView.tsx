@@ -23,6 +23,7 @@ import ContentPageHeader from "./ContentPageHeader";
 import ContentPageFooter from "./ContentPageFooter";
 import AllocationBar from "../payments/AllocationBar";
 import RelatedPagesSection from "../features/RelatedPagesSection";
+import RepliesSection from "../features/RepliesSection";
 import PageGraphView from "./PageGraphView";
 
 import DeletedPageBanner from "../utils/DeletedPageBanner";
@@ -1832,6 +1833,12 @@ export default function ContentPageView({
                     </div>
                   </div>
                 )}
+
+                {/* Replies Section - shows all replies to this page with type filtering */}
+                <RepliesSection
+                  pageId={page.id}
+                  pageTitle={page.title}
+                />
 
                 <RelatedPagesSection
                   page={page}

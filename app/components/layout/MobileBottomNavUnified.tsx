@@ -144,20 +144,41 @@ export default function MobileBottomNavUnified() {
     trackNavigationEvent(NAVIGATION_EVENTS.TOOLBAR_RESET_TO_DEFAULT, {});
   }, [resetOrder, trackNavigationEvent]);
 
-  // Route checks
+  // Route checks - determines if we should hide mobile nav on this route
   const isContentPageRoute = useCallback(() => {
     const navPageRoutes = ['/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
-      '/search', '/notifications', '/random-pages', '/trending-pages', '/following', '/leaderboard'];
+      '/search', '/notifications', '/random-pages', '/trending-pages', '/following', '/leaderboard',
+      '/settings', '/timeline'];
+    
+    // Always show on NavPage routes
     if (navPageRoutes.includes(pathname)) return false;
+    
+    // Hide on other user/group pages (show on own profile)
     if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
       if (user?.uid && pathname === `/user/${user.uid}`) return false;
       return true;
     }
+    
+    // Hide on admin routes
     if (pathname.startsWith('/admin/')) return true;
+    
+    // Hide on settings subpages
     if (pathname.startsWith('/settings/')) return true;
+    
+    // Hide on location pages
     if (pathname.includes('/location')) return true;
+    
+    // Hide on checkout/payment pages
     if (pathname.includes('/checkout') || pathname.includes('/payment') || pathname.includes('/subscription')) return true;
+    
+    // Hide on ContentPages (single segment routes that have the floating allocation bar)
+    // These are page IDs like /abc123
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`)) {
+      return true;
+    }
+    
     return false;
   }, [pathname, user?.uid]);
 

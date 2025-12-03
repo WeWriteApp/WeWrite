@@ -228,50 +228,50 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
       )}
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-2xl font-bold">{summaryStats.totalPayouts}</div>
-                <div className="text-sm text-muted-foreground">Total Payouts</div>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex items-center gap-1 md:gap-2">
+              <FileText className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-base md:text-2xl font-bold">{summaryStats.totalPayouts}</div>
+                <div className="text-xs md:text-sm text-muted-foreground truncate">Total</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-2xl font-bold">{formatCurrency(summaryStats.totalAmount)}</div>
-                <div className="text-sm text-muted-foreground">Total Amount</div>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex items-center gap-1 md:gap-2">
+              <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-base md:text-2xl font-bold truncate">{formatCurrency(summaryStats.totalAmount)}</div>
+                <div className="text-xs md:text-sm text-muted-foreground truncate">Amount</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <div>
-                <div className="text-2xl font-bold">{summaryStats.completedPayouts}</div>
-                <div className="text-sm text-muted-foreground">Completed</div>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex items-center gap-1 md:gap-2">
+              <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-base md:text-2xl font-bold">{summaryStats.completedPayouts}</div>
+                <div className="text-xs md:text-sm text-muted-foreground truncate">Completed</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-600" />
-              <div>
-                <div className="text-2xl font-bold">{summaryStats.pendingPayouts}</div>
-                <div className="text-sm text-muted-foreground">Pending</div>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex items-center gap-1 md:gap-2">
+              <Clock className="h-3 w-3 md:h-4 md:w-4 text-yellow-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-base md:text-2xl font-bold">{summaryStats.pendingPayouts}</div>
+                <div className="text-xs md:text-sm text-muted-foreground truncate">Pending</div>
               </div>
             </div>
           </CardContent>
@@ -550,11 +550,15 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => window.open('https://dashboard.stripe.com/connect/accounts', '_blank')}
+            onClick={() => {
+              // Use location.href for PWA compatibility instead of window.open
+              window.location.href = 'https://dashboard.stripe.com/connect/accounts';
+            }}
             className="flex items-center gap-2"
           >
             <ExternalLink className="h-4 w-4" />
-            View payouts dashboard on Stripe
+            <span className="hidden sm:inline">View payouts dashboard on Stripe</span>
+            <span className="sm:hidden">Stripe Dashboard</span>
           </Button>
         </div>
       </CardHeader>

@@ -184,7 +184,8 @@ export default function SimpleEarningsDashboard() {
         }
         throw new Error(message);
       }
-      window.open(data.url, '_blank');
+      // Use location.href instead of window.open for PWA compatibility
+      window.location.href = data.url;
     } catch (error: any) {
       console.error('[SimpleEarningsDashboard] Error creating account link:', error);
       toast({
@@ -323,49 +324,52 @@ export default function SimpleEarningsDashboard() {
       </Card>
 
       {/* Earnings Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Available Balance
+          <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium flex items-center">
+              <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Available Balance</span>
+              <span className="sm:hidden">Available</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="p-2 md:p-4 pt-0">
+            <div className="text-base md:text-2xl font-bold">
               ${(Number(earnings?.availableBalance) || 0).toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">Ready for payout</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">Ready for payout</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Clock className="w-4 h-4 mr-2" />
-              Pending Balance
+          <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium flex items-center">
+              <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Pending Balance</span>
+              <span className="sm:hidden">Pending</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="p-2 md:p-4 pt-0">
+            <div className="text-base md:text-2xl font-bold">
               ${(Number(earnings?.pendingBalance) || 0).toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">This month's earnings</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">This month's earnings</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Total Earned
+          <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium flex items-center">
+              <CheckCircle className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Total Earned</span>
+              <span className="sm:hidden">Total</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="p-2 md:p-4 pt-0">
+            <div className="text-base md:text-2xl font-bold">
               ${(Number(earnings?.totalEarnings) || 0).toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">Lifetime earnings</p>
           </CardContent>
         </Card>
       </div>
