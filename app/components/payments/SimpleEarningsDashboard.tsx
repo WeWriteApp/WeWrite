@@ -96,7 +96,8 @@ export default function SimpleEarningsDashboard() {
       const bankAccountStatus = bankResponse.ok ? await bankResponse.json() : null;
       const payouts = payoutsResponse.ok ? await payoutsResponse.json() : [];
 
-      setEarnings(earningsBreakdown);
+      // Extract earnings data from the API response (API returns { success: true, earnings: {...}, data: {...} })
+      setEarnings(earningsBreakdown?.earnings || earningsBreakdown?.data || null);
       setBankStatus(bankAccountStatus);
       setPayoutHistory(payouts);
 
