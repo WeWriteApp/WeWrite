@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { syncUserToResend } from '../../../services/resendContactsService';
 
 interface RegisterRequest {
   email: string;
@@ -95,6 +96,11 @@ export async function POST(request: NextRequest) {
       username,
       email,
       createdAt: new Date().toISOString()
+    });
+
+    // Sync user to Resend for broadcast emails (async, non-blocking)
+    syncUserToResend({ email, username }).catch(err => {
+      console.warn('[Register] Failed to sync user to Resend:', err.message);
     });
 
     // Note: Email verification is sent client-side after registration

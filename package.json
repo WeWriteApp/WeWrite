@@ -78,6 +78,8 @@
     "test:report": "bun run app/scripts/generate-test-report.js",
     "test:production": "bun run app/scripts/run-production-tests.ts",
     "production-readiness-check": "bun run app/scripts/production-readiness-check.ts",
+    "resend:sync": "bun run scripts/sync-users-to-resend.ts",
+    "resend:sync:dry": "bun run scripts/sync-users-to-resend.ts --dry-run",
     "analyze:bundle": "bun run scripts/analyze-bundle.js",
     "analyze:build": "bun run build && bun run analyze:bundle",
     "perf:audit": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html --chrome-flags='--headless'",
