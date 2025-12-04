@@ -97,10 +97,10 @@ const userCategories: UserCategoryConfig[] = [
 const pageCategories: PageCategoryConfig[] = [
   {
     id: 'new-supporters',
-    label: 'New Supporters',
+    label: 'New Sponsors',
     icon: Heart,
-    description: 'Most supporters gained',
-    countLabel: 'supporters'
+    description: 'Most users donating to this page',
+    countLabel: 'sponsors'
   },
   {
     id: 'most-replies',
@@ -268,14 +268,9 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex-1 flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">{category.label}</h1>
-            <p className="text-sm text-muted-foreground">{category.description}</p>
-          </div>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold">{category.label}</h1>
+          <p className="text-sm text-muted-foreground">{category.description}</p>
         </div>
         <button
           onClick={handleShare}
@@ -289,7 +284,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
       {/* Month indicator */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Calendar className="h-4 w-4" />
-        <span>{selectedMonth === getCurrentMonth() ? 'This month' : formatMonth(selectedMonth)}</span>
+        <span>{formatMonth(selectedMonth)}</span>
       </div>
 
       {/* Content */}
@@ -308,7 +303,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
           </div>
         ) : data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Icon className="h-12 w-12 text-muted-foreground/30" />
+            <Heart className="h-12 w-12 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
               No data available yet
             </p>
@@ -322,7 +317,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
               <div className="flex-shrink-0 text-right">{category.countLabel}</div>
             </div>
             
-            {data.map((entry: any) => renderEntry(entry, category))}
+            {data.slice(0, 20).map((entry: any) => renderEntry(entry, category))}
           </div>
         )}
       </div>
@@ -410,9 +405,9 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
     }
   };
 
-  // Calculate centered transform - card width is 85%, gap between cards
-  const cardWidthPercent = 85;
-  const gapPx = 12;
+  // Calculate centered transform - card width is 75% to show neighboring cards
+  const cardWidthPercent = 75;
+  const gapPercent = 3; // 3% gap
   
   return (
     <div className="space-y-3">
@@ -423,7 +418,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
       </div>
 
       {/* Carousel */}
-      <div className="overflow-hidden">
+      <div className="overflow-hidden px-4">
         <div 
           ref={carouselRef}
           className="relative touch-pan-y"
@@ -447,30 +442,29 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
             <ChevronRight className="h-5 w-5" />
           </button>
 
-          {/* Cards Container - properly centered */}
+          {/* Cards Container - centered with visible neighbors */}
           <div 
             className="flex transition-transform duration-300 ease-out"
             style={{ 
-              // Center the current card: start with 7.5% offset (to center 85% card), 
-              // then move by card width + gap for each index
-              transform: `translateX(calc(7.5% - ${selectedIndex * cardWidthPercent}% - ${selectedIndex * gapPx}px))`,
-              paddingLeft: '0',
-              paddingRight: '0'
+              // Center the current card: offset by (100% - cardWidth) / 2 = 12.5%
+              // Then move by (cardWidth + gap) for each index
+              transform: `translateX(calc(12.5% - ${selectedIndex * (cardWidthPercent + gapPercent)}%))`,
             }}
           >
             {categories.map((category, index) => {
-              const Icon = category.icon;
               const leaderboard = data[category.id] || [];
               const isActive = index === selectedIndex;
               
               return (
                 <div
                   key={category.id}
-                  className="flex-shrink-0 px-1.5"
+                  className="flex-shrink-0"
                   style={{ 
                     width: `${cardWidthPercent}%`,
+                    marginRight: `${gapPercent}%`,
                     opacity: isActive ? 1 : 0.5, 
-                    transition: 'opacity 0.3s ease' 
+                    transform: isActive ? 'scale(1)' : 'scale(0.95)',
+                    transition: 'opacity 0.3s ease, transform 0.3s ease' 
                   }}
                 >
                   <div 
@@ -480,14 +474,9 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                     {/* Card Header */}
                     <div className="px-4 py-3 border-b border-border bg-muted/30">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
-                            <Icon className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-base">{category.label}</h3>
-                            <p className="text-xs text-muted-foreground">{category.description}</p>
-                          </div>
+                        <div>
+                          <h3 className="font-semibold text-base">{category.label}</h3>
+                          <p className="text-xs text-muted-foreground">{category.description}</p>
                         </div>
                         <button
                           onClick={(e) => handleShare(e, category)}
@@ -514,7 +503,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                       </div>
                     ) : leaderboard.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <Icon className="h-12 w-12 text-muted-foreground/30" />
+                        <Heart className="h-12 w-12 text-muted-foreground/30" />
                         <p className="text-sm text-muted-foreground">
                           No data available yet
                         </p>
@@ -530,12 +519,12 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                         
                         {leaderboard.slice(0, 5).map((entry: any) => renderEntry(entry, category))}
                         
-                        {/* View more indicator */}
-                        {leaderboard.length > 5 && (
-                          <div className="px-3 py-2 text-center text-xs text-muted-foreground bg-muted/10">
-                            +{leaderboard.length - 5} more • Tap to view all
-                          </div>
-                        )}
+                        {/* View more button */}
+                        <div className="px-3 py-2 text-center">
+                          <span className="text-xs text-primary font-medium">
+                            View More
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
