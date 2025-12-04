@@ -55,9 +55,9 @@ const categories: CategoryConfig[] = [
   },
   {
     id: 'pages-linked',
-    label: 'Pages Linked',
+    label: 'Links Received',
     icon: Link2,
-    description: 'Most links created',
+    description: 'Most links to their pages',
     countLabel: 'links'
   },
   {
@@ -88,8 +88,8 @@ const getMedalColor = (rank: number): string | null => {
 
 // Period display labels
 const periodLabels: Record<TimePeriod, string> = {
-  'week': 'This Week',
-  'month': 'This Month',
+  'week': 'Past 7 Days',
+  'month': 'Past 30 Days',
   '6months': 'Past 6 Months'
 };
 

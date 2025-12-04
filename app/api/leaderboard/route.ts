@@ -33,15 +33,18 @@ function getDateRange(period: TimePeriod): { start: Date; end: Date } {
   
   let start: Date;
   if (period === 'week') {
+    // Past 7 days
     start = new Date(now);
     start.setDate(start.getDate() - 7);
   } else if (period === '6months') {
-    // Past 6 months
+    // Past 6 months (rolling)
     start = new Date(now);
     start.setMonth(start.getMonth() - 6);
   } else {
-    // This month
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    // "month" = Past 30 days (rolling window, not calendar month)
+    // This ensures month always covers more time than week
+    start = new Date(now);
+    start.setDate(start.getDate() - 30);
   }
   
   // Set to start of day
@@ -143,7 +146,7 @@ async function getPagesCreatedLeaderboard(
   return await enrichUserData(db, sortedUsers);
 }
 
-// Get top users by pages linked (backlinks created) in time period
+// Get top users by links received (backlinks TO their pages) in time period
 async function getPagesLinkedLeaderboard(
   db: FirebaseFirestore.Firestore,
   start: Date,
@@ -151,6 +154,7 @@ async function getPagesLinkedLeaderboard(
   limit: number
 ): Promise<LeaderboardUser[]> {
   const backlinksCollection = getCollectionName('backlinks');
+  const pagesCollection = getCollectionName('pages');
   
   // Query backlinks created in the time period
   const backlinksSnapshot = await db.collection(backlinksCollection)
@@ -158,15 +162,54 @@ async function getPagesLinkedLeaderboard(
     .where('createdAt', '<=', end)
     .get();
 
-  // Count backlinks created per user (the one who created the link, not target)
+  // Collect all unique page IDs (both source and target) to look up owners
+  const allPageIds = new Set<string>();
+  backlinksSnapshot.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.targetPageId) allPageIds.add(data.targetPageId);
+    if (data.sourcePageId) allPageIds.add(data.sourcePageId);
+  });
+
+  // Batch fetch page owners for all pages
+  const pageOwners = new Map<string, string>();
+  const pageIdArray = Array.from(allPageIds);
+  const chunkSize = 30; // Firestore 'in' query limit
+  
+  for (let i = 0; i < pageIdArray.length; i += chunkSize) {
+    const chunk = pageIdArray.slice(i, i + chunkSize);
+    try {
+      const pagesSnapshot = await db.collection(pagesCollection)
+        .where('__name__', 'in', chunk)
+        .get();
+      
+      pagesSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.userId) {
+          pageOwners.set(doc.id, data.userId);
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching page owners:', error);
+    }
+  }
+
+  // Count links received per page owner (the target page's owner)
+  // Excludes self-links (where source page owner == target page owner)
   const userCounts = new Map<string, number>();
   
   backlinksSnapshot.docs.forEach(doc => {
     const data = doc.data();
-    // The source page owner created the link
-    const userId = data.sourceUserId;
-    if (userId) {
-      userCounts.set(userId, (userCounts.get(userId) || 0) + 1);
+    const targetPageId = data.targetPageId;
+    const sourcePageId = data.sourcePageId;
+    
+    if (targetPageId && sourcePageId) {
+      const targetOwnerId = pageOwners.get(targetPageId);
+      const sourceOwnerId = pageOwners.get(sourcePageId);
+      
+      // Only count if we know both owners and it's not self-linking
+      if (targetOwnerId && sourceOwnerId && targetOwnerId !== sourceOwnerId) {
+        userCounts.set(targetOwnerId, (userCounts.get(targetOwnerId) || 0) + 1);
+      }
     }
   });
 
