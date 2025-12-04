@@ -10,7 +10,7 @@
  *   bun run scripts/sync-users-to-resend.ts --limit 100
  */
 
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 import { config } from 'dotenv';
 
 // Load environment variables
@@ -189,10 +189,8 @@ async function main() {
           created++;
         }
         
-        // Rate limiting - Resend allows 10 requests per second
-        if ((i + 1) % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 1100));
-        }
+        // Rate limiting - Resend Contacts API allows 2 requests per second
+        await new Promise(resolve => setTimeout(resolve, 600));
       }
     } catch (error: any) {
       console.error(`${progress} ❌ Failed: ${user.email} - ${error.message}`);
