@@ -15,7 +15,7 @@ import { addRecentSearch, addRecentSearchDebounced } from "../utils/recentSearch
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 import RecentSearches from '../components/search/RecentSearches';
-import { trackInteractionEvent } from '../utils/analytics-service';
+import { getAnalyticsService } from '../utils/analytics-service';
 import { SHARE_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
 // Import the new separated components
@@ -369,8 +369,13 @@ const SearchPage = React.memo(() => {
       ? `Check out these search results for "${searchTerm}" on WeWrite`
       : "Check out WeWrite search";
 
+    // Get analytics service
+    const analytics = getAnalyticsService();
+
     // Track share started
-    trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_STARTED, EVENT_CATEGORIES.SHARE, {
+    analytics?.trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_STARTED, {
+      category: EVENT_CATEGORIES.SHARE,
+      action: SHARE_EVENTS.SEARCH_SHARE_STARTED,
       search_query: searchTerm,
       has_query: Boolean(searchTerm)
     });
@@ -384,7 +389,9 @@ const SearchPage = React.memo(() => {
       })
       .then(() => {
         // Track successful share
-        trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
+        analytics?.trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_SUCCEEDED, {
+          category: EVENT_CATEGORIES.SHARE,
+          action: SHARE_EVENTS.SEARCH_SHARE_SUCCEEDED,
           search_query: searchTerm,
           share_method: 'native_share',
           has_query: Boolean(searchTerm)
@@ -395,13 +402,17 @@ const SearchPage = React.memo(() => {
         console.error('Error sharing:', err);
         // Track cancelled or failed share
         if (err.name === 'AbortError') {
-          trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_CANCELLED, EVENT_CATEGORIES.SHARE, {
+          analytics?.trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_CANCELLED, {
+            category: EVENT_CATEGORIES.SHARE,
+            action: SHARE_EVENTS.SEARCH_SHARE_CANCELLED,
             search_query: searchTerm,
             share_method: 'native_share',
             has_query: Boolean(searchTerm)
           });
         } else {
-          trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_FAILED, EVENT_CATEGORIES.SHARE, {
+          analytics?.trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_FAILED, {
+            category: EVENT_CATEGORIES.SHARE,
+            action: SHARE_EVENTS.SEARCH_SHARE_FAILED,
             search_query: searchTerm,
             share_method: 'native_share',
             error_message: err.message,
@@ -415,7 +426,9 @@ const SearchPage = React.memo(() => {
       // Fallback for browsers that don't support the Web Share API
       copyToClipboard(url.toString());
       // Track successful clipboard copy
-      trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_SUCCEEDED, EVENT_CATEGORIES.SHARE, {
+      analytics?.trackInteractionEvent(SHARE_EVENTS.SEARCH_SHARE_SUCCEEDED, {
+        category: EVENT_CATEGORIES.SHARE,
+        action: SHARE_EVENTS.SEARCH_SHARE_SUCCEEDED,
         search_query: searchTerm,
         share_method: 'copy_link',
         has_query: Boolean(searchTerm)
