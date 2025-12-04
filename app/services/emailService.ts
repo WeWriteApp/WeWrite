@@ -660,8 +660,8 @@ export const sendSecurityAlert = async (options: {
   }
 };
 
-// Export the Resend instance for advanced use cases
-export { resend };
+// Export the getResend function for advanced use cases
+export { getResend };
 
 export default {
   sendEmail,
