@@ -347,4 +347,6 @@ export const config = {
      */
     "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
+  // Run middleware on Node.js runtime (Bun doesn't support Vercel middleware yet)
+  runtime: "nodejs",
 };
