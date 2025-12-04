@@ -25,8 +25,19 @@ import {
 } from '../lib/emailTemplates';
 import { logEmailSend } from './emailLogService';
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-initialize Resend to avoid build-time errors
+let resendInstance: Resend | null = null;
+
+function getResend(): Resend {
+  if (!resendInstance) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not set');
+    }
+    resendInstance = new Resend(apiKey);
+  }
+  return resendInstance;
+}
 
 // Use test domain until DNS propagates, then switch to production
 const FROM_EMAIL = process.env.NODE_ENV === 'production' 
@@ -81,7 +92,7 @@ export const sendVerificationEmail = async (options: VerificationEmailOptions): 
   try {
     const { to, verificationLink, username, userId } = options;
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: verificationEmailTemplate.subject,
@@ -132,7 +143,7 @@ export const sendWelcomeEmail = async (options: WelcomeEmailOptions): Promise<bo
   try {
     const { to, username, userId } = options;
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: welcomeEmailTemplate.subject,
@@ -183,7 +194,7 @@ export const sendPasswordResetEmail = async (options: PasswordResetEmailOptions)
   try {
     const { to, resetLink, username, userId } = options;
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: passwordResetEmailTemplate.subject,
@@ -234,7 +245,7 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
   try {
     const { to, subject, heading, body, ctaText, ctaUrl, username, userId } = options;
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject,
@@ -287,7 +298,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     // Resend requires at least one of: html, text, or react
     const content = html || text || subject;
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: Array.isArray(to) ? to : [to],
       subject,
@@ -323,7 +334,7 @@ export const sendPayoutSetupReminder = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: payoutSetupReminderTemplate.subject,
@@ -378,7 +389,7 @@ export const sendPayoutProcessed = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: payoutProcessedTemplate.subject,
@@ -435,7 +446,7 @@ export const sendSubscriptionConfirmation = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: subscriptionConfirmationTemplate.subject,
@@ -491,7 +502,7 @@ export const sendNewFollowerEmail = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: newFollowerTemplate.subject,
@@ -548,7 +559,7 @@ export const sendPageLinkedEmail = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: pageLinkedTemplate.subject,
@@ -605,7 +616,7 @@ export const sendSecurityAlert = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: accountSecurityTemplate.subject,
