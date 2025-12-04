@@ -196,45 +196,44 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
     }
   };
 
-  // Handle go home with state reset
-  const handleGoHome = async () => {
+  // Handle go home with state reset - use direct navigation for reliability
+  const handleGoHome = () => {
     try {
-      // Try to use error recovery utilities
-      const { resetApplicationState } = await import('../../utils/error-recovery');
-      await resetApplicationState({
-        forceReload: true,
-        redirectUrl: '/',
-        preserveTheme: true,
-        clearCache: true
-      });
-    } catch (e) {
-      console.error("Failed to import error recovery utilities:", e);
-      
-      // Fallback implementation
-      try {
-        // Clear localStorage except theme
-        if (typeof localStorage !== 'undefined') {
-          const theme = localStorage.getItem('theme');
-          localStorage.clear();
-          if (theme) localStorage.setItem('theme', theme);
-        }
-
-        // Clear sessionStorage
-        if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.clear();
-        }
-
-        // Redirect with cache buster
-        if (typeof window !== 'undefined') {
-          window.location.href = `/?_cb=${Date.now()}`;
-        }
-      } catch (fallbackError) {
-        console.error("Fallback reset also failed:", fallbackError);
-        // Last resort - just redirect
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
+      // Clear localStorage except theme
+      if (typeof localStorage !== 'undefined') {
+        const theme = localStorage.getItem('theme');
+        localStorage.clear();
+        if (theme) localStorage.setItem('theme', theme);
       }
+
+      // Clear sessionStorage
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.clear();
+      }
+    } catch (e) {
+      console.error("Failed to clear storage:", e);
+    }
+
+    // Always use direct navigation - most reliable for chunk loading errors
+    if (typeof window !== 'undefined') {
+      window.location.href = `/?_cb=${Date.now()}`;
+    }
+  };
+
+  // Handle go back - use direct navigation fallback
+  const handleGoBack = () => {
+    try {
+      // Check if there's history to go back to
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        window.history.back();
+      } else {
+        // No history, go home instead
+        handleGoHome();
+      }
+    } catch (e) {
+      console.error("Failed to go back:", e);
+      // Fallback to home
+      handleGoHome();
     }
   };
 
@@ -279,7 +278,7 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
                 variant="secondary"
                 size="lg"
                 className="gap-2 w-full sm:w-1/2"
-                onClick={() => window.history.back()}
+                onClick={handleGoBack}
               >
                 <ArrowLeft className="h-5 w-5" />
                 Go Back
@@ -322,6 +321,17 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
             </CollapsibleContent>
           </Collapsible>
         )}
+
+        {/* Fallback link in case buttons don't work */}
+        <noscript>
+          <a href="/" className="text-primary underline mt-4 block">Go to Home Page</a>
+        </noscript>
+        <a 
+          href="/" 
+          className="text-xs text-muted-foreground hover:text-foreground mt-4 block underline"
+        >
+          If buttons don&apos;t work, click here to go home
+        </a>
       </div>
     </div>
   );
