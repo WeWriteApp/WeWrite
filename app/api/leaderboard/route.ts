@@ -1,441 +1,725 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../firebase/admin';
-import { getCollectionName } from '../../utils/environmentConfig';
-import { createApiResponse, createErrorResponse } from '../auth-helper';
+import admin from 'firebase-admin';
 
-/**
- * Leaderboard API Route
- * 
- * Returns top users for various metrics within a time period (week or month)
- * 
- * Categories:
- * - pages-created: Most pages created
- * - pages-linked: Most pages linked (backlinks created)
- * - new-sponsors: Most new sponsors gained
- * - page-visits: Most page visits received
- */
+// Types for the month-based leaderboard system
+export type UserLeaderboardCategory = 'pages-created' | 'links-received' | 'sponsors-gained' | 'page-views';
+export type PageLeaderboardCategory = 'new-supporters' | 'most-replies' | 'most-views' | 'most-links';
+export type LeaderboardType = 'user' | 'page';
 
-type LeaderboardCategory = 'pages-created' | 'pages-linked' | 'new-sponsors' | 'page-visits';
-type TimePeriod = 'week' | 'month' | '6months';
-
-interface LeaderboardUser {
+export interface LeaderboardUser {
   userId: string;
   username: string;
-  photoURL?: string;
+  displayName?: string;
+  profilePicture?: string;
   count: number;
   rank: number;
 }
 
-// Helper to get date range
-function getDateRange(period: TimePeriod): { start: Date; end: Date } {
+export interface LeaderboardPage {
+  pageId: string;
+  title: string;
+  userId: string;
+  username: string;
+  count: number;
+  rank: number;
+}
+
+// Get date range for a specific month (YYYY-MM format)
+function getMonthDateRange(monthStr: string): { startDate: Date; endDate: Date } {
+  const [year, month] = monthStr.split('-').map(Number);
+  const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)); // Last day of month
+  return { startDate, endDate };
+}
+
+// Get current month in YYYY-MM format
+function getCurrentMonth(): string {
   const now = new Date();
-  const end = new Date(now);
-  
-  let start: Date;
-  if (period === 'week') {
-    // Past 7 days
-    start = new Date(now);
-    start.setDate(start.getDate() - 7);
-  } else if (period === '6months') {
-    // Past 6 months (rolling)
-    start = new Date(now);
-    start.setMonth(start.getMonth() - 6);
-  } else {
-    // "month" = Past 30 days (rolling window, not calendar month)
-    // This ensures month always covers more time than week
-    start = new Date(now);
-    start.setDate(start.getDate() - 30);
-  }
-  
-  // Set to start of day
-  start.setHours(0, 0, 0, 0);
-  
-  return { start, end };
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// GET /api/leaderboard?category=pages-created&period=month&limit=10
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const category = (searchParams.get('category') || 'pages-created') as LeaderboardCategory;
-    const period = (searchParams.get('period') || 'month') as TimePeriod;
-    const limitParam = parseInt(searchParams.get('limit') || '10', 10);
-    const limit = Math.min(Math.max(limitParam, 1), 100); // Clamp between 1-100
-
-    const validCategories: LeaderboardCategory[] = ['pages-created', 'pages-linked', 'new-sponsors', 'page-visits'];
-    const validPeriods: TimePeriod[] = ['week', 'month', '6months'];
-
-    if (!validCategories.includes(category)) {
-      return createErrorResponse('BAD_REQUEST', `Invalid category. Valid options: ${validCategories.join(', ')}`);
-    }
-
-    if (!validPeriods.includes(period)) {
-      return createErrorResponse('BAD_REQUEST', `Invalid period. Valid options: ${validPeriods.join(', ')}`);
-    }
-
-    const admin = initAdmin();
-    const db = admin.firestore();
-    const { start, end } = getDateRange(period);
-
-    let leaderboard: LeaderboardUser[] = [];
-
-    console.log(`📊 Fetching leaderboard: ${category} for ${period} (${start.toISOString()} - ${end.toISOString()})`);
-
-    switch (category) {
-      case 'pages-created':
-        leaderboard = await getPagesCreatedLeaderboard(db, start, end, limit);
-        break;
-      case 'pages-linked':
-        leaderboard = await getPagesLinkedLeaderboard(db, start, end, limit);
-        break;
-      case 'new-sponsors':
-        leaderboard = await getNewSponsorsLeaderboard(db, start, end, limit);
-        break;
-      case 'page-visits':
-        leaderboard = await getPageVisitsLeaderboard(db, start, end, limit);
-        break;
-    }
-
-    return createApiResponse({
-      category,
-      period,
-      periodStart: start.toISOString(),
-      periodEnd: end.toISOString(),
-      leaderboard,
-      count: leaderboard.length
-    });
-
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch leaderboard');
-  }
+// Validate month format (YYYY-MM)
+function isValidMonth(monthStr: string): boolean {
+  const regex = /^\d{4}-(0[1-9]|1[0-2])$/;
+  return regex.test(monthStr);
 }
 
-// Get top users by pages created in time period
+// ==================== USER LEADERBOARD FUNCTIONS ====================
+
 async function getPagesCreatedLeaderboard(
   db: FirebaseFirestore.Firestore,
-  start: Date,
-  end: Date,
-  limit: number
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
 ): Promise<LeaderboardUser[]> {
-  const pagesCollection = getCollectionName('pages');
+  const collectionName = isDev ? 'DEV_pages' : 'pages';
   
-  // Query pages created in the time period
-  const pagesSnapshot = await db.collection(pagesCollection)
-    .where('createdAt', '>=', start)
-    .where('createdAt', '<=', end)
+  // Convert to Firestore Timestamps for proper comparison
+  const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
+  const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
+  
+  console.log(`📊 Query: ${collectionName} where createdAt >= ${startDate.toISOString()} and <= ${endDate.toISOString()}`);
+  
+  // Query by date range using Timestamps for proper comparison
+  const snapshot = await db.collection(collectionName)
+    .where('createdAt', '>=', startTimestamp)
+    .where('createdAt', '<=', endTimestamp)
     .get();
 
-  // Count pages per user
-  const userCounts = new Map<string, number>();
+  console.log(`📊 Found ${snapshot.docs.length} documents in date range`);
+
+  const userCounts: Record<string, number> = {};
   
-  pagesSnapshot.docs.forEach(doc => {
+  snapshot.docs.forEach(doc => {
     const data = doc.data();
+    // Filter deleted pages in memory
+    if (data.deleted === true) return;
     const userId = data.userId;
     if (userId) {
-      userCounts.set(userId, (userCounts.get(userId) || 0) + 1);
+      userCounts[userId] = (userCounts[userId] || 0) + 1;
     }
   });
 
-  // Sort and get top users
-  const sortedUsers = Array.from(userCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit);
+  const sorted = Object.entries(userCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, limit)
+    .map(([userId, count], index) => ({
+      userId,
+      username: '',
+      count,
+      rank: index + 1
+    }));
 
-  // Fetch user details
-  return await enrichUserData(db, sortedUsers);
+  return sorted;
 }
 
-// Get top users by links received (backlinks TO their pages) in time period
-async function getPagesLinkedLeaderboard(
+async function getLinksReceivedLeaderboard(
   db: FirebaseFirestore.Firestore,
-  start: Date,
-  end: Date,
-  limit: number
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
 ): Promise<LeaderboardUser[]> {
-  const backlinksCollection = getCollectionName('backlinks');
-  const pagesCollection = getCollectionName('pages');
+  const collectionName = isDev ? 'DEV_pages' : 'pages';
   
-  // Query backlinks created in the time period
-  const backlinksSnapshot = await db.collection(backlinksCollection)
-    .where('createdAt', '>=', start)
-    .where('createdAt', '<=', end)
-    .get();
+  // Get all pages and count incoming links per user
+  // Filter deleted pages in memory to avoid composite index requirement
+  const snapshot = await db.collection(collectionName).get();
 
-  // Collect all unique page IDs (both source and target) to look up owners
-  const allPageIds = new Set<string>();
-  backlinksSnapshot.docs.forEach(doc => {
+  const userLinkCounts: Record<string, number> = {};
+  
+  snapshot.docs.forEach(doc => {
     const data = doc.data();
-    if (data.targetPageId) allPageIds.add(data.targetPageId);
-    if (data.sourcePageId) allPageIds.add(data.sourcePageId);
+    if (data.deleted === true) return;
+    const linkedPages = data.linkedPages || [];
+    
+    // For each linked page, count it toward the linked page's owner
+    linkedPages.forEach((linkedPageId: string) => {
+      // We need to look up who owns that linked page
+      // For efficiency, we'll count by page first then aggregate
+    });
   });
 
-  // Batch fetch page owners for all pages
-  const pageOwners = new Map<string, string>();
-  const pageIdArray = Array.from(allPageIds);
-  const chunkSize = 30; // Firestore 'in' query limit
+  // Alternative approach: count links added in the time period
+  // Reuse the same snapshot, already filtered
+  const linksSnapshot = snapshot;
+
+  const pageLinkCounts: Record<string, { userId: string; count: number }> = {};
+  const pageOwners: Record<string, string> = {};
+
+  linksSnapshot.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.deleted === true) return;
+    pageOwners[doc.id] = data.userId;
+  });
+
+  // Count incoming links per page (skip deleted pages)
+  linksSnapshot.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.deleted === true) return;
+    const linkedPages = data.linkedPages || [];
+    
+    linkedPages.forEach((linkedPageId: string) => {
+      const ownerId = pageOwners[linkedPageId];
+      if (ownerId) {
+        userLinkCounts[ownerId] = (userLinkCounts[ownerId] || 0) + 1;
+      }
+    });
+  });
+
+  const sorted = Object.entries(userLinkCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, limit)
+    .map(([userId, count], index) => ({
+      userId,
+      username: '',
+      count,
+      rank: index + 1
+    }));
+
+  return sorted;
+}
+
+async function getSponsorsGainedLeaderboard(
+  db: FirebaseFirestore.Firestore,
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
+): Promise<LeaderboardUser[]> {
+  const collectionName = isDev ? 'DEV_usdAllocations' : 'usdAllocations';
   
-  for (let i = 0; i < pageIdArray.length; i += chunkSize) {
-    const chunk = pageIdArray.slice(i, i + chunkSize);
-    try {
+  // Convert to Firestore Timestamps for proper comparison
+  const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
+  const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
+  
+  // Query by date range, filter status in memory to avoid composite index
+  const snapshot = await db.collection(collectionName)
+    .where('createdAt', '>=', startTimestamp)
+    .where('createdAt', '<=', endTimestamp)
+    .get();
+
+  // Group by recipient user (page owner)
+  const userSponsorCounts: Record<string, Set<string>> = {};
+  
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    // Filter by status in memory
+    if (data.status !== 'pending') return;
+    const recipientUserId = data.recipientUserId;
+    const senderUserId = data.userId;
+    
+    if (recipientUserId && senderUserId) {
+      if (!userSponsorCounts[recipientUserId]) {
+        userSponsorCounts[recipientUserId] = new Set();
+      }
+      userSponsorCounts[recipientUserId].add(senderUserId);
+    }
+  });
+
+  const sorted = Object.entries(userSponsorCounts)
+    .map(([userId, sponsors]) => ({ userId, count: sponsors.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((item, index) => ({
+      userId: item.userId,
+      username: '',
+      count: item.count,
+      rank: index + 1
+    }));
+
+  return sorted;
+}
+
+async function getPageViewsLeaderboard(
+  db: FirebaseFirestore.Firestore,
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
+): Promise<LeaderboardUser[]> {
+  const collectionName = isDev ? 'DEV_pageViews' : 'pageViews';
+  const pagesCollection = isDev ? 'DEV_pages' : 'pages';
+  
+  // Convert to Firestore Timestamps for proper comparison
+  const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
+  const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
+  
+  try {
+    const snapshot = await db.collection(collectionName)
+      .where('timestamp', '>=', startTimestamp)
+      .where('timestamp', '<=', endTimestamp)
+      .get();
+
+    // Get page owners
+    const pageIds = [...new Set(snapshot.docs.map(doc => doc.data().pageId))];
+    const pageOwners: Record<string, string> = {};
+    
+    // Fetch page owners in batches
+    for (let i = 0; i < pageIds.length; i += 10) {
+      const batch = pageIds.slice(i, i + 10);
       const pagesSnapshot = await db.collection(pagesCollection)
-        .where('__name__', 'in', chunk)
+        .where('__name__', 'in', batch)
         .get();
       
       pagesSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.userId) {
-          pageOwners.set(doc.id, data.userId);
-        }
+        pageOwners[doc.id] = doc.data().userId;
       });
-    } catch (error) {
-      console.error('Error fetching page owners:', error);
     }
-  }
 
-  // Count links received per page owner (the target page's owner)
-  // Excludes self-links (where source page owner == target page owner)
-  const userCounts = new Map<string, number>();
-  
-  backlinksSnapshot.docs.forEach(doc => {
-    const data = doc.data();
-    const targetPageId = data.targetPageId;
-    const sourcePageId = data.sourcePageId;
+    // Count views per user
+    const userViewCounts: Record<string, number> = {};
     
-    if (targetPageId && sourcePageId) {
-      const targetOwnerId = pageOwners.get(targetPageId);
-      const sourceOwnerId = pageOwners.get(sourcePageId);
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const pageId = data.pageId;
+      const userId = pageOwners[pageId];
       
-      // Only count if we know both owners and it's not self-linking
-      if (targetOwnerId && sourceOwnerId && targetOwnerId !== sourceOwnerId) {
-        userCounts.set(targetOwnerId, (userCounts.get(targetOwnerId) || 0) + 1);
+      if (userId) {
+        userViewCounts[userId] = (userViewCounts[userId] || 0) + 1;
       }
+    });
+
+    const sorted = Object.entries(userViewCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, limit)
+      .map(([userId, count], index) => ({
+        userId,
+        username: '',
+        count,
+        rank: index + 1
+      }));
+
+    return sorted;
+  } catch (error) {
+    console.error('Error fetching page views leaderboard:', error);
+    return [];
+  }
+}
+
+// ==================== PAGE LEADERBOARD FUNCTIONS ====================
+
+async function getNewSupportersLeaderboard(
+  db: FirebaseFirestore.Firestore,
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
+): Promise<LeaderboardPage[]> {
+  const collectionName = isDev ? 'DEV_usdAllocations' : 'usdAllocations';
+  const pagesCollection = isDev ? 'DEV_pages' : 'pages';
+  
+  // Convert to Firestore Timestamps for proper comparison
+  const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
+  const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
+  
+  // Query by date range, filter status in memory to avoid composite index
+  const snapshot = await db.collection(collectionName)
+    .where('createdAt', '>=', startTimestamp)
+    .where('createdAt', '<=', endTimestamp)
+    .get();
+
+  // Count unique supporters per page
+  const pageSupporters: Record<string, Set<string>> = {};
+  
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    // Filter by status in memory
+    if (data.status !== 'pending') return;
+    const pageId = data.pageId;
+    const senderUserId = data.userId;
+    
+    if (pageId && senderUserId) {
+      if (!pageSupporters[pageId]) {
+        pageSupporters[pageId] = new Set();
+      }
+      pageSupporters[pageId].add(senderUserId);
     }
   });
 
-  // Sort and get top users
-  const sortedUsers = Array.from(userCounts.entries())
-    .sort((a, b) => b[1] - a[1])
+  // Get top pages by supporter count
+  const topPageIds = Object.entries(pageSupporters)
+    .map(([pageId, supporters]) => ({ pageId, count: supporters.size }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 
-  // Fetch user details
-  return await enrichUserData(db, sortedUsers);
-}
-
-// Get top users by new sponsors gained in time period
-async function getNewSponsorsLeaderboard(
-  db: FirebaseFirestore.Firestore,
-  start: Date,
-  end: Date,
-  limit: number
-): Promise<LeaderboardUser[]> {
-  const pledgesCollection = getCollectionName('usdAllocations');
+  // Fetch page details
+  const pageDetails: Record<string, { title: string; userId: string }> = {};
+  const pageIds = topPageIds.map(p => p.pageId);
   
-  // Query pledges/allocations created in the time period
-  const pledgesSnapshot = await db.collection(pledgesCollection)
-    .where('createdAt', '>=', start)
-    .where('createdAt', '<=', end)
-    .get();
-
-  // Count unique sponsors per page owner
-  // We need to group by page owner, counting unique sponsors
-  const userSponsors = new Map<string, Set<string>>();
-  
-  for (const doc of pledgesSnapshot.docs) {
-    const data = doc.data();
-    const pageId = data.pageId;
-    const sponsorId = data.userId; // The person making the pledge
-    
-    if (pageId && sponsorId) {
-      // We need to look up the page owner
-      // For efficiency, we'll batch this or use a denormalized field
-      // Assuming pageOwnerId is stored in the allocation
-      const pageOwnerId = data.pageOwnerId || data.creatorId;
-      
-      if (pageOwnerId && pageOwnerId !== sponsorId) {
-        if (!userSponsors.has(pageOwnerId)) {
-          userSponsors.set(pageOwnerId, new Set());
-        }
-        userSponsors.get(pageOwnerId)!.add(sponsorId);
-      }
-    }
-  }
-
-  // Convert to counts
-  const userCounts: [string, number][] = Array.from(userSponsors.entries())
-    .map(([userId, sponsors]) => [userId, sponsors.size]);
-
-  // Sort and get top users
-  const sortedUsers = userCounts
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit);
-
-  // Fetch user details
-  return await enrichUserData(db, sortedUsers);
-}
-
-// Get top users by page visits received in time period
-async function getPageVisitsLeaderboard(
-  db: FirebaseFirestore.Firestore,
-  start: Date,
-  end: Date,
-  limit: number
-): Promise<LeaderboardUser[]> {
-  const pageViewsCollection = getCollectionName('pageViews');
-  
-  // Format dates for pageViews (stored as YYYY-MM-DD strings)
-  const startStr = start.toISOString().split('T')[0];
-  const endStr = end.toISOString().split('T')[0];
-  
-  // Query page views in the time period
-  const pageViewsSnapshot = await db.collection(pageViewsCollection)
-    .where('date', '>=', startStr)
-    .where('date', '<=', endStr)
-    .get();
-
-  // Aggregate views per page, then look up page owners
-  const pageViews = new Map<string, number>();
-  
-  pageViewsSnapshot.docs.forEach(doc => {
-    const data = doc.data();
-    const pageId = data.pageId;
-    const views = data.totalViews || 0;
-    
-    if (pageId) {
-      pageViews.set(pageId, (pageViews.get(pageId) || 0) + views);
-    }
-  });
-
-  // Get page owners for all pages
-  const pagesCollection = getCollectionName('pages');
-  const userViews = new Map<string, number>();
-  
-  // Batch fetch page documents to get owner info
-  const pageIds = Array.from(pageViews.keys());
-  const chunkSize = 30; // Firestore 'in' query limit
-  
-  for (let i = 0; i < pageIds.length; i += chunkSize) {
-    const chunk = pageIds.slice(i, i + chunkSize);
+  for (let i = 0; i < pageIds.length; i += 10) {
+    const batch = pageIds.slice(i, i + 10);
     const pagesSnapshot = await db.collection(pagesCollection)
-      .where('__name__', 'in', chunk)
+      .where('__name__', 'in', batch)
       .get();
     
     pagesSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const userId = data.userId;
-      const pageId = doc.id;
-      const views = pageViews.get(pageId) || 0;
-      
-      if (userId && views > 0) {
-        userViews.set(userId, (userViews.get(userId) || 0) + views);
-      }
+      pageDetails[doc.id] = {
+        title: data.title || 'Untitled',
+        userId: data.userId
+      };
     });
   }
 
-  // Sort and get top users
-  const sortedUsers = Array.from(userViews.entries())
-    .sort((a, b) => b[1] - a[1])
+  return topPageIds.map((item, index) => ({
+    pageId: item.pageId,
+    title: pageDetails[item.pageId]?.title || 'Untitled',
+    userId: pageDetails[item.pageId]?.userId || '',
+    username: '',
+    count: item.count,
+    rank: index + 1
+  }));
+}
+
+async function getMostRepliesLeaderboard(
+  db: FirebaseFirestore.Firestore,
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
+): Promise<LeaderboardPage[]> {
+  const collectionName = isDev ? 'DEV_pages' : 'pages';
+  
+  // Convert to Firestore Timestamps for proper comparison
+  const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
+  const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
+  
+  // Find pages that were created as replies to other pages in the time period
+  // Query by date range, filter deleted in memory to avoid composite index
+  const snapshot = await db.collection(collectionName)
+    .where('createdAt', '>=', startTimestamp)
+    .where('createdAt', '<=', endTimestamp)
+    .get();
+
+  // Count replies per parent page
+  const pageReplyCounts: Record<string, number> = {};
+  
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    // Filter deleted pages in memory
+    if (data.deleted === true) return;
+    const replyToPageId = data.replyToPageId;
+    
+    if (replyToPageId) {
+      pageReplyCounts[replyToPageId] = (pageReplyCounts[replyToPageId] || 0) + 1;
+    }
+  });
+
+  // Get top pages by reply count
+  const topPageIds = Object.entries(pageReplyCounts)
+    .map(([pageId, count]) => ({ pageId, count }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 
-  // Fetch user details
-  return await enrichUserData(db, sortedUsers);
+  // Fetch page details
+  const pageDetails: Record<string, { title: string; userId: string }> = {};
+  const pageIds = topPageIds.map(p => p.pageId);
+  
+  for (let i = 0; i < pageIds.length; i += 10) {
+    const batch = pageIds.slice(i, i + 10);
+    const pagesSnapshot = await db.collection(collectionName)
+      .where('__name__', 'in', batch)
+      .get();
+    
+    pagesSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      pageDetails[doc.id] = {
+        title: data.title || 'Untitled',
+        userId: data.userId
+      };
+    });
+  }
+
+  return topPageIds.map((item, index) => ({
+    pageId: item.pageId,
+    title: pageDetails[item.pageId]?.title || 'Untitled',
+    userId: pageDetails[item.pageId]?.userId || '',
+    username: '',
+    count: item.count,
+    rank: index + 1
+  }));
 }
 
-// Enrich user data with username and photo
-// Helper to check if username is valid (not auto-generated placeholder)
-function isValidUsername(username: string | undefined | null): boolean {
-  if (!username || typeof username !== 'string') return false;
-  const trimmed = username.trim();
-  if (!trimmed) return false;
-  if (trimmed.includes('@')) return false;
-  // Auto-generated fallbacks are not valid
-  if (/^user_[a-zA-Z0-9]{8}$/i.test(trimmed)) return false;
-  if (/^User [a-zA-Z0-9]{8}$/i.test(trimmed)) return false;
-  return true;
+async function getMostViewsLeaderboard(
+  db: FirebaseFirestore.Firestore,
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
+): Promise<LeaderboardPage[]> {
+  const collectionName = isDev ? 'DEV_pageViews' : 'pageViews';
+  const pagesCollection = isDev ? 'DEV_pages' : 'pages';
+  
+  // Convert to Firestore Timestamps for proper comparison
+  const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
+  const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
+  
+  try {
+    const snapshot = await db.collection(collectionName)
+      .where('timestamp', '>=', startTimestamp)
+      .where('timestamp', '<=', endTimestamp)
+      .get();
+
+    // Count views per page
+    const pageViewCounts: Record<string, number> = {};
+    
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const pageId = data.pageId;
+      
+      if (pageId) {
+        pageViewCounts[pageId] = (pageViewCounts[pageId] || 0) + 1;
+      }
+    });
+
+    // Get top pages by view count
+    const topPageIds = Object.entries(pageViewCounts)
+      .map(([pageId, count]) => ({ pageId, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+
+    // Fetch page details
+    const pageDetails: Record<string, { title: string; userId: string }> = {};
+    const pageIds = topPageIds.map(p => p.pageId);
+    
+    for (let i = 0; i < pageIds.length; i += 10) {
+      const batch = pageIds.slice(i, i + 10);
+      const pagesSnapshot = await db.collection(pagesCollection)
+        .where('__name__', 'in', batch)
+        .get();
+      
+      pagesSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        pageDetails[doc.id] = {
+          title: data.title || 'Untitled',
+          userId: data.userId
+        };
+      });
+    }
+
+    return topPageIds.map((item, index) => ({
+      pageId: item.pageId,
+      title: pageDetails[item.pageId]?.title || 'Untitled',
+      userId: pageDetails[item.pageId]?.userId || '',
+      username: '',
+      count: item.count,
+      rank: index + 1
+    }));
+  } catch (error) {
+    console.error('Error fetching most views leaderboard:', error);
+    return [];
+  }
 }
+
+async function getMostLinksLeaderboard(
+  db: FirebaseFirestore.Firestore,
+  startDate: Date,
+  endDate: Date,
+  limit: number,
+  isDev: boolean
+): Promise<LeaderboardPage[]> {
+  const collectionName = isDev ? 'DEV_pages' : 'pages';
+  
+  // Get all pages and count incoming links
+  // Filter deleted pages in memory to avoid composite index requirement
+  const snapshot = await db.collection(collectionName).get();
+
+  const pageLinkCounts: Record<string, number> = {};
+  const pageDetails: Record<string, { title: string; userId: string }> = {};
+
+  // First pass: collect page details (skip deleted pages)
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.deleted === true) return;
+    pageDetails[doc.id] = {
+      title: data.title || 'Untitled',
+      userId: data.userId
+    };
+  });
+
+  // Second pass: count incoming links (skip deleted pages)
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.deleted === true) return;
+    const linkedPages = data.linkedPages || [];
+    
+    linkedPages.forEach((linkedPageId: string) => {
+      if (pageDetails[linkedPageId]) {
+        pageLinkCounts[linkedPageId] = (pageLinkCounts[linkedPageId] || 0) + 1;
+      }
+    });
+  });
+
+  // Get top pages by link count
+  const topPageIds = Object.entries(pageLinkCounts)
+    .map(([pageId, count]) => ({ pageId, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+
+  return topPageIds.map((item, index) => ({
+    pageId: item.pageId,
+    title: pageDetails[item.pageId]?.title || 'Untitled',
+    userId: pageDetails[item.pageId]?.userId || '',
+    username: '',
+    count: item.count,
+    rank: index + 1
+  }));
+}
+
+// ==================== USER DATA ENRICHMENT ====================
 
 async function enrichUserData(
   db: FirebaseFirestore.Firestore,
-  userCounts: [string, number][]
+  users: LeaderboardUser[],
+  isDev: boolean
 ): Promise<LeaderboardUser[]> {
-  if (userCounts.length === 0) return [];
-
-  // Try to get user data from RTDB, then fall back to Firestore
-  const admin = await import('../../firebase/admin').then(m => m.initAdmin());
-  const rtdb = admin.database();
-  const usersCollection = getCollectionName('users');
+  const collectionName = isDev ? 'DEV_users' : 'users';
+  const userIds = users.map(u => u.userId);
   
-  const leaderboard: LeaderboardUser[] = [];
-  
-  for (let i = 0; i < userCounts.length; i++) {
-    const [userId, count] = userCounts[i];
-    
-    try {
-      let username: string | null = null;
-      let photoURL: string | undefined = undefined;
+  if (userIds.length === 0) return users;
 
-      // Try RTDB first (primary user store)
-      const userRef = rtdb.ref(`users/${userId}`);
-      const rtdbSnapshot = await userRef.get();
-      
-      if (rtdbSnapshot.exists()) {
-        const rtdbData = rtdbSnapshot.val();
-        photoURL = rtdbData.photoURL;
-        
-        // Check if RTDB has a valid username
-        if (isValidUsername(rtdbData.username)) {
-          username = rtdbData.username;
-        } else if (isValidUsername(rtdbData.displayName)) {
-          // Fall back to displayName if username isn't set
-          username = rtdbData.displayName;
-        }
-      }
+  const userDataMap: Record<string, { username: string; displayName?: string; profilePicture?: string }> = {};
 
-      // If still no valid username, try Firestore
-      if (!username) {
-        try {
-          const firestoreDoc = await db.collection(usersCollection).doc(userId).get();
-          if (firestoreDoc.exists) {
-            const firestoreData = firestoreDoc.data();
-            if (firestoreData) {
-              if (isValidUsername(firestoreData.username)) {
-                username = firestoreData.username;
-              } else if (isValidUsername(firestoreData.displayName)) {
-                username = firestoreData.displayName;
-              }
-              // Also grab photoURL if not found in RTDB
-              if (!photoURL && firestoreData.photoURL) {
-                photoURL = firestoreData.photoURL;
-              }
-            }
-          }
-        } catch (fsError) {
-          console.error(`Error fetching Firestore user ${userId}:`, fsError);
-        }
-      }
+  // Fetch in batches of 10
+  for (let i = 0; i < userIds.length; i += 10) {
+    const batch = userIds.slice(i, i + 10);
+    const snapshot = await db.collection(collectionName)
+      .where('__name__', 'in', batch)
+      .get();
 
-      // Final fallback
-      if (!username) {
-        username = `user_${userId.slice(0, 8)}`;
-      }
-
-      leaderboard.push({
-        userId,
-        username,
-        photoURL,
-        count,
-        rank: i + 1
-      });
-    } catch (error) {
-      console.error(`Error fetching user ${userId}:`, error);
-      leaderboard.push({
-        userId,
-        username: `user_${userId.slice(0, 8)}`,
-        count,
-        rank: i + 1
-      });
-    }
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      userDataMap[doc.id] = {
+        username: data.username || doc.id.slice(0, 8),
+        displayName: data.displayName,
+        profilePicture: data.profilePicture
+      };
+    });
   }
+
+  return users.map(user => ({
+    ...user,
+    username: userDataMap[user.userId]?.username || user.userId.slice(0, 8),
+    displayName: userDataMap[user.userId]?.displayName,
+    profilePicture: userDataMap[user.userId]?.profilePicture
+  }));
+}
+
+async function enrichPageUserData(
+  db: FirebaseFirestore.Firestore,
+  pages: LeaderboardPage[],
+  isDev: boolean
+): Promise<LeaderboardPage[]> {
+  const collectionName = isDev ? 'DEV_users' : 'users';
+  const userIds = [...new Set(pages.map(p => p.userId).filter(Boolean))];
   
-  return leaderboard;
+  if (userIds.length === 0) return pages;
+
+  const userDataMap: Record<string, string> = {};
+
+  // Fetch in batches of 10
+  for (let i = 0; i < userIds.length; i += 10) {
+    const batch = userIds.slice(i, i + 10);
+    const snapshot = await db.collection(collectionName)
+      .where('__name__', 'in', batch)
+      .get();
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      userDataMap[doc.id] = data.username || doc.id.slice(0, 8);
+    });
+  }
+
+  return pages.map(page => ({
+    ...page,
+    username: userDataMap[page.userId] || page.userId?.slice(0, 8) || 'Unknown'
+  }));
+}
+
+// ==================== MAIN API HANDLER ====================
+
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const type = (searchParams.get('type') || 'user') as LeaderboardType;
+  const category = searchParams.get('category') || '';
+  const month = searchParams.get('month') || getCurrentMonth();
+  const limit = parseInt(searchParams.get('limit') || '10', 10);
+
+  // Validate month format
+  if (!isValidMonth(month)) {
+    return NextResponse.json(
+      { error: 'Invalid month format. Use YYYY-MM (e.g., 2025-12)' },
+      { status: 400 }
+    );
+  }
+
+  const { startDate, endDate } = getMonthDateRange(month);
+  const isDev = process.env.NODE_ENV === 'development';
+
+  console.log(`📊 Fetching ${type} leaderboard: ${category} for ${month} (${startDate.toISOString()} - ${endDate.toISOString()})`);
+
+  try {
+    const admin = initAdmin();
+    const db = admin.firestore();
+
+    if (type === 'user') {
+      let users: LeaderboardUser[] = [];
+
+      switch (category as UserLeaderboardCategory) {
+        case 'pages-created':
+          users = await getPagesCreatedLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        case 'links-received':
+          users = await getLinksReceivedLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        case 'sponsors-gained':
+          users = await getSponsorsGainedLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        case 'page-views':
+          users = await getPageViewsLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        default:
+          return NextResponse.json(
+            { error: `Invalid user category: ${category}. Valid options: pages-created, links-received, sponsors-gained, page-views` },
+            { status: 400 }
+          );
+      }
+
+      // Enrich with user data
+      const enrichedUsers = await enrichUserData(db, users, isDev);
+
+      return NextResponse.json({
+        type: 'user',
+        category,
+        month,
+        data: enrichedUsers
+      });
+    } else if (type === 'page') {
+      let pages: LeaderboardPage[] = [];
+
+      switch (category as PageLeaderboardCategory) {
+        case 'new-supporters':
+          pages = await getNewSupportersLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        case 'most-replies':
+          pages = await getMostRepliesLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        case 'most-views':
+          pages = await getMostViewsLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        case 'most-links':
+          pages = await getMostLinksLeaderboard(db, startDate, endDate, limit, isDev);
+          break;
+        default:
+          return NextResponse.json(
+            { error: `Invalid page category: ${category}. Valid options: new-supporters, most-replies, most-views, most-links` },
+            { status: 400 }
+          );
+      }
+
+      // Enrich with user data
+      const enrichedPages = await enrichPageUserData(db, pages, isDev);
+
+      return NextResponse.json({
+        type: 'page',
+        category,
+        month,
+        data: enrichedPages
+      });
+    } else {
+      return NextResponse.json(
+        { error: `Invalid type: ${type}. Valid options: user, page` },
+        { status: 400 }
+      );
+    }
+  } catch (error) {
+    console.error('Leaderboard API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch leaderboard data' },
+      { status: 500 }
+    );
+  }
 }

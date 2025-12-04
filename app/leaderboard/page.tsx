@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from "react";
 import { useAuth } from '../providers/AuthProvider';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -11,41 +11,58 @@ import {
   Eye,
   Loader2,
   Medal,
-  Calendar,
-  Check
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+  Users,
+  FileStack,
+  MessageSquare,
+  Calendar
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import NavPageLayout from "../components/layout/NavPageLayout";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
 
 // Types
-type LeaderboardCategory = 'pages-created' | 'pages-linked' | 'new-sponsors' | 'page-visits';
-type TimePeriod = 'week' | 'month' | '6months';
+type UserLeaderboardCategory = 'pages-created' | 'links-received' | 'sponsors-gained' | 'page-views';
+type PageLeaderboardCategory = 'new-supporters' | 'most-replies' | 'most-views' | 'most-links';
 
 interface LeaderboardUser {
   userId: string;
   username: string;
-  photoURL?: string;
+  displayName?: string;
+  profilePicture?: string;
   count: number;
   rank: number;
 }
 
-interface CategoryConfig {
-  id: LeaderboardCategory;
+interface LeaderboardPage {
+  pageId: string;
+  title: string;
+  userId: string;
+  username: string;
+  count: number;
+  rank: number;
+}
+
+interface UserCategoryConfig {
+  id: UserLeaderboardCategory;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
   countLabel: string;
 }
 
-const categories: CategoryConfig[] = [
+interface PageCategoryConfig {
+  id: PageLeaderboardCategory;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  countLabel: string;
+}
+
+const userCategories: UserCategoryConfig[] = [
   {
     id: 'pages-created',
     label: 'Pages Created',
@@ -54,27 +71,91 @@ const categories: CategoryConfig[] = [
     countLabel: 'pages'
   },
   {
-    id: 'pages-linked',
+    id: 'links-received',
     label: 'Links Received',
     icon: Link2,
     description: 'Most links to their pages',
     countLabel: 'links'
   },
   {
-    id: 'new-sponsors',
+    id: 'sponsors-gained',
     label: 'New Sponsors',
     icon: Heart,
     description: 'Most sponsors gained',
     countLabel: 'sponsors'
   },
   {
-    id: 'page-visits',
+    id: 'page-views',
     label: 'Page Views',
     icon: Eye,
     description: 'Most views received',
     countLabel: 'views'
   }
 ];
+
+const pageCategories: PageCategoryConfig[] = [
+  {
+    id: 'new-supporters',
+    label: 'New Supporters',
+    icon: Heart,
+    description: 'Most supporters gained',
+    countLabel: 'supporters'
+  },
+  {
+    id: 'most-replies',
+    label: 'Most Replies',
+    icon: MessageSquare,
+    description: 'Most reply pages',
+    countLabel: 'replies'
+  },
+  {
+    id: 'most-views',
+    label: 'Most Views',
+    icon: Eye,
+    description: 'Most page views',
+    countLabel: 'views'
+  },
+  {
+    id: 'most-links',
+    label: 'Most Links',
+    icon: Link2,
+    description: 'Most links received',
+    countLabel: 'links'
+  }
+];
+
+// Generate list of available months (past 24 months, oldest first, newest last)
+function getAvailableMonths(): { value: string; label: string }[] {
+  const months: { value: string; label: string }[] = [];
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Build list from oldest to newest (23 months ago -> this month)
+  for (let i = 23; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    // Label current month as "This month", otherwise use short format
+    const label = value === currentMonth 
+      ? 'This month' 
+      : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    months.push({ value, label });
+  }
+  
+  return months;
+}
+
+// Get current month in YYYY-MM format
+function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Format month for display
+function formatMonth(monthStr: string): string {
+  const [year, month] = monthStr.split('-').map(Number);
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
 
 // Medal colors for top 3
 const getMedalColor = (rank: number): string | null => {
@@ -86,26 +167,277 @@ const getMedalColor = (rank: number): string | null => {
   }
 };
 
-// Period display labels
-const periodLabels: Record<TimePeriod, string> = {
-  'week': 'Past 7 Days',
-  'month': 'Past 30 Days',
-  '6months': 'Past 6 Months'
-};
+// Month Selector Component
+function MonthSelector({ 
+  selectedMonth, 
+  onMonthChange,
+  onClose
+}: { 
+  selectedMonth: string; 
+  onMonthChange: (month: string) => void;
+  onClose: () => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const months = useMemo(() => getAvailableMonths(), []);
+  
+  // Scroll to selected month on mount (now at end/right side)
+  useEffect(() => {
+    if (scrollRef.current) {
+      const selectedElement = scrollRef.current.querySelector(`[data-month="${selectedMonth}"]`);
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [selectedMonth]);
+  
+  return (
+    <div className="relative">
+      <div 
+        ref={scrollRef}
+        className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {months.map(month => (
+          <button
+            key={month.value}
+            data-month={month.value}
+            onClick={() => {
+              onMonthChange(month.value);
+              onClose();
+            }}
+            className={cn(
+              "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors snap-center",
+              month.value === selectedMonth
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted hover:bg-muted/80 text-foreground"
+            )}
+          >
+            {month.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Carousel Component for both user and page leaderboards
+function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>({
+  title,
+  titleIcon: TitleIcon,
+  categories,
+  selectedIndex,
+  onSelectIndex,
+  data,
+  loading,
+  error,
+  onRetry,
+  renderEntry,
+  type
+}: {
+  title: string;
+  titleIcon: React.ComponentType<{ className?: string }>;
+  categories: T[];
+  selectedIndex: number;
+  onSelectIndex: (index: number) => void;
+  data: Record<string, any[]>;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  renderEntry: (entry: any, category: T) => React.ReactNode;
+  type: 'user' | 'page';
+}) {
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const navigateCategory = useCallback((direction: 'next' | 'prev') => {
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (selectedIndex + 1) % categories.length;
+    } else {
+      newIndex = (selectedIndex - 1 + categories.length) % categories.length;
+    }
+    onSelectIndex(newIndex);
+  }, [selectedIndex, categories.length, onSelectIndex]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      navigateCategory('next');
+    } else if (isRightSwipe) {
+      navigateCategory('prev');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Section Header */}
+      <div className="flex items-center gap-2 px-4">
+        <TitleIcon className="h-5 w-5 text-muted-foreground" />
+        <h2 className="text-lg font-semibold">{title}</h2>
+      </div>
+
+      {/* Carousel */}
+      <div className="overflow-hidden -mx-4">
+        <div 
+          ref={carouselRef}
+          className="relative touch-pan-y px-4"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Navigation Arrows - Desktop only */}
+          <button
+            onClick={() => navigateCategory('prev')}
+            className="absolute left-6 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
+            aria-label="Previous leaderboard"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => navigateCategory('next')}
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
+            aria-label="Next leaderboard"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Cards Container */}
+          <div 
+            className="flex transition-transform duration-300 ease-out"
+            style={{ 
+              transform: `translateX(calc(${7.5}% - ${selectedIndex * 85}% - ${selectedIndex * 16}px))` 
+            }}
+          >
+            {categories.map((category, index) => {
+              const Icon = category.icon;
+              const leaderboard = data[category.id] || [];
+              const isActive = index === selectedIndex;
+              
+              return (
+                <div
+                  key={category.id}
+                  className="w-[85%] flex-shrink-0 px-2"
+                  style={{ opacity: isActive ? 1 : 0.6, transition: 'opacity 0.3s ease' }}
+                >
+                  <div className="wewrite-card rounded-xl overflow-hidden h-full">
+                    {/* Card Header */}
+                    <div className="px-4 py-3 border-b border-border bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
+                            <Icon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-base">{category.label}</h3>
+                            <p className="text-xs text-muted-foreground">{category.description}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const shareUrl = `${window.location.origin}/leaderboard?section=${type}&category=${category.id}`;
+                            if (navigator.share) {
+                              navigator.share({ title: `${category.label} Leaderboard`, url: shareUrl });
+                            } else {
+                              navigator.clipboard.writeText(shareUrl);
+                            }
+                          }}
+                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
+                          aria-label={`Share ${category.label} leaderboard`}
+                        >
+                          <Share2 className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    {loading ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Loading...</p>
+                      </div>
+                    ) : error ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <p className="text-sm text-muted-foreground">{error}</p>
+                        <Button variant="outline" size="sm" onClick={onRetry}>
+                          Try Again
+                        </Button>
+                      </div>
+                    ) : leaderboard.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Icon className="h-12 w-12 text-muted-foreground/30" />
+                        <p className="text-sm text-muted-foreground">
+                          No data available yet
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {/* Column Header */}
+                        <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide bg-muted/20">
+                          <div className="w-6 flex-shrink-0 text-center">#</div>
+                          <div className="flex-1">{type === 'user' ? 'User' : 'Page'}</div>
+                          <div className="flex-shrink-0 text-right">{category.countLabel}</div>
+                        </div>
+                        
+                        {leaderboard.map((entry: any) => renderEntry(entry, category))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Pagination Dots */}
+      <div className="flex justify-center gap-2.5">
+        {categories.map((category, index) => (
+          <button
+            key={category.id}
+            onClick={() => onSelectIndex(index)}
+            className={cn(
+              "w-2.5 h-2.5 rounded-full transition-colors duration-200",
+              index === selectedIndex
+                ? "bg-primary"
+                : "bg-neutral-30 hover:bg-neutral-40"
+            )}
+            aria-label={`Go to ${category.label}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Loading fallback component
 function LeaderboardLoading() {
   return (
     <NavPageLayout maxWidth="2xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Trophy className="h-7 w-7 text-yellow-500" />
-          <h1 className="text-2xl font-bold tracking-tight">Leaderboard</h1>
+          <Trophy className="h-6 w-6 text-yellow-500" />
+          <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
         </div>
       </div>
       <div className="flex flex-col items-center justify-center py-16 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading leaderboard...</p>
+        <p className="text-sm text-muted-foreground">Loading leaderboards...</p>
       </div>
     </NavPageLayout>
   );
@@ -116,250 +448,274 @@ function LeaderboardContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const chipsContainerRef = useRef<HTMLDivElement>(null);
   
-  // Initialize from URL params or defaults
-  const getInitialCategory = (): LeaderboardCategory => {
-    const param = searchParams.get('category');
-    const validCategories: LeaderboardCategory[] = ['pages-created', 'pages-linked', 'new-sponsors', 'page-visits'];
-    if (param && validCategories.includes(param as LeaderboardCategory)) {
-      return param as LeaderboardCategory;
-    }
-    return 'pages-created';
-  };
+  // State
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+  const [showMonthSelector, setShowMonthSelector] = useState(false);
+  const [userCategoryIndex, setUserCategoryIndex] = useState(0);
+  const [pageCategoryIndex, setPageCategoryIndex] = useState(0);
   
-  const getInitialPeriod = (): TimePeriod => {
-    const param = searchParams.get('period');
-    const validPeriods: TimePeriod[] = ['week', 'month', '6months'];
-    if (param && validPeriods.includes(param as TimePeriod)) {
-      return param as TimePeriod;
-    }
-    return 'month';
-  };
+  const [userLeaderboardData, setUserLeaderboardData] = useState<Record<UserLeaderboardCategory, LeaderboardUser[]>>({
+    'pages-created': [],
+    'links-received': [],
+    'sponsors-gained': [],
+    'page-views': []
+  });
   
-  const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>(getInitialCategory);
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>(getInitialPeriod);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [pageLeaderboardData, setPageLeaderboardData] = useState<Record<PageLeaderboardCategory, LeaderboardPage[]>>({
+    'new-supporters': [],
+    'most-replies': [],
+    'most-views': [],
+    'most-links': []
+  });
+  
+  const [userLoading, setUserLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [userError, setUserError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
 
-  // Update URL when category or period changes
-  const updateUrl = useCallback((category: LeaderboardCategory, period: TimePeriod) => {
-    const params = new URLSearchParams();
-    params.set('category', category);
-    params.set('period', period);
+  // Handle month change
+  const handleMonthChange = useCallback((month: string) => {
+    setSelectedMonth(month);
+    // Update URL
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('month', month);
     router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
-  }, [router]);
+  }, [router, searchParams]);
 
-  // Handler for category change
-  const handleCategoryChange = useCallback((category: LeaderboardCategory) => {
-    setSelectedCategory(category);
-    updateUrl(category, selectedPeriod);
-  }, [selectedPeriod, updateUrl]);
-
-  // Handler for period change
-  const handlePeriodChange = useCallback((period: TimePeriod) => {
-    setSelectedPeriod(period);
-    updateUrl(selectedCategory, period);
-  }, [selectedCategory, updateUrl]);
-
-  const fetchLeaderboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch user leaderboards
+  const fetchUserLeaderboards = useCallback(async () => {
+    setUserLoading(true);
+    setUserError(null);
     
     try {
-      const response = await fetch(
-        `/api/leaderboard?category=${selectedCategory}&period=${selectedPeriod}&limit=10`
+      const results = await Promise.all(
+        userCategories.map(async (category) => {
+          const response = await fetch(
+            `/api/leaderboard?type=user&category=${category.id}&month=${selectedMonth}&limit=10`
+          );
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${category.id} leaderboard`);
+          }
+          const data = await response.json();
+          return { category: category.id, data: data.data || [] };
+        })
       );
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard');
-      }
+      const newData: Record<UserLeaderboardCategory, LeaderboardUser[]> = {
+        'pages-created': [],
+        'links-received': [],
+        'sponsors-gained': [],
+        'page-views': []
+      };
       
-      const data = await response.json();
-      setLeaderboard(data.data?.leaderboard || []);
+      results.forEach(result => {
+        newData[result.category as UserLeaderboardCategory] = result.data;
+      });
+      
+      setUserLeaderboardData(newData);
     } catch (err) {
-      console.error('Error fetching leaderboard:', err);
-      setError('Unable to load leaderboard. Please try again.');
-      setLeaderboard([]);
+      console.error('Error fetching user leaderboards:', err);
+      setUserError('Unable to load user leaderboards.');
     } finally {
-      setLoading(false);
+      setUserLoading(false);
     }
-  }, [selectedCategory, selectedPeriod]);
+  }, [selectedMonth]);
 
+  // Fetch page leaderboards
+  const fetchPageLeaderboards = useCallback(async () => {
+    setPageLoading(true);
+    setPageError(null);
+    
+    try {
+      const results = await Promise.all(
+        pageCategories.map(async (category) => {
+          const response = await fetch(
+            `/api/leaderboard?type=page&category=${category.id}&month=${selectedMonth}&limit=10`
+          );
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${category.id} leaderboard`);
+          }
+          const data = await response.json();
+          return { category: category.id, data: data.data || [] };
+        })
+      );
+      
+      const newData: Record<PageLeaderboardCategory, LeaderboardPage[]> = {
+        'new-supporters': [],
+        'most-replies': [],
+        'most-views': [],
+        'most-links': []
+      };
+      
+      results.forEach(result => {
+        newData[result.category as PageLeaderboardCategory] = result.data;
+      });
+      
+      setPageLeaderboardData(newData);
+    } catch (err) {
+      console.error('Error fetching page leaderboards:', err);
+      setPageError('Unable to load page leaderboards.');
+    } finally {
+      setPageLoading(false);
+    }
+  }, [selectedMonth]);
+
+  // Fetch data on mount and when month changes
   useEffect(() => {
-    fetchLeaderboard();
-  }, [fetchLeaderboard]);
+    fetchUserLeaderboards();
+    fetchPageLeaderboards();
+  }, [fetchUserLeaderboards, fetchPageLeaderboards]);
 
-  const selectedCategoryConfig = categories.find(c => c.id === selectedCategory)!;
+  // Render user entry
+  const renderUserEntry = (entry: LeaderboardUser, category: UserCategoryConfig) => {
+    const medalColor = getMedalColor(entry.rank);
+    const isCurrentUser = user?.uid === entry.userId;
+    
+    return (
+      <Link
+        key={entry.userId}
+        href={`/user/${entry.userId}`}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors",
+          isCurrentUser && "bg-primary/5"
+        )}
+      >
+        <div className="w-6 flex-shrink-0 flex items-center justify-center">
+          {medalColor ? (
+            <Medal className={cn("h-5 w-5", medalColor)} />
+          ) : (
+            <span className="text-sm font-bold text-muted-foreground">
+              {entry.rank}
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={cn(
+            "font-medium truncate text-sm",
+            isCurrentUser && "text-primary"
+          )}>
+            {entry.displayName || entry.username}
+            {isCurrentUser && (
+              <span className="ml-2 text-xs text-muted-foreground">(you)</span>
+            )}
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <p className="font-bold text-sm">
+            {entry.count.toLocaleString()}
+          </p>
+        </div>
+      </Link>
+    );
+  };
 
-  const periodLabel = periodLabels[selectedPeriod];
+  // Render page entry
+  const renderPageEntry = (entry: LeaderboardPage, category: PageCategoryConfig) => {
+    const medalColor = getMedalColor(entry.rank);
+    
+    return (
+      <Link
+        key={entry.pageId}
+        href={`/${entry.pageId}`}
+        className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors"
+      >
+        <div className="w-6 flex-shrink-0 flex items-center justify-center">
+          {medalColor ? (
+            <Medal className={cn("h-5 w-5", medalColor)} />
+          ) : (
+            <span className="text-sm font-bold text-muted-foreground">
+              {entry.rank}
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate text-sm">{entry.title}</p>
+          <p className="text-xs text-muted-foreground truncate">by @{entry.username}</p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <p className="font-bold text-sm">
+            {entry.count.toLocaleString()}
+          </p>
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <NavPageLayout maxWidth="2xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header with Calendar Toggle */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Trophy className="h-7 w-7 text-yellow-500" />
-          <h1 className="text-2xl font-bold tracking-tight">Leaderboard</h1>
+          <Trophy className="h-6 w-6 text-yellow-500" />
+          <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
         </div>
-        
-        {/* Period Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">{periodLabel}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={() => handlePeriodChange('week')}
-              className="gap-2"
-            >
-              {selectedPeriod === 'week' && <Check className="h-4 w-4" />}
-              <span className={selectedPeriod !== 'week' ? 'ml-6' : ''}>This Week</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => handlePeriodChange('month')}
-              className="gap-2"
-            >
-              {selectedPeriod === 'month' && <Check className="h-4 w-4" />}
-              <span className={selectedPeriod !== 'month' ? 'ml-6' : ''}>This Month</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => handlePeriodChange('6months')}
-              className="gap-2"
-            >
-              {selectedPeriod === '6months' && <Check className="h-4 w-4" />}
-              <span className={selectedPeriod !== '6months' ? 'ml-6' : ''}>Past 6 Months</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <button
+          onClick={() => setShowMonthSelector(!showMonthSelector)}
+          className={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
+            showMonthSelector 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-muted hover:bg-muted/80"
+          )}
+          aria-label="Select month"
+        >
+          <Calendar className="h-4 w-4" />
+          <span className="text-sm font-medium">
+            {selectedMonth === getCurrentMonth() ? 'This month' : formatMonth(selectedMonth)}
+          </span>
+        </button>
       </div>
 
-      {/* Category Chips - Horizontally Scrollable */}
-      <div 
-        ref={chipsContainerRef}
-        className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {categories.map((category) => {
-          const Icon = category.icon;
-          const isSelected = selectedCategory === category.id;
-          
-          return (
-            <button
-              key={category.id}
-              onClick={() => handleCategoryChange(category.id)}
-              className={cn(
-                "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0",
-                isSelected
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {category.label}
-            </button>
-          );
-        })}
+      {/* Month Selector (collapsible) */}
+      {showMonthSelector && (
+        <div className="mb-6">
+          <MonthSelector 
+            selectedMonth={selectedMonth} 
+            onMonthChange={handleMonthChange}
+            onClose={() => setShowMonthSelector(false)}
+          />
+        </div>
+      )}
+
+      {/* By User Section */}
+      <div className="mb-8">
+        <LeaderboardCarousel
+          title="By User"
+          titleIcon={Users}
+          categories={userCategories}
+          selectedIndex={userCategoryIndex}
+          onSelectIndex={setUserCategoryIndex}
+          data={userLeaderboardData}
+          loading={userLoading}
+          error={userError}
+          onRetry={fetchUserLeaderboards}
+          renderEntry={renderUserEntry}
+          type="user"
+        />
       </div>
 
-      {/* Description */}
-      <p className="text-muted-foreground text-sm mt-4 mb-6">
-        {selectedCategoryConfig.description} {periodLabel.toLowerCase()}
-      </p>
-
-      {/* Leaderboard */}
-      <div className="wewrite-card rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading leaderboard...</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <p className="text-sm text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchLeaderboard}>
-              Try Again
-            </Button>
-          </div>
-        ) : leaderboard.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Trophy className="h-12 w-12 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">
-              No data available for this {selectedPeriod} yet
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {/* Column Header */}
-            <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide bg-muted/30">
-              <div className="w-6 flex-shrink-0 text-center">#</div>
-              <div className="flex-1">User</div>
-              <div className="flex-shrink-0 text-right capitalize">{selectedCategoryConfig.countLabel}</div>
-            </div>
-            
-            {leaderboard.map((entry) => {
-              const medalColor = getMedalColor(entry.rank);
-              const isCurrentUser = user?.uid === entry.userId;
-              
-              return (
-                <Link
-                  key={entry.userId}
-                  href={`/user/${entry.userId}`}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors",
-                    isCurrentUser && "bg-primary/5"
-                  )}
-                >
-                  {/* Rank */}
-                  <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                    {medalColor ? (
-                      <Medal className={cn("h-5 w-5", medalColor)} />
-                    ) : (
-                      <span className="text-sm font-bold text-muted-foreground">
-                        {entry.rank}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Username */}
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "font-medium truncate text-sm",
-                      isCurrentUser && "text-primary"
-                    )}>
-                      {entry.username}
-                      {isCurrentUser && (
-                        <span className="ml-2 text-xs text-muted-foreground">(you)</span>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Count */}
-                  <div className="flex-shrink-0 text-right">
-                    <p className="font-bold text-sm">
-                      {entry.count.toLocaleString()}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+      {/* By Page Section */}
+      <div className="mb-4">
+        <LeaderboardCarousel
+          title="By Page"
+          titleIcon={FileStack}
+          categories={pageCategories}
+          selectedIndex={pageCategoryIndex}
+          onSelectIndex={setPageCategoryIndex}
+          data={pageLeaderboardData}
+          loading={pageLoading}
+          error={pageError}
+          onRetry={fetchPageLeaderboards}
+          renderEntry={renderPageEntry}
+          type="page"
+        />
       </div>
-
-      {/* Footer */}
-      <p className="text-center text-xs text-muted-foreground mt-6">
-        Leaderboards update in real-time
-      </p>
     </NavPageLayout>
   );
 }
 
-// Default export with Suspense wrapper for useSearchParams
+// Default export with Suspense wrapper
 export default function LeaderboardPage() {
   return (
     <Suspense fallback={<LeaderboardLoading />}>
