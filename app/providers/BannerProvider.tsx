@@ -3,18 +3,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { usePWA } from './PWAProvider';
+import { isValidUsername } from '../hooks/useUsernameStatus';
 
 interface BannerContextType {
   showEmailBanner: boolean;
   showPWABanner: boolean;
+  showUsernameBanner: boolean;
   setEmailBannerDismissed: () => void;
+  setUsernameBannerDismissed: () => void;
   bannerOffset: number;
 }
 
 const BannerContext = createContext<BannerContextType>({
   showEmailBanner: false,
   showPWABanner: false,
+  showUsernameBanner: false,
   setEmailBannerDismissed: () => {},
+  setUsernameBannerDismissed: () => {},
   bannerOffset: 0
 });
 
@@ -24,7 +29,9 @@ const STORAGE_KEYS = {
   EMAIL_BANNER_DISMISSED: 'wewrite_email_banner_dismissed',
   EMAIL_BANNER_DISMISSED_TIMESTAMP: 'wewrite_email_banner_dismissed_timestamp',
   EMAIL_DONT_REMIND: 'wewrite_email_dont_remind',
-  ADMIN_EMAIL_BANNER_OVERRIDE: 'wewrite_admin_email_banner_override'
+  ADMIN_EMAIL_BANNER_OVERRIDE: 'wewrite_admin_email_banner_override',
+  USERNAME_BANNER_DISMISSED_TIMESTAMP: 'wewrite_username_banner_dismissed_timestamp',
+  USERNAME_DONT_REMIND: 'wewrite_username_dont_remind',
 };
 
 export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -32,6 +39,7 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { showBanner: pwaBannerShouldShow } = usePWA();
   const [showEmailBanner, setShowEmailBanner] = useState(false);
   const [showPWABanner, setShowPWABanner] = useState(false);
+  const [showUsernameBanner, setShowUsernameBanner] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [bannerHeight, setBannerHeight] = useState(0);
 
@@ -61,6 +69,7 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Look for banner elements in the DOM
       const emailBanner = document.querySelector('[data-banner="email-verification"]');
       const pwaBanner = document.querySelector('[data-banner="pwa-installation"]');
+      const usernameBanner = document.querySelector('[data-banner="username-setup"]');
 
       let totalHeight = 0;
 
@@ -70,6 +79,10 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (pwaBanner && showPWABanner) {
         totalHeight += pwaBanner.getBoundingClientRect().height;
+      }
+
+      if (usernameBanner && showUsernameBanner) {
+        totalHeight += usernameBanner.getBoundingClientRect().height;
       }
 
       setBannerHeight(totalHeight);
@@ -88,12 +101,13 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     return () => observer.disconnect();
-  }, [showEmailBanner, showPWABanner]);
+  }, [showEmailBanner, showPWABanner, showUsernameBanner]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user) {
       setShowEmailBanner(false);
       setShowPWABanner(false);
+      setShowUsernameBanner(false);
       return;
     }
 
@@ -122,13 +136,39 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return true;
     };
 
+    // Check if username banner should show
+    const shouldShowUsernameBanner = () => {
+      // Check if user has a valid username
+      const currentUsername = user.username || '';
+      if (isValidUsername(currentUsername)) return false;
+
+      // Check if user has chosen "Don't remind me"
+      if (localStorage.getItem(STORAGE_KEYS.USERNAME_DONT_REMIND) === 'true') return false;
+
+      // Check if banner was recently dismissed
+      const dismissedTimestamp = localStorage.getItem(STORAGE_KEYS.USERNAME_BANNER_DISMISSED_TIMESTAMP);
+      if (dismissedTimestamp) {
+        const dismissedTime = parseInt(dismissedTimestamp, 10);
+        const currentTime = Date.now();
+
+        // If dismissed less than 3 days ago, don't show
+        if (currentTime - dismissedTime < 3 * 24 * 60 * 60 * 1000) return false;
+      }
+
+      return true;
+    };
+
     const updateBannerStates = () => {
       const emailBannerShouldShow = shouldShowEmailBanner();
       setShowEmailBanner(emailBannerShouldShow);
 
-      // PWA banner only shows if email banner is NOT showing
+      // Username banner shows if email banner is NOT showing
+      const usernameBannerShouldShow = !emailBannerShouldShow && shouldShowUsernameBanner();
+      setShowUsernameBanner(usernameBannerShouldShow);
+
+      // PWA banner only shows if other banners are NOT showing
       // This implements the "one thing at a time" priority system
-      setShowPWABanner(!emailBannerShouldShow && pwaBannerShouldShow);
+      setShowPWABanner(!emailBannerShouldShow && !usernameBannerShouldShow && pwaBannerShouldShow);
     };
 
     // Initial update
@@ -158,7 +198,23 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const setEmailBannerDismissed = () => {
     setShowEmailBanner(false);
-    // After email banner is dismissed, check if PWA banner should show
+    // After email banner is dismissed, check if username or PWA banner should show
+    if (typeof window !== 'undefined') {
+      const currentUsername = user?.username || '';
+      const shouldShowUsername = !isValidUsername(currentUsername) && 
+        localStorage.getItem(STORAGE_KEYS.USERNAME_DONT_REMIND) !== 'true';
+      
+      if (shouldShowUsername) {
+        setShowUsernameBanner(true);
+      } else {
+        setShowPWABanner(pwaBannerShouldShow);
+      }
+    }
+  };
+
+  const setUsernameBannerDismissed = () => {
+    setShowUsernameBanner(false);
+    // After username banner is dismissed, check if PWA banner should show
     setShowPWABanner(pwaBannerShouldShow);
   };
 
@@ -170,13 +226,14 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     // If no banners are showing, no offset needed
-    if (!showEmailBanner && !showPWABanner) {
+    if (!showEmailBanner && !showPWABanner && !showUsernameBanner) {
       return 0;
     }
 
     // Use detected banner height, fallback to estimated height based on visible banners
     let estimatedHeight = 0;
     if (showEmailBanner) estimatedHeight += 88; // ~80px content + 8px margins
+    if (showUsernameBanner) estimatedHeight += 88; // ~80px content + 8px margins
     if (showPWABanner) estimatedHeight += 88; // ~80px content + 8px margins
 
     const totalBannerHeight = bannerHeight || estimatedHeight;
@@ -186,13 +243,15 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const visibleBannerHeight = Math.max(0, totalBannerHeight - scrollY);
 
     return visibleBannerHeight;
-  }, [showEmailBanner, showPWABanner, bannerHeight, scrollY]);
+  }, [showEmailBanner, showPWABanner, showUsernameBanner, bannerHeight, scrollY]);
 
   return (
     <BannerContext.Provider value={{
       showEmailBanner,
       showPWABanner,
+      showUsernameBanner,
       setEmailBannerDismissed,
+      setUsernameBannerDismissed,
       bannerOffset
     }}>
       {children}

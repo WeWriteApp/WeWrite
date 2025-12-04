@@ -33,6 +33,7 @@ import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
 import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextPayoutCountdown';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { useUsernameStatus } from '../hooks/useUsernameStatus';
 
 
 interface SettingsSection {
@@ -54,6 +55,8 @@ export default function SettingsIndexPage() {
   const { usdBalance, hasActiveSubscription: contextHasActiveSubscription } = useUsdBalance();
   const { earnings } = useEarnings();
   const payoutCountdown = useNextPayoutCountdown();
+  // Get username status to show warning dot on Profile section
+  const { needsUsername } = useUsernameStatus();
 
   // Derive subscription warning state from consolidated context
   const shouldShowSubscriptionWarning = contextHasActiveSubscription === false;
@@ -293,10 +296,16 @@ export default function SettingsIndexPage() {
             // Show warning for funding-related sections if there are subscription issues
             // But don't show warning dots when we have status icons or when loading
             // Only show warnings for truly problematic states, not for active subscriptions
-            const showWarning = section.id === 'fund-account' &&
+            const showFundingWarning = section.id === 'fund-account' &&
               shouldShowSubscriptionWarning &&
               hasActiveSubscription !== null && // Don't show while loading
               hasActiveSubscription === false; // Only show when explicitly false (not active)
+
+            // Show warning for profile section if username is needed
+            const showProfileWarning = section.id === 'profile' && needsUsername;
+
+            const showWarning = showFundingWarning || showProfileWarning;
+            const warningVariantToUse = showProfileWarning ? 'warning' : 'error';
 
             return (
               <div key={section.id} className="relative">
@@ -317,6 +326,12 @@ export default function SettingsIndexPage() {
                         ) : (
                           `$${subscriptionAmount}/mo`
                         )}
+                      </span>
+                    )}
+
+                    {section.id === 'profile' && needsUsername && (
+                      <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                        Set username
                       </span>
                     )}
 
@@ -370,7 +385,7 @@ export default function SettingsIndexPage() {
                 </button>
                 {showWarning && (
                   <WarningDot
-                    variant={warningVariant}
+                    variant={warningVariantToUse}
                     size="sm"
                     position="top-right"
                     offset={{ top: '12px', right: '12px' }}

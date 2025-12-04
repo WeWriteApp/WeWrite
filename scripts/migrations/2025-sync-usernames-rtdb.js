@@ -5,9 +5,13 @@
  * It sources the username from:
  *   1. Existing RTDB username (if valid)
  *   2. Firestore users collection username
- *   3. Firebase Auth displayName
- *   4. Email prefix (before @)
- *   5. Fallback: user_XXXXXXXX
+ *   3. Firestore displayName (legacy)
+ *   4. RTDB displayName (legacy)
+ *   5. Firebase Auth displayName
+ *   6. Fallback: user_XXXXXXXX
+ *
+ * NOTE: We intentionally do NOT use email to generate usernames to avoid
+ * exposing user email addresses.
  *
  * Run with:
  *   node scripts/migrations/2025-sync-usernames-rtdb.js
@@ -15,16 +19,75 @@
  *   node scripts/migrations/2025-sync-usernames-rtdb.js --execute
  *
  * Requirements:
- * - GOOGLE_CLOUD_KEY_JSON (base64 or raw JSON) available in env
+ * - Set environment variables (use dotenv or export manually)
+ * - Or run from project root with: source .env.local && node scripts/migrations/2025-sync-usernames-rtdb.js
  */
 
-const path = require('path');
+require('dotenv').config({ path: require('path').join(__dirname, '../..', '.env.local') });
 
-// Load environment variables
-require('dotenv').config({ path: path.join(__dirname, '../../.env.local') });
+const admin = require('firebase-admin');
 
-const { getFirebaseAdmin } = require('../firebase/firebaseAdmin');
-const { getCollectionName } = require('../utils/environmentConfig');
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  try {
+    let serviceAccount;
+    
+    // Use GOOGLE_CLOUD_KEY_JSON from environment
+    if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+      let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON;
+      
+      // Check if base64 encoded
+      if (!jsonString.includes(' ') && !jsonString.startsWith('{')) {
+        jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+      }
+      
+      serviceAccount = JSON.parse(jsonString);
+      console.log(`✅ Using service account: ${serviceAccount.client_email}`);
+    } else if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+      // Fallback to individual env vars
+      serviceAccount = {
+        type: 'service_account',
+        project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
+        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        client_id: process.env.FIREBASE_CLIENT_ID,
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+        client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
+      };
+      console.log(`✅ Using service account from env vars: ${serviceAccount.client_email}`);
+    } else {
+      throw new Error('Missing Firebase credentials. Set GOOGLE_CLOUD_KEY_JSON or individual FIREBASE_* env vars');
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
+    });
+    
+    console.log('✅ Firebase Admin initialized');
+  } catch (err) {
+    console.error('❌ Failed to initialize Firebase Admin:', err.message);
+    console.error('');
+    console.error('Make sure to set environment variables:');
+    console.error('  - GOOGLE_CLOUD_KEY_JSON (JSON string or base64)');
+    console.error('  - Or: FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL, etc.');
+    console.error('');
+    console.error('You can source your .env.local file first:');
+    console.error('  source .env.local && node scripts/migrations/2025-sync-usernames-rtdb.js');
+    process.exit(1);
+  }
+}
+
+const db = admin.firestore();
+const rtdb = admin.database();
+const auth = admin.auth();
+
+// Environment prefix for collections
+const ENV_PREFIX = process.env.NEXT_PUBLIC_FIRESTORE_ENV_PREFIX || '';
+const getCollectionName = (name) => ENV_PREFIX ? `${ENV_PREFIX}_${name}` : name;
 
 const DRY_RUN = !process.argv.includes('--execute');
 
@@ -45,31 +108,23 @@ function sanitizeUsername(raw, fallbackId) {
     return `user_${fallbackId.slice(0, 8)}`;
   }
   const trimmed = raw.trim();
-  // If it's an email, extract prefix
+  // Reject anything that looks like an email (contains @)
   if (trimmed.includes('@')) {
-    const prefix = trimmed.split('@')[0];
-    return prefix || `user_${fallbackId.slice(0, 8)}`;
+    return `user_${fallbackId.slice(0, 8)}`;
   }
   return trimmed || `user_${fallbackId.slice(0, 8)}`;
 }
 
 async function main() {
+  console.log('');
   console.log('🔄 Username Sync Migration: RTDB');
   console.log('================================');
   console.log(`Mode: ${DRY_RUN ? '🧪 DRY RUN (no changes)' : '⚡ EXECUTE (will make changes)'}`);
   console.log('');
 
-  const admin = getFirebaseAdmin();
-  if (!admin) {
-    console.error('❌ Firebase Admin not initialized. Check GOOGLE_CLOUD_KEY_JSON.');
-    process.exit(1);
-  }
-
-  const db = admin.firestore();
-  const rtdb = admin.database();
-  const auth = admin.auth();
-  
   const usersCollection = getCollectionName('users');
+  console.log(`📁 Using collection: ${usersCollection}`);
+  console.log('');
   
   // Step 1: Get all users from RTDB
   console.log('📥 Fetching users from RTDB...');
@@ -129,35 +184,20 @@ async function main() {
         newUsername = rtdbData.displayName;
       }
 
-      // Source 4: Try Firebase Auth
+      // Source 4: Try Firebase Auth displayName only (NOT email)
       if (!newUsername) {
         try {
           const authUser = await auth.getUser(userId);
           if (authUser.displayName && isValidUsername(authUser.displayName)) {
             newUsername = authUser.displayName;
-          } else if (authUser.email) {
-            const emailPrefix = authUser.email.split('@')[0];
-            if (emailPrefix && !emailPrefix.includes('.')) {
-              newUsername = emailPrefix;
-            }
           }
+          // NOTE: We intentionally do NOT use email to avoid exposing user emails
         } catch (authError) {
           // User might not exist in Auth (deleted, etc.)
         }
       }
 
-      // Source 5: Email from Firestore/RTDB
-      if (!newUsername) {
-        const email = firestoreData.email || rtdbData.email;
-        if (email) {
-          const prefix = email.split('@')[0];
-          if (prefix && prefix.length > 2) {
-            newUsername = prefix;
-          }
-        }
-      }
-
-      // Fallback
+      // Fallback - use anonymized user ID
       if (!newUsername) {
         newUsername = `user_${userId.slice(0, 8)}`;
       }
@@ -191,7 +231,7 @@ async function main() {
 
   if (updates.length === 0) {
     console.log('✨ All users already have valid usernames!');
-    return;
+    process.exit(0);
   }
 
   // Show what will be updated
@@ -223,7 +263,7 @@ async function main() {
   if (DRY_RUN) {
     console.log('🧪 DRY RUN - No changes made.');
     console.log('   Run with --execute to apply changes.');
-    return;
+    process.exit(0);
   }
 
   // Apply updates
@@ -252,6 +292,7 @@ async function main() {
   console.log('✅ Migration complete!');
   console.log(`   Successfully updated: ${successCount}`);
   console.log(`   Failed: ${failCount}`);
+  process.exit(0);
 }
 
 main().catch((err) => {

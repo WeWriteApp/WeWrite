@@ -8,17 +8,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail, sendNotificationEmail, sendWelcomeEmail } from '../../../services/emailService';
+import { sendEmail, sendNotificationEmail, sendWelcomeEmail, sendTemplatedEmail } from '../../../services/emailService';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, ...emailData } = body;
+    const { type, templateId, ...emailData } = body;
 
     // Validate required fields
-    if (!type) {
+    if (!type && !templateId) {
       return NextResponse.json(
-        { error: 'Email type is required' },
+        { error: 'Email type or templateId is required' },
         { status: 400 }
       );
     }
@@ -32,7 +32,16 @@ export async function POST(request: NextRequest) {
 
     let success = false;
 
-    switch (type) {
+    // Handle template-based sending
+    if (templateId) {
+      success = await sendTemplatedEmail({
+        templateId,
+        to: emailData.to,
+        data: emailData.data || {},
+      });
+    } else {
+      // Handle legacy type-based sending
+      switch (type) {
       case 'generic':
         if (!emailData.subject) {
           return NextResponse.json(
@@ -85,6 +94,7 @@ export async function POST(request: NextRequest) {
           { error: `Unknown email type: ${type}` },
           { status: 400 }
         );
+      }
     }
 
     if (success) {

@@ -17,7 +17,8 @@ import {
   Users,
   FileStack,
   MessageSquare,
-  Calendar
+  Calendar,
+  ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
@@ -220,6 +221,115 @@ function MonthSelector({
   );
 }
 
+// Detail View Component for a single leaderboard
+function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig>({
+  category,
+  data,
+  loading,
+  error,
+  onRetry,
+  onBack,
+  selectedMonth,
+  renderEntry,
+  type
+}: {
+  category: T;
+  data: any[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onBack: () => void;
+  selectedMonth: string;
+  renderEntry: (entry: any, category: T) => React.ReactNode;
+  type: 'user' | 'page';
+}) {
+  const Icon = category.icon;
+  
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}/leaderboard?view=${type}&category=${category.id}&month=${selectedMonth}`;
+    if (navigator.share) {
+      navigator.share({ 
+        title: `${category.label} Leaderboard - ${formatMonth(selectedMonth)}`, 
+        url: shareUrl 
+      });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+    }
+  };
+  
+  return (
+    <div className="space-y-4">
+      {/* Back button and header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors"
+          aria-label="Back to all leaderboards"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex-1 flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">{category.label}</h1>
+            <p className="text-sm text-muted-foreground">{category.description}</p>
+          </div>
+        </div>
+        <button
+          onClick={handleShare}
+          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors"
+          aria-label={`Share ${category.label} leaderboard`}
+        >
+          <Share2 className="h-5 w-5 text-muted-foreground" />
+        </button>
+      </div>
+      
+      {/* Month indicator */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Calendar className="h-4 w-4" />
+        <span>{selectedMonth === getCurrentMonth() ? 'This month' : formatMonth(selectedMonth)}</span>
+      </div>
+
+      {/* Content */}
+      <div className="wewrite-card rounded-xl overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              Try Again
+            </Button>
+          </div>
+        ) : data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Icon className="h-12 w-12 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              No data available yet
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {/* Column Header */}
+            <div className="flex items-center gap-3 px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide bg-muted/20">
+              <div className="w-8 flex-shrink-0 text-center">#</div>
+              <div className="flex-1">{type === 'user' ? 'User' : 'Page'}</div>
+              <div className="flex-shrink-0 text-right">{category.countLabel}</div>
+            </div>
+            
+            {data.map((entry: any) => renderEntry(entry, category))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Carousel Component for both user and page leaderboards
 function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>({
   title,
@@ -232,7 +342,9 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
   error,
   onRetry,
   renderEntry,
-  type
+  type,
+  onOpenDetail,
+  selectedMonth
 }: {
   title: string;
   titleIcon: React.ComponentType<{ className?: string }>;
@@ -245,6 +357,8 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
   onRetry: () => void;
   renderEntry: (entry: any, category: T) => React.ReactNode;
   type: 'user' | 'page';
+  onOpenDetail: (type: 'user' | 'page', categoryId: string) => void;
+  selectedMonth: string;
 }) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -283,6 +397,23 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
     }
   };
 
+  const handleShare = (e: React.MouseEvent, category: T) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/leaderboard?view=${type}&category=${category.id}&month=${selectedMonth}`;
+    if (navigator.share) {
+      navigator.share({ 
+        title: `${category.label} Leaderboard - ${formatMonth(selectedMonth)}`, 
+        url: shareUrl 
+      });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+    }
+  };
+
+  // Calculate centered transform - card width is 85%, gap between cards
+  const cardWidthPercent = 85;
+  const gapPx = 12;
+  
   return (
     <div className="space-y-3">
       {/* Section Header */}
@@ -292,10 +423,10 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
       </div>
 
       {/* Carousel */}
-      <div className="overflow-hidden -mx-4">
+      <div className="overflow-hidden">
         <div 
           ref={carouselRef}
-          className="relative touch-pan-y px-4"
+          className="relative touch-pan-y"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -303,24 +434,28 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
           {/* Navigation Arrows - Desktop only */}
           <button
             onClick={() => navigateCategory('prev')}
-            className="absolute left-6 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
             aria-label="Previous leaderboard"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={() => navigateCategory('next')}
-            className="absolute right-6 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
             aria-label="Next leaderboard"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
 
-          {/* Cards Container */}
+          {/* Cards Container - properly centered */}
           <div 
             className="flex transition-transform duration-300 ease-out"
             style={{ 
-              transform: `translateX(calc(${7.5}% - ${selectedIndex * 85}% - ${selectedIndex * 16}px))` 
+              // Center the current card: start with 7.5% offset (to center 85% card), 
+              // then move by card width + gap for each index
+              transform: `translateX(calc(7.5% - ${selectedIndex * cardWidthPercent}% - ${selectedIndex * gapPx}px))`,
+              paddingLeft: '0',
+              paddingRight: '0'
             }}
           >
             {categories.map((category, index) => {
@@ -331,10 +466,17 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
               return (
                 <div
                   key={category.id}
-                  className="w-[85%] flex-shrink-0 px-2"
-                  style={{ opacity: isActive ? 1 : 0.6, transition: 'opacity 0.3s ease' }}
+                  className="flex-shrink-0 px-1.5"
+                  style={{ 
+                    width: `${cardWidthPercent}%`,
+                    opacity: isActive ? 1 : 0.5, 
+                    transition: 'opacity 0.3s ease' 
+                  }}
                 >
-                  <div className="wewrite-card rounded-xl overflow-hidden h-full">
+                  <div 
+                    className="wewrite-card rounded-xl overflow-hidden h-full cursor-pointer"
+                    onClick={() => onOpenDetail(type, category.id)}
+                  >
                     {/* Card Header */}
                     <div className="px-4 py-3 border-b border-border bg-muted/30">
                       <div className="flex items-center justify-between">
@@ -348,15 +490,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                           </div>
                         </div>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const shareUrl = `${window.location.origin}/leaderboard?section=${type}&category=${category.id}`;
-                            if (navigator.share) {
-                              navigator.share({ title: `${category.label} Leaderboard`, url: shareUrl });
-                            } else {
-                              navigator.clipboard.writeText(shareUrl);
-                            }
-                          }}
+                          onClick={(e) => handleShare(e, category)}
                           className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
                           aria-label={`Share ${category.label} leaderboard`}
                         >
@@ -374,7 +508,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                     ) : error ? (
                       <div className="flex flex-col items-center justify-center py-16 gap-3">
                         <p className="text-sm text-muted-foreground">{error}</p>
-                        <Button variant="outline" size="sm" onClick={onRetry}>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onRetry(); }}>
                           Try Again
                         </Button>
                       </div>
@@ -394,7 +528,14 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                           <div className="flex-shrink-0 text-right">{category.countLabel}</div>
                         </div>
                         
-                        {leaderboard.map((entry: any) => renderEntry(entry, category))}
+                        {leaderboard.slice(0, 5).map((entry: any) => renderEntry(entry, category))}
+                        
+                        {/* View more indicator */}
+                        {leaderboard.length > 5 && (
+                          <div className="px-3 py-2 text-center text-xs text-muted-foreground bg-muted/10">
+                            +{leaderboard.length - 5} more • Tap to view all
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -429,7 +570,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
 function LeaderboardLoading() {
   return (
     <NavPageLayout maxWidth="2xl">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
           <Trophy className="h-6 w-6 text-yellow-500" />
           <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
@@ -450,10 +591,18 @@ function LeaderboardContent() {
   const router = useRouter();
   
   // State
-  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    return searchParams.get('month') || getCurrentMonth();
+  });
   const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [userCategoryIndex, setUserCategoryIndex] = useState(0);
   const [pageCategoryIndex, setPageCategoryIndex] = useState(0);
+  
+  // Detail view state
+  const [detailView, setDetailView] = useState<{
+    type: 'user' | 'page';
+    categoryId: string;
+  } | null>(null);
   
   const [userLeaderboardData, setUserLeaderboardData] = useState<Record<UserLeaderboardCategory, LeaderboardUser[]>>({
     'pages-created': [],
@@ -474,6 +623,30 @@ function LeaderboardContent() {
   const [userError, setUserError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
+  // Parse URL params on mount for detail view
+  useEffect(() => {
+    const viewType = searchParams.get('view') as 'user' | 'page' | null;
+    const categoryParam = searchParams.get('category');
+    const monthParam = searchParams.get('month');
+    
+    if (monthParam) {
+      setSelectedMonth(monthParam);
+    }
+    
+    if (viewType && categoryParam) {
+      setDetailView({ type: viewType, categoryId: categoryParam });
+      
+      // Also set the carousel index
+      if (viewType === 'user') {
+        const index = userCategories.findIndex(c => c.id === categoryParam);
+        if (index >= 0) setUserCategoryIndex(index);
+      } else {
+        const index = pageCategories.findIndex(c => c.id === categoryParam);
+        if (index >= 0) setPageCategoryIndex(index);
+      }
+    }
+  }, [searchParams]);
+
   // Handle month change
   const handleMonthChange = useCallback((month: string) => {
     setSelectedMonth(month);
@@ -482,6 +655,26 @@ function LeaderboardContent() {
     params.set('month', month);
     router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
+
+  // Handle opening detail view
+  const handleOpenDetail = useCallback((type: 'user' | 'page', categoryId: string) => {
+    setDetailView({ type, categoryId });
+    // Update URL
+    const params = new URLSearchParams();
+    params.set('view', type);
+    params.set('category', categoryId);
+    params.set('month', selectedMonth);
+    router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
+  }, [router, selectedMonth]);
+
+  // Handle closing detail view
+  const handleCloseDetail = useCallback(() => {
+    setDetailView(null);
+    // Update URL - remove view and category params
+    const params = new URLSearchParams();
+    params.set('month', selectedMonth);
+    router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
+  }, [router, selectedMonth]);
 
   // Fetch user leaderboards
   const fetchUserLeaderboards = useCallback(async () => {
@@ -492,7 +685,7 @@ function LeaderboardContent() {
       const results = await Promise.all(
         userCategories.map(async (category) => {
           const response = await fetch(
-            `/api/leaderboard?type=user&category=${category.id}&month=${selectedMonth}&limit=10`
+            `/api/leaderboard?type=user&category=${category.id}&month=${selectedMonth}&limit=20`
           );
           if (!response.ok) {
             throw new Error(`Failed to fetch ${category.id} leaderboard`);
@@ -531,7 +724,7 @@ function LeaderboardContent() {
       const results = await Promise.all(
         pageCategories.map(async (category) => {
           const response = await fetch(
-            `/api/leaderboard?type=page&category=${category.id}&month=${selectedMonth}&limit=10`
+            `/api/leaderboard?type=page&category=${category.id}&month=${selectedMonth}&limit=20`
           );
           if (!response.ok) {
             throw new Error(`Failed to fetch ${category.id} leaderboard`);
@@ -576,6 +769,7 @@ function LeaderboardContent() {
       <Link
         key={entry.userId}
         href={`/user/${entry.userId}`}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
           "flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors",
           isCurrentUser && "bg-primary/5"
@@ -618,6 +812,7 @@ function LeaderboardContent() {
       <Link
         key={entry.pageId}
         href={`/${entry.pageId}`}
+        onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors"
       >
         <div className="w-6 flex-shrink-0 flex items-center justify-center">
@@ -642,10 +837,53 @@ function LeaderboardContent() {
     );
   };
 
+  // Detail view render
+  if (detailView) {
+    if (detailView.type === 'user') {
+      const category = userCategories.find(c => c.id === detailView.categoryId);
+      if (category) {
+        return (
+          <NavPageLayout maxWidth="2xl">
+            <LeaderboardDetailView
+              category={category}
+              data={userLeaderboardData[category.id] || []}
+              loading={userLoading}
+              error={userError}
+              onRetry={fetchUserLeaderboards}
+              onBack={handleCloseDetail}
+              selectedMonth={selectedMonth}
+              renderEntry={renderUserEntry}
+              type="user"
+            />
+          </NavPageLayout>
+        );
+      }
+    } else {
+      const category = pageCategories.find(c => c.id === detailView.categoryId);
+      if (category) {
+        return (
+          <NavPageLayout maxWidth="2xl">
+            <LeaderboardDetailView
+              category={category}
+              data={pageLeaderboardData[category.id] || []}
+              loading={pageLoading}
+              error={pageError}
+              onRetry={fetchPageLeaderboards}
+              onBack={handleCloseDetail}
+              selectedMonth={selectedMonth}
+              renderEntry={renderPageEntry}
+              type="page"
+            />
+          </NavPageLayout>
+        );
+      }
+    }
+  }
+
   return (
     <NavPageLayout maxWidth="2xl">
       {/* Header with Calendar Toggle */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
           <Trophy className="h-6 w-6 text-yellow-500" />
           <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
@@ -669,7 +907,7 @@ function LeaderboardContent() {
 
       {/* Month Selector (collapsible) */}
       {showMonthSelector && (
-        <div className="mb-6">
+        <div className="mb-6 px-4">
           <MonthSelector 
             selectedMonth={selectedMonth} 
             onMonthChange={handleMonthChange}
@@ -692,6 +930,8 @@ function LeaderboardContent() {
           onRetry={fetchUserLeaderboards}
           renderEntry={renderUserEntry}
           type="user"
+          onOpenDetail={handleOpenDetail}
+          selectedMonth={selectedMonth}
         />
       </div>
 
@@ -709,6 +949,8 @@ function LeaderboardContent() {
           onRetry={fetchPageLeaderboards}
           renderEntry={renderPageEntry}
           type="page"
+          onOpenDetail={handleOpenDetail}
+          selectedMonth={selectedMonth}
         />
       </div>
     </NavPageLayout>

@@ -265,7 +265,7 @@ export default function MobileBottomNavUnified() {
       icon: Trophy,
       onClick: () => { setIsExpanded(false); router.push('/leaderboard'); },
       isActive: pathname === '/leaderboard',
-      ariaLabel: 'Leaderboard',
+      ariaLabel: 'Leaderboards',
       label: 'Leaders',
     },
     admin: {

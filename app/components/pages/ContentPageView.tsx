@@ -1100,13 +1100,18 @@ export default function ContentPageView({
         await createNewPagesFromLinks(newPageRefs);
       }
 
-      const updateData = {
+      const updateData: any = {
         id: pageId,
         title: title.trim(),
         content: contentToSave, // Pass as object, not stringified - API will handle stringification
         location: location,
         customDate: customDate
       };
+
+      // Include replyType if this is a reply page and the type has been set
+      if (page?.replyTo && page?.replyType) {
+        updateData.replyType = page.replyType;
+      }
 
       console.log('🔵 PAGE SAVE: Update data prepared', {
         id: updateData.id,
@@ -1115,7 +1120,8 @@ export default function ContentPageView({
         contentType: typeof updateData.content,
         contentLength: updateData.content ? JSON.stringify(updateData.content).length : 0,
         hasLocation: !!updateData.location,
-        customDate: updateData.customDate
+        customDate: updateData.customDate,
+        replyType: updateData.replyType
       });
 
       pageLogger.debug('API request: PUT /api/pages', {

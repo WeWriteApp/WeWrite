@@ -138,27 +138,57 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {filterButtons.map((filter) => (
-            <button
-              key={filter.type}
-              onClick={() => setActiveFilter(filter.type)}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                activeFilter === filter.type
-                  ? "bg-muted text-foreground"
-                  : "bg-muted/50 hover:bg-muted/80 text-muted-foreground"
-              )}
-            >
-              {filter.icon}
-              {filter.label}
-              <span className={cn(
-                "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
-                activeFilter === filter.type ? "bg-black/10 dark:bg-white/10" : "bg-muted-foreground/20"
-              )}>
-                {filter.count}
-              </span>
-            </button>
-          ))}
+          {filterButtons.map((filter) => {
+            // Get color classes based on filter type and active state
+            const getFilterColors = () => {
+              if (activeFilter !== filter.type) {
+                return "bg-muted/50 hover:bg-muted/80 text-muted-foreground";
+              }
+              // Active states with semantic colors
+              switch (filter.type) {
+                case 'disagree':
+                  return "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20";
+                case 'agree':
+                  return "bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20";
+                default: // 'all' and 'neutral' use accent color
+                  return "bg-accent text-accent-foreground";
+              }
+            };
+
+            const getCountBgColor = () => {
+              if (activeFilter !== filter.type) {
+                return "bg-muted-foreground/20";
+              }
+              switch (filter.type) {
+                case 'disagree':
+                  return "bg-red-500/20";
+                case 'agree':
+                  return "bg-green-500/20";
+                default:
+                  return "bg-black/10 dark:bg-white/10";
+              }
+            };
+
+            return (
+              <button
+                key={filter.type}
+                onClick={() => setActiveFilter(filter.type)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  getFilterColors()
+                )}
+              >
+                {filter.icon}
+                {filter.label}
+                <span className={cn(
+                  "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                  getCountBgColor()
+                )}>
+                  {filter.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Loading State */}
@@ -201,8 +231,18 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
 
         {/* Empty State for Filter */}
         {!loading && !error && replies.length === 0 && counts.total > 0 && (
-          <div className="text-sm text-muted-foreground py-4 text-center">
-            No {activeFilter !== 'all' ? activeFilter : ''} replies found
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              No {activeFilter !== 'all' ? activeFilter : ''} replies found
+            </p>
+            {activeFilter !== 'all' && (
+              <Link href={`/new?replyTo=${pageId}&replyType=${activeFilter}`}>
+                <Button variant="secondary" size="sm" className="gap-2">
+                  <Reply className="w-4 h-4" />
+                  Be the first to {activeFilter}
+                </Button>
+              </Link>
+            )}
           </div>
         )}
 
@@ -210,10 +250,10 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
         {!loading && !error && counts.total === 0 && (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-3">No replies yet. Be the first to reply!</p>
-            <Link href={`/create?replyTo=${pageId}`}>
+            <Link href={`/new?replyTo=${pageId}${activeFilter !== 'all' ? `&replyType=${activeFilter}` : ''}`}>
               <Button variant="secondary" size="sm" className="gap-2">
                 <Reply className="w-4 h-4" />
-                Reply
+                Reply{activeFilter !== 'all' && activeFilter !== 'neutral' ? ` (${activeFilter})` : ''}
               </Button>
             </Link>
           </div>

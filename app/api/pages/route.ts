@@ -641,7 +641,7 @@ export async function PUT(request: NextRequest) {
     }
 
     body = await request.json();
-    const { id, title, content, location, groupId, customDate } = body;
+    const { id, title, content, location, groupId, customDate, replyType } = body;
 
     console.log('🔵 API: Request body parsed', {
       pageId: id,
@@ -772,6 +772,11 @@ export async function PUT(request: NextRequest) {
       updateData.customDate = customDate;
     }
 
+    // Handle replyType changes for reply pages
+    if (replyType !== undefined) {
+      updateData.replyType = replyType;
+    }
+
     // Declare versionResult outside all blocks so it's accessible throughout the function
     let versionResult;
 
@@ -813,6 +818,18 @@ export async function PUT(request: NextRequest) {
             newTitle: title.trim()
           };
           console.log('🔄 TITLE_CHANGE: Adding title change info to content version');
+        }
+
+        // Add replyType change information for audit trail
+        if (replyType !== undefined && replyType !== pageData.replyType) {
+          versionData.replyTypeChange = {
+            oldReplyType: pageData.replyType || null,
+            newReplyType: replyType
+          };
+          console.log('🔄 REPLY_TYPE_CHANGE: Adding replyType change info to content version', {
+            oldReplyType: pageData.replyType,
+            newReplyType: replyType
+          });
         }
 
         logger.debug('Calling saveNewVersion', {
@@ -907,6 +924,9 @@ export async function PUT(request: NextRequest) {
       }
       if (customDate !== undefined) {
         metadataUpdate.customDate = customDate;
+      }
+      if (replyType !== undefined) {
+        metadataUpdate.replyType = replyType;
       }
 
       // CRITICAL FIX: Always ensure lastModified is updated for recent edits tracking

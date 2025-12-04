@@ -11,6 +11,7 @@ import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 import FloatingFinancialHeader from './FloatingFinancialHeader';
 import VerifyEmailBanner from '../utils/VerifyEmailBanner';
+import UsernameSetupBanner from '../utils/UsernameSetupBanner';
 import PWABanner from '../utils/PWABanner';
 
 
@@ -33,8 +34,9 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <>
-      {/* Banner system - shows at top of content */}
+      {/* Banner system - shows at top of content (priority: email > username > PWA) */}
       <VerifyEmailBanner />
+      <UsernameSetupBanner />
       <PWABanner />
 
       {/* Floating elements - render outside SidebarLayout to ensure proper viewport positioning */}

@@ -22,6 +22,8 @@ import {
   newFollowerTemplate,
   pageLinkedTemplate,
   accountSecurityTemplate,
+  chooseUsernameTemplate,
+  getTemplateById,
 } from '../lib/emailTemplates';
 import { logEmailSend } from './emailLogService';
 
@@ -663,6 +665,70 @@ export const sendSecurityAlert = async (options: {
 // Export the getResend function for advanced use cases
 export { getResend };
 
+/**
+ * Send an email using a template ID
+ * This is the recommended way to send emails using pre-defined templates
+ */
+export const sendTemplatedEmail = async (options: {
+  templateId: string;
+  to: string;
+  data: Record<string, any>;
+  userId?: string;
+}): Promise<boolean> => {
+  const sentAt = new Date().toISOString();
+  try {
+    const { templateId, to, data, userId } = options;
+    
+    const template = getTemplateById(templateId);
+    if (!template) {
+      console.error('[EmailService] Template not found:', templateId);
+      return false;
+    }
+
+    const { data: resendData, error } = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: template.subject,
+      html: template.generateHtml(data),
+    });
+
+    if (error) {
+      console.error('[EmailService] Resend error:', error);
+      await logEmailSend({
+        templateId,
+        templateName: template.name,
+        recipientEmail: to,
+        recipientUserId: userId,
+        recipientUsername: data.username,
+        subject: template.subject,
+        status: 'failed',
+        errorMessage: error.message,
+        metadata: data,
+        sentAt,
+      });
+      return false;
+    }
+
+    console.log(`[EmailService] ${template.name} email sent to:`, to, 'ID:', resendData?.id);
+    await logEmailSend({
+      templateId,
+      templateName: template.name,
+      recipientEmail: to,
+      recipientUserId: userId,
+      recipientUsername: data.username,
+      subject: template.subject,
+      status: 'sent',
+      resendId: resendData?.id,
+      metadata: data,
+      sentAt,
+    });
+    return true;
+  } catch (error) {
+    console.error('[EmailService] Failed to send templated email:', error);
+    return false;
+  }
+};
+
 export default {
   sendEmail,
   sendVerificationEmail,
@@ -675,4 +741,5 @@ export default {
   sendNewFollowerEmail,
   sendPageLinkedEmail,
   sendSecurityAlert,
+  sendTemplatedEmail,
 };

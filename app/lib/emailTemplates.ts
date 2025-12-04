@@ -524,6 +524,47 @@ export const accountSecurityTemplate: EmailTemplate = {
   `),
 };
 
+export const chooseUsernameTemplate: EmailTemplate = {
+  id: 'choose-username',
+  name: 'Choose Your Username',
+  description: 'Reminds users who haven\'t set up a proper username to choose one',
+  category: 'engagement',
+  subject: 'Choose your username on WeWrite ✏️',
+  sampleData: {
+    currentDisplayName: 'user_abc123',
+  },
+  generateHtml: ({ currentDisplayName }) => wrapEmail('Choose Your Username', `
+    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 style="margin-top: 0; color: #000;">Make Your Mark on WeWrite ✏️</h2>
+      <p>Hey there!</p>
+      <p>We noticed you haven't chosen a username yet. Right now you're showing up as <strong style="color: #666;">${currentDisplayName || 'user_...'}</strong> around the platform.</p>
+      
+      <p>A great username helps you:</p>
+      <ul style="padding-left: 20px; margin: 20px 0;">
+        <li style="margin-bottom: 8px;">Build your identity as a writer</li>
+        <li style="margin-bottom: 8px;">Make it easy for others to find and follow you</li>
+        <li style="margin-bottom: 8px;">Stand out on the leaderboard</li>
+        <li style="margin-bottom: 8px;">Get proper credit for your contributions</li>
+      </ul>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://getwewrite.app/settings/profile" style="${emailStyles.button}">
+          Choose My Username
+        </a>
+      </div>
+      
+      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 0; font-size: 14px; color: #666;">
+          <strong>💡 Tips for a great username:</strong><br>
+          • Keep it memorable and easy to spell<br>
+          • Use something that represents you as a writer<br>
+          • Avoid numbers and special characters if possible
+        </p>
+      </div>
+    </div>
+  `),
+};
+
 // ============================================================================
 // Export All Templates
 // ============================================================================
@@ -541,6 +582,7 @@ export const emailTemplates: EmailTemplate[] = [
   weeklyDigestTemplate,
   newFollowerTemplate,
   pageLinkedTemplate,
+  chooseUsernameTemplate,
   // System
   genericNotificationTemplate,
   accountSecurityTemplate,
