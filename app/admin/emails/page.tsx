@@ -330,6 +330,24 @@ export default function AdminEmailsPage() {
         </FloatingHeader>
 
         <div className="pt-24 lg:pt-0">
+          {/* Broadcast Banner */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Mail className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Send a Broadcast</h3>
+                  <p className="text-sm text-muted-foreground">Newsletter or product update to all users</p>
+                </div>
+              </div>
+              <Button onClick={() => router.push('/admin/broadcast')}>
+                Send Broadcast
+              </Button>
+            </div>
+          </div>
+
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Template List */}
             <div className="w-full lg:w-1/3 space-y-4">

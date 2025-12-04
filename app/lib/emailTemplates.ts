@@ -566,6 +566,57 @@ export const chooseUsernameTemplate: EmailTemplate = {
 };
 
 // ============================================================================
+// Broadcast Template (for newsletters and product updates)
+// ============================================================================
+
+export const broadcastEmailTemplate: EmailTemplate = {
+  id: 'broadcast',
+  name: 'Broadcast Email',
+  description: 'Newsletter and product update template for bulk sending to all users',
+  category: 'engagement',
+  subject: 'Update from WeWrite',
+  sampleData: {
+    subject: 'New Features on WeWrite! 🎉',
+    heading: 'Exciting Updates Coming Your Way',
+    body: `<p>We've been working hard on some amazing new features that we think you'll love:</p>
+    <ul>
+      <li><strong>Improved Editor</strong> - A smoother writing experience</li>
+      <li><strong>New Themes</strong> - Fresh looks for your pages</li>
+      <li><strong>Better Mobile Support</strong> - Write on the go</li>
+    </ul>
+    <p>Thank you for being part of our community!</p>`,
+    ctaText: 'Explore New Features',
+    ctaUrl: 'https://getwewrite.app',
+  },
+  generateHtml: ({ subject, heading, body, ctaText, ctaUrl, recipientEmail }) => {
+    const baseUrl = 'https://getwewrite.app';
+    const unsubscribeUrl = `${baseUrl}/settings?tab=notifications&email=${encodeURIComponent(recipientEmail || '')}`;
+    
+    const ctaSection = ctaText && ctaUrl ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${ctaUrl}" style="${emailStyles.button}">
+          ${ctaText}
+        </a>
+      </div>
+    ` : '';
+    
+    return wrapEmail(subject || 'Update from WeWrite', `
+      <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+        <h2 style="margin-top: 0; color: #000;">${heading}</h2>
+        <div style="color: #333; line-height: 1.7;">
+          ${body}
+        </div>
+        ${ctaSection}
+      </div>
+      <div style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
+        <p>You're receiving this because you have an account at WeWrite.</p>
+        <p><a href="${unsubscribeUrl}" style="color: #999;">Manage email preferences</a></p>
+      </div>
+    `);
+  },
+};
+
+// ============================================================================
 // Export All Templates
 // ============================================================================
 
@@ -583,6 +634,7 @@ export const emailTemplates: EmailTemplate[] = [
   newFollowerTemplate,
   pageLinkedTemplate,
   chooseUsernameTemplate,
+  broadcastEmailTemplate,
   // System
   genericNotificationTemplate,
   accountSecurityTemplate,
