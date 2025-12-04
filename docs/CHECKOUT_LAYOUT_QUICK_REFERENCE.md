@@ -78,10 +78,10 @@ Before deploying checkout changes:
 **Problem:** Stripe requires HTTPS, localhost uses HTTP
 ```bash
 # Setup HTTPS (one-time)
-pnpm run dev:https:setup
+bun run dev:https:setup
 
 # Start HTTPS server
-pnpm run dev:https
+bun run dev:https
 
 # Visit: https://localhost:3000
 ```

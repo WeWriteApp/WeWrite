@@ -6,6 +6,9 @@
 .pnp.js
 .yarn/install-state.gz
 
+# old pnpm lockfile (migrated to bun)
+pnpm-lock.yaml
+
 # testing
 /coverage
 

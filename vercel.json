@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "bun run build",
+  "installCommand": "bun install --frozen-lockfile",
   "env": {
     "SKIP_TYPE_CHECK": "1",
     "NODE_OPTIONS": "--max_old_space_size=4096"

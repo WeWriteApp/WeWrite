@@ -92,7 +92,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 
 ### Prerequisites
 - Node.js 20+ (recommended)
-- pnpm package manager
+- Bun package manager
 - Firebase project setup
 
 ### Installation
@@ -101,13 +101,13 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 git clone https://github.com/WeWriteApp/WeWrite.git
 
 # Install dependencies
-pnpm install
+bun install
 
 # Set up environment variables
 cp .env.example .env.local
 
 # Start development server
-pnpm dev
+bun dev
 ```
 
 ### Development Workflow
@@ -170,16 +170,16 @@ import { AllocationBar, EmbeddedAllocationBar, SimpleAllocationBar } from '@/com
 ### Running Tests
 ```bash
 # Run all tests
-pnpm test
+bun test
 
 # Run allocation-specific tests
-pnpm test:allocation
+bun test:allocation
 
 # Run tests with coverage
-pnpm test:coverage
+bun test:coverage
 
 # Run tests in watch mode
-pnpm test:watch
+bun test:watch
 ```
 
 ### Test Structure

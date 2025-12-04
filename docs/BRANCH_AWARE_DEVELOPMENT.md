@@ -9,7 +9,7 @@ WeWrite implements **branch-aware environment detection** for local development,
 ### Main Branch (`main`)
 ```bash
 git checkout main
-pnpm dev
+bun dev
 # → Uses production collections (users, pages, subscriptions)
 # → Connects to real production data
 # → Uses live Stripe keys
@@ -24,7 +24,7 @@ pnpm dev
 ### Dev Branch (`dev`)
 ```bash
 git checkout dev
-pnpm dev
+bun dev
 # → Uses DEV_ prefixed collections (DEV_users, DEV_pages, DEV_subscriptions)
 # → Connects to isolated test data
 # → Uses test Stripe keys
@@ -39,7 +39,7 @@ pnpm dev
 ### Other Branches (Feature branches, etc.)
 ```bash
 git checkout feature/my-new-feature
-pnpm dev
+bun dev
 # → Uses DEV_ prefixed collections (safe default)
 # → Connects to isolated test data
 # → Uses test Stripe keys
@@ -71,20 +71,20 @@ The branch detection logic is implemented in:
    git checkout dev
    git pull origin dev
    git checkout -b feature/my-feature
-   pnpm dev  # Safe: uses DEV_ collections
+   bun dev  # Safe: uses DEV_ collections
    ```
 
 2. **Test with production data when needed**:
    ```bash
    git checkout main
-   pnpm dev  # Caution: uses production collections
+   bun dev  # Caution: uses production collections
    # Test your changes against real data
    ```
 
 3. **Switch back to dev for continued development**:
    ```bash
    git checkout dev
-   pnpm dev  # Safe: back to DEV_ collections
+   bun dev  # Safe: back to DEV_ collections
    ```
 
 ### Branch Switching
@@ -94,7 +94,7 @@ When you switch branches, the environment automatically updates:
 # Currently on dev branch - using DEV_ collections
 git checkout main
 # Now on main branch - will use production collections on next server restart
-pnpm dev  # Restart to pick up new environment
+bun dev  # Restart to pick up new environment
 ```
 
 ## 🛡️ Safety Features

@@ -26,28 +26,28 @@ WeWrite is built with [Next.js](https://nextjs.org/) and uses modern web technol
 
 ### Prerequisites
 
-- **Node.js** 18+
-- **pnpm** (preferred package manager)
+- **Node.js** 20+
+- **Bun** (preferred package manager - faster than npm/pnpm)
 
 ### Installation
 
 ```bash
-# Install pnpm if you don't have it
-npm install -g pnpm
+# Install Bun if you don't have it
+curl -fsSL https://bun.sh/install | bash
 
 # Clone the repository
 git clone https://github.com/WeWriteApp/WeWrite.git
 cd WeWrite
 
 # Install dependencies
-pnpm install
+bun install
 
 # Set up environment variables
 cp .env.example .env.local
 # Edit .env.local with your configuration
 
 # Run the development server
-pnpm dev
+bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! 🎉

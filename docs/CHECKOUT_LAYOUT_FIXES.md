@@ -184,10 +184,10 @@ When modifying checkout layout, verify:
 ### Solution: Local HTTPS Development
 ```bash
 # Setup HTTPS certificates (one-time)
-pnpm run dev:https:setup
+bun run dev:https:setup
 
 # Start HTTPS development server
-pnpm run dev:https
+bun run dev:https
 
 # Visit: https://localhost:3000
 # Accept the self-signed certificate warning

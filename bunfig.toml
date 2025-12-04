@@ -1,0 +1,14 @@
+# Bun configuration file
+# https://bun.sh/docs/runtime/configuration
+
+[install]
+# Use the lockfile for reproducible builds
+frozenLockfile = false
+
+[install.lockfile]
+# Save the lockfile after installing
+save = true
+
+[run]
+# Silence the bun update message
+silent = false
