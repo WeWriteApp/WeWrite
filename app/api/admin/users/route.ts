@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getFirebaseAdmin } from '../../../firebase/admin';
 import { isAdminServer } from '../../admin-auth-helper';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 
@@ -36,7 +36,17 @@ interface UserData {
 export async function GET(request: NextRequest) {
   try {
     // Initialize Firebase Admin
-    const admin = getFirebaseAdmin();
+    let admin;
+    try {
+      admin = getFirebaseAdmin();
+    } catch (initError: any) {
+      console.error('[Admin Users API] Firebase Admin initialization error:', initError.message);
+      return NextResponse.json({ 
+        error: 'Firebase Admin initialization failed',
+        details: initError.message
+      }, { status: 500 });
+    }
+    
     if (!admin) {
       console.error('[Admin Users API] Firebase Admin failed to initialize');
       return NextResponse.json({ 

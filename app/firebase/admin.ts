@@ -130,6 +130,12 @@ export const getFirebaseAdmin = () => {
   return initAdmin();
 };
 
+// Export getAdminFirestore for easy Firestore access
+export const getAdminFirestore = () => {
+  const adminInstance = initAdmin();
+  return adminInstance.firestore();
+};
+
 // Auto-initialize if in server environment
 if (typeof window === 'undefined') {
   // Only auto-initialize in production or when explicitly requested
