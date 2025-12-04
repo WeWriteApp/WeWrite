@@ -37,6 +37,13 @@ export async function GET(request: NextRequest) {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.error('[Admin Users API] Firebase Admin failed to initialize');
+      return NextResponse.json({ 
+        error: 'Firebase Admin not available',
+        details: 'Server configuration issue - check environment variables'
+      }, { status: 500 });
+    }
     const db = admin.firestore();
 
     // Verify admin access
