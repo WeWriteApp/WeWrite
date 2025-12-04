@@ -342,15 +342,28 @@ async function getPageVisitsLeaderboard(
 }
 
 // Enrich user data with username and photo
+// Helper to check if username is valid (not auto-generated placeholder)
+function isValidUsername(username: string | undefined | null): boolean {
+  if (!username || typeof username !== 'string') return false;
+  const trimmed = username.trim();
+  if (!trimmed) return false;
+  if (trimmed.includes('@')) return false;
+  // Auto-generated fallbacks are not valid
+  if (/^user_[a-zA-Z0-9]{8}$/i.test(trimmed)) return false;
+  if (/^User [a-zA-Z0-9]{8}$/i.test(trimmed)) return false;
+  return true;
+}
+
 async function enrichUserData(
   db: FirebaseFirestore.Firestore,
   userCounts: [string, number][]
 ): Promise<LeaderboardUser[]> {
   if (userCounts.length === 0) return [];
 
-  // Try to get user data from RTDB or Firestore
+  // Try to get user data from RTDB, then fall back to Firestore
   const admin = await import('../../firebase/admin').then(m => m.initAdmin());
   const rtdb = admin.database();
+  const usersCollection = getCollectionName('users');
   
   const leaderboard: LeaderboardUser[] = [];
   
@@ -358,34 +371,66 @@ async function enrichUserData(
     const [userId, count] = userCounts[i];
     
     try {
+      let username: string | null = null;
+      let photoURL: string | undefined = undefined;
+
       // Try RTDB first (primary user store)
       const userRef = rtdb.ref(`users/${userId}`);
-      const snapshot = await userRef.get();
+      const rtdbSnapshot = await userRef.get();
       
-      if (snapshot.exists()) {
-        const userData = snapshot.val();
-        leaderboard.push({
-          userId,
-          // Only use username field - displayName is deprecated
-          username: userData.username || `user_${userId.slice(0, 8)}`,
-          photoURL: userData.photoURL,
-          count,
-          rank: i + 1
-        });
-      } else {
-        // User not found, use placeholder
-        leaderboard.push({
-          userId,
-          username: `User ${userId.slice(0, 8)}`,
-          count,
-          rank: i + 1
-        });
+      if (rtdbSnapshot.exists()) {
+        const rtdbData = rtdbSnapshot.val();
+        photoURL = rtdbData.photoURL;
+        
+        // Check if RTDB has a valid username
+        if (isValidUsername(rtdbData.username)) {
+          username = rtdbData.username;
+        } else if (isValidUsername(rtdbData.displayName)) {
+          // Fall back to displayName if username isn't set
+          username = rtdbData.displayName;
+        }
       }
+
+      // If still no valid username, try Firestore
+      if (!username) {
+        try {
+          const firestoreDoc = await db.collection(usersCollection).doc(userId).get();
+          if (firestoreDoc.exists) {
+            const firestoreData = firestoreDoc.data();
+            if (firestoreData) {
+              if (isValidUsername(firestoreData.username)) {
+                username = firestoreData.username;
+              } else if (isValidUsername(firestoreData.displayName)) {
+                username = firestoreData.displayName;
+              }
+              // Also grab photoURL if not found in RTDB
+              if (!photoURL && firestoreData.photoURL) {
+                photoURL = firestoreData.photoURL;
+              }
+            }
+          }
+        } catch (fsError) {
+          console.error(`Error fetching Firestore user ${userId}:`, fsError);
+        }
+      }
+
+      // Final fallback
+      if (!username) {
+        username = `user_${userId.slice(0, 8)}`;
+      }
+
+      leaderboard.push({
+        userId,
+        username,
+        photoURL,
+        count,
+        rank: i + 1
+      });
     } catch (error) {
       console.error(`Error fetching user ${userId}:`, error);
       leaderboard.push({
         userId,
-        username: `User ${userId.slice(0, 8)}`,
+        username: `user_${userId.slice(0, 8)}`,
         count,
         rank: i + 1
       });
