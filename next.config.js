@@ -106,7 +106,14 @@ const nextConfig = {
   },
 
   // External packages for server components
-  serverExternalPackages: [],
+  // These packages should not be bundled and will use node_modules at runtime
+  serverExternalPackages: [
+    'firebase-admin',
+    'jwks-rsa',
+    'jose',
+    '@google-cloud/firestore',
+    '@google-cloud/storage',
+  ],
 
   // Enhanced logging for development - increase verbosity for debugging
   logging: {
