@@ -16,7 +16,8 @@ import {
   Palette,
   Wallet,
   Loader2,
-  Bell
+  Bell,
+  Mail
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 
@@ -97,6 +98,12 @@ export default function SettingsIndexPage() {
       title: 'Notifications',
       icon: Bell,
       href: '/settings/notifications'
+    },
+    {
+      id: 'email-preferences',
+      title: 'Email Preferences',
+      icon: Mail,
+      href: '/settings/email-preferences'
     },
     {
       id: 'deleted',

@@ -11,7 +11,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 // Swipeable tabs removed - simplified admin interface
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Navigation } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Navigation, Mail } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -512,6 +512,27 @@ export default function AdminPage() {
                 >
                   <Navigation className="h-4 w-4" />
                   Manage Navigation
+                </Button>
+              </div>
+            </div>
+
+            {/* Email Templates */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Email Templates</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Preview and manage email designs for verification, notifications, payouts, and more.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/emails')}
+                >
+                  <Mail className="h-4 w-4" />
+                  Manage Emails
                 </Button>
               </div>
             </div>

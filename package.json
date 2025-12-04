@@ -175,6 +175,7 @@
     "react-search-autocomplete": "^8.5.2",
     "react-swipeable": "^7.0.2",
     "recharts": "^2.15.3",
+    "resend": "^6.5.2",
     "sharp": "^0.34.2",
     "slate": "^0.103.0",
     "slate-history": "^0.113.1",
