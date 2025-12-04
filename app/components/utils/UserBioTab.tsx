@@ -61,7 +61,14 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         setIsLoading(true);
 
         // Use API route for bio loading to handle environment-aware operations
-        const response = await fetch(`/api/users/${profile.uid}/bio`);
+        // Add cache-busting to ensure fresh data on every load
+        const response = await fetch(`/api/users/${profile.uid}/bio`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
 
         console.log('🔍 UserBioTab: API response status:', response.status);
 

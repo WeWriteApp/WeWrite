@@ -53,11 +53,18 @@ export async function GET(
       ? JSON.parse(JSON.stringify(userData.bio))
       : '';
 
-    return createApiResponse({
+    const response = createApiResponse({
       bio: normalizedBio,
       bioLastEditor: userData?.bioLastEditor || null,
       bioLastEditTime: userData?.bioLastEditTime || null
     });
+
+    // Prevent caching of bio data to ensure users always see latest content
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+
+    return response;
 
   } catch (error) {
     console.error('Error fetching user bio:', error);
