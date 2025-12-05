@@ -68,45 +68,142 @@ export async function POST(request: NextRequest) {
     if (useDevAuth) {
       console.log('[Auth] Using dev auth system (local development only)');
 
-      // In development mode, check against known test accounts
+      // In development mode, first check against known test accounts
       const testAccountsArray = Object.values(DEV_TEST_USERS);
 
       const account = testAccountsArray.find(acc =>
         (acc.email === emailOrUsername || acc.username === emailOrUsername) && acc.password === password
       );
 
-      if (!account) {
-        return createErrorResponse('Invalid credentials');
+      if (account) {
+        // Create session cookie for predefined test account
+        const cookieStore = await cookies();
+        const sessionData = {
+          uid: account.uid,
+          email: account.email,
+          username: account.username,
+          emailVerified: true,
+          isAdmin: account.isAdmin || false
+        };
+
+        cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
+          httpOnly: true,
+          secure: false, // Dev mode
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+          path: '/'
+        });
+
+        secureLogger.info('[Auth] Dev auth login successful (predefined user)', {
+          email: maskEmail(account.email),
+          username: account.username
+        });
+
+        return createSuccessResponse({
+          uid: account.uid,
+          email: account.email,
+          username: account.username,
+          emailVerified: true
+        });
       }
 
-      // Create session cookie
-      const cookieStore = await cookies();
-      const sessionData = {
-        uid: account.uid,
-        email: account.email,
-        username: account.username,
-        emailVerified: true
-      };
+      // Check for dynamically registered dev users in DEV_users collection
+      console.log('[Auth] Checking for dev-registered user...');
+      const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82';
+      const usersCollection = getCollectionName('users');
+      const usernamesCollection = getCollectionName('usernames');
+      
+      // Look up user by email or username
+      let userDoc = null;
+      const isEmail = emailOrUsername.includes('@');
+      
+      if (isEmail) {
+        // Query by email
+        const queryUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`;
+        const queryResponse = await fetch(queryUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            structuredQuery: {
+              from: [{ collectionId: usersCollection }],
+              where: {
+                fieldFilter: {
+                  field: { fieldPath: 'email' },
+                  op: 'EQUAL',
+                  value: { stringValue: emailOrUsername }
+                }
+              },
+              limit: 1
+            }
+          })
+        });
+        
+        const queryResult = await queryResponse.json();
+        if (queryResult[0]?.document) {
+          userDoc = queryResult[0].document;
+        }
+      } else {
+        // Look up by username first
+        const usernameUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usernamesCollection}/${emailOrUsername.toLowerCase()}`;
+        const usernameResponse = await fetch(usernameUrl);
+        
+        if (usernameResponse.ok) {
+          const usernameData = await usernameResponse.json();
+          const uid = usernameData.fields?.uid?.stringValue;
+          
+          if (uid) {
+            const userUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usersCollection}/${uid}`;
+            const userResponse = await fetch(userUrl);
+            if (userResponse.ok) {
+              userDoc = await userResponse.json();
+            }
+          }
+        }
+      }
+      
+      if (userDoc) {
+        const fields = userDoc.fields || {};
+        const storedPasswordHash = fields.passwordHash?.stringValue;
+        const expectedHash = `dev_hash_${Buffer.from(password).toString('base64')}`;
+        
+        if (storedPasswordHash === expectedHash) {
+          // Extract uid from document path
+          const docPath = userDoc.name || '';
+          const uid = docPath.split('/').pop() || '';
+          
+          const userData = {
+            uid,
+            email: fields.email?.stringValue || '',
+            username: fields.username?.stringValue || '',
+            emailVerified: fields.emailVerified?.booleanValue || false,
+            isAdmin: fields.isAdmin?.booleanValue || false
+          };
+          
+          // Create session cookie
+          const cookieStore = await cookies();
+          cookieStore.set('simpleUserSession', JSON.stringify(userData), {
+            httpOnly: true,
+            secure: false, // Dev mode
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+            path: '/'
+          });
+          
+          secureLogger.info('[Auth] Dev auth login successful (registered user)', {
+            email: maskEmail(userData.email),
+            username: userData.username
+          });
+          
+          return createSuccessResponse({
+            uid: userData.uid,
+            email: userData.email,
+            username: userData.username,
+            emailVerified: userData.emailVerified
+          });
+        }
+      }
 
-      cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-        path: '/'
-      });
-
-      secureLogger.info('[Auth] Dev auth login successful', {
-        email: maskEmail(account.email),
-        username: account.username
-      });
-
-      return createSuccessResponse({
-        uid: account.uid,
-        email: account.email,
-        username: account.username,
-        emailVerified: true
-      });
+      return createErrorResponse('Invalid credentials');
     }
 
     // Production mode: use Firebase Admin Firestore for username lookup
