@@ -10,10 +10,12 @@ export interface User {
   email: string;
   username?: string;
   photoURL?: string;
+  emailVerified?: boolean;
   bio?: string | EditorContent;
   bioLastEditor?: string;
   bioLastEditTime?: string;
   createdAt?: string | Timestamp;
+  lastLoginAt?: string | Timestamp;
   lastActive?: string | Timestamp;
   isAdmin?: boolean;
   tier?: SubscriptionTier;

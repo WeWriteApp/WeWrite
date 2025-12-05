@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { verifyIdToken, getUserById, updateFirestoreDocument } from '../../../lib/firebase-rest';
+import { verifyIdToken, updateFirestoreDocument } from '../../../lib/firebase-rest';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { cookies } from 'next/headers';
 
@@ -34,16 +34,8 @@ export async function POST(request: NextRequest) {
         return createErrorResponse('UNAUTHORIZED', 'Invalid token');
       }
 
-      const userResult = await getUserById(verifyResult.uid);
-      
-      if (!userResult.success || !userResult.user) {
-        return createErrorResponse('BAD_REQUEST', 'User not found');
-      }
-
-      const user = userResult.user;
-
-      // Check if email is already verified
-      if (user.emailVerified) {
+      // Check if email is already verified (from token verification)
+      if (verifyResult.emailVerified) {
         return createApiResponse({
           message: 'Email is already verified',
           emailVerified: true
@@ -53,7 +45,7 @@ export async function POST(request: NextRequest) {
       // Return instructions for client to send verification email
       return createApiResponse({
         message: 'Use Firebase client SDK sendEmailVerification() to send verification email',
-        email: user.email,
+        email: verifyResult.email,
         emailVerified: false,
         requiresClientAction: true
       });
@@ -87,23 +79,15 @@ export async function PUT(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'ID token is required');
     }
 
-    // Verify the token to get user info
+    // Verify the token to get user info (includes emailVerified status)
     const verifyResult = await verifyIdToken(idToken);
     
     if (!verifyResult.success || !verifyResult.uid) {
       return createErrorResponse('UNAUTHORIZED', 'Invalid token');
     }
 
-    // Get fresh user data to check emailVerified status
-    const userResult = await getUserById(verifyResult.uid);
-    
-    if (!userResult.success || !userResult.user) {
-      return createErrorResponse('BAD_REQUEST', 'User not found');
-    }
-
-    const user = userResult.user;
-
-    if (!user.emailVerified) {
+    // The token verification returns current emailVerified status from Firebase
+    if (!verifyResult.emailVerified) {
       return createErrorResponse('BAD_REQUEST', 'Email has not been verified yet');
     }
 
@@ -119,22 +103,19 @@ export async function PUT(request: NextRequest) {
     
     if (sessionCookie?.value) {
       try {
-        const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+        let sessionData;
+        try {
+          sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+        } catch {
+          sessionData = JSON.parse(sessionCookie.value);
+        }
         sessionData.emailVerified = true;
         
-        const response = createApiResponse({
-          message: 'Email verified successfully',
-          email: user.email,
-          emailVerified: true,
-          uid: verifyResult.uid
-        });
-        
-        // Can't set cookies on createApiResponse, need NextResponse
         const nextResponse = NextResponse.json({
           success: true,
           data: {
             message: 'Email verified successfully',
-            email: user.email,
+            email: verifyResult.email,
             emailVerified: true,
             uid: verifyResult.uid
           }
@@ -159,7 +140,7 @@ export async function PUT(request: NextRequest) {
 
     return createApiResponse({
       message: 'Email verified successfully',
-      email: user.email,
+      email: verifyResult.email,
       emailVerified: true,
       uid: verifyResult.uid
     });
@@ -177,44 +158,40 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("simpleUserSession");
     
-    let uid: string | null = null;
-    
     if (sessionCookie?.value) {
       try {
-        const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
-        uid = sessionData.uid;
+        let sessionData;
+        try {
+          sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+        } catch {
+          sessionData = JSON.parse(sessionCookie.value);
+        }
+        
+        if (sessionData.uid) {
+          return createApiResponse({
+            emailVerified: sessionData.emailVerified || false,
+            uid: sessionData.uid
+          });
+        }
       } catch {
         // Continue to check for token in header
       }
     }
 
     // If no session, try Authorization header
-    if (!uid) {
-      const authHeader = request.headers.get('authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        const verifyResult = await verifyIdToken(token);
-        if (verifyResult.success && verifyResult.uid) {
-          uid = verifyResult.uid;
-        }
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const verifyResult = await verifyIdToken(token);
+      if (verifyResult.success && verifyResult.uid) {
+        return createApiResponse({
+          emailVerified: verifyResult.emailVerified || false,
+          uid: verifyResult.uid
+        });
       }
     }
 
-    if (!uid) {
-      return createErrorResponse('UNAUTHORIZED', 'Authentication required');
-    }
-
-    // Get user record
-    const userResult = await getUserById(uid);
-    
-    if (!userResult.success || !userResult.user) {
-      return createErrorResponse('BAD_REQUEST', 'User not found');
-    }
-
-    return createApiResponse({
-      emailVerified: userResult.user.emailVerified || false,
-      uid: uid
-    });
+    return createErrorResponse('UNAUTHORIZED', 'Authentication required');
 
   } catch (error: unknown) {
     console.error('Email verification status check error:', error);

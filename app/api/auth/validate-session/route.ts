@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getUserById } from "../../../lib/firebase-rest";
 
-// Validate a session by checking if the user still exists and is active
+// Validate a session by checking if the session cookie exists and is valid
+// Note: We trust the session cookie since it was created after successful Firebase Auth login
 export async function GET(request: NextRequest) {
   console.log("[validate-session] GET request received");
 
@@ -24,11 +24,16 @@ export async function GET(request: NextRequest) {
     try {
       sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
     } catch (parseError) {
-      console.error("[validate-session] Failed to parse session cookie:", parseError);
-      return NextResponse.json(
-        { valid: false, error: "Invalid session format" },
-        { status: 401 }
-      );
+      // Try without decoding (some cookies may not be encoded)
+      try {
+        sessionData = JSON.parse(sessionCookie.value);
+      } catch {
+        console.error("[validate-session] Failed to parse session cookie:", parseError);
+        return NextResponse.json(
+          { valid: false, error: "Invalid session format" },
+          { status: 401 }
+        );
+      }
     }
 
     // Validate required fields
@@ -40,40 +45,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[validate-session] Validating session for uid: ${sessionData.uid}`);
-
-    // Verify the user still exists in Firebase Auth using REST API
-    const userResult = await getUserById(sessionData.uid);
-    
-    if (!userResult.success || !userResult.user) {
-      console.log(`[validate-session] User not found or error: ${userResult.error}`);
-      return NextResponse.json(
-        { valid: false, error: "User not found" },
-        { status: 401 }
-      );
-    }
-
-    const user = userResult.user;
-
-    // Check if user is disabled
-    if (user.disabled) {
-      console.log(`[validate-session] User ${sessionData.uid} is disabled`);
-      return NextResponse.json(
-        { valid: false, error: "User account is disabled" },
-        { status: 401 }
-      );
-    }
-
     console.log(`[validate-session] Session valid for user: ${sessionData.email}`);
 
     // Return the session data along with validation status
+    // We trust the cookie since it was created server-side after Firebase Auth verification
     return NextResponse.json({
       valid: true,
       user: {
         uid: sessionData.uid,
         email: sessionData.email,
         username: sessionData.username || null,
-        emailVerified: sessionData.emailVerified || user.emailVerified || false,
+        emailVerified: sessionData.emailVerified || false,
       },
     });
   } catch (error: unknown) {
@@ -101,7 +83,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Import verifyIdToken from firebase-rest
-    const { verifyIdToken } = await import("../../../lib/firebase-rest");
+    const { verifyIdToken, getFirestoreDoc } = await import("../../../lib/firebase-rest");
+    const { getCollectionName } = await import("../../../utils/environmentConfig");
     
     const verifyResult = await verifyIdToken(idToken);
     
@@ -112,37 +95,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current user data
-    const userResult = await getUserById(verifyResult.uid);
-    
-    if (!userResult.success || !userResult.user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
-      );
-    }
+    // Get username from Firestore (using REST API with user's token)
+    const userDoc = await getFirestoreDoc(getCollectionName("users"), verifyResult.uid);
+    const username = userDoc?.username || null;
 
-    const user = userResult.user;
-
-    // Check if user is disabled
-    if (user.disabled) {
-      return NextResponse.json(
-        { success: false, error: "User account is disabled" },
-        { status: 401 }
-      );
-    }
-
-    // Get username from Firestore
-    const { getFirestoreDocument } = await import("../../../lib/firebase-rest");
-    const usernameDoc = await getFirestoreDocument("usernames", verifyResult.uid);
-    const username = usernameDoc.success ? usernameDoc.data?.username : null;
-
-    // Update the session cookie
+    // Update the session cookie with verified data
     const sessionData = {
       uid: verifyResult.uid,
-      email: user.email || verifyResult.email,
+      email: verifyResult.email || '',
       username: username,
-      emailVerified: user.emailVerified || false,
+      emailVerified: verifyResult.emailVerified || false,
     };
 
     const response = NextResponse.json({

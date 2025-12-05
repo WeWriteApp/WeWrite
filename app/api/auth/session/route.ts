@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           uid: devUser.uid,
           email: devUser.email,
           username: devUser.username,
-          photoURL: null,
+          photoURL: undefined,
           emailVerified: true,
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
@@ -173,23 +173,23 @@ export async function POST(request: NextRequest) {
     // Production mode: verify ID token using REST API
     console.log('[Session] Verifying ID token via REST API...');
 
-    const tokenUser = await verifyIdToken(idToken);
-    if (!tokenUser) {
-      console.error('[Session] Token verification failed');
+    const verifyResult = await verifyIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.uid) {
+      console.error('[Session] Token verification failed:', verifyResult.error);
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid ID token');
     }
 
-    console.log('[Session] Token verified for user:', tokenUser.uid);
+    console.log('[Session] Token verified for user:', verifyResult.uid);
 
     // Get user data from Firestore using REST API
-    const userData = await getFirestoreDoc(getCollectionName('users'), tokenUser.uid);
+    const userData = await getFirestoreDoc(getCollectionName('users'), verifyResult.uid);
 
     const user: User = {
-      uid: tokenUser.uid,
-      email: tokenUser.email,
+      uid: verifyResult.uid,
+      email: verifyResult.email || '',
       username: userData?.username || '',
       photoURL: userData?.photoURL || undefined,
-      emailVerified: tokenUser.emailVerified,
+      emailVerified: verifyResult.emailVerified || false,
       createdAt: userData?.createdAt || new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
       isAdmin: userData?.isAdmin === true || userData?.role === 'admin'
