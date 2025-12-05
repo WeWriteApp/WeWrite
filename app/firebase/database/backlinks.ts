@@ -24,23 +24,8 @@ import { db } from '../config';
 import { extractLinksFromNodes } from './links';
 import { getCollectionName } from '../../utils/environmentConfig';
 
-// Helper function to get the appropriate database instance
-function getDatabase() {
-  // Check if we're running on the server (Node.js environment)
-  if (typeof window === 'undefined') {
-    try {
-      // Use Firebase Admin SDK on server
-      const { getFirebaseAdmin } = require('../admin');
-      const admin = getFirebaseAdmin();
-      return admin.firestore();
-    } catch (error) {
-      console.warn('Firebase Admin not available, falling back to client SDK:', error.message);
-      return db;
-    }
-  }
-  // Use client SDK in browser
-  return db;
-}
+// NOTE: This file is imported by client-side code, so we cannot use firebase-admin here.
+// All operations use the client SDK. Server-side backlink operations should use API routes.
 
 export interface BacklinkEntry {
   id: string;
@@ -154,13 +139,8 @@ export async function updateBacklinksIndex(
       isPublic,
       contentType: typeof content,
       contentLength: Array.isArray(content) ? content.length : 'not array',
-      environment: getCollectionName('backlinks'),
-      isServer: typeof window === 'undefined'
+      environment: getCollectionName('backlinks')
     });
-
-    // Get the appropriate database instance (Admin SDK on server, client SDK in browser)
-    const database = getDatabase();
-    const isServerSide = typeof window === 'undefined';
 
     // First, remove all existing backlinks from this page
     await removeBacklinksFromPage(pageId);
@@ -181,72 +161,37 @@ export async function updateBacklinksIndex(
       return;
     }
 
-    // Create batch for efficient writes
-    let batch;
-    if (isServerSide) {
-      // Use Admin SDK batch
-      batch = database.batch();
-    } else {
-      // Use client SDK batch
-      batch = writeBatch(db);
-    }
+    // Create batch for efficient writes using client SDK
+    const batch = writeBatch(db);
     
     // Add new backlink entries and create notifications
     for (const link of pageLinks) {
       const backlinkId = `${pageId}_to_${link.pageId}`;
-
-      let backlinkRef;
-      let backlinkEntry;
-
-      if (isServerSide) {
-        // Use Admin SDK
-        backlinkRef = database.collection(getCollectionName("backlinks")).doc(backlinkId);
-        backlinkEntry = {
-          id: backlinkId,
-          sourcePageId: pageId,
-          sourcePageTitle: pageTitle,
-          sourceUsername: username,
-          targetPageId: link.pageId,
-          linkText: link.text || '',
-          linkUrl: link.url || '',
-          createdAt: new Date(), // Admin SDK uses Date objects
-          lastModified: lastModified,
-          isPublic: isPublic
-        };
-      } else {
-        // Use client SDK
-        backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
-        backlinkEntry = {
-          id: backlinkId,
-          sourcePageId: pageId,
-          sourcePageTitle: pageTitle,
-          sourceUsername: username,
-          targetPageId: link.pageId,
-          linkText: link.text || '',
-          linkUrl: link.url || '',
-          createdAt: serverTimestamp(),
-          lastModified: lastModified,
-          isPublic: isPublic
-        };
-      }
+      const backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
+      const backlinkEntry = {
+        id: backlinkId,
+        sourcePageId: pageId,
+        sourcePageTitle: pageTitle,
+        sourceUsername: username,
+        targetPageId: link.pageId,
+        linkText: link.text || '',
+        linkUrl: link.url || '',
+        createdAt: serverTimestamp(),
+        lastModified: lastModified,
+        isPublic: isPublic
+      };
 
       batch.set(backlinkRef, backlinkEntry);
     }
 
     // Commit the batch
-    console.log(`🔄 [BACKLINKS] Committing batch with ${pageLinks.length} backlink entries using ${isServerSide ? 'Admin SDK' : 'Client SDK'}...`);
+    console.log(`🔄 [BACKLINKS] Committing batch with ${pageLinks.length} backlink entries...`);
     await batch.commit();
 
     console.log(`✅ [BACKLINKS] Successfully updated backlinks index: ${pageLinks.length} links from page ${pageId}`);
 
     // Create notifications for page mentions (links)
-    if (!isServerSide) {
-      // Only create notifications on client side to avoid duplicate notifications
-      await createLinkNotifications(pageId, pageTitle, username, pageLinks);
-    } else {
-      // Server-side: Send email notifications for page links
-      await sendPageLinkedEmails(pageId, pageTitle, username, pageLinks, database);
-    }
+    await createLinkNotifications(pageId, pageTitle, username, pageLinks);
     
   } catch (error) {
     console.error('Error updating backlinks index:', error);
@@ -312,117 +257,30 @@ async function createLinkNotifications(
 }
 
 /**
- * Send email notifications for page links (server-side only)
- */
-async function sendPageLinkedEmails(
-  sourcePageId: string,
-  sourcePageTitle: string,
-  sourceUsername: string,
-  pageLinks: any[],
-  database: any
-): Promise<void> {
-  try {
-    console.log(`📧 [EMAIL] Sending page-linked emails for ${pageLinks.length} links`);
-
-    // Import email service
-    const { sendPageLinkedEmail } = await import('../../services/emailService');
-
-    for (const link of pageLinks) {
-      try {
-        // Get the target page to find its owner
-        const targetPageDoc = await database.collection(getCollectionName('pages')).doc(link.pageId).get();
-
-        if (targetPageDoc.exists) {
-          const targetPageData = targetPageDoc.data();
-          const targetUserId = targetPageData.userId;
-
-          // Don't notify if the user is linking to their own page
-          // Need to look up the source user ID from username
-          const sourceUserQuery = await database.collection(getCollectionName('users'))
-            .where('username', '==', sourceUsername)
-            .limit(1)
-            .get();
-          
-          const sourceUserId = sourceUserQuery.empty ? null : sourceUserQuery.docs[0].id;
-
-          if (targetUserId && targetUserId !== sourceUserId) {
-            // Get the target user's email and preferences
-            const targetUserDoc = await database.collection(getCollectionName('users')).doc(targetUserId).get();
-
-            if (targetUserDoc.exists) {
-              const targetUserData = targetUserDoc.data();
-
-              // Check if user wants engagement emails
-              if (targetUserData.emailPreferences?.engagement !== false && targetUserData.email) {
-                await sendPageLinkedEmail({
-                  to: targetUserData.email,
-                  username: targetUserData.username || 'there',
-                  linkedPageTitle: targetPageData.title || 'Untitled',
-                  linkerUsername: sourceUsername,
-                  linkerPageTitle: sourcePageTitle,
-                  userId: targetUserId
-                });
-
-                console.log(`📧 [EMAIL] Sent page-linked email to user ${targetUserId}`);
-              }
-            }
-          }
-        }
-      } catch (emailError) {
-        console.error(`❌ [EMAIL] Error sending page-linked email for link to ${link.pageId}:`, emailError);
-        // Continue with other emails even if one fails
-      }
-    }
-  } catch (error) {
-    console.error(`❌ [EMAIL] Error sending page-linked emails:`, error);
-    // Don't throw - emails are not critical for backlinks functionality
-  }
-}
-
-/**
  * Remove all backlinks from a specific source page
  */
 export async function removeBacklinksFromPage(sourcePageId: string): Promise<void> {
   try {
-    const database = getDatabase();
-    const isServerSide = typeof window === 'undefined';
-
-    let snapshot;
-    if (isServerSide) {
-      // Use Admin SDK
-      const backlinksQuery = database.collection(getCollectionName('backlinks'))
-        .where('sourcePageId', '==', sourcePageId);
-      snapshot = await backlinksQuery.get();
-    } else {
-      // Use client SDK
-      const backlinksQuery = query(
-        collection(db, getCollectionName('backlinks')),
-        where('sourcePageId', '==', sourcePageId)
-      );
-      snapshot = await getDocs(backlinksQuery);
-    }
+    // Use client SDK
+    const backlinksQuery = query(
+      collection(db, getCollectionName('backlinks')),
+      where('sourcePageId', '==', sourcePageId)
+    );
+    const snapshot = await getDocs(backlinksQuery);
 
     if (snapshot.empty) {
       return;
     }
 
     // Create batch for efficient deletes
-    let batch;
-    if (isServerSide) {
-      batch = database.batch();
-      snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-    } else {
-      batch = writeBatch(db);
-      snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-    }
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(docSnap => {
+      batch.delete(docSnap.ref);
+    });
 
     await batch.commit();
 
-    console.log(`🗑️ Removed ${snapshot.docs.length} backlinks from page ${sourcePageId} using ${isServerSide ? 'Admin SDK' : 'Client SDK'}`);
+    console.log(`🗑️ Removed ${snapshot.docs.length} backlinks from page ${sourcePageId}`);
 
   } catch (error) {
     console.error('Error removing backlinks from page:', error);
