@@ -1,5 +1,10 @@
 # WeWrite Authentication Architecture
 
+**Last Updated**: December 4, 2025  
+**Status**: ACTIVE
+
+> ⚠️ **IMPORTANT**: For the Firebase REST API implementation that handles token verification in production (solving the jose dependency issue), see [Firebase REST API Architecture](./FIREBASE_REST_API_ARCHITECTURE.md).
+
 **⚠️ SOURCE OF TRUTH DOCUMENT ⚠️**
 
 This document describes the **ONLY** authentication system that should be used in WeWrite. The complex multi-auth system has been replaced with a clean, reliable Firebase Auth implementation.
@@ -397,13 +402,50 @@ interface User {
 
 ---
 
-**Last Updated**: 2025-01-22
+**Last Updated**: December 4, 2025
 **Maintainer**: WeWrite Development Team
 **Status**: ACTIVE - This is the current simplified authentication system
 
+## Production Token Verification
+
+In production (Vercel serverless), token verification uses the **Firebase REST API** instead of Firebase Admin Auth to avoid jose dependency issues:
+
+```typescript
+// Server-side session creation (api/auth/session/route.ts)
+import { verifyIdToken } from '../../../lib/firebase-rest';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+
+// 1. Verify token with REST API (avoids jose error)
+const verifyResult = await verifyIdToken(idToken);
+if (!verifyResult.success) {
+  return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+}
+
+// 2. Get user data with Admin Firestore (works fine)
+const admin = getFirebaseAdmin();
+const userDoc = await admin.firestore()
+  .collection('users')
+  .doc(verifyResult.uid)
+  .get();
+
+// 3. Create session cookie
+const sessionData = {
+  uid: verifyResult.uid,
+  email: verifyResult.email,
+  username: userDoc.data()?.username
+};
+response.cookies.set('simpleUserSession', JSON.stringify(sessionData), {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',
+  maxAge: 60 * 60 * 24 * 14 // 14 days
+});
+```
+
+See [Firebase REST API Architecture](./FIREBASE_REST_API_ARCHITECTURE.md) for full details.
+
 ## Related Documentation
 
+- [Firebase REST API Architecture](./FIREBASE_REST_API_ARCHITECTURE.md) - **START HERE** for production auth implementation
 - [Authentication Architecture](./AUTHENTICATION_ARCHITECTURE.md) - Auth system overview
-- [Auth Cleanup Guide](./AUTH_CLEANUP_GUIDE.md) - Legacy auth cleanup
-- [Auth System Audit Results](./AUTH_SYSTEM_AUDIT_RESULTS.md) - Audit status
 - [Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md) - Environment behavior

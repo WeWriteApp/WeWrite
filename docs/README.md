@@ -21,7 +21,9 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 ### Start here (core context)
 - **[CURRENT_ARCHITECTURE.md](./CURRENT_ARCHITECTURE.md)** – High-level system map
 - **[ENVIRONMENT_QUICK_REFERENCE.md](./ENVIRONMENT_QUICK_REFERENCE.md)** – Dev vs preview vs prod behavior
-- **[AUTHENTICATION_ARCHITECTURE.md](./AUTHENTICATION_ARCHITECTURE.md)** – Auth/session pipeline
+- **[FIREBASE_REST_API_ARCHITECTURE.md](./FIREBASE_REST_API_ARCHITECTURE.md)** – **START HERE for auth** – Hybrid REST/Admin architecture
+- **[AUTHENTICATION_ARCHITECTURE.md](./AUTHENTICATION_ARCHITECTURE.md)** – Environment-specific auth rules
+- **[SESSION_MANAGEMENT_ARCHITECTURE.md](./SESSION_MANAGEMENT_ARCHITECTURE.md)** – Session handling and cookies
 - **[ALLOCATION_SYSTEM.md](./ALLOCATION_SYSTEM.md)** + **[ALLOCATION_API_REFERENCE.md](./ALLOCATION_API_REFERENCE.md)** – Funding/allocations core
 - **[PAYMENTS_AND_ALLOCATIONS.md](./PAYMENTS_AND_ALLOCATIONS.md)** – Single entry for subscriptions, allocations, storage balance, payouts, fees, and troubleshooting
 - **[NOTIFICATION_SYSTEM.md](./NOTIFICATION_SYSTEM.md)** – Notification types and delivery
@@ -40,7 +42,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **[CRON_JOB_SETUP.md](./CRON_JOB_SETUP.md)** – Scheduled jobs
 
 ### Admin, security, and data
-- **[ADMIN_ACCOUNT_SETUP.md](./ADMIN_ACCOUNT_SETUP.md)**, **[AUTH_CLEANUP_GUIDE.md](./AUTH_CLEANUP_GUIDE.md)** – Admin and auth hygiene
+- **[ADMIN_ACCOUNT_SETUP.md](./ADMIN_ACCOUNT_SETUP.md)** – Admin setup
 - **[COLLECTION_NAMING_STANDARDS.md](./COLLECTION_NAMING_STANDARDS.md)** – Data layout
 - **[SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md)**, **[SECURITY_INCIDENT_RESPONSE.md](./SECURITY_INCIDENT_RESPONSE.md)** – Security posture
 - **[USERNAME_VS_ID.md](./USERNAME_VS_ID.md)**, **[USERNAME_SECURITY_GUIDELINES.md](./USERNAME_SECURITY_GUIDELINES.md)** – Identity and naming
@@ -53,6 +55,8 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 ### Archives / legacy
 - Older or superseded docs live in `docs/archive/`. Prefer the files listed above; move new legacy material into `docs/archive/` with a brief pointer here.
 - Recently archived (still searchable if needed):
+  - `archive/AUTH_CLEANUP_GUIDE.md` (old auth cleanup patterns)
+  - `archive/AUTH_SYSTEM_AUDIT_RESULTS.md` (January 2025 audit - superseded by current architecture)
   - `archive/BACKFILL_README.md` (legacy backfill steps)
   - `archive/DEMO_BALANCE_SYSTEM.md` (old demo flows)
   - `archive/ENHANCED_PAYMENT_ERROR_MESSAGING.md` (superseded by Payments & Allocations handbook)
