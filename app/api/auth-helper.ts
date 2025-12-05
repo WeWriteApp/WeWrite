@@ -63,13 +63,17 @@ export const ApiErrors: Record<ApiErrorType, ApiError> = {
 
 /**
  * Create standardized error response
+ * @param errorType - The type of error (maps to status code)
+ * @param customMessage - Custom error message to display
+ * @param extraData - Additional data to include in response (e.g., errorCode, errorId)
  */
 export const createErrorResponse = (
   errorType: ApiErrorType,
-  customMessage: string | null = null
+  customMessage: string | null = null,
+  extraData: Record<string, any> | null = null
 ): Response => {
   const error = ApiErrors[errorType] || ApiErrors.INTERNAL_ERROR;
-  return createApiResponse(null, customMessage || error.message, error.status);
+  return createApiResponse(extraData, customMessage || error.message, error.status);
 };
 
 /**

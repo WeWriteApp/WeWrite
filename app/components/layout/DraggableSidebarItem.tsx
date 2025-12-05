@@ -2,7 +2,6 @@
 import React, { useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { cn } from '../../lib/utils';
-import { NavButton } from '../ui/nav-button';
 import { LucideIcon, GripVertical } from 'lucide-react';
 
 interface DraggableSidebarItemProps {
@@ -11,13 +10,14 @@ interface DraggableSidebarItemProps {
   label: string;
   href?: string;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   isActive?: boolean;
   index: number;
   moveItem: (dragIndex: number, hoverIndex: number) => void;
   children?: React.ReactNode;
   isDragEnabled?: boolean;
-  showContent?: boolean; // For desktop sidebar expanded state
-  isCompact?: boolean; // For mobile vs desktop styling
+  showContent?: boolean;
+  isCompact?: boolean;
 }
 
 interface DragItem {
@@ -26,191 +26,128 @@ interface DragItem {
   type: string;
 }
 
+/**
+ * Clean sidebar item component
+ * 
+ * Architecture:
+ * - Collapsed: 40x40 button centered in 64px sidebar (12px margin each side)
+ * - Expanded: Full width button with 12px horizontal padding
+ * - Icon stays at exact same X position in both states
+ * - Label fades in/out with max-width animation
+ */
 const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
   id,
   icon: Icon,
   label,
-  href,
   onClick,
+  onMouseEnter,
   isActive = false,
   index,
   moveItem,
   children,
   isDragEnabled = true,
   showContent = true,
-  isCompact = false,
 }) => {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Defensive programming - ensure all required props are present
-  if (!id || !Icon || !label) {
-    console.warn('DraggableSidebarItem: Missing required props', { id, Icon, label });
-    return null;
-  }
+  if (!id || !Icon || !label) return null;
 
   const [{ handlerId }, drop] = useDrop({
     accept: 'sidebar-item',
     collect(monitor) {
-      return {
-        handlerId: monitor.getHandlerId(),
-      };
+      return { handlerId: monitor.getHandlerId() };
     },
     hover(item: DragItem, monitor) {
-      try {
-        if (!ref.current) {
-          return;
-        }
-        const dragIndex = item.index;
-        const hoverIndex = index;
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      if (dragIndex === hoverIndex) return;
 
-        // Don't replace items with themselves
-        if (dragIndex === hoverIndex) {
-          return;
-        }
+      const hoverBoundingRect = ref.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
 
-        // Determine rectangle on screen
-        const hoverBoundingRect = ref.current?.getBoundingClientRect();
+      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
 
-        // Get vertical middle for sidebar items (they stack vertically)
-        const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-
-        // Determine mouse position
-        const clientOffset = monitor.getClientOffset();
-        if (!clientOffset) return;
-
-        // Auto-scroll functionality when dragging near edges
-        const scrollContainer = ref.current.closest('.overflow-y-auto');
-        if (scrollContainer) {
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const scrollThreshold = 60; // pixels from edge to start scrolling
-          const scrollSpeed = 8; // pixels per scroll step
-
-          // Check if near top edge
-          if (clientOffset.y - containerRect.top < scrollThreshold) {
-            requestAnimationFrame(() => {
-              scrollContainer.scrollTop = Math.max(0, scrollContainer.scrollTop - scrollSpeed);
-            });
-          }
-          // Check if near bottom edge
-          else if (containerRect.bottom - clientOffset.y < scrollThreshold) {
-            requestAnimationFrame(() => {
-              scrollContainer.scrollTop += scrollSpeed;
-            });
-          }
-        }
-
-        // Get pixels to the top
-        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-
-        // Only perform the move when the mouse has crossed half of the items height
-        // When dragging up, only move when the cursor is above 50%
-        // When dragging down, only move when the cursor is below 50%
-
-        // Dragging up
-        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-          return;
-        }
-
-        // Dragging down
-        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-          return;
-        }
-
-        // Time to actually perform the action
-        if (typeof moveItem === 'function') {
-          moveItem(dragIndex, hoverIndex);
-        }
-
-        // Note: we're mutating the monitor item here!
-        // Generally it's better to avoid mutations,
-        // but it's good here for the sake of performance
-        // to avoid expensive index searches.
-        item.index = hoverIndex;
-      } catch (error) {
-        console.warn('Error in sidebar drag hover handler:', error);
-      }
+      moveItem?.(dragIndex, hoverIndex);
+      item.index = hoverIndex;
     },
   });
 
   const [{ isDragging }, drag] = useDrag({
     type: 'sidebar-item',
-    item: () => {
-      try {
-        return { id, index };
-      } catch (error) {
-        console.warn('Error creating sidebar drag item:', error);
-        return { id: 'unknown', index: 0 };
-      }
-    },
-    collect: (monitor) => {
-      try {
-        return {
-          isDragging: monitor.isDragging(),
-        };
-      } catch (error) {
-        console.warn('Error collecting sidebar drag state:', error);
-        return { isDragging: false };
-      }
-    },
+    item: () => ({ id, index }),
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     canDrag: isDragEnabled,
   });
 
-  const opacity = isDragging ? 0.4 : 1;
-
-  // Combine drag and drop refs with error handling
-  try {
-    if (isDragEnabled) {
-      drag(drop(ref));
-    } else {
-      drop(ref);
-    }
-  } catch (error) {
-    console.warn('Error setting up sidebar drag and drop refs:', error);
+  if (isDragEnabled) {
+    drag(drop(ref));
+  } else {
+    drop(ref);
   }
 
   return (
     <div
       ref={ref}
-      className={cn(
-        "relative group",
-        // Dragging state - better visual feedback
-        isDragging && [
-          "scale-105 shadow-xl z-50 bg-background border border-border",
-          "transform rotate-2 opacity-90"
-        ],
-        // Drag handle cursor when enabled
-        isDragEnabled && "cursor-move"
-      )}
-      style={{ opacity }}
+      className={cn("relative group h-10", isDragging && "opacity-40")}
       data-handler-id={handlerId}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <NavButton
-        id={id}
-        icon={Icon}
-        label={label}
-        onClick={onClick}
-        isActive={isActive}
-        ariaLabel={label}
-        variant={
-          isCompact
-            ? 'mobile-toolbar'
-            : showContent
-              ? 'desktop-sidebar'
-              : 'desktop-sidebar-collapsed'
-        }
+      {/* 
+        Button structure:
+        - Always h-10 (40px) tall
+        - Collapsed: w-10 (40px), centered via mx-auto on parent or flex justify-center
+        - Expanded: full width with internal padding
+      */}
+      <button
+        onClick={() => onClick?.()}
+        onMouseEnter={onMouseEnter}
         className={cn(
-          isCompact && "px-4 py-3 text-sm rounded-md min-h-[48px]"
+          "h-10 flex items-center rounded-lg cursor-pointer border-0",
+          "transition-[width,background-color,padding] duration-300 ease-out",
+          // Collapsed: square button, Expanded: full width with left padding to align icon
+          showContent 
+            ? "w-full pl-3 pr-2 bg-transparent" 
+            : "w-10 justify-center bg-transparent",
+          // Active/hover states
+          isActive
+            ? "bg-accent/15 text-accent"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
         )}
+        title={!showContent ? label : undefined}
+        aria-label={label}
       >
+        {/* Icon - always 20x20, centered in its space */}
+        <Icon className={cn(
+          "w-5 h-5 flex-shrink-0",
+          isActive && "text-accent"
+        )} />
+        
+        {/* Label - animated width and opacity */}
+        <span 
+          className={cn(
+            "text-sm font-medium truncate whitespace-nowrap overflow-hidden",
+            "transition-all duration-300 ease-out",
+            showContent 
+              ? "ml-3 opacity-100 w-auto max-w-[160px]" 
+              : "ml-0 opacity-0 w-0 max-w-0"
+          )}
+        >
+          {label}
+        </span>
+        
         {children}
-      </NavButton>
-
-      {/* Drag handle - show on right side when expanded and hovered */}
-      {!isCompact && showContent && isHovered && isDragEnabled && (
-        <GripVertical className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+      </button>
+      
+      {/* Drag handle */}
+      {showContent && isHovered && isDragEnabled && (
+        <GripVertical className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
       )}
     </div>
   );

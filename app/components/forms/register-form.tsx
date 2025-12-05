@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback } from "react"
 import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../firebase/config'
 import { createEmailVerificationNotification } from '../../services/notificationsApi'
-import { Check, Loader2, X } from "lucide-react"
+import { Check, Loader2, X, Copy, CheckCircle2 } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
 import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSuggestions } from "../../utils/usernameValidation"
@@ -39,6 +39,10 @@ export function RegisterForm({
   const [validationError, setValidationError] = useState<string | null>(null)
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([])
+  
+  // Error details for copy functionality
+  const [errorDetails, setErrorDetails] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   // Validate form inputs
   useEffect(() => {
@@ -210,6 +214,9 @@ export function RegisterForm({
       const result = await response.json()
 
       if (response.ok && result.success) {
+        // Clear any previous errors on success
+        setError(null)
+        setErrorDetails(null)
         console.log("Account created successfully:", result.data)
 
         // Transfer any logged-out token allocations to the new user
@@ -265,12 +272,40 @@ export function RegisterForm({
           errorMessage = "Password is too weak. Please choose a stronger password."
         }
 
+        // Capture full error details for support
+        const details = JSON.stringify({
+          timestamp: new Date().toISOString(),
+          status: response.status,
+          statusText: response.statusText,
+          error: result.error,
+          errorCode: result.data?.errorCode || 'unknown',
+          errorId: result.data?.errorId || 'none',
+          message: errorMessage,
+          url: '/api/auth/register'
+        }, null, 2)
+        setErrorDetails(details)
+        console.error("Registration API error:", details)
+        
         setError(errorMessage)
         setIsLoading(false)
       }
     } catch (error: any) {
-      console.error("Registration error:", error)
-      setError(error.message || "An unexpected error occurred")
+      // Capture full error details including stack trace
+      const errorMessage = error?.message || "An unexpected error occurred"
+      const details = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        type: 'client_exception',
+        name: error?.name || 'Error',
+        message: errorMessage,
+        code: error?.code || 'unknown',
+        stack: error?.stack?.split('\n').slice(0, 5) || [],
+        url: '/api/auth/register'
+      }, null, 2)
+      setErrorDetails(details)
+      console.error("Registration client error:", details)
+      console.error("Registration error (raw):", error)
+      
+      setError(errorMessage)
       setIsLoading(false)
     }
   }
@@ -393,8 +428,35 @@ export function RegisterForm({
         </div>
 
         {error && (
-          <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
-            {error}
+          <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md space-y-2">
+            <div>{error}</div>
+            {errorDetails && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(errorDetails)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  } catch (e) {
+                    console.error('Failed to copy:', e)
+                  }
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-background/50 px-2 py-1 rounded border border-border"
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" />
+                    Copy error details for support
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
 

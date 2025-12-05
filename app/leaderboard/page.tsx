@@ -240,7 +240,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
   onRetry: () => void;
   onBack: () => void;
   selectedMonth: string;
-  renderEntry: (entry: any, category: T) => React.ReactNode;
+  renderEntry: (entry: any, category: T, isFirst?: boolean) => React.ReactNode;
   type: 'user' | 'page';
 }) {
   const Icon = category.icon;
@@ -259,36 +259,48 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
   
   return (
     <div className="space-y-4">
-      {/* Back button and header */}
-      <div className="flex items-center gap-3">
-        <button
+      {/* Navigation buttons above card */}
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          variant="secondary"
           onClick={onBack}
-          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors"
-          aria-label="Back to all leaderboards"
+          className="gap-2"
         >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">{category.label}</h1>
-          <p className="text-sm text-muted-foreground">{category.description}</p>
-        </div>
-        <button
+          <ArrowLeft className="h-4 w-4" />
+          Leaderboards
+        </Button>
+        <Button
+          variant="secondary"
           onClick={handleShare}
-          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors"
-          aria-label={`Share ${category.label} leaderboard`}
+          className="gap-2"
         >
-          <Share2 className="h-5 w-5 text-muted-foreground" />
-        </button>
-      </div>
-      
-      {/* Month indicator */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Calendar className="h-4 w-4" />
-        <span>{formatMonth(selectedMonth)}</span>
+          <Share2 className="h-4 w-4" />
+          Share
+        </Button>
       </div>
 
-      {/* Content */}
+      {/* Content Card with header inside */}
       <div className="wewrite-card rounded-xl overflow-hidden">
+        {/* Card Header */}
+        <div className="px-4 py-4 border-b border-border">
+          <div className="flex items-start gap-4">
+            {/* Icon Container */}
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
+              <Icon className="h-7 w-7 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold">{category.label}</h1>
+              <p className="text-sm text-muted-foreground">{category.description}</p>
+            </div>
+            {/* Date Badge - right aligned */}
+            <div className="flex-shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                {formatMonth(selectedMonth)}
+              </span>
+            </div>
+          </div>
+        </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -310,14 +322,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {/* Column Header */}
-            <div className="flex items-center gap-3 px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide bg-muted/20">
-              <div className="w-8 flex-shrink-0 text-center">#</div>
-              <div className="flex-1">{type === 'user' ? 'User' : 'Page'}</div>
-              <div className="flex-shrink-0 text-right">{category.countLabel}</div>
-            </div>
-            
-            {data.slice(0, 20).map((entry: any) => renderEntry(entry, category))}
+            {data.slice(0, 20).map((entry: any, index: number) => renderEntry(entry, category, index === 0))}
           </div>
         )}
       </div>
@@ -350,7 +355,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
   loading: boolean;
   error: string | null;
   onRetry: () => void;
-  renderEntry: (entry: any, category: T) => React.ReactNode;
+  renderEntry: (entry: any, category: T, isFirst?: boolean) => React.ReactNode;
   type: 'user' | 'page';
   onOpenDetail: (type: 'user' | 'page', categoryId: string) => void;
   selectedMonth: string;
@@ -405,8 +410,8 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
     }
   };
 
-  // Calculate centered transform - card width is 75% to show neighboring cards
-  const cardWidthPercent = 75;
+  // Calculate centered transform - card width is 82% to show neighboring cards
+  const cardWidthPercent = 82;
   const gapPercent = 3; // 3% gap
   
   return (
@@ -446,9 +451,9 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
           <div 
             className="flex transition-transform duration-300 ease-out"
             style={{ 
-              // Center the current card: offset by (100% - cardWidth) / 2 = 12.5%
+              // Center the current card: offset by (100% - cardWidth) / 2 = 9%
               // Then move by (cardWidth + gap) for each index
-              transform: `translateX(calc(12.5% - ${selectedIndex * (cardWidthPercent + gapPercent)}%))`,
+              transform: `translateX(calc(9% - ${selectedIndex * (cardWidthPercent + gapPercent)}%))`,
             }}
           >
             {categories.map((category, index) => {
@@ -510,14 +515,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                       </div>
                     ) : (
                       <div className="divide-y divide-border">
-                        {/* Column Header */}
-                        <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide bg-muted/20">
-                          <div className="w-6 flex-shrink-0 text-center">#</div>
-                          <div className="flex-1">{type === 'user' ? 'User' : 'Page'}</div>
-                          <div className="flex-shrink-0 text-right">{category.countLabel}</div>
-                        </div>
-                        
-                        {leaderboard.slice(0, 5).map((entry: any) => renderEntry(entry, category))}
+                        {leaderboard.slice(0, 5).map((entry: any, index: number) => renderEntry(entry, category, index === 0))}
                         
                         {/* View more button */}
                         <div className="px-3 py-2 text-center">
@@ -750,7 +748,7 @@ function LeaderboardContent() {
   }, [fetchUserLeaderboards, fetchPageLeaderboards]);
 
   // Render user entry
-  const renderUserEntry = (entry: LeaderboardUser, category: UserCategoryConfig) => {
+  const renderUserEntry = (entry: LeaderboardUser, category: UserCategoryConfig, isFirst: boolean = false) => {
     const medalColor = getMedalColor(entry.rank);
     const isCurrentUser = user?.uid === entry.userId;
     
@@ -760,22 +758,30 @@ function LeaderboardContent() {
         href={`/user/${entry.userId}`}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors",
+          "flex items-center gap-3 hover:bg-muted/50 transition-colors",
+          isFirst ? "px-4 py-4" : "px-3 py-2.5",
           isCurrentUser && "bg-primary/5"
         )}
       >
-        <div className="w-6 flex-shrink-0 flex items-center justify-center">
+        <div className={cn(
+          "flex-shrink-0 flex items-center justify-center",
+          isFirst ? "w-10" : "w-6"
+        )}>
           {medalColor ? (
-            <Medal className={cn("h-5 w-5", medalColor)} />
+            <Medal className={cn(isFirst ? "h-8 w-8" : "h-5 w-5", medalColor)} />
           ) : (
-            <span className="text-sm font-bold text-muted-foreground">
+            <span className={cn(
+              "font-bold text-muted-foreground",
+              isFirst ? "text-lg" : "text-sm"
+            )}>
               {entry.rank}
             </span>
           )}
         </div>
         <div className="flex-1 min-w-0">
           <p className={cn(
-            "font-medium truncate text-sm",
+            "font-medium truncate",
+            isFirst ? "text-base" : "text-sm",
             isCurrentUser && "text-primary"
           )}>
             {entry.displayName || entry.username}
@@ -785,16 +791,22 @@ function LeaderboardContent() {
           </p>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className="font-bold text-sm">
+          <p className={cn(
+            "font-bold",
+            isFirst ? "text-lg" : "text-sm"
+          )}>
             {entry.count.toLocaleString()}
           </p>
+          {isFirst && (
+            <p className="text-xs text-muted-foreground">{category.countLabel}</p>
+          )}
         </div>
       </Link>
     );
   };
 
   // Render page entry
-  const renderPageEntry = (entry: LeaderboardPage, category: PageCategoryConfig) => {
+  const renderPageEntry = (entry: LeaderboardPage, category: PageCategoryConfig, isFirst: boolean = false) => {
     const medalColor = getMedalColor(entry.rank);
     
     return (
@@ -802,25 +814,43 @@ function LeaderboardContent() {
         key={entry.pageId}
         href={`/${entry.pageId}`}
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors"
+        className={cn(
+          "flex items-center gap-3 hover:bg-muted/50 transition-colors",
+          isFirst ? "px-4 py-4" : "px-3 py-2.5"
+        )}
       >
-        <div className="w-6 flex-shrink-0 flex items-center justify-center">
+        <div className={cn(
+          "flex-shrink-0 flex items-center justify-center",
+          isFirst ? "w-10" : "w-6"
+        )}>
           {medalColor ? (
-            <Medal className={cn("h-5 w-5", medalColor)} />
+            <Medal className={cn(isFirst ? "h-8 w-8" : "h-5 w-5", medalColor)} />
           ) : (
-            <span className="text-sm font-bold text-muted-foreground">
+            <span className={cn(
+              "font-bold text-muted-foreground",
+              isFirst ? "text-lg" : "text-sm"
+            )}>
               {entry.rank}
             </span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate text-sm">{entry.title}</p>
+          <p className={cn(
+            "font-medium truncate",
+            isFirst ? "text-base" : "text-sm"
+          )}>{entry.title}</p>
           <p className="text-xs text-muted-foreground truncate">by @{entry.username}</p>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className="font-bold text-sm">
+          <p className={cn(
+            "font-bold",
+            isFirst ? "text-lg" : "text-sm"
+          )}>
             {entry.count.toLocaleString()}
           </p>
+          {isFirst && (
+            <p className="text-xs text-muted-foreground">{category.countLabel}</p>
+          )}
         </div>
       </Link>
     );

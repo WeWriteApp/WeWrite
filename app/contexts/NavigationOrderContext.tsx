@@ -27,6 +27,7 @@ const DEFAULT_SIDEBAR_ORDER = [
   'random-pages',
   'new',
   'trending-pages',
+  'leaderboard',
   'following',
   'recents',
   'notifications',

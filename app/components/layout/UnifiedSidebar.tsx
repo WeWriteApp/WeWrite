@@ -150,7 +150,7 @@ export default function UnifiedSidebar() {
     return null;
   }
 
-  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />;
+  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} handleNavigationHover={handleNavigationHover} />;
 }
 
 /**
@@ -162,13 +162,15 @@ function UnifiedSidebarContent({
   setIsExpanded,
   isHovering,
   setIsHovering,
-  toggleExpanded
+  toggleExpanded,
+  handleNavigationHover
 }: {
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
   isHovering: boolean;
   setIsHovering: (value: boolean) => void;
   toggleExpanded: () => void;
+  handleNavigationHover: (href: string) => void;
 }) {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -355,48 +357,65 @@ function UnifiedSidebarContent({
           showContent && "bg-white dark:bg-[var(--card-bg)]",
           // Remove rounded corners for sidebar
           "!rounded-none",
-          "sidebar-smooth-transition overflow-hidden", // Prevent any overflow
+          "sidebar-smooth-transition overflow-hidden",
           showContent ? "w-64" : "w-16",
           isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
         )}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
+        {/* 
+          Inner container:
+          - Collapsed: No horizontal padding, buttons center themselves in 64px
+          - Expanded: px-3 for nice margins
+        */}
         <div className={cn(
-          "flex flex-col h-full",
-          showContent ? "p-4" : "py-4 px-1"
+          "flex flex-col h-full py-4",
+          "transition-[padding] duration-300 ease-out",
+          showContent ? "px-3" : "px-0"
         )}>
           {/* Header with toggle button - Fixed at top */}
-          <div className="flex items-center justify-between mb-6 flex-shrink-0">
-            {showContent && (
-              <h3 className="text-lg font-semibold text-foreground transition-opacity duration-300">
-                {isEditMode ? "Editor" : "WeWrite"}
-              </h3>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
+          <div className={cn(
+            "flex items-center mb-6 flex-shrink-0 h-10",
+            !showContent && "justify-center"
+          )}>
+            {/* Toggle button */}
+            <button
               onClick={toggleExpanded}
-              className="ml-auto text-foreground nav-hover-state nav-active-state hover:text-foreground transition-all duration-300 w-8 h-8"
+              className={cn(
+                "h-10 flex items-center rounded-lg cursor-pointer border-0 bg-transparent",
+                "text-foreground hover:bg-muted/50 transition-all duration-300 ease-out",
+                showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
+              )}
               aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
-              {isExpanded ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
+              <ChevronRight className={cn(
+                "h-5 w-5 flex-shrink-0 transition-transform duration-300 ease-out",
+                isExpanded && "rotate-180"
+              )} />
+              {/* Title */}
+              <span className={cn(
+                "text-lg font-semibold whitespace-nowrap overflow-hidden",
+                "transition-all duration-300 ease-out",
+                showContent ? "ml-3 opacity-100 w-auto" : "ml-0 opacity-0 w-0"
+              )}>
+                {isEditMode ? "Editor" : "WeWrite"}
+              </span>
+            </button>
           </div>
 
           {/* Scrollable content area */}
           <div className={cn(
             "flex-1 overflow-y-auto overflow-x-hidden",
-            "scrollbar-hide" // Hide scrollbars completely
+            "scrollbar-hide"
           )}>
             {/* Navigation Items */}
-            <nav className="flex flex-col gap-2 mb-6">
+            <nav className={cn(
+              "flex flex-col gap-1",
+              !showContent && "items-center"
+            )}>
             {completeSidebarOrder
-              .filter((itemId, index, array) => array.indexOf(itemId) === index) // Remove duplicates
+              .filter((itemId, index, array) => array.indexOf(itemId) === index)
               .map((itemId, index) => {
                 const item = navigationItemsConfig[itemId];
                 if (!item) return null;
@@ -406,18 +425,17 @@ function UnifiedSidebarContent({
 
                 return (
                   <DraggableSidebarItem
-                    key={`desktop-sidebar-${itemId}-${index}`} // Add index to ensure uniqueness
+                    key={`desktop-sidebar-${itemId}-${index}`}
                     id={itemId}
                     icon={item.icon}
                     label={item.label}
                     href={item.href}
                     onClick={() => handleNavItemClick(item)}
-                    onMouseEnter={() => handleNavigationHover(item.href)} // 🚀 Preload on hover
+                    onMouseEnter={() => handleNavigationHover(item.href)}
                     isActive={isActive}
                     index={index}
                     moveItem={reorderCompleteItems}
                     showContent={showContent}
-                    isCompact={false}
                   >
                     {/* Settings warning indicator */}
                     {isSettings && criticalSettingsStatus === 'warning' && (
@@ -545,33 +563,40 @@ function UnifiedSidebarContent({
           {/* Fixed bottom section - Fund Account button for users without active subscription */}
           {!isEditMode && user && hasActiveSubscription === false && (
             <div className={cn(
-              "pb-4 flex-shrink-0 flex justify-center",
-              // Match navigation container padding for consistent alignment
-              showContent ? "px-3" : ""
+              "pb-4 flex-shrink-0",
+              !showContent && "flex justify-center"
             )}>
-              <Button
+              <button
                 onClick={() => router.push('/settings/fund-account')}
                 className={cn(
-                  "bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg",
-                  // Match navigation button sizing for consistency
-                  showContent
-                    ? "w-full h-auto p-3 justify-start flex items-center"
-                    : "w-12 h-12 justify-center flex items-center"
+                  "h-10 flex items-center rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium",
+                  "transition-all duration-300 ease-out cursor-pointer border-0",
+                  showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
                 )}
-                title={showContent ? "" : "Fund Account"}
+                title={!showContent ? "Fund Account" : undefined}
+                aria-label="Fund Account"
               >
-                <DollarSign className={cn("h-5 w-5 flex-shrink-0", showContent && "mr-3")} />
-                {showContent && "Fund Account"}
-              </Button>
+                <DollarSign className="h-5 w-5 flex-shrink-0" />
+                <span className={cn(
+                  "text-sm font-medium whitespace-nowrap overflow-hidden",
+                  "transition-all duration-300 ease-out",
+                  showContent ? "ml-3 opacity-100 w-auto" : "ml-0 opacity-0 w-0"
+                )}>
+                  Fund Account
+                </span>
+              </button>
             </div>
           )}
 
           {/* Fixed bottom section - User info and logout at bottom for non-edit mode */}
           {!isEditMode && user && (
-            <div className="mt-auto pt-4 border-t border-border flex-shrink-0">
+            <div className={cn(
+              "mt-auto pt-4 border-t border-border flex-shrink-0",
+              !showContent && "flex flex-col items-center"
+            )}>
               {/* User Information - only show when expanded */}
               {showContent && (
-                <div className="mb-3 px-3 py-2">
+                <div className="mb-3 pl-3 py-2">
                   <div className="text-sm font-medium text-foreground truncate">
                     {sanitizeUsername(user.username, 'Loading...', 'User')}
                   </div>
@@ -579,28 +604,25 @@ function UnifiedSidebarContent({
               )}
 
               {/* Logout Button */}
-              {showContent ? (
-                <Button
-                  variant="ghost"
-                  onClick={handleLogoutClick}
-                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
+              <button
+                onClick={handleLogoutClick}
+                className={cn(
+                  "h-10 flex items-center rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20",
+                  "transition-all duration-300 ease-out cursor-pointer border-0 bg-transparent",
+                  showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
+                )}
+                title={!showContent ? "Logout" : undefined}
+                aria-label="Logout"
+              >
+                <LogOut className="h-5 w-5 flex-shrink-0" />
+                <span className={cn(
+                  "text-sm font-medium whitespace-nowrap overflow-hidden",
+                  "transition-all duration-300 ease-out",
+                  showContent ? "ml-3 opacity-100 w-auto" : "ml-0 opacity-0 w-0"
+                )}>
                   Logout
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  onClick={handleLogoutClick}
-                  className="relative flex items-center h-12 w-full text-foreground nav-hover-state nav-active-state hover:text-foreground transition-all duration-300 sidebar-nav-button justify-start px-3 rounded-lg"
-                  title="Logout"
-                >
-                  {/* Icon container - maintains position during transitions */}
-                  <div className="sidebar-icon-container">
-                    <LogOut className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                </Button>
-              )}
+                </span>
+              </button>
             </div>
           )}
         </div>

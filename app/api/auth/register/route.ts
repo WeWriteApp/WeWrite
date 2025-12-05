@@ -117,7 +117,16 @@ export async function POST(request: NextRequest) {
     }, null, 201);
 
   } catch (error: any) {
-    console.error('Registration error:', error);
+    // Log comprehensive error details for debugging
+    const errorDetails = {
+      message: error?.message || 'Unknown error',
+      code: error?.code || 'unknown',
+      name: error?.name || 'Error',
+      stack: error?.stack?.split('\n').slice(0, 5).join('\n') || 'No stack trace',
+      raw: JSON.stringify(error, Object.getOwnPropertyNames(error || {}), 2)
+    };
+    console.error('Registration error details:', errorDetails);
+    console.error('Registration error (raw):', error);
 
     // Handle specific Firebase Auth errors
     if (error.code === 'auth/email-already-exists') {
@@ -126,8 +135,20 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Invalid email address');
     } else if (error.code === 'auth/weak-password') {
       return createErrorResponse('BAD_REQUEST', 'Password is too weak');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      return createErrorResponse('BAD_REQUEST', 'Email/password accounts are not enabled. Please contact support.');
+    } else if (error.code === 'auth/too-many-requests') {
+      return createErrorResponse('BAD_REQUEST', 'Too many attempts. Please wait a few minutes and try again.');
     }
 
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to create account');
+    // Return error with details for debugging (but sanitized for user)
+    const userMessage = error?.message?.includes('Firebase') 
+      ? 'Failed to create account. Please try again or contact support.'
+      : (error?.message || 'Failed to create account');
+    
+    return createErrorResponse('INTERNAL_ERROR', userMessage, {
+      errorCode: error?.code || 'unknown',
+      errorId: Date.now().toString(36)
+    });
   }
 }

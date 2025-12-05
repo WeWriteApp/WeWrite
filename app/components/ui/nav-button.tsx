@@ -70,7 +70,8 @@ export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
       "flex items-center justify-start h-12 w-full rounded-lg px-3"
     ],
     'desktop-sidebar-collapsed': [
-      "flex items-center justify-center h-12 w-full rounded-lg p-2"
+      // Centered icon button for collapsed state
+      "flex items-center justify-center h-12 w-full rounded-lg"
     ],
     'mobile-toolbar': [
       "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-2 gap-0.5",

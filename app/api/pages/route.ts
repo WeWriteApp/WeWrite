@@ -17,56 +17,97 @@ import { sanitizeUsername } from '../../utils/usernameSecurity';
 // SIMPLE SOLUTION: Update all links to a page when its title changes
 async function updateAllLinksToPage(pageId: string, oldTitle: string, newTitle: string) {
   try {
-    console.log(`🔄 SIMPLE_UPDATE: Searching for pages that link to ${pageId}`);
+    console.log(`🔄 TITLE_PROPAGATION: Starting propagation for page ${pageId}: "${oldTitle}" -> "${newTitle}"`);
 
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
     const collectionName = getCollectionName('pages');
 
-    // Get all pages
+    // Get all pages (filter deleted in code since not all pages have deleted field)
     const pagesSnapshot = await db.collection(collectionName).get();
+
+    console.log(`🔄 TITLE_PROPAGATION: Checking ${pagesSnapshot.docs.length} pages for links to ${pageId}`);
 
     const batch = db.batch();
     let updatedCount = 0;
+    let checkedCount = 0;
 
     for (const pageDoc of pagesSnapshot.docs) {
+      // Skip the page being updated
+      if (pageDoc.id === pageId) continue;
+      
       const pageData = pageDoc.data();
+      
+      // Skip deleted pages
+      if (pageData.deleted === true) continue;
+      
+      if (!pageData.content) continue;
+      
+      checkedCount++;
 
-      if (!pageData.content || pageDoc.id === pageId) continue;
+      // Parse content if it's stored as a string
+      let contentArray: any[];
+      try {
+        contentArray = typeof pageData.content === 'string' 
+          ? JSON.parse(pageData.content) 
+          : pageData.content;
+        
+        if (!Array.isArray(contentArray)) {
+          console.warn(`🔄 TITLE_PROPAGATION: Page ${pageDoc.id} has non-array content, skipping`);
+          continue;
+        }
+      } catch (parseError) {
+        console.warn(`🔄 TITLE_PROPAGATION: Failed to parse content for page ${pageDoc.id}:`, parseError);
+        continue;
+      }
 
-      // Check if this page's content contains links to our target page
-      const updatedContent = updateLinksInContent(pageData.content, pageId, oldTitle, newTitle);
+      // Quick check if this page even references the target pageId
+      const contentString = JSON.stringify(contentArray);
+      if (!contentString.includes(pageId)) {
+        continue; // Skip pages that don't reference this page at all
+      }
 
-      if (JSON.stringify(updatedContent) !== JSON.stringify(pageData.content)) {
+      // Update links in the content
+      const updatedContent = updateLinksInContent(contentArray, pageId, oldTitle, newTitle);
+
+      // Check if anything actually changed
+      const updatedString = JSON.stringify(updatedContent);
+      if (updatedString !== contentString) {
+        // Store in same format as original
+        const contentToSave = typeof pageData.content === 'string' 
+          ? updatedString 
+          : updatedContent;
+        
         batch.update(pageDoc.ref, {
-          content: updatedContent,
+          content: contentToSave,
           lastModified: new Date().toISOString()
         });
         updatedCount++;
-        console.log(`🔄 SIMPLE_UPDATE: Updated links in page ${pageDoc.id}`);
+        console.log(`🔄 TITLE_PROPAGATION: Queued update for page ${pageDoc.id}`);
       }
     }
 
     if (updatedCount > 0) {
       await batch.commit();
-      console.log(`✅ SIMPLE_UPDATE: Successfully updated ${updatedCount} pages`);
+      console.log(`✅ TITLE_PROPAGATION: Successfully updated ${updatedCount} pages (checked ${checkedCount})`);
     } else {
-      console.log(`🔄 SIMPLE_UPDATE: No pages needed updating`);
+      console.log(`🔄 TITLE_PROPAGATION: No pages needed updating (checked ${checkedCount})`);
     }
 
+    return { success: true, updatedCount };
+
   } catch (error) {
-    console.error('❌ SIMPLE_UPDATE: Error updating links:', error);
+    console.error('❌ TITLE_PROPAGATION: Error updating links:', error);
+    return { success: false, error };
   }
 }
 
-import { LinkNode, LinkNodeHelper, LinkMigrationHelper } from '../../types/linkNode';
-
 /**
- * CLEAN TITLE UPDATE SYSTEM
+ * TITLE PROPAGATION SYSTEM
  *
- * This function updates page titles in links while respecting user customization.
- * - Auto-generated links get updated to show new page title
- * - Custom text links keep their custom text but update pageTitle for reference
+ * When a page title changes, this system updates all links to that page:
+ * - Auto-generated links (isCustomText: false): Update display text to new title
+ * - Custom text links (isCustomText: true): Keep custom text, only update pageTitle reference
  */
 
 // Helper function to update links in content recursively
@@ -77,46 +118,40 @@ function updateLinksInContent(content: any, targetPageId: string, oldTitle: stri
     return content.map(item => updateLinksInContent(item, targetPageId, oldTitle, newTitle));
   }
 
-  if (typeof content === 'object') {
+  if (typeof content === 'object' && content !== null) {
     // Check if this is a link node that references our target page
     if (content.type === 'link' && content.pageId === targetPageId) {
-
-      // MIGRATION: Convert old messy format to clean format if needed
-      let linkNode: LinkNode;
-      if (content.isCustomText === undefined) {
-        console.log(`🔄 MIGRATION: Converting old link format for page ${targetPageId}`);
-        linkNode = LinkMigrationHelper.migrateOldLink(content);
-
-        // Clean up old fields to avoid confusion
-        const cleanedLink = {
-          type: linkNode.type,
-          pageId: linkNode.pageId,
-          pageTitle: linkNode.pageTitle,
-          url: linkNode.url,
-          isCustomText: linkNode.isCustomText,
-          customText: linkNode.customText,
-          children: linkNode.children,
-          // Keep necessary Slate properties
-          isExternal: content.isExternal,
-          isPublic: content.isPublic,
-          isOwned: content.isOwned
+      // Determine if this link has custom text
+      // Legacy links might not have isCustomText flag, so we check multiple indicators
+      const hasCustomText = content.isCustomText === true || 
+        (content.customText && content.customText !== content.pageTitle);
+      
+      // Get current display text
+      const currentDisplayText = content.children?.[0]?.text || content.displayText || '';
+      
+      // For auto-generated links, update the display text
+      // For custom text links, keep the display text but update pageTitle reference
+      if (!hasCustomText) {
+        // Auto-generated link - update display text to new title
+        return {
+          ...content,
+          pageTitle: newTitle,
+          // Also update these legacy fields for backwards compatibility
+          originalPageTitle: newTitle,
+          displayText: newTitle,
+          children: [{ text: newTitle }],
+          // Explicitly mark as not custom text
+          isCustomText: false
         };
-
-        linkNode = cleanedLink as LinkNode;
       } else {
-        linkNode = content as LinkNode;
+        // Custom text link - only update pageTitle reference, keep display text
+        return {
+          ...content,
+          pageTitle: newTitle,
+          originalPageTitle: newTitle,
+          // Keep existing isCustomText, customText, and children unchanged
+        };
       }
-
-      // CLEAN UPDATE: Use the helper to update the link
-      const updatedLink = LinkNodeHelper.updatePageTitle(linkNode, newTitle);
-
-      if (LinkNodeHelper.shouldUpdateOnTitleChange(linkNode)) {
-        console.log(`🔄 TITLE_UPDATE: Auto-updating link: "${oldTitle}" -> "${newTitle}"`);
-      } else {
-        console.log(`🔄 TITLE_UPDATE: Keeping custom text "${linkNode.customText}" for page ${targetPageId}`);
-      }
-
-      return updatedLink;
     }
 
     // Recursively update nested objects
@@ -643,17 +678,6 @@ export async function PUT(request: NextRequest) {
     body = await request.json();
     const { id, title, content, location, groupId, customDate, replyType } = body;
 
-    console.log('🔵 API: Request body parsed', {
-      pageId: id,
-      title: title ? `"${title}"` : 'undefined',
-      hasContent: !!content,
-      contentType: typeof content,
-      contentLength: content ? JSON.stringify(content).length : 0,
-      hasLocation: !!location,
-      groupId,
-      customDate,
-      userId: currentUserId
-    });
 
     logger.info('Page save request', {
       pageId: id,
@@ -779,6 +803,9 @@ export async function PUT(request: NextRequest) {
 
     // Declare versionResult outside all blocks so it's accessible throughout the function
     let versionResult;
+    
+    // Track if content was changed for title propagation logic
+    const contentChanged = content !== undefined;
 
     // If content is being updated, use the version saving system to create activity records
     if (content !== undefined) {
@@ -787,20 +814,12 @@ export async function PUT(request: NextRequest) {
       try {
         // Get current user data for version saving
         logger.debug('Loading user profile for version save', { userId: currentUserId }, 'PAGE_SAVE');
-        console.log('🔵 API: Loading user profile for version save', { userId: currentUserId });
 
         const { getUserProfile } = await import('../../firebase/database/users');
         const currentUser = await getUserProfile(currentUserId);
-        console.log('🔵 API: User profile loaded', {
-          userId: currentUserId,
-          username: currentUser?.username,
-          hasUser: !!currentUser
-        });
 
         // Import the server-side saveNewVersion function
-        console.log('🔵 API: Importing saveNewVersionServer function');
         const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
-        console.log('🔵 API: saveNewVersionServer function imported successfully');
 
         // Prepare data for version saving
         const versionData = {
@@ -817,7 +836,6 @@ export async function PUT(request: NextRequest) {
             oldTitle: pageData.title,
             newTitle: title.trim()
           };
-          console.log('🔄 TITLE_CHANGE: Adding title change info to content version');
         }
 
         // Add replyType change information for audit trail
@@ -826,10 +844,6 @@ export async function PUT(request: NextRequest) {
             oldReplyType: pageData.replyType || null,
             newReplyType: replyType
           };
-          console.log('🔄 REPLY_TYPE_CHANGE: Adding replyType change info to content version', {
-            oldReplyType: pageData.replyType,
-            newReplyType: replyType
-          });
         }
 
         logger.debug('Calling saveNewVersion', {
@@ -860,39 +874,18 @@ export async function PUT(request: NextRequest) {
         }
 
         // Save new version (this creates activity records and updates lastDiff)
-        console.log('🔵 API: Calling saveNewVersionServer', {
-          pageId: id,
-          versionDataKeys: Object.keys(versionData),
-          environment: process.env.NODE_ENV,
-          vercelEnv: process.env.VERCEL_ENV
-        });
 
         versionResult = await saveNewVersionServer(id, versionData);
 
-        console.log('🔵 API: saveNewVersion returned', {
-          versionResult,
-          success: versionResult?.success,
-          error: versionResult?.error
-        });
 
         if (!versionResult || !versionResult.success) {
-          console.error('🔴 API: Version save failed', {
-            pageId: id,
-            error: versionResult?.error || 'Version save returned null',
-            versionResult
-          });
           logger.error('Version save failed', {
             pageId: id,
-            error: versionResult?.error || 'Version save returned null',
-            versionResult
+            error: versionResult?.error || 'Version save returned null'
           }, 'PAGE_SAVE');
           return createErrorResponse('INTERNAL_ERROR', 'Failed to save page version');
         }
 
-        console.log('✅ API: Version saved successfully', {
-          pageId: id,
-          versionId: versionResult?.versionId
-        });
         logger.info('Version saved successfully', {
           pageId: id,
           versionId: versionResult?.versionId
@@ -933,14 +926,8 @@ export async function PUT(request: NextRequest) {
       // This is especially important for no-op edits where version saving might skip the update
       metadataUpdate.lastModified = new Date().toISOString();
 
-      console.log('🔵 API: Updating page metadata (including lastModified)', {
-        pageId: id,
-        metadataUpdate,
-        isNoOpEdit: versionResult?.isNoOp
-      });
       await pageRef.update(metadataUpdate);
 
-      console.log('✅ Successfully saved version and updated metadata');
     } else {
       // For non-content updates (title, location, etc.), just update the page directly
       await pageRef.update(updateData);
@@ -950,23 +937,6 @@ export async function PUT(request: NextRequest) {
     let titleChanged = false;
     let titleChangeInfo = null;
 
-    console.log('🔍 TITLE_CHANGE_DEBUG: Checking for title changes', {
-      titleFromRequest: title,
-      currentPageTitle: pageData.title,
-      titleIsDefined: title !== undefined,
-      titlesAreDifferent: title !== undefined && title.trim() !== pageData.title
-    });
-
-    console.log('🔄 ULTRA_SIMPLE: Title change detection:', {
-      pageId: id,
-      titleProvided: title !== undefined,
-      providedTitle: title,
-      trimmedTitle: title?.trim(),
-      existingTitle: pageData.title,
-      titlesEqual: title?.trim() === pageData.title,
-      willDetectChange: title !== undefined && title.trim() !== pageData.title
-    });
-
     if (title !== undefined && title.trim() !== pageData.title) {
       titleChanged = true;
       titleChangeInfo = {
@@ -974,8 +944,6 @@ export async function PUT(request: NextRequest) {
         oldTitle: pageData.title,
         newTitle: title.trim()
       };
-
-      console.log('🔄 TITLE_CHANGE: Title changed, handling title change logic');
 
       // If content was NOT updated, create a separate version for the title change
       if (!contentChanged) {
@@ -1078,9 +1046,14 @@ export async function PUT(request: NextRequest) {
         }
       }
 
-      // Update all links immediately and synchronously
-      await updateAllLinksToPage(id, pageData.title, title.trim());
-      console.log('✅ TITLE_CHANGE: All links updated successfully');
+      // Update all links immediately - but don't fail the save if this errors
+      try {
+        await updateAllLinksToPage(id, pageData.title, title.trim());
+        console.log('✅ TITLE_CHANGE: All links updated successfully');
+      } catch (propagationError) {
+        // Log but don't fail - the title save already succeeded
+        console.error('❌ TITLE_CHANGE: Error propagating title to links (save succeeded):', propagationError);
+      }
     }
 
     // Update backlinks index when content is updated
@@ -1153,13 +1126,7 @@ export async function PUT(request: NextRequest) {
       ...(titleChanged && { titleChanged: true, titleChangeInfo })
     };
 
-    console.log('🔄 ULTRA_SIMPLE: Response data being sent:', {
-      responseData,
-      titleChanged,
-      hasTitleChangeInfo: !!titleChangeInfo,
-      titleChangeInfo
-    });
-    console.log('✅ API: Returning success response', { responseData });
+    console.log('✅ API: Page update completed', { pageId: id, titleChanged });
     return createApiResponse(responseData);
 
   } catch (error: any) {
