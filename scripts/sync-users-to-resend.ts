@@ -29,7 +29,6 @@ const limit = limitArg ? parseInt(limitArg.split('=')[1]) : undefined;
 interface UserData {
   uid: string;
   email: string;
-  displayName?: string;
   username?: string;
   marketingOptOut?: boolean;
 }
@@ -64,25 +63,14 @@ async function createResendContact(user: UserData): Promise<{ id: string } | nul
     throw new Error('RESEND_API_KEY is not set');
   }
 
-  // Extract name parts
-  let firstName = user.username || 'User';
-  let lastName: string | undefined;
-  
-  if (user.displayName) {
-    const nameParts = user.displayName.trim().split(' ');
-    firstName = nameParts[0];
-    lastName = nameParts.slice(1).join(' ') || undefined;
-  }
+  // Use username only - displayName is deprecated
+  const firstName = user.username || 'User';
 
   const body: any = {
     email: user.email,
     first_name: firstName,
     unsubscribed: user.marketingOptOut ?? false,
   };
-  
-  if (lastName) {
-    body.last_name = lastName;
-  }
 
   const response = await fetch(`${RESEND_API_URL}/audiences/${GENERAL_AUDIENCE_ID}/contacts`, {
     method: 'POST',
@@ -126,7 +114,6 @@ async function fetchAllUsers(firebaseAdmin: typeof admin, maxUsers?: number): Pr
       users.push({
         uid: doc.id,
         email: data.email,
-        displayName: data.displayName,
         username: data.username,
         marketingOptOut: data.marketingOptOut ?? data.emailPreferences?.marketing === false,
       });
@@ -177,7 +164,7 @@ async function main() {
     
     try {
       if (isDryRun) {
-        console.log(`${progress} Would sync: ${user.email} (${user.displayName || user.username || 'no name'})`);
+        console.log(`${progress} Would sync: ${user.email} (${user.username || 'no username'})`);
         created++;
       } else {
         const result = await createResendContact(user);

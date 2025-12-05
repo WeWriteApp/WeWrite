@@ -201,28 +201,20 @@ export async function upsertContact(options: CreateContactOptions): Promise<{ id
 /**
  * Sync a user to Resend contacts
  * Call this when a user signs up or updates their profile
+ * NOTE: WeWrite uses username only, not displayName (deprecated)
  */
 export async function syncUserToResend(user: {
   email: string;
-  displayName?: string;
   username?: string;
   marketingOptOut?: boolean;
 }): Promise<{ id: string; created: boolean } | null> {
   try {
-    // Extract first/last name from displayName if available
-    let firstName = user.username;
-    let lastName: string | undefined;
-    
-    if (user.displayName) {
-      const nameParts = user.displayName.trim().split(' ');
-      firstName = nameParts[0];
-      lastName = nameParts.slice(1).join(' ') || undefined;
-    }
-    
+    // Use username as the first name for Resend contacts
+    // We don't split names since WeWrite only has usernames, not full names
     const result = await upsertContact({
       email: user.email,
-      firstName,
-      lastName,
+      firstName: user.username,
+      lastName: undefined,
       unsubscribed: user.marketingOptOut ?? false,
     });
     

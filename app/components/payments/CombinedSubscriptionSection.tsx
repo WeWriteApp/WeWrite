@@ -55,7 +55,6 @@ interface Pledge {
   createdAt: any;
   pageTitle?: string;
   authorUsername?: string;
-  authorDisplayName?: string;
 }
 
 function CombinedSubscriptionSectionInner() {

@@ -14,7 +14,7 @@ import { jest } from '@jest/globals';
 export interface TestUser {
   uid: string;
   email: string;
-  displayName: string;
+  username: string;
   subscriptionStatus: 'none' | 'active' | 'cancelled' | 'past_due' | 'incomplete';
   subscriptionTier?: 'basic' | 'premium' | 'custom';
   subscriptionAmount?: number;
@@ -82,14 +82,14 @@ export const TEST_USERS: Record<string, TestUser> = {
   loggedOut: {
     uid: '',
     email: '',
-    displayName: 'Logged Out User',
+    username: 'logged_out_user',
     subscriptionStatus: 'none'
   },
   
   noSubscription: {
     uid: 'user_no_sub_123',
     email: 'nosub@test.com',
-    displayName: 'User Without Subscription',
+    username: 'user_without_sub',
     subscriptionStatus: 'none',
     tokenBalance: {
       totalTokens: 0,
@@ -101,7 +101,7 @@ export const TEST_USERS: Record<string, TestUser> = {
   activeBasic: {
     uid: 'user_basic_456',
     email: 'basic@test.com',
-    displayName: 'Basic Subscriber',
+    username: 'basic_subscriber',
     subscriptionStatus: 'active',
     subscriptionTier: 'basic',
     subscriptionAmount: 5,
@@ -117,7 +117,7 @@ export const TEST_USERS: Record<string, TestUser> = {
   activePremium: {
     uid: 'user_premium_789',
     email: 'premium@test.com',
-    displayName: 'Premium Subscriber',
+    username: 'premium_subscriber',
     subscriptionStatus: 'active',
     subscriptionTier: 'premium',
     subscriptionAmount: 15,
@@ -133,7 +133,7 @@ export const TEST_USERS: Record<string, TestUser> = {
   overBudget: {
     uid: 'user_over_budget_101',
     email: 'overbudget@test.com',
-    displayName: 'Over Budget User',
+    username: 'over_budget_user',
     subscriptionStatus: 'active',
     subscriptionTier: 'basic',
     subscriptionAmount: 5,
@@ -149,7 +149,7 @@ export const TEST_USERS: Record<string, TestUser> = {
   writer: {
     uid: 'writer_123',
     email: 'writer@test.com',
-    displayName: 'Content Writer',
+    username: 'content_writer',
     subscriptionStatus: 'active',
     subscriptionTier: 'basic',
     subscriptionAmount: 5,
@@ -176,7 +176,7 @@ export const TEST_USERS: Record<string, TestUser> = {
   writerUnverified: {
     uid: 'writer_unverified_456',
     email: 'unverified@test.com',
-    displayName: 'Unverified Writer',
+    username: 'unverified_writer',
     subscriptionStatus: 'none',
     writerEarnings: {
       totalEarned: 45.00,
@@ -294,7 +294,7 @@ export class PaymentFlowTestUtils {
       currentUser: user ? {
         uid: user.uid,
         email: user.email,
-        // WeWrite uses username, not Firebase displayName
+        // WeWrite uses username field, not Firebase displayName
         displayName: user.username
       } : null,
       onAuthStateChanged: jest.fn(),
@@ -508,7 +508,7 @@ export class PaymentFlowTestUtils {
     return {
       uid: `test_user_${Date.now()}`,
       email: 'test@example.com',
-      displayName: 'Test User',
+      username: 'test_user',
       subscriptionStatus: 'none',
       ...overrides
     };

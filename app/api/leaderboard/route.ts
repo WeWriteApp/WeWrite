@@ -10,7 +10,6 @@ export type LeaderboardType = 'user' | 'page';
 export interface LeaderboardUser {
   userId: string;
   username: string;
-  displayName?: string;
   profilePicture?: string;
   count: number;
   rank: number;
@@ -561,7 +560,7 @@ async function enrichUserData(
   
   if (userIds.length === 0) return users;
 
-  const userDataMap: Record<string, { username: string; displayName?: string; profilePicture?: string }> = {};
+  const userDataMap: Record<string, { username: string; profilePicture?: string }> = {};
 
   // Fetch in batches of 10
   for (let i = 0; i < userIds.length; i += 10) {
@@ -574,7 +573,6 @@ async function enrichUserData(
       const data = doc.data();
       userDataMap[doc.id] = {
         username: data.username || doc.id.slice(0, 8),
-        displayName: data.displayName,
         profilePicture: data.profilePicture
       };
     });
@@ -583,7 +581,6 @@ async function enrichUserData(
   return users.map(user => ({
     ...user,
     username: userDataMap[user.userId]?.username || user.userId.slice(0, 8),
-    displayName: userDataMap[user.userId]?.displayName,
     profilePicture: userDataMap[user.userId]?.profilePicture
   }));
 }

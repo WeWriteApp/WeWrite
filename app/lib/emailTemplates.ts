@@ -531,13 +531,13 @@ export const chooseUsernameTemplate: EmailTemplate = {
   category: 'engagement',
   subject: 'Choose your username on WeWrite ✏️',
   sampleData: {
-    currentDisplayName: 'user_abc123',
+    currentUsername: 'user_abc123',
   },
-  generateHtml: ({ currentDisplayName }) => wrapEmail('Choose Your Username', `
+  generateHtml: ({ currentUsername }) => wrapEmail('Choose Your Username', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">Make Your Mark on WeWrite ✏️</h2>
       <p>Hey there!</p>
-      <p>We noticed you haven't chosen a username yet. Right now you're showing up as <strong style="color: #666;">${currentDisplayName || 'user_...'}</strong> around the platform.</p>
+      <p>We noticed you haven't chosen a username yet. Right now you're showing up as <strong style="color: #666;">${currentUsername || 'user_...'}</strong> around the platform.</p>
       
       <p>A great username helps you:</p>
       <ul style="padding-left: 20px; margin: 20px 0;">

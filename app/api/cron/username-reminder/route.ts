@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
           templateId: 'choose-username',
           to: userData.email,
           data: {
-            currentDisplayName: username || `user_${userId.slice(0, 8)}`
+            currentUsername: username || `user_${userId.slice(0, 8)}`
           },
           userId
         });

@@ -15,10 +15,11 @@ jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({})),
   onAuthStateChanged: jest.fn((auth, callback) => {
     // Simulate logged-in user
+    // Note: Firebase Auth returns displayName but WeWrite uses username from Firestore
     callback({
       uid: 'test-user-id',
       email: 'test@example.com',
-      displayName: 'Test User'
+      displayName: 'test_user' // This is Firebase's field - we use username in app
     });
     return jest.fn(); // unsubscribe function
   }),

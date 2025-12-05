@@ -104,13 +104,9 @@ async function fixSingleUserPropagation(db: any, userId: string, results: any) {
       currentUsername === 'Anonymous' || 
       currentUsername === 'Missing username') {
     
-    // Try to generate a valid username
-    if (userData.displayName && !userData.displayName.includes('@')) {
-      currentUsername = userData.displayName;
-    } else {
-      // Generate a username based on user ID
-      currentUsername = `user_${userId.substring(0, 8)}`;
-    }
+    // Generate a valid username based on user ID
+    // NOTE: displayName is deprecated - we only use username field
+    currentUsername = `user_${userId.substring(0, 8)}`;
     
     // Update user document
     await db.collection(getCollectionName('users')).doc(userId).update({
@@ -178,16 +174,9 @@ async function fixMissingUsernames(db: any, results: any) {
       
       needsUpdate = true;
       
-      // Try to use displayName if it's valid
-      if (userData.displayName && 
-          !userData.displayName.includes('@') && 
-          userData.displayName !== 'Anonymous' &&
-          userData.displayName.trim() !== '') {
-        newUsername = userData.displayName.trim();
-      } else {
-        // Generate a username based on user ID
-        newUsername = `user_${userId.substring(0, 8)}`;
-      }
+      // Generate a valid username based on user ID
+      // NOTE: displayName is deprecated - we only use username field
+      newUsername = `user_${userId.substring(0, 8)}`;
       
       results.issues.push(`User ${userId} had invalid username: "${userData.username}"`);
     }

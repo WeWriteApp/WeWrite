@@ -47,7 +47,7 @@ describe('End-to-End Payment Flow Integration Testing', () => {
       const newUser = PaymentFlowTestUtils.createTestUser({
         uid: 'new_user_journey_123',
         email: 'journey@test.com',
-        displayName: 'Journey Test User'
+        username: 'journey_test_user'
       });
 
       // Step 1: User signs up and creates subscription

@@ -25,18 +25,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Username must be between 3 and 32 characters.' }, { status: 400 });
     }
 
-    // Update Firestore user document
+    // Update Firestore user document (username is the only name field we use)
     await db.collection(getCollectionName('users')).doc(uid).set(
       { username: newUsername },
       { merge: true }
     );
 
-    // Also update Firebase Auth displayName for consistency
-    try {
-      await admin.auth().updateUser(uid, { displayName: newUsername });
-    } catch (authErr) {
-      console.warn('Auth displayName update failed (continuing):', authErr);
-    }
+    // NOTE: We no longer update Firebase Auth displayName - it's fully deprecated
+    // WeWrite only uses the username field stored in Firestore
 
     // Propagate username to pages owned by this user for consistency in dev
     try {

@@ -194,7 +194,7 @@ export const createUsernameSetupNotificationIfNeeded = async (user: UserData | n
 /**
  * Send username setup email via API
  */
-export const sendUsernameSetupEmail = async (userId: string, email: string, currentDisplayName?: string): Promise<boolean> => {
+export const sendUsernameSetupEmail = async (userId: string, email: string, currentUsername?: string): Promise<boolean> => {
   try {
     // Don't send if already sent
     if (hasUsernameSetupEmailBeenSent()) {
@@ -211,7 +211,7 @@ export const sendUsernameSetupEmail = async (userId: string, email: string, curr
         templateId: 'choose-username',
         to: email,
         data: {
-          currentDisplayName: currentDisplayName || 'user_...',
+          currentUsername: currentUsername || 'user_...',
         },
       }),
     });

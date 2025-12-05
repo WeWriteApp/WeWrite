@@ -32,7 +32,6 @@ type PageLeaderboardCategory = 'new-supporters' | 'most-replies' | 'most-views' 
 interface LeaderboardUser {
   userId: string;
   username: string;
-  displayName?: string;
   profilePicture?: string;
   count: number;
   rank: number;
@@ -784,7 +783,7 @@ function LeaderboardContent() {
             isFirst ? "text-base" : "text-sm",
             isCurrentUser && "text-primary"
           )}>
-            {entry.displayName || entry.username}
+            {entry.username}
             {isCurrentUser && (
               <span className="ml-2 text-xs text-muted-foreground">(you)</span>
             )}
