@@ -1,8 +1,8 @@
 /**
  * Session API Endpoint
  * 
- * Uses Firebase REST API instead of firebase-admin SDK to avoid
- * the jwks-rsa/jose dependency chain that fails in Vercel serverless.
+ * Uses Firebase REST API for Auth token verification (to avoid jose dependency issues)
+ * Uses Firebase Admin SDK for Firestore operations (which work fine)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,12 +10,8 @@ import { cookies } from 'next/headers';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
 import { isAdmin as isAdminByEmail } from '../../../utils/isAdmin';
-import { 
-  verifyIdToken, 
-  getFirestoreDoc, 
-  setFirestoreDoc,
-  getUserFromToken 
-} from '../../../lib/firebase-rest';
+import { verifyIdToken } from '../../../lib/firebase-rest';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { DEV_TEST_USERS } from '../../../utils/testUsers';
 
 // Helper function to create error responses
@@ -69,15 +65,21 @@ export async function GET(request: NextRequest) {
         isAdmin: sessionData.isAdmin === true
       };
 
-      // Try to enrich from Firestore using REST API (non-blocking)
+      // Try to enrich from Firestore using firebase-admin (non-blocking)
       try {
-        const userDoc = await getFirestoreDoc(getCollectionName('users'), user.uid);
-        if (userDoc) {
-          if (userDoc.username) {
-            user.username = userDoc.username;
-          }
-          if (userDoc.isAdmin === true || userDoc.role === 'admin') {
-            user.isAdmin = true;
+        const admin = getFirebaseAdmin();
+        if (admin) {
+          const db = admin.firestore();
+          const userDocRef = db.collection(getCollectionName('users')).doc(user.uid);
+          const userDoc = await userDocRef.get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            if (userData?.username) {
+              user.username = userData.username;
+            }
+            if (userData?.isAdmin === true || userData?.role === 'admin') {
+              user.isAdmin = true;
+            }
           }
         }
       } catch (e) {
@@ -145,8 +147,14 @@ export async function POST(request: NextRequest) {
         const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
         const uid = payload.user_id || payload.sub;
 
-        // Get user data from Firestore
-        const userData = await getFirestoreDoc(getCollectionName('users'), uid);
+        // Get user data from Firestore using firebase-admin
+        const admin = getFirebaseAdmin();
+        let userData: Record<string, any> | undefined;
+        if (admin) {
+          const db = admin.firestore();
+          const userDoc = await db.collection(getCollectionName('users')).doc(uid).get();
+          userData = userDoc.exists ? userDoc.data() : undefined;
+        }
 
         const user: User = {
           uid,
@@ -170,7 +178,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Production mode: verify ID token using REST API
+    // Production mode: verify ID token using REST API (to avoid jose dependency issues)
     console.log('[Session] Verifying ID token via REST API...');
     console.log('[Session] Firebase config check:', {
       hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -194,8 +202,18 @@ export async function POST(request: NextRequest) {
 
     console.log('[Session] Token verified for user:', verifyResult.uid);
 
-    // Get user data from Firestore using REST API
-    const userData = await getFirestoreDoc(getCollectionName('users'), verifyResult.uid);
+    // Get user data from Firestore using firebase-admin (NOT Auth - safe from jose issues)
+    let userData: Record<string, any> | undefined;
+    try {
+      const admin = getFirebaseAdmin();
+      if (admin) {
+        const db = admin.firestore();
+        const userDoc = await db.collection(getCollectionName('users')).doc(verifyResult.uid).get();
+        userData = userDoc.exists ? userDoc.data() : undefined;
+      }
+    } catch (firestoreError) {
+      console.warn('[Session] Firestore lookup failed:', firestoreError);
+    }
 
     const user: User = {
       uid: verifyResult.uid,
@@ -216,24 +234,22 @@ export async function POST(request: NextRequest) {
     // Create session cookie
     await createSessionCookie(user);
 
-    // Update last login time (non-blocking, best-effort)
+    // Update last login time using firebase-admin (non-blocking, best-effort)
     try {
-      await setFirestoreDoc(
-        getCollectionName('users'),
-        user.uid,
-        {
+      const admin = getFirebaseAdmin();
+      if (admin) {
+        const db = admin.firestore();
+        await db.collection(getCollectionName('users')).doc(user.uid).update({
           lastLoginAt: new Date().toISOString(),
           lastActiveAt: new Date().toISOString()
-        },
-        idToken,
-        true // merge
-      );
+        });
+      }
     } catch (e) {
       console.warn('[Session] Failed to update last login time:', e);
     }
 
     // Create device session for tracking
-    await createUserSession(request, user.uid, idToken);
+    await createUserSession(request, user.uid);
 
     console.log('[Session] Session created for:', user.email);
     return createSuccessResponse(user);
@@ -270,7 +286,7 @@ async function createSessionCookie(user: User) {
 /**
  * Create user session for device tracking
  */
-async function createUserSession(request: NextRequest, userId: string, idToken: string) {
+async function createUserSession(request: NextRequest, userId: string) {
   try {
     const userAgent = request.headers.get('user-agent') || '';
     const ipAddress = getClientIP(request);
@@ -290,13 +306,12 @@ async function createUserSession(request: NextRequest, userId: string, idToken: 
       isActive: true,
     };
 
-    // Store session in Firestore using REST API
-    await setFirestoreDoc(
-      getCollectionName('userSessions'),
-      sessionId,
-      sessionData,
-      idToken
-    );
+    // Store session in Firestore using firebase-admin
+    const admin = getFirebaseAdmin();
+    if (admin) {
+      const db = admin.firestore();
+      await db.collection(getCollectionName('userSessions')).doc(sessionId).set(sessionData);
+    }
 
     // Set sessionId cookie
     const cookieStore = await cookies();

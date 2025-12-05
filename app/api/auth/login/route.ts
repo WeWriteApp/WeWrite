@@ -1,14 +1,13 @@
 /**
  * Login API Endpoint
  * 
- * Uses Firebase REST API instead of firebase-admin SDK to avoid
- * the jwks-rsa/jose dependency chain that fails in Vercel serverless.
- * 
- * Note: Actual password verification happens client-side via Firebase Auth.
- * This endpoint is mainly for:
+ * Handles:
  * - Development mode login (with test users)
- * - Username to email lookup
+ * - Username to email lookup (using firebase-admin Firestore - NOT Auth)
  * - Setting session cookies
+ * 
+ * Note: Firebase Admin Auth operations are avoided due to jose dependency issues in Vercel.
+ * Only Firestore operations are used here, which work fine.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +15,7 @@ import { cookies } from 'next/headers';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { secureLogger, maskEmail } from '../../../utils/secureLogging';
 import { DEV_TEST_USERS } from '../../../utils/testUsers';
-import { getFirestoreDoc, queryFirestore } from '../../../lib/firebase-rest';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 
 interface LoginRequest {
   emailOrUsername: string;
@@ -110,7 +109,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Production mode: use Firebase REST API for username lookup
+    // Production mode: use Firebase Admin Firestore for username lookup
+    // Note: We use firebase-admin for Firestore only (NOT Auth) to avoid jose issues
     const isEmail = emailOrUsername.includes('@');
     let email = emailOrUsername;
     let username: string | undefined;
@@ -119,19 +119,59 @@ export async function POST(request: NextRequest) {
     if (!isEmail) {
       console.log('[Auth] Looking up email for username:', emailOrUsername);
       
-      // Get username document using REST API
-      const usernameDoc = await getFirestoreDoc(
-        getCollectionName('usernames'),
-        emailOrUsername.toLowerCase()
-      );
-
-      if (!usernameDoc || !usernameDoc.email) {
-        return createErrorResponse('User not found');
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        console.error('[Auth] Firebase Admin not initialized');
+        return createErrorResponse('Server configuration error', 500);
       }
 
-      email = usernameDoc.email;
-      username = usernameDoc.username || emailOrUsername;
-      console.log('[Auth] Resolved email for username');
+      const db = admin.firestore();
+      
+      // Try direct document lookup first (usernames are stored as doc ID)
+      const usernameDocRef = db.collection(getCollectionName('usernames')).doc(emailOrUsername.toLowerCase());
+      const usernameDoc = await usernameDocRef.get();
+
+      if (usernameDoc.exists) {
+        const data = usernameDoc.data();
+        email = data?.email;
+        username = data?.username || emailOrUsername;
+        console.log('[Auth] Found username doc, resolved email');
+      } else {
+        // Fallback: query users collection by username field
+        console.log('[Auth] Username doc not found, querying users collection');
+        const usersQuery = await db.collection(getCollectionName('users'))
+          .where('username', '==', emailOrUsername)
+          .limit(1)
+          .get();
+
+        if (!usersQuery.empty) {
+          const userData = usersQuery.docs[0].data();
+          email = userData?.email;
+          username = userData?.username || emailOrUsername;
+          console.log('[Auth] Found user by username query');
+        } else {
+          // Try case-insensitive search
+          const lowerUsername = emailOrUsername.toLowerCase();
+          const usersQueryLower = await db.collection(getCollectionName('users'))
+            .where('usernameLower', '==', lowerUsername)
+            .limit(1)
+            .get();
+
+          if (!usersQueryLower.empty) {
+            const userData = usersQueryLower.docs[0].data();
+            email = userData?.email;
+            username = userData?.username || emailOrUsername;
+            console.log('[Auth] Found user by lowercase username query');
+          } else {
+            console.log('[Auth] Username not found in any collection:', emailOrUsername);
+            return createErrorResponse('No account found with this username or email');
+          }
+        }
+      }
+
+      if (!email) {
+        return createErrorResponse('No account found with this username or email');
+      }
     }
 
     // Note: Actual password verification happens client-side via Firebase Auth
