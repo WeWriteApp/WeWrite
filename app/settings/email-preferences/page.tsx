@@ -243,12 +243,14 @@ export default function EmailPreferencesPage() {
                 checked={preferences.securityAlerts}
                 disabled // Always required
               />
+              {/* Login notifications disabled - feature not working properly
               <PreferenceToggle
                 id="loginNotifications"
                 label="Login Notifications"
                 description="Get notified when your account is accessed from a new device"
                 checked={preferences.loginNotifications}
               />
+              */}
             </div>
           </section>
 

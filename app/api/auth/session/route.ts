@@ -345,31 +345,8 @@ async function createUserSession(request: NextRequest, userId: string) {
       
       await db.collection(getCollectionName('userSessions')).doc(sessionId).set(sessionData);
       
-      // Send security alert email for new device logins
-      if (isNewDevice) {
-        try {
-          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            // Check if user wants security emails
-            if (userData?.email && userData?.emailPreferences?.securityAlerts !== false) {
-              const { sendSecurityAlert } = await import('../../../services/emailService');
-              await sendSecurityAlert({
-                to: userData.email,
-                username: userData.username || 'there',
-                eventType: 'New login detected',
-                eventDetails: `${deviceInfo.browser} on ${deviceInfo.os} (${deviceInfo.deviceType}) from IP: ${ipAddress}`,
-                eventTime: new Date().toISOString(),
-                userId
-              });
-              console.log(`[Session] Security alert email sent for new device login for user ${userId}`);
-            }
-          }
-        } catch (emailError) {
-          console.error('[Session] Error sending security alert email:', emailError);
-          // Don't fail the session creation
-        }
-      }
+      // NOTE: Security alert emails for new device logins have been disabled
+      // They were spammy and not working properly - can be re-enabled later if needed
     }
 
     // Set sessionId cookie

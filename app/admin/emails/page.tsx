@@ -109,8 +109,8 @@ const triggerStatus: Record<string, { status: 'active' | 'partial' | 'not-implem
     description: 'Fully implemented. Triggered when pages link to other pages.'
   },
   'account-security': { 
-    status: 'active', 
-    description: 'Fully implemented. Triggered on new device login in session route.'
+    status: 'disabled', 
+    description: 'Disabled - was spammy and not working properly. Can be re-enabled later.'
   },
   'choose-username': { 
     status: 'active', 
