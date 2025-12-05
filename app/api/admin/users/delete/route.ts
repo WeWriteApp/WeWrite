@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { deleteUserByUid } from '../../../../lib/firebase-rest';
 
-const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_API_URL = 'https://api.resend.com';
 
@@ -86,33 +85,6 @@ async function deleteFromAllResendAudiences(email: string): Promise<{ deleted: b
   return { deleted: anyDeleted, errors };
 }
 
-/**
- * Delete a Firebase Auth user using the Identity Toolkit REST API
- * This avoids the jose dependency issues in Vercel production
- */
-async function deleteAuthUserViaRestApi(uid: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    // We need an access token to call the admin API
-    // Since we can't use service account auth easily in REST, we'll try using 
-    // the Admin SDK for non-Auth operations and fall back to noting the limitation
-    
-    // The Identity Toolkit API requires an OAuth2 access token, not an API key
-    // For now, we'll document that this needs to be done via Firebase Console
-    // or we need to implement proper OAuth2 service account flow
-    
-    console.log('[ADMIN DELETE] Cannot delete Firebase Auth user via REST API without OAuth2 token');
-    console.log('[ADMIN DELETE] User must be deleted manually via Firebase Console or implement OAuth2 flow');
-    
-    return { 
-      success: false, 
-      error: 'Firebase Auth user deletion requires manual action in Firebase Console due to API limitations' 
-    };
-  } catch (error: any) {
-    console.error('[ADMIN DELETE] REST API deletion error:', error);
-    return { success: false, error: error.message };
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const admin = getFirebaseAdmin();
@@ -149,17 +121,24 @@ export async function POST(request: NextRequest) {
       console.warn('[ADMIN DELETE] Could not fetch user doc:', err.message);
     }
 
-    // Step 1: Try to delete Firebase Auth user (may fail due to jose)
+    // Step 1: Try to delete Firebase Auth user
+    // First try Admin SDK, then fall back to REST API if jose fails
     try {
       await admin.auth().deleteUser(uid);
       deletionResults.authUser.deleted = true;
-      console.log('[ADMIN DELETE] Firebase Auth user deleted successfully');
+      console.log('[ADMIN DELETE] Firebase Auth user deleted via Admin SDK');
     } catch (authErr: any) {
-      console.warn('[ADMIN DELETE] Firebase Auth deletion failed:', authErr.message);
-      deletionResults.authUser.error = authErr.message;
+      console.warn('[ADMIN DELETE] Admin SDK deletion failed, trying REST API:', authErr.message);
       
-      // Note: We cannot use REST API for admin deletion without OAuth2 service account flow
-      // The user will need to be deleted via Firebase Console
+      // Fallback to REST API which doesn't have jose dependency issues
+      const restResult = await deleteUserByUid(uid);
+      if (restResult.success) {
+        deletionResults.authUser.deleted = true;
+        console.log('[ADMIN DELETE] Firebase Auth user deleted via REST API');
+      } else {
+        deletionResults.authUser.error = `Admin SDK: ${authErr.message}; REST API: ${restResult.error}`;
+        console.error('[ADMIN DELETE] Both deletion methods failed');
+      }
     }
 
     // Step 2: Delete Firestore user document
@@ -213,8 +192,9 @@ export async function POST(request: NextRequest) {
       message = 'User fully deleted';
     } else if (dataDeleted && !authDeleted) {
       message = 'User data deleted, but Firebase Auth user still exists';
-      warnings.push('Firebase Auth user must be manually deleted via Firebase Console');
+      warnings.push('Firebase Auth deletion failed - see deletionResults.authUser.error for details');
       warnings.push('The email address will still be "in use" until the Auth user is deleted');
+      warnings.push('You may need to manually delete via Firebase Console');
     } else if (!dataDeleted && authDeleted) {
       message = 'Firebase Auth user deleted, but Firestore data may remain';
     } else {
@@ -229,11 +209,6 @@ export async function POST(request: NextRequest) {
       username: userData?.username || null,
       deletionResults,
       warnings: warnings.length > 0 ? warnings : undefined,
-      manualActionRequired: !authDeleted ? {
-        action: 'Delete user from Firebase Console',
-        url: `https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PID}/authentication/users`,
-        reason: 'Firebase Admin Auth operations fail in Vercel due to jose dependency issues'
-      } : undefined
     });
   } catch (error: any) {
     console.error('[ADMIN DELETE] Error:', error);

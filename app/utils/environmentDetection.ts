@@ -125,9 +125,13 @@ export const detectEnvironmentType = (): EnvironmentType => {
     return 'development';
   }
 
-  // Production fallback for NODE_ENV=production without VERCEL_ENV
+  // IMPORTANT: Local production builds (next build && next start) should still use DEV_ collections
+  // Only actual Vercel production deployments should use production collections
+  // This prevents accidentally contaminating production data when testing locally
   if (process.env.NODE_ENV === 'production' && !isVercelDeployment()) {
-    return 'production';
+    // Local production build - use development collections for safety
+    console.warn('[Environment Detection] Local production build detected - using DEV_ collections for safety');
+    return 'development';
   }
 
   // Safe default to development to prevent production data contamination

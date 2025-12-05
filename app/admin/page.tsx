@@ -453,6 +453,27 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* OpenGraph Images */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">OpenGraph Images</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Preview all OG image designs used when WeWrite pages are shared on social media.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/opengraph-images')}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  View OG Images
+                </Button>
+              </div>
+            </div>
+
             {/* Financial Test Harness */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">

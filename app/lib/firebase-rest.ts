@@ -489,6 +489,45 @@ export async function deleteUser(idToken: string): Promise<boolean> {
 }
 
 /**
+ * Delete a user account by UID using Admin API (service account auth)
+ * This is the admin-level deletion that works even when jose fails
+ */
+export async function deleteUserByUid(uid: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const accessToken = await getServiceAccountToken();
+    
+    if (!accessToken) {
+      return { success: false, error: 'Could not get service account token' };
+    }
+
+    // Use Identity Toolkit Admin API to delete user
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/accounts:delete`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ localId: uid }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Firebase REST] Admin delete user failed:', response.status, errorText);
+      return { success: false, error: `Failed to delete user: ${response.status} - ${errorText}` };
+    }
+
+    console.log('[Firebase REST] Admin deleted user:', uid);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Firebase REST] Admin delete user error:', error);
+    return { success: false, error: error?.message || 'Failed to delete user' };
+  }
+}
+
+/**
  * Send password reset email
  */
 export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean; error?: string }> {
