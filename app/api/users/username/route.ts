@@ -47,19 +47,67 @@ function validateUsernameFormat(username: string): { valid: boolean; error?: str
 }
 
 /**
- * Generate username suggestions
+ * Generate username suggestion candidates (not yet verified as available)
  */
-function generateUsernameSuggestions(baseUsername: string): string[] {
-  const suggestions: string[] = [];
-  const cleanBase = baseUsername.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+function generateUsernameCandidates(baseUsername: string): string[] {
+  const candidates: string[] = [];
+  const cleanBase = baseUsername.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
   
   if (cleanBase.length >= 3) {
-    suggestions.push(cleanBase);
-    suggestions.push(`${cleanBase}${Math.floor(Math.random() * 100)}`);
-    suggestions.push(`${cleanBase}_${Math.floor(Math.random() * 1000)}`);
+    // Add variations with numbers
+    const currentYear = new Date().getFullYear();
+    candidates.push(`${cleanBase}${Math.floor(Math.random() * 100)}`);
+    candidates.push(`${cleanBase}_${Math.floor(Math.random() * 1000)}`);
+    candidates.push(`${cleanBase}${currentYear}`);
+    candidates.push(`${cleanBase}${Math.floor(Math.random() * 10000)}`);
+    candidates.push(`${cleanBase}_${currentYear}`);
+    candidates.push(`the_${cleanBase}`);
+    candidates.push(`${cleanBase}_real`);
   }
   
-  return suggestions.slice(0, 3);
+  // Filter out any that are too long or don't match the format
+  return candidates.filter(c => c.length >= 3 && c.length <= 20 && /^[a-zA-Z0-9_-]+$/.test(c));
+}
+
+/**
+ * Check if a username is available (helper for suggestion checking)
+ */
+async function isUsernameAvailable(db: FirebaseFirestore.Firestore, username: string): Promise<boolean> {
+  const [usersQuery, usernameDoc] = await Promise.all([
+    db.collection(getCollectionName('users'))
+      .where('username', '==', username)
+      .limit(1)
+      .get(),
+    db.collection(getCollectionName('usernames'))
+      .doc(username.toLowerCase())
+      .get()
+  ]);
+  
+  return usersQuery.empty && !usernameDoc.exists;
+}
+
+/**
+ * Generate verified available username suggestions
+ */
+async function generateVerifiedSuggestions(db: FirebaseFirestore.Firestore, baseUsername: string, maxSuggestions: number = 3): Promise<string[]> {
+  const candidates = generateUsernameCandidates(baseUsername);
+  const availableSuggestions: string[] = [];
+  
+  // Check candidates in parallel, but limit concurrent checks
+  for (const candidate of candidates) {
+    if (availableSuggestions.length >= maxSuggestions) break;
+    
+    try {
+      const isAvailable = await isUsernameAvailable(db, candidate);
+      if (isAvailable) {
+        availableSuggestions.push(candidate);
+      }
+    } catch (error) {
+      console.warn(`Error checking suggestion ${candidate}:`, error);
+    }
+  }
+  
+  return availableSuggestions;
 }
 
 // GET endpoint - Check username availability
@@ -105,10 +153,15 @@ export async function GET(request: NextRequest) {
       available: isAvailable
     };
 
-    // If not available, provide suggestions
+    // If not available, provide verified available suggestions
     if (!isAvailable) {
-      const suggestions = generateUsernameSuggestions(username);
-      result.suggestion = suggestions[0];
+      const verifiedSuggestions = await generateVerifiedSuggestions(db, username, 3);
+      if (verifiedSuggestions.length > 0) {
+        result.suggestion = verifiedSuggestions[0];
+        // Also include all suggestions in the response
+        (result as any).suggestions = verifiedSuggestions;
+      }
+      result.error = 'Username already taken';
     }
 
     return createApiResponse(result);

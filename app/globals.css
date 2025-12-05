@@ -3378,27 +3378,15 @@ button.bg-transparent[type] {
 }
 
 /* SIMPLIFIED: Save header body class for consistent content pushing */
-/* DON'T add padding to body - that pushes the save header down too! */
-/* Instead, push down only the main content areas */
+/* Transform the page content wrapper to slide everything down together */
 
-body.has-sticky-save-header .slide-up-page,
-body.has-sticky-save-header .new-page-container,
-body.has-sticky-save-header main,
-body.has-sticky-save-header [data-page-content] {
-  padding-top: 56px; /* Push content down by save header height */
-  transition: padding-top 300ms ease-out;
+body.has-sticky-save-header .page-content-wrapper {
+  transform: translateY(56px);
+  transition: transform 300ms ease-out;
 }
 
-/* Push the main header down when save banner is present */
-body.has-sticky-save-header header[data-component="main-header"] {
-  /* Let the component handle the positioning with inline styles */
-  margin-top: unset;
-}
-
-body.has-sticky-save-header .page-header-edit-mode {
-  margin-top: unset;
-}
-
-body.has-sticky-save-header header[data-component="main-header"] + div {
-  height: unset;
+/* Don't transform fixed elements or portals */
+body.has-sticky-save-header [data-radix-portal],
+body.has-sticky-save-header [data-portal] {
+  transform: none !important;
 }

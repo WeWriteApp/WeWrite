@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       const usernamesCollection = getCollectionName('usernames');
       
       // Look up user by email or username
-      let userDoc = null;
+      let userDoc: { fields?: Record<string, any>; name?: string } | null = null;
       const isEmail = emailOrUsername.includes('@');
       
       if (isEmail) {

@@ -1,103 +1,15 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { Button } from './button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from './dropdown-menu';
 
 /**
- * Financial Dropdown Solo Behavior System
- *
- * Uses module-level state to ensure only one financial dropdown can be open at a time.
- * This approach is simpler and more reliable than React Context because:
- * 1. No provider nesting required
- * 2. Direct control over dropdown instances
- * 3. Immediate synchronization without React render cycles
- * 4. Works across different component trees
+ * Simple Financial Dropdown - Clean implementation
  */
-let globalOpenDropdown: string | null = null;
-const dropdownInstances = new Set<{
-  id: string;
-  setOpen: (open: boolean) => void;
-}>();
-
-// Register/unregister dropdown instances
-function registerDropdown(id: string, setOpen: (open: boolean) => void) {
-  const instance = { id, setOpen };
-  dropdownInstances.add(instance);
-  return () => dropdownInstances.delete(instance);
-}
-
-// Force close all other dropdowns when one opens
-function openDropdownSolo(targetId: string) {
-  globalOpenDropdown = targetId;
-  dropdownInstances.forEach(instance => {
-    if (instance.id !== targetId) {
-      instance.setOpen(false);
-    }
-  });
-}
-
-// Clear global state when dropdown closes
-function closeDropdown() {
-  globalOpenDropdown = null;
-}
-
-/**
- * Hook for solo dropdown behavior
- * Ensures only one dropdown in the group can be open at a time
- */
-function useSoloDropdown(id: string) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Register this dropdown instance
-  useEffect(() => {
-    const unregister = registerDropdown(id, setIsOpen);
-    return unregister;
-  }, [id]);
-
-  // Handle dropdown open/close with solo behavior
-  const handleOpenChange = useCallback((open: boolean) => {
-    if (open) {
-      openDropdownSolo(id);
-      setIsOpen(true);
-    } else {
-      closeDropdown();
-      setIsOpen(false);
-    }
-  }, [id]);
-
-  // Close on scroll/wheel/touchmove anywhere on the page (treat as outside interaction)
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleOutsideScroll = () => {
-      setIsOpen(false);
-      closeDropdown();
-    };
-
-    window.addEventListener('scroll', handleOutsideScroll, true);
-    window.addEventListener('wheel', handleOutsideScroll, { passive: true, capture: true });
-    window.addEventListener('touchmove', handleOutsideScroll, { passive: true, capture: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleOutsideScroll, true);
-      window.removeEventListener('wheel', handleOutsideScroll, true as any);
-      window.removeEventListener('touchmove', handleOutsideScroll, true as any);
-    };
-  }, [isOpen]);
-
-  return { isOpen, handleOpenChange };
-}
-
-// Note: FinancialDropdownProvider is no longer needed - solo behavior is handled via module-level state
 
 interface FinancialDropdownProps {
   trigger: React.ReactNode;
@@ -108,6 +20,8 @@ interface FinancialDropdownProps {
   direction?: 'southeast' | 'southwest';
   className?: string;
   showNavigationButton?: boolean;
+  isDemo?: boolean;
+  demoMessage?: string;
 }
 
 interface SpendBreakdownProps {
@@ -121,13 +35,9 @@ interface EarningsBreakdownProps {
   pendingEarnings?: number;
   lastMonthEarnings?: number;
   monthlyChange?: number;
+  onRefresh?: () => void;
 }
 
-/**
- * FinancialDropdown - Reusable dropdown for financial displays
- *
- * Now uses the main dropdown component for consistent animations and behavior
- */
 export function FinancialDropdown({
   trigger,
   content,
@@ -136,82 +46,177 @@ export function FinancialDropdown({
   onClose,
   direction = 'southeast',
   className = '',
-  showNavigationButton = true
+  showNavigationButton = true,
+  isDemo = false,
+  demoMessage = 'Demo Mode: Sign up to use real funds!'
 }: FinancialDropdownProps) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false); // For enter animation
+  const [mounted, setMounted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Create unique ID for this dropdown
-  const dropdownId = `financial-${title.toLowerCase()}`;
+  // Mount check for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Use the solo dropdown hook
-  const { isOpen, handleOpenChange } = useSoloDropdown(dropdownId);
-
-  // Enhanced handler to include onClose callback
-  const handleOpenChangeWithCallback = useCallback((open: boolean) => {
-    handleOpenChange(open);
-    if (!open && onClose) {
-      onClose();
+  // Calculate dropdown position synchronously
+  const calculatePosition = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const contentWidth = 260;
+      
+      let left = direction === 'southeast' 
+        ? rect.left 
+        : rect.right - contentWidth;
+      
+      left = Math.max(8, Math.min(left, window.innerWidth - contentWidth - 8));
+      
+      return {
+        top: rect.bottom + 8,
+        left
+      };
     }
-  }, [handleOpenChange, onClose]);
+    return null;
+  }, [direction]);
 
-  return (
-    <DropdownMenu open={isOpen} onOpenChange={handleOpenChangeWithCallback}>
-      <DropdownMenuTrigger asChild>
-        <div
-          className={cn("cursor-pointer flex items-center", className)}
-          onClick={(e) => {
-            e.preventDefault();
-            handleOpenChangeWithCallback(!isOpen);
-          }}
-        >
-          {trigger}
-        </div>
-      </DropdownMenuTrigger>
+  // Handle click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
 
-      <DropdownMenuContent
-        align={direction === 'southeast' ? 'start' : 'end'}
-        className="w-auto min-w-[200px] max-w-[280px] p-3"
-        sideOffset={12}
-      >
-        {/* Title */}
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      // Check if click is outside both the trigger container and the dropdown
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+        setIsAnimating(false);
+        setPosition(null);
+        onClose?.();
+      }
+    };
+
+    // Delay adding listener to prevent immediate close
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  // Handle escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        setIsAnimating(false);
+        setPosition(null);
+        onClose?.();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  const openDropdown = () => {
+    // Calculate position BEFORE opening
+    const pos = calculatePosition();
+    if (pos) {
+      setPosition(pos);
+      setIsOpen(true);
+      // Trigger animation after a frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    }
+  };
+
+  const closeDropdown = () => {
+    setIsAnimating(false);
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      setIsOpen(false);
+      setPosition(null);
+      onClose?.();
+    }, 150);
+  };
+
+  const toggleDropdown = () => {
+    if (isOpen) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
+  };
+
+  // Dropdown content to be portaled
+  const dropdownContent = position && (
+    <div
+      ref={dropdownRef}
+      className="fixed w-[260px] rounded-xl shadow-2xl overflow-hidden transition-all duration-150 ease-out"
+      style={{ 
+        top: position.top, 
+        left: position.left,
+        zIndex: 99999,
+        opacity: isAnimating ? 1 : 0,
+        transform: isAnimating ? 'translateY(0)' : 'translateY(-8px)',
+      }}
+    >
+      {/* Glassmorphic background layer */}
+      <div 
+        className="absolute inset-0 bg-white/70 dark:bg-gray-900/80 backdrop-blur-xl"
+        style={{ zIndex: -1 }}
+      />
+      
+      {/* Content */}
+      <div className="relative p-4 border border-white/20 dark:border-white/10 rounded-xl">
         <div className="text-sm font-medium text-foreground mb-3 text-center">
           {title}
         </div>
 
-        {/* Content */}
         <div className="mb-3">
           {content}
         </div>
 
         {showNavigationButton && (
           <>
-            <DropdownMenuSeparator />
-
-            {/* Navigation buttons */}
-            <div className="mt-3 space-y-2">
+            <div className="border-t border-gray-200/50 dark:border-white/10 my-3" />
+            <div className="space-y-2">
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => {
-                  // Close dropdown before navigating
                   closeDropdown();
                   onNavigate();
                 }}
-                className="w-full whitespace-nowrap"
+                className="w-full"
               >
-                {title === 'Spending' ? 'Spend breakdown' : 'Go to earnings'}
+                {title.includes('Spending') ? 'Spend breakdown' : 'Go to earnings'}
               </Button>
 
-              {title === 'Spending' && (
+              {title.includes('Spending') && (
                 <Button
                   size="sm"
                   onClick={() => {
-                    // Close dropdown before navigating
                     closeDropdown();
-                    // Navigate to fund account page
                     router.push('/settings/fund-account');
                   }}
-                  className="w-full whitespace-nowrap"
+                  className="w-full"
                 >
                   Top off account
                 </Button>
@@ -219,20 +224,47 @@ export function FinancialDropdown({
             </div>
           </>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+
+        {/* Demo mode notice */}
+        {isDemo && (
+          <>
+            <div className="border-t border-gray-200/50 dark:border-white/10 my-3" />
+            <div className="text-xs text-muted-foreground bg-gray-100/50 dark:bg-white/5 p-2 rounded text-center">
+              {demoMessage}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div ref={containerRef} className={cn("relative inline-block", className)}>
+      {/* Trigger - clicking toggles dropdown */}
+      <div
+        className="cursor-pointer"
+        onClick={toggleDropdown}
+        role="button"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+      >
+        {trigger}
+      </div>
+
+      {/* Dropdown panel - rendered via portal for proper stacking */}
+      {isOpen && mounted && typeof document !== 'undefined' && createPortal(
+        dropdownContent,
+        document.body
+      )}
+    </div>
   );
 }
 
-/**
- * SpendBreakdown - Shows detailed spend breakdown
- */
 export function SpendBreakdown({
   totalUsdCents,
   allocatedUsdCents,
   availableUsdCents
 }: SpendBreakdownProps) {
-  // Determine if user is out of funds (available is $0.00)
   const isOutOfFunds = availableUsdCents === 0;
 
   return (
@@ -248,27 +280,24 @@ export function SpendBreakdown({
         </span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Available to spend:</span>
-        <span className={`font-medium ${isOutOfFunds ? 'text-warn' : 'text-success'}`}>
+        <span className="text-muted-foreground">Available:</span>
+        <span className={`font-medium ${isOutOfFunds ? 'text-orange-500' : 'text-green-600'}`}>
           {isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents)}
         </span>
       </div>
       
-      {/* Visual bar */}
       <div className="mt-3">
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div className="h-full flex">
-            {/* Allocated portion */}
-            {allocatedUsdCents > 0 && (
+            {allocatedUsdCents > 0 && totalUsdCents > 0 && (
               <div
                 className={isOutOfFunds ? "bg-orange-500" : "bg-primary"}
                 style={{ width: `${Math.min((allocatedUsdCents / totalUsdCents) * 100, 100)}%` }}
               />
             )}
-            {/* Available portion */}
-            {availableUsdCents > 0 && (
+            {availableUsdCents > 0 && totalUsdCents > 0 && (
               <div
-                className={isOutOfFunds ? "bg-orange-500" : "bg-green-500"}
+                className="bg-green-500"
                 style={{ width: `${Math.min((availableUsdCents / totalUsdCents) * 100, 100)}%` }}
               />
             )}
@@ -279,38 +308,32 @@ export function SpendBreakdown({
   );
 }
 
-/**
- * EarningsBreakdown - Shows detailed earnings information
- */
 export function EarningsBreakdown({
   totalEarnings,
   pendingEarnings = 0,
   lastMonthEarnings = 0,
   monthlyChange = 0,
   onRefresh
-}: EarningsBreakdownProps & { onRefresh?: () => void }) {
-  const changeIsPositive = monthlyChange > 0;
-  const changeIsNegative = monthlyChange < 0;
-
+}: EarningsBreakdownProps) {
   return (
     <div className="space-y-3 text-sm">
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">Pending: This month</span>
-        <span className="font-medium text-green-600 ml-4">{formatUsdCents(pendingEarnings * 100)}</span>
+        <span className="text-muted-foreground">Pending:</span>
+        <span className="font-medium text-green-600">{formatUsdCents(pendingEarnings * 100)}</span>
       </div>
 
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">Earned last month</span>
-        <span className="font-medium ml-4">{formatUsdCents(lastMonthEarnings * 100)}</span>
+        <span className="text-muted-foreground">Last month:</span>
+        <span className="font-medium">{formatUsdCents(lastMonthEarnings * 100)}</span>
       </div>
 
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">Lifetime earnings</span>
-        <span className="font-medium ml-4">{formatUsdCents(totalEarnings * 100)}</span>
+        <span className="text-muted-foreground">Lifetime:</span>
+        <span className="font-medium">{formatUsdCents(totalEarnings * 100)}</span>
       </div>
 
       {totalEarnings === 0 && (
-        <div className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t border-neutral-15">
+        <div className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t">
           Start writing pages to earn from supporters
         </div>
       )}

@@ -168,29 +168,45 @@ export const passwordResetEmailTemplate: EmailTemplate = {
   subject: 'Reset your WeWrite password',
   sampleData: {
     username: 'JohnDoe',
+    email: 'johndoe@example.com',
     resetLink: 'https://getwewrite.app/auth/reset-password?token=xyz789',
   },
-  generateHtml: ({ username, resetLink }) => wrapEmail('Reset Your Password', `
+  generateHtml: ({ username, email, resetLink }) => wrapEmail('Reset Your Password', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">Reset Your Password</h2>
       <p>Hi ${username || 'there'},</p>
-      <p>You requested to reset your password. Click the button below to set a new password:</p>
+      <p>You requested to reset the password for <strong>${email}</strong>.</p>
+      <p>Click the button below to set a new password:</p>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetLink}" style="${emailStyles.button}">
-          Reset Password
-        </a>
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${resetLink}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="14%" strokecolor="#000000" fillcolor="#000000">
+          <w:anchorlock/>
+          <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Reset Password</center>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-->
+        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+          <tr>
+            <td style="background-color: #000; border-radius: 6px; padding: 0;">
+              <a href="${resetLink}" target="_blank" style="background-color: #000; color: #ffffff; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 44px; text-align: center; text-decoration: none; width: 200px; border-radius: 6px; -webkit-text-size-adjust: none;">
+                Reset Password
+              </a>
+            </td>
+          </tr>
+        </table>
+        <!--<![endif]-->
       </div>
       
       <p style="${emailStyles.muted}">
         This link will expire in 1 hour.<br><br>
-        Or copy and paste this link into your browser:<br>
-        <a href="${resetLink}" style="${emailStyles.link}; word-break: break-all;">${resetLink}</a>
+        If the button above doesn't work, copy and paste this link into your browser:<br>
+        <span style="color: #0066cc; word-break: break-all;">${resetLink}</span>
       </p>
     </div>
     
     <div style="${emailStyles.footer}">
-      <p>If you didn't request a password reset, you can safely ignore this email.</p>
+      <p>If you didn't request a password reset for ${email}, you can safely ignore this email.</p>
     </div>
   `),
 };

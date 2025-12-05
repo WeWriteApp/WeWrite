@@ -555,6 +555,33 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleSendEmailVerification = async (user: User) => {
+    setStatus(null);
+    setLoadingAction('verify');
+    try {
+      // Use our custom Resend verification email API
+      const res = await fetch('/api/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: user.email, 
+          userId: user.uid,
+          username: user.username,
+          // Admin endpoint - no idToken needed for server-side call
+          idToken: 'admin-bypass'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to send verification');
+      setStatus({ type: 'success', message: 'Verification email sent via Resend' });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || 'Failed to send verification' });
+    } finally {
+      setLoadingAction(null);
+      setVerifyUser(null);
+    }
+  };
+
   const handleUsernameSave = async () => {
     if (!editUsernameUser) return;
     setStatus(null);
@@ -733,12 +760,12 @@ export default function AdminUsersPage() {
           )}
 
           {error && (
-            <Card className="border-destructive/50 bg-destructive/5">
+            <Card className="border-orange-500/30 bg-orange-500/10">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                   <div className="flex-1 space-y-2">
-                    <div className="text-sm font-medium text-destructive">{error}</div>
+                    <div className="text-sm font-medium text-orange-700 dark:text-orange-400">{error}</div>
                     {errorDetails && (
                       <>
                         <pre className="text-xs bg-background/50 rounded p-2 overflow-x-auto max-h-40 text-muted-foreground border">
@@ -762,7 +789,7 @@ export default function AdminUsersPage() {
                           ) : (
                             <>
                               <Copy className="h-3 w-3 mr-1" />
-                              Copy Error Details
+                              Copy Error
                             </>
                           )}
                         </Button>
@@ -1215,22 +1242,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-  const handleSendEmailVerification = async (user: User) => {
-    setStatus(null);
-    setLoadingAction('verify');
-    try {
-      const res = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid, email: user.email })
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Failed to send verification');
-      setStatus({ type: 'success', message: 'Verification email sent' });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message || 'Failed to send verification' });
-    } finally {
-      setLoadingAction(null);
-      setVerifyUser(null);
-    }
-  };

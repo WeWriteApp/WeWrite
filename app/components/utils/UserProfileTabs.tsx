@@ -2,6 +2,7 @@
 import React, { useState, useRef, useContext } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
+import { InlineError } from '../ui/InlineError';
 import SupporterBadge from "../payments/SupporterBadge";
 import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon, Network, Calendar, MapPin } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
@@ -631,9 +632,11 @@ export default function UserProfileTabs({ profile }) {
               <>
                 <PageList pageList={sortedPages} emptyMessage="No pages yet" isCurrentUserList={isCurrentUser} />
                 {loadingError && (
-                  <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-                    {loadingError}
-                  </div>
+                  <InlineError
+                    variant="inline"
+                    message={loadingError}
+                    className="mt-4"
+                  />
                 )}
 
                 {/* Infinite scroll loading indicator */}

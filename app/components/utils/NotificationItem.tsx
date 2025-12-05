@@ -8,11 +8,12 @@ import { cn } from '../../lib/utils';
 import { useNotifications } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
 import { Button } from '../ui/button';
+import { InlineError } from '../ui/InlineError';
 import { dismissEmailVerificationNotifications } from '../../services/emailVerificationNotifications';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { updateNotificationCriticality, type NotificationCriticality } from '../../services/notificationsApi';
-import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+import { useAuth } from '../../providers/AuthProvider';
 
 /**
  * NotificationItem Component
@@ -25,6 +26,7 @@ import { auth } from '../../firebase/config';
 export default function NotificationItem({ notification }) {
   const router = useRouter();
   const { markAsRead, markAsUnread } = useNotifications();
+  const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [menuPosition, setMenuPosition] = useState('right-0');
@@ -248,9 +250,23 @@ export default function NotificationItem({ notification }) {
                   e.stopPropagation();
                   e.preventDefault();
                   try {
-                    if (auth?.currentUser) {
-                      await sendEmailVerification(auth.currentUser);
-                      console.log('Verification email sent via Firebase client SDK');
+                    if (auth?.currentUser && user) {
+                      const idToken = await auth.currentUser.getIdToken(true);
+                      const response = await fetch('/api/email/send-verification', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          email: user.email,
+                          userId: user.uid,
+                          username: user.username,
+                          idToken,
+                        }),
+                      });
+                      if (response.ok) {
+                        console.log('Verification email sent via Resend');
+                      } else {
+                        console.error('Failed to send verification email');
+                      }
                     } else {
                       console.warn('No authenticated user to send verification email');
                     }
@@ -387,9 +403,13 @@ export default function NotificationItem({ notification }) {
               </button>
             </div>
             {isUrgent && (
-              <div className="text-xs text-destructive font-medium bg-destructive/10 p-2 rounded mt-2">
-                ⚠️ Your subscription may be cancelled if payment continues to fail.
-              </div>
+              <InlineError
+                variant="inline"
+                size="sm"
+                severity="warning"
+                message="Your subscription may be cancelled if payment continues to fail."
+                className="mt-2"
+              />
             )}
           </div>
         );

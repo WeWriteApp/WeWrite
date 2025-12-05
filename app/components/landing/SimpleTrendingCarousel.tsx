@@ -128,7 +128,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
       loading={loading}
       error={error}
       emptyMessage="No trending pages available yet. Check back soon!"
-      height={280}
+      height={320}
       scrollSpeed={0.5}
       reverseDirection={true}
       fullWidth={true}
@@ -140,7 +140,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
             className="trending-page-item flex-shrink-0"
             style={{
               width: '280px',
-              height: '260px',
+              height: '300px',
               marginRight: '8px'
             }}
           >
@@ -148,7 +148,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
               className="block h-full cursor-pointer"
               onClick={() => window.location.href = `/${page.id}`}
             >
-              <div className="wewrite-card h-full flex flex-col justify-between border-0 shadow-none" style={{ transform: 'none' }}>
+              <div className="wewrite-card h-full flex flex-col justify-between" style={{ transform: 'none' }}>
                 <CardHeader className="p-3">
                   <CardTitle className="text-lg mb-1 break-words h-[52px] overflow-hidden">
                     <PillLink href={`/${page.id}`}>
@@ -189,12 +189,13 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
 
                   {/* Allocation controls - show for all users' pages when not viewing your own */}
                   {page.userId && page.id && (!user || user.uid !== page.userId) && (
-                    <div className="pt-2 border-t border-border/20" onClick={(e) => e.stopPropagation()}>
+                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                       <AllocationControls
                         pageId={page.id}
                         authorId={page.userId}
                         pageTitle={page.title || 'Untitled'}
                         source="TrendingCarousel"
+                        hideAvailableText={true}
                       />
                     </div>
                   )}

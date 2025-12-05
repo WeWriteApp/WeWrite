@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Loader, UserX, Users } from 'lucide-react';
+import { InlineError } from '../ui/InlineError';
 import { followsApi } from "../../utils/apiClient";
 import { useAuth } from '../../providers/AuthProvider';
 import Link from 'next/link';
@@ -150,9 +151,10 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
 
   if (error) {
     return (
-      <div className="p-4 text-sm text-destructive bg-destructive/10 rounded-lg">
-        {error}
-      </div>
+      <InlineError
+        variant="card"
+        message={error}
+      />
     );
   }
 

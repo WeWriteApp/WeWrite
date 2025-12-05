@@ -102,8 +102,10 @@ export default function UsernameEnforcementModal() {
           setValidationError("USERNAME_TAKEN");
           setValidationMessage(result.error || "Username already taken");
 
-          // Set username suggestion if available
-          if (result.suggestion) {
+          // Set username suggestions if available (prefer array, fallback to single)
+          if (result.suggestions && result.suggestions.length > 0) {
+            setUsernameSuggestions(result.suggestions);
+          } else if (result.suggestion) {
             setUsernameSuggestions([result.suggestion]);
           } else {
             setUsernameSuggestions([]);

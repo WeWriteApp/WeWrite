@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import UnifiedLoader from '../../components/ui/unified-loader';
+import { InlineError } from '../../components/ui/InlineError';
 import VersionActivityCard from '../../components/activity/VersionActivityCard';
 import { getDiff } from '../../utils/diffService';
 import PageVersionsHeader from '../../components/pages/PageVersionsHeader';
@@ -285,10 +286,13 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
           pageTitle={page?.title || "Unknown Page"}
           isLoading={false}
         />
-        <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5" style={{ marginTop: '80px' }}>
-          <p className="font-medium">{error}</p>
-          <p className="text-sm mt-2 text-muted-foreground">Unable to load page versions. Please try again later.</p>
-        </div>
+        <InlineError
+          message="Unable to load page versions. Please try again later."
+          variant="error"
+          size="lg"
+          title={error}
+          className="mt-20"
+        />
       </div>
     );
   }

@@ -9,6 +9,7 @@
 import { NextRequest } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { syncUserToResend } from '../../../services/resendContactsService';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface RegisterUserRequest {
   uid: string;
@@ -89,6 +90,7 @@ async function verifyIdToken(idToken: string): Promise<{ uid: string; email: str
 // Check if username is taken using Firestore REST API
 async function isUsernameTaken(username: string, idToken: string): Promise<boolean> {
   try {
+    const usernamesCollection = getCollectionName('usernames');
     // Query the usernames collection
     const queryUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`;
     
@@ -100,12 +102,12 @@ async function isUsernameTaken(username: string, idToken: string): Promise<boole
       },
       body: JSON.stringify({
         structuredQuery: {
-          from: [{ collectionId: 'usernames' }],
+          from: [{ collectionId: usernamesCollection }],
           where: {
             fieldFilter: {
               field: { fieldPath: '__name__' },
               op: 'EQUAL',
-              value: { referenceValue: `projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/usernames/${username.toLowerCase()}` }
+              value: { referenceValue: `projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usernamesCollection}/${username.toLowerCase()}` }
             }
           },
           limit: 1
@@ -116,7 +118,7 @@ async function isUsernameTaken(username: string, idToken: string): Promise<boole
     if (!response.ok) {
       // If query fails, try a direct document get
       const docResponse = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/usernames/${username.toLowerCase()}`,
+        `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usernamesCollection}/${username.toLowerCase()}`,
         {
           headers: { 'Authorization': `Bearer ${idToken}` }
         }
@@ -164,7 +166,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user document using Firestore REST API
-    const userDocUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users?documentId=${uid}`;
+    const usersCollection = getCollectionName('users');
+    const userDocUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usersCollection}?documentId=${uid}`;
     const timestamp = new Date().toISOString();
 
     const userDocResponse = await fetch(userDocUrl, {
@@ -175,10 +178,12 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         fields: {
+          uid: { stringValue: uid },
           email: { stringValue: email },
           username: { stringValue: username },
           emailVerified: { booleanValue: false },
           isAnonymous: { booleanValue: false },
+          created: { stringValue: timestamp },
           createdAt: { stringValue: timestamp },
           lastLoginAt: { stringValue: timestamp },
           pageCount: { integerValue: '0' },
@@ -195,7 +200,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create username mapping document
-    const usernameDocUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/usernames?documentId=${username.toLowerCase()}`;
+    const usernamesCollection = getCollectionName('usernames');
+    const usernameDocUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usernamesCollection}?documentId=${username.toLowerCase()}`;
 
     const usernameDocResponse = await fetch(usernameDocUrl, {
       method: 'POST',

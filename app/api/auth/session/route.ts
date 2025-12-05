@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
           emailVerified: true,
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
-          isAdmin: false
+          isAdmin: devUser.isAdmin === true // Dev users have isAdmin flag
         };
       } else {
         return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
@@ -163,8 +163,14 @@ export async function POST(request: NextRequest) {
           photoURL: userData?.photoURL || payload.picture || undefined,
           emailVerified: payload.email_verified || userData?.emailVerified || false,
           createdAt: userData?.createdAt || new Date().toISOString(),
-          lastLoginAt: new Date().toISOString()
+          lastLoginAt: new Date().toISOString(),
+          isAdmin: userData?.isAdmin === true || userData?.role === 'admin'
         };
+
+        // Fallback admin check by email allowlist (includes dev user check)
+        if (!user.isAdmin && isAdminByEmail(user.email)) {
+          user.isAdmin = true;
+        }
 
         // Create session cookie
         await createSessionCookie(user);

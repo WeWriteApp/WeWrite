@@ -8,16 +8,18 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect, useCallback } from "react"
-// Firebase imports for registration and email verification
-import { sendEmailVerification, createUserWithEmailAndPassword } from 'firebase/auth'
+// Firebase imports for registration
+import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../firebase/config'
 import { createEmailVerificationNotification } from '../../services/notificationsApi'
-import { Check, Loader2, X, Copy, CheckCircle2 } from "lucide-react"
+import { Check, Loader2, X, Copy, CheckCircle2, Eye, EyeOff } from "lucide-react"
+import { InlineError } from "../ui/InlineError"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
 import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSuggestions } from "../../utils/usernameValidation"
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 import { transferLoggedOutAllocationsToUser } from "../../utils/simulatedTokens"
+import { useAuth } from "../../providers/AuthProvider"
 
 export function RegisterForm({
   className,
@@ -25,6 +27,7 @@ export function RegisterForm({
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
   const { trackAuthEvent } = useWeWriteAnalytics()
+  const { refreshUser } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
@@ -43,6 +46,7 @@ export function RegisterForm({
   // Error details for copy functionality
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Validate form inputs
   useEffect(() => {
@@ -84,22 +88,6 @@ export function RegisterForm({
         return
       }
 
-      // Special handling for known test case
-      if (value.toLowerCase() === 'jamie') {
-        setIsChecking(true)
-
-        // Force a small delay to simulate network request
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        setIsAvailable(false)
-        setValidationError("USERNAME_TAKEN")
-        setValidationMessage("Username already taken")
-        // Generate some test suggestions for 'jamie'
-        setUsernameSuggestions(['jamie123', 'jamie_2023', 'jamie2024'])
-        setIsChecking(false)
-        return
-      }
-
       // Check availability
       setIsChecking(true)
       try {
@@ -127,8 +115,10 @@ export function RegisterForm({
           setValidationError("USERNAME_TAKEN")
           setValidationMessage(data.error || "Username already taken")
 
-          // Set username suggestion if available
-          if (data.suggestion) {
+          // Set username suggestions if available (prefer array, fallback to single)
+          if (data.suggestions && data.suggestions.length > 0) {
+            setUsernameSuggestions(data.suggestions)
+          } else if (data.suggestion) {
             setUsernameSuggestions([data.suggestion])
           } else {
             setUsernameSuggestions([])
@@ -230,16 +220,54 @@ export function RegisterForm({
         setErrorDetails(null)
         console.log("Account created successfully:", result.data)
 
+        // Step 4: Get a fresh ID token (after Firestore docs are created)
+        console.log('[Register] Getting fresh ID token for session...')
+        const freshIdToken = await user.getIdToken(true) // force refresh
+
+        // Step 5: Create server-side session (same as login flow)
+        console.log('[Register] Creating server-side session...')
+        const sessionResponse = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ idToken: freshIdToken })
+        })
+
+        if (!sessionResponse.ok) {
+          const sessionError = await sessionResponse.text()
+          console.error('[Register] Session creation failed:', sessionResponse.status, sessionError)
+          // Don't fail registration, but log the issue
+        } else {
+          const sessionData = await sessionResponse.json()
+          console.log('[Register] Session created successfully:', sessionData)
+        }
+
         // Transfer any logged-out token allocations to the new user
         const transferResult = transferLoggedOutAllocationsToUser(user.uid)
         if (transferResult.success && transferResult.transferredCount > 0) {
           console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
         }
 
-        // Send verification email
+        // Send verification email via our custom Resend template
         try {
-          await sendEmailVerification(user)
-          console.log('Verification email sent successfully to:', email)
+          const verificationResponse = await fetch('/api/email/send-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email,
+              userId: user.uid,
+              username: username,
+              idToken: freshIdToken,
+            }),
+          })
+          
+          if (verificationResponse.ok) {
+            console.log('Verification email sent successfully to:', email)
+          } else {
+            console.error('Failed to send verification email via API')
+          }
           
           // Create a reminder notification in the notification center
           await createEmailVerificationNotification(user.uid)
@@ -261,12 +289,20 @@ export function RegisterForm({
         setIsRedirecting(true)
 
         // Redirect to home page
-        console.log("Account created successfully, redirecting to home")
+        console.log("Account created successfully, refreshing auth state and redirecting to home")
 
-        // Redirect to home page after a short delay - user will see email verification banner
+        // Refresh the auth provider state so it picks up the new session
+        try {
+          await refreshUser()
+          console.log('[Register] Auth state refreshed successfully')
+        } catch (refreshError) {
+          console.warn('[Register] Auth refresh warning (non-blocking):', refreshError)
+        }
+
+        // Navigate to home page after a short delay
         setTimeout(() => {
           router.push('/')
-        }, 1500)
+        }, 500)
 
       } else {
         // Handle API error response - user was created in Firebase Auth but documents failed
@@ -339,6 +375,9 @@ export function RegisterForm({
       className={cn("flex flex-col gap-4", className)}
       {...props}
       onSubmit={handleSubmit}
+      name="wewrite-register"
+      action="https://www.getwewrite.app/auth/register"
+      method="POST"
     >
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl font-bold">Create your account</h1>
@@ -355,6 +394,7 @@ export function RegisterForm({
           <div className="relative">
             <Input
               id="username"
+              name="username"
               type="text"
               placeholder="yourname"
               required
@@ -420,6 +460,7 @@ export function RegisterForm({
           </Label>
           <Input
             id="email"
+            name="email"
             type="email"
             placeholder="name@example.com"
             required
@@ -435,53 +476,47 @@ export function RegisterForm({
           <Label htmlFor="password" className="text-sm font-medium">
             Password
           </Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            tabIndex={3}
-            className="h-10 bg-background"
-            autoComplete="new-password"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              tabIndex={3}
+              className="h-10 bg-background pr-10"
+              autoComplete="new-password"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
             Password must be at least 6 characters
           </p>
         </div>
 
         {error && (
-          <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md space-y-2">
-            <div>{error}</div>
-            {errorDetails && (
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(errorDetails)
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 2000)
-                  } catch (e) {
-                    console.error('Failed to copy:', e)
-                  }
-                }}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-background/50 px-2 py-1 rounded border border-border"
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3 w-3" />
-                    Copy error details for support
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          <InlineError
+            message={error}
+            variant="error"
+            size="md"
+            errorDetails={errorDetails || undefined}
+            showCopy={!!errorDetails}
+          />
         )}
 
         <Button
@@ -524,28 +559,6 @@ export function RegisterForm({
       >
         Sign in with existing account
       </Button>
-
-      {/* Terms and Privacy Policy Agreement */}
-      <div className="text-xs text-muted-foreground text-center mt-4">
-        By using WeWrite you agree to our{' '}
-        <Link
-          href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/TERMS_OF_SERVICE.md"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-foreground"
-        >
-          Terms of Service
-        </Link>
-        {' '}and{' '}
-        <Link
-          href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/PRIVACY_POLICY.md"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-foreground"
-        >
-          Privacy Policy
-        </Link>
-      </div>
     </form>
   )
 }

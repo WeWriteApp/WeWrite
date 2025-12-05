@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { InlineError } from '../ui/InlineError';
 import { 
   AlertTriangle, 
   CreditCard, 
@@ -216,9 +217,12 @@ export function FailedPaymentNotification({
 
         {/* Urgency Message */}
         {notification.type === 'payment_failed_final' && (
-          <div className="text-xs text-destructive font-medium bg-destructive/10 p-2 rounded">
-            ⚠️ Your subscription may be cancelled if payment continues to fail.
-          </div>
+          <InlineError
+            variant="inline"
+            size="sm"
+            severity="warning"
+            message="Your subscription may be cancelled if payment continues to fail."
+          />
         )}
       </div>
     </div>

@@ -211,7 +211,7 @@ async function createLinkNotifications(
   try {
     console.log(`🔔 [NOTIFICATIONS] Creating link notifications for ${pageLinks.length} page links`);
 
-    // Import notification service
+    // Import notification service (this is safe for client-side)
     const { createNotification } = await import('../../services/notificationsApi');
 
     // Get target page data to find the page owners
@@ -226,6 +226,7 @@ async function createLinkNotifications(
 
           // Don't notify if the user is linking to their own page
           if (targetUserId && targetUserId !== sourceUsername) {
+            // Create in-app notification
             await createNotification({
               userId: targetUserId,
               type: 'link',
@@ -243,6 +244,47 @@ async function createLinkNotifications(
             });
 
             console.log(`🔔 [NOTIFICATIONS] Created link notification for user ${targetUserId}`);
+
+            // Send email notification via API (fire-and-forget)
+            // We use an API call here because emailService uses firebase-admin which can't run client-side
+            try {
+              // Get target user's email and preferences
+              const targetUserDoc = await getDoc(doc(db, getCollectionName('users'), targetUserId));
+              if (targetUserDoc.exists()) {
+                const targetUserData = targetUserDoc.data();
+                const targetEmail = targetUserData.email;
+                const targetUsername = targetUserData.username || `user_${targetUserId.slice(0, 8)}`;
+                
+                // Check if user wants email notifications for page links
+                const shouldSendEmail = targetUserData.emailPreferences?.engagement !== false;
+                
+                if (targetEmail && shouldSendEmail) {
+                  // Call the email API endpoint instead of directly importing emailService
+                  fetch('/api/email/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      templateId: 'page-linked',
+                      to: targetEmail,
+                      data: {
+                        username: targetUsername,
+                        linkedPageTitle: targetPageData.title || 'Untitled',
+                        linkerUsername: sourceUsername,
+                        linkerPageTitle: sourcePageTitle
+                      },
+                      userId: targetUserId
+                    })
+                  }).catch(err => {
+                    console.error(`📧 [EMAIL] Failed to send page linked email:`, err);
+                  });
+                  
+                  console.log(`📧 [EMAIL] Page linked email queued for ${targetEmail}`);
+                }
+              }
+            } catch (emailError) {
+              console.error(`📧 [EMAIL] Error preparing page linked email:`, emailError);
+              // Don't fail notifications if email fails
+            }
           }
         }
       } catch (notificationError) {

@@ -27,7 +27,7 @@ export function ErrorCard({
   showDetails = true
 }: ErrorCardProps) {
   return (
-    <div className={`wewrite-card ${className}`}>
+    <div className={`bg-orange-500/10 border border-orange-500/30 rounded-lg ${className}`}>
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <h3 className="text-lg font-semibold mb-2">{title}</h3>

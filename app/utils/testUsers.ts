@@ -7,6 +7,9 @@
 
 /**
  * Simple test users for development - replaces complex developmentAuth system
+ * 
+ * NOTE: In development mode, ALL dev test users have admin access,
+ * but they can ONLY access DEV_ prefixed collections (not production data).
  */
 export const DEV_TEST_USERS = {
   'jamie@wewrite.app': {
@@ -24,8 +27,8 @@ export const DEV_TEST_USERS = {
     username: 'testuser',
     password: 'TestPassword123!',
     displayName: 'Test User',
-    isAdmin: false,
-    description: 'Regular test user for development'
+    isAdmin: true, // All dev users are admins in dev mode
+    description: 'Test user for development (admin in dev mode)'
   },
   'getwewrite@gmail.com': {
     uid: 'gW5eR8iT3eA9pP2mN6oQ4sT7uV1X',
@@ -33,8 +36,8 @@ export const DEV_TEST_USERS = {
     username: 'getwewrite',
     password: 'TestPassword123!',
     displayName: 'WeWrite',
-    isAdmin: false,
-    description: 'WeWrite official test account'
+    isAdmin: true, // All dev users are admins in dev mode
+    description: 'WeWrite official test account (admin in dev mode)'
   }
 };
 

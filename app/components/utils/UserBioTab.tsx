@@ -292,7 +292,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         isAnimatingOut={false}
       />
 
-      <div className="space-y-4">
+      <div className="space-y-4 page-content-wrapper">
         {/* Header - no standalone edit icon or duplicate buttons */}
         <div className="flex justify-end items-center">
           {/* Edit icon removed - now handled by hover-reveal in content area */}

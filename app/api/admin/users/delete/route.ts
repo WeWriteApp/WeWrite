@@ -5,6 +5,86 @@ import { getCollectionName } from '../../../../utils/environmentConfig';
 
 const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_API_URL = 'https://api.resend.com';
+
+// Resend Audience IDs
+const GENERAL_AUDIENCE_ID = '493da2d9-7034-4bb0-99de-1dcfac3b424d';
+const DEV_TEST_AUDIENCE_ID = 'e475ed52-8398-442a-9d4e-80c5e97374d2';
+
+/**
+ * Delete a contact from a Resend audience by email
+ */
+async function deleteResendContact(email: string, audienceId: string): Promise<{ deleted: boolean; error?: string }> {
+  if (!RESEND_API_KEY) {
+    return { deleted: false, error: 'RESEND_API_KEY not configured' };
+  }
+
+  try {
+    // First, list contacts to find the contact ID
+    const listResponse = await fetch(`${RESEND_API_URL}/audiences/${audienceId}/contacts`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+    });
+
+    if (!listResponse.ok) {
+      return { deleted: false, error: `Failed to list contacts: ${listResponse.statusText}` };
+    }
+
+    const contacts = await listResponse.json();
+    const contact = contacts.data?.find((c: any) => c.email.toLowerCase() === email.toLowerCase());
+
+    if (!contact) {
+      // Contact doesn't exist in this audience, that's fine
+      return { deleted: true };
+    }
+
+    // Delete the contact
+    const deleteResponse = await fetch(`${RESEND_API_URL}/audiences/${audienceId}/contacts/${contact.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+    });
+
+    if (!deleteResponse.ok) {
+      return { deleted: false, error: `Failed to delete contact: ${deleteResponse.statusText}` };
+    }
+
+    return { deleted: true };
+  } catch (error: any) {
+    return { deleted: false, error: error.message };
+  }
+}
+
+/**
+ * Delete a user's contacts from all Resend audiences
+ */
+async function deleteFromAllResendAudiences(email: string): Promise<{ deleted: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  let anyDeleted = false;
+
+  // Try to delete from both audiences
+  const audiences = [
+    { id: GENERAL_AUDIENCE_ID, name: 'general' },
+    { id: DEV_TEST_AUDIENCE_ID, name: 'dev-test' },
+  ];
+
+  for (const audience of audiences) {
+    const result = await deleteResendContact(email, audience.id);
+    if (result.deleted) {
+      anyDeleted = true;
+      console.log(`[ADMIN DELETE] Removed from Resend ${audience.name} audience`);
+    } else if (result.error) {
+      errors.push(`${audience.name}: ${result.error}`);
+      console.warn(`[ADMIN DELETE] Failed to remove from Resend ${audience.name}:`, result.error);
+    }
+  }
+
+  return { deleted: anyDeleted, errors };
+}
 
 /**
  * Delete a Firebase Auth user using the Identity Toolkit REST API
@@ -57,6 +137,7 @@ export async function POST(request: NextRequest) {
       authUser: { deleted: false, error: null as string | null },
       firestoreUser: { deleted: false, error: null as string | null },
       usernameDoc: { deleted: false, error: null as string | null, username: null as string | null },
+      resendContacts: { deleted: false, error: null as string | null },
     };
 
     // Get user data from Firestore to find username and email
@@ -102,6 +183,21 @@ export async function POST(request: NextRequest) {
       } catch (unErr: any) {
         console.warn('[ADMIN DELETE] Username document deletion failed:', unErr.message);
         deletionResults.usernameDoc.error = unErr.message;
+      }
+    }
+
+    // Step 4: Delete from Resend audiences (email marketing)
+    if (userData?.email) {
+      try {
+        const resendResult = await deleteFromAllResendAudiences(userData.email);
+        deletionResults.resendContacts.deleted = resendResult.deleted;
+        if (resendResult.errors.length > 0) {
+          deletionResults.resendContacts.error = resendResult.errors.join('; ');
+        }
+        console.log('[ADMIN DELETE] Resend contacts cleanup complete');
+      } catch (resendErr: any) {
+        console.warn('[ADMIN DELETE] Resend deletion failed:', resendErr.message);
+        deletionResults.resendContacts.error = resendErr.message;
       }
     }
 

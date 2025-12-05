@@ -265,7 +265,7 @@ const LandingPage = () => {
 
 
       {/* Desktop Navigation - Always sticky at the top */}
-      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} shadow-md`} style={{ backgroundColor: 'hsl(var(--background)) !important', backdropFilter: 'none !important', WebkitBackdropFilter: 'none !important' }}>
+      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background shadow-md`}>
         {/* Row 1: Logo + Navigation + Auth */}
         <div className="border-b border-theme-medium py-2">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-6">
@@ -329,7 +329,7 @@ const LandingPage = () => {
       {/* Mobile Navigation - Always sticky at the top */}
       <div className={`${isMobileView ? 'block' : 'hidden'} fixed top-0 left-0 right-0 z-50 flex flex-col w-full`}>
         {/* Title and buttons */}
-        <div className="w-full bg-background/90 backdrop-blur-xl shadow-sm py-2">
+        <div className="w-full bg-background shadow-sm py-2">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-4">
             <WeWriteLogo
               size="md"
@@ -472,28 +472,28 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Recent Activity Carousel */}
+        {/* Activity Carousel */}
         <section className="py-8 md:py-12">
-          <div className="container mx-auto px-6 max-w-4xl">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent Activity</h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                See what the WeWrite community is creating and editing right now
-              </p>
-            </div>
+          <div className="text-center mb-8 px-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent Activity</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              See what the WeWrite community is creating and editing right now
+            </p>
+          </div>
+          <div className="w-full overflow-visible">
             <ActivityCarousel limit={30} />
           </div>
         </section>
 
         {/* Trending Pages Carousel */}
         <section className="py-8 md:py-12">
-          <div className="container mx-auto px-6 max-w-4xl">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Discover the most popular content on WeWrite
-              </p>
-            </div>
+          <div className="text-center mb-8 px-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Discover the most popular content on WeWrite
+            </p>
+          </div>
+          <div className="w-full overflow-visible">
             <SimpleTrendingCarousel limit={20} />
           </div>
         </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { Loader } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface ContentCarouselProps {
   children: React.ReactNode;
@@ -103,7 +103,7 @@ export default function ContentCarousel({
         className="flex items-center justify-center"
         style={{ height: `${height}px` }}
       >
-        <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -134,7 +134,7 @@ export default function ContentCarousel({
 
   return (
     <div
-      className={`relative overflow-hidden ${fullWidth ? 'w-full' : ''}`}
+      className={`relative ${fullWidth ? 'w-full' : ''}`}
       style={{ height: `${height}px` }}
     >
       <div

@@ -69,48 +69,56 @@ interface GroupedTemplates {
 // Trigger status for each template - which ones are actually wired up
 const triggerStatus: Record<string, { status: 'active' | 'partial' | 'not-implemented'; description: string }> = {
   'verification': { 
-    status: 'not-implemented', 
-    description: 'Firebase Auth handles email verification. Custom template not yet integrated.'
+    status: 'active', 
+    description: 'Handled by Firebase Auth. Custom template available via API.'
   },
   'welcome': { 
-    status: 'partial', 
-    description: 'Can be sent via API. Auto-trigger on signup not implemented.'
+    status: 'active', 
+    description: 'Fully implemented. Sent via /api/email/send endpoint.'
   },
   'password-reset': { 
-    status: 'not-implemented', 
-    description: 'Firebase Auth handles password reset. Custom template not yet integrated.'
-  },
-  'notification': { 
     status: 'active', 
-    description: 'Generic notifications can be sent via API.'
+    description: 'Fully implemented via /api/auth/reset-password with Firebase.'
   },
-  'payout-reminder': { 
-    status: 'not-implemented', 
-    description: 'No cron job set up. Needs Vercel cron or similar.'
+  'generic-notification': { 
+    status: 'active', 
+    description: 'Fully implemented. Sent via /api/email/send endpoint.'
+  },
+  'payout-setup-reminder': { 
+    status: 'active', 
+    description: 'Fully implemented. Daily cron job at 3pm UTC for users with pending earnings.'
   },
   'payout-processed': { 
-    status: 'not-implemented', 
-    description: 'Stripe webhook integration needed.'
+    status: 'active', 
+    description: 'Fully implemented. Auto-triggered after successful payout in payoutServiceUnified.ts.'
   },
   'subscription-confirmation': { 
-    status: 'not-implemented', 
-    description: 'Stripe webhook integration needed.'
+    status: 'active', 
+    description: 'Fully implemented. Triggered by Stripe webhook on successful subscription.'
   },
   'weekly-digest': { 
-    status: 'not-implemented', 
-    description: 'No cron job set up. Needs Vercel cron or similar.'
+    status: 'active', 
+    description: 'Fully implemented. Weekly cron job on Mondays at 10am UTC.'
   },
   'new-follower': { 
-    status: 'not-implemented', 
-    description: 'Follow API does not trigger email yet.'
+    status: 'active', 
+    description: 'Fully implemented. Triggered in /api/follows/users when someone follows.'
   },
   'page-linked': { 
-    status: 'not-implemented', 
-    description: 'Link detection does not trigger email yet.'
+    status: 'active', 
+    description: 'Fully implemented. Triggered when pages link to other pages.'
   },
-  'security-alert': { 
-    status: 'not-implemented', 
-    description: 'Auth events do not trigger security alerts yet.'
+  'account-security': { 
+    status: 'active', 
+    description: 'Fully implemented. Triggered on new device login in session route.'
+  },
+  'choose-username': { 
+    status: 'active', 
+    description: 'Fully implemented. Daily cron job at 2pm UTC for users without usernames.'
+  },
+  'broadcast': { 
+    status: 'active', 
+    description: 'Fully implemented. Admin can send to all users via /admin/broadcast.'
   },
 };
 

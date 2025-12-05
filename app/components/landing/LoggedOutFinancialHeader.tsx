@@ -51,19 +51,19 @@ export function LoggedOutFinancialHeader() {
           onNavigate={() => router.push('/auth/register')}
           direction="southeast"
           showNavigationButton={false}
+          isDemo={true}
+          demoMessage="Demo Mode: Sign up to start allocating real funds!"
           trigger={
             <OverspendWarningDisplay
               overspendUsdCents={overspendingAmount}
             />
           }
           content={
-            <div className="p-4 space-y-3">
-              <SpendBreakdown
-                totalUsdCents={demoBalance.totalUsdCents}
-                allocatedUsdCents={demoBalance.allocatedUsdCents}
-                availableUsdCents={Math.max(0, demoBalance.totalUsdCents - demoBalance.allocatedUsdCents)}
-              />
-            </div>
+            <SpendBreakdown
+              totalUsdCents={demoBalance.totalUsdCents}
+              allocatedUsdCents={demoBalance.allocatedUsdCents}
+              availableUsdCents={Math.max(0, demoBalance.totalUsdCents - demoBalance.allocatedUsdCents)}
+            />
           }
         />
       );
@@ -77,6 +77,8 @@ export function LoggedOutFinancialHeader() {
           onNavigate={() => router.push('/auth/register')}
           direction="southeast"
           showNavigationButton={false}
+          isDemo={true}
+          demoMessage="Demo Mode: Sign up to start allocating real funds!"
           trigger={
             <RemainingFundsDisplay
               allocatedUsdCents={demoBalance.allocatedUsdCents || 0}
@@ -84,13 +86,11 @@ export function LoggedOutFinancialHeader() {
             />
           }
           content={
-            <div className="p-4 space-y-3">
-              <SpendBreakdown
-                totalUsdCents={demoBalance.totalUsdCents}
-                allocatedUsdCents={demoBalance.allocatedUsdCents}
-                availableUsdCents={availableUsdCents}
-              />
-            </div>
+            <SpendBreakdown
+              totalUsdCents={demoBalance.totalUsdCents}
+              allocatedUsdCents={demoBalance.allocatedUsdCents}
+              availableUsdCents={availableUsdCents}
+            />
           }
         />
       );
@@ -108,6 +108,8 @@ export function LoggedOutFinancialHeader() {
         onNavigate={() => router.push('/auth/register')}
         direction="southwest"
         showNavigationButton={false}
+        isDemo={true}
+        demoMessage="Demo Mode: Start writing pages to earn from supporters!"
         trigger={
           <Badge
             variant="secondary"
@@ -117,17 +119,12 @@ export function LoggedOutFinancialHeader() {
           </Badge>
         }
         content={
-          <div className="p-4 space-y-3">
-            <EarningsBreakdown
-              totalEarnings={12.34} // Pass as dollars, not cents
-              pendingEarnings={12.34} // Pass as dollars, not cents
-              lastMonthEarnings={5.67} // Pass as dollars, not cents
-              monthlyChange={15} // 15% increase
-            />
-            <div className="text-xs text-success bg-success-20 p-2 rounded">
-              <strong>Demo Mode:</strong> Start writing pages to earn from supporters! Sign up to begin.
-            </div>
-          </div>
+          <EarningsBreakdown
+            totalEarnings={12.34} // Pass as dollars, not cents
+            pendingEarnings={12.34} // Pass as dollars, not cents
+            lastMonthEarnings={5.67} // Pass as dollars, not cents
+            monthlyChange={15} // 15% increase
+          />
         }
       />
     );

@@ -5,6 +5,7 @@ import { Eye, Clock, Heart, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useDateFormat } from "../../contexts/DateFormatContext";
+import { InlineError } from '../ui/InlineError';
 
 interface PageStatsData {
   totalViews: number;
@@ -121,11 +122,11 @@ export default function ContentPageStats({
   // Handle error state
   if (error) {
     return (
-      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
-        <p className="text-destructive text-sm">
-          Failed to load page statistics: {error}
-        </p>
-      </div>
+      <InlineError
+        variant="card"
+        message={`Failed to load page statistics: ${error}`}
+        className="mb-6"
+      />
     );
   }
 

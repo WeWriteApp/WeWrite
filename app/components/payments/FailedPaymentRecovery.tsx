@@ -140,7 +140,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
   };
 
   return (
-    <Card className="border-destructive/50 bg-destructive/5">
+    <Card className="border-orange-500/30 bg-orange-500/10">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

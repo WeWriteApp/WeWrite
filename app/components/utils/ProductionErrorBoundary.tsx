@@ -141,7 +141,7 @@ export const SimpleErrorFallback: React.FC<{ error: Error; resetError: () => voi
   error, 
   resetError 
 }) => (
-  <div className="p-4 border border-destructive/20 rounded-md bg-destructive/5">
+  <div className="p-4 border border-orange-500/30 rounded-md bg-orange-500/10">
     <div className="flex items-center gap-3">
       <div className="w-5 h-5 text-destructive flex-shrink-0">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

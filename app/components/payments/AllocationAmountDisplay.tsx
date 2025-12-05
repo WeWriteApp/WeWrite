@@ -11,6 +11,7 @@ interface AllocationAmountDisplayProps {
   className?: string;
   flashType?: 'accent' | 'red' | null;
   allocationIntervalCents?: number;
+  hideWhenZero?: boolean;
 }
 
 /**
@@ -27,7 +28,8 @@ export function AllocationAmountDisplay({
   variant = 'page',
   className,
   flashType = null,
-  allocationIntervalCents = 10 // Default to $0.10
+  allocationIntervalCents = 10, // Default to $0.10
+  hideWhenZero = false
 }: AllocationAmountDisplayProps) {
   // Show interval amount during flash animation
   const isFlashing = flashType !== null;
@@ -52,6 +54,12 @@ export function AllocationAmountDisplay({
   }
 
   const hasAllocation = allocationCents > 0;
+  
+  // If hideWhenZero is true and there's no allocation, don't render anything
+  if (hideWhenZero && !hasAllocation) {
+    return null;
+  }
+  
   const displayText = hasAllocation
     ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
     : `Available: ${formatUsdCents(availableBalanceCents)}`;

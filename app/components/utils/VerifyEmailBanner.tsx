@@ -8,7 +8,6 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useBanner } from '../../providers/BannerProvider';
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
-import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 
 const STORAGE_KEYS = {
@@ -88,8 +87,26 @@ export default function VerifyEmailBanner() {
         label: 'Resend_Email'
       });
 
-      if (auth?.currentUser) {
-        await sendEmailVerification(auth.currentUser);
+      if (auth?.currentUser && user) {
+        // Get fresh ID token for API call
+        const idToken = await auth.currentUser.getIdToken(true);
+        
+        // Send via our custom Resend API
+        const response = await fetch('/api/email/send-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            userId: user.uid,
+            username: user.username,
+            idToken,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to send verification email');
+        }
+        
         // Increment attempts and set cooldown
         const newAttempts = resendAttempts + 1;
         setResendAttempts(newAttempts);
@@ -112,7 +129,7 @@ export default function VerifyEmailBanner() {
         }, 1000);
 
         // Show success feedback
-        console.log('Verification email sent successfully via Firebase client SDK');
+        console.log('Verification email sent successfully via Resend');
       } else {
         console.warn('No authenticated user; cannot resend verification email');
       }

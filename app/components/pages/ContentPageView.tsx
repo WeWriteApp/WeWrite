@@ -1628,8 +1628,8 @@ export default function ContentPageView({
   }
 
   return (
-    <PublicLayout>
-      {/* Sticky Save Header - slides down from top when there are unsaved changes */}
+    <>
+      {/* Sticky Save Header - fixed at top, outside content wrapper */}
       <StickySaveHeader
         hasUnsavedChanges={hasUnsavedChanges && canEdit}
         onSave={handleSave}
@@ -1638,26 +1638,27 @@ export default function ContentPageView({
         isAnimatingOut={saveSuccess && !hasUnsavedChanges}
       />
 
-      <PageProvider>
-        <div className="w-full max-w-none box-border">
-          {/* Sentinel element used by ContentPageHeader to detect scroll position reliably */}
-          <div data-header-sentinel aria-hidden className="h-px w-full" />
-          <ContentPageHeader
-            title={title}
-            username={page?.username}
-            authorUsername={
-              page?.username ||
-              (page as any)?.authorUsername ||
-              (page as any)?.user?.username ||
-              null
-            }
-            userId={page?.userId}
-            isLoading={isLoading}
-            isEditing={isEditing}
-            onTitleChange={handleTitleChange}
-            canEdit={canEdit}
-            titleError={!!titleError}
-            pageId={pageId}
+      <PublicLayout>
+        <PageProvider>
+          <div className="w-full max-w-none box-border">
+            {/* Sentinel element used by ContentPageHeader to detect scroll position reliably */}
+            <div data-header-sentinel aria-hidden className="h-px w-full" />
+            <ContentPageHeader
+              title={title}
+              username={page?.username}
+              authorUsername={
+                page?.username ||
+                (page as any)?.authorUsername ||
+                (page as any)?.user?.username ||
+                null
+              }
+              userId={page?.userId}
+              isLoading={isLoading}
+              isEditing={isEditing}
+              onTitleChange={handleTitleChange}
+              canEdit={canEdit}
+              titleError={!!titleError}
+              pageId={pageId}
           />
 
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}
@@ -1891,5 +1892,6 @@ export default function ContentPageView({
         </div>
       </PageProvider>
     </PublicLayout>
+    </>
   );
 }

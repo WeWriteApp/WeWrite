@@ -41,10 +41,9 @@ function getResend(): Resend {
   return resendInstance;
 }
 
-// Use test domain until DNS propagates, then switch to production
-const FROM_EMAIL = process.env.NODE_ENV === 'production' 
-  ? 'WeWrite <noreply@getwewrite.app>'
-  : 'WeWrite <onboarding@resend.dev>';
+// Use notifications@ instead of noreply@ for better deliverability
+const FROM_EMAIL = 'WeWrite <notifications@getwewrite.app>';
+const REPLY_TO_EMAIL = 'support@getwewrite.app';
 
 interface EmailOptions {
   to: string | string[];
@@ -96,6 +95,7 @@ export const sendVerificationEmail = async (options: VerificationEmailOptions): 
     
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: verificationEmailTemplate.subject,
       html: verificationEmailTemplate.generateHtml({ verificationLink, username }),
@@ -147,6 +147,7 @@ export const sendWelcomeEmail = async (options: WelcomeEmailOptions): Promise<bo
     
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: welcomeEmailTemplate.subject,
       html: welcomeEmailTemplate.generateHtml({ username }),
@@ -198,10 +199,11 @@ export const sendPasswordResetEmail = async (options: PasswordResetEmailOptions)
     
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: passwordResetEmailTemplate.subject,
-      html: passwordResetEmailTemplate.generateHtml({ resetLink, username }),
-      text: `Hi ${username || 'there'},\n\nYou requested to reset your password. Click this link to set a new password: ${resetLink}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can ignore this email.\n\nThanks,\nThe WeWrite Team`,
+      html: passwordResetEmailTemplate.generateHtml({ resetLink, username, email: to }),
+      text: `Hi ${username || 'there'},\n\nYou requested to reset the password for ${to}.\n\nClick this link to set a new password: ${resetLink}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can ignore this email.\n\nThanks,\nThe WeWrite Team`,
     });
 
     if (error) {
@@ -249,6 +251,7 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
     
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject,
       html: genericNotificationTemplate.generateHtml({ heading, body, ctaText, ctaUrl, username }),
@@ -302,6 +305,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: Array.isArray(to) ? to : [to],
       subject,
       ...(html ? { html } : { text: content }),
@@ -338,6 +342,7 @@ export const sendPayoutSetupReminder = async (options: {
   try {
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: payoutSetupReminderTemplate.subject,
       html: payoutSetupReminderTemplate.generateHtml(options),
@@ -393,6 +398,7 @@ export const sendPayoutProcessed = async (options: {
   try {
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: payoutProcessedTemplate.subject,
       html: payoutProcessedTemplate.generateHtml(options),
@@ -450,6 +456,7 @@ export const sendSubscriptionConfirmation = async (options: {
   try {
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: subscriptionConfirmationTemplate.subject,
       html: subscriptionConfirmationTemplate.generateHtml(options),
@@ -506,6 +513,7 @@ export const sendNewFollowerEmail = async (options: {
   try {
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: newFollowerTemplate.subject,
       html: newFollowerTemplate.generateHtml(options),
@@ -563,6 +571,7 @@ export const sendPageLinkedEmail = async (options: {
   try {
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: pageLinkedTemplate.subject,
       html: pageLinkedTemplate.generateHtml(options),
@@ -620,6 +629,7 @@ export const sendSecurityAlert = async (options: {
   try {
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: accountSecurityTemplate.subject,
       html: accountSecurityTemplate.generateHtml(options),
@@ -687,6 +697,7 @@ export const sendTemplatedEmail = async (options: {
 
     const { data: resendData, error } = await getResend().emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: template.subject,
       html: template.generateHtml(data),

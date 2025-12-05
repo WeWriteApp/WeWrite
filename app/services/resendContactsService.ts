@@ -4,11 +4,25 @@
  * Manages contacts in Resend audiences for broadcast/marketing emails.
  * Used for newsletters, product updates, and re-activation campaigns.
  * 
- * Audience: "general" - 493da2d9-7034-4bb0-99de-1dcfac3b424d
+ * Audiences:
+ *   - General (production): 493da2d9-7034-4bb0-99de-1dcfac3b424d
+ *   - Dev Test Users: e475ed52-8398-442a-9d4e-80c5e97374d2
  */
+
+import { getEnvironmentType } from '../utils/environmentConfig';
 
 const RESEND_API_URL = 'https://api.resend.com';
 const GENERAL_AUDIENCE_ID = '493da2d9-7034-4bb0-99de-1dcfac3b424d';
+const DEV_TEST_AUDIENCE_ID = 'e475ed52-8398-442a-9d4e-80c5e97374d2';
+
+/**
+ * Get the appropriate audience ID based on environment
+ * Dev environment users go to dev test audience, production users go to general
+ */
+function getDefaultAudienceId(): string {
+  const envType = getEnvironmentType();
+  return envType === 'development' ? DEV_TEST_AUDIENCE_ID : GENERAL_AUDIENCE_ID;
+}
 
 interface ResendContact {
   id: string;
@@ -202,6 +216,9 @@ export async function upsertContact(options: CreateContactOptions): Promise<{ id
  * Sync a user to Resend contacts
  * Call this when a user signs up or updates their profile
  * NOTE: WeWrite uses username only, not displayName (deprecated)
+ * 
+ * In development: Users are added to the dev test audience
+ * In production: Users are added to the general audience
  */
 export async function syncUserToResend(user: {
   email: string;
@@ -209,6 +226,9 @@ export async function syncUserToResend(user: {
   marketingOptOut?: boolean;
 }): Promise<{ id: string; created: boolean } | null> {
   try {
+    const audienceId = getDefaultAudienceId();
+    const envType = getEnvironmentType();
+    
     // Use username as the first name for Resend contacts
     // We don't split names since WeWrite only has usernames, not full names
     const result = await upsertContact({
@@ -216,9 +236,10 @@ export async function syncUserToResend(user: {
       firstName: user.username,
       lastName: undefined,
       unsubscribed: user.marketingOptOut ?? false,
+      audienceId,
     });
     
-    console.log('[ResendContacts] User synced:', user.email, result.created ? '(new)' : '(updated)');
+    console.log(`[ResendContacts] User synced to ${envType === 'development' ? 'dev-test' : 'general'} audience:`, user.email, result.created ? '(new)' : '(updated)');
     return result;
   } catch (error) {
     console.error('[ResendContacts] Failed to sync user:', user.email, error);

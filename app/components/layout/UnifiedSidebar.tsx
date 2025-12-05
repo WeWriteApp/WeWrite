@@ -82,6 +82,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // 🚀 OPTIMIZATION: Navigation preloader for smooth navigation
+  const { handleNavigationHover } = useNavigationPreloader();
 
   // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
@@ -112,7 +114,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SidebarContext.Provider value={contextValue}>
       {/* Only render sidebar for authenticated users and not on admin dashboard */}
-      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />}
+      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} handleNavigationHover={handleNavigationHover} />}
       {children}
     </SidebarContext.Provider>
   );

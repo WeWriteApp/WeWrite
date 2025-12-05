@@ -6,6 +6,7 @@ import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import RandomPagesTable from '../components/pages/RandomPagesTable';
 import EmptyState from '../components/ui/EmptyState';
+import { InlineError } from '../components/ui/InlineError';
 import { getRecentlyViewedPageIds } from '../utils/recentSearches';
 import { Clock } from 'lucide-react';
 
@@ -124,9 +125,11 @@ export default function RecentsPage() {
             </div>
           ) : error ? (
             // Error state
-            <div className="border border-destructive/20 rounded-lg p-4 text-center text-destructive">
-              {error}
-            </div>
+            <InlineError
+              message={error}
+              variant="error"
+              size="md"
+            />
           ) : recentPages.length === 0 ? (
             // Empty state
             <EmptyState

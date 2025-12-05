@@ -487,6 +487,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               pageTitle={currentPageName}
               source="HomePage"
               className="w-full"
+              hideAvailableText={activity.isCarouselCard}
             />
           </div>
         )}

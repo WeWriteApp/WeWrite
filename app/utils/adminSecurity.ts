@@ -9,7 +9,8 @@
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from '../api/auth-helper';
 import { getFirebaseAdmin } from '../firebase/admin';
-import { getCollectionName } from './environmentConfig';
+import { getCollectionName, getEnvironmentType } from './environmentConfig';
+import { DEV_TEST_USER_UIDS, DEV_TEST_USER_EMAILS } from './testUsers';
 
 // SECURITY: Single source of truth for admin users
 const ADMIN_USER_IDS = [
@@ -28,6 +29,28 @@ const ADMIN_EMAILS = [
   'test2@wewrite.dev', // Dev admin: testuser2
   // Add other admin emails here as needed
 ];
+
+/**
+ * Check if we're in development environment and the user is a dev test user
+ * DEV USERS ARE AUTOMATICALLY ADMINS IN DEVELOPMENT MODE
+ * This allows testing admin features without modifying production admin lists
+ */
+function isDevUserAdmin(userId: string | null, userEmail: string | null): boolean {
+  const env = getEnvironmentType();
+  if (env !== 'development') {
+    return false; // Dev user admin access is ONLY for development environment
+  }
+  
+  // Check by UID or email
+  if (userId && DEV_TEST_USER_UIDS.includes(userId)) {
+    return true;
+  }
+  if (userEmail && DEV_TEST_USER_EMAILS.includes(userEmail)) {
+    return true;
+  }
+  
+  return false;
+}
 
 export interface AdminAuthResult {
   isAdmin: boolean;
@@ -189,19 +212,21 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
     // Check admin status using both user ID and email for security
     const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
     const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+    const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
     console.log('🔐 [ADMIN AUTH] Admin checks:', {
       userId,
       userEmail,
       isAdminByUserId,
       isAdminByEmail,
+      isDevAdmin,
+      environment: getEnvironmentType(),
       adminUserIds: ADMIN_USER_IDS,
       adminEmails: ADMIN_EMAILS
     });
 
-    // SECURITY: For now, allow admin access if email matches (to fix immediate issue)
-    // TODO: Add user ID to the list once we identify the correct production user ID
-    isAdmin = isAdminByEmail;
+    // SECURITY: Allow admin access by email, user ID, or dev user status (in development)
+    isAdmin = isAdminByEmail || isAdminByUserId || isDevAdmin;
 
     // Log if user ID doesn't match but email does (for debugging)
     if (isAdminByEmail && !isAdminByUserId) {
@@ -271,9 +296,10 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
     const userEmail = await getUserEmail(userId);
     const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
     const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+    const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
-    // Allow admin by either verified email or userId (email is the primary source of truth)
-    return isAdminByUserId || isAdminByEmail;
+    // Allow admin by verified email, userId, or dev user status (in development)
+    return isAdminByUserId || isAdminByEmail || isDevAdmin;
   } catch (error) {
     console.error('[SECURITY] Error in simple admin check:', error);
     return false;

@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
+import { InlineError } from '../ui/InlineError';
 import { AlertCircle, Eye, EyeOff, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getEnvironmentType } from '../../utils/environmentConfig';
@@ -221,19 +222,25 @@ export function LoginForm() {
 
       {/* Error Alert */}
       {error && (
-        <Alert className="bg-red-50 dark:bg-red-950 border-theme-medium" style={{ borderColor: 'hsl(0 84% 60% / 0.3)' }}>
-          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-          <AlertDescription className="text-red-600 dark:text-red-400">
-            {error}
-          </AlertDescription>
-        </Alert>
+        <InlineError
+          message={error}
+          variant="error"
+          size="md"
+        />
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        name="wewrite-login"
+        action="https://www.getwewrite.app/auth/login"
+        method="POST"
+      >
         <div className="space-y-2">
           <Label htmlFor="emailOrUsername">Email or Username</Label>
           <Input
             id="emailOrUsername"
+            name="username"
             type="text"
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
@@ -253,6 +260,7 @@ export function LoginForm() {
           <div className="relative">
             <Input
               id="password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -291,45 +299,22 @@ export function LoginForm() {
         </Button>
       </form>
 
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-4">
         <Link
-          href="/auth/forgot-password"
-          className="text-sm text-muted-foreground hover:text-foreground underline"
+          href={`/auth/forgot-password${emailOrUsername && emailOrUsername.includes('@') ? `?email=${encodeURIComponent(emailOrUsername.trim())}` : ''}`}
+          className="text-sm text-primary underline underline-offset-2 hover:text-primary/80"
         >
           Forgot your password?
         </Link>
 
-        <div className="text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <Link
-            href="/auth/register"
-            className="text-foreground hover:underline font-medium"
-          >
-            Sign up
-          </Link>
-        </div>
-
-        {/* Terms and Privacy Policy Agreement */}
-        <div className="text-xs text-muted-foreground">
-          By using WeWrite you agree to our{' '}
-          <Link
-            href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/TERMS_OF_SERVICE.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-foreground"
-          >
-            Terms of Service
-          </Link>
-          {' '}and{' '}
-          <Link
-            href="https://github.com/WeWriteApp/WeWrite/blob/main/docs/PRIVACY_POLICY.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-foreground"
-          >
-            Privacy Policy
-          </Link>
-        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          onClick={() => router.push('/auth/register')}
+        >
+          Sign up for an account
+        </Button>
       </div>
 
       {/* Only show test account info in development */}

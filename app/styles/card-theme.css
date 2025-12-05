@@ -284,6 +284,20 @@
   transform: none !important;
 }
 
+/* Disable hover effects on expanded toolbar - keep it solid/opaque */
+.wewrite-card[data-floating-card="toolbar"][data-expanded="true"]:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: var(--card-border);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  transform: none;
+}
+
+.dark .wewrite-card[data-floating-card="toolbar"][data-expanded="true"]:hover {
+  background-color: var(--card-bg);
+  border-color: var(--border);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */
 
 html[data-high-contrast="true"] .wewrite-card {

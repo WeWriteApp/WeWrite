@@ -41,7 +41,7 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
     { href: "/zRNwhNgIEfLFo050nyAT", label: "Feature Roadmap", icon: <Map className="h-3 w-3" />, section: 'content' },
     { href: "/sUASL4gNdCMVHkr7Qzty", label: "About us", icon: <Info className="h-3 w-3" />, section: 'content' },
     { href: "/Kva5XqFpFb2bl5TCZoxE", label: "Feedback", icon: <MessageSquare className="h-3 w-3" />, section: 'content' },
-    { href: "mailto:getwewrite@gmail.com", label: "Email support", icon: <Mail className="h-3 w-3" />, external: true, section: 'external' },
+    { href: "mailto:support@getwewrite.app", label: "Email support", icon: <Mail className="h-3 w-3" />, external: true, section: 'external' },
     { href: "https://x.com/WeWriteApp", label: "Follow on X", icon: <X className="h-3 w-3" />, external: true, section: 'external' },
     { href: "https://github.com/WeWriteApp/WeWrite", label: "Source code", icon: <Code className="h-3 w-3" />, external: true, section: 'external' },
   ];

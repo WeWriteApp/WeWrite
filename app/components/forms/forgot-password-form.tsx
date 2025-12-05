@@ -1,34 +1,12 @@
 "use client";
 
+import { InlineError } from '../ui/InlineError';
+
 /**
- * WeWrite Authentication Improvements - Forgot Password Form
- *
- * Enhanced password reset form component with improved error handling and
- * user experience as part of the authentication improvements.
- *
- * Improvements Implemented:
- * 1. **Enhanced Error Handling**: Specific Firebase error code handling
- * 2. **Improved Success Messaging**: Clear messaging with expiration info
- * 3. **Better UX**: "Return to Login" button and clearer instructions
- * 4. **Debugging Support**: Console logging for troubleshooting
- *
- * Error Handling Features:
- * - Specific error messages for different Firebase error codes
- * - User-friendly error descriptions instead of technical messages
- * - Proper handling of rate limiting and invalid email scenarios
- * - Console logging for debugging password reset issues
- *
- * Success Flow Enhancements:
- * - Clear success message with instructions
- * - Information about 1-hour expiration time
- * - Direct "Return to Login" button for better flow
- * - Improved visual feedback with color-coded alerts
- *
- * Integration with Custom Reset Page:
- * - Works with custom password reset page at /auth/reset-password
- * - Handles Firebase oobCode parameter from email links
- * - Custom branded experience instead of Firebase default UI
- * - Maintains Firebase security model while improving UX
+ * Forgot Password Form
+ * 
+ * Sends password reset emails via our API (which uses Firebase Admin SDK
+ * to generate reset links and Resend to send branded emails).
  */
 
 import { useState, useEffect } from "react";
@@ -37,15 +15,15 @@ import { LoadingButton } from "../ui/loading-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-// Using API endpoints instead of direct Firebase calls
 import Link from "next/link";
 import { cn } from "../../lib/utils";
 
 export function ForgotPasswordForm({
   className,
+  initialEmail = '',
   ...props
-}: React.ComponentPropsWithoutRef<"form">) {
-  const [email, setEmail] = useState("");
+}: React.ComponentPropsWithoutRef<"form"> & { initialEmail?: string }) {
+  const [email, setEmail] = useState(initialEmail);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -65,12 +43,8 @@ export function ForgotPasswordForm({
     setError("");
 
     try {
-      console.log("🔐 [Forgot Password Form] Attempting password reset for:", email.substring(0, 3) + '***@' + email.split('@')[1]);
-
-      // Use API-first approach - no Firebase client SDK fallback
-      // Add timeout to prevent hanging requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
@@ -85,40 +59,21 @@ export function ForgotPasswordForm({
       const data = await response.json();
 
       if (!response.ok) {
-        // API returned an error - use the detailed error message from the API
-        console.error("🔐 [Forgot Password Form] API error:", data);
         throw new Error(data.error || 'Failed to send reset email');
       }
 
-      console.log("🔐 [Forgot Password Form] Reset email sent successfully:", data);
       setSuccess(true);
 
     } catch (error: any) {
-      console.error("🔐 [Forgot Password Form] Error:", error);
-
-      // Use the error message from the API if available, otherwise provide fallback
       let errorMessage = error.message || "Failed to send reset email. Please try again.";
 
-      // Handle specific error types
       if (error.name === 'AbortError') {
         errorMessage = "Request timed out. The server may be busy. Please try again.";
       } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
         errorMessage = "Network error. Please check your internet connection and try again.";
       } else if (error.message.includes('JSON')) {
         errorMessage = "Server communication error. Please try again.";
-      } else if (error.message.includes('Password reset system error')) {
-        // For system errors, show the full message which now includes technical details
-        errorMessage = error.message;
       }
-
-      // Log additional error details for debugging
-      console.error("🔐 [Forgot Password Form] Detailed error info:", {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        email: email.substring(0, 3) + '***@' + email.split('@')[1],
-        timestamp: new Date().toISOString()
-      });
 
       setError(errorMessage);
     } finally {
@@ -167,19 +122,12 @@ export function ForgotPasswordForm({
           </div>
 
           {error && (
-            <div className="bg-destructive/10 p-3 rounded-md border border-destructive/20">
-              <div className="text-xs sm:text-sm font-medium text-destructive mb-1">
-                Password Reset Error
-              </div>
-              <div className="text-xs sm:text-sm text-destructive/90">
-                {error}
-              </div>
-              {error.includes('Technical details:') && (
-                <div className="text-xs text-destructive/70 mt-2">
-                  Please include these details when contacting support.
-                </div>
-              )}
-            </div>
+            <InlineError
+              variant="error"
+              title="Password Reset Error"
+              message={error}
+              showCopy={error.includes('Technical details:')}
+            />
           )}
 
           <LoadingButton
@@ -200,7 +148,7 @@ export function ForgotPasswordForm({
             Remember your password?{" "}
             <Link
               href="/auth/login"
-              className="underline underline-offset-4 text-foreground hover:text-foreground/90"
+              className="text-primary underline underline-offset-2 hover:text-primary/80"
             >
               Back to login
             </Link>

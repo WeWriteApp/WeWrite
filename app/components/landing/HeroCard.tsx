@@ -223,7 +223,7 @@ export default function HeroCard({
             <AuthButton
               type="register"
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               device="hero_card"
             >
               Sign Up

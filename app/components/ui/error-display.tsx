@@ -52,10 +52,10 @@ export function ErrorDisplay({
   // Determine colors based on severity
   const colors = {
     error: {
-      bg: 'bg-red-100 dark:bg-red-900/20',
-      text: 'text-red-600 dark:text-red-400',
-      border: 'border-theme-medium',
-      bgLight: 'bg-red-50 dark:bg-red-950/30'
+      bg: 'bg-orange-500/10',
+      text: 'text-orange-700 dark:text-orange-400',
+      border: 'border-orange-500/30',
+      bgLight: 'bg-orange-500/5'
     },
     warning: {
       bg: 'bg-amber-100 dark:bg-amber-900/20',

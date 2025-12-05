@@ -1260,34 +1260,36 @@ function NewPageContent() {
 
   // Render using the exact same structure as SinglePageView
   return (
-    <motion.div
-      initial={{ y: '100%' }}
-      animate={{ y: isClosing ? '100%' : 0 }}
-      transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      <SlideUpPage className="min-h-screen bg-background pb-32 md:pb-28" enableAnimation={true}>
-        {/* Sticky Save Header - slides down from top when there are unsaved changes */}
-        <StickySaveHeader
-          hasUnsavedChanges={hasUnsavedChanges}
-          onSave={() => handleSave(editorState, 'button')}
-          onCancel={handleCancel}
-          isSaving={isSaving}
-          isAnimatingOut={saveSuccess && !hasUnsavedChanges}
-        />
+    <>
+      {/* Sticky Save Header - fixed at top, outside content wrapper */}
+      <StickySaveHeader
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSave={() => handleSave(editorState, 'button')}
+        onCancel={handleCancel}
+        isSaving={isSaving}
+        isAnimatingOut={saveSuccess && !hasUnsavedChanges}
+      />
 
-        <Layout>
-          <Head>
-            <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
-          </Head>
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: isClosing ? '100%' : 0 }}
+        transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="page-content-wrapper"
+      >
+        <SlideUpPage className="min-h-screen bg-background pb-32 md:pb-28" enableAnimation={true}>
+          <Layout>
+            <Head>
+              <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+            </Head>
 
-          <ContentPageHeader
-            title={title}
-            username={username}
-            userId={user?.uid}
-            isLoading={isLoading}
-            scrollDirection="none"
+            <ContentPageHeader
+              title={title}
+              username={username}
+              userId={user?.uid}
+              isLoading={isLoading}
+              scrollDirection="none"
 
-            isEditing={isEditing}
+              isEditing={isEditing}
             setIsEditing={handleSetIsEditing}
             onTitleChange={handleTitleChange}
             titleError={titleError}
@@ -1414,7 +1416,8 @@ function NewPageContent() {
           )}
         </Layout>
       </SlideUpPage>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
 

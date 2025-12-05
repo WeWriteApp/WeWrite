@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Editor from '../editor/Editor';
+import { InlineError } from '../ui/InlineError';
 
 /**
  * EditableContent - Pure Editing Component
@@ -109,9 +110,11 @@ const EditableContent: React.FC<EditableContentProps> = ({
       )}
 
       {error && (
-        <div className="mb-4 p-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded">
-          {error}
-        </div>
+        <InlineError
+          variant="inline"
+          message={error}
+          className="mb-4"
+        />
       )}
 
       <Editor

@@ -55,11 +55,19 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
       loading={loading}
       error={errorMessage}
       emptyMessage="No recent activity to display"
-      height={200}
+      height={220}
       scrollSpeed={0.5}
       fullWidth={true}
     >
-      {activities && activities.length > 0 && activities.map((edit, index) => {
+      {activities && activities.length > 0 && activities
+        // Filter to only show activities with valid diff previews
+        .filter((edit) => {
+          const hasDiffPreview = edit.lastDiff?.preview || edit.diffPreview;
+          const hasChanges = edit.lastDiff?.hasChanges || edit.diff?.hasChanges;
+          // Only show activities that have meaningful content to display
+          return hasDiffPreview || hasChanges;
+        })
+        .map((edit, index) => {
         const activityCardData = {
           pageId: edit.id,
           pageName: edit.title,
@@ -73,22 +81,21 @@ export default function ActivityCarousel({ limit = 30 }: { limit?: number }) {
           isPublic: edit.isPublic,
           totalPledged: edit.totalPledged,
           pledgeCount: edit.pledgeCount,
-          activityType: 'page_edit' as const
+          activityType: 'page_edit' as const,
+          isCarouselCard: true // Pass flag to hide allocation "Available" text
         };
 
         return (
           <div
             key={`${edit.id}-${index}`}
-            className="activity-card-item flex-shrink-0 overflow-hidden"
+            className="activity-card-item flex-shrink-0"
             style={{
               width: '300px',
-              height: '180px',
+              minHeight: '200px',
               position: 'relative'
             }}
           >
-            <div className="h-full overflow-hidden">
-              <ActivityCard activity={activityCardData} isCarousel={true} compactLayout={true} />
-            </div>
+            <ActivityCard activity={activityCardData} isCarousel={true} compactLayout={true} />
           </div>
         );
       })}

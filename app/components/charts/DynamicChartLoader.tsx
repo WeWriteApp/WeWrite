@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useProgressiveLoading } from '../ui/progressive-loader';
 import { BarChart3, TrendingUp, PieChart as PieChartIcon, Activity } from 'lucide-react';
+import { InlineError } from '../ui/InlineError';
 
 interface ChartData {
   [key: string]: any;
@@ -219,15 +220,13 @@ export function DynamicChart({
   // Show error state
   if (error) {
     return (
-      <div 
-        className="w-full bg-destructive/10 rounded-lg border border-destructive/20 flex items-center justify-center p-4"
+      <InlineError
+        variant="card"
+        title="Failed to load chart"
+        message={error}
         style={{ height }}
-      >
-        <div className="text-center space-y-2">
-          <div className="text-destructive text-sm">Failed to load chart</div>
-          <div className="text-xs text-muted-foreground">{error}</div>
-        </div>
-      </div>
+        className="w-full flex items-center justify-center"
+      />
     );
   }
 

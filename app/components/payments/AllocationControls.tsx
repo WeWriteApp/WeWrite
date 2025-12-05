@@ -38,8 +38,9 @@ export function AllocationControls({
   authorId,
   pageTitle = '',
   className,
-  source = 'ActivityCard'
-}: AllocationControlsProps) {
+  source = 'ActivityCard',
+  hideAvailableText = false
+}: AllocationControlsProps & { hideAvailableText?: boolean }) {
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
   const { hasActiveSubscription } = useSubscription();
@@ -298,6 +299,7 @@ export function AllocationControls({
         allocationCents={allocationState.currentAllocationCents}
         availableBalanceCents={(shouldUseDemoBalance ? demoBalance : usdBalance)?.availableUsdCents || 0}
         variant="page"
+        hideWhenZero={hideAvailableText}
       />
 
       <div className="flex items-center gap-3">
@@ -305,7 +307,7 @@ export function AllocationControls({
         <Button
           size="sm"
           variant="secondary"
-          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
+          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20"
           onClick={(e) => handleButtonClick(-1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -365,7 +367,7 @@ export function AllocationControls({
         <Button
           size="sm"
           variant="secondary"
-          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
+          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20"
           onClick={(e) => compositionData.isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}

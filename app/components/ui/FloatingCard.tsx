@@ -76,8 +76,8 @@ export function FloatingCard({
   const variantClasses = {
     default: "",
     toolbar: cn(
-      // Enhanced background only in light mode when expanded (dark stays unchanged)
-      isExpanded && "bg-white/90 hover:bg-white/95 border border-border/70 dark:bg-[var(--card-bg)] dark:border-border"
+      // Expanded: fully opaque, no hover state. Collapsed: semi-transparent (default from wewrite-card)
+      isExpanded && "bg-white/95 border border-border/70 dark:bg-[var(--card-bg)] dark:border-border"
     ),
     header: "",
     overlay: cn(
@@ -108,6 +108,7 @@ export function FloatingCard({
         className
       )}
       data-floating-card={variant}
+      data-expanded={isExpanded ? "true" : undefined}
       style={style}
     >
       {children}
