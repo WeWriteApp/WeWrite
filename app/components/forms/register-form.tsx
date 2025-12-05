@@ -8,8 +8,8 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect, useCallback } from "react"
-// Firebase imports for email verification after registration
-import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth'
+// Firebase imports for registration and email verification
+import { sendEmailVerification, createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../firebase/config'
 import { createEmailVerificationNotification } from '../../services/notificationsApi'
 import { Check, Loader2, X, Copy, CheckCircle2 } from "lucide-react"
@@ -182,6 +182,7 @@ export function RegisterForm({
     }
 
     setError(null)
+    setErrorDetails(null)
     setIsLoading(true)
 
     // Validate username availability before submission
@@ -197,17 +198,27 @@ export function RegisterForm({
     }
 
     try {
-      // Call API endpoint to register user
-      const response = await fetch('/api/auth/register', {
+      // Step 1: Create user with Firebase Client SDK (no server-side firebase-admin needed)
+      console.log('[Register] Creating user with Firebase Client SDK...')
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+      console.log('[Register] Firebase user created:', user.uid)
+
+      // Step 2: Get the ID token for API authentication
+      const idToken = await user.getIdToken()
+
+      // Step 3: Call API to create Firestore documents (uses REST API, not firebase-admin)
+      console.log('[Register] Creating user documents via API...')
+      const response = await fetch('/api/auth/register-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          uid: user.uid,
           email,
-          password,
-          username
-          // displayName removed - only username is used
+          username,
+          idToken
         })
       })
 
@@ -220,22 +231,19 @@ export function RegisterForm({
         console.log("Account created successfully:", result.data)
 
         // Transfer any logged-out token allocations to the new user
-        const transferResult = transferLoggedOutAllocationsToUser(result.data.uid)
+        const transferResult = transferLoggedOutAllocationsToUser(user.uid)
         if (transferResult.success && transferResult.transferredCount > 0) {
           console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
         }
 
-        // Sign in the user to get a Firebase user object, then send verification email
+        // Send verification email
         try {
-          const userCredential = await signInWithEmailAndPassword(auth, email, password)
-          if (userCredential.user) {
-            await sendEmailVerification(userCredential.user)
-            console.log('Verification email sent successfully to:', email)
-            
-            // Create a reminder notification in the notification center
-            await createEmailVerificationNotification(result.data.uid)
-            console.log('Email verification reminder notification created')
-          }
+          await sendEmailVerification(user)
+          console.log('Verification email sent successfully to:', email)
+          
+          // Create a reminder notification in the notification center
+          await createEmailVerificationNotification(user.uid)
+          console.log('Email verification reminder notification created')
         } catch (emailError) {
           // Don't fail registration if email sending fails - user can resend from banner
           console.error('Failed to send verification email:', emailError)
@@ -243,7 +251,7 @@ export function RegisterForm({
 
         // Track user creation event
         trackAuthEvent('USER_CREATED', {
-          user_id: result.data.uid,
+          user_id: user.uid,
           username: username,
           email: email,
           registration_method: 'email_password'
@@ -261,15 +269,12 @@ export function RegisterForm({
         }, 1500)
 
       } else {
-        // Handle API error response
-        let errorMessage = result.error || "Failed to create account. Please try again."
+        // Handle API error response - user was created in Firebase Auth but documents failed
+        let errorMessage = result.error || "Failed to complete account setup. Please try logging in."
 
-        if (errorMessage.includes("email already exists") || errorMessage.includes("email-already-in-use")) {
-          errorMessage = "Email already in use. Try logging in instead."
-        } else if (errorMessage.includes("Username is already taken")) {
+        if (errorMessage.includes("Username is already taken")) {
           errorMessage = "Username is already taken. Please choose a different username."
-        } else if (errorMessage.includes("weak-password")) {
-          errorMessage = "Password is too weak. Please choose a stronger password."
+          // Note: User exists in Firebase Auth but not in Firestore - they can try again
         }
 
         // Capture full error details for support
@@ -281,7 +286,8 @@ export function RegisterForm({
           errorCode: result.data?.errorCode || 'unknown',
           errorId: result.data?.errorId || 'none',
           message: errorMessage,
-          url: '/api/auth/register'
+          url: '/api/auth/register-user',
+          note: 'Firebase Auth user was created but Firestore documents may have failed'
         }, null, 2)
         setErrorDetails(details)
         console.error("Registration API error:", details)
@@ -290,16 +296,33 @@ export function RegisterForm({
         setIsLoading(false)
       }
     } catch (error: any) {
+      // Handle Firebase Auth errors specifically
+      let errorMessage = error?.message || "An unexpected error occurred"
+      
+      // Map Firebase Auth error codes to user-friendly messages
+      if (error?.code === 'auth/email-already-in-use') {
+        errorMessage = "Email already in use. Try logging in instead."
+      } else if (error?.code === 'auth/weak-password') {
+        errorMessage = "Password is too weak. Please choose a stronger password (at least 6 characters)."
+      } else if (error?.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address format."
+      } else if (error?.code === 'auth/operation-not-allowed') {
+        errorMessage = "Email/password accounts are not enabled. Please contact support."
+      } else if (error?.code === 'auth/too-many-requests') {
+        errorMessage = "Too many attempts. Please wait a few minutes and try again."
+      } else if (error?.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your connection and try again."
+      }
+
       // Capture full error details including stack trace
-      const errorMessage = error?.message || "An unexpected error occurred"
       const details = JSON.stringify({
         timestamp: new Date().toISOString(),
         type: 'client_exception',
         name: error?.name || 'Error',
-        message: errorMessage,
+        message: error?.message || errorMessage,
         code: error?.code || 'unknown',
         stack: error?.stack?.split('\n').slice(0, 5) || [],
-        url: '/api/auth/register'
+        step: 'firebase_auth_create_user'
       }, null, 2)
       setErrorDetails(details)
       console.error("Registration client error:", details)

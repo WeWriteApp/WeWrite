@@ -8,8 +8,7 @@
   },
   "functions": {
     "app/api/**/*.{js,ts}": {
-      "maxDuration": 30,
-      "includeFiles": "node_modules/{jose,jwks-rsa}/**"
+      "maxDuration": 30
     }
   },
   "crons": [
