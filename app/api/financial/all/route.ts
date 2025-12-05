@@ -24,20 +24,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user from session
+    // Get user from session cookie (uses simpleUserSession to avoid jose issues with verifySessionCookie)
     const cookieStore = cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
+    const simpleSession = cookieStore.get('simpleUserSession')?.value;
     
-    if (!sessionCookie) {
+    if (!simpleSession) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    let decodedToken;
+    let sessionData;
     try {
-      decodedToken = await admin.auth().verifySessionCookie(sessionCookie);
+      sessionData = JSON.parse(simpleSession);
     } catch (error) {
       return NextResponse.json(
         { error: 'Invalid session' },
@@ -45,7 +45,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = decodedToken.uid;
+    const userId = sessionData.uid;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Invalid session - no user ID' },
+        { status: 401 }
+      );
+    }
+    
     const db = admin.firestore();
 
     // Fetch all financial data in parallel for better performance

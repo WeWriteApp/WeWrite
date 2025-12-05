@@ -243,6 +243,9 @@ export async function updateBacklinksIndex(
     if (!isServerSide) {
       // Only create notifications on client side to avoid duplicate notifications
       await createLinkNotifications(pageId, pageTitle, username, pageLinks);
+    } else {
+      // Server-side: Send email notifications for page links
+      await sendPageLinkedEmails(pageId, pageTitle, username, pageLinks, database);
     }
     
   } catch (error) {
@@ -305,6 +308,74 @@ async function createLinkNotifications(
   } catch (error) {
     console.error(`❌ [NOTIFICATIONS] Error creating link notifications:`, error);
     // Don't throw - notifications are not critical for backlinks functionality
+  }
+}
+
+/**
+ * Send email notifications for page links (server-side only)
+ */
+async function sendPageLinkedEmails(
+  sourcePageId: string,
+  sourcePageTitle: string,
+  sourceUsername: string,
+  pageLinks: any[],
+  database: any
+): Promise<void> {
+  try {
+    console.log(`📧 [EMAIL] Sending page-linked emails for ${pageLinks.length} links`);
+
+    // Import email service
+    const { sendPageLinkedEmail } = await import('../../services/emailService');
+
+    for (const link of pageLinks) {
+      try {
+        // Get the target page to find its owner
+        const targetPageDoc = await database.collection(getCollectionName('pages')).doc(link.pageId).get();
+
+        if (targetPageDoc.exists) {
+          const targetPageData = targetPageDoc.data();
+          const targetUserId = targetPageData.userId;
+
+          // Don't notify if the user is linking to their own page
+          // Need to look up the source user ID from username
+          const sourceUserQuery = await database.collection(getCollectionName('users'))
+            .where('username', '==', sourceUsername)
+            .limit(1)
+            .get();
+          
+          const sourceUserId = sourceUserQuery.empty ? null : sourceUserQuery.docs[0].id;
+
+          if (targetUserId && targetUserId !== sourceUserId) {
+            // Get the target user's email and preferences
+            const targetUserDoc = await database.collection(getCollectionName('users')).doc(targetUserId).get();
+
+            if (targetUserDoc.exists) {
+              const targetUserData = targetUserDoc.data();
+
+              // Check if user wants engagement emails
+              if (targetUserData.emailPreferences?.engagement !== false && targetUserData.email) {
+                await sendPageLinkedEmail({
+                  to: targetUserData.email,
+                  username: targetUserData.username || 'there',
+                  linkedPageTitle: targetPageData.title || 'Untitled',
+                  linkerUsername: sourceUsername,
+                  linkerPageTitle: sourcePageTitle,
+                  userId: targetUserId
+                });
+
+                console.log(`📧 [EMAIL] Sent page-linked email to user ${targetUserId}`);
+              }
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error(`❌ [EMAIL] Error sending page-linked email for link to ${link.pageId}:`, emailError);
+        // Continue with other emails even if one fails
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [EMAIL] Error sending page-linked emails:`, error);
+    // Don't throw - emails are not critical for backlinks functionality
   }
 }
 

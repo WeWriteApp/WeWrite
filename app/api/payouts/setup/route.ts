@@ -35,19 +35,14 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
 
     // Require verified email before proceeding with payouts
-    try {
-      const authUser = await admin.auth().getUser(userId);
-      if (!authUser.emailVerified) {
-        return NextResponse.json({
-          error: 'Email not verified. Please verify your email before setting up payouts.',
-          emailVerified: false
-        }, { status: 403 });
-      }
-    } catch (authErr) {
-      console.warn('Could not fetch auth user for email verification check:', authErr);
+    // Check emailVerified from Firestore (synced from Firebase Auth) instead of calling admin.auth()
+    // This avoids jose dependency issues in Vercel production
+    const emailVerified = userData?.emailVerified === true;
+    if (!emailVerified) {
       return NextResponse.json({
-        error: 'Unable to verify email status. Please try again.',
-      }, { status: 500 });
+        error: 'Email not verified. Please verify your email before setting up payouts.',
+        emailVerified: false
+      }, { status: 403 });
     }
 
     if (userData?.stripeConnectedAccountId !== stripeConnectedAccountId) {

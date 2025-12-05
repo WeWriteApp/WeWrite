@@ -57,7 +57,7 @@ export default function AdminUsersPage() {
   const [copiedError, setCopiedError] = useState(false);
   const [search, setSearch] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [status, setStatus] = useState<{ type: "success" | "error" | "warning"; message: string; details?: string } | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<User | null>(null);
   const [resetUserId, setResetUserId] = useState<User | null>(null);
   const [editUsernameUser, setEditUsernameUser] = useState<User | null>(null);
@@ -502,8 +502,30 @@ export default function AdminUsersPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Delete failed');
+      
+      // Remove user from list
       setUsers((prev) => prev.filter((u) => u.uid !== uid));
-      setStatus({ type: 'success', message: 'User deleted' });
+      
+      // Check if manual action is required (Firebase Auth user couldn't be deleted)
+      if (data.manualActionRequired) {
+        setStatus({ 
+          type: 'warning', 
+          message: `${data.message}. Firebase Auth user must be deleted manually.`,
+          details: `Go to Firebase Console → Authentication → Users and delete the user with email: ${data.email || 'unknown'}`
+        });
+        // Open Firebase Console in new tab
+        if (data.manualActionRequired.url) {
+          window.open(data.manualActionRequired.url, '_blank');
+        }
+      } else if (data.warnings && data.warnings.length > 0) {
+        setStatus({ 
+          type: 'warning', 
+          message: data.message,
+          details: data.warnings.join('. ')
+        });
+      } else {
+        setStatus({ type: 'success', message: data.message || 'User deleted' });
+      }
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || 'Delete failed' });
     } finally {
@@ -691,8 +713,15 @@ export default function AdminUsersPage() {
         </div>
 
           {status && (
-            <div className={status.type === 'success' ? 'text-sm text-emerald-500' : 'text-sm text-destructive'}>
-              {status.message}
+            <div className={`text-sm ${
+              status.type === 'success' ? 'text-emerald-500' : 
+              status.type === 'warning' ? 'text-amber-500' : 
+              'text-destructive'
+            }`}>
+              <div>{status.message}</div>
+              {status.details && (
+                <div className="mt-1 text-xs opacity-80">{status.details}</div>
+              )}
             </div>
           )}
 

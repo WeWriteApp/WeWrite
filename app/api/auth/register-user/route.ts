@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     // Check if username is already taken
     const taken = await isUsernameTaken(username, idToken);
     if (taken) {
-      return createErrorResponse('BAD_REQUEST', 'Username is already taken');
+      return createErrorResponse('BAD_REQUEST', 'This username is already taken. Please choose a different username.');
     }
 
     // Create user document using Firestore REST API

@@ -14,6 +14,7 @@ import { getStripeSecretKey } from '../utils/stripeConfig';
 import Stripe from 'stripe';
 import { sendUserNotification } from '../utils/notifications';
 import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
+import { sendPayoutProcessed } from './emailService';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-12-18.acacia'
@@ -185,6 +186,29 @@ export class PayoutService {
         body: `We sent $${(payout.amountCents / 100).toFixed(2)} to your bank.`,
         metadata: { payoutId, transferId: payoutResult.transferId, amountCents: payout.amountCents }
       });
+      
+      // Send payout email notification (fire-and-forget)
+      try {
+        const userData = userDoc.data();
+        if (userData?.email) {
+          const amount = payout.amountCents / 100;
+          const processingDate = new Date();
+          const arrivalDate = new Date(processingDate);
+          arrivalDate.setDate(arrivalDate.getDate() + 3); // Estimate 3 business days
+          
+          sendPayoutProcessed({
+            to: userData.email,
+            username: userData.username || 'there',
+            amount: `$${amount.toFixed(2)}`,
+            processingDate: processingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            arrivalDate: `${arrivalDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}-${new Date(arrivalDate.getTime() + 2*24*60*60*1000).toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })}`,
+            userId: payout.userId
+          }).catch(err => console.error('[Payout] Failed to send payout email:', err));
+        }
+      } catch (emailErr) {
+        console.error('[Payout] Error preparing payout email:', emailErr);
+      }
+      
       return { success: true, transferId: payoutResult.transferId };
 
     } catch (error) {

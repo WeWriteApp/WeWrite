@@ -17,6 +17,7 @@ import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
+import { sendSubscriptionConfirmation } from '../../../services/emailService';
 
 // Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
@@ -494,6 +495,40 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, trackingAttempts) * 1000));
         }
       }
+    }
+
+    // Send subscription confirmation email (fire-and-forget)
+    try {
+      // Get user data for email
+      const userRef = doc(db, getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS).parentPath.replace('/subscriptions', ''));
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.exists() ? userDoc.data() : null;
+      
+      if (userData?.email) {
+        const price = subscription.items.data[0].price;
+        const amount = price.unit_amount ? price.unit_amount / 100 : 0;
+        const nextBillingDate = new Date(subscription.current_period_end * 1000);
+        
+        sendSubscriptionConfirmation({
+          to: userData.email,
+          username: userData.username || 'there',
+          planName: `$${amount}/month`,
+          amount: `$${amount.toFixed(2)}/month`,
+          nextBillingDate: nextBillingDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          userId
+        }).catch(err => {
+          console.error('[SUBSCRIPTION WEBHOOK] Failed to send subscription confirmation email:', err);
+        });
+        
+        console.log(`[SUBSCRIPTION WEBHOOK] Queued subscription confirmation email for ${userData.email}`);
+      }
+    } catch (emailErr) {
+      console.error('[SUBSCRIPTION WEBHOOK] Error preparing subscription email:', emailErr);
+      // Don't fail the webhook if email fails
     }
 
   } catch (error) {

@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       const errorCode = signUpData.error?.message || 'UNKNOWN_ERROR';
       
       if (errorCode === 'EMAIL_EXISTS') {
-        return createErrorResponse('BAD_REQUEST', 'An account with this email already exists');
+        return createErrorResponse('BAD_REQUEST', 'This email address is already registered. Please try logging in instead.');
       } else if (errorCode === 'WEAK_PASSWORD') {
         return createErrorResponse('BAD_REQUEST', 'Password is too weak. Please use at least 6 characters.');
       } else if (errorCode === 'INVALID_EMAIL') {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         }
       );
       
-      return createErrorResponse('BAD_REQUEST', 'Username is already taken');
+      return createErrorResponse('BAD_REQUEST', 'This username is already taken. Please choose a different username.');
     }
 
     // Step 3: Create user document in Firestore

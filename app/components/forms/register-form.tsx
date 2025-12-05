@@ -300,8 +300,9 @@ export function RegisterForm({
       let errorMessage = error?.message || "An unexpected error occurred"
       
       // Map Firebase Auth error codes to user-friendly messages
+      // These are SPECIFIC about what the problem is
       if (error?.code === 'auth/email-already-in-use') {
-        errorMessage = "Email already in use. Try logging in instead."
+        errorMessage = "This email address is already registered. Try logging in instead, or use a different email."
       } else if (error?.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. Please choose a stronger password (at least 6 characters)."
       } else if (error?.code === 'auth/invalid-email') {

@@ -36,16 +36,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Verify the user exists in Firebase
-    try {
-      await admin.auth().getUser(userId);
-    } catch (error) {
-      console.error('Error verifying user:', error);
+    // Verify the user exists in Firestore (avoids admin.auth() jose issues in Vercel)
+    const db = admin.firestore();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+    if (!userDoc.exists) {
+      console.error('User not found in Firestore:', userId);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the user's balance from Firestore
-    const db = admin.firestore();
     
     try {
       // Fetch user balance document

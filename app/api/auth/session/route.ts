@@ -310,7 +310,60 @@ async function createUserSession(request: NextRequest, userId: string) {
     const admin = getFirebaseAdmin();
     if (admin) {
       const db = admin.firestore();
+      
+      // Check if this is a new device by looking for existing sessions
+      // with different userAgent/IP combination
+      let isNewDevice = true;
+      try {
+        const existingSessions = await db.collection(getCollectionName('userSessions'))
+          .where('userId', '==', userId)
+          .where('isActive', '==', true)
+          .orderBy('createdAt', 'desc')
+          .limit(10)
+          .get();
+        
+        // Check if we have a matching device already
+        for (const sessionDoc of existingSessions.docs) {
+          const session = sessionDoc.data();
+          if (session.deviceInfo?.browser === deviceInfo.browser &&
+              session.deviceInfo?.os === deviceInfo.os &&
+              session.deviceInfo?.deviceType === deviceInfo.deviceType) {
+            isNewDevice = false;
+            break;
+          }
+        }
+      } catch (sessionQueryError) {
+        console.warn('[Session] Error checking existing sessions:', sessionQueryError);
+        // Assume new device on error to be safe
+      }
+      
       await db.collection(getCollectionName('userSessions')).doc(sessionId).set(sessionData);
+      
+      // Send security alert email for new device logins
+      if (isNewDevice) {
+        try {
+          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            // Check if user wants security emails
+            if (userData?.email && userData?.emailPreferences?.securityAlerts !== false) {
+              const { sendSecurityAlert } = await import('../../../services/emailService');
+              await sendSecurityAlert({
+                to: userData.email,
+                username: userData.username || 'there',
+                eventType: 'New login detected',
+                eventDetails: `${deviceInfo.browser} on ${deviceInfo.os} (${deviceInfo.deviceType}) from IP: ${ipAddress}`,
+                eventTime: new Date().toISOString(),
+                userId
+              });
+              console.log(`[Session] Security alert email sent for new device login for user ${userId}`);
+            }
+          }
+        } catch (emailError) {
+          console.error('[Session] Error sending security alert email:', emailError);
+          // Don't fail the session creation
+        }
+      }
     }
 
     // Set sessionId cookie

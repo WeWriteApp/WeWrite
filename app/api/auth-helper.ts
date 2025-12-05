@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { getFirebaseAdmin } from '../firebase/admin';
 import { DEV_TEST_USERS } from '../utils/testUsers';
+import { getCollectionName } from '../utils/environmentConfig';
 
 // Type definitions
 interface ApiResponse<T = any> {
@@ -97,15 +98,16 @@ export async function getUserEmailFromId(userId: string): Promise<string | null>
       return 'test@local.dev';
     }
 
-    // Production: get from Firebase Auth
+    // Production: get from Firestore (avoids admin.auth() jose issues in Vercel)
     const admin = getFirebaseAdmin();
     if (!admin) {
       console.warn('Firebase Admin not available');
       return null;
     }
 
-    const userRecord = await admin.auth().getUser(userId);
-    return userRecord.email || null;
+    const db = admin.firestore();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+    return userDoc.data()?.email || null;
   } catch (error) {
     console.error('Error getting user email:', error);
     return null;

@@ -4,23 +4,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '../../../utils/isAdmin';
-import { getUserIdFromRequest } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Get user email from Firebase to check admin status
-    const firebaseAdmin = getFirebaseAdmin();
-    const userRecord = await firebaseAdmin.auth().getUser(userId);
-    if (!userRecord.email || !isAdmin(userRecord.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check admin access using session cookie (avoids jose issues)
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
     }
 
     console.log('🔍 Admin verification: Running comprehensive dashboard verification...');

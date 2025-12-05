@@ -3,6 +3,7 @@ import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '..
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
+import { sendNewFollowerEmail } from '../../../services/emailService';
 
 /**
  * User Following API Route
@@ -14,7 +15,7 @@ import { sanitizeUsername } from '../../../utils/usernameSecurity';
  * This route replaces direct Firebase calls for user following operations
  * and ensures environment-aware collection naming.
  *
- * Updated: 2025-07-31 - Added comprehensive debugging
+ * Updated: 2025-12-04 - Added email notification on follow
  */
 
 // GET /api/follows/users?userId=xxx&type=following|followers
@@ -227,6 +228,40 @@ export async function POST(request: NextRequest) {
     await db.collection(getCollectionName('users')).doc(targetUserId).update({
       followerCount: admin.firestore.FieldValue.increment(1)
     });
+
+    // Send new follower email notification (fire-and-forget, don't block response)
+    try {
+      const targetUserData = targetUserDoc.data();
+      const targetEmail = targetUserData?.email;
+      const targetUsername = targetUserData?.username || `user_${targetUserId.slice(0, 8)}`;
+      
+      // Get follower (current user) info
+      const followerDoc = await db.collection(getCollectionName('users')).doc(currentUserId).get();
+      const followerData = followerDoc.data();
+      const followerUsername = followerData?.username || `user_${currentUserId.slice(0, 8)}`;
+      const followerBio = followerData?.bio || '';
+      
+      if (targetEmail) {
+        // Check user's email preferences (don't send if they opted out)
+        const emailPrefs = targetUserData?.emailPreferences;
+        const shouldSendEmail = emailPrefs?.newFollowers !== false; // Default to true if not set
+        
+        if (shouldSendEmail) {
+          sendNewFollowerEmail({
+            to: targetEmail,
+            username: targetUsername,
+            followerUsername,
+            followerBio,
+            userId: targetUserId
+          }).catch(err => {
+            console.error('[FOLLOWS API] Failed to send new follower email:', err);
+          });
+        }
+      }
+    } catch (emailErr) {
+      // Don't fail the follow operation if email fails
+      console.error('[FOLLOWS API] Error preparing follower email:', emailErr);
+    }
 
     console.log('[FOLLOWS API] Follow operation completed successfully');
 

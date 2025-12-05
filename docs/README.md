@@ -27,6 +27,7 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **[ALLOCATION_SYSTEM.md](./ALLOCATION_SYSTEM.md)** + **[ALLOCATION_API_REFERENCE.md](./ALLOCATION_API_REFERENCE.md)** – Funding/allocations core
 - **[PAYMENTS_AND_ALLOCATIONS.md](./PAYMENTS_AND_ALLOCATIONS.md)** – Single entry for subscriptions, allocations, storage balance, payouts, fees, and troubleshooting
 - **[NOTIFICATION_SYSTEM.md](./NOTIFICATION_SYSTEM.md)** – Notification types and delivery
+- **[EMAIL_SYSTEM_IMPLEMENTATION.md](./EMAIL_SYSTEM_IMPLEMENTATION.md)** – **NEW**: Email templates, triggers, and cron jobs
 - **[TEXT_SELECTION_AND_ATTRIBUTION.md](./TEXT_SELECTION_AND_ATTRIBUTION.md)** – Cross-page selection, attribution, copy rules
 - **[HEADER_SYSTEM.md](./HEADER_SYSTEM.md)** + **[SETTINGS_NAVIGATION_SYSTEM.md](./SETTINGS_NAVIGATION_SYSTEM.md)** – Header and settings UX patterns
 - **[RECENT_EDITS_SYSTEM.md](./RECENT_EDITS_SYSTEM.md)** – Diffing and recent activity expectations

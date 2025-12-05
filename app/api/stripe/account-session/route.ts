@@ -59,18 +59,13 @@ export async function POST(request: NextRequest) {
     if (!stripeConnectedAccountId) {
       console.log(`Creating new Stripe Connect account for user ${userId}`);
       
-      // Get user email
+      // Get user email from Firestore (avoids admin.auth() jose issues)
       let userEmail = userData?.email;
       if (!userEmail) {
-        try {
-          const userRecord = await admin.auth().getUser(userId);
-          userEmail = userRecord.email;
-        } catch (error) {
-          console.error('Could not get user email:', error);
-          return NextResponse.json({
-            error: 'Could not determine user email for account creation'
-          }, { status: 400 });
-        }
+        console.error('User email not found in Firestore');
+        return NextResponse.json({
+          error: 'Could not determine user email for account creation'
+        }, { status: 400 });
       }
 
       // Get username for better account identification

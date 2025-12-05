@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
       // Check if it's the same user
       const isSameUser = usersQuery.documents.some(doc => doc.id === currentUserId);
       if (!isSameUser) {
-        return createErrorResponse('BAD_REQUEST', 'Username is already taken');
+        return createErrorResponse('BAD_REQUEST', 'This username is already taken. Please choose a different username.');
       }
     }
 

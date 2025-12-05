@@ -84,13 +84,22 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Check if username exists in Firestore users collection
-    const usersQuery = await db.collection(getCollectionName('users'))
-      .where('username', '==', username)
-      .limit(1)
-      .get();
+    // Check BOTH the users collection AND the usernames collection
+    // The usernames collection is the authoritative source for reserved usernames
+    const [usersQuery, usernameDoc] = await Promise.all([
+      db.collection(getCollectionName('users'))
+        .where('username', '==', username)
+        .limit(1)
+        .get(),
+      db.collection(getCollectionName('usernames'))
+        .doc(username.toLowerCase())
+        .get()
+    ]);
 
-    const isAvailable = usersQuery.empty;
+    // Username is only available if it's not in EITHER collection
+    const isInUsersCollection = !usersQuery.empty;
+    const isInUsernamesCollection = usernameDoc.exists;
+    const isAvailable = !isInUsersCollection && !isInUsernamesCollection;
 
     const result: UsernameCheckResult = {
       available: isAvailable

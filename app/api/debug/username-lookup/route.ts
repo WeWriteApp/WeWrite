@@ -5,6 +5,8 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 /**
  * Debug API to check username lookup in production
  * This helps debug login issues with usernames
+ * 
+ * NOTE: Uses Firestore instead of admin.auth() to avoid jose dependency issues in Vercel
  */
 
 export async function POST(request: NextRequest) {
@@ -22,6 +24,7 @@ export async function POST(request: NextRequest) {
 
     const firestore = admin.firestore();
     const usernamesCollection = getCollectionName('usernames');
+    const usersCollection = getCollectionName('users');
 
     console.log('[Debug] Looking up username:', username);
     console.log('[Debug] Username collection:', usernamesCollection);
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
       .doc(username.toLowerCase())
       .get();
 
-    const result = {
+    const result: any = {
       username: username,
       usernamesCollection: usernamesCollection,
       exists: usernameDoc.exists,
@@ -41,33 +44,31 @@ export async function POST(request: NextRequest) {
 
     if (usernameDoc.exists) {
       const usernameData = usernameDoc.data();
-      const email = usernameData?.email;
+      const uid = usernameData?.uid;
 
-      if (email) {
-        // Try to get Firebase Auth user
+      if (uid) {
+        // Get user info from Firestore users collection (avoids jose issues)
         try {
-          const auth = admin.auth();
-          const userRecord = await auth.getUserByEmail(email);
-          result.firebaseUser = {
-            uid: userRecord.uid,
-            email: userRecord.email,
-            emailVerified: userRecord.emailVerified,
-            disabled: userRecord.disabled
-          };
-        } catch (authError) {
-          result.firebaseError = authError.message;
-        }
-
-        // Check if user exists in users collection
-        const usersCollection = getCollectionName('users');
-        try {
-          const userDoc = await firestore.collection(usersCollection).doc(usernameData.uid || 'unknown').get();
-          result.firestoreUser = {
-            collection: usersCollection,
-            exists: userDoc.exists,
-            uid: usernameData.uid
-          };
-        } catch (firestoreError) {
+          const userDoc = await firestore.collection(usersCollection).doc(uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            result.firestoreUser = {
+              collection: usersCollection,
+              exists: true,
+              uid: uid,
+              email: userData?.email,
+              emailVerified: userData?.emailVerified,
+              username: userData?.username,
+              createdAt: userData?.createdAt
+            };
+          } else {
+            result.firestoreUser = {
+              collection: usersCollection,
+              exists: false,
+              uid: uid
+            };
+          }
+        } catch (firestoreError: any) {
           result.firestoreError = firestoreError.message;
         }
       }
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     console.log('[Debug] Username lookup result:', result);
     return NextResponse.json(result);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Debug] Username lookup error:', error);
     return NextResponse.json({ 
       error: 'Internal server error',

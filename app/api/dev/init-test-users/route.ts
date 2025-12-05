@@ -9,6 +9,12 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
  * Development endpoint to initialize test user profiles in DEV_ collections
+ * 
+ * NOTE: This endpoint uses firebase-admin auth for user creation which is unavoidable.
+ * This is acceptable because:
+ * 1. It only runs in development environment
+ * 2. Development doesn't have the Vercel serverless jose issues
+ * 3. Creating Firebase Auth users REQUIRES admin.auth().createUser()
  */
 export async function POST(request: NextRequest) {
   try {

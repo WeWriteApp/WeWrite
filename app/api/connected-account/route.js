@@ -37,15 +37,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Verify the user exists in Firebase
-    try {
-      await admin.auth().getUser(userId);
-    } catch (error) {
-      console.error('Error verifying user:', error);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get the user's connected account from Firestore
+    // Get the user's connected account from Firestore (also verifies user exists - avoids admin.auth() jose issues)
     const db = admin.firestore();
     
     try {
@@ -53,20 +45,22 @@ export async function POST(request) {
       const userDocRef = db.collection(getCollectionName('users')).doc(userId);
       const userDoc = await userDocRef.get();
       
+      if (!userDoc.exists) {
+        console.error('User not found in Firestore:', userId);
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
       let account = null;
-
-      if (userDoc.exists) {
-        const userData = userDoc.data();
+      const userData = userDoc.data();
         
-        // Check if user has a connected Stripe account
-        if (userData.stripeConnectedAccountId) {
-          account = {
-            id: userData.stripeConnectedAccountId,
-            last4: userData.bankAccountLast4 || '****',
-            type: 'bank_account',
-            status: userData.accountStatus || 'pending'
-          };
-        }
+      // Check if user has a connected Stripe account
+      if (userData.stripeConnectedAccountId) {
+        account = {
+          id: userData.stripeConnectedAccountId,
+          last4: userData.bankAccountLast4 || '****',
+          type: 'bank_account',
+          status: userData.accountStatus || 'pending'
+        };
       }
 
       return NextResponse.json({ account });

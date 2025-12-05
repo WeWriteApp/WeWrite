@@ -40,18 +40,10 @@ async function fetchPaymentHistoryForUser(userId) {
     throw new Error('Database not available');
   }
 
-  // Verify the user exists in Firebase
-  try {
-    await admin.auth().getUser(userId);
-  } catch (error) {
-    console.error('Error verifying user:', error);
-    throw new Error('Unauthorized');
-  }
-
   // Get the user's subscription from Firestore
   const db = getFirestore();
 
-  // Fetch user data from Firestore
+  // Fetch user data from Firestore (also verifies user exists - avoids admin.auth() jose issues)
   const userDocRef = doc(db, 'users', userId);
   const userDoc = await getDoc(userDocRef);
 

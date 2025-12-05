@@ -3,12 +3,15 @@
  * 
  * One-time endpoint to create a secure admin test account that can access production data.
  * This should only be run once and then the endpoint should be disabled.
+ * 
+ * NOTE: This endpoint still uses firebase-admin auth for USER CREATION which requires
+ * admin.auth().createUser(). This is unavoidable for creating Firebase Auth accounts.
+ * However, the ADMIN CHECK uses session cookies to avoid jose issues.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { isAdminServer } from '../../admin-auth-helper';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions, isAdminServer } from '../../admin-auth-helper';
 
 // Security: Only allow this endpoint to run once
 const ACCOUNT_CREATION_ENABLED = process.env.ENABLE_ADMIN_ACCOUNT_CREATION === 'true';
@@ -22,17 +25,10 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    // Check if current user is already an admin (for security)
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Get user email from Firebase to check admin status
-    const firebaseAdmin = getFirebaseAdmin();
-    const userRecord = await firebaseAdmin.auth().getUser(userId);
-    if (!userRecord.email || !isAdmin(userRecord.email)) {
-      return NextResponse.json({ error: 'Only existing admins can create admin accounts' }, { status: 401 });
+    // Check if current user is already an admin using session cookie (avoids jose issues)
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Only existing admins can create admin accounts' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -136,27 +132,22 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check if admin account exists
 export async function GET(request: NextRequest) {
   try {
-    // Check if current user is an admin
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Get user email from Firebase to check admin status
-    const firebaseAdmin = getFirebaseAdmin();
-    const userRecord = await firebaseAdmin.auth().getUser(userId);
-    if (!userRecord.email || !isAdminServer(userRecord.email)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
+    // Check if current user is an admin using session cookie (avoids jose issues)
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 401 });
     }
 
     const adminEmail = 'admin.test@wewrite.app';
     
     // Use the same Firebase Admin SDK instance
+    const firebaseAdmin = getFirebaseAdmin();
     if (!firebaseAdmin) {
       return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
     }
 
     try {
+      // NOTE: This still uses admin.auth() for checking if user exists - unavoidable for this operation
       const userRecord = await firebaseAdmin.auth().getUserByEmail(adminEmail);
       
       return NextResponse.json({
