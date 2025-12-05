@@ -172,8 +172,21 @@ export async function POST(request: NextRequest) {
 
     // Production mode: verify ID token using REST API
     console.log('[Session] Verifying ID token via REST API...');
+    console.log('[Session] Firebase config check:', {
+      hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PID,
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV
+    });
 
     const verifyResult = await verifyIdToken(idToken);
+    
+    console.log('[Session] Token verification result:', {
+      success: verifyResult.success,
+      hasUid: !!verifyResult.uid,
+      error: verifyResult.error
+    });
+    
     if (!verifyResult.success || !verifyResult.uid) {
       console.error('[Session] Token verification failed:', verifyResult.error);
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid ID token');

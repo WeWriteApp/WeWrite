@@ -38,9 +38,11 @@ export interface FirebaseUser {
 export async function verifyIdToken(idToken: string): Promise<{ success: boolean; uid?: string; email?: string; emailVerified?: boolean; error?: string }> {
   try {
     if (!FIREBASE_API_KEY) {
-      console.error('[Firebase REST] Missing API key');
+      console.error('[Firebase REST] Missing API key. NEXT_PUBLIC_FIREBASE_API_KEY:', FIREBASE_API_KEY ? 'set' : 'not set');
       return { success: false, error: 'API key not configured' };
     }
+
+    console.log('[Firebase REST] Verifying token, API key prefix:', FIREBASE_API_KEY?.substring(0, 10) + '...');
 
     const response = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
@@ -51,14 +53,18 @@ export async function verifyIdToken(idToken: string): Promise<{ success: boolean
       }
     );
 
+    console.log('[Firebase REST] Token verification response status:', response.status);
+
     if (!response.ok) {
-      console.error('[Firebase REST] Token verification failed:', response.status);
-      return { success: false, error: 'Token verification failed' };
+      const errorText = await response.text();
+      console.error('[Firebase REST] Token verification failed:', response.status, errorText);
+      return { success: false, error: `Token verification failed: ${response.status}` };
     }
 
     const data = await response.json();
     if (data.users && data.users.length > 0) {
       const user = data.users[0];
+      console.log('[Firebase REST] Token verified for user:', user.localId);
       return {
         success: true,
         uid: user.localId,
@@ -66,6 +72,7 @@ export async function verifyIdToken(idToken: string): Promise<{ success: boolean
         emailVerified: user.emailVerified || false,
       };
     }
+    console.error('[Firebase REST] No users in response');
     return { success: false, error: 'No user found' };
   } catch (error) {
     console.error('[Firebase REST] Token verification error:', error);
