@@ -1,162 +1,170 @@
 /**
  * Email Verification API
- * Handles email verification and resending verification emails
+ * Handles email verification status checks
+ * 
+ * NOTE: For sending verification emails, use Firebase Client SDK's sendEmailVerification()
+ * directly on the client side. This is the recommended approach as the Admin SDK
+ * generateEmailVerificationLink requires server-side email delivery.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createApiResponse, createErrorResponse, getUserIdFromRequest } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { createApiResponse, createErrorResponse } from '../../auth-helper';
+import { verifyIdToken, getUserById, updateFirestoreDocument } from '../../../lib/firebase-rest';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { cookies } from 'next/headers';
 
 interface ResendVerificationRequest {
+  idToken?: string;
   email?: string;
 }
 
-// POST endpoint - Resend verification email
+// POST endpoint - Generate verification link (returns instruction for client-side delivery)
+// NOTE: Firebase REST API doesn't support generating verification links server-side
+// The client should use sendEmailVerification() from Firebase Client SDK instead
 export async function POST(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
-    const auth = admin.auth();
-    const db = admin.firestore();
-
-    // Try to get user ID from request (if authenticated)
-    const currentUserId = await getUserIdFromRequest(request);
-    
     const body = await request.json();
-    const { email } = body as ResendVerificationRequest;
+    const { idToken, email } = body as ResendVerificationRequest;
 
-    let targetEmail = email;
-    let userRecord;
-
-    // If user is authenticated, use their email
-    if (currentUserId) {
-      try {
-        userRecord = await auth.getUser(currentUserId);
-        targetEmail = userRecord.email;
-      } catch (error) {
-        console.error('Error getting current user:', error);
+    // If idToken provided, verify and get user info
+    if (idToken) {
+      const verifyResult = await verifyIdToken(idToken);
+      
+      if (!verifyResult.success || !verifyResult.uid) {
+        return createErrorResponse('UNAUTHORIZED', 'Invalid token');
       }
-    }
 
-    // If no email provided and no authenticated user
-    if (!targetEmail) {
-      return createErrorResponse('BAD_REQUEST', 'Email address is required');
-    }
-
-    // Get user by email if we don't have the user record yet
-    if (!userRecord) {
-      try {
-        userRecord = await auth.getUserByEmail(targetEmail);
-      } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
-          return createErrorResponse('BAD_REQUEST', 'No account found with this email address');
-        }
-        throw error;
+      const userResult = await getUserById(verifyResult.uid);
+      
+      if (!userResult.success || !userResult.user) {
+        return createErrorResponse('BAD_REQUEST', 'User not found');
       }
-    }
 
-    // Check if email is already verified
-    if (userRecord.emailVerified) {
+      const user = userResult.user;
+
+      // Check if email is already verified
+      if (user.emailVerified) {
+        return createApiResponse({
+          message: 'Email is already verified',
+          emailVerified: true
+        });
+      }
+
+      // Return instructions for client to send verification email
       return createApiResponse({
-        message: 'Email is already verified',
-        emailVerified: true
-      });
-    }
-
-    // Generate verification link
-    try {
-      // Generate email verification link with proper action code settings
-      const actionCodeSettings = {
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app'}/?verified=true`,
-        handleCodeInApp: false
-      };
-
-      const emailVerificationLink = await auth.generateEmailVerificationLink(
-        targetEmail,
-        actionCodeSettings
-      );
-
-      return createApiResponse({
-        // NOTE: Firebase Admin only generates the link; client should call sendEmailVerification for actual delivery.
-        message: 'Verification link generated. Use Firebase client SDK sendEmailVerification to deliver.',
-        email: targetEmail,
+        message: 'Use Firebase client SDK sendEmailVerification() to send verification email',
+        email: user.email,
         emailVerified: false,
-        emailSent: false,
-        verificationLink: emailVerificationLink // returned for client to deliver
+        requiresClientAction: true
       });
-
-    } catch (emailError: any) {
-      console.error('Failed to generate email verification link:', emailError);
-      
-      if (emailError.code === 'auth/user-not-found') {
-        return createErrorResponse('BAD_REQUEST', 'No account found with this email address');
-      } else if (emailError.code === 'auth/invalid-email') {
-        return createErrorResponse('BAD_REQUEST', 'Invalid email address');
-      }
-      
-      return createErrorResponse('INTERNAL_ERROR', 'Failed to send verification email');
     }
 
-  } catch (error: any) {
+    // If only email provided, tell client to handle it
+    if (email) {
+      return createApiResponse({
+        message: 'Use Firebase client SDK sendEmailVerification() to send verification email',
+        email: email,
+        requiresClientAction: true
+      });
+    }
+
+    return createErrorResponse('BAD_REQUEST', 'ID token or email address is required');
+
+  } catch (error: unknown) {
     console.error('Email verification error:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to process email verification request');
   }
 }
 
-// PUT endpoint - Verify email with action code
+// PUT endpoint - Mark email as verified after client-side verification
+// Called after user clicks verification link and Firebase updates their status
 export async function PUT(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
-    const auth = admin.auth();
-    const db = admin.firestore();
+    const body = await request.json();
+    const { idToken } = body;
 
-    const { searchParams } = new URL(request.url);
-    const actionCode = searchParams.get('oobCode');
-
-    if (!actionCode) {
-      return createErrorResponse('BAD_REQUEST', 'Verification code is required');
+    if (!idToken) {
+      return createErrorResponse('BAD_REQUEST', 'ID token is required');
     }
 
-    try {
-      // Verify the email verification code
-      const email = await auth.verifyEmailVerificationCode(actionCode);
-      
-      // Get user by email
-      const userRecord = await auth.getUserByEmail(email);
-      
-      // Update user's email verification status
-      await auth.updateUser(userRecord.uid, {
-        emailVerified: true
-      });
+    // Verify the token to get user info
+    const verifyResult = await verifyIdToken(idToken);
+    
+    if (!verifyResult.success || !verifyResult.uid) {
+      return createErrorResponse('UNAUTHORIZED', 'Invalid token');
+    }
 
-      // Update user document in Firestore
-      await db.collection(getCollectionName('users')).doc(userRecord.uid).update({
-        emailVerified: true,
-        emailVerifiedAt: new Date().toISOString()
-      });
+    // Get fresh user data to check emailVerified status
+    const userResult = await getUserById(verifyResult.uid);
+    
+    if (!userResult.success || !userResult.user) {
+      return createErrorResponse('BAD_REQUEST', 'User not found');
+    }
 
-      return createApiResponse({
-        message: 'Email verified successfully',
-        email,
-        emailVerified: true,
-        uid: userRecord.uid
-      });
+    const user = userResult.user;
 
-    } catch (verificationError: any) {
-      console.error('Email verification failed:', verificationError);
-      
-      if (verificationError.code === 'auth/invalid-action-code') {
-        return createErrorResponse('BAD_REQUEST', 'Invalid or expired verification code');
-      } else if (verificationError.code === 'auth/expired-action-code') {
-        return createErrorResponse('BAD_REQUEST', 'Verification code has expired');
-      } else if (verificationError.code === 'auth/user-not-found') {
-        return createErrorResponse('BAD_REQUEST', 'No account found for this verification code');
+    if (!user.emailVerified) {
+      return createErrorResponse('BAD_REQUEST', 'Email has not been verified yet');
+    }
+
+    // Update user document in Firestore
+    await updateFirestoreDocument(getCollectionName('users'), verifyResult.uid, {
+      emailVerified: true,
+      emailVerifiedAt: new Date().toISOString()
+    });
+
+    // Update session cookie if it exists
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("simpleUserSession");
+    
+    if (sessionCookie?.value) {
+      try {
+        const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+        sessionData.emailVerified = true;
+        
+        const response = createApiResponse({
+          message: 'Email verified successfully',
+          email: user.email,
+          emailVerified: true,
+          uid: verifyResult.uid
+        });
+        
+        // Can't set cookies on createApiResponse, need NextResponse
+        const nextResponse = NextResponse.json({
+          success: true,
+          data: {
+            message: 'Email verified successfully',
+            email: user.email,
+            emailVerified: true,
+            uid: verifyResult.uid
+          }
+        });
+        
+        nextResponse.cookies.set({
+          name: "simpleUserSession",
+          value: encodeURIComponent(JSON.stringify(sessionData)),
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+        
+        return nextResponse;
+      } catch (parseError) {
+        // Session parse failed, continue without updating
+        console.error('Failed to update session cookie:', parseError);
       }
-      
-      return createErrorResponse('INTERNAL_ERROR', 'Email verification failed');
     }
 
-  } catch (error: any) {
+    return createApiResponse({
+      message: 'Email verified successfully',
+      email: user.email,
+      emailVerified: true,
+      uid: verifyResult.uid
+    });
+
+  } catch (error: unknown) {
     console.error('Email verification error:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to verify email');
   }
@@ -165,31 +173,51 @@ export async function PUT(request: NextRequest) {
 // GET endpoint - Check email verification status
 export async function GET(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
-    const auth = admin.auth();
-
-    // Get user ID from request
-    const currentUserId = await getUserIdFromRequest(request);
+    // First try to get from session cookie
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("simpleUserSession");
     
-    if (!currentUserId) {
+    let uid: string | null = null;
+    
+    if (sessionCookie?.value) {
+      try {
+        const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+        uid = sessionData.uid;
+      } catch {
+        // Continue to check for token in header
+      }
+    }
+
+    // If no session, try Authorization header
+    if (!uid) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const verifyResult = await verifyIdToken(token);
+        if (verifyResult.success && verifyResult.uid) {
+          uid = verifyResult.uid;
+        }
+      }
+    }
+
+    if (!uid) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
 
     // Get user record
-    const userRecord = await auth.getUser(currentUserId);
-
-    return createApiResponse({
-      emailVerified: userRecord.emailVerified,
-      uid: userRecord.uid
-    });
-
-  } catch (error: any) {
-    console.error('Email verification status check error:', error);
+    const userResult = await getUserById(uid);
     
-    if (error.code === 'auth/user-not-found') {
+    if (!userResult.success || !userResult.user) {
       return createErrorResponse('BAD_REQUEST', 'User not found');
     }
-    
+
+    return createApiResponse({
+      emailVerified: userResult.user.emailVerified || false,
+      uid: uid
+    });
+
+  } catch (error: unknown) {
+    console.error('Email verification status check error:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to check email verification status');
   }
 }

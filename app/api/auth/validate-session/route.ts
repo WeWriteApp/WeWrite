@@ -1,157 +1,172 @@
-/**
- * Session Validation API Endpoint
- * 
- * Validates the current user session and returns session status.
- * This endpoint is called by SessionMonitor to check if the session is still valid.
- */
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getUserById } from "../../../lib/firebase-rest";
 
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+// Validate a session by checking if the user still exists and is active
+export async function GET(request: NextRequest) {
+  console.log("[validate-session] GET request received");
 
-interface SessionValidationResponse {
-  valid: boolean;
-  reason?: string;
-  user?: {
-    uid: string;
-    email: string;
-    username?: string;
-  };
-  timestamp: string;
-}
-
-/**
- * GET endpoint - Validate current session
- */
-export async function GET(request: NextRequest): Promise<NextResponse<SessionValidationResponse>> {
   try {
+    // Get the session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('simpleUserSession');
+    const sessionCookie = cookieStore.get("simpleUserSession");
 
-    if (!sessionCookie) {
-      return NextResponse.json({
-        valid: false,
-        reason: 'No session cookie found',
-        timestamp: new Date().toISOString(),
-      });
+    if (!sessionCookie?.value) {
+      console.log("[validate-session] No session cookie found");
+      return NextResponse.json(
+        { valid: false, error: "No session found" },
+        { status: 401 }
+      );
     }
 
+    // Parse the session data
+    let sessionData;
     try {
-      // Parse the session cookie
-      const sessionData = JSON.parse(sessionCookie.value);
-      
-      if (!sessionData.uid || !sessionData.email) {
-        return NextResponse.json({
-          valid: false,
-          reason: 'Invalid session data format',
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // Check if session has expired
-      if (sessionData.expiresAt && new Date(sessionData.expiresAt) < new Date()) {
-        return NextResponse.json({
-          valid: false,
-          reason: 'Session expired',
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // For development with dev auth, just validate the session format
-      const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
-      
-      if (useDevAuth) {
-        return NextResponse.json({
-          valid: true,
-          user: {
-            uid: sessionData.uid,
-            email: sessionData.email,
-            username: sessionData.username
-          },
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // For production, validate with Firebase Admin
-      try {
-        const admin = getFirebaseAdmin();
-        const adminAuth = admin.auth();
-        
-        // Verify the user still exists in Firebase Auth
-        const userRecord = await adminAuth.getUser(sessionData.uid);
-        
-        if (!userRecord) {
-          return NextResponse.json({
-            valid: false,
-            reason: 'User not found in Firebase Auth',
-            timestamp: new Date().toISOString(),
-          });
-        }
-
-        // Check if user is disabled
-        if (userRecord.disabled) {
-          return NextResponse.json({
-            valid: false,
-            reason: 'User account is disabled',
-            timestamp: new Date().toISOString(),
-          });
-        }
-
-        // Session is valid
-        return NextResponse.json({
-          valid: true,
-          user: {
-            uid: userRecord.uid,
-            email: userRecord.email || sessionData.email,
-            username: sessionData.username
-          },
-          timestamp: new Date().toISOString(),
-        });
-
-      } catch (firebaseError) {
-        console.error('Firebase validation error:', firebaseError);
-        
-        // If Firebase is unavailable, don't invalidate the session
-        // This prevents logout during temporary Firebase outages
-        return NextResponse.json({
-          valid: true,
-          user: {
-            uid: sessionData.uid,
-            email: sessionData.email,
-            username: sessionData.username
-          },
-          timestamp: new Date().toISOString(),
-        });
-      }
-
+      sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
     } catch (parseError) {
-      console.error('Session cookie parse error:', parseError);
-      return NextResponse.json({
-        valid: false,
-        reason: 'Invalid session cookie format',
-        timestamp: new Date().toISOString(),
-      });
+      console.error("[validate-session] Failed to parse session cookie:", parseError);
+      return NextResponse.json(
+        { valid: false, error: "Invalid session format" },
+        { status: 401 }
+      );
     }
 
-  } catch (error) {
-    console.error('Session validation error:', error);
+    // Validate required fields
+    if (!sessionData.uid || !sessionData.email) {
+      console.log("[validate-session] Session missing required fields");
+      return NextResponse.json(
+        { valid: false, error: "Incomplete session data" },
+        { status: 401 }
+      );
+    }
+
+    console.log(`[validate-session] Validating session for uid: ${sessionData.uid}`);
+
+    // Verify the user still exists in Firebase Auth using REST API
+    const userResult = await getUserById(sessionData.uid);
     
-    // Return valid=true for unknown errors to prevent unnecessary logouts
+    if (!userResult.success || !userResult.user) {
+      console.log(`[validate-session] User not found or error: ${userResult.error}`);
+      return NextResponse.json(
+        { valid: false, error: "User not found" },
+        { status: 401 }
+      );
+    }
+
+    const user = userResult.user;
+
+    // Check if user is disabled
+    if (user.disabled) {
+      console.log(`[validate-session] User ${sessionData.uid} is disabled`);
+      return NextResponse.json(
+        { valid: false, error: "User account is disabled" },
+        { status: 401 }
+      );
+    }
+
+    console.log(`[validate-session] Session valid for user: ${sessionData.email}`);
+
+    // Return the session data along with validation status
     return NextResponse.json({
       valid: true,
-      reason: 'Validation error - assuming valid to prevent logout',
-      timestamp: new Date().toISOString(),
+      user: {
+        uid: sessionData.uid,
+        email: sessionData.email,
+        username: sessionData.username || null,
+        emailVerified: sessionData.emailVerified || user.emailVerified || false,
+      },
     });
+  } catch (error: unknown) {
+    console.error("[validate-session] Error validating session:", error);
+    return NextResponse.json(
+      { valid: false, error: "Session validation failed" },
+      { status: 500 }
+    );
   }
 }
 
-/**
- * POST endpoint - Not supported for this endpoint
- */
-export async function POST(): Promise<NextResponse> {
-  return NextResponse.json({
-    error: 'Method not allowed',
-    message: 'Use GET to validate session'
-  }, { status: 405 });
+// POST: Refresh session data (optional - can update session with latest user data)
+export async function POST(request: NextRequest) {
+  console.log("[validate-session] POST request received");
+
+  try {
+    const body = await request.json();
+    const { idToken } = body;
+
+    if (!idToken) {
+      return NextResponse.json(
+        { success: false, error: "ID token required" },
+        { status: 400 }
+      );
+    }
+
+    // Import verifyIdToken from firebase-rest
+    const { verifyIdToken } = await import("../../../lib/firebase-rest");
+    
+    const verifyResult = await verifyIdToken(idToken);
+    
+    if (!verifyResult.success || !verifyResult.uid) {
+      return NextResponse.json(
+        { success: false, error: verifyResult.error || "Invalid token" },
+        { status: 401 }
+      );
+    }
+
+    // Get current user data
+    const userResult = await getUserById(verifyResult.uid);
+    
+    if (!userResult.success || !userResult.user) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const user = userResult.user;
+
+    // Check if user is disabled
+    if (user.disabled) {
+      return NextResponse.json(
+        { success: false, error: "User account is disabled" },
+        { status: 401 }
+      );
+    }
+
+    // Get username from Firestore
+    const { getFirestoreDocument } = await import("../../../lib/firebase-rest");
+    const usernameDoc = await getFirestoreDocument("usernames", verifyResult.uid);
+    const username = usernameDoc.success ? usernameDoc.data?.username : null;
+
+    // Update the session cookie
+    const sessionData = {
+      uid: verifyResult.uid,
+      email: user.email || verifyResult.email,
+      username: username,
+      emailVerified: user.emailVerified || false,
+    };
+
+    const response = NextResponse.json({
+      success: true,
+      user: sessionData,
+    });
+
+    // Update the cookie
+    response.cookies.set({
+      name: "simpleUserSession",
+      value: encodeURIComponent(JSON.stringify(sessionData)),
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return response;
+  } catch (error: unknown) {
+    console.error("[validate-session] Error refreshing session:", error);
+    return NextResponse.json(
+      { success: false, error: "Session refresh failed" },
+      { status: 500 }
+    );
+  }
 }
