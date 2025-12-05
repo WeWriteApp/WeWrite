@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../../auth-helper';
+import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import { isAdminServer } from '../../../admin-auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 
 export async function POST(request: NextRequest) {
@@ -12,16 +11,10 @@ export async function POST(request: NextRequest) {
     }
     const db = admin.firestore();
 
-    const actorId = await getUserIdFromRequest(request);
-    if (!actorId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const actorRecord = await admin.auth().getUser(actorId);
-    const actorEmail = actorRecord.email;
-    const devBypass = process.env.NODE_ENV === 'development';
-    if (!actorEmail || (!isAdminServer(actorEmail) && !devBypass)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -30,17 +23,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
     }
 
+    // Get user email from Firestore instead of Firebase Auth (avoids jose issues)
     let targetEmail: string | null = null;
     try {
-      const userRec = await admin.auth().getUser(uid);
-      targetEmail = userRec.email;
+      const userDoc = await db.collection(getCollectionName('users')).doc(uid).get();
+      targetEmail = userDoc.data()?.email || null;
     } catch (err) {
-      // continue; may be already deleted in auth
+      // continue; may not have Firestore doc
     }
 
-    // Delete auth user if present
-    if (targetEmail) {
+    // Delete auth user if present (this may fail in Vercel due to jose, but try anyway)
+    try {
       await admin.auth().deleteUser(uid);
+    } catch (authErr: any) {
+      console.warn('[ADMIN] deleteUser from Auth failed (may be jose issue or user not found):', authErr.message);
     }
 
     // Delete user doc (dev/production handled by getCollectionName)

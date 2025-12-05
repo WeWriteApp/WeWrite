@@ -6,7 +6,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
-import { Loader2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { Loader2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,8 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [copiedError, setCopiedError] = useState(false);
   const [search, setSearch] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -75,15 +77,36 @@ export default function AdminUsersPage() {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setErrorDetails(null);
       try {
         const res = await fetch("/api/admin/users?includeFinancial=true&limit=300");
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      throw new Error(data.error || "Failed to load users");
-    }
-    setUsers(data.users || []);
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          const errorMsg = data.error || `HTTP ${res.status}: ${res.statusText}`;
+          const details = JSON.stringify({
+            status: res.status,
+            statusText: res.statusText,
+            error: data.error,
+            details: data.details,
+            timestamp: new Date().toISOString(),
+            url: "/api/admin/users?includeFinancial=true&limit=300"
+          }, null, 2);
+          setError(errorMsg);
+          setErrorDetails(details);
+          return;
+        }
+        setUsers(data.users || []);
       } catch (err: any) {
-        setError(err.message || "Failed to load users");
+        const errorMsg = err.message || "Failed to load users";
+        const details = JSON.stringify({
+          error: err.message,
+          name: err.name,
+          stack: err.stack?.split('\n').slice(0, 5).join('\n'),
+          timestamp: new Date().toISOString(),
+          url: "/api/admin/users?includeFinancial=true&limit=300"
+        }, null, 2);
+        setError(errorMsg);
+        setErrorDetails(details);
       } finally {
         setLoading(false);
       }
@@ -680,7 +703,47 @@ export default function AdminUsersPage() {
             </div>
           )}
 
-          {error && <div className="text-sm text-destructive">{error}</div>}
+          {error && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div className="text-sm font-medium text-destructive">{error}</div>
+                    {errorDetails && (
+                      <>
+                        <pre className="text-xs bg-background/50 rounded p-2 overflow-x-auto max-h-40 text-muted-foreground border">
+                          {errorDetails}
+                        </pre>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            navigator.clipboard.writeText(errorDetails);
+                            setCopiedError(true);
+                            setTimeout(() => setCopiedError(false), 2000);
+                          }}
+                        >
+                          {copiedError ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy Error Details
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {!loading && !error && (
             <>

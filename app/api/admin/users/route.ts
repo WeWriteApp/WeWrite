@@ -4,9 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions, isAdminServer } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { isAdminServer } from '../../admin-auth-helper';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 
 interface UserData {
@@ -56,18 +55,12 @@ export async function GET(request: NextRequest) {
     }
     const db = admin.firestore();
 
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify admin access using session cookie (avoids firebase-admin auth/jose issues)
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
-
-    // Get user email to check admin status (allow dev bypass locally)
-    const userRecord = await admin.auth().getUser(userId);
-    const userEmail = userRecord.email;
-    if (!userEmail || !isAdminServer(userEmail)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const adminEmail = adminCheck.userEmail;
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');
@@ -125,14 +118,9 @@ export async function GET(request: NextRequest) {
       try {
         const data = userDoc.data();
 
-        // Get email verification status from Firebase Auth
-        let emailVerified = false;
-        try {
-          const authUser = await admin.auth().getUser(userDoc.id);
-          emailVerified = authUser.emailVerified;
-        } catch (authError) {
-          console.warn(`Could not get auth data for user ${userDoc.id}:`, authError.message);
-        }
+        // Get email verification status from Firestore data
+        // (Avoid using admin.auth().getUser() which causes jose issues in Vercel)
+        const emailVerified = data.emailVerified === true;
 
         const user: UserData = {
           uid: userDoc.id,
@@ -142,7 +130,7 @@ export async function GET(request: NextRequest) {
           createdAt: data.createdAt,
           lastLogin: data.lastLogin,
           stripeConnectedAccountId: data.stripeConnectedAccountId || null,
-          isAdmin: data.isAdmin === true || (userEmail ? isAdminServer(data.email || '') : false)
+          isAdmin: data.isAdmin === true || isAdminServer(data.email || '')
         };
 
         // Total pages (non-deleted) for this user
@@ -250,18 +238,10 @@ export async function POST(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user email to check admin status
-    const userRecord = await admin.auth().getUser(userId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || !isAdminServer(userEmail)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     // Feature flags have been removed - this endpoint no longer handles feature flag updates

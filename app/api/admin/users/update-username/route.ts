@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../../auth-helper';
+import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import { isAdminServer } from '../../../admin-auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 
 export async function POST(request: NextRequest) {
@@ -9,16 +8,10 @@ export async function POST(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    const requesterId = await getUserIdFromRequest(request);
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const requesterRecord = await admin.auth().getUser(requesterId);
-    const requesterEmail = requesterRecord.email;
-
-    if (!requesterEmail || !isAdminServer(requesterEmail)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const { uid, username } = await request.json();

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../../auth-helper';
+import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import { isAdminServer } from '../../../admin-auth-helper';
+import { getCollectionName } from '../../../../utils/environmentConfig';
 
 const IDENTITY_TOOLKIT_ENDPOINT = 'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode';
 
@@ -11,27 +11,23 @@ export async function POST(request: NextRequest) {
     if (!admin) {
       return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 503 });
     }
+    const db = admin.firestore();
 
-    const actorId = await getUserIdFromRequest(request);
-    if (!actorId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const actorRecord = await admin.auth().getUser(actorId);
-    const actorEmail = actorRecord.email;
-    const devBypass = process.env.NODE_ENV === 'development';
-    if (!actorEmail || (!isAdminServer(actorEmail) && !devBypass)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
     const { uid, email } = body || {};
     let targetEmail = email;
 
+    // Get email from Firestore if not provided (avoids firebase-admin auth/jose issues)
     if (!targetEmail && uid) {
       try {
-        const userRec = await admin.auth().getUser(uid);
-        targetEmail = userRec.email || undefined;
+        const userDoc = await db.collection(getCollectionName('users')).doc(uid).get();
+        targetEmail = userDoc.data()?.email || undefined;
       } catch (err) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
