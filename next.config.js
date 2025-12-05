@@ -107,10 +107,9 @@ const nextConfig = {
 
   // External packages for server components
   // These packages should not be bundled and will use node_modules at runtime
+  // The firebase-admin dependency chain requires jwks-rsa which requires jose
   serverExternalPackages: [
     'firebase-admin',
-    'jwks-rsa',
-    'jose',
     '@google-cloud/firestore',
     '@google-cloud/storage',
   ],
