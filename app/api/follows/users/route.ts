@@ -239,7 +239,24 @@ export async function POST(request: NextRequest) {
       const followerDoc = await db.collection(getCollectionName('users')).doc(currentUserId).get();
       const followerData = followerDoc.data();
       const followerUsername = followerData?.username || `user_${currentUserId.slice(0, 8)}`;
-      const followerBio = followerData?.bio || '';
+
+      // Convert bio to plain text if it's an EditorContent object
+      let followerBio = '';
+      if (followerData?.bio) {
+        if (typeof followerData.bio === 'string') {
+          followerBio = followerData.bio;
+        } else if (Array.isArray(followerData.bio)) {
+          // EditorContent is an array of nodes, extract text from all children
+          followerBio = followerData.bio
+            .map((node: any) =>
+              node.children
+                ?.map((child: any) => child.text || '')
+                .join('')
+            )
+            .join(' ')
+            .trim();
+        }
+      }
       
       if (targetEmail) {
         // Check user's email preferences (don't send if they opted out)

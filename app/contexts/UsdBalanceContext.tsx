@@ -100,30 +100,49 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
         }
 
         // Threshold notification: 90% allocation warning (once per month)
+        // Uses localStorage to prevent duplicate notifications during rapid re-renders
         try {
           if (balanceData && balanceData.totalUsdCents > 0) {
             const allocationRatio = balanceData.allocatedUsdCents / balanceData.totalUsdCents;
             const monthKey = `${user.uid}_${getCurrentMonth()}`;
-            notified90Ref.current = notified90Ref.current || localStorage.getItem('wewrite_notified_90');
+            const percentage = Math.round(allocationRatio * 100);
 
             if (allocationRatio >= 0.9) {
               const alreadyNotifiedKey = localStorage.getItem('wewrite_notified_90_key');
-              if (alreadyNotifiedKey !== monthKey) {
+              const lastNotifiedTime = localStorage.getItem('wewrite_notified_90_timestamp');
+              const now = Date.now();
+
+              // Only create notification if:
+              // 1. Haven't notified for this month yet
+              // 2. AND last notification was more than 1 hour ago (prevent rapid duplicates during re-renders)
+              const shouldNotify = alreadyNotifiedKey !== monthKey &&
+                (!lastNotifiedTime || (now - parseInt(lastNotifiedTime)) > 60 * 60 * 1000);
+
+              if (shouldNotify) {
+                const allocatedFormatted = formatUsdCents(balanceData.allocatedUsdCents);
+                const totalFormatted = formatUsdCents(balanceData.totalUsdCents);
+
                 await createNotification({
                   userId: user.uid,
                   type: 'allocation_threshold',
-                  title: 'You have used 90% of your monthly funds',
-                  message: 'Top off or adjust allocations to keep supporting pages.',
+                  title: `${percentage}% of monthly funds allocated`,
+                  message: `You've allocated ${allocatedFormatted} of ${totalFormatted}. Top off your account or adjust allocations to keep supporting pages.`,
                   criticality: 'normal',
+                  actionUrl: '/settings/fund-account',
                   metadata: {
                     allocatedUsdCents: balanceData.allocatedUsdCents,
                     totalUsdCents: balanceData.totalUsdCents,
                     threshold: 0.9,
+                    percentage,
                     month: getCurrentMonth()
                   }
                 });
                 localStorage.setItem('wewrite_notified_90', 'true');
                 localStorage.setItem('wewrite_notified_90_key', monthKey);
+                localStorage.setItem('wewrite_notified_90_timestamp', now.toString());
+                console.log(`[UsdBalanceContext] Created 90% allocation threshold notification for ${monthKey}`);
+              } else {
+                console.log(`[UsdBalanceContext] Skipping 90% notification - already notified for ${monthKey} or too recent`);
               }
             }
           }

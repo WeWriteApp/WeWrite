@@ -71,10 +71,21 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount}`);
 
+    // Get current subscription data for audit logging and upgrade detection
+    const { parentPath, subCollectionName } = getSubCollectionPath(
+      PAYMENT_COLLECTIONS.USERS,
+      userId,
+      PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+    );
+
+    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
+    const currentSubscriptionDoc = await subscriptionRef.get();
+    const oldSubscriptionData = currentSubscriptionDoc.data();
+
     // Check if this is a test subscription or development environment
     const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
                                process.env.NODE_ENV === 'development';
-    
+
     let updatedSubscription;
     const oldAmount = oldSubscriptionData?.amount || 0;
     const isUpgrade = newAmount > oldAmount;
@@ -145,17 +156,6 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
     }
-
-    // Get current subscription data for audit logging
-    const { parentPath, subCollectionName } = getSubCollectionPath(
-      PAYMENT_COLLECTIONS.USERS,
-      userId,
-      PAYMENT_COLLECTIONS.SUBSCRIPTIONS
-    );
-
-    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
-    const currentSubscriptionDoc = await subscriptionRef.get();
-    const oldSubscriptionData = currentSubscriptionDoc.data();
 
     // Update subscription in Firestore
     const tier = newTier || determineTierFromAmount(newAmount);

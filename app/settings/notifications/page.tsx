@@ -17,9 +17,14 @@ const NOTIFICATION_TYPES = [
     description: 'When someone follows you'
   },
   {
-    id: 'link',
-    title: 'Page Mentions',
+    id: 'pageLinks',
+    title: 'Page Links',
     description: 'When someone links to your page'
+  },
+  {
+    id: 'userMentions',
+    title: 'User Mentions',
+    description: 'When someone mentions you by linking to your user page'
   },
   {
     id: 'append',

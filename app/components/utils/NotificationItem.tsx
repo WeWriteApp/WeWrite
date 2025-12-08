@@ -339,6 +339,55 @@ export default function NotificationItem({ notification }) {
         // Groups functionality removed - group invitations no longer supported
         return null;
 
+      case 'allocation_threshold':
+        const percentage = notification.metadata?.percentage || 90;
+        const allocatedFormatted = notification.metadata?.allocatedUsdCents
+          ? `$${(notification.metadata.allocatedUsdCents / 100).toFixed(2)}`
+          : '';
+        const totalFormatted = notification.metadata?.totalUsdCents
+          ? `$${(notification.metadata.totalUsdCents / 100).toFixed(2)}`
+          : '';
+
+        return (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1 text-foreground">
+              {notification.title || `${percentage}% of monthly funds allocated`}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `You've allocated ${allocatedFormatted} of ${totalFormatted}. Top off your account or adjust allocations to keep supporting pages.`}
+            </p>
+            {allocatedFormatted && totalFormatted && (
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                <span>Allocated: {allocatedFormatted}</span>
+                <span>Total: {totalFormatted}</span>
+                <span>Used: {percentage}%</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  router.push('/settings/fund-account');
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Top off Account
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  router.push('/settings/spend');
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+              >
+                Manage Allocations
+              </button>
+            </div>
+          </div>
+        );
+
       case 'payment_failed':
       case 'payment_failed_warning':
       case 'payment_failed_final':

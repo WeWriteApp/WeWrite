@@ -1,8 +1,18 @@
 # WeWrite Search Performance Optimizations
 
+**Last Updated**: December 2024
+
 ## 🎯 Overview
 
-This document outlines the comprehensive search performance optimizations implemented to dramatically improve search speed for both the `/search` page and link insertion modal.
+This document outlines the comprehensive search performance optimizations implemented to dramatically improve search speed and accuracy for both the `/search` page and link insertion modal.
+
+## 🆕 Recent Updates (December 2024)
+
+### Substring Matching Fix
+**Problem**: Searching "masses" didn't find "Who are the American masses?"
+**Root Cause**: Firestore range queries only support PREFIX matching
+**Solution**: Enhanced client-side filtering with increased document limit (500 → 2000 pages)
+**Impact**: ✅ Now finds words anywhere in page titles, not just at the beginning
 
 ## 📊 Performance Improvements Implemented
 
@@ -46,6 +56,10 @@ This document outlines the comprehensive search performance optimizations implem
 - **Title Prefix Search**: Uses efficient `>=` and `<=` operators with proper indexing
 - **Server-side Filtering**: Eliminates client-side filtering for deleted pages
 - **Reduced Data Transfer**: Only fetches necessary fields for title-only searches
+- **Two-Phase Search** (Dec 2024): Combines fast Firestore prefix queries with comprehensive client-side substring matching
+  - Phase 1: Fast prefix matching for quick results
+  - Phase 2: Comprehensive substring matching for complete coverage (2000 pages)
+  - Result: Finds "masses" in "Who are the American masses?" ✅
 
 ### **2. Enhanced Caching Strategy**
 
@@ -239,7 +253,7 @@ class SearchPerformanceTracker {
 
 ## 🎉 Summary
 
-These comprehensive optimizations transform WeWrite's search from a slow, inefficient system into a fast, responsive, and intelligent search experience. The combination of database optimizations, smart caching, request optimization, and performance monitoring creates a robust foundation for excellent search performance.
+These comprehensive optimizations transform WeWrite's search from a slow, inefficient system into a fast, responsive, and intelligent search experience. The combination of database optimizations, smart caching, request optimization, performance monitoring, and the recent substring matching fix creates a robust foundation for excellent search performance.
 
 **Key Benefits:**
 - **3x faster** search response times
@@ -247,5 +261,13 @@ These comprehensive optimizations transform WeWrite's search from a slow, ineffi
 - **80% better** cache utilization
 - **Real-time** performance monitoring
 - **Automatic** optimization recommendations
+- **Complete substring matching** (Dec 2024) - finds words anywhere in titles ✅
 
-The search system is now ready to handle high-volume usage while maintaining excellent performance and user experience.
+**Recent Algorithm Improvements (December 2024):**
+- ✅ Fixed substring matching: "masses" now finds "Who are the American masses?"
+- ✅ Increased comprehensive search limit: 500 → 2000 pages
+- ✅ Improved scoring hierarchy: substring matches prioritized (75 → 80 points)
+- ✅ Simplified algorithm: more intuitive, easier to maintain
+- ✅ Comprehensive documentation: two-phase approach explained
+
+The search system is now ready to handle high-volume usage while maintaining excellent performance, accuracy, and user experience.

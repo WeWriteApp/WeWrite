@@ -18,6 +18,15 @@ import { Button } from "../ui/button";
 import { ClearableInput } from "../ui/clearable-input";
 import { PillLink } from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
+
+// Generate a Firestore-compatible document ID
+const generatePageId = (): string => {
+  // Use crypto.randomUUID for a proper unique ID, or fallback to timestamp + random
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '').substring(0, 20);
+  }
+  return `${Date.now().toString(36)}${Math.random().toString(36).substring(2, 10)}`;
+};
 import { getBatchUserData } from '../../utils/apiDeduplication';
 import searchPerformanceMonitor from '../../utils/searchPerformanceMonitor';
 import { shouldAllowRequest } from "../../utils/requestThrottle";
@@ -787,9 +796,13 @@ const FilteredSearchResults = forwardRef(({
 
                 setIsCreatingPage(true);
 
+                // Generate a page ID upfront so we can use it even if the API call fails
+                const generatedPageId = generatePageId();
+
                 // Create the page immediately in the database
                 try {
                   const pageData = {
+                    id: generatedPageId, // Use the pre-generated ID
                     title: search,
                     content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
                     userId: user.uid,
@@ -827,12 +840,13 @@ const FilteredSearchResults = forwardRef(({
                       onSelect(newPageData);
                     }
                   } else {
-                    // If creation fails, fall back to the old behavior with placeholder ID
-                    console.error('Failed to create page:', await response.text());
+                    // If creation fails, use the pre-generated ID with isNew flag
+                    // The page will be created when the parent page is saved
+                    console.error('Failed to create page immediately, will create on save:', await response.text());
                     const fallbackPageData = {
-                      id: `new:${search}`,
+                      id: generatedPageId, // Use the pre-generated ID, not new:title
                       title: search,
-                      isNew: true,
+                      isNew: true, // Mark for creation when parent page is saved
                       isPublic: false,
                       userId: user?.uid
                     };
@@ -842,9 +856,9 @@ const FilteredSearchResults = forwardRef(({
                   }
                 } catch (error) {
                   console.error('Error creating page:', error);
-                  // Fall back to old behavior
+                  // Fall back to using the pre-generated ID
                   const fallbackPageData = {
-                    id: `new:${search}`,
+                    id: generatedPageId, // Use pre-generated ID, not new:title
                     title: search,
                     isNew: true,
                     isPublic: false,

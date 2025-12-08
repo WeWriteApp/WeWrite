@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, location, groupId, customDate } = body;
+    const { title, content, location, groupId, customDate, id: requestedId } = body;
 
 
 
@@ -528,7 +528,22 @@ export async function POST(request: NextRequest) {
     // Create the page
     const collectionName = getCollectionName('pages');
 
-    const pageRef = await db.collection(collectionName).add(pageData);
+    // Support creating with a specific ID (for inline link pages) or auto-generate
+    let pageRef;
+    let pageId: string;
+    
+    if (requestedId && typeof requestedId === 'string' && requestedId.trim()) {
+      // Use the requested ID - this is for inline link pages where the ID is pre-generated
+      pageId = requestedId.trim();
+      pageRef = db.collection(collectionName).doc(pageId);
+      await pageRef.set(pageData);
+      console.log('🔵 PAGE CREATION: Created page with requested ID:', pageId);
+    } else {
+      // Auto-generate ID
+      pageRef = await db.collection(collectionName).add(pageData);
+      pageId = pageRef.id;
+      console.log('🔵 PAGE CREATION: Created page with auto-generated ID:', pageId);
+    }
 
     // Create activity record with pre-computed diff data for new page
     console.log('🔵 PAGE CREATION: Starting activity/version creation section');
@@ -586,7 +601,7 @@ export async function POST(request: NextRequest) {
 
       // UNIFIED VERSION SYSTEM: Create initial version for new page
       console.log('🔵 PAGE CREATION: Starting version creation for new page', {
-        pageId: pageRef.id,
+        pageId: pageId,
         contentLength: (contentString || '').length,
         diffAdded: diffResult.added,
         diffRemoved: diffResult.removed
@@ -625,34 +640,59 @@ export async function POST(request: NextRequest) {
       });
 
       // Create version in pages/{pageId}/versions subcollection
-      const pageVersionsRef = db.collection(getCollectionName('pages')).doc(pageRef.id).collection('versions');
+      const pageVersionsRef = db.collection(getCollectionName('pages')).doc(pageId).collection('versions');
       console.log('🔵 PAGE CREATION: Creating version in subcollection', {
-        collectionPath: `${getCollectionName('pages')}/${pageRef.id}/versions`
+        collectionPath: `${getCollectionName('pages')}/${pageId}/versions`
       });
 
       const versionRef = await pageVersionsRef.add(versionData);
 
       console.log("✅ UNIFIED VERSION: Created initial version for new page", {
         versionId: versionRef.id,
-        pageId: pageRef.id,
+        pageId: pageId,
         added: diffResult.added,
         removed: diffResult.removed,
         hasChanges: versionData.diff.hasChanges
       });
+
+      // Process link mentions for notifications
+      try {
+        console.log('🔔 Processing link mentions for notifications:', pageId);
+        const { processPageLinksForNotifications } = await import('../../services/linkMentionService');
+
+        // Parse content to extract links
+        let contentNodes = [];
+        if (validatedContent) {
+          contentNodes = validatedContent;
+        }
+
+        await processPageLinksForNotifications(
+          pageId,
+          pageData.title || 'Untitled',
+          currentUserId,
+          username || 'Anonymous',
+          contentNodes
+        );
+
+        console.log('✅ Link mentions processed for notifications');
+      } catch (notificationError) {
+        console.error('⚠️ Error processing link mentions (non-fatal):', notificationError);
+        // Don't fail the page creation if notification processing fails
+      }
 
     } catch (error: any) {
       console.error('❌ PAGE CREATION: Error creating new page or version:', error);
       console.error('❌ PAGE CREATION: Error details:', {
         message: error?.message || 'Unknown error',
         stack: error?.stack || 'No stack trace',
-        pageId: pageRef?.id,
+        pageId: pageId,
         hasPageRef: !!pageRef
       });
       return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
     }
 
     return createApiResponse({
-      id: pageRef.id,
+      id: pageId,
       message: 'Page created successfully'
     });
 
@@ -1096,6 +1136,43 @@ export async function PUT(request: NextRequest) {
       } catch (backlinkError) {
         console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
         // Don't fail the page update if backlinks update fails
+      }
+
+      // Process link mentions for notifications
+      try {
+        console.log('🔔 Processing link mentions for notifications:', id);
+        const { processPageLinksForNotifications } = await import('../../services/linkMentionService');
+
+        // Parse content to extract links
+        let contentNodes = [];
+        if (content) {
+          if (typeof content === 'string') {
+            try {
+              contentNodes = JSON.parse(content);
+            } catch (parseError) {
+              console.warn('Could not parse content string for notification processing:', parseError);
+            }
+          } else if (Array.isArray(content)) {
+            contentNodes = content;
+          }
+        }
+
+        // Get the updated page data
+        const updatedPageDoc = await pageRef.get();
+        const updatedPageData = updatedPageDoc.data();
+
+        await processPageLinksForNotifications(
+          id,
+          updatedPageData?.title || title || 'Untitled',
+          currentUserId,
+          updatedPageData?.username || 'Anonymous',
+          contentNodes
+        );
+
+        console.log('✅ Link mentions processed for notifications');
+      } catch (notificationError) {
+        console.error('⚠️ Error processing link mentions (non-fatal):', notificationError);
+        // Don't fail the page update if notification processing fails
       }
     }
 

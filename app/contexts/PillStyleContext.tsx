@@ -140,12 +140,14 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         `;
       } else {
         // Default filled style - dynamic text color based on accent lightness
+        // Use background-image for alpha overlay to preserve base bg-accent-100
         const textColor = getFilledTextColor();
         styleClasses = `
           bg-accent-100
           border border-accent-100
-          hover:bg-accent-80 dark:hover:bg-accent-120
-          active:bg-accent-70 dark:active:bg-accent-140
+          [background-image:none]
+          hover:[background-image:var(--alpha-10-gradient)]
+          active:[background-image:var(--alpha-15-gradient)]
           hover:shadow-md
           active:shadow-sm
           ${textColor} !important

@@ -376,14 +376,19 @@ const Editor: React.FC<EditorProps> = ({
     setEditorValue(normalizedInitialContent);
   }, [normalizedInitialContent]);
 
-  // Simple change handler - no complex error recovery
+  // Optimized change handler with requestAnimationFrame for better mobile performance
   const handleChange = useCallback((newValue: Descendant[]) => {
+    // Update local state immediately for instant UI feedback
     setEditorValue(newValue);
-    try {
-      onChange(newValue);
-    } catch (error) {
-      console.error('Error in onChange:', error);
-    }
+
+    // Defer parent onChange callback to next frame to avoid blocking input
+    requestAnimationFrame(() => {
+      try {
+        onChange(newValue);
+      } catch (error) {
+        console.error('Error in onChange:', error);
+      }
+    });
   }, [onChange]);
 
   // Simple link insertion - no complex timing dependencies
@@ -577,6 +582,64 @@ const Editor: React.FC<EditorProps> = ({
     setShowLinkModal(true);
   }, [editor, readOnly]);
 
+  // URL detection and cleanup utility
+  const cleanUrl = useCallback((url: string): { fullUrl: string; displayText: string } => {
+    // Ensure the URL has a protocol for linking
+    let fullUrl = url.trim();
+    if (!fullUrl.match(/^https?:\/\//i)) {
+      fullUrl = 'https://' + fullUrl.replace(/^www\./i, '');
+    }
+
+    // Clean up display text - remove protocol and www
+    let displayText = url.trim();
+    displayText = displayText.replace(/^https?:\/\//i, ''); // Remove protocol
+    displayText = displayText.replace(/^www\./i, ''); // Remove www
+    displayText = displayText.replace(/\/+$/, ''); // Remove trailing slashes
+
+    return { fullUrl, displayText };
+  }, []);
+
+  // Paste handler - automatically converts URLs to links
+  const handlePaste = useCallback((event: React.ClipboardEvent) => {
+    if (readOnly) return;
+
+    const pastedText = event.clipboardData.getData('text/plain');
+
+    // Check if pasted text is a URL
+    const urlRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+
+    if (urlRegex.test(pastedText.trim())) {
+      event.preventDefault();
+
+      const { fullUrl, displayText } = cleanUrl(pastedText);
+
+      console.log('🔗 Auto-linking pasted URL:', {
+        original: pastedText,
+        fullUrl,
+        displayText
+      });
+
+      // Create link element with cleaned display text
+      const linkElement = LinkNodeHelper.createCustomExternalLink(fullUrl, displayText);
+
+      const { selection } = editor;
+
+      if (selection) {
+        if (Range.isCollapsed(selection)) {
+          // Insert link at cursor
+          Transforms.insertNodes(editor, linkElement);
+          // Move cursor after the inserted link
+          Transforms.move(editor, { distance: 1, unit: 'offset' });
+        } else {
+          // Replace selected text with link
+          Transforms.delete(editor);
+          Transforms.insertNodes(editor, linkElement);
+          Transforms.move(editor, { distance: 1, unit: 'offset' });
+        }
+      }
+    }
+  }, [editor, readOnly, cleanUrl]);
+
   // Keyboard shortcut handler - supports both Mac (Cmd) and Windows/Linux (Ctrl)
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (readOnly) return;
@@ -718,8 +781,6 @@ const Editor: React.FC<EditorProps> = ({
         <Slate
           editor={editor}
           initialValue={normalizedInitialContent}
-          // Slate only applies initialValue on mount, so the key forces a remount when it changes
-          key={JSON.stringify(normalizedInitialContent)}
           onChange={handleChange}
         >
           <div className={cn(
@@ -766,8 +827,16 @@ const Editor: React.FC<EditorProps> = ({
                   renderElement={renderElement}
                   renderLeaf={renderLeaf}
                   onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
                   readOnly={readOnly}
                   spellCheck={true}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  style={{
+                    // Performance optimization for mobile: use GPU acceleration
+                    transform: 'translateZ(0)',
+                    willChange: 'contents'
+                  }}
                 />
               </div>
             </div>

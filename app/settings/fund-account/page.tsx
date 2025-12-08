@@ -117,12 +117,18 @@ export default function FundAccountPage() {
               // Redirect to success page
               window.location.href = `/settings/fund-account/success?subscription=${updateSubscriptionId}&amount=${amount}`;
             } else {
-              const error = await response.json();
-              console.error('Auto-update failed:', error);
+              let errorMessage = 'Unknown error';
+              try {
+                const error = await response.json();
+                errorMessage = error.error || error.message || JSON.stringify(error);
+              } catch (e) {
+                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+              }
+              console.error('Auto-update failed:', errorMessage);
               // Show error message or redirect to manual flow
             }
           } catch (error) {
-            console.error('Auto-update error:', error);
+            console.error('Auto-update error:', error instanceof Error ? error.message : String(error));
           }
         }, 1000);
       }

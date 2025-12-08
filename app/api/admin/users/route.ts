@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions, isAdminServer } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, getEnvironmentType, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 
 interface UserData {
   uid: string;
@@ -122,15 +122,22 @@ export async function GET(request: NextRequest) {
         // (Avoid using admin.auth().getUser() which causes jose issues in Vercel)
         const emailVerified = data.emailVerified === true;
 
+        // Handle both lastLogin and lastLoginAt field names (codebase inconsistency)
+        // lastLoginAt is used by session/register code, lastLogin by some older code
+        const lastLoginValue = data.lastLoginAt || data.lastLogin || null;
+
+        // In dev environment, all users are admins (for testing purposes)
+        const isDev = getEnvironmentType() === 'development';
+        
         const user: UserData = {
           uid: userDoc.id,
           email: data.email || 'No email',
           username: data.username,
           emailVerified,
           createdAt: data.createdAt,
-          lastLogin: data.lastLogin,
+          lastLogin: lastLoginValue,
           stripeConnectedAccountId: data.stripeConnectedAccountId || null,
-          isAdmin: data.isAdmin === true || isAdminServer(data.email || '')
+          isAdmin: isDev || data.isAdmin === true || isAdminServer(data.email || '')
         };
 
         // Total pages (non-deleted) for this user

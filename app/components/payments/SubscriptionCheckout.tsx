@@ -18,6 +18,7 @@ import { PaymentStep } from './checkout-steps/PaymentStep';
 import { ConfirmationStep } from './checkout-steps/ConfirmationStep';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SUBSCRIPTION_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
+import { ErrorCard } from '../ui/ErrorCard';
 
 // Initialize Stripe
 const stripePromise = loadStripe(getStripePublishableKey() || '');
@@ -336,11 +337,18 @@ export function SubscriptionCheckout({
 
       {/* Error Display */}
       {error && (
-        <Card className="border-destructive">
-          <CardContent className="p-4">
-            <p className="text-destructive text-sm">{error}</p>
-          </CardContent>
-        </Card>
+        <ErrorCard
+          title="Subscription Error"
+          message="We encountered an issue setting up your subscription. Please try again."
+          error={error}
+          onRetry={() => {
+            setError(null);
+            if (selectedPlan) {
+              handlePlanSelection(selectedPlan);
+            }
+          }}
+          retryLabel="Try Again"
+        />
       )}
 
       {/* Step Content */}

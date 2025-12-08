@@ -168,23 +168,17 @@ export function FinancialDropdown({
   const dropdownContent = position && (
     <div
       ref={dropdownRef}
-      className="fixed w-[260px] rounded-xl shadow-2xl overflow-hidden transition-all duration-150 ease-out"
-      style={{ 
-        top: position.top, 
+      className="fixed w-[260px] transition-all duration-150 ease-out"
+      style={{
+        top: position.top,
         left: position.left,
         zIndex: 99999,
         opacity: isAnimating ? 1 : 0,
         transform: isAnimating ? 'translateY(0)' : 'translateY(-8px)',
       }}
     >
-      {/* Glassmorphic background layer */}
-      <div 
-        className="absolute inset-0 bg-white/70 dark:bg-gray-900/80 backdrop-blur-xl"
-        style={{ zIndex: -1 }}
-      />
-      
-      {/* Content */}
-      <div className="relative p-4 border border-white/20 dark:border-white/10 rounded-xl">
+      {/* WeWrite card with glassmorphic passthrough blur */}
+      <div className="wewrite-card card-80">
         <div className="text-sm font-medium text-foreground mb-3 text-center">
           {title}
         </div>

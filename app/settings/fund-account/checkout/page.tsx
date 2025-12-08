@@ -9,6 +9,7 @@ import { getStripePublishableKey } from '../../../utils/stripeConfig';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { Button } from '../../../components/ui/button';
 import { Loader2, CreditCard, Building2 } from 'lucide-react';
+import { ErrorCard } from '../../../components/ui/ErrorCard';
 
 
 const stripePromise = loadStripe(getStripePublishableKey() || '');
@@ -44,43 +45,52 @@ function CheckoutForm({
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [useExistingPayment, setUseExistingPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [existingSubscription, setExistingSubscription] = useState<any>(null);
 
-  // Fetch saved payment methods so upgrades/downgrades don't re-collect details
+  // Fetch saved payment methods and existing subscription
   useEffect(() => {
-    const fetchPaymentMethods = async () => {
+    const fetchData = async () => {
       if (!user?.uid) {
         setLoadingPaymentMethods(false);
         return;
       }
 
       try {
-        const response = await fetch('/api/payment-methods', {
+        // Fetch payment methods
+        const pmResponse = await fetch('/api/payment-methods', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (pmResponse.ok) {
+          const pmData = await pmResponse.json();
+          const methods: PaymentMethod[] = pmData.paymentMethods || [];
+          setPaymentMethods(methods);
+
+          if (methods.length > 0) {
+            const primary = methods.find((pm) => pm.isPrimary) || methods[0];
+            setSelectedPaymentMethod(primary.id);
+            setUseExistingPayment(true);
+            setIsFormComplete(true);
+          }
         }
 
-        const data = await response.json();
-        const methods: PaymentMethod[] = data.paymentMethods || [];
-        setPaymentMethods(methods);
-
-        if (methods.length > 0) {
-          const primary = methods.find((pm) => pm.isPrimary) || methods[0];
-          setSelectedPaymentMethod(primary.id);
-          setUseExistingPayment(true);
-          setIsFormComplete(true);
+        // Fetch existing subscription
+        const subResponse = await fetch('/api/account-subscription');
+        if (subResponse.ok) {
+          const subData = await subResponse.json();
+          if (subData.hasSubscription && subData.fullData) {
+            setExistingSubscription(subData.fullData);
+          }
         }
       } catch (fetchError) {
-        console.error('Error fetching payment methods:', fetchError);
+        console.error('Error fetching data:', fetchError);
       } finally {
         setLoadingPaymentMethods(false);
       }
     };
 
-    fetchPaymentMethods();
+    fetchData();
   }, [user?.uid]);
 
   const getPaymentMethodDisplay = (method: PaymentMethod | null) => {
@@ -112,24 +122,47 @@ function CheckoutForm({
     try {
       // Fast path: user already has a payment method, so don't prompt for details again
       if (useExistingPayment && selectedPaymentMethod) {
-        const response = await fetch('/api/subscription/create-with-payment-method', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            paymentMethodId: selectedPaymentMethod,
-            tier: 'custom',
-            amount,
-            tierName: `$${amount}/month`
-          }),
-        });
+        // If user has an existing subscription, update it; otherwise create a new one
+        if (existingSubscription?.id) {
+          // Update existing subscription
+          const response = await fetch('/api/subscription/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscriptionId: existingSubscription.id,
+              newAmount: amount,
+              paymentMethodId: selectedPaymentMethod
+            }),
+          });
 
-        const data = await response.json();
+          const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to update subscription with saved payment method');
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to update subscription');
+          }
+
+          onSuccess(existingSubscription.id);
+        } else {
+          // Create new subscription
+          const response = await fetch('/api/subscription/create-with-payment-method', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentMethodId: selectedPaymentMethod,
+              tier: 'custom',
+              amount,
+              tierName: `$${amount}/month`
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to create subscription with saved payment method');
+          }
+
+          onSuccess(data.subscriptionId);
         }
-
-        onSuccess(data.subscriptionId);
         return;
       }
 
@@ -334,8 +367,18 @@ function CheckoutForm({
           </div>
 
           {error && (
-            <div className="mt-4 p-4 bg-destructive/10 border-theme-strong rounded-lg text-destructive text-sm">
-              {error}
+            <div className="mt-4">
+              <ErrorCard
+                title="Payment Error"
+                message="We couldn't process your payment. Please check your payment details and try again."
+                error={error}
+                onRetry={() => {
+                  setError(null);
+                  setIsProcessing(false);
+                }}
+                retryLabel="Try Again"
+                className="p-4"
+              />
             </div>
           )}
         </div>

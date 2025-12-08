@@ -60,8 +60,8 @@ export function Logo({
       className={cn(
         'inline-flex items-center justify-center relative',
         styled && [
-          'border border-theme-medium bg-background shadow-sm rounded-lg overflow-hidden',
-          'hover:shadow-md hover:border-theme-medium',
+          'border border-neutral-alpha-3 bg-background shadow-sm rounded-lg overflow-hidden',
+          'hover:shadow-md hover:border-neutral-alpha-3',
           size === 'sm' ? 'h-5 w-5' : 'h-9 w-9'
         ],
         clickable && 'hover:opacity-80 cursor-pointer transition-opacity duration-200',

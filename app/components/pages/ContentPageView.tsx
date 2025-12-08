@@ -995,6 +995,7 @@ export default function ContentPageView({
     for (const pageRef of newPageRefs) {
       try {
         const pageData = {
+          id: pageRef.pageId, // Use the pre-generated ID from the link
           title: pageRef.title,
           content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
           userId: user.uid,

@@ -106,33 +106,6 @@ export async function GET(request: Request) {
       url: request.url
     });
 
-    // Test mode - simple red image for testing
-    if (pageId === 'test') {
-      console.log('🖼️ [OG.PNG] Test mode');
-      return new ImageResponse(
-        (
-          <div
-            style={{
-              backgroundColor: '#ff0000',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <div style={{ color: 'white', fontSize: 48 }}>
-              PNG TEST WORKING
-            </div>
-          </div>
-        ),
-        { 
-          width: 1200, 
-          height: 630
-        }
-      );
-    }
-
     // Default WeWrite branding if no pageId
     if (!pageId) {
       console.log('🖼️ [OG.PNG] Default WeWrite branding');
@@ -351,7 +324,7 @@ export async function GET(request: Request) {
             </div>
           </div>
 
-          {/* Footer with call to action */}
+          {/* Footer with call to action and logo */}
           <div
             style={{
               display: 'flex',
@@ -362,24 +335,57 @@ export async function GET(request: Request) {
           >
             <div
               style={{
-                fontSize: 18,
-                color: 'rgba(255, 255, 255, 0.6)'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
               }}
             >
-              The social wiki where every page is a fundraiser
+              <div
+                style={{
+                  fontSize: 24,
+                  fontWeight: 'bold',
+                  color: 'white',
+                  padding: '12px 32px',
+                  borderRadius: '50px',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  boxShadow: '0 4px 16px rgba(59, 130, 246, 0.3)'
+                }}
+              >
+                Read & Support →
+              </div>
             </div>
+            {/* WeWrite logo - bottom right */}
             <div
               style={{
-                fontSize: 32,
-                fontWeight: 'bold',
-                color: 'white',
-                padding: '20px 48px',
-                borderRadius: '50px',
-                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              Read & Support →
+              <div
+                style={{
+                  fontSize: 18,
+                  color: 'rgba(255, 255, 255, 0.5)'
+                }}
+              >
+                wewrite.app
+              </div>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: 'white'
+                }}
+              >
+                W
+              </div>
             </div>
           </div>
         </div>

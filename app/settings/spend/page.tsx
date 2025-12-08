@@ -7,7 +7,7 @@ import { UsdAllocationBreakdown } from '../../components/payments/UsdAllocationB
 import { UsdPieChart } from '../../components/ui/UsdPieChart';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Wallet, TrendingUp, Calendar, Settings, FileText } from 'lucide-react';
+import { Wallet, TrendingUp, Calendar, Settings, FileText, ChevronDown } from 'lucide-react';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useAllocationInterval, ALLOCATION_INTERVAL_OPTIONS } from '../../contexts/AllocationIntervalContext';
 import { AllocationIntervalModal } from '../../components/payments/AllocationIntervalModal';
@@ -28,6 +28,19 @@ export default function SpendPage() {
   const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
   const [showIntervalModal, setShowIntervalModal] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    overview: true,
+    schedule: true,
+    breakdown: true,
+    howItWorks: true
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   // Track page view
   useEffect(() => {
@@ -423,87 +436,121 @@ export default function SpendPage() {
           <>
             {/* Monthly Overview Section */}
             <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <h2
+                className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                onClick={() => toggleSection('overview')}
+              >
                 <TrendingUp className="h-5 w-5" />
                 Monthly Overview
+                <ChevronDown
+                  className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.overview ? '' : 'rotate-180'}`}
+                />
               </h2>
-              <UsdAllocationDisplay
-                subscriptionAmount={subscriptionAmount}
-                usdBalance={usdBalance}
-              />
+              {expandedSections.overview && (
+                <UsdAllocationDisplay
+                  subscriptionAmount={subscriptionAmount}
+                  usdBalance={usdBalance}
+                />
+              )}
             </div>
 
             {/* Payment Schedule Section */}
             <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <h2
+                className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                onClick={() => toggleSection('schedule')}
+              >
                 <Calendar className="h-5 w-5" />
                 Payment Schedule
+                <ChevronDown
+                  className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.schedule ? '' : 'rotate-180'}`}
+                />
               </h2>
-              <div className="bg-muted/30 rounded-lg p-4">
-                <div className="text-center space-y-3">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-muted-foreground">Next payment in</div>
-                    <div className="text-2xl font-bold text-primary font-mono">
-                      {countdown}
+              {expandedSections.schedule && (
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center space-y-3">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-muted-foreground">Next payment in</div>
+                        <div className="text-2xl font-bold text-primary font-mono">
+                          {countdown}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          to make adjustments
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Allocations will be sent to creators for the month of{' '}
+                        <span className="font-medium">
+                          {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </span>
+                      </p>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      to make adjustments
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Allocations will be sent to creators for the month of{' '}
-                    <span className="font-medium">
-                      {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </span>
-                  </p>
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Allocation Breakdown Section */}
             <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <h2
+                className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                onClick={() => toggleSection('breakdown')}
+              >
                 <FileText className="h-5 w-5" />
                 Allocation Breakdown
+                <ChevronDown
+                  className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.breakdown ? '' : 'rotate-180'}`}
+                />
               </h2>
-              <UsdAllocationBreakdown
-                allocations={allocations}
-                totalUsdCents={subscriptionAmount * 100} // Use actual subscription amount in cents
-                onEditAllocation={handleEditAllocation}
-                onRemoveAllocation={handleRemoveAllocation}
-                onViewResource={handleViewResource}
-                onIncreaseAllocation={handleIncreaseAllocation}
-                onDecreaseAllocation={handleDecreaseAllocation}
-                onSetAllocationAmount={handleSetAllocationAmount}
-                onOpenIntervalModal={() => setShowIntervalModal(true)}
-                showSectionHeader={false} // Don't show header since we have our own
-              />
+              {expandedSections.breakdown && (
+                <UsdAllocationBreakdown
+                  allocations={allocations}
+                  totalUsdCents={subscriptionAmount * 100} // Use actual subscription amount in cents
+                  onEditAllocation={handleEditAllocation}
+                  onRemoveAllocation={handleRemoveAllocation}
+                  onViewResource={handleViewResource}
+                  onIncreaseAllocation={handleIncreaseAllocation}
+                  onDecreaseAllocation={handleDecreaseAllocation}
+                  onSetAllocationAmount={handleSetAllocationAmount}
+                  onOpenIntervalModal={() => setShowIntervalModal(true)}
+                  showSectionHeader={false} // Don't show header since we have our own
+                />
+              )}
             </div>
           </>
         )}
 
         {/* How It Works Section */}
         <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <h2
+            className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+            onClick={() => toggleSection('howItWorks')}
+          >
             <Calendar className="h-5 w-5" />
             How Monthly Distribution Works
+            <ChevronDown
+              className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.howItWorks ? '' : 'rotate-180'}`}
+            />
           </h2>
-          <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>
-                <strong>Monthly Processing:</strong> At the end of each month, your allocated funds
-                are distributed directly to creators.
-              </p>
-              <p>
-                <strong>Flexible Allocations:</strong> You can modify your allocations anytime
-                before the monthly processing date.
-              </p>
-              <p>
-                <strong>Unallocated Funds:</strong> Any unallocated funds go to supporting the
-                WeWrite platform and infrastructure.
-              </p>
+          {expandedSections.howItWorks && (
+            <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>
+                  <strong>Monthly Processing:</strong> At the end of each month, your allocated funds
+                  are distributed directly to creators.
+                </p>
+                <p>
+                  <strong>Flexible Allocations:</strong> You can modify your allocations anytime
+                  before the monthly processing date.
+                </p>
+                <p>
+                  <strong>Unallocated Funds:</strong> Any unallocated funds go to supporting the
+                  WeWrite platform and infrastructure.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Allocation Interval Modal */}

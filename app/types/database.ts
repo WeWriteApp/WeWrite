@@ -425,6 +425,7 @@ export type NotificationType =
   // User interaction notifications
   | 'follow'                    // User follows another user (not pages)
   | 'link'                      // User links to your page (page mention)
+  | 'user_mention'              // User mentions you (links to your user page)
   | 'append'                    // User adds your page to their page
 
   // System notifications

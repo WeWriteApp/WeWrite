@@ -6,6 +6,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
+import { CreditCard, Banknote, Bell, Filter } from "lucide-react";
 import { Loader2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
 import {
   Dialog,
@@ -49,6 +50,20 @@ type Column = {
   render: (u: User) => React.ReactNode;
 };
 
+type ActivityType = 'subscription' | 'payout' | 'notification';
+type ActivityFilter = ActivityType | 'all';
+
+type Activity = {
+  id: string;
+  type: ActivityType;
+  title: string;
+  description: string;
+  amount?: number;
+  status?: string;
+  createdAt: string;
+  metadata?: Record<string, any>;
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,8 +79,9 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [verifyUser, setVerifyUser] = useState<User | null>(null);
-  const [userNotifications, setUserNotifications] = useState<any[]>([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [userActivities, setUserActivities] = useState<Activity[]>([]);
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+  const [loadingActivities, setLoadingActivities] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
@@ -178,13 +194,7 @@ export default function AdminUsersPage() {
             className="h-7 px-2 text-xs gap-1"
             onClick={() => setVerifyUser(u)}
           >
-            <Badge
-              className={`border ${
-                u.emailVerified
-                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                  : 'bg-red-500/15 text-red-500 border-red-500/30'
-              }`}
-            >
+            <Badge variant={u.emailVerified ? 'success-secondary' : 'destructive-secondary'}>
               {u.emailVerified ? 'Verified' : 'Unverified'}
             </Badge>
           </Button>
@@ -197,9 +207,9 @@ export default function AdminUsersPage() {
       sortable: true,
       render: (u) =>
         u.isAdmin ? (
-          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Admin</Badge>
+          <Badge variant="success-secondary">Admin</Badge>
         ) : (
-          <Badge variant="outline" className="text-muted-foreground border-border/60">Not admin</Badge>
+          <Badge variant="outline-static">Not admin</Badge>
         )
     },
     {
@@ -375,9 +385,15 @@ export default function AdminUsersPage() {
       case "available":
         return u.financial?.availableEarningsUsd ?? 0;
       case "created":
-        return u.createdAt?.toDate ? u.createdAt.toDate().getTime() : 0;
+        // Handle both Firestore timestamps and ISO strings
+        if (u.createdAt?.toDate) return u.createdAt.toDate().getTime();
+        if (u.createdAt) return new Date(u.createdAt).getTime() || 0;
+        return 0;
       case "lastLogin":
-        return u.lastLogin?.toDate ? u.lastLogin.toDate().getTime() : 0;
+        // Handle both Firestore timestamps and ISO strings
+        if (u.lastLogin?.toDate) return u.lastLogin.toDate().getTime();
+        if (u.lastLogin) return new Date(u.lastLogin).getTime() || 0;
+        return 0;
       case "totalPages":
         return u.totalPages ?? 0;
       default:
@@ -418,7 +434,7 @@ export default function AdminUsersPage() {
       return (
         <Badge
           title={title}
-          className="bg-red-500/15 text-red-500 border border-red-500/30"
+          variant="destructive-secondary"
         >
           Cancelled{amt ? ` • $${amt.toFixed?.(2) ?? amt}` : ''}
         </Badge>
@@ -429,8 +445,7 @@ export default function AdminUsersPage() {
       return (
         <Badge
           title={title}
-          variant="outline"
-          className="text-muted-foreground border-border/60"
+          variant="outline-static"
         >
           None
         </Badge>
@@ -441,7 +456,7 @@ export default function AdminUsersPage() {
     return (
       <Badge
         title={title}
-        className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+        variant="success-secondary"
       >
         Active{amt ? ` • $${amt.toFixed?.(2) ?? amt}` : ''}
       </Badge>
@@ -458,13 +473,13 @@ export default function AdminUsersPage() {
   const renderPayout = (fin?: FinancialInfo, acct?: string | null) => {
     if (fin?.payoutsSetup || acct) {
       return (
-        <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+        <Badge variant="success-secondary">
           Connected
         </Badge>
       );
     }
     return (
-      <Badge variant="outline" className="text-muted-foreground border-border/60">
+      <Badge variant="outline-static">
         Not set up
       </Badge>
     );
@@ -610,18 +625,18 @@ export default function AdminUsersPage() {
     }
   };
 
-  const refreshUserNotifications = async (uid: string) => {
-    setLoadingNotifications(true);
+  const refreshUserNotifications = async (uid: string, filter: ActivityFilter = 'all') => {
+    setLoadingActivities(true);
     try {
-      const res = await fetch(`/api/admin/users/notifications?uid=${uid}&limit=25`);
+      const res = await fetch(`/api/admin/users/activity?uid=${uid}&filter=${filter}&limit=30`);
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Failed to load notifications");
-      setUserNotifications(data.notifications || []);
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to load activity");
+      setUserActivities(data.activities || []);
     } catch (err) {
-      console.error("Admin users: failed to load notifications", err);
-      setUserNotifications([]);
+      console.error("Admin users: failed to load activity", err);
+      setUserActivities([]);
     } finally {
-      setLoadingNotifications(false);
+      setLoadingActivities(false);
     }
   };
 
@@ -650,11 +665,59 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (selectedUser?.uid) {
-      refreshUserNotifications(selectedUser.uid);
+      refreshUserNotifications(selectedUser.uid, activityFilter);
     } else {
-      setUserNotifications([]);
+      setUserActivities([]);
     }
-  }, [selectedUser?.uid]);
+  }, [selectedUser?.uid, activityFilter]);
+
+  // Activity filter helpers
+  const filteredActivities = useMemo(() => {
+    if (activityFilter === 'all') return userActivities;
+    return userActivities.filter(a => a.type === activityFilter);
+  }, [userActivities, activityFilter]);
+
+  const getActivityIcon = (type: ActivityType) => {
+    switch (type) {
+      case 'subscription': return <CreditCard className="h-4 w-4" />;
+      case 'payout': return <Banknote className="h-4 w-4" />;
+      case 'notification': return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const getActivityBadgeStyle = (type: ActivityType) => {
+    switch (type) {
+      case 'subscription': return 'bg-primary/15 text-primary border-primary/30';
+      case 'payout': return 'bg-success/15 text-success border-success/30';
+      case 'notification': return 'bg-warning/15 text-warning border-warning/30';
+    }
+  };
+
+  const getStatusBadgeStyle = (status?: string) => {
+    if (!status) return 'bg-neutral-10 text-foreground/60 border-neutral-20';
+    switch (status) {
+      case 'active':
+      case 'paid':
+      case 'completed':
+      case 'available':
+        return 'bg-success/15 text-success border-success/30';
+      case 'pending':
+      case 'trialing':
+        return 'bg-warning/15 text-warning border-warning/30';
+      case 'failed':
+      case 'cancelled':
+      case 'canceled':
+      case 'unpaid':
+      case 'past_due':
+        return 'bg-error/15 text-error border-error/30';
+      case 'read':
+        return 'bg-neutral-10 text-foreground/60 border-neutral-20';
+      case 'unread':
+        return 'bg-primary/15 text-primary border-primary/30';
+      default:
+        return 'bg-neutral-10 text-foreground/60 border-neutral-20';
+    }
+  };
 
   return (
     <div className="p-4 pt-4 space-y-4">
@@ -888,17 +951,17 @@ export default function AdminUsersPage() {
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Email verified</span>
                           {u.emailVerified ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Verified</Badge>
+                            <Badge variant="success-secondary">Verified</Badge>
                           ) : (
-                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30">Unverified</Badge>
+                            <Badge variant="destructive-secondary">Unverified</Badge>
                           )}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Admin</span>
                           {u.isAdmin ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Admin</Badge>
+                            <Badge variant="success-secondary">Admin</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground border-border/60">Not admin</Badge>
+                            <Badge variant="outline-static">Not admin</Badge>
                           )}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
@@ -1113,17 +1176,17 @@ export default function AdminUsersPage() {
                 <div>
                   <div className="text-muted-foreground">Admin</div>
                   {selectedUser.isAdmin ? (
-                    <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Admin</Badge>
+                    <Badge variant="success-secondary">Admin</Badge>
                   ) : (
-                    <Badge variant="outline" className="text-muted-foreground border-border/60">Not admin</Badge>
+                    <Badge variant="outline-static">Not admin</Badge>
                   )}
                 </div>
                 <div>
                   <div className="text-muted-foreground">Email verified</div>
                   {selectedUser.emailVerified ? (
-                    <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Verified</Badge>
+                    <Badge variant="success-secondary">Verified</Badge>
                   ) : (
-                    <Badge className="bg-red-500/15 text-red-500 border border-red-500/30">Unverified</Badge>
+                    <Badge variant="destructive-secondary">Unverified</Badge>
                   )}
                 </div>
                 <div>
@@ -1144,8 +1207,11 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="font-medium">Subscription</div>
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CreditCard className="h-4 w-4 text-blue-400" />
+                  <span className="font-medium">Subscription</span>
+                </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   {renderSubscription(selectedUser.financial)}
                   {selectedUser.financial?.subscriptionAmount ? (
@@ -1156,8 +1222,11 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="font-medium">Payouts</div>
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Banknote className="h-4 w-4 text-emerald-400" />
+                  <span className="font-medium">Payouts</span>
+                </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   {renderPayout(selectedUser.financial, selectedUser.stripeConnectedAccountId)}
                   <span className="text-muted-foreground text-xs">
@@ -1188,47 +1257,78 @@ export default function AdminUsersPage() {
                 )}
               </div>
 
-              <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="font-medium">Subscription history</div>
-                <div className="text-muted-foreground text-xs">
-                  History data not yet wired. (TODO: pull from billing events.)
-                </div>
-              </div>
-
-              <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="font-medium">Payout history</div>
-                <div className="text-muted-foreground text-xs">
-                  History data not yet wired. (TODO: pull from payout events/transfers.)
-                </div>
-              </div>
-
-              <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="font-medium">Recent notifications</div>
-                  {loadingNotifications && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                </div>
-                {userNotifications.length === 0 && !loadingNotifications ? (
-                  <div className="text-sm text-muted-foreground">No notifications found.</div>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-auto pr-1">
-                    {userNotifications.map((n) => (
-                      <div key={n.id} className="rounded-md border border-border/60 p-2 text-sm space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium">{n.title || n.type}</div>
-                          <span className="text-xs text-muted-foreground">
-                            {n.createdAt ? (n.createdAt._seconds ? new Date(n.createdAt._seconds * 1000).toLocaleString() : '') : ''}
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground text-sm">{n.message}</div>
-                        {n.metadata?.availableUsd !== undefined && (
-                          <div className="text-xs text-muted-foreground">
-                            Available: ${Number(n.metadata.availableUsd).toFixed(2)}
-                          </div>
-                        )}
-                      </div>
+              {/* Unified Activity Feed */}
+              <div className="rounded-lg border border-border bg-card">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Activity Feed</span>
+                    {loadingActivities && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  </div>
+                  <div className="flex gap-1">
+                    {(['all', 'subscription', 'payout', 'notification'] as const).map((filter) => (
+                      <Button
+                        key={filter}
+                        size="sm"
+                        variant={activityFilter === filter ? 'secondary' : 'ghost'}
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setActivityFilter(filter)}
+                      >
+                        {filter === 'all' && 'All'}
+                        {filter === 'subscription' && <><CreditCard className="h-3 w-3 mr-1" />Subs</>}
+                        {filter === 'payout' && <><Banknote className="h-3 w-3 mr-1" />Payouts</>}
+                        {filter === 'notification' && <><Bell className="h-3 w-3 mr-1" />Notifs</>}
+                      </Button>
                     ))}
                   </div>
-                )}
+                </div>
+                
+                <div className="max-h-80 overflow-auto">
+                  {filteredActivities.length === 0 && !loadingActivities ? (
+                    <div className="p-4 text-sm text-muted-foreground text-center">
+                      No activity found{activityFilter !== 'all' ? ` for ${activityFilter}` : ''}.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {filteredActivities.map((activity) => (
+                        <div key={activity.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <div className={`mt-0.5 p-1.5 rounded-md border ${getActivityBadgeStyle(activity.type)}`}>
+                                {getActivityIcon(activity.type)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-sm">{activity.title}</span>
+                                  {activity.status && (
+                                    <Badge className={`text-[10px] px-1.5 py-0 h-4 ${getStatusBadgeStyle(activity.status)}`}>
+                                      {activity.status}
+                                    </Badge>
+                                  )}
+                                  {activity.amount !== undefined && (
+                                    <span className="text-sm font-medium text-emerald-400">
+                                      ${activity.amount.toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                  {activity.description}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(activity.createdAt).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                                year: new Date(activity.createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

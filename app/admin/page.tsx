@@ -516,23 +516,23 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Email Templates */}
+            {/* Notifications */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Email Templates</h3>
+                <h3 className="font-medium">Notifications</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
-                Preview and manage email designs for verification, notifications, payouts, and more.
+                Manage email, in-app, and push notifications for all user communication.
               </span>
               <div className="mt-2">
                 <Button
                   variant="secondary"
                   size="sm"
                   className="gap-2 w-full"
-                  onClick={() => router.push('/admin/emails')}
+                  onClick={() => router.push('/admin/notifications')}
                 >
                   <Mail className="h-4 w-4" />
-                  Manage Emails
+                  Manage Notifications
                 </Button>
               </div>
             </div>

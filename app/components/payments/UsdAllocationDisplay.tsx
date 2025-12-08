@@ -176,7 +176,7 @@ export default function UsdAllocationDisplay({
 
 
         {/* Detailed Breakdown */}
-        <div className="border-t pt-3 space-y-2 text-xs sm:text-sm">
+        <div className="space-y-2 text-xs sm:text-sm">
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Funded Allocations</span>
             <span className="font-semibold text-green-600 text-sm">
@@ -280,11 +280,6 @@ export default function UsdAllocationDisplay({
             Next billing cycle: {new Date(billingCycleEnd).toLocaleDateString()}
           </div>
         )}
-
-        {/* USD Info */}
-        <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
-          <p>{USD_UI_TEXT.TOOLTIP_TEXT}</p>
-        </div>
       </CardContent>
     </Card>
   );

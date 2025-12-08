@@ -135,69 +135,90 @@ html, body {
   .xs\:hidden { display: none; }
 }
 
+/* ============================================
+   MOBILE INTERACTION UTILITIES
+   Consolidated mobile touch and zoom prevention
+   ============================================ */
+
+/* Base utility classes for user selection */
+.user-select-text {
+  -webkit-user-select: text;
+  -khtml-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+.user-select-none {
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Base utility classes for touch interactions */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+.touch-pan-xy {
+  touch-action: pan-x pan-y;
+}
+
+/* Consolidated mobile zoom prevention - applies 16px font to prevent iOS zoom */
+.mobile-no-zoom {
+  font-size: max(16px, 1rem);
+}
+
 /* Mobile zoom prevention and text selection */
 @media screen and (max-width: 768px) {
   /* Prevent zoom on interactive elements */
   button, [role="button"], .button, input, select, textarea {
-    touch-action: manipulation;
-    font-size: 16px !important; /* Prevent zoom on input focus */
+    font-size: max(16px, 1rem); /* Consolidated: prevent zoom on input focus */
   }
 
-  /* Ensure content areas remain selectable on mobile */
+  /* Ensure content areas remain selectable on mobile - extends base utility */
   h1, h2, h3, h4, h5, h6, p, .page-content, .editor-content, .content-area,
   .prose, [data-page-content], .unified-text-content, .text-view-content,
   .paragraph-content, .wewrite-content-display, .wewrite-viewer-content,
   .wewrite-paragraph-content, [data-slate-node="text"], [data-slate-leaf],
   input, textarea, select, [contenteditable="true"] {
-    -webkit-user-select: text !important;
-    -khtml-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-    touch-action: pan-x pan-y;
+    @apply user-select-text touch-pan-xy;
   }
 
   /* Body settings */
   body {
-    touch-action: pan-x pan-y;
+    @apply touch-pan-xy;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
 
-  /* Interactive elements need manipulation for proper touch handling */
+  /* Interactive elements - consolidated into single rule */
   button, [role="button"], [tabindex] {
-    font-size: 16px !important; /* Prevent zoom on input focus */
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    pointer-events: auto; /* Ensure buttons are clickable */
+    @apply touch-manipulation user-select-none;
+    font-size: max(16px, 1rem);
+    pointer-events: auto;
   }
 
-  /* Input fields should allow text selection but prevent zoom */
+  /* Input fields - consolidated */
   input, textarea, select {
-    font-size: 16px !important; /* Prevent zoom on input focus */
-    touch-action: manipulation;
+    @apply touch-manipulation;
+    font-size: max(16px, 1rem);
     pointer-events: auto;
   }
 
-  /* Links should allow text selection of their content */
+  /* Links - consolidated */
   a {
-    font-size: 16px !important;
-    touch-action: manipulation;
+    @apply touch-manipulation;
+    font-size: max(16px, 1rem);
     pointer-events: auto;
   }
 
-  /* Special handling for range sliders - they need manipulation touch action */
+  /* Special handling for range sliders */
   input[type="range"], .mobile-slider-input {
-    touch-action: manipulation !important;
-    pointer-events: auto !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
+    @apply touch-manipulation user-select-none;
+    pointer-events: auto;
   }
 
   /* Allow text selection in input fields */
@@ -255,46 +276,36 @@ html, body {
     will-change: contents;
   }
 
-  /* Prevent zoom on images and media */
+  /* Prevent zoom on images and media - consolidated */
   img, video, canvas, svg {
-    touch-action: pan-x pan-y;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    @apply touch-pan-xy user-select-none;
   }
 
   /* Prevent zoom on code blocks and pre-formatted text */
   pre, code, .code-block {
-    touch-action: pan-x pan-y;
+    @apply touch-pan-xy;
   }
 
   /* Ensure modals and overlays prevent zoom */
   .modal, .overlay, .dropdown-menu, .popover {
-    touch-action: pan-x pan-y;
+    @apply touch-pan-xy;
   }
 
-  /* Ensure allocation bar buttons are always interactive */
+  /* Allocation bar interactive elements - consolidated into data attribute selector */
+  [data-allocation-bar] {
+    pointer-events: auto;
+    @apply touch-pan-xy;
+  }
+
   [data-allocation-bar] button,
   [data-allocation-bar] [role="button"],
   [data-allocation-bar] .btn,
   [data-allocation-bar] .button {
-    pointer-events: auto !important;
-    touch-action: manipulation !important;
-    cursor: pointer !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
+    @apply touch-manipulation user-select-none;
+    pointer-events: auto;
+    cursor: pointer;
   }
 
-  /* Ensure allocation bar container is interactive */
-  [data-allocation-bar] {
-    pointer-events: auto !important;
-    touch-action: pan-x pan-y !important;
-  }
-
-  /* Ensure allocation bar cards are interactive */
   [data-allocation-bar] .wewrite-card {
     pointer-events: auto !important;
   }
@@ -385,52 +396,32 @@ body .paragraph-number {
 
 /* Mobile optimizations for dense mode */
 @media (max-width: 767px) {
-  /* Ensure dense mode paragraphs display inline on mobile */
-  .viewer-paragraph.dense-paragraph {
-    @apply inline-block mr-4;
-    /* Force inline-block display on mobile */
-    display: inline-block !important;
-  }
-
-  /* Ensure proper spacing for dense mode paragraph numbers on mobile */
-  .viewer-paragraph.dense-paragraph .paragraph-number {
-    @apply mr-3;
-    /* Maintain proper spacing on mobile */
-    margin-right: 0.75rem !important;
-  }
-
-  /* Ensure dense content flows properly on mobile */
-  .dense-content-flow {
-    @apply leading-relaxed;
-    /* Maintain proper line height on mobile */
-    line-height: 1.625 !important;
-    /* Ensure dense content container allows inline flow on mobile */
-    display: block !important;
-    width: 100% !important;
-  }
-
-  /* Prevent mobile from breaking dense mode layout */
-  .viewer-paragraph.dense-paragraph .paragraph-content {
-    @apply inline;
-    /* Ensure content stays inline on mobile */
-    display: inline !important;
-  }
-
-  /* Additional mobile dense mode fixes with higher specificity */
+  /* Dense mode layout system - consolidated and simplified
+   * Note: These rules need higher specificity to override conflicting responsive styles
+   */
   .viewer-paragraph.dense-paragraph,
   .wewrite-viewer-paragraph.dense {
-    /* Force inline-block with higher specificity */
-    display: inline-block !important;
-    margin-right: 1rem !important;
-    vertical-align: top !important;
-    /* Allow normal text wrapping but maintain inline-block structure */
-    white-space: normal !important;
+    display: inline-block;
+    margin-right: 1rem;
+    vertical-align: top;
+    white-space: normal; /* Allow text wrapping within inline-block */
   }
 
-  /* Ensure content within dense paragraphs displays inline */
+  .viewer-paragraph.dense-paragraph .paragraph-number {
+    margin-right: 0.75rem;
+  }
+
+  /* Dense content needs to display inline within the inline-block container */
   .viewer-paragraph.dense-paragraph .paragraph-content,
   .wewrite-viewer-paragraph.dense .paragraph-content {
-    display: inline !important;
+    display: inline;
+  }
+
+  /* Dense content flow container */
+  .dense-content-flow {
+    display: block;
+    width: 100%;
+    line-height: 1.625;
   }
 }
 
@@ -698,13 +689,15 @@ input[type="range"]::-moz-range-thumb,
     word-break: break-word;
   }
 
-  /* EXCEPTION: Dense mode paragraphs should maintain normal word breaking */
+  /* EXCEPTION: Dense mode paragraphs should maintain normal word breaking
+   * Using higher specificity instead of !important
+   */
   .viewer-paragraph.dense-paragraph,
   .viewer-paragraph.dense-paragraph p,
   .viewer-paragraph.dense-paragraph span,
   .viewer-paragraph.dense-paragraph div {
-    word-break: normal !important;
-    overflow-wrap: normal !important;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   /* Headings get special treatment to prevent unnecessary hyphenation */
@@ -726,16 +719,18 @@ input[type="range"]::-moz-range-thumb,
     overflow-x: hidden;
   }
 
-  /* ADDED: Ensure all content containers are properly sized on mobile */
+  /* Ensure content containers are properly sized on mobile
+   * Specificity handles precedence without !important
+   */
   .unified-editor,
   .editor-content,
   .unified-paragraph,
   .unified-text-content {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
 
@@ -743,19 +738,21 @@ input[type="range"]::-moz-range-thumb,
 /* This ensures consistent styling across the entire application */
 /* Import editor-styles.css in components that need pill link styling */
 
-/* UsernameBadge specific styling - ensure proper colors for subscription status */
-.username-badge-link {
-  text-decoration: none !important;
+/* UsernameBadge specific styling - subscription status colors
+ * Specificity through chaining handles precedence
+ */
+a.username-badge-link {
+  text-decoration: none;
 }
 
-.username-badge-link.text-primary,
-.username-badge-link:has(.text-primary) {
-  color: hsl(var(--primary)) !important;
+a.username-badge-link.text-primary,
+a.username-badge-link:has(.text-primary) {
+  color: hsl(var(--primary));
 }
 
-.username-badge-link.text-muted-foreground,
-.username-badge-link:has(.text-muted-foreground) {
-  color: hsl(var(--muted-foreground)) !important;
+a.username-badge-link.text-muted-foreground,
+a.username-badge-link:has(.text-muted-foreground) {
+  color: hsl(var(--muted-foreground));
 }
 
 /* Custom Spinner Animation */
@@ -959,9 +956,11 @@ input[type="range"]::-moz-range-thumb,
 }
 
 /* Sticky Save Header - Push main header down when present */
+/* Note: The header already has inline styles for bannerOffset, so we need to account for that */
 .has-sticky-save-header header[data-component="main-header"] {
-  top: 56px !important; /* Height of sticky save header */
-  transition: top 300ms ease-in-out;
+  /* Add 56px to whatever the current top value is (from bannerOffset inline style) */
+  margin-top: 56px !important; /* Height of sticky save header */
+  transition: margin-top 300ms ease-in-out;
 }
 
 /* Ensure the header spacer accounts for the save header */
@@ -1045,6 +1044,10 @@ input[type="range"]::-moz-range-thumb,
     --alpha-25: rgba(0, 0, 0, 0.25);
     --alpha-30: rgba(0, 0, 0, 0.30);
 
+    /* Alpha overlay gradients - for layering on top of bg colors */
+    --alpha-10-gradient: linear-gradient(var(--alpha-10), var(--alpha-10));
+    --alpha-15-gradient: linear-gradient(var(--alpha-15), var(--alpha-15));
+
     /* Semantic alpha overlays - tinted overlays for colored buttons */
     /* Success alpha - green tint overlay (darker green in light mode) */
     --success-alpha-5: rgba(22, 163, 74, 0.15);
@@ -1123,6 +1126,10 @@ input[type="range"]::-moz-range-thumb,
     --alpha-20: rgba(255, 255, 255, 0.20);
     --alpha-25: rgba(255, 255, 255, 0.25);
     --alpha-30: rgba(255, 255, 255, 0.30);
+
+    /* Alpha overlay gradients - for layering on top of bg colors */
+    --alpha-10-gradient: linear-gradient(var(--alpha-10), var(--alpha-10));
+    --alpha-15-gradient: linear-gradient(var(--alpha-15), var(--alpha-15));
 
     /* Semantic alpha overlays - tinted overlays for colored buttons */
     /* Success alpha - brighter green in dark mode */
@@ -1296,7 +1303,7 @@ iframe[src*="js.stripe.com"] {
 /* Remove hover states - cards stay static */
 
 /* Dark mode hover state for cards - enhanced shadow for dark mode */
-.dark .wewrite-card:hover:not([role="dialog"]):not([data-modal-content]):not([aria-modal="true"] *) {
+.dark .wewrite-card:hover:not([role="dialog"]):not([data-modal-content]):not([aria-modal="true"] *):not([data-expanded="true"]) {
   box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3), 0 2px 4px 0 rgba(0, 0, 0, 0.2); /* Stronger shadow for dark mode */
   transform: translateY(-1px); /* Subtle lift effect */
 }
@@ -1335,9 +1342,42 @@ iframe[src*="js.stripe.com"] {
 
 
 .wewrite-card.wewrite-input:hover,
-.wewrite-card:not(.wewrite-input):hover {
+.wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
   border-color: var(--card-border-hover) !important;
   background-color: var(--card-bg-hover) !important;
+}
+
+/* Expanded toolbar - NO hover states, fully opaque white/black */
+.wewrite-card[data-expanded="true"] {
+  background-color: white !important;
+  border-color: var(--card-border) !important;
+  backdrop-filter: none !important;
+}
+
+.dark .wewrite-card[data-expanded="true"] {
+  background-color: black !important;
+}
+
+.wewrite-card[data-expanded="true"]:hover {
+  background-color: white !important;
+  border-color: var(--card-border) !important;
+  transform: none !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+.dark .wewrite-card[data-expanded="true"]:hover {
+  background-color: black !important;
+}
+
+/* Disable hover states on mobile/touch devices to prevent sticky hover */
+@media (hover: none) {
+  .wewrite-card:hover:not(.wewrite-input),
+  .dark .wewrite-card:hover {
+    background-color: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+    box-shadow: var(--card-shadow) !important;
+    transform: none !important;
+  }
 }
 
 /* Title input specific styling - works with wewrite-input glassmorphic system */
@@ -2342,332 +2382,275 @@ button.bg-transparent[type] {
   color: hsl(var(--foreground)) !important;
 }
 
-/* Systematic Color System - Opacity-based Utility Classes */
+/* Systematic Color System - Opacity-based Utility Classes
+ * Refactored: Removed !important declarations and consolidated duplicates
+ * These utility classes work through normal CSS specificity
+ */
 
-/* Accent Colors (accent-n) */
-.bg-accent-5 { background-color: oklch(var(--accent-base) / 0.05) !important; }
-.bg-accent-10 { background-color: oklch(var(--accent-base) / 0.1) !important; }
-.bg-accent-15 { background-color: oklch(var(--accent-base) / 0.15) !important; }
-.bg-accent-20 { background-color: oklch(var(--accent-base) / 0.2) !important; }
-.bg-accent-25 { background-color: oklch(var(--accent-base) / 0.25) !important; }
-.bg-accent-30 { background-color: oklch(var(--accent-base) / 0.3) !important; }
-.bg-accent-35 { background-color: oklch(var(--accent-base) / 0.35) !important; }
-.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
-.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7) !important; }
-.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8) !important; }
-.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
-.bg-accent-110 { background-color: oklch(var(--accent-base) / 1.1) !important; }
-.bg-accent-120 { background-color: oklch(var(--accent-base) / 1.2) !important; }
-.bg-accent-140 { background-color: oklch(var(--accent-base) / 1.4) !important; }
-.bg-accent-40 { background-color: oklch(var(--accent-base) / 0.4) !important; }
-.bg-accent-50 { background-color: oklch(var(--accent-base) / 0.5) !important; }
-.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
-.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7) !important; }
-.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8) !important; }
-.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
-.bg-accent-100 { background-color: oklch(var(--accent-base)) !important; }
-
-/* Complete Background Color System - 1% to 100% opacity for all tokens */
-
-/* Accent Background Colors */
-.bg-accent { background-color: oklch(var(--accent-base)) !important; }
-.bg-accent-100 { background-color: oklch(var(--accent-base)) !important; }
-.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9) !important; }
-.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8) !important; }
-.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7) !important; }
-.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6) !important; }
-.bg-accent-50 { background-color: oklch(var(--accent-base) / 0.5) !important; }
-.bg-accent-40 { background-color: oklch(var(--accent-base) / 0.4) !important; }
-.bg-accent-30 { background-color: oklch(var(--accent-base) / 0.3) !important; }
-.bg-accent-25 { background-color: oklch(var(--accent-base) / 0.25) !important; }
-.bg-accent-20 { background-color: oklch(var(--accent-base) / 0.2) !important; }
-.bg-accent-15 { background-color: oklch(var(--accent-base) / 0.15) !important; }
-.bg-accent-10 { background-color: oklch(var(--accent-base) / 0.1) !important; }
-.bg-accent-5 { background-color: oklch(var(--accent-base) / 0.05) !important; }
-.bg-accent-1 { background-color: oklch(var(--accent-base) / 0.01) !important; }
+/* Accent Background Colors - Complete opacity scale */
+.bg-accent { background-color: oklch(var(--accent-base)); }
+.bg-accent-1 { background-color: oklch(var(--accent-base) / 0.01); }
+.bg-accent-5 { background-color: oklch(var(--accent-base) / 0.05); }
+.bg-accent-10 { background-color: oklch(var(--accent-base) / 0.1); }
+.bg-accent-15 { background-color: oklch(var(--accent-base) / 0.15); }
+.bg-accent-20 { background-color: oklch(var(--accent-base) / 0.2); }
+.bg-accent-25 { background-color: oklch(var(--accent-base) / 0.25); }
+.bg-accent-30 { background-color: oklch(var(--accent-base) / 0.3); }
+.bg-accent-35 { background-color: oklch(var(--accent-base) / 0.35); }
+.bg-accent-40 { background-color: oklch(var(--accent-base) / 0.4); }
+.bg-accent-50 { background-color: oklch(var(--accent-base) / 0.5); }
+.bg-accent-60 { background-color: oklch(var(--accent-base) / 0.6); }
+.bg-accent-70 { background-color: oklch(var(--accent-base) / 0.7); }
+.bg-accent-80 { background-color: oklch(var(--accent-base) / 0.8); }
+.bg-accent-90 { background-color: oklch(var(--accent-base) / 0.9); }
+.bg-accent-100 { background-color: oklch(var(--accent-base)); }
+.bg-accent-110 { background-color: oklch(var(--accent-base) / 1.1); }
+.bg-accent-120 { background-color: oklch(var(--accent-base) / 1.2); }
+.bg-accent-140 { background-color: oklch(var(--accent-base) / 1.4); }
 
 /* Neutral Background Colors */
-.bg-neutral { background-color: oklch(var(--neutral-base)) !important; }
-.bg-neutral-100 { background-color: oklch(var(--neutral-base)) !important; }
-.bg-neutral-90 { background-color: oklch(var(--neutral-base) / 0.9) !important; }
-.bg-neutral-80 { background-color: oklch(var(--neutral-base) / 0.8) !important; }
-.bg-neutral-70 { background-color: oklch(var(--neutral-base) / 0.7) !important; }
-.bg-neutral-60 { background-color: oklch(var(--neutral-base) / 0.6) !important; }
-.bg-neutral-50 { background-color: oklch(var(--neutral-base) / 0.5) !important; }
-.bg-neutral-40 { background-color: oklch(var(--neutral-base) / 0.4) !important; }
-.bg-neutral-30 { background-color: oklch(var(--neutral-base) / 0.3) !important; }
-.bg-neutral-25 { background-color: oklch(var(--neutral-base) / 0.25) !important; }
-.bg-neutral-20 { background-color: oklch(var(--neutral-base) / 0.2) !important; }
-.bg-neutral-15 { background-color: oklch(var(--neutral-base) / 0.15) !important; }
-.bg-neutral-10 { background-color: oklch(var(--neutral-base) / 0.1) !important; }
-.bg-neutral-5 { background-color: oklch(var(--neutral-base) / 0.05) !important; }
-.bg-neutral-1 { background-color: oklch(var(--neutral-base) / 0.01) !important; }
+.bg-neutral { background-color: oklch(var(--neutral-base)); }
+.bg-neutral-1 { background-color: oklch(var(--neutral-base) / 0.01); }
+.bg-neutral-5 { background-color: oklch(var(--neutral-base) / 0.05); }
+.bg-neutral-10 { background-color: oklch(var(--neutral-base) / 0.1); }
+.bg-neutral-15 { background-color: oklch(var(--neutral-base) / 0.15); }
+.bg-neutral-20 { background-color: oklch(var(--neutral-base) / 0.2); }
+.bg-neutral-25 { background-color: oklch(var(--neutral-base) / 0.25); }
+.bg-neutral-30 { background-color: oklch(var(--neutral-base) / 0.3); }
+.bg-neutral-40 { background-color: oklch(var(--neutral-base) / 0.4); }
+.bg-neutral-50 { background-color: oklch(var(--neutral-base) / 0.5); }
+.bg-neutral-60 { background-color: oklch(var(--neutral-base) / 0.6); }
+.bg-neutral-70 { background-color: oklch(var(--neutral-base) / 0.7); }
+.bg-neutral-80 { background-color: oklch(var(--neutral-base) / 0.8); }
+.bg-neutral-90 { background-color: oklch(var(--neutral-base) / 0.9); }
+.bg-neutral-100 { background-color: oklch(var(--neutral-base)); }
 
 /* Success Background Colors */
-.bg-success { background-color: oklch(var(--success-base)) !important; }
-.bg-success-100 { background-color: oklch(var(--success-base)) !important; }
-.bg-success-90 { background-color: oklch(var(--success-base) / 0.9) !important; }
-.bg-success-80 { background-color: oklch(var(--success-base) / 0.8) !important; }
-.bg-success-70 { background-color: oklch(var(--success-base) / 0.7) !important; }
-.bg-success-60 { background-color: oklch(var(--success-base) / 0.6) !important; }
-.bg-success-50 { background-color: oklch(var(--success-base) / 0.5) !important; }
-.bg-success-40 { background-color: oklch(var(--success-base) / 0.4) !important; }
-.bg-success-30 { background-color: oklch(var(--success-base) / 0.3) !important; }
-.bg-success-25 { background-color: oklch(var(--success-base) / 0.25) !important; }
-.bg-success-20 { background-color: oklch(var(--success-base) / 0.2) !important; }
-.bg-success-15 { background-color: oklch(var(--success-base) / 0.15) !important; }
-.bg-success-10 { background-color: oklch(var(--success-base) / 0.1) !important; }
-.bg-success-5 { background-color: oklch(var(--success-base) / 0.05) !important; }
-.bg-success-1 { background-color: oklch(var(--success-base) / 0.01) !important; }
+.bg-success { background-color: oklch(var(--success-base)); }
+.bg-success-1 { background-color: oklch(var(--success-base) / 0.01); }
+.bg-success-5 { background-color: oklch(var(--success-base) / 0.05); }
+.bg-success-10 { background-color: oklch(var(--success-base) / 0.1); }
+.bg-success-15 { background-color: oklch(var(--success-base) / 0.15); }
+.bg-success-20 { background-color: oklch(var(--success-base) / 0.2); }
+.bg-success-25 { background-color: oklch(var(--success-base) / 0.25); }
+.bg-success-30 { background-color: oklch(var(--success-base) / 0.3); }
+.bg-success-40 { background-color: oklch(var(--success-base) / 0.4); }
+.bg-success-50 { background-color: oklch(var(--success-base) / 0.5); }
+.bg-success-60 { background-color: oklch(var(--success-base) / 0.6); }
+.bg-success-70 { background-color: oklch(var(--success-base) / 0.7); }
+.bg-success-80 { background-color: oklch(var(--success-base) / 0.8); }
+.bg-success-90 { background-color: oklch(var(--success-base) / 0.9); }
+.bg-success-100 { background-color: oklch(var(--success-base)); }
+.bg-success-120 { background-color: oklch(var(--success-base) / 1.2); }
+.bg-success-140 { background-color: oklch(var(--success-base) / 1.4); }
 
 /* Warning Background Colors */
-.bg-warn { background-color: oklch(var(--warn-base)) !important; }
-.bg-warn-100 { background-color: oklch(var(--warn-base)) !important; }
-.bg-warn-90 { background-color: oklch(var(--warn-base) / 0.9) !important; }
-.bg-warn-80 { background-color: oklch(var(--warn-base) / 0.8) !important; }
-.bg-warn-70 { background-color: oklch(var(--warn-base) / 0.7) !important; }
-.bg-warn-60 { background-color: oklch(var(--warn-base) / 0.6) !important; }
-.bg-warn-50 { background-color: oklch(var(--warn-base) / 0.5) !important; }
-.bg-warn-40 { background-color: oklch(var(--warn-base) / 0.4) !important; }
-.bg-warn-30 { background-color: oklch(var(--warn-base) / 0.3) !important; }
-.bg-warn-25 { background-color: oklch(var(--warn-base) / 0.25) !important; }
-.bg-warn-20 { background-color: oklch(var(--warn-base) / 0.2) !important; }
-.bg-warn-15 { background-color: oklch(var(--warn-base) / 0.15) !important; }
-.bg-warn-10 { background-color: oklch(var(--warn-base) / 0.1) !important; }
-.bg-warn-5 { background-color: oklch(var(--warn-base) / 0.05) !important; }
-.bg-warn-1 { background-color: oklch(var(--warn-base) / 0.01) !important; }
+.bg-warn { background-color: oklch(var(--warn-base)); }
+.bg-warn-1 { background-color: oklch(var(--warn-base) / 0.01); }
+.bg-warn-5 { background-color: oklch(var(--warn-base) / 0.05); }
+.bg-warn-10 { background-color: oklch(var(--warn-base) / 0.1); }
+.bg-warn-15 { background-color: oklch(var(--warn-base) / 0.15); }
+.bg-warn-20 { background-color: oklch(var(--warn-base) / 0.2); }
+.bg-warn-25 { background-color: oklch(var(--warn-base) / 0.25); }
+.bg-warn-30 { background-color: oklch(var(--warn-base) / 0.3); }
+.bg-warn-40 { background-color: oklch(var(--warn-base) / 0.4); }
+.bg-warn-50 { background-color: oklch(var(--warn-base) / 0.5); }
+.bg-warn-60 { background-color: oklch(var(--warn-base) / 0.6); }
+.bg-warn-70 { background-color: oklch(var(--warn-base) / 0.7); }
+.bg-warn-80 { background-color: oklch(var(--warn-base) / 0.8); }
+.bg-warn-90 { background-color: oklch(var(--warn-base) / 0.9); }
+.bg-warn-100 { background-color: oklch(var(--warn-base)); }
 
 /* Error Background Colors */
-.bg-error { background-color: oklch(var(--error-base)) !important; }
-.bg-error-100 { background-color: oklch(var(--error-base)) !important; }
-.bg-error-90 { background-color: oklch(var(--error-base) / 0.9) !important; }
-.bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
-.bg-error-70 { background-color: oklch(var(--error-base) / 0.7) !important; }
-.bg-error-60 { background-color: oklch(var(--error-base) / 0.6) !important; }
-.bg-error-50 { background-color: oklch(var(--error-base) / 0.5) !important; }
-.bg-error-40 { background-color: oklch(var(--error-base) / 0.4) !important; }
-.bg-error-30 { background-color: oklch(var(--error-base) / 0.3) !important; }
-.bg-error-25 { background-color: oklch(var(--error-base) / 0.25) !important; }
-.bg-error-20 { background-color: oklch(var(--error-base) / 0.2) !important; }
-.bg-error-15 { background-color: oklch(var(--error-base) / 0.15) !important; }
-.bg-error-10 { background-color: oklch(var(--error-base) / 0.1) !important; }
-.bg-error-5 { background-color: oklch(var(--error-base) / 0.05) !important; }
-.bg-error-1 { background-color: oklch(var(--error-base) / 0.01) !important; }
+.bg-error { background-color: oklch(var(--error-base)); }
+.bg-error-1 { background-color: oklch(var(--error-base) / 0.01); }
+.bg-error-5 { background-color: oklch(var(--error-base) / 0.05); }
+.bg-error-10 { background-color: oklch(var(--error-base) / 0.1); }
+.bg-error-15 { background-color: oklch(var(--error-base) / 0.15); }
+.bg-error-20 { background-color: oklch(var(--error-base) / 0.2); }
+.bg-error-25 { background-color: oklch(var(--error-base) / 0.25); }
+.bg-error-30 { background-color: oklch(var(--error-base) / 0.3); }
+.bg-error-40 { background-color: oklch(var(--error-base) / 0.4); }
+.bg-error-50 { background-color: oklch(var(--error-base) / 0.5); }
+.bg-error-60 { background-color: oklch(var(--error-base) / 0.6); }
+.bg-error-70 { background-color: oklch(var(--error-base) / 0.7); }
+.bg-error-80 { background-color: oklch(var(--error-base) / 0.8); }
+.bg-error-90 { background-color: oklch(var(--error-base) / 0.9); }
+.bg-error-100 { background-color: oklch(var(--error-base)); }
+.bg-error-120 { background-color: oklch(var(--error-base) / 1.2); }
+.bg-error-140 { background-color: oklch(var(--error-base) / 1.4); }
 
-/* Success Colors (success-n) */
-.bg-success-10 { background-color: oklch(var(--success-base) / 0.1) !important; }
-.bg-success-15 { background-color: oklch(var(--success-base) / 0.15) !important; }
-.bg-success-20 { background-color: oklch(var(--success-base) / 0.2) !important; }
-.bg-success-25 { background-color: oklch(var(--success-base) / 0.25) !important; }
-.bg-success-70 { background-color: oklch(var(--success-base) / 0.7) !important; }
-.bg-success-80 { background-color: oklch(var(--success-base) / 0.8) !important; }
-.bg-success-120 { background-color: oklch(var(--success-base) / 1.2) !important; }
-.bg-success-140 { background-color: oklch(var(--success-base) / 1.4) !important; }
-.bg-success-30 { background-color: oklch(var(--success-base) / 0.3) !important; }
-.bg-success-40 { background-color: oklch(var(--success-base) / 0.4) !important; }
-.bg-success-50 { background-color: oklch(var(--success-base) / 0.5) !important; }
-.bg-success-60 { background-color: oklch(var(--success-base) / 0.6) !important; }
-.bg-success-70 { background-color: oklch(var(--success-base) / 0.7) !important; }
-.bg-success-80 { background-color: oklch(var(--success-base) / 0.8) !important; }
-.bg-success-90 { background-color: oklch(var(--success-base) / 0.9) !important; }
+/* Duplicate sections removed - consolidated above */
 
-/* Warning Colors (warn-n) */
-.bg-warn-10 { background-color: oklch(var(--warn-base) / 0.1) !important; }
-.bg-warn-20 { background-color: oklch(var(--warn-base) / 0.2) !important; }
-.bg-warn-30 { background-color: oklch(var(--warn-base) / 0.3) !important; }
-.bg-warn-40 { background-color: oklch(var(--warn-base) / 0.4) !important; }
-.bg-warn-50 { background-color: oklch(var(--warn-base) / 0.5) !important; }
-.bg-warn-60 { background-color: oklch(var(--warn-base) / 0.6) !important; }
-.bg-warn-70 { background-color: oklch(var(--warn-base) / 0.7) !important; }
-.bg-warn-80 { background-color: oklch(var(--warn-base) / 0.8) !important; }
-.bg-warn-90 { background-color: oklch(var(--warn-base) / 0.9) !important; }
-
-/* Error Colors (error-n) */
-.bg-error-10 { background-color: oklch(var(--error-base) / 0.1) !important; }
-.bg-error-15 { background-color: oklch(var(--error-base) / 0.15) !important; }
-.bg-error-20 { background-color: oklch(var(--error-base) / 0.2) !important; }
-.bg-error-25 { background-color: oklch(var(--error-base) / 0.25) !important; }
-.bg-error-70 { background-color: oklch(var(--error-base) / 0.7) !important; }
-.bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
-.bg-error-120 { background-color: oklch(var(--error-base) / 1.2) !important; }
-.bg-error-140 { background-color: oklch(var(--error-base) / 1.4) !important; }
-.bg-error-30 { background-color: oklch(var(--error-base) / 0.3) !important; }
-.bg-error-40 { background-color: oklch(var(--error-base) / 0.4) !important; }
-.bg-error-50 { background-color: oklch(var(--error-base) / 0.5) !important; }
-.bg-error-60 { background-color: oklch(var(--error-base) / 0.6) !important; }
-.bg-error-70 { background-color: oklch(var(--error-base) / 0.7) !important; }
-.bg-error-80 { background-color: oklch(var(--error-base) / 0.8) !important; }
-.bg-error-90 { background-color: oklch(var(--error-base) / 0.9) !important; }
-
-/* Complete Border Color System - 1% to 100% opacity for all tokens */
+/* Border Color System - Refactored without !important */
 
 /* Accent Border Colors */
-.border-accent { border-color: oklch(var(--accent-base)) !important; }
-.border-accent-100 { border-color: oklch(var(--accent-base)) !important; }
-.border-accent-90 { border-color: oklch(var(--accent-base) / 0.9) !important; }
-.border-accent-80 { border-color: oklch(var(--accent-base) / 0.8) !important; }
-.border-accent-70 { border-color: oklch(var(--accent-base) / 0.7) !important; }
-.border-accent-60 { border-color: oklch(var(--accent-base) / 0.6) !important; }
-.border-accent-50 { border-color: oklch(var(--accent-base) / 0.5) !important; }
-.border-accent-40 { border-color: oklch(var(--accent-base) / 0.4) !important; }
-.border-accent-30 { border-color: oklch(var(--accent-base) / 0.3) !important; }
-.border-accent-25 { border-color: oklch(var(--accent-base) / 0.25) !important; }
-.border-accent-20 { border-color: oklch(var(--accent-base) / 0.2) !important; }
-.border-accent-15 { border-color: oklch(var(--accent-base) / 0.15) !important; }
-.border-accent-10 { border-color: oklch(var(--accent-base) / 0.1) !important; }
-.border-accent-5 { border-color: oklch(var(--accent-base) / 0.05) !important; }
-.border-accent-1 { border-color: oklch(var(--accent-base) / 0.01) !important; }
+.border-accent { border-color: oklch(var(--accent-base)); }
+.border-accent-1 { border-color: oklch(var(--accent-base) / 0.01); }
+.border-accent-5 { border-color: oklch(var(--accent-base) / 0.05); }
+.border-accent-10 { border-color: oklch(var(--accent-base) / 0.1); }
+.border-accent-15 { border-color: oklch(var(--accent-base) / 0.15); }
+.border-accent-20 { border-color: oklch(var(--accent-base) / 0.2); }
+.border-accent-25 { border-color: oklch(var(--accent-base) / 0.25); }
+.border-accent-30 { border-color: oklch(var(--accent-base) / 0.3); }
+.border-accent-40 { border-color: oklch(var(--accent-base) / 0.4); }
+.border-accent-50 { border-color: oklch(var(--accent-base) / 0.5); }
+.border-accent-60 { border-color: oklch(var(--accent-base) / 0.6); }
+.border-accent-70 { border-color: oklch(var(--accent-base) / 0.7); }
+.border-accent-80 { border-color: oklch(var(--accent-base) / 0.8); }
+.border-accent-90 { border-color: oklch(var(--accent-base) / 0.9); }
+.border-accent-100 { border-color: oklch(var(--accent-base)); }
 
 /* Neutral Border Colors */
-.border-neutral { border-color: oklch(var(--neutral-base)) !important; }
-.border-neutral-100 { border-color: oklch(var(--neutral-base)) !important; }
-.border-neutral-90 { border-color: oklch(var(--neutral-base) / 0.9) !important; }
-.border-neutral-80 { border-color: oklch(var(--neutral-base) / 0.8) !important; }
-.border-neutral-70 { border-color: oklch(var(--neutral-base) / 0.7) !important; }
-.border-neutral-60 { border-color: oklch(var(--neutral-base) / 0.6) !important; }
-.border-neutral-50 { border-color: oklch(var(--neutral-base) / 0.5) !important; }
-.border-neutral-40 { border-color: oklch(var(--neutral-base) / 0.4) !important; }
-.border-neutral-30 { border-color: oklch(var(--neutral-base) / 0.3) !important; }
-.border-neutral-25 { border-color: oklch(var(--neutral-base) / 0.25) !important; }
-.border-neutral-20 { border-color: oklch(var(--neutral-base) / 0.2) !important; }
-.border-neutral-15 { border-color: oklch(var(--neutral-base) / 0.15) !important; }
-.border-neutral-10 { border-color: oklch(var(--neutral-base) / 0.1) !important; }
-.border-neutral-5 { border-color: oklch(var(--neutral-base) / 0.05) !important; }
-.border-neutral-1 { border-color: oklch(var(--neutral-base) / 0.01) !important; }
+.border-neutral { border-color: oklch(var(--neutral-base)); }
+.border-neutral-1 { border-color: oklch(var(--neutral-base) / 0.01); }
+.border-neutral-5 { border-color: oklch(var(--neutral-base) / 0.05); }
+.border-neutral-10 { border-color: oklch(var(--neutral-base) / 0.1); }
+.border-neutral-15 { border-color: oklch(var(--neutral-base) / 0.15); }
+.border-neutral-20 { border-color: oklch(var(--neutral-base) / 0.2); }
+.border-neutral-25 { border-color: oklch(var(--neutral-base) / 0.25); }
+.border-neutral-30 { border-color: oklch(var(--neutral-base) / 0.3); }
+.border-neutral-40 { border-color: oklch(var(--neutral-base) / 0.4); }
+.border-neutral-50 { border-color: oklch(var(--neutral-base) / 0.5); }
+.border-neutral-60 { border-color: oklch(var(--neutral-base) / 0.6); }
+.border-neutral-70 { border-color: oklch(var(--neutral-base) / 0.7); }
+.border-neutral-80 { border-color: oklch(var(--neutral-base) / 0.8); }
+.border-neutral-90 { border-color: oklch(var(--neutral-base) / 0.9); }
+.border-neutral-100 { border-color: oklch(var(--neutral-base)); }
 
 /* Success Border Colors */
-.border-success { border-color: oklch(var(--success-base)) !important; }
-.border-success-100 { border-color: oklch(var(--success-base)) !important; }
-.border-success-90 { border-color: oklch(var(--success-base) / 0.9) !important; }
-.border-success-80 { border-color: oklch(var(--success-base) / 0.8) !important; }
-.border-success-70 { border-color: oklch(var(--success-base) / 0.7) !important; }
-.border-success-60 { border-color: oklch(var(--success-base) / 0.6) !important; }
-.border-success-50 { border-color: oklch(var(--success-base) / 0.5) !important; }
-.border-success-40 { border-color: oklch(var(--success-base) / 0.4) !important; }
-.border-success-30 { border-color: oklch(var(--success-base) / 0.3) !important; }
-.border-success-25 { border-color: oklch(var(--success-base) / 0.25) !important; }
-.border-success-20 { border-color: oklch(var(--success-base) / 0.2) !important; }
-.border-success-15 { border-color: oklch(var(--success-base) / 0.15) !important; }
-.border-success-10 { border-color: oklch(var(--success-base) / 0.1) !important; }
-.border-success-5 { border-color: oklch(var(--success-base) / 0.05) !important; }
-.border-success-1 { border-color: oklch(var(--success-base) / 0.01) !important; }
+.border-success { border-color: oklch(var(--success-base)); }
+.border-success-1 { border-color: oklch(var(--success-base) / 0.01); }
+.border-success-5 { border-color: oklch(var(--success-base) / 0.05); }
+.border-success-10 { border-color: oklch(var(--success-base) / 0.1); }
+.border-success-15 { border-color: oklch(var(--success-base) / 0.15); }
+.border-success-20 { border-color: oklch(var(--success-base) / 0.2); }
+.border-success-25 { border-color: oklch(var(--success-base) / 0.25); }
+.border-success-30 { border-color: oklch(var(--success-base) / 0.3); }
+.border-success-40 { border-color: oklch(var(--success-base) / 0.4); }
+.border-success-50 { border-color: oklch(var(--success-base) / 0.5); }
+.border-success-60 { border-color: oklch(var(--success-base) / 0.6); }
+.border-success-70 { border-color: oklch(var(--success-base) / 0.7); }
+.border-success-80 { border-color: oklch(var(--success-base) / 0.8); }
+.border-success-90 { border-color: oklch(var(--success-base) / 0.9); }
+.border-success-100 { border-color: oklch(var(--success-base)); }
 
 /* Warning Border Colors */
-.border-warn { border-color: oklch(var(--warn-base)) !important; }
-.border-warn-100 { border-color: oklch(var(--warn-base)) !important; }
-.border-warn-90 { border-color: oklch(var(--warn-base) / 0.9) !important; }
-.border-warn-80 { border-color: oklch(var(--warn-base) / 0.8) !important; }
-.border-warn-70 { border-color: oklch(var(--warn-base) / 0.7) !important; }
-.border-warn-60 { border-color: oklch(var(--warn-base) / 0.6) !important; }
-.border-warn-50 { border-color: oklch(var(--warn-base) / 0.5) !important; }
-.border-warn-40 { border-color: oklch(var(--warn-base) / 0.4) !important; }
-.border-warn-30 { border-color: oklch(var(--warn-base) / 0.3) !important; }
-.border-warn-25 { border-color: oklch(var(--warn-base) / 0.25) !important; }
-.border-warn-20 { border-color: oklch(var(--warn-base) / 0.2) !important; }
-.border-warn-15 { border-color: oklch(var(--warn-base) / 0.15) !important; }
-.border-warn-10 { border-color: oklch(var(--warn-base) / 0.1) !important; }
-.border-warn-5 { border-color: oklch(var(--warn-base) / 0.05) !important; }
-.border-warn-1 { border-color: oklch(var(--warn-base) / 0.01) !important; }
+.border-warn { border-color: oklch(var(--warn-base)); }
+.border-warn-1 { border-color: oklch(var(--warn-base) / 0.01); }
+.border-warn-5 { border-color: oklch(var(--warn-base) / 0.05); }
+.border-warn-10 { border-color: oklch(var(--warn-base) / 0.1); }
+.border-warn-15 { border-color: oklch(var(--warn-base) / 0.15); }
+.border-warn-20 { border-color: oklch(var(--warn-base) / 0.2); }
+.border-warn-25 { border-color: oklch(var(--warn-base) / 0.25); }
+.border-warn-30 { border-color: oklch(var(--warn-base) / 0.3); }
+.border-warn-40 { border-color: oklch(var(--warn-base) / 0.4); }
+.border-warn-50 { border-color: oklch(var(--warn-base) / 0.5); }
+.border-warn-60 { border-color: oklch(var(--warn-base) / 0.6); }
+.border-warn-70 { border-color: oklch(var(--warn-base) / 0.7); }
+.border-warn-80 { border-color: oklch(var(--warn-base) / 0.8); }
+.border-warn-90 { border-color: oklch(var(--warn-base) / 0.9); }
+.border-warn-100 { border-color: oklch(var(--warn-base)); }
 
 /* Error Border Colors */
-.border-error { border-color: oklch(var(--error-base)) !important; }
-.border-error-100 { border-color: oklch(var(--error-base)) !important; }
-.border-error-90 { border-color: oklch(var(--error-base) / 0.9) !important; }
-.border-error-80 { border-color: oklch(var(--error-base) / 0.8) !important; }
-.border-error-70 { border-color: oklch(var(--error-base) / 0.7) !important; }
-.border-error-60 { border-color: oklch(var(--error-base) / 0.6) !important; }
-.border-error-50 { border-color: oklch(var(--error-base) / 0.5) !important; }
-.border-error-40 { border-color: oklch(var(--error-base) / 0.4) !important; }
-.border-error-30 { border-color: oklch(var(--error-base) / 0.3) !important; }
-.border-error-25 { border-color: oklch(var(--error-base) / 0.25) !important; }
-.border-error-20 { border-color: oklch(var(--error-base) / 0.2) !important; }
-.border-error-15 { border-color: oklch(var(--error-base) / 0.15) !important; }
-.border-error-10 { border-color: oklch(var(--error-base) / 0.1) !important; }
-.border-error-5 { border-color: oklch(var(--error-base) / 0.05) !important; }
-.border-error-1 { border-color: oklch(var(--error-base) / 0.01) !important; }
+.border-error { border-color: oklch(var(--error-base)); }
+.border-error-1 { border-color: oklch(var(--error-base) / 0.01); }
+.border-error-5 { border-color: oklch(var(--error-base) / 0.05); }
+.border-error-10 { border-color: oklch(var(--error-base) / 0.1); }
+.border-error-15 { border-color: oklch(var(--error-base) / 0.15); }
+.border-error-20 { border-color: oklch(var(--error-base) / 0.2); }
+.border-error-25 { border-color: oklch(var(--error-base) / 0.25); }
+.border-error-30 { border-color: oklch(var(--error-base) / 0.3); }
+.border-error-40 { border-color: oklch(var(--error-base) / 0.4); }
+.border-error-50 { border-color: oklch(var(--error-base) / 0.5); }
+.border-error-60 { border-color: oklch(var(--error-base) / 0.6); }
+.border-error-70 { border-color: oklch(var(--error-base) / 0.7); }
+.border-error-80 { border-color: oklch(var(--error-base) / 0.8); }
+.border-error-90 { border-color: oklch(var(--error-base) / 0.9); }
+.border-error-100 { border-color: oklch(var(--error-base)); }
 
-/* Complete Text Color System - 1% to 100% opacity for all tokens */
+/* Text Color System - Refactored without !important */
 
 /* Accent Text Colors */
-.text-accent { color: oklch(var(--accent-base)) !important; }
-.text-accent-100 { color: oklch(var(--accent-base)) !important; }
-.text-accent-90 { color: oklch(var(--accent-base) / 0.9) !important; }
-.text-accent-80 { color: oklch(var(--accent-base) / 0.8) !important; }
-.text-accent-70 { color: oklch(var(--accent-base) / 0.7) !important; }
-.text-accent-60 { color: oklch(var(--accent-base) / 0.6) !important; }
-.text-accent-50 { color: oklch(var(--accent-base) / 0.5) !important; }
-.text-accent-40 { color: oklch(var(--accent-base) / 0.4) !important; }
-.text-accent-30 { color: oklch(var(--accent-base) / 0.3) !important; }
-.text-accent-20 { color: oklch(var(--accent-base) / 0.2) !important; }
-.text-accent-15 { color: oklch(var(--accent-base) / 0.15) !important; }
-.text-accent-10 { color: oklch(var(--accent-base) / 0.1) !important; }
-.text-accent-5 { color: oklch(var(--accent-base) / 0.05) !important; }
-.text-accent-1 { color: oklch(var(--accent-base) / 0.01) !important; }
+.text-accent { color: oklch(var(--accent-base)); }
+.text-accent-1 { color: oklch(var(--accent-base) / 0.01); }
+.text-accent-5 { color: oklch(var(--accent-base) / 0.05); }
+.text-accent-10 { color: oklch(var(--accent-base) / 0.1); }
+.text-accent-15 { color: oklch(var(--accent-base) / 0.15); }
+.text-accent-20 { color: oklch(var(--accent-base) / 0.2); }
+.text-accent-30 { color: oklch(var(--accent-base) / 0.3); }
+.text-accent-40 { color: oklch(var(--accent-base) / 0.4); }
+.text-accent-50 { color: oklch(var(--accent-base) / 0.5); }
+.text-accent-60 { color: oklch(var(--accent-base) / 0.6); }
+.text-accent-70 { color: oklch(var(--accent-base) / 0.7); }
+.text-accent-80 { color: oklch(var(--accent-base) / 0.8); }
+.text-accent-90 { color: oklch(var(--accent-base) / 0.9); }
+.text-accent-100 { color: oklch(var(--accent-base)); }
 
 /* Neutral Text Colors */
-.text-neutral { color: oklch(var(--neutral-base)) !important; }
-.text-neutral-100 { color: oklch(var(--neutral-base)) !important; }
-.text-neutral-90 { color: oklch(var(--neutral-base) / 0.9) !important; }
-.text-neutral-80 { color: oklch(var(--neutral-base) / 0.8) !important; }
-.text-neutral-70 { color: oklch(var(--neutral-base) / 0.7) !important; }
-.text-neutral-60 { color: oklch(var(--neutral-base) / 0.6) !important; }
-.text-neutral-50 { color: oklch(var(--neutral-base) / 0.5) !important; }
-.text-neutral-40 { color: oklch(var(--neutral-base) / 0.4) !important; }
-.text-neutral-30 { color: oklch(var(--neutral-base) / 0.3) !important; }
-.text-neutral-25 { color: oklch(var(--neutral-base) / 0.25) !important; }
-.text-neutral-20 { color: oklch(var(--neutral-base) / 0.2) !important; }
-.text-neutral-15 { color: oklch(var(--neutral-base) / 0.15) !important; }
-.text-neutral-10 { color: oklch(var(--neutral-base) / 0.1) !important; }
-.text-neutral-5 { color: oklch(var(--neutral-base) / 0.05) !important; }
-.text-neutral-1 { color: oklch(var(--neutral-base) / 0.01) !important; }
+.text-neutral { color: oklch(var(--neutral-base)); }
+.text-neutral-1 { color: oklch(var(--neutral-base) / 0.01); }
+.text-neutral-5 { color: oklch(var(--neutral-base) / 0.05); }
+.text-neutral-10 { color: oklch(var(--neutral-base) / 0.1); }
+.text-neutral-15 { color: oklch(var(--neutral-base) / 0.15); }
+.text-neutral-20 { color: oklch(var(--neutral-base) / 0.2); }
+.text-neutral-25 { color: oklch(var(--neutral-base) / 0.25); }
+.text-neutral-30 { color: oklch(var(--neutral-base) / 0.3); }
+.text-neutral-40 { color: oklch(var(--neutral-base) / 0.4); }
+.text-neutral-50 { color: oklch(var(--neutral-base) / 0.5); }
+.text-neutral-60 { color: oklch(var(--neutral-base) / 0.6); }
+.text-neutral-70 { color: oklch(var(--neutral-base) / 0.7); }
+.text-neutral-80 { color: oklch(var(--neutral-base) / 0.8); }
+.text-neutral-90 { color: oklch(var(--neutral-base) / 0.9); }
+.text-neutral-100 { color: oklch(var(--neutral-base)); }
 
 /* Success Text Colors */
-.text-success { color: oklch(var(--success-base)) !important; }
-.text-success-100 { color: oklch(var(--success-base)) !important; }
-.text-success-90 { color: oklch(var(--success-base) / 0.9) !important; }
-.text-success-80 { color: oklch(var(--success-base) / 0.8) !important; }
-.text-success-70 { color: oklch(var(--success-base) / 0.7) !important; }
-.text-success-60 { color: oklch(var(--success-base) / 0.6) !important; }
-.text-success-50 { color: oklch(var(--success-base) / 0.5) !important; }
-.text-success-40 { color: oklch(var(--success-base) / 0.4) !important; }
-.text-success-30 { color: oklch(var(--success-base) / 0.3) !important; }
-.text-success-20 { color: oklch(var(--success-base) / 0.2) !important; }
-.text-success-15 { color: oklch(var(--success-base) / 0.15) !important; }
-.text-success-10 { color: oklch(var(--success-base) / 0.1) !important; }
-.text-success-5 { color: oklch(var(--success-base) / 0.05) !important; }
-.text-success-1 { color: oklch(var(--success-base) / 0.01) !important; }
+.text-success { color: oklch(var(--success-base)); }
+.text-success-1 { color: oklch(var(--success-base) / 0.01); }
+.text-success-5 { color: oklch(var(--success-base) / 0.05); }
+.text-success-10 { color: oklch(var(--success-base) / 0.1); }
+.text-success-15 { color: oklch(var(--success-base) / 0.15); }
+.text-success-20 { color: oklch(var(--success-base) / 0.2); }
+.text-success-30 { color: oklch(var(--success-base) / 0.3); }
+.text-success-40 { color: oklch(var(--success-base) / 0.4); }
+.text-success-50 { color: oklch(var(--success-base) / 0.5); }
+.text-success-60 { color: oklch(var(--success-base) / 0.6); }
+.text-success-70 { color: oklch(var(--success-base) / 0.7); }
+.text-success-80 { color: oklch(var(--success-base) / 0.8); }
+.text-success-90 { color: oklch(var(--success-base) / 0.9); }
+.text-success-100 { color: oklch(var(--success-base)); }
 
 /* Warning Text Colors */
-.text-warn { color: oklch(var(--warn-base)) !important; }
-.text-warn-100 { color: oklch(var(--warn-base)) !important; }
-.text-warn-90 { color: oklch(var(--warn-base) / 0.9) !important; }
-.text-warn-80 { color: oklch(var(--warn-base) / 0.8) !important; }
-.text-warn-70 { color: oklch(var(--warn-base) / 0.7) !important; }
-.text-warn-60 { color: oklch(var(--warn-base) / 0.6) !important; }
-.text-warn-50 { color: oklch(var(--warn-base) / 0.5) !important; }
-.text-warn-40 { color: oklch(var(--warn-base) / 0.4) !important; }
-.text-warn-30 { color: oklch(var(--warn-base) / 0.3) !important; }
-.text-warn-20 { color: oklch(var(--warn-base) / 0.2) !important; }
-.text-warn-15 { color: oklch(var(--warn-base) / 0.15) !important; }
-.text-warn-10 { color: oklch(var(--warn-base) / 0.1) !important; }
-.text-warn-5 { color: oklch(var(--warn-base) / 0.05) !important; }
-.text-warn-1 { color: oklch(var(--warn-base) / 0.01) !important; }
+.text-warn { color: oklch(var(--warn-base)); }
+.text-warn-1 { color: oklch(var(--warn-base) / 0.01); }
+.text-warn-5 { color: oklch(var(--warn-base) / 0.05); }
+.text-warn-10 { color: oklch(var(--warn-base) / 0.1); }
+.text-warn-15 { color: oklch(var(--warn-base) / 0.15); }
+.text-warn-20 { color: oklch(var(--warn-base) / 0.2); }
+.text-warn-30 { color: oklch(var(--warn-base) / 0.3); }
+.text-warn-40 { color: oklch(var(--warn-base) / 0.4); }
+.text-warn-50 { color: oklch(var(--warn-base) / 0.5); }
+.text-warn-60 { color: oklch(var(--warn-base) / 0.6); }
+.text-warn-70 { color: oklch(var(--warn-base) / 0.7); }
+.text-warn-80 { color: oklch(var(--warn-base) / 0.8); }
+.text-warn-90 { color: oklch(var(--warn-base) / 0.9); }
+.text-warn-100 { color: oklch(var(--warn-base)); }
 
 /* Error Text Colors */
-.text-error { color: oklch(var(--error-base)) !important; }
-.text-error-100 { color: oklch(var(--error-base)) !important; }
-.text-error-90 { color: oklch(var(--error-base) / 0.9) !important; }
-.text-error-80 { color: oklch(var(--error-base) / 0.8) !important; }
-.text-error-70 { color: oklch(var(--error-base) / 0.7) !important; }
-.text-error-60 { color: oklch(var(--error-base) / 0.6) !important; }
-.text-error-50 { color: oklch(var(--error-base) / 0.5) !important; }
-.text-error-40 { color: oklch(var(--error-base) / 0.4) !important; }
-.text-error-30 { color: oklch(var(--error-base) / 0.3) !important; }
-.text-error-20 { color: oklch(var(--error-base) / 0.2) !important; }
-.text-error-15 { color: oklch(var(--error-base) / 0.15) !important; }
-.text-error-10 { color: oklch(var(--error-base) / 0.1) !important; }
-.text-error-5 { color: oklch(var(--error-base) / 0.05) !important; }
-.text-error-1 { color: oklch(var(--error-base) / 0.01) !important; }
+.text-error { color: oklch(var(--error-base)); }
+.text-error-1 { color: oklch(var(--error-base) / 0.01); }
+.text-error-5 { color: oklch(var(--error-base) / 0.05); }
+.text-error-10 { color: oklch(var(--error-base) / 0.1); }
+.text-error-15 { color: oklch(var(--error-base) / 0.15); }
+.text-error-20 { color: oklch(var(--error-base) / 0.2); }
+.text-error-30 { color: oklch(var(--error-base) / 0.3); }
+.text-error-40 { color: oklch(var(--error-base) / 0.4); }
+.text-error-50 { color: oklch(var(--error-base) / 0.5); }
+.text-error-60 { color: oklch(var(--error-base) / 0.6); }
+.text-error-70 { color: oklch(var(--error-base) / 0.7); }
+.text-error-80 { color: oklch(var(--error-base) / 0.8); }
+.text-error-90 { color: oklch(var(--error-base) / 0.9); }
+.text-error-100 { color: oklch(var(--error-base)); }
 
 /* Focus Ring Colors for Buttons */
 .focus-visible\:ring-accent:focus-visible { --tw-ring-color: oklch(var(--accent-base) / 0.5) !important; }

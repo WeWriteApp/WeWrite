@@ -245,9 +245,11 @@ export async function POST(request: NextRequest) {
       const admin = getFirebaseAdmin();
       if (admin) {
         const db = admin.firestore();
+        const now = new Date().toISOString();
         await db.collection(getCollectionName('users')).doc(user.uid).update({
-          lastLoginAt: new Date().toISOString(),
-          lastActiveAt: new Date().toISOString()
+          lastLogin: now, // For admin panel
+          lastLoginAt: now, // For other code that uses this field
+          lastActiveAt: now
         });
       }
     } catch (e) {

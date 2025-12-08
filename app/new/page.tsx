@@ -524,20 +524,18 @@ function NewPageContent() {
     }
   };
 
-  // Handle content changes
-  const handleContentChange = (content: EditorNode[]) => {
+  // Handle content changes - optimized for mobile performance
+  const handleContentChange = useCallback((content: EditorNode[]) => {
     setEditorContent(content);
     setEditorState(content);
 
-    try {
-      const initialContent = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
-      const newContent = JSON.stringify(content);
-      setHasContentChanged(initialContent !== newContent);
-    } catch (e) {
-      console.error('Error comparing content:', e);
-      setHasContentChanged(true);
-    }
-  };
+    // Lightweight check: just check if content array has changed length or has actual text
+    // This avoids expensive JSON.stringify on every keystroke
+    const hasActualContent = content.length > 1 ||
+      (content.length === 1 && content[0]?.children?.some((child: any) => child.text && child.text.trim().length > 0));
+
+    setHasContentChanged(hasActualContent);
+  }, []);
 
   // Update hasUnsavedChanges when content or title changes
   useEffect(() => {
@@ -574,6 +572,7 @@ function NewPageContent() {
     for (const pageRef of newPageRefs) {
       try {
         const pageData = {
+          id: pageRef.pageId, // Use the pre-generated ID from the link
           title: pageRef.title,
           content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
           userId: user.uid,

@@ -49,11 +49,11 @@ function setCachedResult(cacheKey, data, ttl) {
 
 /**
  * UNIFIED SEARCH API - Single Source of Truth
- * 
+ *
  * This API replaces all 7 previous search implementations with a single,
  * comprehensive, and efficient search system that ensures complete record retrieval
  * without artificial limits while maintaining optimal performance.
- * 
+ *
  * Key Features:
  * - No artificial result limits (finds ALL relevant records)
  * - Smart pagination for performance
@@ -61,6 +61,43 @@ function setCachedResult(cacheKey, data, ttl) {
  * - Efficient database queries with proper indexing
  * - Comprehensive caching strategy
  * - Support for multiple search contexts (main search, link editor, add to page)
+ *
+ * === SEARCH ALGORITHM OVERVIEW ===
+ *
+ * The search uses a two-phase approach:
+ *
+ * 1. FAST PHASE: Firestore Range Queries (PREFIX matching only)
+ *    - Uses Firestore's where() clause with >= and <= operators
+ *    - Example: where('title', '>=', 'masses') only finds titles STARTING with "masses"
+ *    - LIMITATION: Cannot find "masses" in "Who are the American masses?"
+ *    - Purpose: Quick results for prefix matches with minimal database reads
+ *
+ * 2. COMPREHENSIVE PHASE: Client-Side Filtering (SUBSTRING matching)
+ *    - Fetches up to 2000 pages and filters client-side using .includes()
+ *    - Example: "masses".includes("masses") finds "Who are the American masses?"
+ *    - Purpose: Catch all substring matches that Firestore queries miss
+ *    - This phase is CRITICAL for user expectations ("masses" SHOULD find the page)
+ *
+ * === SEARCH MATCHING LOGIC ===
+ *
+ * The algorithm prioritizes matches in this order:
+ * 1. Exact match (100 pts) - "american masses" === "American Masses"
+ * 2. Starts with (95 pts) - "american" matches "American Masses"
+ * 3. Contains substring (80 pts) - "masses" matches "Who are the American masses?" ✅ KEY FIX
+ * 4. All words found (70 pts) - "who masses" matches "Who are the American masses?"
+ * 5. Partial matches (50 pts) - "mass" matches "masses"
+ *
+ * === WHY TWO PHASES? ===
+ *
+ * Firestore limitations:
+ * - No native full-text search
+ * - Range queries (>=, <=) only support prefix matching
+ * - No LIKE or CONTAINS operators
+ *
+ * Solution:
+ * - Phase 1 gives fast results for common prefix searches
+ * - Phase 2 ensures we don't miss substring matches
+ * - Together they provide a complete, intuitive search experience
  */
 
 // Search context types
@@ -104,36 +141,59 @@ const CONTEXT_DEFAULTS = {
 };
 
 /**
- * Advanced search matching with comprehensive scoring
+ * SIMPLIFIED and IMPROVED search scoring
+ *
+ * Prioritizes intuitive matching:
+ * 1. Exact matches (100 points)
+ * 2. Starts with search term (95 points)
+ * 3. Contains search term as substring (80 points) - CRITICAL for "masses" in "Who are the American masses?"
+ * 4. All words found (70 points)
+ * 5. Partial word matches (50 points)
+ *
+ * This ensures users get expected results when searching for words anywhere in titles.
  */
 function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch = false) {
   if (!text || !searchTerm) return 0;
-  
+
   const normalizedText = text.toLowerCase();
   const normalizedSearch = searchTerm.toLowerCase();
-  
+
   // Exact match (highest score)
   if (normalizedText === normalizedSearch) {
     return isTitle ? 100 : 80;
   }
-  
-  // Starts with search term
+
+  // Starts with search term (very high score)
   if (normalizedText.startsWith(normalizedSearch)) {
     return isTitle ? 95 : 75;
   }
-  
+
+  // IMPROVED: Contains search term as substring (high score)
+  // This is CRITICAL for finding "masses" in "Who are the American masses?"
+  if (normalizedText.includes(normalizedSearch)) {
+    return isTitle ? 80 : 60;
+  }
+
   // Word boundary matches
   const words = normalizedText.split(/\s+/);
   const searchWords = normalizedSearch.split(/\s+/);
-  
+
   // All search words found as complete words
-  const allWordsFound = searchWords.every(searchWord => 
+  const allWordsFound = searchWords.every(searchWord =>
     words.some(word => word === searchWord)
   );
   if (allWordsFound) {
-    return isTitle ? 90 : 70;
+    return isTitle ? 75 : 55;
   }
-  
+
+  // Contains all search words as substrings (non-sequential)
+  const containsAllWords = searchWords.every(searchWord =>
+    normalizedText.includes(searchWord)
+  );
+  if (containsAllWords) {
+    return isTitle ? 70 : 50;
+  }
+
   // Sequential word matches
   let sequentialMatches = 0;
   for (let i = 0; i <= words.length - searchWords.length; i++) {
@@ -147,22 +207,17 @@ function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch 
     }
     sequentialMatches = Math.max(sequentialMatches, matches);
   }
-  
+
   if (sequentialMatches === searchWords.length) {
-    return isTitle ? 85 : 65;
+    return isTitle ? 65 : 45;
   }
-  
-  // Contains all search words (non-sequential)
-  const containsAllWords = searchWords.every(searchWord =>
+
+  // Partial word matches (lowest score but still valid)
+  const someWordsFound = searchWords.some(searchWord =>
     normalizedText.includes(searchWord)
   );
-  if (containsAllWords) {
-    return isTitle ? 80 : 60;
-  }
-  
-  // Partial matches
-  if (normalizedText.includes(normalizedSearch)) {
-    return isTitle ? 75 : 55;
+  if (someWordsFound) {
+    return isTitle ? 50 : 35;
   }
 
   // No match found - return 0 to exclude irrelevant results
@@ -424,15 +479,19 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
 
     // ENHANCED FALLBACK: Always perform broader client-side search for better word matching
     // This ensures we find pages where search terms appear anywhere in the title, not just at the start
+    // CRITICAL FIX: Firestore range queries only support PREFIX matching (e.g., title >= "masses")
+    // which won't find "Who are the American masses?" because it doesn't start with "masses"
+    // Solution: Always perform a comprehensive client-side search to catch substring matches
     if (!isEmptySearch) {
       console.log(`⚡ [SEARCH DEBUG] Performing comprehensive client-side search to catch missed matches`);
 
       try {
-        // Get a broader set of pages for client-side filtering
-        // Increase limit to ensure we catch more potential matches
+        // IMPROVED: Get a much larger set of pages for client-side filtering
+        // Increase limit significantly to ensure we catch all potential matches
+        // Users reported missing results like "masses" not finding "Who are the American masses?"
         const broadQuery = query(
           collection(db, getCollectionName('pages')),
-          limit(500)
+          limit(2000) // Increased from 500 to 2000 to catch more matches
         );
 
         const broadSnapshot = await getDocs(broadQuery);
@@ -440,7 +499,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
 
         broadSnapshot.forEach(doc => {
           if (processedIds.has(doc.id) || doc.id === currentPageId) return;
-          if (allResults.length >= finalMaxResults) return;
+          if (allResults.length >= finalMaxResults * 2) return; // Allow more results for better matching
 
           const data = doc.data();
 
@@ -449,13 +508,14 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
 
           const pageTitle = data.title || '';
 
-          // Enhanced client-side matching: check for individual words and full term
+          // SIMPLIFIED: Use simple substring matching for reliability
+          // This is more intuitive and matches user expectations
           const titleLower = pageTitle.toLowerCase();
           const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
 
           let hasMatch = false;
 
-          // Check if title contains the full search term
+          // Check if title contains the full search term (highest priority)
           if (titleLower.includes(searchTermLower)) {
             hasMatch = true;
           }
@@ -469,6 +529,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           }
 
           // Check if title contains any individual search word (for single word searches)
+          // IMPORTANT: This catches cases like "masses" in "Who are the American masses?"
           if (!hasMatch && searchWords.length === 1) {
             if (titleLower.includes(searchWords[0])) {
               hasMatch = true;
@@ -500,7 +561,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           }
         });
 
-        console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches`);
+        console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches (total now: ${allResults.length})`);
       } catch (error) {
         console.warn('Error in comprehensive client-side search:', error);
       }

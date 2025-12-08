@@ -11,15 +11,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../..
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
-import { 
-  ChevronLeft, 
-  Palette, 
-  Search, 
-  Heart, 
-  Star, 
-  Settings, 
-  User, 
-  Mail, 
+import {
+  ChevronLeft,
+  Palette,
+  Search,
+  Heart,
+  Star,
+  Settings,
+  User,
+  Mail,
   Lock,
   Eye,
   EyeOff,
@@ -29,7 +29,8 @@ import {
   X,
   AlertCircle,
   Info,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 import { isAdmin } from '../../utils/isAdmin';
@@ -740,42 +741,174 @@ export default function DesignSystemPage() {
           <ComponentShowcase
             title="PillLink Components"
             path="app/components/utils/PillLink.tsx"
-            description="Interactive pill-shaped links used throughout the application for pages, users, and external links"
+            description="Interactive pill-shaped links used throughout the application for pages, users, and external links. Try hovering and clicking to see all interaction states!"
           >
-            <StateDemo label="Page Links">
-              <div className="flex flex-wrap gap-2">
-                <PillLink href="/example-page" pageId="example123">Normal Page</PillLink>
-                <PillLink href="/example-page" pageId="example123" isOwned={true}>Owned Page</PillLink>
-                <PillLink href="/example-page" pageId="example123" isPublic={true}>Public Page</PillLink>
-                <PillLink href="/example-page" pageId="example123" isLoading={true}>Loading Page</PillLink>
+            <StateDemo label="Filled Style (default) - Hover & Click to test">
+              <div className="wewrite-card p-4 space-y-3 bg-muted/30">
+                <div className="text-sm text-muted-foreground mb-2">
+                  <strong>Filled Pills:</strong> Bold background with dynamic text color (white/black) based on accent lightness. Uses alpha overlay on hover to darken/brighten.
+                </div>
+                <div className="flex flex-wrap gap-2 items-baseline">
+                  <PillLink href="/example-page" pageId="example123">Page Link</PillLink>
+                  <PillLink href="/user/example">@username</PillLink>
+                  <PillLink href="https://example.com">External Link</PillLink>
+                  <div className="inline-flex items-baseline gap-1">
+                    <PillLink href="/example-page" pageId="example123">Page Title</PillLink>
+                    <span className="text-sm text-muted-foreground">by</span>
+                    <PillLink href="/user/author">@author</PillLink>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Classes: <code className="bg-muted px-1 rounded">bg-accent-100 hover:[background-image:var(--alpha-10-gradient)] active:[background-image:var(--alpha-15-gradient)]</code>
+                  <p className="mt-1">Uses background-image to layer alpha overlay on top of accent color (keeps base color visible)</p>
+                </div>
               </div>
             </StateDemo>
 
-            <StateDemo label="User Links">
-              <div className="flex flex-wrap gap-2">
-                <PillLink href="/user/example">@username</PillLink>
-                <PillLink href="/user/example" byline="Author">@author</PillLink>
+            <StateDemo label="Outline Style - Hover & Click to test">
+              <div className="wewrite-card p-4 space-y-3 bg-muted/30">
+                <div className="text-sm text-muted-foreground mb-2">
+                  <strong>Outline Pills:</strong> Transparent background with colored border, subtle fill on hover
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a href="#" className="inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">Page Link</span>
+                  </a>
+                  <a href="#" className="inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">@username</span>
+                  </a>
+                  <a href="#" className="inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">External Link</span>
+                    <ExternalLink size={14} className="ml-1.5 flex-shrink-0" />
+                  </a>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Classes: <code className="bg-muted px-1 rounded">border border-accent-70 hover:bg-accent-10 active:bg-accent-15</code>
+                </div>
               </div>
             </StateDemo>
 
-            <StateDemo label="External Links">
-              <div className="flex flex-wrap gap-2">
-                <PillLink href="https://example.com">External Link</PillLink>
-                <PillLink href="https://github.com">GitHub</PillLink>
+            <StateDemo label="Text Only Style - Hover & Click to test">
+              <div className="wewrite-card p-4 space-y-3 bg-muted/30">
+                <div className="text-sm text-muted-foreground mb-2">
+                  <strong>Text Only Pills:</strong> Clean text with underline on hover, minimal background
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">Page Link</span>
+                  </a>
+                  <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">@username</span>
+                  </a>
+                  <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">External Link</span>
+                    <ExternalLink size={14} className="ml-1.5 flex-shrink-0" />
+                  </a>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Classes: <code className="bg-muted px-1 rounded">font-bold hover:underline hover:bg-accent-5 active:bg-accent-10</code>
+                </div>
               </div>
             </StateDemo>
 
-            <StateDemo label="Special States">
+            <StateDemo label="Underlined Style - Hover & Click to test">
+              <div className="wewrite-card p-4 space-y-3 bg-muted/30">
+                <div className="text-sm text-muted-foreground mb-2">
+                  <strong>Underlined Pills:</strong> Always underlined, thicker underline on hover
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">Page Link</span>
+                  </a>
+                  <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">@username</span>
+                  </a>
+                  <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
+                    <span className="pill-text">External Link</span>
+                    <ExternalLink size={14} className="ml-1.5 flex-shrink-0" />
+                  </a>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Classes: <code className="bg-muted px-1 rounded">underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10</code>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Interaction States Reference">
+              <div className="wewrite-card p-4 space-y-3 bg-muted/30">
+                <h4 className="font-medium text-sm mb-3">All pill styles share these interaction patterns:</h4>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• <strong>Normal:</strong> Base state with default colors</li>
+                  <li>• <strong>Hover:</strong> <code className="bg-muted px-1 rounded">scale-[1.05]</code> + style-specific hover effects (background, border, underline)</li>
+                  <li>• <strong>Active/Pressed:</strong> <code className="bg-muted px-1 rounded">scale-[0.95]</code> + stronger background/border colors</li>
+                  <li>• <strong>Focus:</strong> <code className="bg-muted px-1 rounded">ring-2 ring-accent ring-offset-2</code> for keyboard navigation</li>
+                </ul>
+                <div className="mt-3 text-xs">
+                  <strong>All styles use:</strong> <code className="bg-muted px-1 rounded">transition-all duration-150 ease-out</code>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Special States & Variants">
               <div className="flex flex-wrap gap-2">
-                <PillLink href="/deleted-page" deleted={true}>I'm gonna delete this page one sec</PillLink>
-                <PillLink href="/fallback-page" isFallback={true}>Fallback Link</PillLink>
+                <PillLink href="/deleted-page" deleted={true}>Deleted Page</PillLink>
                 <PillLink href="/suggestion" isSuggestion={true}>Link Suggestion</PillLink>
+                <PillLink href="/example-page" pageId="example123" isLoading={true}>Loading...</PillLink>
               </div>
             </StateDemo>
 
-            <StateDemo label="Group Links">
-              <div className="flex flex-wrap gap-2">
-                <PillLink href="/group/example" groupId="group123">Group Page</PillLink>
+            <StateDemo label="Link Type Examples">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Page Links</p>
+                  <div className="flex flex-wrap gap-2 items-baseline">
+                    <PillLink href="/example-page" pageId="example123">Simple Page</PillLink>
+                    <div className="inline-flex items-baseline gap-1">
+                      <PillLink href="/example-page" pageId="example456">Building a Startup</PillLink>
+                      <span className="text-sm text-muted-foreground">by</span>
+                      <PillLink href="/user/jamie">@jamie</PillLink>
+                    </div>
+                    <PillLink href="/example-page" pageId="example789" isPublic={true}>Public Page</PillLink>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 italic">
+                    Note: In the editor, "Page by Author" is one link object with "show author" enabled. For readers, it displays as two separate clickable links.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">User Links</p>
+                  <div className="flex flex-wrap gap-2">
+                    <PillLink href="/user/jamie">@jamie</PillLink>
+                    <PillLink href="/user/example">@example</PillLink>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">External Links</p>
+                  <div className="flex flex-wrap gap-2">
+                    <PillLink href="https://example.com">Example Website</PillLink>
+                    <PillLink href="https://github.com">GitHub</PillLink>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Group Links</p>
+                  <div className="flex flex-wrap gap-2">
+                    <PillLink href="/group/example" groupId="group123">Example Group</PillLink>
+                  </div>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Style Configuration">
+              <div className="wewrite-card p-4 bg-muted/30">
+                <h4 className="font-medium mb-2">Available Styles</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Users can change their preferred pill style in Settings. The style is controlled by <code className="bg-muted px-1 rounded">PillStyleContext</code>.
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <code className="bg-muted px-1 rounded">filled</code> - Bold filled background (default)</li>
+                  <li>• <code className="bg-muted px-1 rounded">outline</code> - Bordered with transparent background</li>
+                  <li>• <code className="bg-muted px-1 rounded">text_only</code> - Clean text that underlines on hover</li>
+                  <li>• <code className="bg-muted px-1 rounded">underlined</code> - Always underlined text</li>
+                </ul>
               </div>
             </StateDemo>
           </ComponentShowcase>

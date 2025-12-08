@@ -36,6 +36,12 @@ WeWrite is a modern content platform built with Next.js 15, featuring a sophisti
 - **[THEME_SYSTEM_ARCHITECTURE.md](./THEME_SYSTEM_ARCHITECTURE.md)**, **[COMPLETE_COLOR_SYSTEM.md](./COMPLETE_COLOR_SYSTEM.md)**, **[OKLCH_COLOR_SYSTEM.md](./OKLCH_COLOR_SYSTEM.md)** – Tokens and theming
 - **[DESIGN_SYSTEM_ARCHITECTURE.md](./DESIGN_SYSTEM_ARCHITECTURE.md)** – Cards, overlays, glassmorphism guidelines
 
+### Search System
+- **[SEARCH_SYSTEM.md](./SEARCH_SYSTEM.md)** – Search algorithm architecture and quality standards
+- **[SEARCH_PERFORMANCE_OPTIMIZATIONS.md](./SEARCH_PERFORMANCE_OPTIMIZATIONS.md)** – Performance tuning and caching
+- **[SEARCH_ALGORITHM_CHANGELOG.md](./SEARCH_ALGORITHM_CHANGELOG.md)** – Algorithm changes and improvements
+- **[search-requirements.md](./search-requirements.md)** – Requirements and implementation status
+
 ### Performance, logging, and ops
 - **[FIREBASE_OPTIMIZATION_GUIDE.md](./FIREBASE_OPTIMIZATION_GUIDE.md)**, **[PERFORMANCE_OPTIMIZATION_GUIDE.md](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** – Perf/cost
 - **[LOGGING_NOISE_REDUCTION.md](./LOGGING_NOISE_REDUCTION.md)** – Flags and practices to keep logs sane

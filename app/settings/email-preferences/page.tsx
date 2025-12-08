@@ -24,17 +24,18 @@ interface EmailPreferences {
   // Authentication & Security
   securityAlerts: boolean;
   loginNotifications: boolean;
-  
+
   // Notifications
   newFollower: boolean;
   pageComments: boolean;
-  pageMentions: boolean;
-  
+  pageLinks: boolean;
+  userMentions: boolean;
+
   // Payments
   payoutReminders: boolean;
   paymentReceipts: boolean;
   earningsSummary: boolean;
-  
+
   // Engagement & Marketing
   weeklyDigest: boolean;
   productUpdates: boolean;
@@ -46,7 +47,8 @@ const defaultPreferences: EmailPreferences = {
   loginNotifications: true,
   newFollower: true,
   pageComments: true,
-  pageMentions: true,
+  pageLinks: true,
+  userMentions: true,
   payoutReminders: true,
   paymentReceipts: true,
   earningsSummary: true,
@@ -277,10 +279,16 @@ export default function EmailPreferencesPage() {
                 checked={preferences.pageComments}
               />
               <PreferenceToggle
-                id="pageMentions"
-                label="Mentions"
-                description="Get notified when someone mentions you or links to your pages"
-                checked={preferences.pageMentions}
+                id="pageLinks"
+                label="Page Links"
+                description="Get notified when someone links to your page"
+                checked={preferences.pageLinks}
+              />
+              <PreferenceToggle
+                id="userMentions"
+                label="User Mentions"
+                description="Get notified when someone mentions you by linking to your user page"
+                checked={preferences.userMentions}
               />
             </div>
           </section>
@@ -358,7 +366,8 @@ export default function EmailPreferencesPage() {
                     loginNotifications: false,
                     newFollower: false,
                     pageComments: false,
-                    pageMentions: false,
+                    pageLinks: false,
+                    userMentions: false,
                     payoutReminders: false,
                     paymentReceipts: false,
                     earningsSummary: false,
