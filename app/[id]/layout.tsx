@@ -161,9 +161,27 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
     console.error('Error generating metadata:', error);
   }
 
+  // Fallback metadata - still include the page ID for OG image
+  const unwrappedParams = await params;
+  const pageId = unwrappedParams.id;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                 (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://wewrite.app');
+
   return {
     title: 'WeWrite - The social wiki where every page is a fundraiser',
-    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.'
+    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.',
+    openGraph: {
+      title: 'WeWrite - The social wiki where every page is a fundraiser',
+      description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.',
+      url: `${baseUrl}/${pageId}`,
+      siteName: 'WeWrite',
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'WeWrite - The social wiki where every page is a fundraiser',
+      description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.',
+    }
   };
 }
 
