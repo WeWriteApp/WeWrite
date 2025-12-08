@@ -607,8 +607,6 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
     const searchLower = searchTerm.toLowerCase().trim();
     const results = new Map();
 
-    console.log(`🔍 [USER SEARCH] Searching for users with term: "${searchTerm}" (lowercase: "${searchLower}")`);
-
     // ALWAYS do a comprehensive search since we don't have many users
     // This is more reliable than trying to use the usernameLower field which may not be populated
     try {
@@ -618,18 +616,13 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
       );
       const broadResults = await getDocs(broadQuery);
 
-      console.log(`🔍 [USER SEARCH] Fetched ${broadResults.size} user documents for filtering`);
-
       broadResults.forEach(doc => {
         const userData = doc.data();
         const username = userData.username || '';
         const usernameLower = (userData.usernameLower || username).toLowerCase();
 
-        console.log(`🔍 [USER SEARCH] Checking user ${doc.id}: username="${username}", usernameLower="${usernameLower}"`);
-
         // SECURITY: Only include users with valid usernames, never search by email
         if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
-          console.log(`🔍 [USER SEARCH] Skipping user ${doc.id} - invalid username`);
           return; // Skip users without proper usernames
         }
 
@@ -637,11 +630,8 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
         // This catches "Jumbo" in "JumboJubilee"
         const usernameMatch = usernameLower.includes(searchLower);
 
-        console.log(`🔍 [USER SEARCH] User ${doc.id} match check: "${usernameLower}".includes("${searchLower}") = ${usernameMatch}`);
-
         if (usernameMatch) {
           const matchScore = calculateSearchScore(username, searchTerm, true, false);
-          console.log(`🔍 [USER SEARCH] ✓ Found match! User ${doc.id} (${username}) with score ${matchScore}`);
           results.set(doc.id, {
             id: doc.id,
             username,
@@ -652,8 +642,6 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
           });
         }
       });
-
-      console.log(`🔍 [USER SEARCH] Found ${results.size} matching users`);
     } catch (error) {
       console.error('Error in comprehensive user search:', error);
     }
