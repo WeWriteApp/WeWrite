@@ -607,37 +607,41 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
     const searchLower = searchTerm.toLowerCase().trim();
     const results = new Map();
 
-    // OPTIMIZATION: Use parallel queries for better performance
-    const queryPromises = [];
+    console.log(`🔍 [USER SEARCH] Searching for users with term: "${searchTerm}" (lowercase: "${searchLower}")`);
 
-    // Primary search by usernameLower field
-    const usernameQuery = query(
-      collection(db, getCollectionName('users')),
-      where('usernameLower', '>=', searchLower),
-      where('usernameLower', '<=', searchLower + '\uf8ff'),
-      limit(maxResults)
-    );
-    queryPromises.push(getDocs(usernameQuery));
+    // ALWAYS do a comprehensive search since we don't have many users
+    // This is more reliable than trying to use the usernameLower field which may not be populated
+    try {
+      const broadQuery = query(
+        collection(db, getCollectionName('users')),
+        limit(500) // Increased limit to ensure we find all matching users
+      );
+      const broadResults = await getDocs(broadQuery);
 
-    // OPTIMIZATION: Execute queries in parallel
-    const queryResults = await Promise.all(queryPromises);
+      console.log(`🔍 [USER SEARCH] Fetched ${broadResults.size} user documents for filtering`);
 
-    // Process results efficiently
-    for (const snapshot of queryResults) {
-      snapshot.forEach(doc => {
-        if (results.has(doc.id)) return;
-
+      broadResults.forEach(doc => {
         const userData = doc.data();
         const username = userData.username || '';
+        const usernameLower = (userData.usernameLower || username).toLowerCase();
 
-        // SECURITY: Only include users with valid usernames, never expose email information
+        console.log(`🔍 [USER SEARCH] Checking user ${doc.id}: username="${username}", usernameLower="${usernameLower}"`);
+
+        // SECURITY: Only include users with valid usernames, never search by email
         if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
+          console.log(`🔍 [USER SEARCH] Skipping user ${doc.id} - invalid username`);
           return; // Skip users without proper usernames
         }
 
-        const matchScore = calculateSearchScore(username, searchTerm, true, false);
+        // Search by username using case-insensitive substring matching
+        // This catches "Jumbo" in "JumboJubilee"
+        const usernameMatch = usernameLower.includes(searchLower);
 
-        if (matchScore > 0) {
+        console.log(`🔍 [USER SEARCH] User ${doc.id} match check: "${usernameLower}".includes("${searchLower}") = ${usernameMatch}`);
+
+        if (usernameMatch) {
+          const matchScore = calculateSearchScore(username, searchTerm, true, false);
+          console.log(`🔍 [USER SEARCH] ✓ Found match! User ${doc.id} (${username}) with score ${matchScore}`);
           results.set(doc.id, {
             id: doc.id,
             username,
@@ -648,46 +652,10 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
           });
         }
       });
-    }
 
-    // If we have few results, do a broader search
-    if (results.size < maxResults / 2) {
-      try {
-        const broadQuery = query(
-          collection(db, getCollectionName('users')),
-          limit(200)
-        );
-        const broadResults = await getDocs(broadQuery);
-
-        broadResults.forEach(doc => {
-          if (!results.has(doc.id)) {
-            const userData = doc.data();
-            const username = userData.username || '';
-
-            // SECURITY: Only include users with valid usernames, never search by email
-            if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
-              return; // Skip users without proper usernames
-            }
-
-            // Only search by username, never by email for security
-            const usernameMatch = username.toLowerCase().includes(searchLower);
-
-            if (usernameMatch) {
-              const matchScore = calculateSearchScore(username, searchTerm, true, false);
-              results.set(doc.id, {
-                id: doc.id,
-                username,
-                // SECURITY: Never include email in search results
-                photoURL: userData.photoURL || null,
-                type: 'user',
-                matchScore
-              });
-            }
-          }
-        });
-      } catch (error) {
-        console.warn('Error in broad user search:', error);
-      }
+      console.log(`🔍 [USER SEARCH] Found ${results.size} matching users`);
+    } catch (error) {
+      console.error('Error in comprehensive user search:', error);
     }
 
     // Sort by match score and username
