@@ -60,6 +60,25 @@ function calculateConfidence(phrase: string, title: string, content: string): nu
 }
 
 /**
+ * Look up username from userId
+ */
+async function getUsernameFromUserId(db: FirebaseFirestore.Firestore, userId: string): Promise<string | null> {
+  if (!userId) return null;
+
+  try {
+    const usersCollectionName = getCollectionName('users');
+    const userDoc = await db.collection(usersCollectionName).doc(userId).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      return userData?.username || null;
+    }
+  } catch (error) {
+    console.error(`🔴 LINK_SUGGESTIONS: Error looking up username for ${userId}:`, error);
+  }
+  return null;
+}
+
+/**
  * Search for pages that match a specific phrase
  */
 async function searchPagesForPhrase(
@@ -70,7 +89,7 @@ async function searchPagesForPhrase(
   try {
     const db = getFirebaseAdmin().firestore();
     const pagesCollectionName = getCollectionName('pages');
-    
+
     console.log(`🔗 LINK_SUGGESTIONS: Searching for phrase "${phrase}" in pages collection: ${pagesCollectionName} (FIXED VERSION)`);
 
     // Search for pages where title contains the phrase (case-insensitive)
@@ -88,6 +107,9 @@ async function searchPagesForPhrase(
     const sampleTitles = titleQuery.docs.slice(0, 10).map(doc => doc.data().title).filter(Boolean);
     console.log(`🔗 LINK_SUGGESTIONS: Sample titles from query: ${JSON.stringify(sampleTitles)}`);
 
+    // Collect matching pages first
+    const matchingDocs: { doc: FirebaseFirestore.QueryDocumentSnapshot, isExact: boolean }[] = [];
+
     titleQuery.docs.forEach(doc => {
       const data = doc.data();
       const title = data.title?.toLowerCase() || '';
@@ -104,18 +126,36 @@ async function searchPagesForPhrase(
 
       if (isExactMatch || titleContainsPhrase) {
         console.log(`🔗 LINK_SUGGESTIONS: Found match for "${phrase}": "${data.title}" (exact: ${isExactMatch}, titleContains: ${titleContainsPhrase})`);
-
-        pages.push({
-          id: doc.id,
-          title: data.title,
-          username: data.username || 'Unknown',
-          userId: data.userId || '',
-          lastModified: data.lastModified?.toDate?.()?.toISOString() || new Date().toISOString(),
-          isPublic: data.isPublic !== false,
-          content: data.content || ''
-        });
+        matchingDocs.push({ doc, isExact: isExactMatch });
       }
     });
+
+    // Look up usernames for matching pages
+    for (const { doc } of matchingDocs) {
+      const data = doc.data();
+      // Try to get username from page document first
+      let username = data.username;
+
+      // If username looks like a userId (long alphanumeric string), look up the real username
+      // This handles cases where the page's username field was incorrectly set to userId
+      const looksLikeUserId = username && username.length > 15 && /^[a-zA-Z0-9]+$/.test(username);
+      if ((!username || looksLikeUserId) && data.userId) {
+        const realUsername = await getUsernameFromUserId(db, data.userId);
+        if (realUsername) {
+          username = realUsername;
+        }
+      }
+
+      pages.push({
+        id: doc.id,
+        title: data.title,
+        username: username || null,
+        userId: data.userId || '',
+        lastModified: data.lastModified?.toDate?.()?.toISOString() || new Date().toISOString(),
+        isPublic: data.isPublic !== false,
+        content: data.content || ''
+      });
+    }
     
     console.log(`🔗 LINK_SUGGESTIONS: Found ${pages.length} potential matches for phrase "${phrase}"`);
     

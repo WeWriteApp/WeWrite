@@ -1053,37 +1053,9 @@ export async function PUT(request: NextRequest) {
           console.error('❌ TITLE_CHANGE: Error creating version for title change:', versionError);
         }
       } else {
-        console.log('🔄 TITLE_CHANGE: Content was also updated, title change included in content version');
-        // Title change will be handled by the content version system
-        // We just need to update the lastDiff to show the title change
-        try {
-          const titleDiffResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/diff`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              titleChange: {
-                oldTitle: pageData.title,
-                newTitle: title.trim()
-              }
-            })
-          });
-
-          if (titleDiffResponse.ok) {
-            const titleDiff = await titleDiffResponse.json();
-            // Update the page's lastDiff to show title change in recent edits
-            await pageRef.update({
-              lastDiff: {
-                added: titleDiff.added || 0,
-                removed: titleDiff.removed || 0,
-                hasChanges: true,
-                preview: titleDiff.preview || null
-              }
-            });
-            console.log('✅ TITLE_CHANGE: Updated lastDiff for title change in recent edits');
-          }
-        } catch (diffError) {
-          console.error('❌ TITLE_CHANGE: Error calculating title diff:', diffError);
-        }
+        // Content was also updated - the content diff from saveNewVersionServer is already stored
+        // and is more meaningful than the title diff, so we DON'T overwrite lastDiff here
+        console.log('🔄 TITLE_CHANGE: Content was also updated, keeping content diff (more meaningful than title diff)');
       }
 
       // Update all links immediately - but don't fail the save if this errors

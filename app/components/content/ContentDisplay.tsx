@@ -54,6 +54,7 @@ interface ContentDisplayProps {
   onInsertLinkRequest?: (triggerFn: () => void) => void;
   pageId?: string;
   initialSelectionPath?: import('slate').Path;
+  showLinkSuggestions?: boolean;
   
   // Viewing props (only used when isEditable=false)
   showDiff?: boolean;
@@ -89,6 +90,7 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
   onInsertLinkRequest,
   pageId,
   initialSelectionPath,
+  showLinkSuggestions = false,
   showDiff = false,
   showLineNumbers = true,
   isSearch = false,
@@ -124,6 +126,7 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
         onInsertLinkRequest={onInsertLinkRequest}
         pageId={pageId}
         initialSelectionPath={initialSelectionPath}
+        showLinkSuggestions={showLinkSuggestions}
         className={className}
       />
     );

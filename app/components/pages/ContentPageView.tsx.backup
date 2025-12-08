@@ -16,7 +16,6 @@ import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import logger, { createLogger } from '../../utils/logger';
-import { extractNewPageReferences, createNewPagesFromLinks } from '../../utils/pageContentHelpers';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
@@ -161,6 +160,7 @@ export default function ContentPageView({
 
   // Debug logging for hasUnsavedChanges state
   useEffect(() => {
+    console.log('🔍 UNSAVED CHANGES: hasUnsavedChanges state changed to:', hasUnsavedChanges);
   }, [hasUnsavedChanges]);
   const [title, setTitle] = useState('');
   const authorUsername = page?.username || (page as any)?.authorUsername || (page as any)?.user?.username || '';
@@ -185,9 +185,6 @@ export default function ContentPageView({
 
   // Link insertion trigger function
   const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
-
-  // Link suggestions toggle state
-  const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
 
   // Title validation state
   const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
@@ -256,10 +253,11 @@ export default function ContentPageView({
   const tryApiFallback = useCallback(async () => {
     try {
       pageLogger.debug('Trying API fallback for page load', { pageId, userId: user?.uid });
+      console.log('🔄 [PageView] API fallback: Calling getPageById with pageId:', pageId, 'userId:', user?.uid);
 
       const result = await getPageById(pageId, user?.uid);
 
-      pageLogger.debug('API fallback result', {
+      console.log('🔄 [PageView] API fallback result:', {
         hasPageData: !!result.pageData,
         hasError: !!result.error,
         error: result.error,
@@ -548,6 +546,7 @@ export default function ContentPageView({
 
     // CRITICAL FIX: Don't reload data immediately after save to prevent showing stale content
     if (justSaved) {
+      console.log('📄 PageView: Skipping data loading - just saved, using current editor state');
       return;
     }
 
@@ -563,6 +562,7 @@ export default function ContentPageView({
     // Function to load page data using optimized caching
     const loadOptimizedPageData = async () => {
       try {
+        console.log('🔍 PageView: Using optimized data fetching for page:', pageId);
 
         // Use optimized page data fetching with aggressive caching
         const data = await getOptimizedPageData(pageId, user?.uid);
@@ -574,7 +574,7 @@ export default function ContentPageView({
           return;
         }
 
-        pageLogger.debug('Optimized page data loaded', {
+        console.log('🔍 PageView: Optimized data received', {
           hasPageData: !!data.pageData,
           hasVersionData: !!data.versionData,
           pageData: data.pageData ? {
@@ -609,6 +609,7 @@ export default function ContentPageView({
 
           // Try API fallback before giving up
           try {
+            console.log('🔄 [PageView] Primary data load failed, trying API fallback for page:', pageId);
             await tryApiFallback();
             return; // tryApiFallback handles loading state
           } catch (fallbackError) {
@@ -626,7 +627,7 @@ export default function ContentPageView({
 
         // CRITICAL FIX: Handle missing or corrupted page data
         if (pageData && (!pageData.title || pageData.title === 'Untitled' || !pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username')) {
-          console.warn('⚠️ [PageView] Page has missing data, attempting to fix:', {
+          console.log('🔧 [PageView] Detected missing page data, attempting to fix:', {
             pageId,
             title: pageData.title,
             username: pageData.username,
@@ -636,11 +637,13 @@ export default function ContentPageView({
           // Try to fetch missing username from user profile
           if (pageData.userId && (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username')) {
             try {
+              console.log('🔧 [PageView] Fetching username for user:', pageData.userId);
               const userResponse = await fetch(`/api/users/profile?id=${encodeURIComponent(pageData.userId)}`);
               if (userResponse.ok) {
                 const userResult = await userResponse.json();
                 if (userResult.success && userResult.data?.username) {
                   pageData = { ...pageData, username: userResult.data.username };
+                  console.log('✅ [PageView] Fixed username:', userResult.data.username);
                 }
               }
             } catch (userError) {
@@ -651,6 +654,7 @@ export default function ContentPageView({
           // If title is still missing or default, try to get it from version data
           if ((!pageData.title || pageData.title === 'Untitled') && versionData?.title) {
             pageData = { ...pageData, title: versionData.title };
+            console.log('✅ [PageView] Fixed title from version data:', versionData.title);
           }
 
           // If we still have missing data, show a helpful error
@@ -688,7 +692,7 @@ export default function ContentPageView({
 
           if (contentToUse) {
             try {
-              console.log('📄 PageView: Content to use details:', {
+              console.log('🔍 PAGE LOAD: Raw content before parsing:', {
                 contentToUse,
                 type: typeof contentToUse,
                 length: typeof contentToUse === 'string' ? contentToUse.length : 'not string',
@@ -718,7 +722,7 @@ export default function ContentPageView({
                 parsedContent = contentToUse;
               }
 
-              console.log('📄 PageView: Parsed content details:', {
+              console.log('📄 PageView parsed content:', {
                 source: contentSource,
                 type: typeof parsedContent,
                 isArray: Array.isArray(parsedContent),
@@ -728,13 +732,16 @@ export default function ContentPageView({
               });
 
               // SIMPLIFIED: Pass raw content to components - let them handle conversion
+              console.log('🔍 SIMPLIFIED: Setting raw parsed content - components will handle format');
               setEditorState(parsedContent);
             } catch (error) {
               console.error("📄 PageView: Error parsing content:", error, { contentToUse });
               // SIMPLIFIED: Pass raw content even on error - components will handle it
+              console.log('📄 SIMPLIFIED: Using raw content as fallback');
               setEditorState(contentToUse || null);
             }
           } else {
+            console.log('📄 SIMPLIFIED: No content found, setting null - components will handle empty state');
             setEditorState(null);
           }
 
@@ -828,7 +835,7 @@ export default function ContentPageView({
   const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
 
   // Debug canEdit logic
-  console.log('🔍 canEdit calculation:', {
+  console.log('🔗 PAGE_VIEW: canEdit calculation:', {
     userUid: user?.uid,
     pageUserId: page?.userId,
     isPreviewingDeleted,
@@ -844,7 +851,7 @@ export default function ContentPageView({
   // MY page = ALWAYS edit mode
   // NOT my page = ALWAYS view mode
   useEffect(() => {
-    console.log('🔍 Edit mode logic:', {
+    console.log('🔗 PAGE_VIEW: Setting edit mode based on permissions:', {
       canEdit,
       showVersion,
       showDiff,
@@ -853,9 +860,11 @@ export default function ContentPageView({
 
     if (canEdit && !showVersion && !showDiff) {
       // This is MY page - ALWAYS edit mode
+      console.log('🔗 PAGE_VIEW: Entering edit mode');
       setIsEditing(true);
     } else {
       // This is NOT my page OR showing version/diff - ALWAYS view mode
+      console.log('🔗 PAGE_VIEW: Staying in view mode');
       setIsEditing(false);
     }
   }, [canEdit, showVersion, showDiff]);
@@ -956,8 +965,85 @@ export default function ContentPageView({
 
   // No need for handleSetIsEditing - always in edit mode
 
+  // Helper function to extract new page references from content
+  const extractNewPageReferences = (content: any[]): Array<{pageId: string, title: string}> => {
+    const newPages: Array<{pageId: string, title: string}> = [];
+
+    const processNode = (node: any) => {
+      if (node.type === 'link' && node.isNew && node.pageId && node.pageTitle) {
+        newPages.push({
+          pageId: node.pageId,
+          title: node.pageTitle
+        });
+      }
+
+      if (node.children) {
+        node.children.forEach(processNode);
+      }
+    };
+
+    content.forEach(processNode);
+    return newPages;
+  };
+
+  // Helper function to create new pages referenced in links
+  const createNewPagesFromLinks = async (newPageRefs: Array<{pageId: string, title: string}>): Promise<void> => {
+    if (!user?.uid || newPageRefs.length === 0) return;
+
+    console.log('🔵 PAGE SAVE: Creating new pages from links:', newPageRefs);
+
+    for (const pageRef of newPageRefs) {
+      try {
+        const pageData = {
+          id: pageRef.pageId, // Use the pre-generated ID from the link
+          title: pageRef.title,
+          content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
+          userId: user.uid,
+          username: user.username || 'Anonymous',
+          lastModified: new Date().toISOString(),
+          isReply: false,
+          groupId: null,
+          customDate: null
+        };
+
+        const response = await fetch('/api/pages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pageData),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ PAGE SAVE: Created new page from link:', { title: pageRef.title, id: result.id });
+        } else {
+          // Parse the error response to get the specific error message
+          let errorMessage = `Failed to create page "${pageRef.title}"`;
+          try {
+            const errorData = await response.json();
+            // Check for error message in the correct field - API uses 'error' field, not 'message'
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (parseError) {
+            console.error('🔴 PAGE SAVE: Failed to parse error response:', parseError);
+          }
+          console.error('🔴 PAGE SAVE: Failed to create new page from link:', pageRef.title, errorMessage);
+        }
+      } catch (error) {
+        console.error('🔴 PAGE SAVE: Error creating new page from link:', error);
+      }
+    }
+  };
+
+  // 🎯 ELEGANT: No longer needed - using existing event system in LinkNode components
+
   const handleSave = useCallback(async (passedContent?: any) => {
-    console.log('💾 PAGE SAVE: Save initiated with details:', {
+    console.log('🚨 SAVE_DEBUG: handleSave function called!', {
       pageId,
       hasPage: !!page,
       title,
@@ -984,7 +1070,9 @@ export default function ContentPageView({
       return;
     }
 
-    console.log('💾 PAGE SAVE: Validated page details:', {
+
+
+    console.log('🔵 PAGE SAVE: Starting page save process', {
       pageId,
       title,
       contentType: typeof editorState,
@@ -1000,7 +1088,7 @@ export default function ContentPageView({
     try {
       // Use API route instead of direct Firebase calls
       const contentToSave = editorState;
-      console.log('💾 PAGE SAVE: Content to save details:', {
+      console.log('🔵 PAGE SAVE: Content to save prepared', {
         contentToSaveType: typeof contentToSave,
         contentToSaveLength: contentToSave ? contentToSave.length : 0,
         contentToSaveSample: contentToSave ? JSON.stringify(contentToSave).substring(0, 200) : 'null'
@@ -1009,7 +1097,8 @@ export default function ContentPageView({
       // Extract and create new pages referenced in links before saving the main page
       const newPageRefs = extractNewPageReferences(contentToSave);
       if (newPageRefs.length > 0) {
-        await createNewPagesFromLinks(newPageRefs, user.uid, user.username || 'Anonymous');
+        console.log('🔵 PAGE SAVE: Found new page references, creating them first:', newPageRefs);
+        await createNewPagesFromLinks(newPageRefs);
       }
 
       const updateData: any = {
@@ -1025,7 +1114,7 @@ export default function ContentPageView({
         updateData.replyType = page.replyType;
       }
 
-      console.log('💾 PAGE SAVE: Update data to send:', {
+      console.log('🔵 PAGE SAVE: Update data prepared', {
         id: updateData.id,
         title: updateData.title,
         hasContent: !!updateData.content,
@@ -1043,7 +1132,9 @@ export default function ContentPageView({
         contentLength: contentToSave ? JSON.stringify(contentToSave).length : 0
       });
 
+      console.log('🔵 PAGE SAVE: Making API request to /api/pages');
 
+      console.log('🚨 NETWORK_DEBUG: About to make fetch request to /api/pages');
 
       const response = await fetch('/api/pages', {
         method: 'PUT',
@@ -1054,7 +1145,7 @@ export default function ContentPageView({
         credentials: 'include'
       });
 
-      console.log('💾 PAGE SAVE: API response received:', {
+      console.log('🚨 NETWORK_DEBUG: Fetch request completed', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
@@ -1112,6 +1203,7 @@ export default function ContentPageView({
             });
 
             if (sessionRefreshResponse.ok) {
+              console.log('✅ PAGE SAVE: Session refreshed via API, retrying save');
 
               // Retry the save operation
               const retryResponse = await fetch('/api/pages', {
@@ -1122,7 +1214,9 @@ export default function ContentPageView({
               });
 
               if (retryResponse.ok) {
+                console.log('✅ PAGE SAVE: Retry successful after user refresh');
                 const responseData = await retryResponse.json();
+                console.log('✅ PAGE SAVE: Page saved successfully via API (after user refresh)', { pageId });
                 // Skip to success handling
                 setHasUnsavedChanges(false);
                 setError(null);
@@ -1151,6 +1245,7 @@ export default function ContentPageView({
                 });
 
                 if (sessionResponse.ok) {
+                  console.log('✅ PAGE SAVE: Firebase auth refreshed, retrying save');
                   // Retry the save operation
                   const retryResponse = await fetch('/api/pages', {
                     method: 'PUT',
@@ -1160,7 +1255,9 @@ export default function ContentPageView({
                   });
 
                   if (retryResponse.ok) {
+                    console.log('✅ PAGE SAVE: Retry successful after Firebase refresh');
                     const responseData = await retryResponse.json();
+                    console.log('✅ PAGE SAVE: Page saved successfully via API (after Firebase refresh)', { pageId });
                     // Skip to success handling
                     setHasUnsavedChanges(false);
                     setError(null);
@@ -1187,13 +1284,14 @@ export default function ContentPageView({
         throw new Error(detailedMessage);
       }
 
+      console.log('🔵 PAGE SAVE: Parsing successful response');
       let result: any = { success: true };
       try {
         result = await response.json();
       } catch (jsonError) {
         console.warn('⚠️ PAGE SAVE: Response had no/invalid JSON, treating as success', jsonError);
       }
-      console.log('💾 PAGE SAVE: Parsed response data:', {
+      console.log('🔵 PAGE SAVE: Response parsed successfully', {
         success: result.success,
         hasData: !!result.data,
         message: result.message,
@@ -1208,13 +1306,16 @@ export default function ContentPageView({
         throw new Error(result.message || 'Failed to update page');
       }
 
+      console.log('✅ PAGE SAVE: Page saved successfully via API', { pageId });
       pageLogger.info('Page saved successfully via API', { pageId });
 
       // SIMPLE: Title updates are now handled automatically by the backend
       if (result.titleChanged) {
+        console.log('✅ SIMPLE: Title updated - all links updated automatically by backend');
       }
 
       // CRITICAL FIX: Properly update both page state and editor state after save
+      console.log('🔍 PAGE SAVE: Updating local page state with saved content');
       if (page) {
         const updatedPage = {
           ...page,
@@ -1225,10 +1326,12 @@ export default function ContentPageView({
           lastModified: new Date().toISOString()
         };
         setPage(updatedPage);
+        console.log('✅ PAGE SAVE: Local page state updated');
 
         // CRITICAL FIX: Update editor state directly without reset to prevent stale content
         console.log('🔄 EDITOR FIX: Updating editor state with saved content (no reset)');
         setEditorState(contentToSave);
+        console.log('✅ EDITOR FIX: Editor state updated with saved content');
       }
 
       // SIMPLIFIED CLIENT-SIDE CACHE INVALIDATION
@@ -1244,8 +1347,10 @@ export default function ContentPageView({
           window.dispatchEvent(new CustomEvent('refresh-recent-edits', {
             detail: { pageId, userId: user?.uid }
           }));
+          console.log('✅ UNIFIED CACHE: Dispatched refresh-recent-edits event');
         }
 
+        console.log('✅ UNIFIED CACHE: Client-side invalidation completed');
       } catch (cacheError) {
         console.warn('⚠️ UNIFIED CACHE: Error clearing caches (non-fatal):', cacheError);
       }
@@ -1255,10 +1360,12 @@ export default function ContentPageView({
         window.dispatchEvent(new CustomEvent('pageSaved', {
           detail: { pageId, title: title.trim(), content: contentToSave }
         }));
+        console.log('✅ PAGE SAVE: pageSaved event emitted for real-time updates');
       }
 
 
 
+      console.log('🔍 PAGE SAVE: Resetting hasUnsavedChanges to false');
       setHasUnsavedChanges(false);
 
       // Trigger save success animation
@@ -1288,6 +1395,7 @@ export default function ContentPageView({
       setJustSaved(true);
       setTimeout(() => {
         setJustSaved(false);
+        console.log('✅ PAGE SAVE: justSaved flag cleared - data reloading allowed again');
       }, 2000); // Prevent reloading for 2 seconds after save
 
 
@@ -1362,7 +1470,7 @@ export default function ContentPageView({
   // BULLETPROOF: Simplified keyboard shortcuts with extensive debugging
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('⌨️ KEYBOARD: Key pressed:', {
+      console.log('🚨 KEYBOARD_DEBUG: Key pressed:', {
         key: e.key,
         metaKey: e.metaKey,
         ctrlKey: e.ctrlKey,
@@ -1375,6 +1483,7 @@ export default function ContentPageView({
       // Cmd/Ctrl + S to save - ALWAYS try to save, ignore conditions
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
+        console.log('🚨 KEYBOARD_DEBUG: Cmd+S detected, calling handleSave unconditionally');
         handleSave();
         return;
       }
@@ -1382,18 +1491,22 @@ export default function ContentPageView({
       // Cmd/Ctrl + Enter to save - ALWAYS try to save, ignore conditions
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
+        console.log('🚨 KEYBOARD_DEBUG: Cmd+Enter detected, calling handleSave unconditionally');
         handleSave();
         return;
       }
 
       // Escape to cancel editing
       if (e.key === 'Escape' && isEditing) {
+        console.log('🚨 KEYBOARD_DEBUG: Escape detected, calling handleCancel');
         handleCancel();
       }
     };
 
+    console.log('🚨 KEYBOARD_DEBUG: Setting up keyboard event listener');
     window.addEventListener('keydown', handleKeyDown);
     return () => {
+      console.log('🚨 KEYBOARD_DEBUG: Removing keyboard event listener');
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [handleSave, handleCancel, isEditing, hasUnsavedChanges, canEdit]);
@@ -1442,6 +1555,7 @@ export default function ContentPageView({
 
     // SIMPLIFIED: Pass raw content directly - no preprocessing
     setEditorState(page.content);
+    console.log('✅ SIMPLIFIED: Raw content set - components will handle conversion');
   }, [page?.content]); // Update whenever page content changes
 
   // Progressive loading state - show page structure immediately
@@ -1591,7 +1705,7 @@ export default function ContentPageView({
 
                       {/* Unified content display system */}
                       {(() => {
-                        console.log('📄 Content display debug:', {
+                        console.log('🔗 PAGE_VIEW: Rendering unified content display:', {
                           canEdit,
                           isEditable: canEdit,
                           hasContent: !!editorState?.length
@@ -1618,7 +1732,6 @@ export default function ContentPageView({
                               pageId={pageId}
                               showDiff={showDiff}
                               showLineNumbers={true}
-                              showLinkSuggestions={showLinkSuggestions}
                             />
 
                             {/* Dense mode toggle below content - only show in view mode */}
@@ -1667,8 +1780,6 @@ export default function ContentPageView({
               error={error}
               titleError={titleError}
               hasUnsavedChanges={hasUnsavedChanges}
-              showLinkSuggestions={showLinkSuggestions}
-              onToggleLinkSuggestions={setShowLinkSuggestions}
             />
             </div>
 

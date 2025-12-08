@@ -200,12 +200,9 @@ export function DiffStats({
   const TooltipTrigger = showTooltips ? require('../ui/tooltip').TooltipTrigger : null;
 
   const renderStats = () => {
-    // For special change types (location, custom date), show a different indicator
+    // Don't show anything when there are no changes (no dot)
     if (added === 0 && removed === 0 && !isNewPage) {
-      // This might be a special change type (location, custom date)
-      return (
-        <span className="text-primary dark:text-muted-foreground">●</span>
-      );
+      return null;
     }
 
     if (added > 0 && removed > 0) {
@@ -226,11 +223,8 @@ export function DiffStats({
       return (
         <span className="text-red-600 dark:text-red-400">-{removed}</span>
       );
-    } else if (!isNewPage) {
-      return (
-        <span className="text-muted-foreground">No changes</span>
-      );
     }
+    // Return null for no changes (already handled at top)
     return null;
   };
 

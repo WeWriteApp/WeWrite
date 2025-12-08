@@ -18,7 +18,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createEditor, Descendant, Editor as SlateEditor, Element, Element as SlateElement, Node as SlateNode, Range, Text, Transforms, Path } from 'slate';
+import { createEditor, Descendant, Editor as SlateEditor, Element, Element as SlateElement, Node as SlateNode, Range, Text, Transforms, Path, NodeEntry } from 'slate';
 import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { cn } from '../../lib/utils';
@@ -27,6 +27,9 @@ import LinkNode from './LinkNode';
 import LinkEditorModal from './LinkEditorModal';
 import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { createPortal } from 'react-dom';
+import { useLinkSuggestions, LinkSuggestionState, LinkSuggestionActions } from '../../hooks/useLinkSuggestions';
+import { useAuth } from '../../providers/AuthProvider';
+import { LinkSuggestion } from '../../services/linkSuggestionService';
 
 // Simple error boundary - no complex recovery mechanisms
 class SimpleErrorBoundary extends React.Component<
@@ -75,6 +78,7 @@ interface EditorProps {
   className?: string;
   onInsertLinkRequest?: (triggerFn: () => void) => void;
   initialSelectionPath?: Path; // Optional initial cursor position
+  showLinkSuggestions?: boolean; // Show link suggestion underlines when enabled
 }
 
 const Editor: React.FC<EditorProps> = ({
@@ -85,13 +89,45 @@ const Editor: React.FC<EditorProps> = ({
   pageId,
   className,
   onInsertLinkRequest,
-  initialSelectionPath
+  initialSelectionPath,
+  showLinkSuggestions = false
 }) => {
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
+  const { user } = useAuth();
+
   // Simple state management - no complex state
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [editingLink, setEditingLink] = useState<any>(null);
   const [selectedText, setSelectedText] = useState('');
+
+  // Link suggestions state
+  const [activeSuggestionForModal, setActiveSuggestionForModal] = useState<LinkSuggestion | null>(null);
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+
+  // Link suggestions hook - only active when toggled on
+  const { state: linkSuggestionState, actions: linkSuggestionActions } = useLinkSuggestions({
+    enabled: showLinkSuggestions,
+    minConfidence: 0.3,
+    debounceDelay: 1500,
+    onSuggestionSelected: (suggestion) => {
+      // When a suggestion is selected, insert the link
+      insertLinkFromSuggestion(suggestion);
+    }
+  });
+
+  // Debug: Log when suggestions change
+  useEffect(() => {
+    if (linkSuggestionState.allSuggestions.length > 0) {
+      console.log('🔗 [EDITOR] Suggestions updated:', {
+        count: linkSuggestionState.allSuggestions.length,
+        suggestions: linkSuggestionState.allSuggestions.map(s => ({
+          matchedText: s.matchedText,
+          title: s.title,
+          confidence: s.confidence
+        }))
+      });
+    }
+  }, [linkSuggestionState.allSuggestions]);
 
   // Link deletion plugin - allows deleting links with backspace/delete keys
   const withLinkDeletion = useCallback((editor: ReactEditor) => {
@@ -390,6 +426,134 @@ const Editor: React.FC<EditorProps> = ({
       }
     });
   }, [onChange]);
+
+  // Extract plain text from editor content for link suggestion analysis
+  const extractPlainText = useCallback((nodes: Descendant[]): string => {
+    return nodes.map(node => {
+      if (Text.isText(node)) {
+        return node.text;
+      }
+      if ('children' in node && Array.isArray(node.children)) {
+        return extractPlainText(node.children as Descendant[]);
+      }
+      return '';
+    }).join(' ');
+  }, []);
+
+  // Analyze text for link suggestions when content changes or toggle is enabled
+  useEffect(() => {
+    console.log('🔗 [EDITOR] Link suggestions effect triggered:', {
+      showLinkSuggestions,
+      hasEditorValue: !!editorValue,
+      readOnly,
+      userId: user?.uid,
+      pageId
+    });
+
+    if (!showLinkSuggestions || !editorValue || readOnly) {
+      console.log('🔗 [EDITOR] Skipping analysis - conditions not met');
+      return;
+    }
+
+    const plainText = extractPlainText(editorValue);
+    console.log('🔗 [EDITOR] Extracted plain text:', {
+      length: plainText.length,
+      preview: plainText.substring(0, 100)
+    });
+
+    if (plainText.length >= 10) {
+      console.log('🔗 [EDITOR] Triggering link suggestion analysis...');
+      linkSuggestionActions.analyzeText(plainText, user?.uid, pageId);
+    } else {
+      console.log('🔗 [EDITOR] Text too short for analysis (< 10 chars)');
+    }
+  }, [showLinkSuggestions, editorValue, user?.uid, pageId, readOnly, extractPlainText, linkSuggestionActions]);
+
+  // Helper function to insert a link from a suggestion
+  const insertLinkFromSuggestion = useCallback((suggestion: LinkSuggestion) => {
+    console.log('🔗 [SUGGESTION] Inserting link from suggestion:', suggestion);
+
+    // Find the text in the editor and wrap it with a link
+    const searchText = suggestion.matchedText;
+
+    // Search through all text nodes to find the matched text
+    for (const [node, path] of SlateNode.texts(editor)) {
+      const text = node.text;
+      const index = text.indexOf(searchText);
+
+      if (index !== -1) {
+        // Found the text, select it and insert a link
+        const start = { path, offset: index };
+        const end = { path, offset: index + searchText.length };
+
+        Transforms.select(editor, { anchor: start, focus: end });
+
+        // Create and insert the link
+        const linkElement = LinkNodeHelper.createAutoLink(
+          suggestion.id,
+          suggestion.title,
+          `/${suggestion.id}`
+        );
+
+        Transforms.wrapNodes(editor, linkElement, { split: true });
+        Transforms.collapse(editor, { edge: 'end' });
+
+        // Dismiss this suggestion since it's been applied
+        linkSuggestionActions.dismissSuggestion(searchText);
+        setShowSuggestionModal(false);
+        setActiveSuggestionForModal(null);
+        break;
+      }
+    }
+  }, [editor, linkSuggestionActions]);
+
+  // Handle clicking on a suggestion underline
+  const handleSuggestionClick = useCallback((suggestion: LinkSuggestion) => {
+    setActiveSuggestionForModal(suggestion);
+    setShowSuggestionModal(true);
+  }, []);
+
+  // Decorate function to add suggestion underlines
+  const decorate = useCallback(([node, path]: NodeEntry): Range[] => {
+    const ranges: Range[] = [];
+
+    if (!showLinkSuggestions || !Text.isText(node) || !linkSuggestionState.allSuggestions.length) {
+      return ranges;
+    }
+
+    const text = node.text;
+    const textLower = text.toLowerCase();
+
+    // Find all suggestions that match text in this node (case insensitive)
+    for (const suggestion of linkSuggestionState.allSuggestions) {
+      const searchText = suggestion.matchedText.toLowerCase();
+      let index = textLower.indexOf(searchText);
+
+      while (index !== -1) {
+        console.log('🔗 [DECORATE] Found match:', {
+          searchText,
+          textPreview: text.substring(index, index + searchText.length),
+          path,
+          index
+        });
+
+        ranges.push({
+          anchor: { path, offset: index },
+          focus: { path, offset: index + searchText.length },
+          suggestion: suggestion,
+          isSuggestion: true
+        } as Range & { suggestion: LinkSuggestion; isSuggestion: boolean });
+
+        index = textLower.indexOf(searchText, index + 1);
+      }
+    }
+
+    if (ranges.length > 0) {
+      console.log('🔗 [DECORATE] Returning ranges:', ranges.length);
+    }
+
+    return ranges;
+  }, [showLinkSuggestions, linkSuggestionState.allSuggestions]);
 
   // Simple link insertion - no complex timing dependencies
   const insertLink = useCallback((linkData: any) => {
@@ -749,7 +913,7 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [editor, readOnly]);
 
-  // Simple leaf renderer
+  // Simple leaf renderer with suggestion underline support
   const renderLeaf = useCallback((props: any) => {
     let { children } = props;
 
@@ -765,8 +929,27 @@ const Editor: React.FC<EditorProps> = ({
       children = <code>{children}</code>;
     }
 
+    // Link suggestion underline - clickable dotted underline
+    if (props.leaf.isSuggestion && props.leaf.suggestion) {
+      const suggestion = props.leaf.suggestion as LinkSuggestion;
+      return (
+        <span
+          {...props.attributes}
+          className="border-b-2 border-dotted border-primary/50 cursor-pointer hover:border-primary hover:bg-primary/10 transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSuggestionClick(suggestion);
+          }}
+          title={`Suggest linking to: ${suggestion.title}`}
+        >
+          {children}
+        </span>
+      );
+    }
+
     return <span {...props.attributes}>{children}</span>;
-  }, []);
+  }, [handleSuggestionClick]);
 
   if (!editorValue || !Array.isArray(editorValue)) {
     console.warn('Editor skipping Slate render because value is invalid', editorValue);
@@ -826,6 +1009,7 @@ const Editor: React.FC<EditorProps> = ({
                   placeholder={placeholder}
                   renderElement={renderElement}
                   renderLeaf={renderLeaf}
+                  decorate={decorate}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
                   readOnly={readOnly}
@@ -843,6 +1027,17 @@ const Editor: React.FC<EditorProps> = ({
           </div>
         </Slate>
 
+        {/* Loading indicator for link suggestions */}
+        {showLinkSuggestions && linkSuggestionState.isLoading && (
+          <div className="absolute top-2 right-2 flex items-center gap-2 text-xs text-muted-foreground bg-card/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50">
+            <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Finding links...</span>
+          </div>
+        )}
+
         {/* Simple modal rendering */}
         {showLinkModal && typeof document !== 'undefined' && createPortal(
           <LinkEditorModal
@@ -857,6 +1052,64 @@ const Editor: React.FC<EditorProps> = ({
             selectedText={selectedText}
             currentPageId={pageId}
           />,
+          document.body
+        )}
+
+        {/* Link Suggestion Modal */}
+        {showSuggestionModal && activeSuggestionForModal && typeof document !== 'undefined' && createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            onClick={() => {
+              setShowSuggestionModal(false);
+              setActiveSuggestionForModal(null);
+            }}
+          >
+            <div
+              className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-2">Link Suggestion</h3>
+              <p className="text-muted-foreground mb-4">
+                Link "<span className="font-medium text-foreground">{activeSuggestionForModal.matchedText}</span>" to:
+              </p>
+              <div className="bg-muted/50 rounded-lg p-3 mb-6">
+                <p className="font-medium">{activeSuggestionForModal.title}</p>
+                {activeSuggestionForModal.username && activeSuggestionForModal.username !== activeSuggestionForModal.userId && (
+                  <p className="text-sm text-muted-foreground">by @{activeSuggestionForModal.username}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                  onClick={() => insertLinkFromSuggestion(activeSuggestionForModal)}
+                >
+                  Accept Suggestion
+                </button>
+                <button
+                  className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors"
+                  onClick={() => {
+                    // Open the link editor modal with this text selected
+                    setSelectedText(activeSuggestionForModal.matchedText);
+                    setShowSuggestionModal(false);
+                    setActiveSuggestionForModal(null);
+                    setShowLinkModal(true);
+                  }}
+                >
+                  Choose Different Link
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => {
+                    linkSuggestionActions.dismissSuggestion(activeSuggestionForModal.matchedText);
+                    setShowSuggestionModal(false);
+                    setActiveSuggestionForModal(null);
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>,
           document.body
         )}
       </div>

@@ -2408,8 +2408,23 @@ button.bg-transparent[type] {
 .bg-accent-120 { background-color: oklch(var(--accent-base) / 1.2); }
 .bg-accent-140 { background-color: oklch(var(--accent-base) / 1.4); }
 
-/* Neutral Background Colors */
+/* Neutral Solid Background Colors (uses neutral-base color with alpha) */
 .bg-neutral { background-color: oklch(var(--neutral-base)); }
+.bg-neutral-solid-1 { background-color: oklch(var(--neutral-base) / 0.01); }
+.bg-neutral-solid-5 { background-color: oklch(var(--neutral-base) / 0.05); }
+.bg-neutral-solid-10 { background-color: oklch(var(--neutral-base) / 0.1); }
+.bg-neutral-solid-15 { background-color: oklch(var(--neutral-base) / 0.15); }
+.bg-neutral-solid-20 { background-color: oklch(var(--neutral-base) / 0.2); }
+.bg-neutral-solid-25 { background-color: oklch(var(--neutral-base) / 0.25); }
+.bg-neutral-solid-30 { background-color: oklch(var(--neutral-base) / 0.3); }
+.bg-neutral-solid-40 { background-color: oklch(var(--neutral-base) / 0.4); }
+.bg-neutral-solid-50 { background-color: oklch(var(--neutral-base) / 0.5); }
+.bg-neutral-solid-60 { background-color: oklch(var(--neutral-base) / 0.6); }
+.bg-neutral-solid-70 { background-color: oklch(var(--neutral-base) / 0.7); }
+.bg-neutral-solid-80 { background-color: oklch(var(--neutral-base) / 0.8); }
+.bg-neutral-solid-90 { background-color: oklch(var(--neutral-base) / 0.9); }
+.bg-neutral-solid-100 { background-color: oklch(var(--neutral-base)); }
+/* Legacy aliases - keep for backward compatibility */
 .bg-neutral-1 { background-color: oklch(var(--neutral-base) / 0.01); }
 .bg-neutral-5 { background-color: oklch(var(--neutral-base) / 0.05); }
 .bg-neutral-10 { background-color: oklch(var(--neutral-base) / 0.1); }
@@ -2424,6 +2439,28 @@ button.bg-transparent[type] {
 .bg-neutral-80 { background-color: oklch(var(--neutral-base) / 0.8); }
 .bg-neutral-90 { background-color: oklch(var(--neutral-base) / 0.9); }
 .bg-neutral-100 { background-color: oklch(var(--neutral-base)); }
+
+/* Neutral Alpha Background Colors (additive: black in light, white in dark) */
+.bg-neutral-alpha-5 { background-color: rgba(0, 0, 0, 0.05); }
+.dark .bg-neutral-alpha-5 { background-color: rgba(255, 255, 255, 0.05); }
+.bg-neutral-alpha-10 { background-color: rgba(0, 0, 0, 0.1); }
+.dark .bg-neutral-alpha-10 { background-color: rgba(255, 255, 255, 0.1); }
+.bg-neutral-alpha-15 { background-color: rgba(0, 0, 0, 0.15); }
+.dark .bg-neutral-alpha-15 { background-color: rgba(255, 255, 255, 0.15); }
+.bg-neutral-alpha-20 { background-color: rgba(0, 0, 0, 0.2); }
+.dark .bg-neutral-alpha-20 { background-color: rgba(255, 255, 255, 0.2); }
+.bg-neutral-alpha-25 { background-color: rgba(0, 0, 0, 0.25); }
+.dark .bg-neutral-alpha-25 { background-color: rgba(255, 255, 255, 0.25); }
+.bg-neutral-alpha-30 { background-color: rgba(0, 0, 0, 0.3); }
+.dark .bg-neutral-alpha-30 { background-color: rgba(255, 255, 255, 0.3); }
+
+/* Dark-mode only neutral alpha backgrounds (transparent in light, white overlay in dark) */
+.bg-neutral-alpha-dark-5 { background-color: transparent; }
+.dark .bg-neutral-alpha-dark-5 { background-color: rgba(255, 255, 255, 0.05); }
+.bg-neutral-alpha-dark-10 { background-color: transparent; }
+.dark .bg-neutral-alpha-dark-10 { background-color: rgba(255, 255, 255, 0.1); }
+.bg-neutral-alpha-dark-15 { background-color: transparent; }
+.dark .bg-neutral-alpha-dark-15 { background-color: rgba(255, 255, 255, 0.15); }
 
 /* Success Background Colors */
 .bg-success { background-color: oklch(var(--success-base)); }

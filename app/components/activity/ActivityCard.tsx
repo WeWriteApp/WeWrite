@@ -424,19 +424,24 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </div>
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs opacity-0 group-hover/header:opacity-100 transition-opacity">
-            Section: Header (Title & Timestamp)
+          <TooltipContent side="top" className="text-xs">
+            Header Section: Page title, author/group, and timestamp
           </TooltipContent>
         </Tooltip>
 
         {/* Diff preview sub-card - chunked section */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="mb-3 cursor-pointer group/diff" onClick={handleCardClick}>
-              <div className="bg-neutral-alpha-10 rounded-lg p-3">
-                {/* Diff counter at top of sub-card */}
-                {!isTitleChange && (
-                  <div className="mb-2">
+            <div className={cn(
+              "cursor-pointer group/diff",
+              // Only add bottom margin if allocation bar will be shown
+              activity.userId && activity.pageId && (!user || user.uid !== activity.userId) ? "mb-3" : ""
+            )} onClick={handleCardClick}>
+              {/* Light mode: outlined, Dark mode: filled background (additive/brighter) */}
+              <div className="border border-border dark:border-transparent bg-neutral-alpha-dark-10 rounded-lg p-3 relative">
+                {/* Diff counter at top right of sub-card */}
+                {!isTitleChange && (added > 0 || removed > 0) && (
+                  <div className="absolute top-2 right-3">
                     <DiffStats
                       added={added}
                       removed={removed}
@@ -465,8 +470,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </div>
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs opacity-0 group-hover/diff:opacity-100 transition-opacity">
-            Section: Diff Preview (Changes)
+          <TooltipContent side="top" className="text-xs">
+            Diff Section: Character additions/removals and content preview
           </TooltipContent>
         </Tooltip>
 
@@ -498,8 +503,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs opacity-0 group-hover/restore:opacity-100 transition-opacity">
-              Section: Restore Actions
+            <TooltipContent side="top" className="text-xs">
+              Restore Section: Revert page to this version
             </TooltipContent>
           </Tooltip>
         )}
@@ -519,8 +524,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs opacity-0 group-hover/allocation:opacity-100 transition-opacity">
-              Section: Allocation Controls
+            <TooltipContent side="top" className="text-xs">
+              Allocation Section: Support this author with tokens
             </TooltipContent>
           </Tooltip>
         )}

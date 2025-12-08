@@ -226,9 +226,19 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           setTimeout(() => reject(new Error('Page update timeout after 10 seconds')), 10000);
         });
 
-        const updatePromise = setDoc(doc(db, getCollectionName("pages"), pageRef.id), { currentVersion: version.id }, { merge: true });
+        // Include lastDiff in the update so activity cards have diff data for new pages
+        const pageUpdateData: any = { currentVersion: version.id };
+        if (initialDiff) {
+          pageUpdateData.lastDiff = {
+            added: initialDiff.added,
+            removed: initialDiff.removed,
+            hasChanges: initialDiff.hasChanges,
+            preview: initialDiff.preview
+          };
+        }
+        const updatePromise = setDoc(doc(db, getCollectionName("pages"), pageRef.id), pageUpdateData, { merge: true });
         await Promise.race([updatePromise, updateTimeoutPromise]);
-        console.log("Updated page with current version ID");
+        console.log("Updated page with current version ID and lastDiff");
 
         // Record user activity for streak tracking
         try {

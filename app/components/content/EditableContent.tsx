@@ -45,6 +45,7 @@ interface EditableContentProps {
   showToolbar?: boolean;
   onInsertLinkRequest?: (triggerFn: () => void) => void;
   pageId?: string;
+  showLinkSuggestions?: boolean;
   className?: string;
 }
 
@@ -70,6 +71,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
   showToolbar = false,
   onInsertLinkRequest,
   pageId,
+  showLinkSuggestions = false,
   initialSelectionPath,
   className = ''
 }) => {
@@ -126,6 +128,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
         className="min-h-[200px]"
         onInsertLinkRequest={onInsertLinkRequest}
         initialSelectionPath={initialSelectionPath}
+        showLinkSuggestions={showLinkSuggestions}
       />
     </div>
   );

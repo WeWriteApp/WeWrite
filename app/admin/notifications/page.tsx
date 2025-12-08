@@ -517,7 +517,7 @@ function NotificationPreview({ templateId }: { templateId: string }) {
               )}
             </div>
             <div className="flex-1">
-            {notification.type === 'allocation_threshold' ? (
+              {notification.type === 'allocation_threshold' ? (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium mb-1 text-foreground">
                   {notification.title}
@@ -552,7 +552,8 @@ function NotificationPreview({ templateId }: { templateId: string }) {
                   {notification.message}
                 </p>
               </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
         <div className="text-xs text-foreground opacity-70 whitespace-nowrap">

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X, Link, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X, Link, ThumbsUp, ThumbsDown, Lightbulb } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
@@ -103,6 +103,8 @@ interface PageActionsProps {
   showFollowButton?: boolean;
   onInsertLink?: () => void; // Add insert link callback
   isSaving?: boolean; // Add saving state
+  showLinkSuggestions?: boolean; // Link suggestions toggle state
+  onToggleLinkSuggestions?: (enabled: boolean) => void; // Callback when toggle changes
 }
 
 export function ContentPageActions({
@@ -114,7 +116,9 @@ export function ContentPageActions({
   className = "",
   showFollowButton = false,
   onInsertLink,
-  isSaving = false
+  isSaving = false,
+  showLinkSuggestions = false,
+  onToggleLinkSuggestions
 }: PageActionsProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -403,6 +407,20 @@ export function ContentPageActions({
             >
               <Link className="h-5 w-5" />
               <span>Insert Link</span>
+            </Button>
+          )}
+
+          {/* Link Suggestions toggle - shown when editing */}
+          {isEditing && onToggleLinkSuggestions && (
+            <Button
+              variant={showLinkSuggestions ? "default" : "secondary"}
+              size="lg"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+              onClick={() => onToggleLinkSuggestions(!showLinkSuggestions)}
+              disabled={isSaving}
+            >
+              <Lightbulb className={`h-5 w-5 ${showLinkSuggestions ? "text-yellow-300" : ""}`} />
+              <span>Link Suggestions</span>
             </Button>
           )}
 
