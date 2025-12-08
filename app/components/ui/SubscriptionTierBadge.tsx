@@ -12,6 +12,7 @@ interface SubscriptionTierBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   isLoading?: boolean;
+  pillVariant?: 'primary' | 'secondary' | 'outline';
 }
 
 export function SubscriptionTierBadge({
@@ -20,7 +21,8 @@ export function SubscriptionTierBadge({
   amount,
   size = 'sm',
   className = '',
-  isLoading = false
+  isLoading = false,
+  pillVariant = 'primary'
 }: SubscriptionTierBadgeProps) {
 
   // Size configurations - moved to top to fix initialization error
@@ -54,14 +56,24 @@ export function SubscriptionTierBadge({
 
   const config = sizeConfig[size];
 
+  // Determine cancel icon color based on pill variant
+  const getCancelIconColor = () => {
+    // For filled/primary variant: white text, so white icon
+    if (pillVariant === 'primary') {
+      return 'text-white dark:text-white';
+    }
+    // For outline, secondary, and other variants: accent/primary color
+    return 'text-primary';
+  };
+
   // Get badge content based on tier
   const getBadgeContent = () => {
     switch (finalTier) {
       case 'inactive':
         return {
-          icon: <Ban size={config.icon} className="text-muted-foreground" />,
+          icon: <Ban size={config.icon} className={getCancelIconColor()} />,
           tooltip: 'No active subscription - $0/mo',
-          color: 'text-muted-foreground'
+          color: getCancelIconColor()
         };
       case 'tier1':
         return {
@@ -141,9 +153,9 @@ export function SubscriptionTierBadge({
         };
       default:
         return {
-          icon: <Ban size={config.icon} className="text-muted-foreground" />,
+          icon: <Ban size={config.icon} className="text-muted-foreground dark:text-white" />,
           tooltip: 'No subscription',
-          color: 'text-muted-foreground'
+          color: 'text-muted-foreground dark:text-white'
         };
     }
   };

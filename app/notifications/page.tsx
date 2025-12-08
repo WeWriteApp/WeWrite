@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { useNotifications } from "../providers/NotificationProvider";
@@ -11,9 +11,11 @@ import NavPageLayout from '../components/layout/NavPageLayout';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
-import { Loader, CheckCheck, ChevronLeft, MoreHorizontal, Settings } from 'lucide-react';
+import { Loader, CheckCheck, ChevronLeft, MoreHorizontal, Settings, Filter } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
+
+type NotificationFilter = 'unread' | 'all';
 
 function NotificationsContent() {
   const router = useRouter();
@@ -27,7 +29,16 @@ function NotificationsContent() {
   } = useNotifications();
   const { trackNotificationInteraction } = useWeWriteAnalytics();
 
+  // Filter state - default to showing only unread
+  const [filter, setFilter] = useState<NotificationFilter>('unread');
 
+  // Filter notifications based on selected filter
+  const filteredNotifications = useMemo(() => {
+    if (filter === 'unread') {
+      return notifications.filter(n => !n.read);
+    }
+    return notifications;
+  }, [notifications, filter]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -79,6 +90,18 @@ function NotificationsContent() {
           <p className="text-muted-foreground">Stay updated with your latest activity</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Filter toggle button */}
+          <Button
+            variant={filter === 'unread' ? 'default' : 'secondary'}
+            size="sm"
+            onClick={() => setFilter(filter === 'unread' ? 'all' : 'unread')}
+            className="flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            <span className="hidden md:inline">
+              {filter === 'unread' ? 'Unread' : 'All'}
+            </span>
+          </Button>
           <NotificationsHeaderButton />
         </div>
       </div>
@@ -86,10 +109,10 @@ function NotificationsContent() {
       <div className="mt-6">
         {loading && notifications.length === 0 ? (
           <NotificationListSkeleton count={5} />
-        ) : notifications.length > 0 ? (
+        ) : filteredNotifications.length > 0 ? (
           <>
             <div className="space-y-4">
-              {notifications.map(notification => (
+              {filteredNotifications.map(notification => (
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
@@ -97,7 +120,7 @@ function NotificationsContent() {
               ))}
             </div>
 
-            {hasMore && (
+            {hasMore && filter === 'all' && (
               <div className="mt-6 flex justify-center">
                 <Button
                   variant="secondary"
@@ -118,9 +141,14 @@ function NotificationsContent() {
           </>
         ) : (
           <div className="bg-card rounded-xl border-theme-strong shadow-sm p-8 text-center">
-            <h3 className="text-lg font-medium mb-2">No notifications yet</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {filter === 'unread' ? 'No unreads' : 'No notifications yet'}
+            </h3>
             <p className="text-sm text-foreground opacity-80 max-w-md mx-auto">
-              When someone follows your pages, links to them, or adds them to their own pages, you'll see notifications here.
+              {filter === 'unread'
+                ? "You're all caught up! No unread notifications at the moment."
+                : "When someone follows your pages, links to them, or adds them to their own pages, you'll see notifications here."
+              }
             </p>
           </div>
         )}

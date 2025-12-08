@@ -342,6 +342,8 @@ function PushNotificationPreview({ templateId }: { templateId: string }) {
 
 // Mock notification previews for each email template
 function NotificationPreview({ templateId }: { templateId: string }) {
+  const [showAsRead, setShowAsRead] = useState(false);
+
   // Mock notification data based on template
   const getNotificationData = () => {
     switch (templateId) {
@@ -474,13 +476,47 @@ function NotificationPreview({ templateId }: { templateId: string }) {
 
   // Render a mock NotificationItem using the same component structure
   return (
-    <div className="relative rounded-xl border-theme-strong bg-card text-card-foreground shadow-sm p-4 ring-2 ring-primary/20">
-      <div className="flex justify-between items-start">
-        <div className="flex items-center flex-1">
-          <div className="flex-shrink-0 mr-3 flex items-center h-full">
-            <div className="w-2 h-2 bg-primary rounded-full" style={{ backgroundColor: '#1768FF' }}></div>
-          </div>
-          <div className="flex-1">
+    <div className="space-y-3">
+      {/* Toggle for read/unread state */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAsRead(false)}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              !showAsRead
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Unread
+          </button>
+          <button
+            onClick={() => setShowAsRead(true)}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              showAsRead
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Read
+          </button>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {showAsRead ? 'Action buttons hidden' : 'Action buttons visible'}
+        </span>
+      </div>
+
+      <div className={`relative rounded-xl border-theme-strong bg-card text-card-foreground shadow-sm p-4 ${!showAsRead ? 'ring-2 ring-primary/20' : ''}`}>
+        <div className="flex justify-between items-start">
+          <div className="flex items-center flex-1">
+            <div className="flex-shrink-0 mr-3 flex items-center h-full">
+              {!showAsRead ? (
+                <div className="w-2 h-2 bg-primary rounded-full" style={{ backgroundColor: '#1768FF' }}></div>
+              ) : (
+                <div className="w-2 h-2 bg-gray-300 rounded-full opacity-30"></div>
+              )}
+            </div>
+            <div className="flex-1">
             {notification.type === 'allocation_threshold' ? (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium mb-1 text-foreground">
@@ -496,14 +532,16 @@ function NotificationPreview({ templateId }: { templateId: string }) {
                     <span>Used: {notification.metadata.percentage}%</span>
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <button className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90">
-                    Top off Account
-                  </button>
-                  <button className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors">
-                    Manage Allocations
-                  </button>
-                </div>
+                {!showAsRead && (
+                  <div className="flex gap-2">
+                    <button className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+                      Top off Account
+                    </button>
+                    <button className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors">
+                      Manage Allocations
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 min-w-0">

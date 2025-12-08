@@ -184,6 +184,10 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
               ? followedUser.bio.map((n: any) => n.text || '').join(' ')
               : '';
 
+          // Check if username is long enough to warrant stacking
+          const username = followedUser.username || 'Anonymous User';
+          const isLongUsername = username.length > 15;
+
           return (
           <div
             key={followedUser.id}
@@ -191,21 +195,28 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
           >
             <Link
               href={`/user/${followedUser.id}`}
-              className="flex items-center gap-2 flex-grow"
+              className="flex items-center gap-2 flex-grow min-w-0"
             >
-              <div className="flex flex-col">
-                <UsernameBadge
-                  userId={followedUser.id}
-                  username={followedUser.username || 'Anonymous User'}
-                  tier={followedUser.tier}
-                  subscriptionStatus={followedUser.subscriptionStatus}
-                  subscriptionAmount={followedUser.subscriptionAmount}
-                  size="sm"
-                  showBadge={true}
-                  className="font-medium"
-                />
+              <div className={cn(
+                "flex gap-1",
+                isLongUsername ? "flex-col items-start" : "flex-row items-center flex-wrap"
+              )}>
+                <span className={cn(
+                  "font-medium text-primary",
+                  isLongUsername && "break-all"
+                )}>
+                  {username}
+                </span>
+                {(followedUser.subscriptionStatus === 'active' && followedUser.subscriptionAmount) && (
+                  <span className={cn(
+                    "text-xs font-medium text-muted-foreground",
+                    isLongUsername && "self-center"
+                  )}>
+                    ${followedUser.subscriptionAmount.toFixed(2)}
+                  </span>
+                )}
                 {bioText && (
-                  <p className="text-xs text-muted-foreground line-clamp-1">{bioText}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1 w-full">{bioText}</p>
                 )}
               </div>
             </Link>
@@ -214,7 +225,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                 onClick={() => handleUnfollow(followedUser.id)}
                 disabled={unfollowingId === followedUser.id}
               >

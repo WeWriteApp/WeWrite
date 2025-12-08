@@ -208,13 +208,27 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
 
   // Scroll to today's card
   const scrollToToday = useCallback(() => {
-    if (!scrollContainerRef.current) return;
+    if (!scrollContainerRef.current) {
+      console.log('📅 TimelineCarousel: scrollContainerRef not available');
+      return;
+    }
 
-    const today = new Date();
+    // Use the CURRENT date, not startOfDay which might use a cached date
+    const now = new Date();
+    const today = startOfDay(now);
     const todayString = format(today, 'yyyy-MM-dd');
+
+    console.log('📅 TimelineCarousel: Scrolling to today:', {
+      now: now.toISOString(),
+      today: today.toISOString(),
+      todayString,
+      allCards: Array.from(scrollContainerRef.current.querySelectorAll('[data-date]')).map(el => el.getAttribute('data-date'))
+    });
+
     const todayCard = scrollContainerRef.current.querySelector(`[data-date="${todayString}"]`);
 
     if (todayCard) {
+      console.log('📅 TimelineCarousel: Found today card, scrolling to it');
       // Scroll the card into view with some padding
       const container = scrollContainerRef.current;
       const cardRect = todayCard.getBoundingClientRect();
@@ -223,11 +237,22 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
       // Calculate scroll position to center the card
       const scrollLeft = container.scrollLeft + cardRect.left - containerRect.left - (containerRect.width / 2) + (cardRect.width / 2);
 
+      console.log('📅 TimelineCarousel: Scrolling details:', {
+        scrollLeft,
+        cardRectLeft: cardRect.left,
+        containerRectLeft: containerRect.left,
+        containerWidth: containerRect.width,
+        cardWidth: cardRect.width
+      });
+
       container.scrollTo({
         left: scrollLeft,
         behavior: 'smooth'
       });
     } else {
+      console.warn('📅 TimelineCarousel: Today card NOT FOUND! Available dates:',
+        Array.from(scrollContainerRef.current.querySelectorAll('[data-date]')).map(el => el.getAttribute('data-date'))
+      );
       // If today's card is not visible, scroll to approximate center
       const container = scrollContainerRef.current;
       const scrollPosition = container.scrollWidth / 2 - container.clientWidth / 2;
@@ -323,7 +348,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
             {dateRange.map(date => {
               const dateString = format(date, 'yyyy-MM-dd');
               const notesForDate = notesByDate.get(dateString) || [];
-              const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              const isToday = format(date, 'yyyy-MM-dd') === format(startOfDay(new Date()), 'yyyy-MM-dd');
 
               return (
                 <div key={dateString} data-date={dateString}>

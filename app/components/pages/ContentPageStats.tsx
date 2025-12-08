@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { InlineError } from '../ui/InlineError';
+import { formatRelativeTime } from "../../utils/formatRelativeTime";
 
 interface PageStatsData {
   totalViews: number;
@@ -14,6 +15,20 @@ interface PageStatsData {
   changeData: number[];
   supporterCount: number;
   supporterData: number[];
+  lastEditedAt?: string | null;
+  lastDiff?: {
+    added?: number;
+    removed?: number;
+    hasChanges?: boolean;
+  } | null;
+  diffPreview?: {
+    beforeContext?: string;
+    addedText?: string;
+    removedText?: string;
+    afterContext?: string;
+    hasAdditions?: boolean;
+    hasRemovals?: boolean;
+  } | null;
 }
 
 interface PageStatsProps {
@@ -70,6 +85,9 @@ export default function ContentPageStats({
             changeData: result.data.changeData || Array(24).fill(0),
             supporterCount: result.data.supporterCount || 0,
             supporterData: result.data.supporterData || Array(24).fill(0),
+            lastEditedAt: result.data.lastEditedAt || null,
+            lastDiff: result.data.lastDiff || null,
+            diffPreview: result.data.diffPreview || null,
           });
         } else {
           throw new Error(result.error || 'Failed to load page statistics');
@@ -180,38 +198,80 @@ export default function ContentPageStats({
 
       {/* Recent Changes Card */}
       <div
-        className="wewrite-card flex items-center justify-between cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors"
+        className="wewrite-card cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors flex flex-col gap-3"
         onClick={handleViewActivity}
       >
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Recent Edits</span>
-        </div>
+        {/* Header with icon, title, and stats */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Recent Edits</span>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <div className="h-8 w-16 relative">
-              {showSparklines && (
-                <SimpleSparkline
-                  data={stats.changeData.length > 0 ? stats.changeData : Array(24).fill(0)}
-                  height={30}
-                  color={accentColorValue}
-                />
-              )}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <div className="h-8 w-16 relative">
+                {showSparklines && (
+                  <SimpleSparkline
+                    data={stats.changeData.length > 0 ? stats.changeData : Array(24).fill(0)}
+                    height={30}
+                    color={accentColorValue}
+                  />
+                )}
+              </div>
+              <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
             </div>
-            <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
-          </div>
 
-          <div
-            className="text-sm font-medium px-2 py-1 rounded-md"
-            style={{
-              backgroundColor: accentColorValue,
-              color: pillTextColor
-            }}
-          >
-            {stats.recentChanges.toLocaleString()}
+            <div
+              className="text-sm font-medium px-2 py-1 rounded-md"
+              style={{
+                backgroundColor: accentColorValue,
+                color: pillTextColor
+              }}
+            >
+              {stats.recentChanges.toLocaleString()}
+            </div>
           </div>
         </div>
+
+        {/* Last edited timestamp and diff preview */}
+        {stats.lastEditedAt && (
+          <div className="flex flex-col gap-2 border-t border-neutral-15 pt-3 -mb-1">
+            {/* Last edited timestamp */}
+            <div className="text-xs text-muted-foreground">
+              Last edited {formatRelativeTime(new Date(stats.lastEditedAt))}
+            </div>
+
+            {/* Diff preview */}
+            {stats.diffPreview && (
+              <div className="text-xs overflow-hidden line-clamp-2">
+                {/* Before context */}
+                {stats.diffPreview.beforeContext && (
+                  <span className="text-muted-foreground">{stats.diffPreview.beforeContext}</span>
+                )}
+
+                {/* Removed text */}
+                {stats.diffPreview.hasRemovals && stats.diffPreview.removedText && (
+                  <span className="bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-0.5 rounded line-through">
+                    {stats.diffPreview.removedText}
+                  </span>
+                )}
+
+                {/* Added text */}
+                {stats.diffPreview.hasAdditions && stats.diffPreview.addedText && (
+                  <span className="bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-0.5 rounded">
+                    {stats.diffPreview.addedText}
+                  </span>
+                )}
+
+                {/* After context */}
+                {stats.diffPreview.afterContext && (
+                  <span className="text-muted-foreground">{stats.diffPreview.afterContext}...</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Supporters Card - only show if data is provided */}

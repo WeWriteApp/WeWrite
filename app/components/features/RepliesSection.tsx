@@ -136,9 +136,10 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
           <span className="text-xs text-muted-foreground">({counts.total})</span>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {filterButtons.map((filter) => {
+        {/* Filter Buttons - only show if there are replies */}
+        {counts.total > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {filterButtons.map((filter) => {
             // Get color classes based on filter type and active state
             const getFilterColors = () => {
               if (activeFilter !== filter.type) {
@@ -189,7 +190,8 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
               </button>
             );
           })}
-        </div>
+          </div>
+        )}
 
         {/* Loading State */}
         {loading && (

@@ -360,6 +360,12 @@ async function fetchPageStats(pageId: string) {
       uniqueEditors: uniqueEditors.size
     });
 
+    // Get the most recent edit for preview (if available)
+    const mostRecentEdit = recentEdits.length > 0 ? recentEdits[0] : null;
+    const lastEditedAt = mostRecentEdit?.createdAt || mostRecentEdit?.lastModified || null;
+    const lastDiff = mostRecentEdit?.diff || mostRecentEdit?.lastDiff || null;
+    const diffPreview = mostRecentEdit?.diffPreview || mostRecentEdit?.preview || null;
+
     // Supporters: query USD allocations for this page (current month active allocations)
     let supporterCount = 0;
     let supporterData = Array(24).fill(0);
@@ -412,6 +418,9 @@ async function fetchPageStats(pageId: string) {
       totalPledgedTokens: 0,
       supporterData,
       uniqueSponsors: [],
+      lastEditedAt, // Most recent edit timestamp
+      lastDiff, // Diff data for most recent edit
+      diffPreview, // Preview of most recent change
       lastUpdated: Date.now(),
       cached: false
     };
@@ -433,6 +442,9 @@ async function fetchPageStats(pageId: string) {
       totalPledgedTokens: 0,
       supporterData: Array(24).fill(0),
       uniqueSponsors: [],
+      lastEditedAt: null,
+      lastDiff: null,
+      diffPreview: null,
       lastUpdated: Date.now(),
       cached: false
     };

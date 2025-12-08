@@ -81,7 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Identify user in LogRocket when user logs in
     if (enrichedUser) {
       try {
-        console.log('🔍 AuthProvider: Attempting to identify user in LogRocket:', {
+        console.log('✅ LogRocket user identification:', {
           uid: enrichedUser.uid,
           username: enrichedUser.username,
           email: enrichedUser.email,
@@ -103,7 +103,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('❌ Failed to identify user in LogRocket:', error);
       }
     } else {
-      console.log('🔍 AuthProvider: User is null, skipping LogRocket identification');
     }
   }, []);
 
@@ -143,7 +142,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } else {
         const errorData = await response.text();
         setUser(null);
-        console.log('[Auth] ❌ Session check failed:', response.status, errorData);
       }
     } catch (error) {
       console.error('[Auth] ❌ Session check error:', error);
@@ -163,8 +161,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const useDevAuth = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_DEV_AUTH === 'true';
 
       // SIMPLIFIED: Always use the login API endpoint
-      console.log('[Auth] Using simplified login API for all environments');
-      console.log('[Auth] Environment check:', {
+      console.log('[Auth] Using simplified login API for all environments', {
         NODE_ENV: process.env.NODE_ENV,
         NEXT_PUBLIC_USE_DEV_AUTH: process.env.NEXT_PUBLIC_USE_DEV_AUTH,
         useDevAuth: useDevAuth
@@ -199,22 +196,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } else {
         // Use client-side Firebase Auth for production
-        console.log('[Auth] Using Firebase Auth for production/preview environment');
-        console.log('[Auth] Attempting Firebase login for:', emailOrUsername);
-
-
-        console.log('[Auth] Environment details:', {
+        console.log('[Auth] Using Firebase Auth for production', {
           nodeEnv: process.env.NODE_ENV,
           hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
           isClient: typeof window !== 'undefined'
         });
 
         const { loginUser } = await import('../firebase/auth');
-        console.log('[Auth] Firebase auth module loaded, attempting login...');
         const result = await loginUser(emailOrUsername, password);
 
         if (result.user) {
-          console.log('[Auth] Firebase login successful, user:', {
+          console.log('[Auth] Firebase user authenticated:', {
             uid: result.user.uid,
             email: result.user.email,
             emailVerified: result.user.emailVerified
@@ -244,7 +236,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.log('[Auth] Session data received:', sessionData);
             if (sessionData.user) {
               setUser(sessionData.user);
-              console.log('[Auth] Firebase Auth sign in successful for user:', sessionData.user.email);
             } else {
               console.error('[Auth] Session response missing user data:', sessionData);
               throw new AuthError('Session creation failed', AuthErrorCode.UNKNOWN_ERROR);
@@ -294,7 +285,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { signOut: firebaseSignOut } = await import('firebase/auth');
         const { auth } = await import('../firebase/auth');
         await firebaseSignOut(auth);
-        console.log('[Auth] 🔴 LOGOUT: Firebase Auth logout completed');
       } catch (firebaseError) {
         console.warn('[Auth] 🔴 LOGOUT: Firebase logout error (continuing):', firebaseError);
       }
@@ -381,7 +371,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // First, check if we have a Firebase Auth user and refresh their token
       const { auth } = await import('../firebase/auth');
       if (auth.currentUser) {
-        console.log('[Auth] Refreshing Firebase Auth user token to get latest emailVerified status');
         await auth.currentUser.reload(); // Refresh the user's data from Firebase
 
         // Get fresh ID token with updated claims

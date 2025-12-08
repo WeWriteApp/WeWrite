@@ -2762,6 +2762,23 @@ button.bg-transparent[type] {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* Border neutral alpha classes - very subtle borders for theme compatibility */
+.border-neutral-alpha-3 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark .border-neutral-alpha-3 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.hover\:border-neutral-alpha-5:hover {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.dark .hover\:border-neutral-alpha-5:hover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
 /* ==========================================================================
    Alpha Overlay System
    These classes add a semi-transparent overlay on top of the existing bg color.

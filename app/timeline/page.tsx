@@ -7,6 +7,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, List, Clock } from 'lucide-react';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../components/ui/segmented-control';
+import { Button } from '../components/ui/button';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { useAuth } from '../providers/AuthProvider';
 import { useAccentColor } from '../contexts/AccentColorContext';

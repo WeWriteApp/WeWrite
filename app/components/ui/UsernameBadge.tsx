@@ -244,6 +244,7 @@ export function UsernameBadge({
           status={subscriptionStatus}
           amount={subscriptionAmount}
           size={size}
+          pillVariant={variant === 'pill' ? pillVariant : undefined}
         />
       )}
     </span>

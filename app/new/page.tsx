@@ -37,6 +37,7 @@ import { useLogRocket } from "../providers/LogRocketProvider";
 import LocationField from "../components/pages/LocationField";
 import { WritingIdeasBanner } from "../components/writing/WritingIdeasBanner";
 import { sanitizeUsername } from "../utils/usernameSecurity";
+import { extractNewPageReferences, createNewPagesFromLinks } from "../utils/pageContentHelpers";
 
 
 
@@ -542,81 +543,9 @@ function NewPageContent() {
     setHasUnsavedChanges(hasContentChanged || hasTitleChanged);
   }, [hasContentChanged, hasTitleChanged]);
 
-  // Helper function to extract new page references from content
-  const extractNewPageReferences = (content: EditorNode[]): Array<{pageId: string, title: string}> => {
-    const newPages: Array<{pageId: string, title: string}> = [];
-
-    const processNode = (node: any) => {
-      if (node.type === 'link' && node.isNew && node.pageId && node.pageTitle) {
-        newPages.push({
-          pageId: node.pageId,
-          title: node.pageTitle
-        });
-      }
-
-      if (node.children) {
-        node.children.forEach(processNode);
-      }
-    };
-
-    content.forEach(processNode);
-    return newPages;
-  };
-
-  // Helper function to create new pages referenced in links
-  const createNewPagesFromLinks = async (newPageRefs: Array<{pageId: string, title: string}>): Promise<void> => {
-    if (!user?.uid || newPageRefs.length === 0) return;
-
-    console.log('🔵 DEBUG: Creating new pages from links:', newPageRefs);
-
-    for (const pageRef of newPageRefs) {
-      try {
-        const pageData = {
-          id: pageRef.pageId, // Use the pre-generated ID from the link
-          title: pageRef.title,
-          content: JSON.stringify([{ type: 'paragraph', children: [{ text: '' }] }]), // Empty content
-          userId: user.uid,
-          username: user.username || 'Anonymous',
-          lastModified: new Date().toISOString(),
-          isReply: false,
-          groupId: null,
-          customDate: null
-        };
-
-        const response = await fetch('/api/pages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(pageData),
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ DEBUG: Created new page from link:', { title: pageRef.title, id: result.id });
-        } else {
-          // Parse the error response to get the specific error message
-          let errorMessage = `Failed to create page "${pageRef.title}"`;
-          try {
-            const errorData = await response.json();
-            if (errorData.message) {
-              errorMessage = errorData.message;
-            }
-          } catch (parseError) {
-            console.error('🔴 DEBUG: Failed to parse error response:', parseError);
-          }
-          console.error('🔴 DEBUG: Failed to create new page from link:', pageRef.title, errorMessage);
-        }
-      } catch (error) {
-        console.error('🔴 DEBUG: Error creating new page from link:', error);
-      }
-    }
-  };
-
   // Handle save
   const handleSave = async (content: EditorNode[], saveMethod: 'keyboard' | 'button' = 'button'): Promise<boolean> => {
-    console.log('🔵 DEBUG: handleSave called with:', {
+    console.log('🔄 Save initiated with details:', {
       saveMethod,
       hasTitle: !!(title && title.trim()),
       hasContent: !!(content && content.length),
@@ -626,7 +555,6 @@ function NewPageContent() {
 
     // CRITICAL FIX: Enhanced title validation with visual feedback - NOW APPLIES TO ALL PAGES INCLUDING REPLIES
     if (!title || title.trim() === '') {
-      console.error('🔴 DEBUG: Save failed - missing title');
       const errorMsg = "Please add a title before saving";
       setError(errorMsg);
       setTitleError(true);
@@ -644,7 +572,6 @@ function NewPageContent() {
 
     // Validate user authentication
     if (!user || !user.uid) {
-      console.error('🔴 DEBUG: Save failed - user not authenticated');
       const errorMsg = "You must be logged in to create a page";
       setError(errorMsg);
       toast({
@@ -675,7 +602,7 @@ function NewPageContent() {
             });
             // Don't fail - user-based auth takes precedence after account switching
           } else {
-            console.log('🔵 DEBUG: Firebase Auth verified:', {
+            console.log('🟢 DEBUG: Auth user matches', {
               authUid: auth.currentUser.uid,
               currentAccountUid: user.uid,
               emailVerified: auth.currentUser.emailVerified
@@ -683,13 +610,13 @@ function NewPageContent() {
           }
         } else {
           // Firebase Auth not ready - use user-based auth
-          console.log('🔵 DEBUG: Using user-based auth (Firebase Auth not ready):', {
+          console.log('🟡 DEBUG: Using user-based auth (no Firebase currentUser)', {
             currentAccountUid: user.uid,
             authMethod: 'user-based'
           });
         }
       } else {
-        console.log('🔵 DEBUG: Firebase app not initialized, using user-based auth:', {
+        console.log('🟡 DEBUG: Using user-based auth (no Firebase app)', {
           currentAccountUid: user.uid,
           authMethod: 'user-based'
         });
@@ -699,7 +626,6 @@ function NewPageContent() {
       // Don't fail - user-based auth is sufficient
     }
 
-    console.log('🔵 DEBUG: Starting save process...');
     setIsSaving(true);
     setError(null);
 
@@ -708,7 +634,7 @@ function NewPageContent() {
       const userId = user.uid;
 
       // CRITICAL FIX: Add detailed logging for content validation debugging
-      console.log('🔵 DEBUG: Content validation check:', {
+      console.log('🔍 Content validation details:', {
         hasContent: !!content,
         isArray: Array.isArray(content),
         contentType: typeof content,
@@ -717,7 +643,7 @@ function NewPageContent() {
       });
 
       if (!content || !Array.isArray(content)) {
-        console.error('🔴 DEBUG: Content validation failed:', {
+        console.error('❌ Invalid content format:', {
           content,
           isArray: Array.isArray(content),
           type: typeof content
@@ -833,12 +759,10 @@ function NewPageContent() {
       // Extract and create new pages referenced in links before saving the main page
       const newPageRefs = extractNewPageReferences(finalContent);
       if (newPageRefs.length > 0) {
-        console.log('🔵 DEBUG: Found new page references, creating them first:', newPageRefs);
-        await createNewPagesFromLinks(newPageRefs);
+        await createNewPagesFromLinks(newPageRefs, userId, username);
       }
 
       // Normal page creation for verified users - use API route instead of direct Firestore
-      console.log('🔵 DEBUG: About to call API route with data:', { ...data, content: '(content omitted)' });
 
       let res = null;
       let authRetryAttempted = false;
@@ -866,16 +790,13 @@ function NewPageContent() {
               errorMessage = errorData.message;
             }
           } catch (parseError) {
-            console.error('🔴 DEBUG: Failed to parse error response:', parseError);
           }
 
             // Handle authentication errors specifically
             if (response.status === 401 && !authRetryAttempted) {
-              console.error('🔴 DEBUG: Authentication error - attempting to refresh auth');
               authRetryAttempted = true;
 
               try {
-                console.log('🔄 DEBUG: Attempting user refresh via API');
 
                 // First, try to refresh the user using the user API
                 const sessionRefreshResponse = await fetch('/api/auth/user', {
@@ -884,10 +805,8 @@ function NewPageContent() {
                 });
 
                 if (sessionRefreshResponse.ok) {
-                  console.log('✅ DEBUG: Session refreshed via API, retrying page creation');
                   return await attemptPageCreation();
                 } else {
-                  console.log('🔄 DEBUG: Session API refresh failed, trying Firebase token refresh');
 
                   // Fallback to Firebase token refresh
                   const { getAuth } = await import('firebase/auth');
@@ -895,7 +814,6 @@ function NewPageContent() {
                   const user = auth.currentUser;
 
                   if (user) {
-                    console.log('🔄 DEBUG: Refreshing Firebase auth token');
                     const newToken = await user.getIdToken(true); // Force refresh
 
                     // Create new user cookie
@@ -907,13 +825,11 @@ function NewPageContent() {
                     });
 
                     if (sessionResponse.ok) {
-                      console.log('✅ DEBUG: Firebase auth refreshed, retrying page creation');
                       return await attemptPageCreation();
                     }
                   }
                 }
               } catch (refreshError) {
-                console.error('🔴 DEBUG: Session/auth refresh failed:', refreshError);
               }
 
               throw new Error(`Authentication failed: Please refresh the page and log in again.`);
@@ -923,16 +839,13 @@ function NewPageContent() {
           }
 
           const result = await response.json();
-          console.log('🔵 DEBUG: API response:', result);
           return result.success ? result.data.id : null;
         };
 
         try {
           res = await attemptPageCreation();
-          console.log('🔵 DEBUG: Extracted pageId:', res);
 
         } catch (apiError) {
-          console.error('🔴 DEBUG: API request failed:', apiError);
           setIsSaving(false);
 
           // Use the specific error message from the API if available
@@ -951,8 +864,6 @@ function NewPageContent() {
         if (res) {
           // res is the page ID string returned by createPage
           const pageId = res;
-          console.log('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
-          console.error('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
 
           // Track page creation in LogRocket
           trackPageCreation({
@@ -964,32 +875,21 @@ function NewPageContent() {
 
           // CRITICAL DEBUG: Immediately try to fetch the page to see if it exists
           try {
-            console.log('🔍 DEBUG: Attempting to fetch newly created page...');
             const { getPageById } = await import('../firebase/database');
             const fetchResult = await getPageById(pageId, userId);
-            console.log('🔍 DEBUG: Fetch result:', fetchResult);
             if (fetchResult.pageData) {
-              console.log('✅ DEBUG: Page exists in database immediately after creation');
             } else {
-              console.error('❌ DEBUG: Page does NOT exist in database after creation!', fetchResult.error);
             }
           } catch (fetchError) {
-            console.error('❌ DEBUG: Error fetching newly created page:', fetchError);
           }
 
           // Invalidate caches to ensure new page appears in UI immediately
-          console.log('✅ DEBUG: Page created successfully, ID:', pageId);
-          console.error('✅ DEBUG: Page created successfully, ID:', pageId);
 
           // CRITICAL FIX: Immediate cache invalidation to ensure new page appears in profile
           // Clear caches immediately to prevent stale data from showing
-          console.log('🔵 DEBUG: Starting immediate cache invalidation...');
           try {
             const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
-            console.log('🔵 DEBUG: Cache invalidation module imported, calling function...');
             invalidatePageCreationCaches(userId);
-            console.log('✅ Immediate cache invalidation triggered for user:', userId);
-            console.log('🔵 DEBUG: Immediate cache invalidation completed successfully');
           } catch (cacheError) {
             console.error('Error triggering immediate cache invalidation (non-fatal):', cacheError);
           }
@@ -1020,7 +920,6 @@ function NewPageContent() {
               window.dispatchEvent(new CustomEvent('pageSaved', {
                 detail: { pageId, title: eventTitle, content: content }
               }));
-              console.log('✅ Immediate page-created and pageSaved events dispatched');
             }
           } catch (eventError) {
             console.error('Error dispatching immediate page-created event (non-fatal):', eventError);
@@ -1031,14 +930,12 @@ function NewPageContent() {
             try {
               const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
               invalidatePageCreationCaches(userId);
-              console.log('✅ Delayed cache invalidation triggered for user:', userId);
             } catch (cacheError) {
               console.error('Error triggering delayed cache invalidation (non-fatal):', cacheError);
             }
           }, 3000); // 3s delay to handle Firestore indexing delays
 
           // Track content changes for new page creation (non-blocking)
-          console.log('🔵 Tracking content changes with pageId:', pageId);
           const { trackContentChange } = await import("../utils/diffService");
           trackContentChange(
             pageId,
@@ -1047,7 +944,6 @@ function NewPageContent() {
             null, // No previous content for new pages
             finalContent
           ).then(() => {
-            console.log('🔵 Content tracking completed successfully');
           }).catch((trackingError) => {
             console.error('Error tracking content changes for new page (non-fatal):', trackingError);
           });
@@ -1080,13 +976,11 @@ function NewPageContent() {
           //   console.error('Analytics tracking failed (non-fatal):', analyticsError);
           // }
 
-          console.log('🔵 DEBUG: About to reset state and complete save process...');
           setHasContentChanged(false);
           setHasTitleChanged(false);
           setHasUnsavedChanges(false);
           setSaveSuccess(true);
 
-          console.log('🔵 DEBUG: Setting isSaving to false...');
           setIsSaving(false);
 
           // Store optimistic payload so the destination page can render instantly without skeleton
@@ -1121,7 +1015,6 @@ function NewPageContent() {
 
           return true;
         } else {
-          console.error('🔴 DEBUG: Page creation failed - createPage returned null/false');
           setIsSaving(false);
           const errorMsg = "Failed to create page. Please try again.";
           setError(errorMsg);
@@ -1134,8 +1027,7 @@ function NewPageContent() {
           return false;
         }
     } catch (error: any) {
-      console.error('🔴 DEBUG: Save failed with error:', error);
-      console.error('🔴 DEBUG: Error details:', {
+      console.error('❌ Page save error:', {
         message: error.message,
         stack: error.stack,
         name: error.name,

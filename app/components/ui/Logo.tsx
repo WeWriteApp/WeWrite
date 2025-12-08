@@ -61,7 +61,7 @@ export function Logo({
         'inline-flex items-center justify-center relative',
         styled && [
           'border border-neutral-alpha-3 bg-background shadow-sm rounded-lg overflow-hidden',
-          'hover:shadow-md hover:border-neutral-alpha-3',
+          'hover:shadow-md hover:border-neutral-alpha-5',
           size === 'sm' ? 'h-5 w-5' : 'h-9 w-9'
         ],
         clickable && 'hover:opacity-80 cursor-pointer transition-opacity duration-200',

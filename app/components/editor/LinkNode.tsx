@@ -369,14 +369,14 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       // TextView is now for viewing only - editing is handled by Editor component
       // Always render in view mode
       // In view mode, normal navigation behavior
+      // Use inline display so compound links wrap naturally like manually created page+user links
       return (
         <span
           {...wrapperProps}
-          className="compound-link-container inline-block"
+          className="compound-link-container"
           style={{
             ...wrapperProps.style,
-            display: 'inline-block',
-            whiteSpace: 'nowrap',
+            display: 'inline',
             verticalAlign: 'baseline'
           }}
         >
@@ -390,7 +390,9 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
           >
             {pageTitleText}
           </PillLink>
-          <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
+          {' '}
+          <span className="text-muted-foreground text-sm" style={{ verticalAlign: 'middle' }}>by</span>
+          {' '}
           <UsernameBadge
             userId={validatedNode.authorUserId}
             username={cleanUsername || 'Loading...'}
@@ -401,6 +403,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
             variant="pill"
             pillVariant="secondary"
             className="author-portion"
+            showBadge={true}
           />
           <span style={{ display: 'none' }}>{children}</span>
         </span>

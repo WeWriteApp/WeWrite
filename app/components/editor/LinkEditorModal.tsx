@@ -417,16 +417,20 @@ export default function LinkEditorModal({
 
   // CRITICAL FIX: Memoize page link creation to prevent React state errors
   const handleCreatePageLink = useCallback(() => {
-    if (!selectedPage) {
+    // FIXED: When editing, allow using editingLink data if no new page selected
+    const pageToUse = selectedPage || (isEditing && editingLink?.data);
+
+    if (!pageToUse) {
       toast.error('Please select a page');
       return;
     }
 
     const customDisplayText = customText ? displayText.trim() : '';
-    const linkData = createLinkData(selectedPage, customDisplayText);
+    const linkData = createLinkData(pageToUse, customDisplayText);
 
     console.log('🔗 [MODAL DEBUG] About to save link:', {
       selectedPage: selectedPage,
+      pageToUse: pageToUse,
       customText: customText,
       displayText: displayText,
       customDisplayText: customDisplayText,
@@ -442,7 +446,7 @@ export default function LinkEditorModal({
     setTimeout(() => {
       onClose();
     }, 50);
-  }, [selectedPage, customText, displayText, createLinkData, onInsertLink, onClose]);
+  }, [selectedPage, customText, displayText, createLinkData, onInsertLink, onClose, isEditing, editingLink]);
 
   // CRITICAL FIX: Remove problematic memoization that was causing React state errors
   // Focus is now maintained through proper event handling and useCallback optimization
@@ -545,7 +549,7 @@ export default function LinkEditorModal({
                   // Internal page link preview
                   if (preview.showAuthor && preview.authorUsername) {
                     return (
-                      <>
+                      <span style={{ display: 'inline' }}>
                         <PillLink
                           href={preview.url || '#'}
                           isPublic={true}
@@ -554,15 +558,21 @@ export default function LinkEditorModal({
                         >
                           {preview.text}
                         </PillLink>
-                        <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
+                        {' '}
+                        <span className="text-muted-foreground text-sm" style={{ verticalAlign: 'middle' }}>by</span>
+                        {' '}
                         <UsernameBadge
                           userId={preview.authorUserId || ''}
                           username={preview.authorUsername?.replace(/^@/, '') || 'Loading...'}
+                          tier={editingLink?.data?.authorTier || selectedPage?.tier}
+                          subscriptionStatus={editingLink?.data?.authorSubscriptionStatus || selectedPage?.subscriptionStatus}
+                          subscriptionAmount={editingLink?.data?.authorSubscriptionAmount || selectedPage?.subscriptionAmount}
                           size="sm"
                           variant="pill"
                           pillVariant="secondary"
+                          showBadge={true}
                         />
-                      </>
+                      </span>
                     );
                   } else {
                     return (
@@ -837,7 +847,7 @@ export default function LinkEditorModal({
         {activeTab === 'pages' ? (
           <Button
             onClick={handleCreatePageLink}
-            disabled={!selectedPage}
+            disabled={!selectedPage && !(isEditing && editingLink?.data)}
             className="w-full"
           >
             <Link className="h-4 w-4 mr-2" />

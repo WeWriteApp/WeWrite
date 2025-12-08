@@ -90,18 +90,13 @@ interface LogRocketProviderProps {
 export function LogRocketProvider({ children }: LogRocketProviderProps) {
   // Initialize LogRocket on mount (client-side only, Strict Mode safe)
   useRunOnce('logrocket-provider', () => {
-    console.log('🔍 LogRocketProvider: Initializing LogRocket...');
-
     // Initialize LogRocket if we're on the client side
     if (typeof window !== 'undefined') {
       try {
         logRocketService.init();
-        console.log('✅ LogRocketProvider: LogRocket initialization attempted');
       } catch (error) {
-        console.error('❌ LogRocketProvider: Failed to initialize LogRocket:', error);
+        console.error('Failed to initialize LogRocket:', error);
       }
-    } else {
-      console.log('⏭️ LogRocketProvider: Skipping LogRocket init (server-side)');
     }
   }, []);
 

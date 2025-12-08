@@ -177,6 +177,26 @@ function extractLinkText(node: any): string {
     const cleanUsername = node.authorUsername.replace(/^@/, '');
     linkText = `${baseText} by ${cleanUsername}`;
   }
+  // Handle standalone user links (link to /user/[userId])
+  else if (node.url && node.url.startsWith('/user/')) {
+    // Extract username from the link data
+    if (node.username) {
+      // Remove @ symbol from username if present
+      linkText = node.username.replace(/^@/, '');
+    } else if (node.children) {
+      const childText = extractTextFromNodes(node.children);
+      // Check if the child text looks like a user ID (long alphanumeric string)
+      // If so, use the node data instead
+      if (childText && childText.length > 20 && /^[a-zA-Z0-9]+$/.test(childText)) {
+        // This looks like a user ID, try to get username from node data
+        linkText = node.displayText || node.username || childText;
+      } else {
+        linkText = childText;
+      }
+    } else {
+      linkText = node.displayText || node.username || node.url;
+    }
+  }
   // Handle regular links
   else {
     // Check for custom text first
@@ -224,6 +244,26 @@ function extractLexicalLinkText(node: any): string {
     // Remove @ symbol from username if present
     const cleanUsername = node.authorUsername.replace(/^@/, '');
     linkText = `${baseText} by ${cleanUsername}`;
+  }
+  // Handle standalone user links (link to /user/[userId])
+  else if ((node.url || node.__url) && (node.url || node.__url).startsWith('/user/')) {
+    // Extract username from the link data
+    if (node.username || node.__username) {
+      // Remove @ symbol from username if present
+      linkText = (node.username || node.__username).replace(/^@/, '');
+    } else if (node.children) {
+      const childText = extractTextFromLexicalNodes(node.children);
+      // Check if the child text looks like a user ID (long alphanumeric string)
+      // If so, use the node data instead
+      if (childText && childText.length > 20 && /^[a-zA-Z0-9]+$/.test(childText)) {
+        // This looks like a user ID, try to get username from node data
+        linkText = node.displayText || node.__displayText || node.username || node.__username || childText;
+      } else {
+        linkText = childText;
+      }
+    } else {
+      linkText = node.displayText || node.__displayText || node.username || node.__username || node.url || node.__url;
+    }
   }
   // Handle regular links
   else {

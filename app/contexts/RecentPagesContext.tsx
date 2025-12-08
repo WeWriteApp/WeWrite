@@ -72,8 +72,6 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
     const fetchRecentPages = async () => {
       setLoading(true);
       try {
-        console.log('🔍 [RECENT_PAGES_CONTEXT] Fetching recent pages for user:', user.uid);
-
         const response = await fetch(`/api/recent-edits/user?userId=${user.uid}&limit=${MAX_RECENT_PAGES}`);
 
         if (!response.ok) {
@@ -81,7 +79,6 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
         }
 
         const data = await response.json();
-        console.log('🔍 [RECENT_PAGES_CONTEXT] API response:', data);
 
         if (data.pages && Array.isArray(data.pages)) {
           // Convert API response to RecentPage format
@@ -93,14 +90,12 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
             username: page.username || page.authorUsername || 'Anonymous'
           }));
 
-          console.log('🔍 [RECENT_PAGES_CONTEXT] Processed pages:', recentPagesData.length);
           setRecentPages(recentPagesData);
         } else {
-          console.log('🔍 [RECENT_PAGES_CONTEXT] No recent pages found');
           setRecentPages([]);
         }
       } catch (error) {
-        console.error('🔍 [RECENT_PAGES_CONTEXT] Error fetching recent pages:', error);
+        console.error('Error fetching recent pages:', error);
         setRecentPages([]);
       } finally {
         setLoading(false);
@@ -121,8 +116,6 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
     if (!user || !page || !page.id) return;
 
     try {
-      console.log('🔍 [RECENT_PAGES_CONTEXT] Page view tracked (no action needed - using lastModified):', page.id);
-
       // Since we now use the user's own pages sorted by lastModified,
       // we don't need to manually track page views. The pages will automatically
       // appear in recent pages when they're modified.

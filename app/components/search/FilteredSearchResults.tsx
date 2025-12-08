@@ -287,9 +287,11 @@ const FilteredSearchResults = forwardRef(({
         });
 
       } else {
-        // Handle regular search results
+        // Handle regular search results (unified API format: { pages: [], users: [] })
         let allPages = data.pages || [];
+        let allUsers = data.users || [];
         console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
+        console.log('[FilteredSearchResults] Total users from search:', allUsers.length);
 
         // Ensure allPages is an array before filtering
         const safeAllPages = Array.isArray(allPages) ? allPages : [];
@@ -327,13 +329,16 @@ const FilteredSearchResults = forwardRef(({
 
         const limitedPages = maxResults ? filteredPages.slice(0, maxResults) : filteredPages;
         setPages(limitedPages);
-        setUsers([]); // Clear users for regular search
+
+        // FIXED: Include users from API response instead of clearing them
+        setUsers(Array.isArray(allUsers) ? allUsers : []);
         setGroups([]); // Clear groups for regular search
 
         // Fetch subscription data for page authors
         fetchUserSubscriptionData(limitedPages);
 
         console.log('[FilteredSearchResults] Set filtered pages:', limitedPages.length, 'pages');
+        console.log('[FilteredSearchResults] Set users:', allUsers.length, 'users');
         console.log('[FilteredSearchResults] Pages state updated:', limitedPages);
       }
 
@@ -736,28 +741,26 @@ const FilteredSearchResults = forwardRef(({
                   User Profiles
                 </h3>
                 <div className="space-y-1">
-                  {users.map((user) => (
+                  {users.map((userItem) => (
                     <button
-                      key={user.id}
-                      onClick={() => handleSelect(user)}
+                      key={userItem.id}
+                      onClick={() => handleSelect(userItem)}
                       className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                        selectedId === user.id ? 'bg-muted' : ''
+                        selectedId === userItem.id ? 'bg-muted' : ''
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        {user.photoURL && (
-                          <img
-                            src={user.photoURL}
-                            alt={user.title}
-                            className="w-5 h-5 rounded-full"
-                          />
-                        )}
-                        <span className="text-sm font-medium text-foreground">
-                          @{user.title}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          (User Profile)
-                        </span>
+                        <UsernameBadge
+                          userId={userItem.id}
+                          username={userItem.username}
+                          tier={userItem.tier}
+                          subscriptionStatus={userItem.subscriptionStatus}
+                          subscriptionAmount={userItem.subscriptionAmount}
+                          size="sm"
+                          variant="pill"
+                          isLinkEditor={isLinkEditor}
+                          onLinkEditorSelect={() => handleSelect(userItem)}
+                        />
                       </div>
                     </button>
                   ))}

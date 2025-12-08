@@ -244,71 +244,73 @@ export default function NotificationItem({ notification }) {
             <p className="text-sm text-muted-foreground mb-2">
               Please verify your email to access all features and ensure your account is secure.
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  try {
-                    if (auth?.currentUser && user) {
-                      const idToken = await auth.currentUser.getIdToken(true);
-                      const response = await fetch('/api/email/send-verification', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          email: user.email,
-                          userId: user.uid,
-                          username: user.username,
-                          idToken,
-                        }),
-                      });
-                      if (response.ok) {
-                        console.log('Verification email sent via Resend');
+            {!notification.read && (
+              <div className="flex gap-2">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      if (auth?.currentUser && user) {
+                        const idToken = await auth.currentUser.getIdToken(true);
+                        const response = await fetch('/api/email/send-verification', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            email: user.email,
+                            userId: user.uid,
+                            username: user.username,
+                            idToken,
+                          }),
+                        });
+                        if (response.ok) {
+                          console.log('Verification email sent via Resend');
+                        } else {
+                          console.error('Failed to send verification email');
+                        }
                       } else {
-                        console.error('Failed to send verification email');
+                        console.warn('No authenticated user to send verification email');
                       }
-                    } else {
-                      console.warn('No authenticated user to send verification email');
+                    } catch (error) {
+                      console.error('Error sending verification email:', error);
                     }
-                  } catch (error) {
-                    console.error('Error sending verification email:', error);
-                  }
-                }}
-                className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-              >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Resend Email
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  router.push('/settings');
-                }}
-                className="inline-flex items-center px-2 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
-              >
-                Go to Settings
-              </button>
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  try {
-                    // Dismiss future email verification notifications
-                    dismissEmailVerificationNotifications();
-                    // Mark this notification as read
-                    await markAsRead(notification.id);
-                    console.log('Email verification notifications dismissed');
-                  } catch (error) {
-                    console.error('Error dismissing email verification notifications:', error);
-                  }
-                }}
-                className="inline-flex items-center px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Dismiss
-              </button>
-            </div>
+                  }}
+                  className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Resend Email
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    router.push('/settings');
+                  }}
+                  className="inline-flex items-center px-2 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
+                >
+                  Go to Settings
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      // Dismiss future email verification notifications
+                      dismissEmailVerificationNotifications();
+                      // Mark this notification as read
+                      await markAsRead(notification.id);
+                      console.log('Email verification notifications dismissed');
+                    } catch (error) {
+                      console.error('Error dismissing email verification notifications:', error);
+                    }
+                  }}
+                  className="inline-flex items-center px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Dismiss
+                </button>
+              </div>
+            )}
           </div>
         );
 
@@ -363,28 +365,30 @@ export default function NotificationItem({ notification }) {
                 <span>Used: {percentage}%</span>
               </div>
             )}
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  router.push('/settings/fund-account');
-                }}
-                className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Top off Account
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  router.push('/settings/spend');
-                }}
-                className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
-              >
-                Manage Allocations
-              </button>
-            </div>
+            {!notification.read && (
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    router.push('/settings/fund-account');
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Top off Account
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    router.push('/settings/spend');
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+                >
+                  Manage Allocations
+                </button>
+              </div>
+            )}
           </div>
         );
 
@@ -410,47 +414,49 @@ export default function NotificationItem({ notification }) {
                 <span>Due: {new Date(notification.metadata.dueDate).toLocaleDateString()}</span>
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  try {
-                    const response = await fetch('/api/subscription/retry-payment', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' }});
-                    const data = await response.json();
-                    if (response.ok && data.success) {
-                      // Mark notification as read on success
-                      await markAsRead(notification.id);
-                      console.log('Payment retry successful');
-                    } else {
-                      console.error('Payment retry failed:', data.error);
+            {!notification.read && (
+              <div className="flex gap-2">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      const response = await fetch('/api/subscription/retry-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }});
+                      const data = await response.json();
+                      if (response.ok && data.success) {
+                        // Mark notification as read on success
+                        await markAsRead(notification.id);
+                        console.log('Payment retry successful');
+                      } else {
+                        console.error('Payment retry failed:', data.error);
+                      }
+                    } catch (error) {
+                      console.error('Error retrying payment:', error);
                     }
-                  } catch (error) {
-                    console.error('Error retrying payment:', error);
-                  }
-                }}
-                className={`inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium ${
-                  isUrgent
-                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                }`}
-              >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Retry Payment
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  router.push('/settings#subscription');
-                }}
-                className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
-              >
-                Update Payment
-              </button>
-            </div>
+                  }}
+                  className={`inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium ${
+                    isUrgent
+                      ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  }`}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Retry Payment
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    router.push('/settings#subscription');
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+                >
+                  Update Payment
+                </button>
+              </div>
+            )}
             {isUrgent && (
               <InlineError
                 variant="inline"

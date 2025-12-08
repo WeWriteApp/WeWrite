@@ -334,164 +334,197 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       style={{ transform: 'none' }}
     >
       {/* Header section - clickable area */}
-      <div
-        className="flex justify-between items-start w-full mb-3 cursor-pointer"
-        onClick={handleCardClick}
-      >
-        {/* Left side: Only show if we have page name or user info */}
-        {(currentPageName || activity.userId) && (
-          <div className="flex-1 min-w-0 pr-3">
-            {/* Page title and user info on same line, can wrap */}
-            <div className="flex flex-wrap items-center gap-1 text-xs">
-              {currentPageName && (
-                <PillLink href={activityUrl} className="flex-shrink-0">
-                  {currentPageName && isExactDateFormat(currentPageName)
-                    ? formatDate(new Date(currentPageName))
-                    : (currentPageName || "Untitled page")}
-                </PillLink>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="flex justify-between items-start w-full mb-3 cursor-pointer group/header"
+              onClick={handleCardClick}
+            >
+              {/* Left side: Only show if we have page name or user info */}
+              {(currentPageName || activity.userId) && (
+                <div className="flex-1 min-w-0 pr-3">
+                  {/* Page title and user info on same line, can wrap */}
+                  <div className="flex flex-wrap items-center gap-1 text-xs">
+                    {currentPageName && (
+                      <PillLink href={activityUrl} className="flex-shrink-0">
+                        {currentPageName && isExactDateFormat(currentPageName)
+                          ? formatDate(new Date(currentPageName))
+                          : (currentPageName || "Untitled page")}
+                      </PillLink>
+                    )}
+                    {activity.userId && (
+                      <>
+                        {activity.groupId && activity.groupName ? (
+                          <>
+                            <span className="text-foreground whitespace-nowrap">
+                              {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}
+                            </span>
+                            <Link
+                              href={`/group/${activity.groupId}`}
+                              className="hover:underline text-primary flex-shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {activity.groupName}
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-foreground whitespace-nowrap">
+                              {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
+                            </span>
+                            {/* Don't make user links clickable for sample data */}
+                            {activity.isSample ? (
+                              <span className="text-primary flex-shrink-0">
+                                {sanitizeUsername(activity.username)}
+                              </span>
+                            ) : (
+                              <UsernameBadge
+                                userId={activity.userId}
+                                username={activity.username || "Missing username"}
+                                tier={activity.subscriptionTier}
+                                subscriptionStatus={activity.hasActiveSubscription ? 'active' : 'inactive'}
+                                subscriptionAmount={activity.subscriptionAmount}
+                                size="sm"
+                                showBadge={true}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex flex-shrink-0"
+                              />
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
-              {activity.userId && (
-                <>
-                  {activity.groupId && activity.groupName ? (
-                    <>
-                      <span className="text-foreground whitespace-nowrap">
-                        {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}
-                      </span>
-                      <Link
-                        href={`/group/${activity.groupId}`}
-                        className="hover:underline text-primary flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {activity.groupName}
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-foreground whitespace-nowrap">
-                        {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
-                      </span>
-                      {/* Don't make user links clickable for sample data */}
-                      {activity.isSample ? (
-                        <span className="text-primary flex-shrink-0">
-                          {sanitizeUsername(activity.username)}
-                        </span>
-                      ) : (
-                        <UsernameBadge
-                          userId={activity.userId}
-                          username={activity.username || "Missing username"}
-                          tier={activity.subscriptionTier}
-                          subscriptionStatus={activity.hasActiveSubscription ? 'active' : 'inactive'}
-                          subscriptionAmount={activity.subscriptionAmount}
-                          size="sm"
-                          showBadge={true}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex flex-shrink-0"
-                        />
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+
+              {/* Right side: Timestamp */}
+              <div className="flex-shrink-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">
+                      {activity.timestamp ? formatRelativeTime(activity.timestamp) : 'Unknown time'}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <span>
+                      {activity.timestamp ? (() => {
+                        try {
+                          const date = new Date(activity.timestamp);
+                          return isNaN(date.getTime()) ? 'Invalid date' : formatDate(date);
+                        } catch (error) {
+                          console.error('Error formatting tooltip date:', error);
+                          return 'Invalid date';
+                        }
+                      })() : "Unknown date"}
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </div>
-        )}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs opacity-0 group-hover/header:opacity-100 transition-opacity">
+            Section: Header (Title & Timestamp)
+          </TooltipContent>
+        </Tooltip>
 
-        {/* Right side: Timestamp and diff counter */}
-        <div className="flex-shrink-0 flex flex-col items-end gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">
-                  {activity.timestamp ? formatRelativeTime(activity.timestamp) : 'Unknown time'}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <span>
-                  {activity.timestamp ? (() => {
-                    try {
-                      const date = new Date(activity.timestamp);
-                      return isNaN(date.getTime()) ? 'Invalid date' : formatDate(date);
-                    } catch (error) {
-                      console.error('Error formatting tooltip date:', error);
-                      return 'Invalid date';
-                    }
-                  })() : "Unknown date"}
-                </span>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        {/* Diff preview sub-card - chunked section */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="mb-3 cursor-pointer group/diff" onClick={handleCardClick}>
+              <div className="bg-neutral-alpha-10 rounded-lg p-3">
+                {/* Diff counter at top of sub-card */}
+                {!isTitleChange && (
+                  <div className="mb-2">
+                    <DiffStats
+                      added={added}
+                      removed={removed}
+                      isNewPage={isNewPage}
+                      showTooltips={true}
+                      className="text-xs"
+                    />
+                  </div>
+                )}
 
-          {/* Diff counter underneath timestamp */}
-          {!isTitleChange && (
-            <DiffStats
-              added={added}
-              removed={removed}
-              isNewPage={isNewPage}
-              showTooltips={true}
-              className="text-xs"
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Diff section at bottom - clickable area */}
-      <div className="mt-auto cursor-pointer" onClick={handleCardClick}>
-        <DiffPreview
-          currentContent={activity.currentContent}
-          previousContent={isNewPage ? null : activity.previousContent}
-          textDiff={{
-            preview: activity.lastDiff?.preview || activity.diffPreview, // Use lastDiff.preview first, fallback to diffPreview
-            added: activity.lastDiff?.added || activity.diff?.added || 0,
-            removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
-            hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
-          }}
-          isNewPage={isNewPage}
-          showInlineStats={false}
-          added={added}
-          removed={removed}
-        />
+                {/* Diff preview */}
+                <DiffPreview
+                  currentContent={activity.currentContent}
+                  previousContent={isNewPage ? null : activity.previousContent}
+                  textDiff={{
+                    preview: activity.lastDiff?.preview || activity.diffPreview,
+                    added: activity.lastDiff?.added || activity.diff?.added || 0,
+                    removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
+                    hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
+                  }}
+                  isNewPage={isNewPage}
+                  showInlineStats={false}
+                  added={added}
+                  removed={removed}
+                />
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs opacity-0 group-hover/diff:opacity-100 transition-opacity">
+            Section: Diff Preview (Changes)
+          </TooltipContent>
+        </Tooltip>
 
         {/* Restore button for activity context - only show if needed */}
         {canRestore && (
-          <div className="flex-shrink-0 pt-3 border-t border-neutral-15 mt-3">
-            <div className="flex justify-end items-center">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleRestore}
-                disabled={isRestoring}
-                className="h-6 px-2 text-xs"
-              >
-                {isRestoring ? (
-                  <>
-                    <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
-                    Restoring...
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="h-3 w-3 mr-1" />
-                    Restore
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex-shrink-0 mb-3 group/restore">
+                <div className="flex justify-end items-center">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleRestore}
+                    disabled={isRestoring}
+                    className="h-6 px-2 text-xs"
+                  >
+                    {isRestoring ? (
+                      <>
+                        <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                        Restoring...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Restore
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs opacity-0 group-hover/restore:opacity-100 transition-opacity">
+              Section: Restore Actions
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Dollar allocation UI - show for all users' pages when not viewing your own */}
         {activity.userId && activity.pageId && (!user || user.uid !== activity.userId) && (
-          <div className="pt-3 mt-3">
-            <AllocationControls
-              pageId={activity.pageId}
-              authorId={activity.userId}
-              pageTitle={currentPageName}
-              source="HomePage"
-              className="w-full"
-              hideAvailableText={activity.isCarouselCard}
-            />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="group/allocation">
+                <AllocationControls
+                  pageId={activity.pageId}
+                  authorId={activity.userId}
+                  pageTitle={currentPageName}
+                  source="HomePage"
+                  className="w-full"
+                  hideAvailableText={activity.isCarouselCard}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs opacity-0 group-hover/allocation:opacity-100 transition-opacity">
+              Section: Allocation Controls
+            </TooltipContent>
+          </Tooltip>
         )}
-      </div>
+      </TooltipProvider>
     </div>
   );
 };
