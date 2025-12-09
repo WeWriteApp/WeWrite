@@ -76,9 +76,9 @@ export function FloatingCard({
   const variantClasses = {
     default: "",
     toolbar: cn(
-      // Light mode: always opaque white background
-      // Dark mode: semi-transparent with blur
-      "!bg-white dark:!bg-neutral-alpha-80 !border !border-border dark:backdrop-blur-xl"
+      // Always opaque backgrounds - no transparency, no blur
+      // CSS handles expanded state via [data-expanded="true"]
+      "!bg-white dark:!bg-black !border !border-border"
     ),
     header: "",
     overlay: cn(

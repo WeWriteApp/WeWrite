@@ -203,12 +203,20 @@ html, body {
 .shiny-chip {
   background-size: 200% 100%;
   animation: shimmer 2.5s ease-in-out infinite, glow-pulse-base 2s ease-in-out infinite;
-  color: white !important;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   transition: transform 0.15s ease, filter 0.15s ease;
   outline: none !important;
+}
+
+/* CRITICAL: Force white text on ALL shiny chips - override Tailwind utilities */
+/* This must override text-foreground and other Tailwind text color classes */
+.shiny-chip,
+.shiny-chip.text-foreground,
+.shiny-chip[class*="text-"] {
+  --tw-text-opacity: 1 !important;
+  color: rgb(255 255 255 / var(--tw-text-opacity)) !important;
 }
 
 .shiny-chip:hover {
@@ -1572,36 +1580,51 @@ iframe[src*="js.stripe.com"] {
   background-color: var(--card-bg-hover) !important;
 }
 
-/* Expanded toolbar - NO hover states, fully opaque white/black */
-.wewrite-card[data-expanded="true"] {
+/* Expanded toolbar - ALWAYS opaque white/black, NO hover/active states */
+.wewrite-card[data-expanded="true"],
+.wewrite-card[data-expanded="true"]:hover,
+.wewrite-card[data-expanded="true"]:active,
+.wewrite-card[data-expanded="true"]:focus {
   background-color: white !important;
   border-color: var(--card-border) !important;
   backdrop-filter: none !important;
-}
-
-.dark .wewrite-card[data-expanded="true"] {
-  background-color: black !important;
-}
-
-.wewrite-card[data-expanded="true"]:hover {
-  background-color: white !important;
-  border-color: var(--card-border) !important;
   transform: none !important;
   box-shadow: var(--card-shadow) !important;
 }
 
-.dark .wewrite-card[data-expanded="true"]:hover {
+.dark .wewrite-card[data-expanded="true"],
+.dark .wewrite-card[data-expanded="true"]:hover,
+.dark .wewrite-card[data-expanded="true"]:active,
+.dark .wewrite-card[data-expanded="true"]:focus {
   background-color: black !important;
 }
 
-/* Disable hover states on mobile/touch devices to prevent sticky hover */
+/* Disable ALL hover/active states on mobile/touch devices to prevent sticky hover */
 @media (hover: none) {
-  .wewrite-card:hover:not(.wewrite-input),
-  .dark .wewrite-card:hover {
+  .wewrite-card:hover:not(.wewrite-input):not([data-expanded="true"]),
+  .wewrite-card:active:not(.wewrite-input):not([data-expanded="true"]),
+  .dark .wewrite-card:hover:not([data-expanded="true"]),
+  .dark .wewrite-card:active:not([data-expanded="true"]) {
     background-color: var(--card-bg) !important;
     border-color: var(--card-border) !important;
     box-shadow: var(--card-shadow) !important;
     transform: none !important;
+  }
+
+  /* Ensure expanded toolbar stays white on mobile regardless of touch state */
+  .wewrite-card[data-expanded="true"],
+  .wewrite-card[data-expanded="true"]:hover,
+  .wewrite-card[data-expanded="true"]:active,
+  .wewrite-card[data-expanded="true"]:focus {
+    background-color: white !important;
+    backdrop-filter: none !important;
+  }
+
+  .dark .wewrite-card[data-expanded="true"],
+  .dark .wewrite-card[data-expanded="true"]:hover,
+  .dark .wewrite-card[data-expanded="true"]:active,
+  .dark .wewrite-card[data-expanded="true"]:focus {
+    background-color: black !important;
   }
 }
 
