@@ -393,78 +393,63 @@ export default function DailyNotesCarousel({
 
 
 
+  // Helper function to scroll to a specific date element and center it
+  const scrollToDateElement = useCallback((dateString: string, animated: boolean = true) => {
+    const carousel = carouselRef.current;
+    if (!carousel) {
+      console.log('📅 DailyNotesCarousel: No carousel ref');
+      return;
+    }
+
+    console.log('📅 DailyNotesCarousel: Looking for date', dateString);
+
+    // Find the element with the target date
+    const targetElement = carousel.querySelector(`[data-date="${dateString}"]`);
+
+    if (targetElement) {
+      console.log('📅 DailyNotesCarousel: Found target element');
+
+      // Get the element's position relative to the carousel
+      const elementRect = targetElement.getBoundingClientRect();
+      const carouselRect = carousel.getBoundingClientRect();
+
+      // Calculate scroll position to CENTER the element in the viewport
+      const elementCenter = elementRect.left + elementRect.width / 2;
+      const carouselCenter = carouselRect.left + carouselRect.width / 2;
+      const scrollOffset = elementCenter - carouselCenter;
+
+      const newScrollLeft = carousel.scrollLeft + scrollOffset;
+
+      console.log('📅 DailyNotesCarousel: Scrolling to center element at', newScrollLeft);
+
+      carousel.scrollTo({
+        left: Math.max(0, newScrollLeft),
+        behavior: animated ? 'smooth' : 'instant'
+      });
+    } else {
+      console.log('📅 DailyNotesCarousel: Target element not found, scrolling to center');
+      // Fallback: scroll to approximate center
+      const scrollPosition = carousel.scrollWidth / 2 - carousel.clientWidth / 2;
+      carousel.scrollTo({ left: scrollPosition, behavior: animated ? 'smooth' : 'instant' });
+    }
+  }, []);
+
   // Animated scroll to today's card for initial load
   const animatedScrollToToday = useCallback(() => {
-    const today = new Date();
-    const todayIndex = dates.findIndex(date =>
-      date.toDateString() === today.toDateString()
-    );
-
-    if (todayIndex !== -1) {
-      const carousel = carouselRef.current;
-      if (carousel) {
-        const containerWidth = 208; // w-48 (192px) + 16px gap
-        const loadMoreButtonWidth = 208; // Same as container width
-
-        // Calculate the exact center position accounting for the "Load More Past" button and container padding
-        // The target position should center today's container in the visible area
-        const containerPadding = 24; // px-6 = 24px on each side
-        const visibleWidth = carousel.clientWidth - (containerPadding * 2);
-        const visibleCenter = visibleWidth / 2;
-        const containerCenter = containerWidth / 2;
-
-        // Position of today's container relative to the start of content (after load button)
-        const todayContainerStart = loadMoreButtonWidth + (todayIndex * containerWidth);
-        const todayContainerCenter = todayContainerStart + containerCenter;
-
-        // Calculate scroll position to center today's container in the visible area
-        const targetScrollPosition = Math.max(0, todayContainerCenter - visibleCenter);
-
-        // Start from the leftmost position (showing past days)
-        carousel.scrollTo({ left: 0, behavior: 'instant' });
-
-        // After a brief moment, animate to today's position
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            carousel.scrollTo({
-              left: targetScrollPosition,
-              behavior: 'smooth'
-            });
-          }, 150); // Small delay to ensure the instant scroll completes
-        });
-      }
-    }
-  }, [dates]);
+    const todayString = format(new Date(), 'yyyy-MM-dd');
+    // Small delay to ensure DOM is ready
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollToDateElement(todayString, true);
+      }, 100);
+    });
+  }, [scrollToDateElement]);
 
   // Regular scroll to today's container (used by "Today" button)
   const scrollToToday = useCallback(() => {
-    const today = new Date();
-    const todayIndex = dates.findIndex(date =>
-      date.toDateString() === today.toDateString()
-    );
-
-    if (todayIndex !== -1) {
-      const carousel = carouselRef.current;
-      if (carousel) {
-        const containerWidth = 208; // w-48 (192px) + 16px gap
-        const loadMoreButtonWidth = 208; // Same as container width
-
-        // Calculate the exact center position accounting for the "Load More Past" button and container padding
-        const containerPadding = 24; // px-6 = 24px on each side
-        const visibleWidth = carousel.clientWidth - (containerPadding * 2);
-        const visibleCenter = visibleWidth / 2;
-        const containerCenter = containerWidth / 2;
-
-        // Position of today's container relative to the start of content (after load button)
-        const todayContainerStart = loadMoreButtonWidth + (todayIndex * containerWidth);
-        const todayContainerCenter = todayContainerStart + containerCenter;
-
-        // Calculate scroll position to center today's container in the visible area
-        const scrollPosition = Math.max(0, todayContainerCenter - visibleCenter);
-        carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
-      }
-    }
-  }, [dates]);
+    const todayString = format(new Date(), 'yyyy-MM-dd');
+    scrollToDateElement(todayString, true);
+  }, [scrollToDateElement]);
 
   // Scroll to focus date or today's card on initial mount with animation
   useEffect(() => {
@@ -473,45 +458,18 @@ export default function DailyNotesCarousel({
       const timer = setTimeout(() => {
         if (focusDate) {
           // Scroll to specific focus date if provided
-          const focusDateObj = new Date(focusDate);
-          const focusIndex = dates.findIndex(date =>
-            date.toDateString() === focusDateObj.toDateString()
-          );
-
-          if (focusIndex !== -1) {
-            // Use the same scrolling logic as animatedScrollToToday but for focus date
-            const carousel = carouselRef.current;
-            if (carousel) {
-              const containerWidth = 200; // Approximate width of each container
-              const containerPadding = 24; // px-6 = 24px
-              const loadMoreButtonWidth = 120; // Approximate width of load more button
-              const visibleWidth = carousel.clientWidth - (containerPadding * 2);
-              const visibleCenter = visibleWidth / 2;
-              const containerCenter = containerWidth / 2;
-
-              const focusContainerStart = loadMoreButtonWidth + (focusIndex * containerWidth);
-              const focusContainerCenter = focusContainerStart + containerCenter;
-              const targetScrollPosition = Math.max(0, focusContainerCenter - visibleCenter);
-
-              carousel.scrollTo({ left: 0, behavior: 'instant' });
-              setTimeout(() => {
-                carousel.scrollTo({ left: targetScrollPosition, behavior: 'smooth' });
-              }, 100);
-            }
-          } else {
-            // Focus date not found, fall back to today
-            animatedScrollToToday();
-          }
+          scrollToDateElement(focusDate, true);
         } else {
           // No focus date, scroll to today
-          animatedScrollToToday();
+          const todayString = format(new Date(), 'yyyy-MM-dd');
+          scrollToDateElement(todayString, true);
         }
         setIsInitialLoad(false); // Mark initial load as complete
-      }, 200); // Slightly longer delay to ensure smooth animation
+      }, 300); // Delay to ensure DOM is ready
 
       return () => clearTimeout(timer);
     }
-  }, [loading, isInitialLoad, animatedScrollToToday, focusDate, dates]);
+  }, [loading, isInitialLoad, scrollToDateElement, focusDate]);
 
   // Expose scrollToToday function globally for the "Today" button
   useEffect(() => {
@@ -550,7 +508,7 @@ export default function DailyNotesCarousel({
     <div
       ref={carouselRef}
       id="daily-notes-carousel"
-      className="w-full overflow-x-auto scrollbar-hide"
+      className="w-screen overflow-x-auto overflow-y-visible scrollbar-hide -mx-4 md:-mx-6 lg:-mx-8"
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',

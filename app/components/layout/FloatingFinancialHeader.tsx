@@ -280,7 +280,7 @@ export default function FloatingFinancialHeader({
       return (
         <Badge
           variant="secondary"
-          className="cursor-pointer bg-secondary/50 hover:bg-secondary/80 transition-colors text-sm"
+          className="cursor-pointer shiny-add-funds-chip text-sm px-3 py-1"
           onClick={() => router.push('/settings/fund-account')}
           title="Click to add funds"
         >

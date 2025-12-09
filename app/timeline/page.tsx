@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Calendar, List, Clock } from 'lucide-react';
+import { Calendar, List } from 'lucide-react';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../components/ui/segmented-control';
 import { Button } from '../components/ui/button';
 import NavPageLayout from '../components/layout/NavPageLayout';
@@ -88,23 +88,32 @@ function TimelineContent() {
 
   // Function to scroll to today's card
   const scrollToToday = () => {
-    console.log('📅 Timeline Page: scrollToToday called');
+    console.log('📅 Timeline Page: scrollToToday called, type:', type);
 
     // Guard against server-side rendering
     if (typeof window === 'undefined') return;
 
-    // Use the globally exposed function from TimelineCarousel
-    if ((window as any).timelineScrollToToday) {
-      (window as any).timelineScrollToToday();
-    } else if ((window as any).dailyNotesScrollToToday) {
-      // For daily notes mode
+    // Use the appropriate scroll function based on current type
+    if (type === 'daily-notes' && (window as any).dailyNotesScrollToToday) {
+      console.log('📅 Timeline Page: Using dailyNotesScrollToToday');
       (window as any).dailyNotesScrollToToday();
+    } else if ((window as any).timelineScrollToToday) {
+      console.log('📅 Timeline Page: Using timelineScrollToToday');
+      (window as any).timelineScrollToToday();
     } else if (typeof document !== 'undefined') {
       // Fallback: try to find today's card manually
+      console.log('📅 Timeline Page: Using fallback querySelector');
       const today = new Date().toISOString().split('T')[0];
       const todayElement = document.querySelector(`[data-date="${today}"]`);
       if (todayElement) {
         todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        // Also try scrolling to the carousel center
+        const carousel = document.querySelector('#daily-notes-carousel');
+        if (carousel) {
+          const scrollPosition = carousel.scrollWidth / 2 - carousel.clientWidth / 2;
+          carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+        }
       }
     }
   };
@@ -145,27 +154,26 @@ function TimelineContent() {
             <p className="text-muted-foreground">{getDescription()}</p>
           </div>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={scrollToToday}
-            className="rounded-2xl relative"
+            className="rounded-2xl"
             aria-label="Scroll to today"
           >
-            <Clock className="h-4 w-4" />
-            <span className="hidden md:inline ml-2">Today</span>
+            Today
           </Button>
         </div>
 
         {/* View Mode Toggle - only for daily notes, in body section */}
         {type === 'daily-notes' && (
-          <div className="flex justify-center mb-6">
+          <div className="mb-6">
             <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
-              <SegmentedControlList className="grid w-full grid-cols-2 max-w-sm">
-                <SegmentedControlTrigger value="timeline" className="flex items-center gap-2">
+              <SegmentedControlList className="grid w-full grid-cols-2">
+                <SegmentedControlTrigger value="timeline" className="flex items-center justify-center gap-2">
                   <List className="h-4 w-4" />
                   Timeline
                 </SegmentedControlTrigger>
-                <SegmentedControlTrigger value="calendar" className="flex items-center gap-2">
+                <SegmentedControlTrigger value="calendar" className="flex items-center justify-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Calendar
                 </SegmentedControlTrigger>

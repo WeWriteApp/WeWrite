@@ -441,7 +441,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               <div className="border border-border dark:border-transparent bg-neutral-alpha-dark-10 rounded-lg p-3 relative">
                 {/* Diff counter at top right of sub-card */}
                 {!isTitleChange && (added > 0 || removed > 0) && (
-                  <div className="absolute top-2 right-3">
+                  <div className="absolute top-2 right-3 z-10">
                     <DiffStats
                       added={added}
                       removed={removed}
@@ -452,7 +452,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                   </div>
                 )}
 
-                {/* Diff preview */}
+                {/* Diff preview - add right padding to prevent collision with diff stats */}
                 <DiffPreview
                   currentContent={activity.currentContent}
                   previousContent={isNewPage ? null : activity.previousContent}
@@ -466,6 +466,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                   showInlineStats={false}
                   added={added}
                   removed={removed}
+                  className={!isTitleChange && (added > 0 || removed > 0) ? "pr-12" : ""}
                 />
               </div>
             </div>

@@ -323,7 +323,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   }
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full overflow-hidden ${className}`}>
       {/* Loading state */}
       {loading && (
         <div className="text-center py-8 text-muted-foreground">
@@ -332,18 +332,18 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
       )}
 
       {/* Carousel */}
-      <div className="relative">
+      <div className="relative overflow-hidden">
         {/* Load Earlier Button */}
         <button
           onClick={handleLoadEarlier}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background border border-border rounded-full p-2 shadow-lg hover:bg-accent transition-colors"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-background border border-border rounded-full p-2 shadow-lg hover:bg-accent transition-colors"
           aria-label="Load earlier dates"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
         {/* Scrollable container */}
-        <div ref={scrollContainerRef} className="overflow-x-auto scrollbar-hide px-12">
+        <div ref={scrollContainerRef} className="overflow-x-auto overflow-y-hidden scrollbar-hide px-12">
           <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
             {dateRange.map(date => {
               const dateString = format(date, 'yyyy-MM-dd');
@@ -372,7 +372,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
         {/* Load Later Button */}
         <button
           onClick={handleLoadLater}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background border border-border rounded-full p-2 shadow-lg hover:bg-accent transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-background border border-border rounded-full p-2 shadow-lg hover:bg-accent transition-colors"
           aria-label="Load later dates"
         >
           <ChevronRight className="w-4 h-4" />
