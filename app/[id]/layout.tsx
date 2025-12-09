@@ -53,8 +53,9 @@ interface SchemaMarkup {
 async function getPageMetadataServer(pageId: string): Promise<any> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
+                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
+
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       cache: 'no-store', // Don't cache to always get fresh data
       headers: {
@@ -104,7 +105,7 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
 
       // Get base URL with fallback for different environments
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://wewrite.app');
+                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.getwewrite.app');
 
       const canonicalUrl = `${baseUrl}/${id}`;
       const imageUrl = `${baseUrl}/api/og?id=${id}`;
@@ -165,7 +166,7 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
   const unwrappedParams = await params;
   const pageId = unwrappedParams.id;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                 (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://wewrite.app');
+                 (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.getwewrite.app');
 
   return {
     title: 'WeWrite - The social wiki where every page is a fundraiser',

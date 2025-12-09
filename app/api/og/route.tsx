@@ -29,7 +29,7 @@ async function fetchPageData(pageId: string) {
     // Get base URL with proper fallbacks for different environments
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://wewrite.app' : 'http://localhost:3000'));
+                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       headers: {
@@ -64,7 +64,7 @@ async function fetchSponsorCount(pageId: string) {
     // Get base URL with proper fallbacks for different environments
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://wewrite.app' : 'http://localhost:3000'));
+                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
       headers: {
@@ -179,16 +179,17 @@ export async function GET(request: Request) {
 
     console.log('🖼️ [OG] pageId exists, continuing to generate dynamic image');
 
-    // Temporarily disable API calls to debug
+    // Fetch real page data when we have a pageId and no overrides
     let pageData = null;
     let sponsorCount = 0;
 
-    // DISABLED FOR DEBUGGING - API calls might be causing issues in edge runtime
-    // if (pageId && !title && !author && !content) {
-    //   console.log('🖼️ [OG] Fetching real data for pageId:', pageId);
-    //   pageData = await fetchPageData(pageId);
-    //   sponsorCount = await fetchSponsorCount(pageId);
-    // }
+    if (pageId && !title && !author && !content) {
+      console.log('🖼️ [OG] Fetching real data for pageId:', pageId);
+      [pageData, sponsorCount] = await Promise.all([
+        fetchPageData(pageId),
+        fetchSponsorCount(pageId)
+      ]);
+    }
 
     // Generate dynamic content based on parameters or fetched data
     const displayTitle = title || pageData?.title || (pageId ? `Page: ${pageId.substring(0, 12)}...` : 'Untitled Page');
