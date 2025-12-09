@@ -1,35 +1,27 @@
 "use client";
 
-import React, { useEffect, useState, useRef, lazy, Suspense, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '../../components/ui/button';
 import { AuthButton } from '../auth/AuthButton';
-import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info, Clock, Wrench } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Separator } from "../../components/ui/separator";
-import Header from '../marketing/Header';
 import { useTheme } from "next-themes";
-import PillLink from "../utils/PillLink";
 import ActivityCarousel from './ActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
-import { useSwipeable } from 'react-swipeable';
-import { AnimatePresence, motion } from 'framer-motion';
-// Import server components for activity and trending data
-import dynamic from 'next/dynamic';
 // Import analytics hooks and constants
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
-import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
-import { openExternalLink } from '../../utils/pwa-detection';
+import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
 import { useAuth } from '../../providers/AuthProvider';
 
 // Import client-side components for simplified stacked layout
 import HeroCard from './HeroCard';
 
 import { DynamicPagePreviewCard } from './DynamicPagePreviewCard';
+import { LandingColorProvider } from './LandingColorContext';
+import { LandingBlobs } from './LandingBlobs';
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 import { WeWriteLogo } from '../ui/WeWriteLogo';
+import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
 import { fetchLandingPageCards, type LandingPageCardConfig } from '../../config/landingPageCards';
 
@@ -37,6 +29,7 @@ const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
+  const [isStackedHeader, setIsStackedHeader] = useState(false);
 
   const { setTheme, theme } = useTheme();
   const [session, setUser] = useState<any>(null);
@@ -53,6 +46,9 @@ const LandingPage = () => {
 
   // Animation classes
   const fadeInClass = "animate-fadeIn";
+
+  // No longer need useLayoutEffect for data-landing-page attribute
+  // The new LandingColorContext handles all colors via React context + inline styles
 
   // Fetch landing page cards configuration
   useEffect(() => {
@@ -74,32 +70,25 @@ const LandingPage = () => {
     loadCards();
   }, []);
 
+  // Simple scroll handler for header shadow effect only
+  // Color animation is now handled by LandingColorContext
   useEffect(() => {
-    let hasScrolledDown = false;
-
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      setIsScrolled(currentScrollY > 10);
+      setIsScrolled(window.scrollY > 10);
 
-
-
-      // Simplified - no section navigation needed for stacked layout
-
-      // If we're at the top of the page, clear the active section
+      // Clear active section when at top
       if (window.scrollY < 100) {
         setActiveSection('');
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // Initial check
     handleScroll();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isMobileView]);
+  }, []);
 
 
 
@@ -110,14 +99,6 @@ const LandingPage = () => {
     // No need for direct Firebase auth listener here
   }, []);
 
-  // Use user's current accent color on landing page mount (no forced blue)
-  useEffect(() => {
-    // Landing page now respects user's theme preferences
-    // No forced color changes - let the theme system handle it
-    document.documentElement.style.setProperty('--accent', '#2563eb'); // Tailwind blue-600
-    // Don't force theme - respect user's system preference
-    // if (setTheme) setTheme('light');
-  }, [setTheme]);
 
 
 
@@ -130,6 +111,8 @@ const LandingPage = () => {
       // Switch to mobile view at 1024px (before links start wrapping)
       // This is wider than the standard md breakpoint (768px)
       setIsMobileView(window.innerWidth < 1024);
+      // Check for very thin screens where header stacks
+      setIsStackedHeader(window.innerWidth < 400);
     };
 
     // Initial checks
@@ -261,13 +244,17 @@ const LandingPage = () => {
   // Simplified - no animation functions needed
 
   return (
-    <div className="min-h-screen bg-background dark:bg-background">
+    <LandingColorProvider>
+    <div className="landing-page-root min-h-screen bg-background dark:bg-background">
+      {/* Animated Background Blobs - GPU-accelerated, changes color with scroll */}
+      <LandingBlobs />
 
-
-      {/* Desktop Navigation - Always sticky at the top */}
-      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background shadow-md`}>
+      {/* Desktop Navigation */}
+      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'}`}>
+        {/* Glassmorphic background with bottom border - uses card theme system for consistent borders */}
+        <div className="absolute inset-0 backdrop-blur-md bg-card/80 border-b" style={{ borderColor: 'var(--card-border)' }} />
         {/* Row 1: Logo + Navigation + Auth */}
-        <div className="border-b border-theme-medium py-2">
+        <div className="py-2 relative z-10">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
             <WeWriteLogo
@@ -293,6 +280,7 @@ const LandingPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            <ModeToggle />
             {!isAuthenticated ? (
               <>
                 <AuthButton
@@ -322,20 +310,20 @@ const LandingPage = () => {
         </div>
         </div>
 
-        {/* Bottom gradient for smooth content transition */}
-        <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none" />
       </header>
 
-      {/* Mobile Navigation - Always sticky at the top */}
+      {/* Mobile Navigation */}
       <div className={`${isMobileView ? 'block' : 'hidden'} fixed top-0 left-0 right-0 z-50 flex flex-col w-full`}>
-        {/* Title and buttons */}
-        <div className="w-full bg-background shadow-sm py-2">
+        {/* Glassmorphic background with bottom border - uses card theme system for consistent borders */}
+        <div className="absolute inset-0 backdrop-blur-md bg-card/80 border-b" style={{ borderColor: 'var(--card-border)' }} />
+        {/* Title and buttons - hide logo text on very thin screens */}
+        <div className="w-full py-2 relative z-10">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-4">
             <WeWriteLogo
               size="md"
               styled={true}
               clickable={true}
-              showText={true}
+              showText={!isStackedHeader}
               priority={true}
               onClick={() => {
                 // Track mobile logo click in Google Analytics
@@ -351,6 +339,7 @@ const LandingPage = () => {
             />
 
             <div className="flex items-center space-x-2">
+              <ModeToggle />
               {!isAuthenticated ? (
                 <>
                   <AuthButton
@@ -384,14 +373,12 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Bottom gradient for smooth content transition */}
-        <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none" />
       </div>
 
-      <main className={`${isMobileView ? 'pt-20' : 'pt-16'}`}>
-        {/* Floating Financial Header */}
-        <LoggedOutFinancialHeader />
+      {/* Floating Financial Header */}
+      <LoggedOutFinancialHeader />
 
+      <main className={`${isMobileView ? 'pt-32' : 'pt-28'}`}>
         {/* SEO Content - Hidden but accessible to search engines */}
         <div className="sr-only">
           <h1>WeWrite - The Social Wiki Where Every Page is a Fundraiser</h1>
@@ -433,7 +420,7 @@ const LandingPage = () => {
 
 
         {/* Simplified Stacked Cards Layout */}
-        <section className="py-8 md:py-12 pt-24 md:pt-28">
+        <section className="py-4 md:py-6 pt-6 md:pt-8">
           <div className="container mx-auto px-6 max-w-4xl space-y-8">
 
             {/* Write Share Earn Card */}
@@ -465,6 +452,10 @@ const LandingPage = () => {
                   authorId={cardConfig.authorId}
                   allocationSource={cardConfig.allocationSource}
                   className={cardConfig.className}
+                  // Landing page: use $0.10 interval, disable modal and long-press
+                  allocationIntervalCents={10}
+                  disableAllocationModal={true}
+                  disableAllocationLongPress={true}
                 />
               ))
             )}
@@ -506,6 +497,7 @@ const LandingPage = () => {
       {/* Global Footer */}
       <SiteFooter />
     </div>
+    </LandingColorProvider>
   );
 };
 

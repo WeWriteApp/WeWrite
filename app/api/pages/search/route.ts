@@ -4,11 +4,16 @@ import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '..
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
- * GET endpoint - Search for pages by title and content
+ * GET endpoint - Search for pages by title, alternative titles, and content
  * Query parameters:
  * - q: Search query
  * - limit: Maximum number of results (default: 10)
  * - includeContent: Whether to search content as well as titles (default: false)
+ *
+ * Search priority:
+ * 1. Primary title matches (highest relevance)
+ * 2. Alternative title matches (slightly lower relevance)
+ * 3. Content matches (lowest relevance)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -99,17 +104,19 @@ export async function GET(request: NextRequest) {
         searchResults.push({
           id: doc.id,
           title: pageData.title,
+          alternativeTitles: pageData.alternativeTitles || [],
           username: pageData.username || 'Unknown',
           userId: pageData.userId || '',
           lastModified: pageData.lastModified,
           isPublic: pageData.isPublic !== false,
           matchType: 'title',
+          matchedTitle: pageData.title, // The title that matched
           relevance: calculateTitleRelevance(pageData.title, trimmedQuery)
         });
       });
     }
 
-    // Strategy 2: If we need more results, do a broader search
+    // Strategy 2: If we need more results, do a broader search (includes alternative titles)
     if (searchResults.length < limit) {
       const remainingLimit = limit - searchResults.length;
 
@@ -130,24 +137,55 @@ export async function GET(request: NextRequest) {
         if (searchResults.find(r => r.id === doc.id)) return;
 
         const title = (pageData.title || '').toLowerCase();
+        const alternativeTitles: string[] = pageData.alternativeTitles || [];
         const content = includeContent ? (pageData.content || '').toLowerCase() : '';
 
-        // Check if title or content contains the query
+        // Check if title, alternative titles, or content contains the query
         const titleMatch = title.includes(trimmedQuery);
+
+        // Check alternative titles
+        let altTitleMatch: string | null = null;
+        for (const altTitle of alternativeTitles) {
+          if (altTitle.toLowerCase().includes(trimmedQuery)) {
+            altTitleMatch = altTitle;
+            break;
+          }
+        }
+
         const contentMatch = includeContent && content.includes(trimmedQuery);
-        
-        if (titleMatch || contentMatch) {
+
+        if (titleMatch || altTitleMatch || contentMatch) {
+          // Determine match type and relevance
+          let matchType: string;
+          let relevance: number;
+          let matchedTitle: string;
+
+          if (titleMatch) {
+            matchType = 'title';
+            relevance = calculateTitleRelevance(pageData.title, trimmedQuery);
+            matchedTitle = pageData.title;
+          } else if (altTitleMatch) {
+            matchType = 'alternative_title';
+            // Alternative title matches get slightly lower relevance than primary
+            relevance = calculateTitleRelevance(altTitleMatch, trimmedQuery) * 0.9;
+            matchedTitle = altTitleMatch;
+          } else {
+            matchType = 'content';
+            relevance = 0.3;
+            matchedTitle = pageData.title;
+          }
+
           searchResults.push({
             id: doc.id,
             title: pageData.title,
+            alternativeTitles: alternativeTitles,
             username: pageData.username || 'Unknown',
             userId: pageData.userId || '',
             lastModified: pageData.lastModified,
             isPublic: pageData.isPublic !== false,
-            matchType: titleMatch ? 'title' : 'content',
-            relevance: titleMatch 
-              ? calculateTitleRelevance(pageData.title, trimmedQuery)
-              : 0.3
+            matchType,
+            matchedTitle,
+            relevance
           });
         }
       });
@@ -157,7 +195,11 @@ export async function GET(request: NextRequest) {
     const sortedResults = searchResults
       .sort((a, b) => b.relevance - a.relevance)
       .slice(0, limit)
-      .map(({ relevance, ...page }) => page); // Remove relevance from final result
+      .map(({ relevance, ...page }) => ({
+        ...page,
+        // Include matchedTitle info for UI display when matched via alternative title
+        isAlternativeTitleMatch: page.matchType === 'alternative_title'
+      }));
 
     console.log('🔍 PAGE_SEARCH: Found results', {
       query: trimmedQuery,

@@ -82,11 +82,10 @@ const DayContainer = React.memo(function DayContainer({
             ? "flex-shrink-0 w-80 min-h-[400px] max-h-[80vh]"
             : "flex-shrink-0 w-48 h-52",
           "rounded-xl overflow-hidden",
-          // Add accent border for today's card
-          isToday && "border-2 border-primary",
+          // Add accent border for today's card using dedicated CSS class
+          isToday && "wewrite-today",
           className
         )}
-        style={isToday ? { borderColor: accentColor } : undefined}
       >
         {/* Date Header - Centered and clickable if not in full page */}
         <div

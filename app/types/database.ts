@@ -33,6 +33,8 @@ export interface User {
 export interface Page {
   id: string;
   title: string;
+  // Alternative titles for search/discovery (aliases)
+  alternativeTitles?: string[];
   content: EditorContent | string;
   userId: string;
   username?: string;

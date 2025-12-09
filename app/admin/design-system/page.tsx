@@ -347,22 +347,98 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
+              {/* Card & Background System */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Card & Background System</h4>
+                <p className="text-sm text-muted-foreground">
+                  Use the <strong className="text-foreground">bg-card</strong> color for card backgrounds and glassmorphic headers.
+                  This is <strong className="text-error">NOT the same as neutral-alpha</strong> which creates overlays, not backgrounds.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-success">Correct: bg-card</p>
+                    <div className="h-16 bg-card/80 backdrop-blur-md rounded-lg border border-border/50 flex items-center justify-center text-sm">
+                      Light in light mode, dark in dark mode
+                    </div>
+                    <code className="text-xs text-muted-foreground">bg-card/80 backdrop-blur-md border-border/50</code>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-error">Wrong: bg-neutral-alpha-70</p>
+                    <div className="h-16 bg-neutral-alpha-70 backdrop-blur-md rounded-lg border border-neutral-alpha-10 flex items-center justify-center text-sm">
+                      Dark in light mode, light in dark mode
+                    </div>
+                    <code className="text-xs text-muted-foreground">bg-neutral-alpha-70 (INVERTED!)</code>
+                  </div>
+                </div>
+                <div className="wewrite-card p-4 bg-muted/30 mt-3 space-y-2">
+                  <p className="text-sm"><strong>When to use what:</strong></p>
+                  <ul className="text-sm space-y-1 list-disc list-inside">
+                    <li><code className="bg-muted px-1 rounded">bg-card</code> - Card backgrounds, headers, floating elements</li>
+                    <li><code className="bg-muted px-1 rounded">bg-card/80</code> - Glassmorphic headers with backdrop-blur</li>
+                    <li><code className="bg-muted px-1 rounded">bg-background</code> - Page backgrounds</li>
+                    <li><code className="bg-muted px-1 rounded">bg-neutral-alpha-*</code> - <strong className="text-error">ONLY for overlay effects</strong> (hover states, darkening/brightening)</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Neutral Alpha System */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Neutral Alpha System</h4>
+                <p className="text-sm text-muted-foreground">
+                  <strong className="text-foreground">Theme-aware neutral overlays</strong> that automatically adapt to light/dark mode.
+                  Black overlays in light mode (to darken), white overlays in dark mode (to brighten).
+                  Available as <code className="bg-muted px-1 rounded">bg-</code>, <code className="bg-muted px-1 rounded">text-</code>, and <code className="bg-muted px-1 rounded">border-</code> utilities.
+                </p>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-5 rounded flex items-center justify-center">5</div>
+                    <code className="text-muted-foreground">neutral-alpha-5</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-10 rounded flex items-center justify-center">10</div>
+                    <code className="text-muted-foreground">neutral-alpha-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-15 rounded flex items-center justify-center">15</div>
+                    <code className="text-muted-foreground">neutral-alpha-15</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-20 rounded flex items-center justify-center">20</div>
+                    <code className="text-muted-foreground">neutral-alpha-20</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-30 rounded flex items-center justify-center">30</div>
+                    <code className="text-muted-foreground">neutral-alpha-30</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-50 rounded flex items-center justify-center">50</div>
+                    <code className="text-muted-foreground">neutral-alpha-50</code>
+                  </div>
+                </div>
+                <div className="wewrite-card p-4 bg-muted/30 mt-3">
+                  <p className="text-sm mb-2"><strong>Usage Examples:</strong></p>
+                  <code className="text-sm block mb-1">bg-neutral-alpha-15 {/* subtle overlay backgrounds */}</code>
+                  <code className="text-sm block mb-1">text-neutral-alpha-60 {/* muted text */}</code>
+                  <code className="text-sm block">border-neutral-alpha-20 {/* subtle borders */}</code>
+                </div>
+              </div>
+
               {/* Alpha vs Opacity Note */}
               <div className="space-y-3">
                 <h4 className="font-medium text-sm">Alpha vs Opacity: When to Use Which</h4>
                 <div className="wewrite-card p-4 bg-muted/30">
                   <div className="text-sm space-y-3">
                     <div>
-                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">alpha-*</code> for neutral hover overlays:</p>
-                      <p className="text-muted-foreground text-xs mt-1">Darkens in light mode, brightens in dark mode. Good for primary, secondary, ghost buttons.</p>
+                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">neutral-alpha-*</code> for theme-aware overlays:</p>
+                      <p className="text-muted-foreground text-xs mt-1">Darkens in light mode (black), brightens in dark mode (white). Perfect for hover states on colorful backgrounds.</p>
                     </div>
                     <div>
                       <p className="font-medium">Use <code className="bg-muted px-1 rounded">success-alpha-*</code> / <code className="bg-muted px-1 rounded">error-alpha-*</code> for semantic buttons:</p>
                       <p className="text-muted-foreground text-xs mt-1">Color-matched tint for success-secondary and destructive-secondary buttons.</p>
                     </div>
                     <div>
-                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">primary-10</code> / <code className="bg-muted px-1 rounded">neutral-10</code> for tinted backgrounds:</p>
-                      <p className="text-muted-foreground text-xs mt-1">10% opacity of the color itself. Good for chips, tags, subtle fills.</p>
+                      <p className="font-medium">Use <code className="bg-muted px-1 rounded">accent-{'{N}'}</code> / <code className="bg-muted px-1 rounded">neutral-{'{N}'}</code> for tinted fills:</p>
+                      <p className="text-muted-foreground text-xs mt-1">Opacity of the accent/neutral color itself. Good for chips, tags, subtle fills.</p>
                     </div>
                   </div>
                 </div>
@@ -578,6 +654,50 @@ export default function DesignSystemPage() {
                   </div>
                 </CardContent>
               </Card>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Shiny Chips */}
+          <ComponentShowcase
+            title="Shiny Chips"
+            path="app/globals.css (.shiny-chip classes)"
+            description="Eye-catching animated badges with shimmer and glow effects. Use sparingly for high-emphasis elements."
+          >
+            <StateDemo label="Shiny Chip Variants (hover me!)">
+              <Badge className="shiny-chip shiny-chip-success !text-white">$146.70</Badge>
+              <Badge className="shiny-chip shiny-chip-primary !text-white">Featured</Badge>
+              <Badge className="shiny-chip shiny-chip-warning !text-white">In Progress</Badge>
+              <Badge className="shiny-add-funds-chip !text-white">Add Funds</Badge>
+            </StateDemo>
+
+            <StateDemo label="Usage Example">
+              <div className="text-lg text-muted-foreground">
+                Join <Badge variant="secondary" className="mx-1 text-lg text-muted-foreground bg-muted">112 writers</Badge>
+                {' '}who've made{' '}
+                <Badge variant="secondary" className="mx-1 text-lg shiny-chip shiny-chip-success !text-white">$146.70</Badge>
+                {' '}helping to build humanity's shared knowledge.
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Implementation">
+              <div className="wewrite-card p-4 max-w-2xl">
+                <h4 className="font-medium mb-2">How to Use</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Apply the base <code className="bg-muted px-1 rounded">shiny-chip</code> class along with a variant class:
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <code className="bg-muted px-1 rounded">shiny-chip shiny-chip-success</code> - Green glow for earnings, positive metrics</li>
+                  <li>• <code className="bg-muted px-1 rounded">shiny-chip shiny-chip-primary</code> - Blue glow for primary highlights</li>
+                  <li>• <code className="bg-muted px-1 rounded">shiny-chip shiny-chip-warning</code> - Amber glow for caution, pending states</li>
+                  <li>• <code className="bg-muted px-1 rounded">shiny-add-funds-chip</code> - Special "Add Funds" style (standalone)</li>
+                </ul>
+                <h4 className="font-medium mt-4 mb-2">Animation Details</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <code className="bg-muted px-1 rounded">shimmer</code> - Gradient sweep animation (2.5s, faster on hover)</li>
+                  <li>• <code className="bg-muted px-1 rounded">glow-pulse</code> - Pulsing box-shadow (2s)</li>
+                  <li>• <code className="bg-muted px-1 rounded">scale(1.05)</code> on hover, <code className="bg-muted px-1 rounded">scale(0.98)</code> on active</li>
+                </ul>
+              </div>
             </StateDemo>
           </ComponentShowcase>
 

@@ -10,8 +10,8 @@
 export const ALLOCATION_BAR_STYLES = {
   // Composition bar sections
   sections: {
-    // Higher-contrast neutral so "other" stays visible on light and dark themes
-    other: 'bg-neutral-300/80 dark:bg-neutral-700/80 rounded-md transition-all duration-300 ease-out',
+    // Semi-transparent neutral that works on both solid backgrounds and colorful landing page
+    other: 'bg-neutral-alpha-15 rounded-md transition-all duration-300 ease-out',
     current: 'bg-primary rounded-md transition-all duration-300 ease-out',
     overspent: 'bg-warn rounded-md transition-all duration-300 ease-out',
     available: 'bg-muted rounded-md transition-all duration-300 ease-out',

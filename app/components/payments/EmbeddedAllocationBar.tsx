@@ -43,7 +43,10 @@ export function EmbeddedAllocationBar({
   authorId,
   pageTitle,
   className,
-  source = 'EmbeddedCard'
+  source = 'EmbeddedCard',
+  overrideIntervalCents,
+  disableDetailModal = false,
+  disableLongPress = false
 }: EmbeddedAllocationBarProps) {
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
@@ -202,6 +205,9 @@ export function EmbeddedAllocationBar({
     }
   };
 
+  // Use override interval if provided, otherwise use user's configured interval
+  const effectiveIntervalCents = overrideIntervalCents ?? allocationIntervalCents;
+
   const handleButtonClick = (direction: number, e: React.MouseEvent) => {
     console.log('🔵 EmbeddedAllocationBar: Button clicked!', { direction, pageId, authorId });
     e.preventDefault();
@@ -213,8 +219,8 @@ export function EmbeddedAllocationBar({
 
     // Allow all users (including page owners) to allocate
     // Use our shared allocation change handler - it handles both logged-in and logged-out users
-    // Use the user's configured increment amount
-    const changeAmount = direction * allocationIntervalCents;
+    // Use effective interval (override or user's configured amount)
+    const changeAmount = direction * effectiveIntervalCents;
     console.log('🔵 EmbeddedAllocationBar: Calling handleAllocationChange', { changeAmount, pageId });
     handleAllocationChange(changeAmount, e);
   };
@@ -232,7 +238,10 @@ export function EmbeddedAllocationBar({
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
+    // Skip long-press behavior if disabled
+    if (disableLongPress) return;
+
     longPressTimeoutRef.current = setTimeout(() => {
       isLongPressing.current = true;
       setShowIntervalModal(true);
@@ -322,7 +331,10 @@ export function EmbeddedAllocationBar({
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
-            setShowAllocationModal(true);
+            // Only open modal if not disabled
+            if (!disableDetailModal) {
+              setShowAllocationModal(true);
+            }
           }}
         >
           {/* Background composition bar with smooth transitions */}

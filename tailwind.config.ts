@@ -6,7 +6,12 @@
  * 2. Avoid hardcoding colors here - use CSS variables instead
  * 3. All new color definitions should support both light and dark modes
  * 4. System theme preferences should be handled by ThemeProvider, not CSS
- * 5. OKLCH color space is used for better perceptual uniformity and accessibility
+ *
+ * COLOR FORMAT MAPPING (CRITICAL - DO NOT MIX UP):
+ * - HSL format variables (use hsl() wrapper):
+ *   border, input, background, foreground, card, popover, secondary, muted, accent
+ * - OKLCH format variables (use oklch() wrapper):
+ *   ring, primary, neutral, error, success, warning
  */
 
 import type { Config } from "tailwindcss";
@@ -22,11 +27,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: "oklch(var(--border))",
-        input: "oklch(var(--input))",
+        // HSL format colors (from globals.css)
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        // OKLCH format colors (primary accent uses oklch for perceptual uniformity)
         ring: "oklch(var(--ring))",
-        background: "oklch(var(--background))",
-        foreground: "oklch(var(--foreground))",
         // Alpha overlay colors - use black in light mode, white in dark mode
         // These are meant to be layered ON TOP of other colors for hover/active states
         alpha: {
@@ -52,9 +59,10 @@ const config: Config = {
           80: "oklch(var(--primary) / 0.80)",
           90: "oklch(var(--primary) / 0.90)",
         },
+        // HSL format UI colors
         secondary: {
-          DEFAULT: "oklch(var(--secondary))",
-          foreground: "oklch(var(--secondary-foreground))",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         neutral: {
           DEFAULT: "oklch(var(--neutral))",
@@ -72,7 +80,7 @@ const config: Config = {
           80: "oklch(var(--neutral) / 0.80)",
           90: "oklch(var(--neutral) / 0.90)",
         },
-        // Semantic Colors with Opacity Variations
+        // OKLCH Semantic Colors with Opacity Variations
         error: {
           DEFAULT: "oklch(var(--error))",
           foreground: "oklch(var(--error-foreground))",
@@ -112,35 +120,35 @@ const config: Config = {
           80: "oklch(var(--warning) / 0.80)",
           90: "oklch(var(--warning) / 0.90)",
         },
-        // Legacy aliases for compatibility
+        // Legacy aliases for compatibility (uses OKLCH - same as error)
         destructive: {
           DEFAULT: "oklch(var(--error))",
           foreground: "oklch(var(--error-foreground))",
         },
         muted: {
-          DEFAULT: "oklch(var(--muted))",
-          foreground: "oklch(var(--muted-foreground))",
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "oklch(var(--accent))",
-          foreground: "oklch(var(--accent-foreground))",
-          10: "oklch(var(--accent) / 0.10)",
-          20: "oklch(var(--accent) / 0.20)",
-          30: "oklch(var(--accent) / 0.30)",
-          40: "oklch(var(--accent) / 0.40)",
-          50: "oklch(var(--accent) / 0.50)",
-          60: "oklch(var(--accent) / 0.60)",
-          70: "oklch(var(--accent) / 0.70)",
-          80: "oklch(var(--accent) / 0.80)",
-          90: "oklch(var(--accent) / 0.90)",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          10: "hsl(var(--accent) / 0.10)",
+          20: "hsl(var(--accent) / 0.20)",
+          30: "hsl(var(--accent) / 0.30)",
+          40: "hsl(var(--accent) / 0.40)",
+          50: "hsl(var(--accent) / 0.50)",
+          60: "hsl(var(--accent) / 0.60)",
+          70: "hsl(var(--accent) / 0.70)",
+          80: "hsl(var(--accent) / 0.80)",
+          90: "hsl(var(--accent) / 0.90)",
         },
         popover: {
-          DEFAULT: "oklch(var(--popover))",
-          foreground: "oklch(var(--popover-foreground))",
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "oklch(var(--card))",
-          foreground: "oklch(var(--card-foreground))",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
       backgroundImage: {

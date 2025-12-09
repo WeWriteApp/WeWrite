@@ -17,23 +17,23 @@
   /* Dynamic card blur - default 50% */
   --card-blur: 0.5;
 
-  /* Light theme card variables - these are set by NeutralColorContext, don't override here */
-  /* --card-bg is dynamically set by NeutralColorContext using neutral colors */
-  /* --card-bg-hover is dynamically set by NeutralColorContext */
-  --card-border: oklch(0.00% 0.0000 0.0 / 0.1); /* Slightly stronger border for better definition */
-  --card-border-hover: oklch(0.00% 0.0000 0.0 / 0.15);
-  --card-text: oklch(16.39% 0.1306 274.7);
-  --card-text-muted: oklch(48.70% 0.1396 267.5);
+  /* Light theme card variables - CSS fallback defaults (NeutralColorContext will override) */
+  --card-bg: oklch(1.00 0.00 230 / 0.70); /* 70% white overlay - fallback if JS fails */
+  --card-bg-hover: oklch(1.00 0.00 230 / 0.75); /* 75% white overlay on hover */
+  --card-border: oklch(0.00 0.00 0 / 0.1); /* Black with 10% opacity */
+  --card-border-hover: oklch(0.00 0.00 0 / 0.15);
+  --card-text: oklch(0.16 0.13 274.7);
+  --card-text-muted: oklch(0.49 0.14 267.5);
 }
 
 .dark {
-  /* Dark theme card variables - these are set by NeutralColorContext, don't override here */
-  /* --card-bg is dynamically set by NeutralColorContext using neutral colors */
-  /* --card-bg-hover is dynamically set by NeutralColorContext */
-  --card-border: oklch(100.00% 0.0000 158.2 / 0.08);
-  --card-border-hover: oklch(100.00% 0.0000 158.2 / 0.12);
-  --card-text: oklch(98.27% 0.0000 158.2);
-  --card-text-muted: oklch(68.12% 0.0000 158.2);
+  /* Dark theme card variables - CSS fallback defaults (NeutralColorContext will override) */
+  --card-bg: oklch(1.00 0.00 230 / 0.06); /* 6% white overlay - fallback if JS fails */
+  --card-bg-hover: oklch(1.00 0.00 230 / 0.08); /* 8% white overlay on hover */
+  --card-border: oklch(1.00 0.00 158.2 / 0.08); /* White with 8% opacity */
+  --card-border-hover: oklch(1.00 0.00 158.2 / 0.12);
+  --card-text: oklch(0.98 0.00 158.2);
+  --card-text-muted: oklch(0.68 0.00 158.2);
 }
 
 /* ===== UNIVERSAL CARD SYSTEM ===== */
@@ -296,6 +296,32 @@
   background-color: var(--card-bg);
   border-color: var(--border);
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
+/* ===== LANDING PAGE CARD OVERRIDES ===== */
+
+/* On landing page, use accent-tinted card styling that animates with scroll */
+/* The JS sets --card-bg, --card-border etc. with proper accent-tinted values */
+/* These CSS rules just ensure the JS-set values are used via var() */
+html[data-landing-page="true"] .wewrite-card {
+  /* Use JS-computed values, fallback to blue-tinted defaults */
+  background-color: var(--card-bg, oklch(1.00 0.05 230 / 0.15));
+  border-color: var(--card-border, oklch(0.30 0.15 230 / 0.15));
+}
+
+html[data-landing-page="true"] .wewrite-card:hover {
+  background-color: var(--card-bg-hover, oklch(1.00 0.05 230 / 0.20));
+  border-color: var(--card-border-hover, oklch(0.30 0.15 230 / 0.20));
+}
+
+html[data-landing-page="true"].dark .wewrite-card {
+  background-color: var(--card-bg, oklch(0.98 0.10 230 / 0.06));
+  border-color: var(--card-border, oklch(0.80 0.12 230 / 0.15));
+}
+
+html[data-landing-page="true"].dark .wewrite-card:hover {
+  background-color: var(--card-bg-hover, oklch(0.98 0.10 230 / 0.08));
+  border-color: var(--card-border-hover, oklch(0.80 0.12 230 / 0.20));
 }
 
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */

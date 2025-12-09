@@ -932,3 +932,241 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
     return [];
   }
 };
+
+// ============================================================================
+// ALTERNATIVE TITLES FUNCTIONS
+// ============================================================================
+
+/**
+ * Get alternative titles for a page
+ */
+export const getAlternativeTitles = async (pageId: string): Promise<string[]> => {
+  try {
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const pageDoc = await getDoc(pageRef);
+
+    if (!pageDoc.exists()) {
+      console.error('Page not found:', pageId);
+      return [];
+    }
+
+    const data = pageDoc.data();
+    return data.alternativeTitles || [];
+  } catch (error) {
+    console.error('Error getting alternative titles:', error);
+    return [];
+  }
+};
+
+/**
+ * Add an alternative title to a page
+ * @returns true if successful, false if title already exists or is same as primary
+ */
+export const addAlternativeTitle = async (
+  pageId: string,
+  newTitle: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const trimmedTitle = newTitle.trim();
+
+    if (!trimmedTitle) {
+      return { success: false, error: 'Title cannot be empty' };
+    }
+
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const pageDoc = await getDoc(pageRef);
+
+    if (!pageDoc.exists()) {
+      return { success: false, error: 'Page not found' };
+    }
+
+    const data = pageDoc.data();
+
+    // Check ownership
+    if (data.userId !== userId) {
+      return { success: false, error: 'You do not have permission to edit this page' };
+    }
+
+    // Check if title matches primary title (case-insensitive)
+    if (data.title?.toLowerCase() === trimmedTitle.toLowerCase()) {
+      return { success: false, error: 'Alternative title cannot be the same as the primary title' };
+    }
+
+    const currentAlternatives = data.alternativeTitles || [];
+
+    // Check if title already exists (case-insensitive)
+    if (currentAlternatives.some((t: string) => t.toLowerCase() === trimmedTitle.toLowerCase())) {
+      return { success: false, error: 'This alternative title already exists' };
+    }
+
+    // Add the new alternative title
+    await setDoc(pageRef, {
+      alternativeTitles: [...currentAlternatives, trimmedTitle],
+      lastModified: new Date().toISOString()
+    }, { merge: true });
+
+    console.log(`Added alternative title "${trimmedTitle}" to page ${pageId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding alternative title:', error);
+    return { success: false, error: 'Failed to add alternative title' };
+  }
+};
+
+/**
+ * Remove an alternative title from a page
+ */
+export const removeAlternativeTitle = async (
+  pageId: string,
+  titleToRemove: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const pageDoc = await getDoc(pageRef);
+
+    if (!pageDoc.exists()) {
+      return { success: false, error: 'Page not found' };
+    }
+
+    const data = pageDoc.data();
+
+    // Check ownership
+    if (data.userId !== userId) {
+      return { success: false, error: 'You do not have permission to edit this page' };
+    }
+
+    const currentAlternatives = data.alternativeTitles || [];
+    const updatedAlternatives = currentAlternatives.filter(
+      (t: string) => t.toLowerCase() !== titleToRemove.toLowerCase()
+    );
+
+    if (updatedAlternatives.length === currentAlternatives.length) {
+      return { success: false, error: 'Alternative title not found' };
+    }
+
+    await setDoc(pageRef, {
+      alternativeTitles: updatedAlternatives,
+      lastModified: new Date().toISOString()
+    }, { merge: true });
+
+    console.log(`Removed alternative title "${titleToRemove}" from page ${pageId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error removing alternative title:', error);
+    return { success: false, error: 'Failed to remove alternative title' };
+  }
+};
+
+/**
+ * Promote an alternative title to primary (swaps with current primary)
+ */
+export const promoteAlternativeTitle = async (
+  pageId: string,
+  titleToPromote: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const pageDoc = await getDoc(pageRef);
+
+    if (!pageDoc.exists()) {
+      return { success: false, error: 'Page not found' };
+    }
+
+    const data = pageDoc.data();
+
+    // Check ownership
+    if (data.userId !== userId) {
+      return { success: false, error: 'You do not have permission to edit this page' };
+    }
+
+    const currentAlternatives = data.alternativeTitles || [];
+    const currentPrimary = data.title;
+
+    // Find the alternative title to promote (case-insensitive search)
+    const titleIndex = currentAlternatives.findIndex(
+      (t: string) => t.toLowerCase() === titleToPromote.toLowerCase()
+    );
+
+    if (titleIndex === -1) {
+      return { success: false, error: 'Alternative title not found' };
+    }
+
+    // Get the exact title (preserving case)
+    const exactTitle = currentAlternatives[titleIndex];
+
+    // Create new alternatives array: remove promoted title, add old primary
+    const newAlternatives = [
+      ...currentAlternatives.slice(0, titleIndex),
+      ...currentAlternatives.slice(titleIndex + 1),
+      currentPrimary
+    ];
+
+    await setDoc(pageRef, {
+      title: exactTitle,
+      alternativeTitles: newAlternatives,
+      lastModified: new Date().toISOString()
+    }, { merge: true });
+
+    console.log(`Promoted "${exactTitle}" to primary title, demoted "${currentPrimary}" to alternative`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error promoting alternative title:', error);
+    return { success: false, error: 'Failed to promote alternative title' };
+  }
+};
+
+/**
+ * Set all alternative titles at once (for bulk operations)
+ */
+export const setAlternativeTitles = async (
+  pageId: string,
+  titles: string[],
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const pageDoc = await getDoc(pageRef);
+
+    if (!pageDoc.exists()) {
+      return { success: false, error: 'Page not found' };
+    }
+
+    const data = pageDoc.data();
+
+    // Check ownership
+    if (data.userId !== userId) {
+      return { success: false, error: 'You do not have permission to edit this page' };
+    }
+
+    // Clean and validate titles
+    const cleanedTitles = titles
+      .map(t => t.trim())
+      .filter(t => t.length > 0)
+      .filter(t => t.toLowerCase() !== data.title?.toLowerCase()); // Remove any that match primary
+
+    // Remove duplicates (case-insensitive)
+    const uniqueTitles: string[] = [];
+    const seenLower = new Set<string>();
+    for (const title of cleanedTitles) {
+      const lower = title.toLowerCase();
+      if (!seenLower.has(lower)) {
+        seenLower.add(lower);
+        uniqueTitles.push(title);
+      }
+    }
+
+    await setDoc(pageRef, {
+      alternativeTitles: uniqueTitles,
+      lastModified: new Date().toISOString()
+    }, { merge: true });
+
+    console.log(`Set ${uniqueTitles.length} alternative titles for page ${pageId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting alternative titles:', error);
+    return { success: false, error: 'Failed to set alternative titles' };
+  }
+};

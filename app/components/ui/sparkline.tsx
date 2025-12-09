@@ -31,25 +31,27 @@ export function Sparkline({
   
   const maxValue = Math.max(...cleanData, 1); // Ensure we don't divide by zero
   const width = 100; // Use percentage for responsive width
-  const padding = 2;
-  const graphHeight = height - (padding * 2);
+  const paddingTop = 2;
+  const paddingBottom = 4; // Extra padding at bottom to avoid baseline appearing as a line
+  const graphHeight = height - paddingTop - paddingBottom;
 
   // Generate points for the polyline
   const points = cleanData.map((value, index) => {
     const x = (index / (cleanData.length - 1)) * width;
-    const y = graphHeight - ((value / maxValue) * graphHeight) + padding;
+    const y = graphHeight - ((value / maxValue) * graphHeight) + paddingTop;
     return `${x},${y}`;
   }).join(' ');
 
-  // Generate points for the area under the line
+  // Generate points for the area under the line - don't extend to full height
+  const bottomY = height - paddingBottom; // Stop before the bottom edge
   const areaPoints = [
-    `0,${height}`, // Bottom left
+    `0,${bottomY}`, // Bottom left
     ...cleanData.map((value, index) => {
       const x = (index / (cleanData.length - 1)) * width;
-      const y = graphHeight - ((value / maxValue) * graphHeight) + padding;
+      const y = graphHeight - ((value / maxValue) * graphHeight) + paddingTop;
       return `${x},${y}`;
     }),
-    `${width},${height}` // Bottom right
+    `${width},${bottomY}` // Bottom right
   ].join(' ');
 
   return (

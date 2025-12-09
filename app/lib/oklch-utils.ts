@@ -350,14 +350,15 @@ export function formatOklchForCSS(oklch: OKLCHColor): string {
 
 /**
  * Format OKLCH for CSS custom properties (space-separated values)
+ * Uses DECIMAL format for lightness (0-1) for browser compatibility
  */
 export function formatOklchForCSSVar(oklch: OKLCHColor): string {
-  // Validate and clamp values
-  const l = Math.max(0, Math.min(100, oklch.l * 100)).toFixed(2);
+  // Validate and clamp values - use DECIMAL format for lightness (0-1 range)
+  const l = Math.max(0, Math.min(1, oklch.l)).toFixed(2);
   const c = Math.max(0, oklch.c).toFixed(4);
   const h = (isNaN(oklch.h) ? 0 : oklch.h % 360).toFixed(1);
 
-  return `${l}% ${c} ${h}`;
+  return `${l} ${c} ${h}`;
 }
 
 /**

@@ -243,8 +243,9 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
       ref={contentRef}
       className={cn(
         // Use universal card system with floating variant and glassmorphism
+        // Note: wewrite-card already provides correct border via --card-border
         "wewrite-card wewrite-floating",
-        "min-w-[12rem] overflow-hidden rounded-2xl border border-border/70 bg-card/90 backdrop-blur-lg shadow-2xl",
+        "min-w-[12rem] overflow-hidden rounded-2xl shadow-2xl",
         "p-3",
         getAnimationClasses(),
         className

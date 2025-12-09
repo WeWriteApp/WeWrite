@@ -50,7 +50,12 @@ export interface FloatingAllocationBarProps extends BaseAllocationProps {
  * Props for embedded allocation bars (cards, search results)
  */
 export interface EmbeddedAllocationBarProps extends BaseAllocationProps {
-  // No additional props currently needed
+  /** Override the allocation interval (in cents) - used for landing page */
+  overrideIntervalCents?: number;
+  /** Disable opening the allocation detail modal - used for landing page */
+  disableDetailModal?: boolean;
+  /** Disable long-press to change interval - used for landing page */
+  disableLongPress?: boolean;
 }
 
 /**

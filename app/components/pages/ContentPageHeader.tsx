@@ -39,6 +39,13 @@ import {
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 import { Logo } from "../ui/Logo";
+import { Settings2 } from "lucide-react";
+
+// Dynamically import TitleSettingsModal to avoid SSR issues
+const TitleSettingsModal = dynamic(() => import('./TitleSettingsModal'), {
+  ssr: false,
+  loading: () => null
+});
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -74,6 +81,8 @@ const isExactDateFormat = isDailyNoteFormat;
 export interface ContentPageHeaderProps {
   /** The page title to display */
   title?: string;
+  /** Alternative titles for the page (aliases for search) */
+  alternativeTitles?: string[];
   /** The username of the page author (fallback if userId fetch fails) */
   username?: string;
   /** Explicit author username if available */
@@ -96,6 +105,8 @@ export interface ContentPageHeaderProps {
   setIsEditing?: (value: boolean) => void;
   /** Callback when title changes during editing */
   onTitleChange?: (newTitle: string) => void;
+  /** Callback when alternative titles change */
+  onAlternativeTitlesChange?: (titles: string[]) => void;
 
   /** Whether the current user can edit this page */
   canEdit?: boolean;
@@ -120,6 +131,7 @@ export interface ContentPageHeaderProps {
 
 export default function ContentPageHeader({
   title,
+  alternativeTitles = [],
   username,
   authorUsername,
   userId,
@@ -131,6 +143,7 @@ export default function ContentPageHeader({
   isEditing = false, // Default to view mode - will be overridden by parent component
   setIsEditing,
   onTitleChange,
+  onAlternativeTitlesChange,
 
   canEdit: propCanEdit = false,
   titleError = false,
@@ -201,6 +214,8 @@ export default function ContentPageHeader({
   const titleInputRef = React.useRef<HTMLTextAreaElement>(null);
   const [isTitleFocused, setIsTitleFocused] = React.useState<boolean>(false);
   const [isEditorFocused, setIsEditorFocused] = React.useState<boolean>(false);
+  const [isTitleSettingsOpen, setIsTitleSettingsOpen] = React.useState<boolean>(false);
+  const [localAlternativeTitles, setLocalAlternativeTitles] = React.useState<string[]>(alternativeTitles);
 
 
 
@@ -253,6 +268,13 @@ export default function ContentPageHeader({
   React.useEffect(() => {
     setEditingTitle(title || "");
   }, [title]);
+
+  // Update alternative titles when prop changes (using JSON comparison to avoid infinite loops)
+  const alternativeTitlesJson = JSON.stringify(alternativeTitles);
+  React.useEffect(() => {
+    setLocalAlternativeTitles(alternativeTitles);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alternativeTitlesJson]);
 
   // Auto-focus title input for new pages (unless title was pre-filled from link creation)
   React.useEffect(() => {
@@ -890,6 +912,32 @@ export default function ContentPageHeader({
                     </p>
                   </div>
                 )}
+
+                {/* Title Settings Button - slides in when title is focused and user can edit */}
+                {canEdit && isEditing && !isNewPage && pageId && (
+                  <div
+                    className={`flex justify-center overflow-hidden transition-all duration-300 ease-out ${
+                      isTitleFocused || isEditingTitle
+                        ? 'opacity-100 max-h-12 mt-2'
+                        : 'opacity-0 max-h-0 mt-0'
+                    }`}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground hover:text-foreground gap-1.5 h-7"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Title settings clicked, opening modal...');
+                        setIsTitleSettingsOpen(true);
+                      }}
+                    >
+                      <Settings2 className="h-3.5 w-3.5" />
+                      Title settings
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Row 3: Byline - slides up and fades out when collapsed */}
@@ -946,6 +994,26 @@ export default function ContentPageHeader({
           currentDate={title || undefined}
           isOpen={showDateFormatPicker}
           onClose={() => setShowDateFormatPicker(false)}
+        />
+      )}
+
+      {/* Title Settings Modal */}
+      {pageId && (
+        <TitleSettingsModal
+          isOpen={isTitleSettingsOpen}
+          onClose={() => setIsTitleSettingsOpen(false)}
+          pageId={pageId}
+          title={title || ''}
+          alternativeTitles={localAlternativeTitles}
+          onTitleChange={(newTitle) => {
+            setEditingTitle(newTitle);
+            onTitleChange?.(newTitle);
+          }}
+          onAlternativeTitlesChange={(titles) => {
+            setLocalAlternativeTitles(titles);
+            onAlternativeTitlesChange?.(titles);
+          }}
+          canEdit={canEdit}
         />
       )}
     </>

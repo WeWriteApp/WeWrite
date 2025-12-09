@@ -20,6 +20,10 @@ export default function FeatureRoadmapCard({ fadeInClass = '' }: FeatureRoadmapC
       showAllocationBar={true}
       authorId="system"
       allocationSource="LandingPageCard"
+      // Landing page: use $0.10 interval, disable modal and long-press
+      allocationIntervalCents={10}
+      disableAllocationModal={true}
+      disableAllocationLongPress={true}
     />
   );
 }

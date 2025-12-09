@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { hexToOklch, formatOklchForCSSVar, OKLCHColor, oklchToHex } from '../lib/oklch-utils';
 import { useTheme } from '../providers/ThemeProvider';
 
@@ -72,28 +72,33 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
   const [darkColor, setDarkColor] = useState<OKLCHColor>(DEFAULT_DARK_OKLCH);
   const { resolvedTheme } = useTheme();
 
-  const getAccentColorValue = () => {
+  const getAccentColorValue = useCallback(() => {
     if (typeof accentColor === 'string' && accentColor.startsWith('#')) {
       return accentColor; // Custom hex color
     }
     return COLORS[accentColor as ColorKey] || COLORS.blue;
-  };
+  }, [accentColor]);
 
-  const isCustomColor = () => {
+  const isCustomColor = useCallback(() => {
     return typeof accentColor === 'string' && accentColor.startsWith('#');
-  };
+  }, [accentColor]);
 
-  const getCurrentThemeColor = (): OKLCHColor => {
+  // Memoize the current theme color to avoid unnecessary effect runs
+  const currentThemeColor = useMemo((): OKLCHColor => {
     return resolvedTheme === 'dark' ? darkColor : lightColor;
-  };
+  }, [resolvedTheme, darkColor, lightColor]);
 
-  const setCurrentThemeColor = (color: OKLCHColor) => {
+  const getCurrentThemeColor = useCallback((): OKLCHColor => {
+    return currentThemeColor;
+  }, [currentThemeColor]);
+
+  const setCurrentThemeColor = useCallback((color: OKLCHColor) => {
     if (resolvedTheme === 'dark') {
       setDarkColor(color);
     } else {
       setLightColor(color);
     }
-  };
+  }, [resolvedTheme]);
 
   // Load saved colors
   useEffect(() => {
@@ -146,11 +151,18 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
   }, [darkColor]);
 
   // Save legacy color and update CSS
+  // Note: On the landing page, LandingColorContext handles CSS variables for scroll animation
+  // so we skip CSS updates here to prevent overwriting the scroll-animated colors
   useEffect(() => {
     localStorage.setItem('accent-color', accentColor.toString());
 
-    // Use the current theme color for CSS variables
-    const currentColor = getCurrentThemeColor();
+    // Skip CSS variable updates on landing page - LandingColorContext handles scroll animation
+    if (typeof window !== 'undefined' && window.location.pathname === '/') {
+      return;
+    }
+
+    // Use the memoized current theme color for CSS variables (already computed)
+    const currentColor = currentThemeColor;
 
     // Also support legacy color system
     const colorValue = getAccentColorValue();
@@ -170,17 +182,29 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
     }
 
     // Prefer the independent theme color over legacy color
-    const finalOklchValues = currentColor;
+    // DEFENSIVE: Ensure we have valid OKLCH values with fallbacks
+    const finalOklchValues = {
+      l: currentColor?.l ?? DEFAULT_LIGHT_OKLCH.l,
+      c: currentColor?.c ?? DEFAULT_LIGHT_OKLCH.c,
+      h: currentColor?.h ?? DEFAULT_LIGHT_OKLCH.h
+    };
+
+    // Skip if we don't have valid values (prevents NaN in CSS)
+    if (isNaN(finalOklchValues.l) || isNaN(finalOklchValues.c) || isNaN(finalOklchValues.h)) {
+      console.warn('AccentColorContext: Invalid OKLCH values, skipping CSS update');
+      return;
+    }
 
     // Update CSS variables for OKLCH using the final values
     const finalHex = oklchToHex(finalOklchValues);
-    document.documentElement.style.setProperty('--accent-color', finalHex);
-    document.documentElement.style.setProperty('--accent-l', `${(finalOklchValues.l * 100).toFixed(2)}%`);
-    document.documentElement.style.setProperty('--accent-c', finalOklchValues.c.toFixed(4));
+    document.documentElement.style.setProperty('--accent-color', finalHex || '#2563EB');
+    // Use DECIMAL format for OKLCH values (not percentage) for browser compatibility
+    document.documentElement.style.setProperty('--accent-l', finalOklchValues.l.toFixed(2));
+    document.documentElement.style.setProperty('--accent-c', finalOklchValues.c.toFixed(2));
     document.documentElement.style.setProperty('--accent-h', finalOklchValues.h.toFixed(1));
 
-    // Set base accent color for opacity-based system
-    const baseAccent = `${(finalOklchValues.l * 100).toFixed(2)}% ${finalOklchValues.c.toFixed(4)} ${finalOklchValues.h.toFixed(1)}`;
+    // Set base accent color for opacity-based system - DECIMAL format (e.g., "0.50 0.25 230")
+    const baseAccent = `${finalOklchValues.l.toFixed(2)} ${finalOklchValues.c.toFixed(2)} ${finalOklchValues.h.toFixed(1)}`;
     document.documentElement.style.setProperty('--accent-base', baseAccent);
 
     // Set primary color to use the accent color
@@ -188,21 +212,21 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
 
     // Set neutral base color (same hue as accent, reduced chroma for subtle appearance)
     const neutralChroma = Math.min(finalOklchValues.c * 0.3, 0.05); // Reduce chroma to 30% of accent, max 0.05
-    const baseNeutral = `${(finalOklchValues.l * 100).toFixed(2)}% ${neutralChroma.toFixed(4)} ${finalOklchValues.h.toFixed(1)}`;
+    const baseNeutral = `${finalOklchValues.l.toFixed(2)} ${neutralChroma.toFixed(2)} ${finalOklchValues.h.toFixed(1)}`;
     document.documentElement.style.setProperty('--neutral-base', baseNeutral);
 
-    // Dynamic primary foreground color based on accent lightness
+    // Dynamic primary foreground color based on accent lightness (DECIMAL format)
     // Use black text for bright accent colors (>70% lightness), white text for darker colors
-    const primaryForegroundColor = finalOklchValues.l > 0.70 ? '0.00% 0.0000 0.0' : '100.00% 0.0000 158.2';
+    const primaryForegroundColor = finalOklchValues.l > 0.70 ? '0.00 0.00 0.0' : '1.00 0.00 0.0';
     document.documentElement.style.setProperty('--primary-foreground', primaryForegroundColor);
 
     // Convert hex to RGB for --accent-color-rgb (kept for compatibility)
-    const hex = finalHex.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
+    const safeHex = (finalHex || '#2563EB').replace('#', '');
+    const r = parseInt(safeHex.substr(0, 2), 16) || 37;
+    const g = parseInt(safeHex.substr(2, 2), 16) || 99;
+    const b = parseInt(safeHex.substr(4, 2), 16) || 235;
     document.documentElement.style.setProperty('--accent-color-rgb', `${r}, ${g}, ${b}`);
-  }, [accentColor, lightColor, darkColor, resolvedTheme, getAccentColorValue, isCustomColor, getCurrentThemeColor]);
+  }, [accentColor, currentThemeColor, getAccentColorValue, isCustomColor]);
 
   return (
     <AccentColorContext.Provider value={{
@@ -240,10 +264,11 @@ export const useAccentColor = () => {
 export { COLORS, COLOR_OKLCH };
 export type { ColorKey };
 
-// Helper function to get OKLCH CSS variable format for a color
+// Helper function to get OKLCH CSS variable format for a color (DECIMAL format)
 export function getColorOklchVar(colorKey: ColorKey): string {
   const oklch = COLOR_OKLCH[colorKey];
-  return `${oklch.l.toFixed(2)}% ${oklch.c.toFixed(4)} ${oklch.h.toFixed(1)}`;
+  // Convert lightness from percentage (0-100) to decimal (0-1) for OKLCH
+  return `${(oklch.l / 100).toFixed(2)} ${oklch.c.toFixed(2)} ${oklch.h.toFixed(1)}`;
 }
 
 // Legacy exports for compatibility

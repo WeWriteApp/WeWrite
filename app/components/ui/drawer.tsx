@@ -28,7 +28,7 @@ const DrawerOverlay = React.forwardRef<
 DrawerOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const drawerVariants = cva(
-  "fixed z-[1100] bg-background border-border",
+  "fixed z-[1100]",
   {
     variants: {
       side: {
@@ -139,10 +139,10 @@ const DrawerContent = React.forwardRef<
         ref={ref}
         className={cn(
           drawerVariants({ side }),
-          "flex flex-col p-0 shadow-2xl border-t border-border/20",
+          "flex flex-col p-0 shadow-2xl wewrite-card",
           className
         )}
-        style={{ height }}
+        style={{ height, borderRadius: '1.5rem 1.5rem 0 0', borderBottom: 'none' }}
         tabIndex={-1}
         {...props}
       >

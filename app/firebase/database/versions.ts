@@ -408,7 +408,8 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       username: data.username || "Anonymous",
       groupId: data.groupId || null,
       previousVersionId: currentVersionId || null, // Link to the previous version
-      isNoOp: isNoOpEdit // Flag to identify no-op edits for filtering
+      isNoOp: isNoOpEdit, // Flag to identify no-op edits for filtering
+      isNewPage // Flag to identify page creation (first version) for "created by" display
     };
 
     // Calculate diff data BEFORE updating the page

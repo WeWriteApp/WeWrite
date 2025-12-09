@@ -31,6 +31,8 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
   }, []);
 
   // Save color and update CSS variables
+  // Note: Landing page now uses its own isolated LandingColorContext with inline styles,
+  // so this context no longer needs to check for landing page or use requestAnimationFrame
   useEffect(() => {
     localStorage.setItem('neutral-color', neutralColor);
 
@@ -73,12 +75,12 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
     const lightBorder = formatOklchForCSSVar({ l: Math.max(0.2, baseL - 0.3), c: baseC * 0.4, h: baseH }) + ' / 0.10'; // Neutral borders
     const lightInput = formatOklchForCSSVar({ l: Math.max(0.2, baseL - 0.3), c: baseC * 0.1, h: baseH }) + ' / 0.02'; // Neutral inputs
 
-    // Light mode cards: Use white overlays for elevation effect
-    const lightCard = '100.00% 0.0000 0.0 / 0.70'; // 70% white overlay for cards
-    const lightCardForeground = '0.00% 0.0000 0.0 / 0.90'; // 90% black overlay for card text
-    const lightCardBorder = '0.00% 0.0000 0.0 / 0.12'; // 12% black overlay for card borders
-    const lightPopover = '100.00% 0.0000 0.0 / 0.85'; // 85% white overlay for popovers
-    const lightPopoverForeground = '0.00% 0.0000 0.0 / 0.90'; // 90% black overlay for popover text
+    // Light mode cards: Use white overlays for elevation effect - DECIMAL format
+    const lightCard = '1.00 0.00 0.0 / 0.70'; // 70% white overlay for cards
+    const lightCardForeground = '0.00 0.00 0.0 / 0.90'; // 90% black overlay for card text
+    const lightCardBorder = '0.00 0.00 0.0 / 0.12'; // 12% black overlay for card borders
+    const lightPopover = '1.00 0.00 0.0 / 0.85'; // 85% white overlay for popovers
+    const lightPopoverForeground = '0.00 0.00 0.0 / 0.90'; // 90% black overlay for popover text
 
     // Dark mode: Use neutral color overlays with varying opacity
     const darkMuted = formatOklchForCSSVar({ l: Math.min(0.8, baseL + 0.3), c: baseC * 0.3, h: baseH }) + ' / 0.04'; // Neutral overlay
@@ -88,12 +90,12 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
     const darkBorder = formatOklchForCSSVar({ l: Math.min(0.8, baseL + 0.3), c: baseC * 0.4, h: baseH }) + ' / 0.08'; // Neutral borders
     const darkInput = formatOklchForCSSVar({ l: Math.min(0.8, baseL + 0.3), c: baseC * 0.1, h: baseH }) + ' / 0.02'; // Neutral inputs
 
-    // Dark mode cards: Use lighter white overlays for elevation effect
-    const darkCard = '100.00% 0.0000 0.0 / 0.06'; // 6% white overlay for cards
-    const darkCardForeground = '100.00% 0.0000 0.0 / 0.98'; // 98% white overlay for card text
-    const darkCardBorder = '100.00% 0.0000 0.0 / 0.08'; // 8% white overlay for card borders
-    const darkPopover = '100.00% 0.0000 0.0 / 0.08'; // 8% white overlay for popovers
-    const darkPopoverForeground = '100.00% 0.0000 0.0 / 0.98'; // 98% white overlay for popover text
+    // Dark mode cards: Use lighter white overlays for elevation effect - DECIMAL format
+    const darkCard = '1.00 0.00 0.0 / 0.06'; // 6% white overlay for cards
+    const darkCardForeground = '1.00 0.00 0.0 / 0.98'; // 98% white overlay for card text
+    const darkCardBorder = '1.00 0.00 0.0 / 0.08'; // 8% white overlay for card borders
+    const darkPopover = '1.00 0.00 0.0 / 0.08'; // 8% white overlay for popovers
+    const darkPopoverForeground = '1.00 0.00 0.0 / 0.98'; // 98% white overlay for popover text
 
     // Apply light mode variables
     root.style.setProperty('--neutral-muted-light', lightMuted);
@@ -149,30 +151,27 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
       ? formatOklchForCSSVar({ l: Math.min(0.8, baseL + 0.3), c: baseC * 0.7, h: baseH }) // Increased from 0.4 to 0.7 for more visible borders
       : formatOklchForCSSVar({ l: Math.max(0.2, baseL - 0.3), c: baseC * 0.8, h: baseH }); // Increased from 0.6 to 0.8 for more visible borders
 
-    // Use theme-appropriate opacity calculations with overlay system
-    const cardOpacityCalc = isDark
-      ? 'calc(var(--card-opacity, 0.15) * 0.4)' // Dark mode: Scale down opacity for subtlety
-      : 'var(--card-opacity, 0.15)'; // Light mode: Use full opacity
+    // Use simple numeric opacity values - calc() cannot be nested inside oklch()
+    // Read the card opacity from CSS variable or use default
+    const cardOpacity = parseFloat(getComputedStyle(root).getPropertyValue('--card-opacity').trim()) || 0.15;
+    const cardOpacityValue = isDark ? cardOpacity * 0.4 : cardOpacity;
+    const cardHoverOpacityValue = isDark ? (cardOpacity * 0.4) + 0.02 : cardOpacity + 0.05;
 
-    const cardHoverOpacityCalc = isDark
-      ? 'calc((var(--card-opacity, 0.15) * 0.4) + 0.02)' // Dark mode: Scaled opacity + small hover boost
-      : 'calc(var(--card-opacity, 0.15) + 0.05)'; // Light mode: Full opacity + hover boost
-
-    root.style.setProperty('--card-bg', `oklch(${cardBgOverlay} / ${cardOpacityCalc})`);
-    root.style.setProperty('--card-bg-hover', `oklch(${cardBgOverlay} / ${cardHoverOpacityCalc})`);
+    root.style.setProperty('--card-bg', `oklch(${cardBgOverlay} / ${cardOpacityValue.toFixed(3)})`);
+    root.style.setProperty('--card-bg-hover', `oklch(${cardBgOverlay} / ${cardHoverOpacityValue.toFixed(3)})`);
     root.style.setProperty('--card-border', `oklch(${cardBorderOverlay} / 0.1)`);
     root.style.setProperty('--card-border-hover', `oklch(${cardBorderOverlay} / 0.15)`);
-
   }, [neutralColor]);
 
   // Listen for theme changes to update variables
+  // Note: Landing page now uses its own isolated LandingColorContext with inline styles
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
           const isDark = document.documentElement.classList.contains('dark');
           const root = document.documentElement;
-          
+
           // Re-apply variables for new theme
           const lightMuted = root.style.getPropertyValue('--neutral-muted-light');
           const lightMutedForeground = root.style.getPropertyValue('--neutral-muted-foreground-light');
@@ -224,24 +223,19 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
             const baseH = neutralWithAccentHue.h;
 
             const cardBgOverlay = isDark
-              ? formatOklchForCSSVar({ l: Math.min(0.98, baseL + 0.4), c: baseC * 0.6, h: baseH }) // Increased from 0.3 to 0.6 for more color
-              : formatOklchForCSSVar({ l: Math.min(1.0, baseL + 0.5), c: baseC * 0.4, h: baseH }); // Increased from 0.1 to 0.4 for more color
+              ? formatOklchForCSSVar({ l: Math.min(0.98, baseL + 0.4), c: baseC * 0.6, h: baseH })
+              : formatOklchForCSSVar({ l: Math.min(1.0, baseL + 0.5), c: baseC * 0.4, h: baseH });
 
             const cardBorderOverlay = isDark
-              ? formatOklchForCSSVar({ l: Math.min(0.8, baseL + 0.3), c: baseC * 0.7, h: baseH }) // Increased from 0.4 to 0.7 for more visible borders
-              : formatOklchForCSSVar({ l: Math.max(0.2, baseL - 0.3), c: baseC * 0.8, h: baseH }); // Increased from 0.6 to 0.8 for more visible borders
+              ? formatOklchForCSSVar({ l: Math.min(0.8, baseL + 0.3), c: baseC * 0.7, h: baseH })
+              : formatOklchForCSSVar({ l: Math.max(0.2, baseL - 0.3), c: baseC * 0.8, h: baseH });
 
-            // Use theme-appropriate opacity calculations with overlay system
-            const cardOpacityCalc = isDark
-              ? 'calc(var(--card-opacity, 0.15) * 0.4)' // Dark mode: Scale down opacity for subtlety
-              : 'var(--card-opacity, 0.15)'; // Light mode: Use full opacity
+            const cardOpacity = parseFloat(getComputedStyle(root).getPropertyValue('--card-opacity').trim()) || 0.15;
+            const cardOpacityValue = isDark ? cardOpacity * 0.4 : cardOpacity;
+            const cardHoverOpacityValue = isDark ? (cardOpacity * 0.4) + 0.02 : cardOpacity + 0.05;
 
-            const cardHoverOpacityCalc = isDark
-              ? 'calc((var(--card-opacity, 0.15) * 0.4) + 0.02)' // Dark mode: Scaled opacity + small hover boost
-              : 'calc(var(--card-opacity, 0.15) + 0.05)'; // Light mode: Full opacity + hover boost
-
-            root.style.setProperty('--card-bg', `oklch(${cardBgOverlay} / ${cardOpacityCalc})`);
-            root.style.setProperty('--card-bg-hover', `oklch(${cardBgOverlay} / ${cardHoverOpacityCalc})`);
+            root.style.setProperty('--card-bg', `oklch(${cardBgOverlay} / ${cardOpacityValue.toFixed(3)})`);
+            root.style.setProperty('--card-bg-hover', `oklch(${cardBgOverlay} / ${cardHoverOpacityValue.toFixed(3)})`);
             root.style.setProperty('--card-border', `oklch(${cardBorderOverlay} / 0.1)`);
             root.style.setProperty('--card-border-hover', `oklch(${cardBorderOverlay} / 0.15)`);
           }
@@ -255,7 +249,7 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [neutralColor]);
 
   return (
     <NeutralColorContext.Provider value={{

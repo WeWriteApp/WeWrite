@@ -36,6 +36,12 @@ interface DynamicPagePreviewCardProps {
   allocationSource?: string;
   /** Whether the card is disabled (no interactions) */
   disabled?: boolean;
+  /** Override the allocation interval (in cents) - used for landing page */
+  allocationIntervalCents?: number;
+  /** Disable opening the allocation detail modal - used for landing page */
+  disableAllocationModal?: boolean;
+  /** Disable long-press to change interval - used for landing page */
+  disableAllocationLongPress?: boolean;
 }
 
 /**
@@ -68,7 +74,10 @@ export function DynamicPagePreviewCard({
   showAllocationBar = false,
   authorId = "system",
   allocationSource = "PreviewCard",
-  disabled = false
+  disabled = false,
+  allocationIntervalCents,
+  disableAllocationModal = false,
+  disableAllocationLongPress = false
 }: DynamicPagePreviewCardProps) {
   const router = useRouter();
   const fetchJson = useProductionDataFetchJson();
@@ -198,7 +207,7 @@ export function DynamicPagePreviewCard({
 
   return (
     <Card
-      className={`min-h-[500px] h-full p-0 cursor-pointer wewrite-card transition-all duration-200 ${className}`}
+      className={`h-auto p-0 cursor-pointer wewrite-card transition-all duration-200 ${className}`}
       onClick={handleViewFullPage}
     >
       <CardHeader className="p-4 pb-3 md:p-6 md:pb-4">
@@ -208,8 +217,14 @@ export function DynamicPagePreviewCard({
       </CardHeader>
 
       <CardContent className="px-4 pb-4 pt-0 md:px-6 md:pb-6 flex flex-col flex-1 relative">
-        {/* Preview content with 8 rendered lines limit and gradient fade */}
-        <div className="flex-1 mb-4 md:mb-6 overflow-hidden relative min-h-[120px] bg-transparent">
+        {/* Preview content with 8 rendered lines limit and gradient fade using CSS mask */}
+        <div
+          className="flex-1 mb-4 md:mb-6 overflow-hidden relative min-h-[120px] bg-transparent"
+          style={{
+            maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)'
+          }}
+        >
           {renderedContent ? (
             <div
               className="text-sm md:text-base text-card-foreground leading-relaxed text-left overflow-hidden [&_p]:!bg-transparent [&_div:not(.pill-link)]:!bg-transparent [&_span:not(.pill-link)]:!bg-transparent"
@@ -226,29 +241,12 @@ export function DynamicPagePreviewCard({
               No content preview available
             </p>
           )}
-
-          {/* Gradient fade overlay */}
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none" />
         </div>
 
-        {/* Ghost "Read more" button blending with gradient */}
-        {!disabled && (
-          <div className="mb-3 md:mb-4 relative z-10">
-            <Button
-              onClick={handleViewFullPage}
-              variant="ghost"
-              className="w-full text-muted-foreground hover:text-foreground hover:bg-transparent border-none shadow-none"
-              size="sm"
-            >
-              Read more...
-            </Button>
-          </div>
-        )}
-
-        {/* Embedded Allocation Bar with separator */}
+        {/* Embedded Allocation Bar */}
         {showAllocationBar && pageId && (
           <div
-            className="relative z-20 mt-auto pt-3 border-t border-neutral-20"
+            className="relative z-20 mt-auto pt-3"
             onClick={(e) => e.stopPropagation()}
           >
             <EmbeddedAllocationBar
@@ -256,6 +254,9 @@ export function DynamicPagePreviewCard({
               authorId={authorId}
               pageTitle={title}
               source={allocationSource}
+              overrideIntervalCents={allocationIntervalCents}
+              disableDetailModal={disableAllocationModal}
+              disableLongPress={disableAllocationLongPress}
             />
           </div>
         )}

@@ -164,6 +164,8 @@ const platformOptions = [
 - **Configurable Display**: Customizable title, button text, and content length
 - **Error Handling**: Proper loading, error, and empty states
 - **Responsive Design**: Mobile-friendly card layout
+- **Embedded Allocation Bar**: Optional allocation controls with customizable behavior
+- **Landing Page Mode**: Simplified allocation controls ($0.10 interval, no modals)
 
 **Key Props**:
 ```typescript
@@ -173,12 +175,25 @@ interface DynamicPagePreviewCardProps {
   buttonText?: string;
   maxLines?: number;
   className?: string;
+  showAllocationBar?: boolean;
+  authorId?: string;
+  allocationSource?: string;
+  // Landing page specific props
+  allocationIntervalCents?: number;      // Override allocation interval (e.g., 10 for $0.10)
+  disableAllocationModal?: boolean;       // Disable detail modal on bar click
+  disableAllocationLongPress?: boolean;   // Disable long-press interval change
 }
 ```
 
 **Usage**:
 - **Roadmap Preview**: Points to `zRNwhNgIEfLFo050nyAT`
 - **Use Cases Preview**: Points to `AXjA19RQnFLhIIfuncBb`
+
+**Landing Page Configuration**:
+On the landing page, allocation bars are configured with:
+- Fixed $0.10 increment (vs user's configured interval)
+- Disabled detail modal (clicking bar doesn't open modal)
+- Disabled long-press (no interval change modal)
 
 ### 7. LoggedOutFinancialHeader (`app/components/landing/LoggedOutFinancialHeader.tsx`)
 **Purpose**: Shows fake financial balance to logged-out users

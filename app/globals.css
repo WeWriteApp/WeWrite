@@ -192,6 +192,110 @@ html, body {
   transform: scale(0.98);
 }
 
+/* ============================================
+   SHINY CHIP DESIGN SYSTEM
+   Reusable shimmer effect chips for badges/indicators
+   Available variants: success (green), primary (blue)
+   Usage: className="shiny-chip shiny-chip-success"
+   ============================================ */
+
+/* Base shiny chip styles */
+.shiny-chip {
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite, glow-pulse-base 2s ease-in-out infinite;
+  color: white !important;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  outline: none !important;
+}
+
+.shiny-chip:hover {
+  transform: scale(1.05);
+  animation: shimmer 1.5s ease-in-out infinite;
+  outline: none !important;
+}
+
+.shiny-chip:active {
+  transform: scale(0.98);
+}
+
+/* Success variant (green) - for earnings, positive metrics */
+.shiny-chip-success {
+  background: linear-gradient(
+    110deg,
+    #0f6b31 0%,
+    #15803d 25%,
+    #22c55e 50%,
+    #15803d 75%,
+    #0f6b31 100%
+  ) !important;
+  box-shadow: 0 0 8px rgba(22, 163, 74, 0.5), 0 0 16px rgba(22, 163, 74, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.shiny-chip-success:hover {
+  background: linear-gradient(
+    110deg,
+    #15803d 0%,
+    #16a34a 25%,
+    #4ade80 50%,
+    #16a34a 75%,
+    #15803d 100%
+  ) !important;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.7), 0 0 28px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Primary variant (blue) - for primary actions, highlights */
+.shiny-chip-primary {
+  background: linear-gradient(
+    110deg,
+    #1e40af 0%,
+    #2563eb 25%,
+    #3b82f6 50%,
+    #2563eb 75%,
+    #1e40af 100%
+  ) !important;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5), 0 0 16px rgba(59, 130, 246, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.shiny-chip-primary:hover {
+  background: linear-gradient(
+    110deg,
+    #2563eb 0%,
+    #3b82f6 25%,
+    #60a5fa 50%,
+    #3b82f6 75%,
+    #2563eb 100%
+  ) !important;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.7), 0 0 28px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Warning variant (amber) - for caution, pending states */
+.shiny-chip-warning {
+  background: linear-gradient(
+    110deg,
+    #b45309 0%,
+    #d97706 25%,
+    #f59e0b 50%,
+    #d97706 75%,
+    #b45309 100%
+  ) !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.shiny-chip-warning:hover {
+  background: linear-gradient(
+    110deg,
+    #d97706 0%,
+    #f59e0b 25%,
+    #fbbf24 50%,
+    #f59e0b 75%,
+    #d97706 100%
+  ) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7), 0 0 28px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
 /* Custom xs breakpoint utilities for mobile optimization */
 @media (min-width: 475px) {
   .xs\:inline { display: inline; }
@@ -975,6 +1079,9 @@ a.username-badge-link:has(.text-muted-foreground) {
   animation: spring-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+/* Landing page content fade is now handled by a React element in LandingPage.tsx */
+/* The fade overlay is position: fixed at z-index 39, above main content but below headers */
+
 /* Page Editor Transition Improvements */
 .page-editor-transition {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1018,19 +1125,9 @@ a.username-badge-link:has(.text-muted-foreground) {
   /* Avoid transitioning layout properties to prevent flickering */
 }
 
-/* Sticky Save Header - Push main header down when present */
-/* Note: The header already has inline styles for bannerOffset, so we need to account for that */
-.has-sticky-save-header header[data-component="main-header"] {
-  /* Add 56px to whatever the current top value is (from bannerOffset inline style) */
-  margin-top: 56px !important; /* Height of sticky save header */
-  transition: margin-top 300ms ease-in-out;
-}
-
-/* Ensure the header spacer accounts for the save header */
-.has-sticky-save-header header[data-component="main-header"] + div {
-  height: calc(var(--header-height, 80px) + 56px) !important;
-  transition: height 300ms ease-in-out;
-}
+/* Sticky Save Header - Header positioning handled via inline styles in ContentPageHeader */
+/* The header component uses hasSaveBanner state to adjust its 'top' position inline */
+/* No CSS rules needed here - prevents double-offsetting */
 
 /* REMOVED: All complex header spacing rules that interfere with simple body padding */
 
@@ -1094,22 +1191,57 @@ a.username-badge-link:has(.text-muted-foreground) {
 @layer base {
   :root {
     /* Accent color variables - dynamically set by AccentColorContext */
+    /* OKLCH format: lightness (0-1), chroma (0-0.5), hue (0-360) */
     --accent-h: 230;
-    --accent-s: 91%;
-    --accent-l: 60%;
+    --accent-c: 0.25;
+    --accent-l: 0.50;
     --accent-color-rgb: 37, 99, 235; /* Default blue RGB values for #2563EB */
 
-    /* Alpha overlay colors - black in light mode for darkening on hover */
-    --alpha-5: rgba(0, 0, 0, 0.05);
-    --alpha-10: rgba(0, 0, 0, 0.10);
-    --alpha-15: rgba(0, 0, 0, 0.15);
-    --alpha-20: rgba(0, 0, 0, 0.20);
-    --alpha-25: rgba(0, 0, 0, 0.25);
-    --alpha-30: rgba(0, 0, 0, 0.30);
+    /* ========================================================================
+       WEWRITE COLOR SYSTEM
+
+       This system provides consistent, theme-aware colors using two patterns:
+
+       1. ALPHA colors: Semi-transparent overlays
+          - neutral-alpha-{N}: Black overlay in light mode, white in dark mode
+          - accent-alpha-{N}: Accent color at N% opacity
+
+       2. SOLID colors: Opaque colors with varied lightness (future)
+          - neutral-solid-{N}: Neutral at N% lightness
+          - accent-solid-{N}: Accent at N% lightness
+
+       Scale: 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90
+
+       Usage: bg-neutral-alpha-15, text-accent-alpha-30, border-neutral-alpha-10
+       ======================================================================== */
+
+    /* Neutral Alpha Scale - Theme-aware black/white overlays
+       Light mode: black overlay (darkening)
+       Dark mode: white overlay (lightening) */
+    --neutral-alpha-5: rgba(0, 0, 0, 0.05);
+    --neutral-alpha-10: rgba(0, 0, 0, 0.10);
+    --neutral-alpha-15: rgba(0, 0, 0, 0.15);
+    --neutral-alpha-20: rgba(0, 0, 0, 0.20);
+    --neutral-alpha-25: rgba(0, 0, 0, 0.25);
+    --neutral-alpha-30: rgba(0, 0, 0, 0.30);
+    --neutral-alpha-40: rgba(0, 0, 0, 0.40);
+    --neutral-alpha-50: rgba(0, 0, 0, 0.50);
+    --neutral-alpha-60: rgba(0, 0, 0, 0.60);
+    --neutral-alpha-70: rgba(0, 0, 0, 0.70);
+    --neutral-alpha-80: rgba(0, 0, 0, 0.80);
+    --neutral-alpha-90: rgba(0, 0, 0, 0.90);
+
+    /* Legacy alpha variables (for backwards compatibility) */
+    --alpha-5: var(--neutral-alpha-5);
+    --alpha-10: var(--neutral-alpha-10);
+    --alpha-15: var(--neutral-alpha-15);
+    --alpha-20: var(--neutral-alpha-20);
+    --alpha-25: var(--neutral-alpha-25);
+    --alpha-30: var(--neutral-alpha-30);
 
     /* Alpha overlay gradients - for layering on top of bg colors */
-    --alpha-10-gradient: linear-gradient(var(--alpha-10), var(--alpha-10));
-    --alpha-15-gradient: linear-gradient(var(--alpha-15), var(--alpha-15));
+    --alpha-10-gradient: linear-gradient(var(--neutral-alpha-10), var(--neutral-alpha-10));
+    --alpha-15-gradient: linear-gradient(var(--neutral-alpha-15), var(--neutral-alpha-15));
 
     /* Semantic alpha overlays - tinted overlays for colored buttons */
     /* Success alpha - green tint overlay (darker green in light mode) */
@@ -1120,6 +1252,17 @@ a.username-badge-link:has(.text-muted-foreground) {
     --error-alpha-5: rgba(220, 38, 38, 0.15);
     --error-alpha-10: rgba(220, 38, 38, 0.25);
     --error-alpha-15: rgba(220, 38, 38, 0.35);
+
+    /* Systematic Color System - Base Colors (OKLCH) - MUST be defined BEFORE --primary */
+    --accent-base: 0.50 0.25 230; /* Default blue in OKLCH - User's custom accent color */
+    --neutral-base: 0.50 0.05 230; /* Same hue as accent, low chroma */
+    --success-base: 0.55 0.15 142; /* Green */
+    --warn-base: 0.72 0.15 72; /* Orange */
+    --error-base: 0.55 0.15 28; /* Red */
+
+    /* Hover variants - darker in light mode */
+    --accent-90: 0.45 0.25 230; /* Darker variant for hover */
+    --accent-110: 0.55 0.25 230; /* Brighter variant for active */
 
     /* Radix Colors - Light Mode */
     --background: 0 0% 100%;
@@ -1148,21 +1291,14 @@ a.username-badge-link:has(.text-muted-foreground) {
 
     --success: 0.55 0.15 142;
     --success-foreground: 1.00 0.00 0;
-
-    /* Systematic Color System - Base Colors (OKLCH) */
-    --accent-base: var(--primary); /* User's custom accent color */
-    --neutral-base: var(--primary); /* Same hue as accent, low chroma */
-    --success-base: 0.55 0.15 142; /* Green */
-    --warn-base: 0.72 0.15 72; /* Orange */
-    --error-base: 0.55 0.15 28; /* Red */
-
-    /* Hover variants - darker in light mode */
-    --accent-90: var(--primary); /* Will be overridden by theme-aware hover */
-    --accent-110: var(--primary); /* Will be overridden by theme-aware hover */
     --success-90: 0.50 0.15 142; /* Darker green */
     --success-110: 0.60 0.15 142; /* Brighter green */
     --error-90: 0.50 0.15 28; /* Darker red */
     --error-110: 0.60 0.15 28; /* Brighter red */
+
+    /* Neutral color for badges and chips - dark grey in light mode */
+    --neutral: 0.20 0.00 0;
+    --neutral-foreground: 1.00 0.00 0;
 
     /* Focus indicator variables */
     --focus-ring-color: var(--accent-base);
@@ -1182,13 +1318,27 @@ a.username-badge-link:has(.text-muted-foreground) {
   }
 
   .dark {
-    /* Alpha overlay colors - white in dark mode for brightening on hover */
-    --alpha-5: rgba(255, 255, 255, 0.05);
-    --alpha-10: rgba(255, 255, 255, 0.10);
-    --alpha-15: rgba(255, 255, 255, 0.15);
-    --alpha-20: rgba(255, 255, 255, 0.20);
-    --alpha-25: rgba(255, 255, 255, 0.25);
-    --alpha-30: rgba(255, 255, 255, 0.30);
+    /* Neutral Alpha Scale - White overlays for dark mode (lightening effect) */
+    --neutral-alpha-5: rgba(255, 255, 255, 0.05);
+    --neutral-alpha-10: rgba(255, 255, 255, 0.10);
+    --neutral-alpha-15: rgba(255, 255, 255, 0.15);
+    --neutral-alpha-20: rgba(255, 255, 255, 0.20);
+    --neutral-alpha-25: rgba(255, 255, 255, 0.25);
+    --neutral-alpha-30: rgba(255, 255, 255, 0.30);
+    --neutral-alpha-40: rgba(255, 255, 255, 0.40);
+    --neutral-alpha-50: rgba(255, 255, 255, 0.50);
+    --neutral-alpha-60: rgba(255, 255, 255, 0.60);
+    --neutral-alpha-70: rgba(255, 255, 255, 0.70);
+    --neutral-alpha-80: rgba(255, 255, 255, 0.80);
+    --neutral-alpha-90: rgba(255, 255, 255, 0.90);
+
+    /* Legacy alpha variables (for backwards compatibility) */
+    --alpha-5: var(--neutral-alpha-5);
+    --alpha-10: var(--neutral-alpha-10);
+    --alpha-15: var(--neutral-alpha-15);
+    --alpha-20: var(--neutral-alpha-20);
+    --alpha-25: var(--neutral-alpha-25);
+    --alpha-30: var(--neutral-alpha-30);
 
     /* Alpha overlay gradients - for layering on top of bg colors */
     --alpha-10-gradient: linear-gradient(var(--alpha-10), var(--alpha-10));
@@ -1233,7 +1383,11 @@ a.username-badge-link:has(.text-muted-foreground) {
     --success: 0.60 0.15 142;
     --success-foreground: 1.00 0.00 0;
 
-    --border: 0 0% 25%;
+    /* Neutral color for badges and chips - light grey in dark mode */
+    --neutral: 0.90 0.00 0;
+    --neutral-foreground: 0.10 0.00 0;
+
+    --border: 0 0% 35%; /* Increased from 25% for better visibility on dark backgrounds */
     --input: 0 0% 18%;
     --ring: var(--accent-base);
     --radius: 0.5rem;
@@ -1380,6 +1534,14 @@ iframe[src*="js.stripe.com"] {
 .wewrite-active-state {
   border: 1px solid oklch(var(--accent-80)) !important;
   background-color: oklch(var(--accent-15)) !important;
+}
+
+/* Today card accent border - uses accent color dynamically */
+.wewrite-card.wewrite-today {
+  border: 2px solid oklch(var(--primary)) !important;
+}
+.wewrite-card.wewrite-today:hover {
+  border-color: oklch(var(--primary)) !important;
 }
 
 /* Active card styling for focused inputs and selected elements */
@@ -1566,6 +1728,29 @@ textarea.wewrite-title-input {
 .wewrite-input:disabled {
   opacity: 0.5 !important;
   cursor: not-allowed !important;
+}
+
+/* Override browser autofill styling - Use accent-alpha instead of browser's blue */
+.wewrite-input:-webkit-autofill,
+.wewrite-input:-webkit-autofill:hover,
+.wewrite-input:-webkit-autofill:focus,
+.wewrite-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px oklch(var(--accent-base) / 0.1) inset !important;
+  box-shadow: 0 0 0 30px oklch(var(--accent-base) / 0.1) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  caret-color: oklch(var(--foreground)) !important;
+  border: 1px solid oklch(var(--accent-base) / 0.3) !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+/* Dark mode autofill override */
+.dark .wewrite-input:-webkit-autofill,
+.dark .wewrite-input:-webkit-autofill:hover,
+.dark .wewrite-input:-webkit-autofill:focus,
+.dark .wewrite-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px oklch(var(--accent-base) / 0.15) inset !important;
+  box-shadow: 0 0 0 30px oklch(var(--accent-base) / 0.15) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
 }
 
 /* Textarea specific adjustments */
@@ -1990,8 +2175,14 @@ body::after {
     zoom: 1 !important;
     /* Ensure no overflow that might cause scaling issues */
     overflow-x: hidden;
-    /* Ensure proper height calculation */
-    height: 100%;
+    /* Ensure proper height calculation - use min-height instead of height
+       to allow content to determine actual scroll height */
+    min-height: 100vh;
+  }
+
+  /* Override for landing page - allow scroll height to be determined by content */
+  html:has(.landing-page-root), html:has(.landing-page-root) body {
+    height: auto !important;
     min-height: 100vh;
   }
 }
@@ -2664,6 +2855,36 @@ button.bg-transparent[type] {
 .border-neutral-90 { border-color: oklch(var(--neutral-base) / 0.9); }
 .border-neutral-100 { border-color: oklch(var(--neutral-base)); }
 
+/* Neutral Alpha Border Colors (additive: black in light, white in dark)
+   Scale: 1-100 representing percentage opacity
+   Usage: border-neutral-alpha-{1-100} */
+.border-neutral-alpha-5 { border-color: rgba(0, 0, 0, 0.05); }
+.dark .border-neutral-alpha-5 { border-color: rgba(255, 255, 255, 0.05); }
+.border-neutral-alpha-10 { border-color: rgba(0, 0, 0, 0.1); }
+.dark .border-neutral-alpha-10 { border-color: rgba(255, 255, 255, 0.1); }
+.border-neutral-alpha-15 { border-color: rgba(0, 0, 0, 0.15); }
+.dark .border-neutral-alpha-15 { border-color: rgba(255, 255, 255, 0.15); }
+.border-neutral-alpha-20 { border-color: rgba(0, 0, 0, 0.2); }
+.dark .border-neutral-alpha-20 { border-color: rgba(255, 255, 255, 0.2); }
+.border-neutral-alpha-25 { border-color: rgba(0, 0, 0, 0.25); }
+.dark .border-neutral-alpha-25 { border-color: rgba(255, 255, 255, 0.25); }
+.border-neutral-alpha-30 { border-color: rgba(0, 0, 0, 0.3); }
+.dark .border-neutral-alpha-30 { border-color: rgba(255, 255, 255, 0.3); }
+.border-neutral-alpha-40 { border-color: rgba(0, 0, 0, 0.4); }
+.dark .border-neutral-alpha-40 { border-color: rgba(255, 255, 255, 0.4); }
+.border-neutral-alpha-50 { border-color: rgba(0, 0, 0, 0.5); }
+.dark .border-neutral-alpha-50 { border-color: rgba(255, 255, 255, 0.5); }
+.border-neutral-alpha-60 { border-color: rgba(0, 0, 0, 0.6); }
+.dark .border-neutral-alpha-60 { border-color: rgba(255, 255, 255, 0.6); }
+.border-neutral-alpha-70 { border-color: rgba(0, 0, 0, 0.7); }
+.dark .border-neutral-alpha-70 { border-color: rgba(255, 255, 255, 0.7); }
+.border-neutral-alpha-80 { border-color: rgba(0, 0, 0, 0.8); }
+.dark .border-neutral-alpha-80 { border-color: rgba(255, 255, 255, 0.8); }
+.border-neutral-alpha-90 { border-color: rgba(0, 0, 0, 0.9); }
+.dark .border-neutral-alpha-90 { border-color: rgba(255, 255, 255, 0.9); }
+.border-neutral-alpha-100 { border-color: rgba(0, 0, 0, 1); }
+.dark .border-neutral-alpha-100 { border-color: rgba(255, 255, 255, 1); }
+
 /* Success Border Colors */
 .border-success { border-color: oklch(var(--success-base)); }
 .border-success-1 { border-color: oklch(var(--success-base) / 0.01); }
@@ -2749,6 +2970,36 @@ button.bg-transparent[type] {
 .text-neutral-80 { color: oklch(var(--neutral-base) / 0.8); }
 .text-neutral-90 { color: oklch(var(--neutral-base) / 0.9); }
 .text-neutral-100 { color: oklch(var(--neutral-base)); }
+
+/* Neutral Alpha Text Colors (additive: black in light, white in dark)
+   Scale: 1-100 representing percentage opacity
+   Usage: text-neutral-alpha-{1-100} */
+.text-neutral-alpha-5 { color: rgba(0, 0, 0, 0.05); }
+.dark .text-neutral-alpha-5 { color: rgba(255, 255, 255, 0.05); }
+.text-neutral-alpha-10 { color: rgba(0, 0, 0, 0.1); }
+.dark .text-neutral-alpha-10 { color: rgba(255, 255, 255, 0.1); }
+.text-neutral-alpha-15 { color: rgba(0, 0, 0, 0.15); }
+.dark .text-neutral-alpha-15 { color: rgba(255, 255, 255, 0.15); }
+.text-neutral-alpha-20 { color: rgba(0, 0, 0, 0.2); }
+.dark .text-neutral-alpha-20 { color: rgba(255, 255, 255, 0.2); }
+.text-neutral-alpha-25 { color: rgba(0, 0, 0, 0.25); }
+.dark .text-neutral-alpha-25 { color: rgba(255, 255, 255, 0.25); }
+.text-neutral-alpha-30 { color: rgba(0, 0, 0, 0.3); }
+.dark .text-neutral-alpha-30 { color: rgba(255, 255, 255, 0.3); }
+.text-neutral-alpha-40 { color: rgba(0, 0, 0, 0.4); }
+.dark .text-neutral-alpha-40 { color: rgba(255, 255, 255, 0.4); }
+.text-neutral-alpha-50 { color: rgba(0, 0, 0, 0.5); }
+.dark .text-neutral-alpha-50 { color: rgba(255, 255, 255, 0.5); }
+.text-neutral-alpha-60 { color: rgba(0, 0, 0, 0.6); }
+.dark .text-neutral-alpha-60 { color: rgba(255, 255, 255, 0.6); }
+.text-neutral-alpha-70 { color: rgba(0, 0, 0, 0.7); }
+.dark .text-neutral-alpha-70 { color: rgba(255, 255, 255, 0.7); }
+.text-neutral-alpha-80 { color: rgba(0, 0, 0, 0.8); }
+.dark .text-neutral-alpha-80 { color: rgba(255, 255, 255, 0.8); }
+.text-neutral-alpha-90 { color: rgba(0, 0, 0, 0.9); }
+.dark .text-neutral-alpha-90 { color: rgba(255, 255, 255, 0.9); }
+.text-neutral-alpha-100 { color: rgba(0, 0, 0, 1); }
+.dark .text-neutral-alpha-100 { color: rgba(255, 255, 255, 1); }
 
 /* Success Text Colors */
 .text-success { color: oklch(var(--success-base)); }
@@ -3517,4 +3768,154 @@ body.has-sticky-save-header .page-content-wrapper {
 body.has-sticky-save-header [data-radix-portal],
 body.has-sticky-save-header [data-portal] {
   transform: none !important;
+}
+
+/* ============================================
+   Landing Page Animated Gradient Blobs
+   GPU-accelerated, subtle background animations
+   ============================================ */
+
+/* Blob container - fixed behind content */
+.landing-blobs-container {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Individual blob styling - large, blurred, visible */
+.landing-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.25;
+  will-change: transform;
+  /* Use accent color with transparency - use individual variables for proper OKLCH syntax */
+  background: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.7);
+  transition: background 0.3s ease-out;
+}
+
+/* Dark mode - slightly more visible blobs */
+.dark .landing-blob {
+  opacity: 0.20;
+  filter: blur(100px);
+}
+
+/* Blob 1 - Top left, largest */
+.landing-blob-1 {
+  width: 60vw;
+  height: 60vw;
+  max-width: 800px;
+  max-height: 800px;
+  top: -20%;
+  left: -15%;
+  animation: blob-float-1 12s ease-in-out infinite;
+}
+
+/* Blob 2 - Bottom right */
+.landing-blob-2 {
+  width: 50vw;
+  height: 50vw;
+  max-width: 700px;
+  max-height: 700px;
+  bottom: -10%;
+  right: -10%;
+  animation: blob-float-2 15s ease-in-out infinite;
+  animation-delay: -5s;
+}
+
+/* Blob 3 - Center, smaller accent */
+.landing-blob-3 {
+  width: 40vw;
+  height: 40vw;
+  max-width: 500px;
+  max-height: 500px;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: blob-float-3 10s ease-in-out infinite;
+  animation-delay: -3s;
+  opacity: 0.15;
+}
+
+/* Blob 4 - Bottom left accent */
+.landing-blob-4 {
+  width: 35vw;
+  height: 35vw;
+  max-width: 450px;
+  max-height: 450px;
+  bottom: 20%;
+  left: -5%;
+  animation: blob-float-4 18s ease-in-out infinite;
+  animation-delay: -8s;
+  opacity: 0.18;
+}
+
+/* GPU-accelerated keyframe animations using transforms only */
+@keyframes blob-float-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(5%, 10%) scale(1.05);
+  }
+  50% {
+    transform: translate(10%, 5%) scale(0.95);
+  }
+  75% {
+    transform: translate(3%, -5%) scale(1.02);
+  }
+}
+
+@keyframes blob-float-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(-8%, -5%) scale(0.97);
+  }
+  50% {
+    transform: translate(-5%, 8%) scale(1.03);
+  }
+  75% {
+    transform: translate(3%, 3%) scale(0.98);
+  }
+}
+
+@keyframes blob-float-3 {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+  }
+  33% {
+    transform: translate(-45%, 10%) scale(1.08);
+  }
+  66% {
+    transform: translate(-55%, -8%) scale(0.92);
+  }
+}
+
+@keyframes blob-float-4 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  20% {
+    transform: translate(10%, -5%) scale(1.04);
+  }
+  40% {
+    transform: translate(5%, 10%) scale(0.96);
+  }
+  60% {
+    transform: translate(-5%, 5%) scale(1.02);
+  }
+  80% {
+    transform: translate(3%, -8%) scale(0.98);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .landing-blob {
+    animation: none !important;
+  }
 }
