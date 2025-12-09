@@ -26,10 +26,14 @@ function truncateText(text: string, maxLength: number): string {
 // Helper function to fetch page data
 async function fetchPageData(pageId: string) {
   try {
-    // Get base URL with proper fallbacks for different environments
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
+    // Get base URL - always use production URL when in production to ensure correct data fetching
+    // VERCEL_URL points to deployment-specific URL which can cause issues with environment detection
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://www.getwewrite.app'
+      : (process.env.NEXT_PUBLIC_BASE_URL ||
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
+
+    console.log(`📄 [OG] Fetching page data from: ${baseUrl}/api/pages/${pageId}`);
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       headers: {
@@ -63,10 +67,11 @@ async function fetchPageData(pageId: string) {
 // Helper function to fetch sponsor count
 async function fetchSponsorCount(pageId: string) {
   try {
-    // Get base URL with proper fallbacks for different environments
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
+    // Get base URL - always use production URL when in production
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://www.getwewrite.app'
+      : (process.env.NEXT_PUBLIC_BASE_URL ||
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
       headers: {

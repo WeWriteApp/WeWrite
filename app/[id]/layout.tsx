@@ -52,9 +52,11 @@ interface SchemaMarkup {
 // This ensures usernames are correctly fetched from RTDB
 async function getPageMetadataServer(pageId: string): Promise<any> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
+    // Get base URL - always use production URL when in production
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://www.getwewrite.app'
+      : (process.env.NEXT_PUBLIC_BASE_URL ||
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       cache: 'no-store', // Don't cache to always get fresh data

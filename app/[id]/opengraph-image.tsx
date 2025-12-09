@@ -68,9 +68,11 @@ interface PageData {
 
 async function fetchPageData(pageId: string): Promise<PageData | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
+    // Get base URL - always use production URL when in production
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://www.getwewrite.app'
+      : (process.env.NEXT_PUBLIC_BASE_URL ||
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       headers: {
@@ -94,9 +96,11 @@ async function fetchPageData(pageId: string): Promise<PageData | null> {
 
 async function fetchSponsorCount(pageId: string): Promise<number> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   (process.env.NODE_ENV === 'production' ? 'https://www.getwewrite.app' : 'http://localhost:3000'));
+    // Get base URL - always use production URL when in production
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://www.getwewrite.app'
+      : (process.env.NEXT_PUBLIC_BASE_URL ||
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
 
     const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
       headers: {
