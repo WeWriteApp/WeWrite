@@ -69,7 +69,8 @@ async function getPageMetadataServer(pageId: string): Promise<any> {
     }
 
     const data = await response.json();
-    return data;
+    // Extract pageData from the response wrapper
+    return data.pageData || data;
   } catch (error) {
     console.error('Error fetching page metadata from API:', error);
     return null;

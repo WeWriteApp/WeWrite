@@ -83,7 +83,9 @@ async function fetchPageData(pageId: string): Promise<PageData | null> {
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    // Extract pageData from the response wrapper
+    return data.pageData || data;
   } catch (error) {
     console.warn(`Error fetching page data for OG image ${pageId}:`, error);
     return null;

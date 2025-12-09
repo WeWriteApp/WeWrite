@@ -45,13 +45,15 @@ async function fetchPageData(pageId: string) {
     }
 
     const data = await response.json();
+    // Extract pageData from the response wrapper
+    const pageData = data.pageData || data;
     console.log(`📄 [OG] Fetched page data for ${pageId}:`, {
-      title: data.title,
-      author: data.authorUsername || data.username,
-      contentLength: data.content?.length || 0
+      title: pageData.title,
+      author: pageData.authorUsername || pageData.username,
+      contentLength: pageData.content?.length || 0
     });
 
-    return data;
+    return pageData;
   } catch (error) {
     console.warn(`Error fetching page data for ${pageId}:`, error);
     return null;
