@@ -202,88 +202,86 @@ function longestCommonSubsequence(oldWords: string[], newWords: string[]): Array
 }
 
 /**
- * Generate enhanced diff preview showing one meaningful chunk
- * Shows context around the most significant change
+ * Generate enhanced diff preview showing the first meaningful change
+ * Shows both additions AND deletions together with context
+ * Limited to ~3 lines worth of content for readability
  */
 function generateDiffPreview(oldText: string, newText: string, operations: DiffOperation[]): DiffPreview | null {
   if (!operations || operations.length === 0) {
     return null;
   }
 
-  // Find the most significant change (largest addition or removal)
-  let largestChange = null;
-  let largestSize = 0;
-
+  // Find the FIRST change (not largest) - this is more intuitive for users
+  let firstChangeIndex = -1;
   for (let i = 0; i < operations.length; i++) {
-    const op = operations[i];
-    if (op.type === 'add' || op.type === 'remove') {
-      if (op.text.length > largestSize) {
-        largestSize = op.text.length;
-        largestChange = { operation: op, index: i };
-      }
+    if (operations[i].type === 'add' || operations[i].type === 'remove') {
+      firstChangeIndex = i;
+      break;
     }
   }
 
-  if (!largestChange) {
+  if (firstChangeIndex === -1) {
     return null;
   }
 
-  const contextLength = 150; // Characters of context on each side
-  const changeOp = largestChange.operation;
-  const changeIndex = largestChange.index;
+  const contextLength = 50; // Shorter context for ~3 line display
+  const maxChangeLength = 200; // Max characters for added/removed text
 
   // Get context before the change
   let beforeContext = '';
-  for (let i = changeIndex - 1; i >= 0; i--) {
+  for (let i = firstChangeIndex - 1; i >= 0; i--) {
     const op = operations[i];
     if (op.type === 'equal') {
-      const contextText = op.text.slice(-contextLength);
-      beforeContext = contextText + beforeContext;
+      beforeContext = op.text.slice(-contextLength);
       break;
     }
   }
 
-  // Get context after the change
-  let afterContext = '';
-  for (let i = changeIndex + 1; i < operations.length; i++) {
-    const op = operations[i];
-    if (op.type === 'equal') {
-      const contextText = op.text.slice(0, contextLength);
-      afterContext = afterContext + contextText;
-      break;
-    }
-  }
-
-  // Collect all additions and removals in this chunk
+  // Collect ALL additions and removals from this point forward
+  // until we hit enough context or reach limits
   let addedText = '';
   let removedText = '';
   let hasAdditions = false;
   let hasRemovals = false;
+  let afterContext = '';
+  let foundAfterContext = false;
 
-  // Look for adjacent changes to include in the same preview
-  let startIndex = changeIndex;
-  let endIndex = changeIndex;
-
-  // Expand backwards to include adjacent changes
-  while (startIndex > 0 && operations[startIndex - 1].type !== 'equal') {
-    startIndex--;
-  }
-
-  // Expand forwards to include adjacent changes
-  while (endIndex < operations.length - 1 && operations[endIndex + 1].type !== 'equal') {
-    endIndex++;
-  }
-
-  // Collect all changes in this range
-  for (let i = startIndex; i <= endIndex; i++) {
+  for (let i = firstChangeIndex; i < operations.length; i++) {
     const op = operations[i];
+
     if (op.type === 'add') {
-      addedText += op.text;
-      hasAdditions = true;
+      // Don't exceed max length
+      if (addedText.length < maxChangeLength) {
+        addedText += op.text;
+        hasAdditions = true;
+      }
     } else if (op.type === 'remove') {
-      removedText += op.text;
-      hasRemovals = true;
+      // Don't exceed max length
+      if (removedText.length < maxChangeLength) {
+        removedText += op.text;
+        hasRemovals = true;
+      }
+    } else if (op.type === 'equal' && !foundAfterContext) {
+      // Get after context from first equal block after changes
+      afterContext = op.text.slice(0, contextLength);
+      foundAfterContext = true;
+      // Don't break - continue to collect more changes if they're nearby
+      // Only break if we've collected enough
+      if (addedText.length >= maxChangeLength || removedText.length >= maxChangeLength) {
+        break;
+      }
+    } else if (op.type === 'equal' && foundAfterContext) {
+      // We've hit a second equal block, stop collecting
+      break;
     }
+  }
+
+  // Truncate with ellipsis if needed
+  if (addedText.length > maxChangeLength) {
+    addedText = addedText.slice(0, maxChangeLength) + '…';
+  }
+  if (removedText.length > maxChangeLength) {
+    removedText = removedText.slice(0, maxChangeLength) + '…';
   }
 
   return {

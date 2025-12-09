@@ -211,8 +211,9 @@ function extractLinkText(node: any): string {
     }
   }
 
-  // Add the link text with special markers to indicate it's a link
-  return `[${linkText}]`;
+  // Return just the link text without brackets
+  // Previously we wrapped in [] but this inflates diff character counts
+  return linkText;
 }
 
 /**
@@ -279,8 +280,9 @@ function extractLexicalLinkText(node: any): string {
     }
   }
 
-  // Add the link text with special markers to indicate it's a link
-  return `[${linkText}]`;
+  // Return just the link text without brackets
+  // Previously we wrapped in [] but this inflates diff character counts
+  return linkText;
 }
 
 /**
