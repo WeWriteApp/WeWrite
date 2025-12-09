@@ -188,6 +188,7 @@ export default function ContentPageView({
 
   // Link suggestions toggle state
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   // Title validation state
   const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
@@ -1619,6 +1620,7 @@ export default function ContentPageView({
                               showDiff={showDiff}
                               showLineNumbers={true}
                               showLinkSuggestions={showLinkSuggestions}
+                              onLinkSuggestionsLoadingChange={setIsLoadingSuggestions}
                             />
 
                             {/* Dense mode toggle below content - only show in view mode */}
@@ -1668,6 +1670,7 @@ export default function ContentPageView({
               titleError={titleError}
               hasUnsavedChanges={hasUnsavedChanges}
               showLinkSuggestions={showLinkSuggestions}
+              isLoadingSuggestions={isLoadingSuggestions}
               onToggleLinkSuggestions={setShowLinkSuggestions}
             />
             </div>

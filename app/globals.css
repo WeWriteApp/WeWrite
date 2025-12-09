@@ -2503,9 +2503,27 @@ button.bg-transparent[type] {
 .bg-neutral-90 { background-color: oklch(var(--neutral-base) / 0.9); }
 .bg-neutral-100 { background-color: oklch(var(--neutral-base)); }
 
-/* Neutral Alpha Background Colors (additive: black in light, white in dark) */
+/* Neutral Alpha Background Colors (additive: black in light, white in dark)
+   Scale: 1-100 representing percentage opacity
+   Usage: bg-neutral-alpha-{1-100} */
+.bg-neutral-alpha-1 { background-color: rgba(0, 0, 0, 0.01); }
+.dark .bg-neutral-alpha-1 { background-color: rgba(255, 255, 255, 0.01); }
+.bg-neutral-alpha-2 { background-color: rgba(0, 0, 0, 0.02); }
+.dark .bg-neutral-alpha-2 { background-color: rgba(255, 255, 255, 0.02); }
+.bg-neutral-alpha-3 { background-color: rgba(0, 0, 0, 0.03); }
+.dark .bg-neutral-alpha-3 { background-color: rgba(255, 255, 255, 0.03); }
+.bg-neutral-alpha-4 { background-color: rgba(0, 0, 0, 0.04); }
+.dark .bg-neutral-alpha-4 { background-color: rgba(255, 255, 255, 0.04); }
 .bg-neutral-alpha-5 { background-color: rgba(0, 0, 0, 0.05); }
 .dark .bg-neutral-alpha-5 { background-color: rgba(255, 255, 255, 0.05); }
+.bg-neutral-alpha-6 { background-color: rgba(0, 0, 0, 0.06); }
+.dark .bg-neutral-alpha-6 { background-color: rgba(255, 255, 255, 0.06); }
+.bg-neutral-alpha-7 { background-color: rgba(0, 0, 0, 0.07); }
+.dark .bg-neutral-alpha-7 { background-color: rgba(255, 255, 255, 0.07); }
+.bg-neutral-alpha-8 { background-color: rgba(0, 0, 0, 0.08); }
+.dark .bg-neutral-alpha-8 { background-color: rgba(255, 255, 255, 0.08); }
+.bg-neutral-alpha-9 { background-color: rgba(0, 0, 0, 0.09); }
+.dark .bg-neutral-alpha-9 { background-color: rgba(255, 255, 255, 0.09); }
 .bg-neutral-alpha-10 { background-color: rgba(0, 0, 0, 0.1); }
 .dark .bg-neutral-alpha-10 { background-color: rgba(255, 255, 255, 0.1); }
 .bg-neutral-alpha-15 { background-color: rgba(0, 0, 0, 0.15); }
@@ -2516,6 +2534,34 @@ button.bg-transparent[type] {
 .dark .bg-neutral-alpha-25 { background-color: rgba(255, 255, 255, 0.25); }
 .bg-neutral-alpha-30 { background-color: rgba(0, 0, 0, 0.3); }
 .dark .bg-neutral-alpha-30 { background-color: rgba(255, 255, 255, 0.3); }
+.bg-neutral-alpha-35 { background-color: rgba(0, 0, 0, 0.35); }
+.dark .bg-neutral-alpha-35 { background-color: rgba(255, 255, 255, 0.35); }
+.bg-neutral-alpha-40 { background-color: rgba(0, 0, 0, 0.4); }
+.dark .bg-neutral-alpha-40 { background-color: rgba(255, 255, 255, 0.4); }
+.bg-neutral-alpha-45 { background-color: rgba(0, 0, 0, 0.45); }
+.dark .bg-neutral-alpha-45 { background-color: rgba(255, 255, 255, 0.45); }
+.bg-neutral-alpha-50 { background-color: rgba(0, 0, 0, 0.5); }
+.dark .bg-neutral-alpha-50 { background-color: rgba(255, 255, 255, 0.5); }
+.bg-neutral-alpha-55 { background-color: rgba(0, 0, 0, 0.55); }
+.dark .bg-neutral-alpha-55 { background-color: rgba(255, 255, 255, 0.55); }
+.bg-neutral-alpha-60 { background-color: rgba(0, 0, 0, 0.6); }
+.dark .bg-neutral-alpha-60 { background-color: rgba(255, 255, 255, 0.6); }
+.bg-neutral-alpha-65 { background-color: rgba(0, 0, 0, 0.65); }
+.dark .bg-neutral-alpha-65 { background-color: rgba(255, 255, 255, 0.65); }
+.bg-neutral-alpha-70 { background-color: rgba(0, 0, 0, 0.7); }
+.dark .bg-neutral-alpha-70 { background-color: rgba(255, 255, 255, 0.7); }
+.bg-neutral-alpha-75 { background-color: rgba(0, 0, 0, 0.75); }
+.dark .bg-neutral-alpha-75 { background-color: rgba(255, 255, 255, 0.75); }
+.bg-neutral-alpha-80 { background-color: rgba(0, 0, 0, 0.8); }
+.dark .bg-neutral-alpha-80 { background-color: rgba(255, 255, 255, 0.8); }
+.bg-neutral-alpha-85 { background-color: rgba(0, 0, 0, 0.85); }
+.dark .bg-neutral-alpha-85 { background-color: rgba(255, 255, 255, 0.85); }
+.bg-neutral-alpha-90 { background-color: rgba(0, 0, 0, 0.9); }
+.dark .bg-neutral-alpha-90 { background-color: rgba(255, 255, 255, 0.9); }
+.bg-neutral-alpha-95 { background-color: rgba(0, 0, 0, 0.95); }
+.dark .bg-neutral-alpha-95 { background-color: rgba(255, 255, 255, 0.95); }
+.bg-neutral-alpha-100 { background-color: rgba(0, 0, 0, 1); }
+.dark .bg-neutral-alpha-100 { background-color: rgba(255, 255, 255, 1); }
 
 /* Dark-mode only neutral alpha backgrounds (transparent in light, white overlay in dark) */
 .bg-neutral-alpha-dark-5 { background-color: transparent; }
@@ -2843,24 +2889,6 @@ button.bg-transparent[type] {
 }
 
 /* Full Opacity Background Colors - Already included in complete system above */
-
-/* Legacy compatibility - keep existing neutral alpha classes */
-.bg-neutral-alpha-2 {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-.dark .bg-neutral-alpha-2 {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Hover state for neutral alpha */
-.hover\:bg-neutral-alpha-2:hover {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-.dark .hover\:bg-neutral-alpha-2:hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
 
 /* Border neutral alpha classes - very subtle borders for theme compatibility */
 .border-neutral-alpha-3 {

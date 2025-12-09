@@ -55,7 +55,8 @@ interface ContentDisplayProps {
   pageId?: string;
   initialSelectionPath?: import('slate').Path;
   showLinkSuggestions?: boolean;
-  
+  onLinkSuggestionsLoadingChange?: (isLoading: boolean) => void;
+
   // Viewing props (only used when isEditable=false)
   showDiff?: boolean;
   showLineNumbers?: boolean;
@@ -91,6 +92,7 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
   pageId,
   initialSelectionPath,
   showLinkSuggestions = false,
+  onLinkSuggestionsLoadingChange,
   showDiff = false,
   showLineNumbers = true,
   isSearch = false,
@@ -127,6 +129,7 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
         pageId={pageId}
         initialSelectionPath={initialSelectionPath}
         showLinkSuggestions={showLinkSuggestions}
+        onLinkSuggestionsLoadingChange={onLinkSuggestionsLoadingChange}
         className={className}
       />
     );

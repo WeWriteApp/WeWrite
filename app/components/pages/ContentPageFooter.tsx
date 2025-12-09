@@ -43,6 +43,7 @@ interface PageFooterProps {
   saveSuccess?: boolean;
   canEdit: boolean;
   showLinkSuggestions?: boolean;
+  isLoadingSuggestions?: boolean;
   onToggleLinkSuggestions?: (enabled: boolean) => void;
 }
 
@@ -98,6 +99,7 @@ export default function ContentPageFooter({
   saveSuccess = false,
   canEdit,
   showLinkSuggestions = false,
+  isLoadingSuggestions = false,
   onToggleLinkSuggestions
 }: PageFooterProps) {
   const { user } = useAuth();
@@ -143,6 +145,7 @@ export default function ContentPageFooter({
           onInsertLink={onInsertLink} // Pass insert link callback
           isSaving={isSaving} // Pass saving state
           showLinkSuggestions={showLinkSuggestions}
+          isLoadingSuggestions={isLoadingSuggestions}
           onToggleLinkSuggestions={onToggleLinkSuggestions}
         />
       )}

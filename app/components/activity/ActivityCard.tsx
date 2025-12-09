@@ -437,8 +437,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               // Only add bottom margin if allocation bar will be shown
               activity.userId && activity.pageId && (!user || user.uid !== activity.userId) ? "mb-3" : ""
             )} onClick={handleCardClick}>
-              {/* Light mode: outlined, Dark mode: filled background (additive/brighter) */}
-              <div className="border border-border dark:border-transparent bg-neutral-alpha-dark-10 rounded-lg p-3 relative">
+              {/* Subtle diff container - no border, just subtle background */}
+              <div className="bg-neutral-alpha-5 rounded-lg p-3 relative">
                 {/* Diff counter at top right of sub-card */}
                 {!isTitleChange && (added > 0 || removed > 0) && (
                   <div className="absolute top-2 right-3 z-10">

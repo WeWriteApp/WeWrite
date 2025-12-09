@@ -30,6 +30,8 @@ import { createPortal } from 'react-dom';
 import { useLinkSuggestions, LinkSuggestionState, LinkSuggestionActions } from '../../hooks/useLinkSuggestions';
 import { useAuth } from '../../providers/AuthProvider';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
+import { PillLink } from '../utils/PillLink';
+import { UsernameBadge } from '../ui/UsernameBadge';
 
 // Simple error boundary - no complex recovery mechanisms
 class SimpleErrorBoundary extends React.Component<
@@ -79,6 +81,7 @@ interface EditorProps {
   onInsertLinkRequest?: (triggerFn: () => void) => void;
   initialSelectionPath?: Path; // Optional initial cursor position
   showLinkSuggestions?: boolean; // Show link suggestion underlines when enabled
+  onLinkSuggestionsLoadingChange?: (isLoading: boolean) => void; // Callback when loading state changes
 }
 
 const Editor: React.FC<EditorProps> = ({
@@ -90,7 +93,8 @@ const Editor: React.FC<EditorProps> = ({
   className,
   onInsertLinkRequest,
   initialSelectionPath,
-  showLinkSuggestions = false
+  showLinkSuggestions = false,
+  onLinkSuggestionsLoadingChange
 }) => {
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
   const { user } = useAuth();
@@ -128,6 +132,11 @@ const Editor: React.FC<EditorProps> = ({
       });
     }
   }, [linkSuggestionState.allSuggestions]);
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    onLinkSuggestionsLoadingChange?.(linkSuggestionState.isLoading);
+  }, [linkSuggestionState.isLoading, onLinkSuggestionsLoadingChange]);
 
   // Link deletion plugin - allows deleting links with backspace/delete keys
   const withLinkDeletion = useCallback((editor: ReactEditor) => {
@@ -473,13 +482,15 @@ const Editor: React.FC<EditorProps> = ({
   const insertLinkFromSuggestion = useCallback((suggestion: LinkSuggestion) => {
     console.log('🔗 [SUGGESTION] Inserting link from suggestion:', suggestion);
 
-    // Find the text in the editor and wrap it with a link
+    // Find the text in the editor and wrap it with a link (case-insensitive)
     const searchText = suggestion.matchedText;
+    const searchTextLower = searchText.toLowerCase();
 
     // Search through all text nodes to find the matched text
     for (const [node, path] of SlateNode.texts(editor)) {
       const text = node.text;
-      const index = text.indexOf(searchText);
+      const textLower = text.toLowerCase();
+      const index = textLower.indexOf(searchTextLower);
 
       if (index !== -1) {
         // Found the text, select it and insert a link
@@ -502,6 +513,8 @@ const Editor: React.FC<EditorProps> = ({
         linkSuggestionActions.dismissSuggestion(searchText);
         setShowSuggestionModal(false);
         setActiveSuggestionForModal(null);
+
+        console.log('🔗 [SUGGESTION] Successfully inserted link');
         break;
       }
     }
@@ -1072,11 +1085,26 @@ const Editor: React.FC<EditorProps> = ({
               <p className="text-muted-foreground mb-4">
                 Link "<span className="font-medium text-foreground">{activeSuggestionForModal.matchedText}</span>" to:
               </p>
-              <div className="bg-muted/50 rounded-lg p-3 mb-6">
-                <p className="font-medium">{activeSuggestionForModal.title}</p>
-                {activeSuggestionForModal.username && activeSuggestionForModal.username !== activeSuggestionForModal.userId && (
-                  <p className="text-sm text-muted-foreground">by @{activeSuggestionForModal.username}</p>
-                )}
+              <div className="bg-neutral-alpha-5 rounded-lg p-4 mb-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <PillLink
+                    href={`/${activeSuggestionForModal.id}`}
+                    pageId={activeSuggestionForModal.id}
+                    clickable={false}
+                  >
+                    {activeSuggestionForModal.title}
+                  </PillLink>
+                  {activeSuggestionForModal.username && activeSuggestionForModal.username !== activeSuggestionForModal.userId && (
+                    <span className="text-sm text-muted-foreground">
+                      by <UsernameBadge
+                        username={activeSuggestionForModal.username}
+                        userId={activeSuggestionForModal.userId}
+                        showBadge={false}
+                        size="sm"
+                      />
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <button
