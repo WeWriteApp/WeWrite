@@ -165,7 +165,13 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
       }
 
       if (append) {
-        setEdits(prev => [...prev, ...(data.edits || [])]);
+        // Deduplicate by page ID to avoid duplicate key errors
+        // Keep existing edits and only add new ones that don't already exist
+        setEdits(prev => {
+          const existingIds = new Set(prev.map(e => e.id));
+          const newEdits = (data.edits || []).filter((e: RecentEdit) => !existingIds.has(e.id));
+          return [...prev, ...newEdits];
+        });
         setAutoLoadCount(prev => prev + 1);
       } else {
         setEdits(data.edits || []);

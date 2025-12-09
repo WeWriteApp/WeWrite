@@ -233,10 +233,10 @@ export function FinancialDropdown({
   );
 
   return (
-    <div ref={containerRef} className={cn("relative inline-block", className)}>
+    <div ref={containerRef} className={cn("relative inline-flex items-center h-full", className)}>
       {/* Trigger - clicking toggles dropdown */}
       <div
-        className="cursor-pointer"
+        className="cursor-pointer flex items-center h-full"
         onClick={toggleDropdown}
         role="button"
         aria-expanded={isOpen}

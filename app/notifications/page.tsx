@@ -140,11 +140,11 @@ function NotificationsContent() {
             )}
           </>
         ) : (
-          <div className="bg-card rounded-xl border-theme-strong shadow-sm p-8 text-center">
+          <div className="wewrite-card p-8 text-center">
             <h3 className="text-lg font-medium mb-2">
               {filter === 'unread' ? 'No unreads' : 'No notifications yet'}
             </h3>
-            <p className="text-sm text-foreground opacity-80 max-w-md mx-auto">
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
               {filter === 'unread'
                 ? "You're all caught up! No unread notifications at the moment."
                 : "When someone follows your pages, links to them, or adds them to their own pages, you'll see notifications here."

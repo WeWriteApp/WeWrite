@@ -76,9 +76,9 @@ export function FloatingCard({
   const variantClasses = {
     default: "",
     toolbar: cn(
-      // Expanded: fully opaque white in light mode, semi-transparent in dark mode
-      // Collapsed: semi-transparent (default from wewrite-card)
-      isExpanded && "!bg-white dark:!bg-neutral-alpha-80 !border !border-border dark:backdrop-blur-xl"
+      // Light mode: always opaque white background
+      // Dark mode: semi-transparent with blur
+      "!bg-white dark:!bg-neutral-alpha-80 !border !border-border dark:backdrop-blur-xl"
     ),
     header: "",
     overlay: cn(

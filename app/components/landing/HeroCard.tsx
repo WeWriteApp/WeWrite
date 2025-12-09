@@ -162,19 +162,19 @@ export default function HeroCard({
 
   return (
     <Card className="h-full wewrite-card">
-      <CardContent className="p-6 md:p-8 flex flex-col justify-center min-h-[500px]">
+      <CardContent className="p-2 md:p-3 flex flex-col justify-center min-h-[280px]">
         <div className="text-center max-w-4xl mx-auto">
           {/* Hero Text */}
-          <div className={`mb-8 ${fadeInClass}`}>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+          <div className={`mb-4 ${fadeInClass}`}>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
               Write, share, earn.
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-6 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-muted-foreground mb-4 max-w-3xl mx-auto">
               WeWrite is a free speech social writing app where every page is a fundraiser.
             </p>
 
             {/* Platform Statistics */}
-            <div className="mb-8 max-w-3xl mx-auto">
+            <div className="mb-4 max-w-3xl mx-auto">
               {error ? (
                 <p className="text-lg text-red-600 dark:text-red-400">
                   Unable to load platform statistics: {error}
@@ -183,18 +183,18 @@ export default function HeroCard({
                 <div className="flex flex-col items-center gap-4">
                   <div className="text-lg md:text-xl text-muted-foreground text-center">
                     Join{' '}
-                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-muted-foreground bg-muted">
+                    <span className="font-semibold text-foreground">
                       {isLoading || writerCount === null ? (
-                        <span className="flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           writers
                         </span>
                       ) : (
                         `${writerCount.toLocaleString()} writers`
                       )}
-                    </Badge>
+                    </span>
                     {' '}who've made{' '}
-                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl text-success bg-success-20 border-success-30 hover:bg-success-25 dark:bg-success-15 dark:border-success-30 dark:hover:bg-success-20">
+                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl shiny-chip shiny-chip-success !text-white">
                       {isLoading || totalPayouts === null ? (
                         <span className="flex items-center gap-1">
                           $<Loader2 className="h-4 w-4 animate-spin" />

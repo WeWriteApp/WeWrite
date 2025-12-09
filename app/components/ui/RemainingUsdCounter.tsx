@@ -67,7 +67,7 @@ export function RemainingFundsDisplay({
   return (
     <div className={`inline-flex items-center gap-2 cursor-pointer ${className}`} onClick={onClick} title={titleText}>
       {/* Pie Chart - outside the chip */}
-      <div className="relative flex items-center">
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
         <svg
           width={size}
           height={size}
@@ -105,7 +105,7 @@ export function RemainingFundsDisplay({
       </div>
 
       {/* Dollar amount chip - separate from pie chart */}
-      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors text-sm font-semibold">
+      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border-transparent bg-neutral-10 text-foreground hover:bg-neutral-15 transition-colors text-sm font-semibold">
         <span>{displayText}</span>
       </div>
     </div>

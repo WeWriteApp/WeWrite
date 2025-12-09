@@ -571,7 +571,7 @@ function UnifiedSidebarContent({
               <button
                 onClick={() => router.push('/settings/fund-account')}
                 className={cn(
-                  "h-10 flex items-center rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium",
+                  "h-10 flex items-center rounded-lg shiny-add-funds-chip !text-white",
                   "transition-all duration-300 ease-out cursor-pointer border-0",
                   showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
                 )}

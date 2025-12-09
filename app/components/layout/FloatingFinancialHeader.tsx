@@ -182,7 +182,7 @@ export default function FloatingFinancialHeader({
               className={`cursor-pointer transition-colors text-sm ${
                 isZeroEarnings
                   ? ''
-                  : 'text-success bg-success-20 border-success-30 hover:bg-success-25 dark:bg-success-15 dark:border-success-30 dark:hover:bg-success-20'
+                  : 'shiny-chip shiny-chip-success !text-white'
               }`}
             >
               {formatUsdCents(displayAmount * 100)}
@@ -280,7 +280,7 @@ export default function FloatingFinancialHeader({
       return (
         <Badge
           variant="secondary"
-          className="cursor-pointer shiny-add-funds-chip text-sm px-3 py-1"
+          className="cursor-pointer shiny-add-funds-chip text-sm px-3 py-1 !text-white"
           onClick={() => router.push('/settings/fund-account')}
           title="Click to add funds"
         >
