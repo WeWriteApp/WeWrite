@@ -90,7 +90,7 @@ export default function PillLinkContextMenu({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.1 }}
-          className="fixed z-50 bg-background border border-border rounded-lg shadow-lg py-1 min-w-[160px] overflow-hidden"
+          className="fixed z-50 wewrite-card wewrite-floating wewrite-card-no-padding wewrite-card-rounded-lg py-1 min-w-[160px] overflow-hidden"
           style={{
             left: adjustedPosition.x,
             top: adjustedPosition.y,

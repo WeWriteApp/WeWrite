@@ -729,7 +729,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     <>
       <div
         ref={menuRef}
-        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden text-selection-menu"
+        className="fixed z-50 wewrite-card wewrite-floating wewrite-card-no-padding wewrite-card-rounded-lg overflow-hidden text-selection-menu"
         style={menuStyle}
       >
         <div className="relative flex items-center">
