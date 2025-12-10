@@ -41,6 +41,7 @@ import { PWAProvider } from "./providers/PWAProvider"
 import { BannerProvider } from "./providers/BannerProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
@@ -141,6 +142,7 @@ export default function RootLayout({
             </ThemeProvider>
         </UnifiedErrorBoundary>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   )

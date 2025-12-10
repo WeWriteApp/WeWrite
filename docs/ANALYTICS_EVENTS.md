@@ -2,7 +2,7 @@
 
 This document is the **single source of truth** for WeWrite's analytics implementation. It documents all tracked events, identifies key product metrics, highlights tracking gaps, and provides implementation guidance.
 
-**Last Updated:** December 3, 2025
+**Last Updated:** December 9, 2025
 
 ---
 
@@ -20,9 +20,18 @@ This document is the **single source of truth** for WeWrite's analytics implemen
 ## Architecture Overview
 
 ### Analytics Providers
-WeWrite uses a **dual-provider approach**:
+WeWrite uses a **multi-provider approach**:
 1. **Google Analytics 4 (GA4)** - Primary analytics via `react-ga4`
 2. **Firebase Analytics** - Secondary tracking for mobile/PWA
+3. **Vercel Analytics** - Web vitals and traffic analytics (re-enabled December 2025)
+4. **Vercel Speed Insights** - Performance monitoring
+
+### Vercel Analytics Integration
+Vercel Analytics is enabled in `app/layout.tsx` and provides:
+- Automatic page view tracking
+- Web vitals monitoring (LCP, FID, CLS)
+- Traffic analytics and geographic data
+- No configuration required - works automatically when deployed to Vercel
 
 ### Source Files
 | File | Purpose |
@@ -32,6 +41,44 @@ WeWrite uses a **dual-provider approach**:
 | `app/hooks/useWeWriteAnalytics.ts` | React hook for component-level tracking |
 | `app/utils/pwaAnalytics.ts` | PWA-specific analytics |
 | `app/services/subscriptionAnalyticsService.ts` | Subscription funnel tracking (Firestore) |
+| `app/utils/pageViewBatcher.ts` | Page view batching for Firestore |
+| `app/firebase/pageViews.ts` | Page view recording and retrieval |
+
+### Page View Count System
+
+WeWrite tracks page views internally using Firestore for trending pages and content analytics.
+
+#### Key Requirements
+- **Anonymous views ARE counted** - The system tracks views from both logged-in and logged-out users
+- Views are batched to reduce Firestore write operations by 90%+
+- Page owners' views of their own pages are NOT counted (prevents self-inflation)
+- Duplicate views in the same session are deduplicated
+
+#### How It Works
+1. When a page is viewed, `recordPageView(pageId, userId)` is called from `ContentPageView.tsx`
+2. The `userId` parameter is optional - passing `null` or `undefined` counts as anonymous view
+3. Views are batched in memory and flushed to Firestore every 5 minutes or when batch size reaches 500
+4. Each page has hourly view counts stored in the `pageViews` collection
+
+#### Data Structure
+```typescript
+// pageViews collection document (pageId_YYYY-MM-DD)
+{
+  pageId: string,
+  date: "YYYY-MM-DD",
+  hours: { 0: count, 1: count, ... 23: count },
+  totalViews: number,
+  uniqueUsers: number,
+  sessions: number,
+  lastUpdated: Timestamp
+}
+```
+
+#### Files Involved
+- `app/utils/pageViewBatcher.ts` - Batching logic
+- `app/firebase/pageViews.ts` - Recording and retrieval functions
+- `app/components/pages/ContentPageView.tsx` - Triggers view recording
+- `app/api/analytics/page-view/route.ts` - API endpoint for server-side recording
 
 ### Event Categories
 ```typescript
