@@ -667,21 +667,21 @@ const FilteredSearchResults = forwardRef(({
           <>
             {/* Pages Section */}
             {pages.length > 0 && (
-              <div className="space-y-1 mb-4">
+              <div className="space-y-2 mb-4">
                 <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
                   {isLinkEditor && isSearchMode ? 'Pages' :
                    isSearchMode ? 'Search Results' :
                    (activeFilter === 'recent' ? 'Recently Viewed' : 'My Pages')}
                 </h3>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {pages.map((page) => {
                     const isAlreadyLinked = Array.isArray(linkedPageIds) && linkedPageIds.includes(page.id);
                     return (
                       <button
                         key={page.id}
                         onClick={() => handleSelect(page)}
-                        className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                          selectedId === page.id ? 'bg-muted' : ''
+                        className={`w-full text-left p-3 wewrite-card hover:bg-muted/50 transition-colors ${
+                          selectedId === page.id ? 'bg-muted/50 ring-2 ring-primary/50' : ''
                         } ${isAlreadyLinked ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
@@ -736,17 +736,17 @@ const FilteredSearchResults = forwardRef(({
 
             {/* Users Section - only show in link editor mode */}
             {isLinkEditor && users.length > 0 && (
-              <div className="space-y-1 mb-4">
+              <div className="space-y-2 mb-4">
                 <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
                   User Profiles
                 </h3>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {users.map((userItem) => (
                     <button
                       key={userItem.id}
                       onClick={() => handleSelect(userItem)}
-                      className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                        selectedId === userItem.id ? 'bg-muted' : ''
+                      className={`w-full text-left p-3 wewrite-card hover:bg-muted/50 transition-colors ${
+                        selectedId === userItem.id ? 'bg-muted/50 ring-2 ring-primary/50' : ''
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -827,11 +827,13 @@ const FilteredSearchResults = forwardRef(({
 
                   if (response.ok) {
                     const result = await response.json();
-                    console.log('✅ Created new page from link editor:', { title: search, id: result.id });
+                    // API returns { success: true, data: { id: pageId } }
+                    const pageId = result.data?.id || result.id || generatedPageId;
+                    console.log('✅ Created new page from link editor:', { title: search, id: pageId });
 
                     // Return the real page data with actual ID
                     const newPageData = {
-                      id: result.id, // Use the real page ID from the database
+                      id: pageId, // Use the real page ID from the database
                       title: search,
                       isNew: false, // Page already exists now
                       isPublic: false,

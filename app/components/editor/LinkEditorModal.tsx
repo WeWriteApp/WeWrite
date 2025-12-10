@@ -6,7 +6,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
-import { Link, ExternalLink, Users, FileText, X } from 'lucide-react';
+import { Link, ExternalLink, Users, FileText, X, Type, Globe } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
@@ -650,36 +650,39 @@ export default function LinkEditorModal({
               {customText && (
                 <div className="flex-shrink-0 animate-in slide-in-from-top-2 duration-200" style={{ pointerEvents: 'auto' }}>
                   <div className="space-y-2">
-                    <Input
-                      ref={customTextInputRef}
-                      id="display-text"
-                      value={displayText}
-                      onChange={handleDisplayTextChange}
-                      placeholder="Enter custom link text"
-                      className="w-full min-w-0"
-                      autoComplete="off"
-                      onFocus={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onBlur={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onKeyUp={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onInput={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    />
+                    <div className="relative">
+                      <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        ref={customTextInputRef}
+                        id="display-text"
+                        value={displayText}
+                        onChange={handleDisplayTextChange}
+                        placeholder="Enter custom link text"
+                        className="w-full min-w-0 pl-9"
+                        autoComplete="off"
+                        onFocus={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onBlur={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onKeyUp={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onInput={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -763,25 +766,28 @@ export default function LinkEditorModal({
             <div className="flex flex-col space-y-3 transition-all duration-200 ease-out">
               <div className="space-y-2">
                 <Label htmlFor="external-url">URL</Label>
-                <Input
-                  ref={externalUrlInputRef}
-                  id="external-url"
-                  value={externalUrl}
-                  onChange={handleExternalUrlChange}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && externalUrl.trim() && !customText) {
-                      e.preventDefault();
-                      handleCreateExternalLink();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    // Ensure paste events are handled properly in the modal
-                    e.stopPropagation();
-                  }}
-                  placeholder="https://example.com"
-                  className="w-full"
-                  autoComplete="off"
-                />
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    ref={externalUrlInputRef}
+                    id="external-url"
+                    value={externalUrl}
+                    onChange={handleExternalUrlChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && externalUrl.trim() && !customText) {
+                        e.preventDefault();
+                        handleCreateExternalLink();
+                      }
+                    }}
+                    onPaste={(e) => {
+                      // Ensure paste events are handled properly in the modal
+                      e.stopPropagation();
+                    }}
+                    placeholder="https://example.com"
+                    className="w-full pl-9"
+                    autoComplete="off"
+                  />
+                </div>
               </div>
 
               {/* Custom Text Switch */}
@@ -803,38 +809,41 @@ export default function LinkEditorModal({
               {/* Custom Text Input - Show when enabled */}
               {customText && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                  <Input
-                    ref={externalCustomTextInputRef}
-                    id="display-text-external"
-                    value={externalCustomText}
-                    onChange={handleExternalCustomTextChange}
-                    placeholder="Enter custom link text"
-                    className="w-full min-w-0"
-                    autoComplete="off"
-                    onFocus={(e) => {
-                      e.stopPropagation();
-                      console.log('🔒 FOCUS on external custom text input');
-                    }}
-                    onBlur={(e) => {
-                      e.stopPropagation();
-                      console.log('🔓 BLUR from external custom text input');
-                    }}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onKeyUp={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onInput={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  />
+                  <div className="relative">
+                    <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      ref={externalCustomTextInputRef}
+                      id="display-text-external"
+                      value={externalCustomText}
+                      onChange={handleExternalCustomTextChange}
+                      placeholder="Enter custom link text"
+                      className="w-full min-w-0 pl-9"
+                      autoComplete="off"
+                      onFocus={(e) => {
+                        e.stopPropagation();
+                        console.log('🔒 FOCUS on external custom text input');
+                      }}
+                      onBlur={(e) => {
+                        e.stopPropagation();
+                        console.log('🔓 BLUR from external custom text input');
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onKeyUp={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onInput={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -842,8 +851,8 @@ export default function LinkEditorModal({
         </div>
       </div>
 
-      {/* Sticky Footer with Action Button */}
-      <div className="flex-shrink-0 border-t border-border bg-background/95 backdrop-blur-sm p-4 mt-4 pb-6">
+      {/* Footer with Action Button */}
+      <div className="flex-shrink-0 px-4 pb-4">
         {activeTab === 'pages' ? (
           <Button
             onClick={handleCreatePageLink}

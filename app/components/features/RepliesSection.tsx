@@ -128,7 +128,7 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
   };
 
   return (
-    <div className={cn("rounded-2xl border border-border bg-card", className)}>
+    <div className={cn("wewrite-card", className)}>
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <MessageCircle className="w-4 h-4 text-muted-foreground" />
@@ -213,7 +213,7 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
                 key={reply.id}
                 href={`/${reply.id}`}
                 className={cn(
-                  "block p-3 rounded-lg border-l-4 bg-muted/30 hover:bg-muted/50 transition-colors",
+                  "block p-3 wewrite-card border-l-4 hover:bg-muted/50 transition-colors",
                   getReplyTypeStyles(reply.replyType)
                 )}
               >

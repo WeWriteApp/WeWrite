@@ -3780,17 +3780,11 @@ button.bg-transparent[type] {
 }
 
 /* SIMPLIFIED: Save header body class for consistent content pushing */
-/* Transform the page content wrapper to slide everything down together */
+/* Use padding instead of transform to avoid conflicts with Framer Motion */
 
 body.has-sticky-save-header .page-content-wrapper {
-  transform: translateY(56px);
-  transition: transform 300ms ease-out;
-}
-
-/* Don't transform fixed elements or portals */
-body.has-sticky-save-header [data-radix-portal],
-body.has-sticky-save-header [data-portal] {
-  transform: none !important;
+  padding-top: 56px;
+  transition: padding-top 300ms ease-out;
 }
 
 /* ============================================
