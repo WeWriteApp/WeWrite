@@ -467,18 +467,25 @@ function NewPageContent() {
     }
   }, [isReply, editorState]);
 
-  // Handle back navigation
+  // Handle back navigation - use browser history to return to previous context
   const handleBack = () => {
-    let backUrl = '/';
-
+    // For replies, we want to go back to the specific page being replied to
     if (isReply && searchParams) {
       const replyToId = searchParams.get('replyTo');
       if (replyToId) {
-        backUrl = `/${replyToId}`;
+        router.push(`/${replyToId}`);
+        return;
       }
     }
 
-    router.push(backUrl);
+    // For all other cases (including map flow), use browser back to preserve context
+    // This allows users to return to wherever they came from (map, search, profile, etc.)
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      // Fallback to home if no history
+      router.push('/');
+    }
   };
 
   // Handle title changes
@@ -1116,18 +1123,26 @@ function NewPageContent() {
 
   // Handle back navigation with unsaved changes check
   const handleBackWithCheck = () => {
-    let backUrl = '/';
-
-    if (isReply && searchParams) {
-      const replyToId = searchParams.get('replyTo');
-      if (replyToId) {
-        backUrl = `/${replyToId}`;
-      }
-    }
-
     const navigateAway = () => {
       setIsClosing(true);
-      setTimeout(() => router.push(backUrl), 320);
+
+      // For replies, go to the specific page being replied to
+      if (isReply && searchParams) {
+        const replyToId = searchParams.get('replyTo');
+        if (replyToId) {
+          setTimeout(() => router.push(`/${replyToId}`), 320);
+          return;
+        }
+      }
+
+      // For all other cases (including map flow), use browser back to preserve context
+      // This allows users to return to wherever they came from (map, search, profile, etc.)
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        setTimeout(() => router.back(), 320);
+      } else {
+        // Fallback to home if no history
+        setTimeout(() => router.push('/'), 320);
+      }
     };
 
     // CRITICAL FIX: Use system dialog for unsaved changes confirmation

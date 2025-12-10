@@ -750,18 +750,10 @@ function MapPageContent() {
       {/* New Pin Drawer - using proper Drawer component, no overlay to see pin */}
       <Drawer open={showNewPinDrawer && !!newPinLocation} onOpenChange={(open) => !open && cancelNewPin()}>
         <DrawerContent height="auto" noOverlay>
-          <DrawerHeader>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-green-600" />
-              <DrawerTitle>Add page here?</DrawerTitle>
-            </div>
-            {newPinLocation && (
-              <p className="text-xs text-muted-foreground">
-                {newPinLocation.lat.toFixed(6)}, {newPinLocation.lng.toFixed(6)}
-              </p>
-            )}
+          <DrawerHeader className="border-b-0 pb-2">
+            <DrawerTitle className="text-center w-full">Add page here?</DrawerTitle>
           </DrawerHeader>
-          <DrawerFooter className="flex-col gap-2">
+          <DrawerFooter className="flex-col gap-2 pb-8">
             <Button
               onClick={handleCreateNewPage}
               className="w-full justify-start gap-3"

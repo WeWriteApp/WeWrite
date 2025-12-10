@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Maximize2, X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2 } from 'lucide-react';
+import { Maximize2, X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2, Loader2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';

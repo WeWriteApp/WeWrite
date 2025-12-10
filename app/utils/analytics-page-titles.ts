@@ -100,9 +100,9 @@ export function getAnalyticsPageTitle(
        document.cookie.includes('authenticated=true'));
 
     if (!currentUser && !hasLocalStorageAuth) {
-      return "Landing";
+      return "Landing page - Logged out";
     } else {
-      return "Home";
+      return "Home - Logged in";
     }
   }
 

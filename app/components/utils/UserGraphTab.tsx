@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Maximize2, X, Link2, FileText, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Maximize2, X, Link2, FileText, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { graphDataCache } from '../../utils/graphDataCache';
