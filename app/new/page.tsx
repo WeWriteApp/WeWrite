@@ -170,9 +170,8 @@ function NewPageContent() {
   const [isClosing, setIsClosing] = useState(false);
   const replyInitialSelectionPath = useMemo<Path | undefined>(() => (isReply ? [1, 0] : undefined), [isReply]);
 
-  // Ensure reply view starts at the top (avoid starting mid-scroll)
+  // Ensure page starts at the top (avoid starting mid-scroll)
   useEffect(() => {
-    if (!isReply) return;
     const originalScrollRestoration = typeof window !== 'undefined' ? window.history.scrollRestoration : undefined;
     if (typeof window !== 'undefined' && window.history.scrollRestoration) {
       window.history.scrollRestoration = 'manual';
@@ -186,7 +185,10 @@ function NewPageContent() {
       }
     };
 
-    // Kick to next frame and again after short delay to override browser scroll restoration
+    // Immediate scroll to top
+    scrollToTop();
+
+    // Also kick to next frame and again after short delay to override browser scroll restoration
     const rafId = requestAnimationFrame(scrollToTop);
     const timeoutId = window.setTimeout(scrollToTop, 50);
 

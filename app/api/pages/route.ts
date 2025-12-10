@@ -655,6 +655,20 @@ export async function POST(request: NextRequest) {
         hasChanges: versionData.diff.hasChanges
       });
 
+      // Update page document with lastDiff for recent edits display
+      await pageRef.update({
+        currentVersion: versionRef.id,
+        lastDiff: {
+          added: diffResult.added || 0,
+          removed: diffResult.removed || 0,
+          hasChanges: true,
+          isNewPage: true,
+          preview: versionData.diffPreview
+        }
+      });
+
+      console.log("✅ PAGE CREATION: Updated page with lastDiff and currentVersion");
+
       // Process link mentions for notifications
       try {
         console.log('🔔 Processing link mentions for notifications:', pageId);
@@ -1058,94 +1072,99 @@ export async function PUT(request: NextRequest) {
         console.log('🔄 TITLE_CHANGE: Content was also updated, keeping content diff (more meaningful than title diff)');
       }
 
-      // Update all links immediately - but don't fail the save if this errors
-      try {
-        await updateAllLinksToPage(id, pageData.title, title.trim());
-        console.log('✅ TITLE_CHANGE: All links updated successfully');
-      } catch (propagationError) {
-        // Log but don't fail - the title save already succeeded
-        console.error('❌ TITLE_CHANGE: Error propagating title to links (save succeeded):', propagationError);
-      }
+      // Update all links in background - don't block the save response
+      // This is expensive (scans all pages) so we fire and forget
+      updateAllLinksToPage(id, pageData.title, title.trim())
+        .then(() => console.log('✅ TITLE_CHANGE: Links updated in background'))
+        .catch(err => console.error('❌ TITLE_CHANGE: Background link update failed:', err));
     }
 
-    // Update backlinks index when content is updated
+    // PERFORMANCE OPTIMIZATION: Run non-blocking operations in background
+    // These operations don't need to complete before returning to user
     if (content !== undefined) {
-      try {
-        console.log('🔗 Updating backlinks index for page:', id);
-        const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
-
-        // Parse content to extract links
-        let contentNodes = [];
-        if (content) {
-          if (typeof content === 'string') {
-            try {
-              contentNodes = JSON.parse(content);
-            } catch (parseError) {
-              console.warn('Could not parse content string for backlinks indexing:', parseError);
-            }
-          } else if (Array.isArray(content)) {
-            // Content is already parsed as an array
-            contentNodes = content;
-          } else {
-            console.warn('Unexpected content type for backlinks indexing:', typeof content);
+      // Parse content once for both operations
+      let contentNodes: any[] = [];
+      if (content) {
+        if (typeof content === 'string') {
+          try {
+            contentNodes = JSON.parse(content);
+          } catch (parseError) {
+            console.warn('Could not parse content string:', parseError);
           }
+        } else if (Array.isArray(content)) {
+          contentNodes = content;
         }
-
-        // Get the updated page data
-        const updatedPageDoc = await pageRef.get();
-        const updatedPageData = updatedPageDoc.data();
-
-        await updateBacklinksIndex(
-          id,
-          updatedPageData?.title || title || 'Untitled',
-          updatedPageData?.username || 'Anonymous',
-          contentNodes,
-          updatedPageData?.isPublic || false,
-          new Date().toISOString()
-        );
-
-        console.log('✅ Backlinks index updated for page:', id);
-      } catch (backlinkError) {
-        console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
-        // Don't fail the page update if backlinks update fails
       }
 
-      // Process link mentions for notifications
-      try {
-        console.log('🔔 Processing link mentions for notifications:', id);
-        const { processPageLinksForNotifications } = await import('../../services/linkMentionService');
+      // Run backlinks and notifications in parallel (non-blocking)
+      const backgroundOps = async () => {
+        const pageTitle = title?.trim() || pageData?.title || 'Untitled';
+        const pageUsername = pageData?.username || 'Anonymous';
 
-        // Parse content to extract links
-        let contentNodes = [];
-        if (content) {
-          if (typeof content === 'string') {
+        await Promise.allSettled([
+          // Update backlinks index
+          (async () => {
             try {
-              contentNodes = JSON.parse(content);
-            } catch (parseError) {
-              console.warn('Could not parse content string for notification processing:', parseError);
+              console.log('🔗 [BG] Updating backlinks index for page:', id);
+              const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
+              await updateBacklinksIndex(
+                id,
+                pageTitle,
+                pageUsername,
+                contentNodes,
+                pageData?.isPublic || false,
+                new Date().toISOString()
+              );
+              console.log('✅ [BG] Backlinks index updated');
+            } catch (err) {
+              console.error('⚠️ [BG] Backlinks update failed:', err);
             }
-          } else if (Array.isArray(content)) {
-            contentNodes = content;
-          }
-        }
+          })(),
 
-        // Get the updated page data
-        const updatedPageDoc = await pageRef.get();
-        const updatedPageData = updatedPageDoc.data();
+          // Process link mentions for notifications
+          (async () => {
+            try {
+              console.log('🔔 [BG] Processing link mentions for page:', id);
+              const { processPageLinksForNotifications } = await import('../../services/linkMentionService');
+              await processPageLinksForNotifications(
+                id,
+                pageTitle,
+                currentUserId,
+                pageUsername,
+                contentNodes
+              );
+              console.log('✅ [BG] Link mentions processed');
+            } catch (err) {
+              console.error('⚠️ [BG] Link mentions failed:', err);
+            }
+          })(),
 
-        await processPageLinksForNotifications(
-          id,
-          updatedPageData?.title || title || 'Untitled',
-          currentUserId,
-          updatedPageData?.username || 'Anonymous',
-          contentNodes
-        );
+          // Rebuild graph cache for this page (fire-and-forget API call)
+          (async () => {
+            try {
+              console.log('📊 [BG] Triggering graph cache rebuild for page:', id);
+              // Use internal fetch to trigger cache rebuild
+              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
+                ? `https://${process.env.VERCEL_URL}`
+                : 'http://localhost:3000';
 
-        console.log('✅ Link mentions processed for notifications');
-      } catch (notificationError) {
-        console.error('⚠️ Error processing link mentions (non-fatal):', notificationError);
-        // Don't fail the page update if notification processing fails
-      }
+              fetch(`${baseUrl}/api/graph-cache/rebuild`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pageId: id, invalidateAffected: true })
+              }).catch(err => {
+                console.error('⚠️ [BG] Graph cache rebuild request failed:', err);
+              });
+              console.log('✅ [BG] Graph cache rebuild triggered');
+            } catch (err) {
+              console.error('⚠️ [BG] Graph cache trigger failed:', err);
+            }
+          })()
+        ]);
+      };
+
+      // Fire and forget - don't await
+      backgroundOps().catch(err => console.error('⚠️ Background ops failed:', err));
     }
 
     console.log('✅ API: Page save completed successfully', {
@@ -1157,16 +1176,13 @@ export async function PUT(request: NextRequest) {
       updateFields: Object.keys(updateData)
     }, 'PAGE_SAVE');
 
-    // SIMPLIFIED CACHE INVALIDATION: Single function call
-    try {
-      console.log('🗑️ UNIFIED CACHE: Invalidating page data for:', id);
-      const { invalidatePageData } = await import('../../utils/unifiedCache');
-      invalidatePageData(id, currentUserId);
-      console.log('✅ UNIFIED CACHE: Page invalidation completed');
-    } catch (cacheError) {
-      console.warn('⚠️ UNIFIED CACHE: Error clearing caches (non-fatal):', cacheError);
-      // Don't fail the save if cache invalidation fails
-    }
+    // SIMPLIFIED CACHE INVALIDATION: Fire and forget (non-blocking)
+    import('../../utils/unifiedCache')
+      .then(({ invalidatePageData }) => {
+        invalidatePageData(id, currentUserId);
+        console.log('✅ Cache invalidated for:', id);
+      })
+      .catch(err => console.warn('⚠️ Cache invalidation failed:', err));
 
     const responseData = {
       id,

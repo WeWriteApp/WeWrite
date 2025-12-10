@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import PillLink from '../utils/PillLink';
+import { Button } from '../ui/button';
 import { Plus } from 'lucide-react';
 
 interface Note {
@@ -81,7 +82,7 @@ const DayContainer = React.memo(function DayContainer({
           isFullPage
             ? "flex-shrink-0 w-80 min-h-[400px] max-h-[80vh]"
             : "flex-shrink-0 w-48 h-52",
-          "rounded-xl overflow-hidden",
+          "rounded-xl overflow-visible",
           // Add accent border for today's card using dedicated CSS class
           isToday && "wewrite-today",
           className
@@ -107,13 +108,13 @@ const DayContainer = React.memo(function DayContainer({
         </div>
 
         {/* Notes Pills Container - takes up available space */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 relative">
           {/* Notes Pills - different layout for full page vs card view */}
           <div className={cn(
             "flex flex-wrap gap-2 items-start flex-1",
             isFullPage
               ? "overflow-y-auto" // Allow scrolling in full page view
-              : "overflow-hidden max-h-[4.5rem]", // Restrict height in card view
+              : "overflow-hidden max-h-[4.5rem]", // Clip bottom in card view
             // Center empty state content vertically and horizontally
             notes.length === 0 && "items-center justify-center"
           )}>
@@ -153,6 +154,10 @@ const DayContainer = React.memo(function DayContainer({
               </div>
             )}
           </div>
+          {/* Gradient fade at bottom for card view when there are notes */}
+          {!isFullPage && notes.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[var(--card)] to-transparent pointer-events-none" />
+          )}
         </div>
 
         {/* Bottom Actions Container - always at bottom */}
@@ -169,22 +174,15 @@ const DayContainer = React.memo(function DayContainer({
 
           {/* Add New Button - only show if onAddNewClick is provided (Timeline) */}
           {onAddNewClick && (
-            <button
-              className={cn(
-                "w-full flex items-center justify-center gap-2 px-3 py-2",
-                "rounded-lg border transition-all duration-200",
-                "text-sm font-medium hover:scale-[1.02] active:scale-[0.98]",
-                "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/40",
-                // Regular outline button style for all states
-                "bg-transparent border-neutral-20 text-accent-100",
-                "hover:bg-accent-10 hover:border-accent-100",
-                "active:bg-accent-15 active:border-accent-100"
-              )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
               onClick={() => onAddNewClick(date)}
             >
               <Plus className="w-4 h-4" />
               Add new
-            </button>
+            </Button>
           )}
         </div>
       </div>

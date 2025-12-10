@@ -23,8 +23,8 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      // Theme-aware overlay colors
-      "bg-white/80 dark:bg-black/80",
+      // Dark overlay to match drawer
+      "bg-black/50",
       className
     )}
     {...props}
@@ -32,18 +32,48 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** Show dark tinted overlay behind dialog */
+  showOverlay?: boolean
+  /** Add blur effect to overlay */
+  blurOverlay?: boolean
+}
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  DialogContentProps
+>(({ className, children, showOverlay = true, blurOverlay = false, ...props }, ref) => {
+  // Determine overlay classes based on options
+  const overlayClasses = cn(
+    "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    showOverlay && "bg-black/50",
+    blurOverlay && "backdrop-blur-sm",
+    // If blur but no dark overlay, add slight tint
+    blurOverlay && !showOverlay && "bg-white/30 dark:bg-black/30"
+  )
+
+  return (
   <DialogPortal>
-    <DialogOverlay />
+    {(showOverlay || blurOverlay) && (
+      <DialogPrimitive.Overlay className={overlayClasses} />
+    )}
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-[1100] grid w-[85%] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 p-6 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4 rounded-2xl",
-        // Use proper wewrite-card system instead of deprecated glass-overlay
-        "wewrite-card",
+        // Position centered - use CSS custom property for animation
+        "fixed left-[50%] top-[50%] z-[1100] grid w-[85%] max-w-lg translate-x-[-50%] gap-4 p-6 rounded-2xl",
+        // Slide up animation from bottom
+        "duration-300 ease-out",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:slide-out-to-bottom-8 data-[state=open]:slide-in-from-bottom-8",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        // Center vertically with translate
+        "-translate-y-1/2",
+        // Frosted glass effect: mostly opaque white with subtle blur
+        "border border-border shadow-lg",
+        "bg-white/95 dark:bg-zinc-900/95",
+        "backdrop-blur-xl",
         className
       )}
       {...props}
@@ -51,7 +81,8 @@ const DialogContent = React.forwardRef<
       {children}
     </DialogPrimitive.Content>
   </DialogPortal>
-))
+  )
+})
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({

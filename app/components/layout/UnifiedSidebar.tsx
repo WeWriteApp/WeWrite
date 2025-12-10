@@ -8,8 +8,8 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
-  Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
-  Clock, Shuffle, LogOut, TrendingUp, Heart, DollarSign, Trophy
+  Link as LinkIcon, X, Check, Trash2, MapPin, Shield, Map,
+  Clock, Shuffle, LogOut, TrendingUp, Heart, Trophy
 } from "lucide-react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
@@ -269,6 +269,7 @@ function UnifiedSidebarContent({
     'search': { icon: Search, label: 'Search', href: '/search' },
     'new': { icon: Plus, label: 'New Page', href: '/new' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
+    'map': { icon: Map, label: 'Map', href: '/map' },
     'leaderboard': { icon: Trophy, label: 'Leaderboards', href: '/leaderboard' },
     'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
     'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
@@ -562,33 +563,6 @@ function UnifiedSidebarContent({
           )}
           </div>
 
-          {/* Fixed bottom section - Fund Account button for users without active subscription */}
-          {!isEditMode && user && hasActiveSubscription === false && (
-            <div className={cn(
-              "pb-4 flex-shrink-0",
-              !showContent && "flex justify-center"
-            )}>
-              <button
-                onClick={() => router.push('/settings/fund-account')}
-                className={cn(
-                  "h-10 flex items-center rounded-lg shiny-add-funds-chip !text-white",
-                  "transition-all duration-300 ease-out cursor-pointer border-0",
-                  showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
-                )}
-                title={!showContent ? "Fund Account" : undefined}
-                aria-label="Fund Account"
-              >
-                <DollarSign className="h-5 w-5 flex-shrink-0" />
-                <span className={cn(
-                  "text-sm font-medium whitespace-nowrap overflow-hidden",
-                  "transition-all duration-300 ease-out",
-                  showContent ? "ml-3 opacity-100 w-auto" : "ml-0 opacity-0 w-0"
-                )}>
-                  Fund Account
-                </span>
-              </button>
-            </div>
-          )}
 
           {/* Fixed bottom section - User info and logout at bottom for non-edit mode */}
           {!isEditMode && user && (

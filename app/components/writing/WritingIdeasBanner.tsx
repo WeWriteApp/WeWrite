@@ -12,7 +12,7 @@ interface WritingIdeasBannerProps {
   initialExpanded?: boolean; // Control initial expansion state
 }
 
-// Memoized idea button for performance
+// Memoized idea button for performance - uses Badge-like styling
 const IdeaButton = React.memo(({
   idea,
   isSelected,
@@ -23,10 +23,10 @@ const IdeaButton = React.memo(({
   onClick: () => void;
 }) => (
   <button
-    className={`whitespace-nowrap h-8 flex items-center justify-center px-3 py-1 text-sm font-medium border rounded-lg transition-colors ${
+    className={`whitespace-nowrap h-8 flex items-center justify-center px-3 py-1 text-sm font-semibold rounded-full transition-all duration-150 ${
       isSelected
-        ? "bg-primary text-white border-primary"
-        : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
+        ? "bg-primary text-primary-foreground border-transparent hover:scale-[1.02] active:scale-[0.98]"
+        : "bg-neutral-10 text-foreground border-transparent hover:scale-[1.02] active:scale-[0.98]"
     }`}
     onClick={onClick}
   >
@@ -157,7 +157,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
   };
 
   return (
-    <div className="w-full wewrite-card transition-all duration-300 ease-in-out flex flex-col rounded-2xl border border-border/70 bg-card/90 shadow-xl">
+    <div className="w-full wewrite-card transition-all duration-300 ease-in-out flex flex-col">
       {/* Header - clickable to toggle */}
       <div
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors duration-200 flex-shrink-0"

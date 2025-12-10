@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 // Admin is included but filtered out in UI if user is not admin
 const DEFAULT_UNIFIED_ORDER = [
   'home',          // toolbar
-  'search',        // toolbar  
+  'search',        // toolbar
   'profile',       // toolbar
   'notifications', // toolbar
   'leaderboard',   // overflow
@@ -14,6 +14,7 @@ const DEFAULT_UNIFIED_ORDER = [
   'trending-pages', // overflow
   'following',     // overflow
   'recents',       // overflow
+  'map',           // overflow - before settings
   'settings',      // overflow
   'admin',         // overflow (only shown if user is admin)
 ];

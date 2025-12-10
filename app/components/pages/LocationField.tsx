@@ -127,43 +127,41 @@ export default function LocationField({
   };
 
   return (
-    <div className={`w-full ${className}`}>
-      <div
-        className={`wewrite-card w-full overflow-hidden ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''}`}
-        onClick={canEdit ? handleLocationClick : undefined}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium">Location</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!normalizedLocation && (
-              <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
-                {canEdit ? 'Click to set location' : 'No location set'}
-              </div>
-            )}
-          </div>
+    <div
+      className={`wewrite-card w-full overflow-hidden ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''} ${className}`}
+      onClick={canEdit ? handleLocationClick : undefined}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm font-medium">Location</span>
         </div>
 
-        {/* Map below header - only show if location exists */}
-        {normalizedLocation && (
-            <div className="h-40 md:h-48 border-t border-theme-light">
-              <MapPicker
-                location={normalizedLocation}
-                readOnly={true}
-                showControls={false}
-                height="100%"
-                className="pointer-events-none"
-                disableZoom={true} // Disable zooming in collapsed state
-                allowPanning={false} // Disable panning in collapsed state
-                initialZoom={normalizedLocation.zoom || 10} // Use saved zoom level to match fullscreen view
-              />
+        <div className="flex items-center gap-2">
+          {!normalizedLocation && (
+            <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
+              {canEdit ? 'Click to set location' : 'No location set'}
             </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Map below header - only show if location exists */}
+      {normalizedLocation && (
+          <div className="h-40 md:h-48 border-t border-theme-light -mx-4 -mb-4 mt-4">
+            <MapPicker
+              location={normalizedLocation}
+              readOnly={true}
+              showControls={false}
+              height="100%"
+              className="pointer-events-none"
+              disableZoom={true} // Disable zooming in collapsed state
+              allowPanning={false} // Disable panning in collapsed state
+              initialZoom={normalizedLocation.zoom || 10} // Use saved zoom level to match fullscreen view
+            />
+          </div>
+      )}
     </div>
   );
 }

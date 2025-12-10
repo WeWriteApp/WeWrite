@@ -174,7 +174,7 @@ export default function UsernameEnforcementModal() {
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border-theme-strong wewrite-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Set Your Username</DialogTitle>
           <DialogDescription>

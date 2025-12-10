@@ -471,7 +471,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                           handleAllocationChange(-decreaseAmount, e);
                         }}
                         disabled={isProcessing}
-                        className="h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20"
+                        className="h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -493,7 +493,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     variant="secondary"
                     onClick={(e) => handleAllocationChange(-allocationIntervalCents, e)}
                     className={cn(
-                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
+                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
                       allocationState.currentAllocationCents <= 0 && "opacity-50",
                       isProcessing && "opacity-75"
                     )}
@@ -544,9 +544,9 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                         style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
                       />
 
-                      {/* Available/Remaining - use neutral color system */}
+                      {/* Available/Remaining - outline style */}
                       <div
-                        className="h-full bg-muted rounded-md transition-all duration-300 ease-out"
+                        className={`h-full ${ALLOCATION_BAR_STYLES.sections.available}`}
                         style={{ width: `${compositionData.availablePercentage}%` }}
                       />
                     </>
@@ -562,7 +562,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                       handleAllocationChange(allocationIntervalCents, e);
                     }}
                     className={cn(
-                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
+                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
                       compositionData.isOutOfFunds && "opacity-50",
                       isProcessing && "opacity-75"
                     )}

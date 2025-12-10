@@ -92,7 +92,7 @@ export default function UnifiedNavButton({
   const showDropIndicator = isOver && canDrop;
 
   return (
-    <div 
+    <div
       ref={ref}
       className={cn(
         // Base sizing - increased height for better tap targets on mobile
@@ -101,17 +101,17 @@ export default function UnifiedNavButton({
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
         // Background and hover states (only when not in edit mode)
-        !editMode && "hover:bg-muted/80 active:bg-muted dark:hover:bg-muted/60 dark:active:bg-muted/80",
+        !editMode && !isActive && "hover:bg-muted/80 active:bg-muted dark:hover:bg-muted/60 dark:active:bg-muted/80",
         // Dragging state - show as semi-transparent
         isDragging && "opacity-40",
         // Wiggle animation when in edit mode (but not while dragging)
         editMode && !isDragging && "animate-wiggle",
         // Press feedback (only outside edit mode)
-        !editMode && isPressed && "scale-110 duration-75 bg-muted",
+        !editMode && isPressed && "scale-110 duration-75",
         !editMode && "active:scale-95 active:duration-75",
-        // Active state
+        // Active state - use accent/primary color for clear indication
         isActive
-          ? "bg-muted text-foreground"
+          ? "bg-accent/15 text-accent"
           : "text-muted-foreground hover:text-foreground",
         // Navigation loading state
         isNavigating && "opacity-75",
@@ -131,7 +131,9 @@ export default function UnifiedNavButton({
         <Icon className={cn(
           // Original icon size from the old NavButton
           "h-5 w-5 flex-shrink-0 transition-transform duration-75",
-          isPressed && !editMode && "scale-110"
+          isPressed && !editMode && "scale-110",
+          // Active icon gets accent color
+          isActive && "text-accent"
         )} />
         {children}
       </div>
@@ -140,11 +142,12 @@ export default function UnifiedNavButton({
         "text-[10px] font-medium leading-tight transition-colors duration-75",
         "text-center max-w-full",
         "line-clamp-1",
-        isActive && "text-foreground"
+        // Active label gets accent color
+        isActive ? "text-accent" : ""
       )}>
         {label}
       </span>
-      
+
       {isNavigating && !editMode && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />

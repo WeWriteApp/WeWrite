@@ -46,7 +46,9 @@ export function EmbeddedAllocationBar({
   source = 'EmbeddedCard',
   overrideIntervalCents,
   disableDetailModal = false,
-  disableLongPress = false
+  disableLongPress = false,
+  highlightPlusButton = false,
+  enableBarClickZones = false
 }: EmbeddedAllocationBarProps) {
   const { user } = useAuth();
   const { usdBalance, isLoading: usdLoading } = useUsdBalance();
@@ -59,6 +61,10 @@ export function EmbeddedAllocationBar({
 
   const [showIntervalModal, setShowIntervalModal] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
+  const [minusButtonPressed, setMinusButtonPressed] = useState(false);
+  const [plusButtonPressed, setPlusButtonPressed] = useState(false);
+  const [minusButtonHovered, setMinusButtonHovered] = useState(false);
+  const [plusButtonHovered, setPlusButtonHovered] = useState(false);
 
   // Long press handling
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -315,7 +321,11 @@ export function EmbeddedAllocationBar({
         <Button
           size="sm"
           variant="secondary"
-          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
+          className={cn(
+            "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20",
+            minusButtonPressed && "scale-95",
+            minusButtonHovered && "bg-secondary/80"
+          )}
           onClick={(e) => handleButtonClick(-1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -327,18 +337,67 @@ export function EmbeddedAllocationBar({
 
         {/* Composition bar with centered dollar amount */}
         <div
-          className="flex-1 h-8 relative"
+          className={cn(
+            "flex-1 h-8 relative",
+            enableBarClickZones && "cursor-pointer"
+          )}
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
+
+            // Handle click zones if enabled
+            if (enableBarClickZones) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const clickX = e.clientX - rect.left;
+              const halfWidth = rect.width / 2;
+
+              if (clickX < halfWidth) {
+                // Left half - trigger minus
+                setMinusButtonPressed(true);
+                setTimeout(() => setMinusButtonPressed(false), 150);
+                if (allocationState.currentAllocationCents > 0) {
+                  handleButtonClick(-1, e);
+                }
+              } else {
+                // Right half - trigger plus
+                setPlusButtonPressed(true);
+                setTimeout(() => setPlusButtonPressed(false), 150);
+                if (!compositionData.isOutOfFunds) {
+                  handleButtonClick(1, e);
+                } else {
+                  handleOutOfFunds(e);
+                }
+              }
+              return;
+            }
+
             // Only open modal if not disabled
             if (!disableDetailModal) {
               setShowAllocationModal(true);
             }
           }}
+          onMouseMove={(e) => {
+            if (!enableBarClickZones) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const halfWidth = rect.width / 2;
+
+            if (mouseX < halfWidth) {
+              setMinusButtonHovered(true);
+              setPlusButtonHovered(false);
+            } else {
+              setMinusButtonHovered(false);
+              setPlusButtonHovered(true);
+            }
+          }}
+          onMouseLeave={() => {
+            if (!enableBarClickZones) return;
+            setMinusButtonHovered(false);
+            setPlusButtonHovered(false);
+          }}
         >
           {/* Background composition bar with smooth transitions */}
-          <div className="absolute inset-0 flex gap-1">
+          <div className="absolute inset-0 flex gap-1 pointer-events-none">
             {/* Other pages (spent elsewhere) - left side */}
             {compositionData.otherPagesPercentage > 0 && (
               <div
@@ -363,10 +422,10 @@ export function EmbeddedAllocationBar({
               />
             )}
 
-            {/* Available funds - right side */}
+            {/* Available funds - right side (outline style) */}
             {compositionData.availablePercentage > 0 && (
               <div
-                className="bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+                className={ALLOCATION_BAR_STYLES.sections.available}
                 style={{ width: `${compositionData.availablePercentage}%` }}
               />
             )}
@@ -377,7 +436,12 @@ export function EmbeddedAllocationBar({
         <Button
           size="sm"
           variant="secondary"
-          className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20"
+          className={cn(
+            "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20",
+            highlightPlusButton && "ring-4 ring-primary/40 animate-pulse border-primary",
+            plusButtonPressed && "scale-95",
+            plusButtonHovered && "bg-secondary/80"
+          )}
           onClick={(e) => compositionData.isOutOfFunds ? handleOutOfFunds(e) : handleButtonClick(1, e)}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}

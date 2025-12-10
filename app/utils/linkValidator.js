@@ -274,6 +274,18 @@ export function validateLink(linkData) {
     if (linkData.authorUsername !== undefined) {
       link.authorUsername = linkData.authorUsername;
     }
+    if (linkData.authorUserId !== undefined) {
+      link.authorUserId = linkData.authorUserId;
+    }
+    if (linkData.authorTier !== undefined) {
+      link.authorTier = linkData.authorTier;
+    }
+    if (linkData.authorSubscriptionStatus !== undefined) {
+      link.authorSubscriptionStatus = linkData.authorSubscriptionStatus;
+    }
+    if (linkData.authorSubscriptionAmount !== undefined) {
+      link.authorSubscriptionAmount = linkData.authorSubscriptionAmount;
+    }
 
     // Add version tracking for future compatibility
     if (!link.linkVersion) {
@@ -294,6 +306,10 @@ export function validateLink(linkData) {
       // Preserve compound link properties in fallback
       showAuthor: linkData?.showAuthor || false,
       authorUsername: linkData?.authorUsername || null,
+      authorUserId: linkData?.authorUserId || null,
+      authorTier: linkData?.authorTier || null,
+      authorSubscriptionStatus: linkData?.authorSubscriptionStatus || null,
+      authorSubscriptionAmount: linkData?.authorSubscriptionAmount || null,
       linkVersion: 3,
       isError: true,
       id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`

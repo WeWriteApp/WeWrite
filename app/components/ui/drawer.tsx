@@ -45,12 +45,29 @@ interface DrawerContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
     VariantProps<typeof drawerVariants> {
   height?: string
+  /** Show dark tinted overlay behind drawer */
+  showOverlay?: boolean
+  /** Add blur effect to overlay */
+  blurOverlay?: boolean
+  /** @deprecated Use showOverlay={false} instead */
+  noOverlay?: boolean
 }
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
->(({ side = "bottom", className, children, height = "85vh", ...props }, ref) => {
+>(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, ...props }, ref) => {
+  // Handle legacy noOverlay prop
+  const shouldShowOverlay = noOverlay ? false : showOverlay
+
+  // Determine overlay classes based on options
+  const overlayClasses = cn(
+    "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    shouldShowOverlay && "bg-black/50",
+    blurOverlay && "backdrop-blur-sm",
+    // If blur but no dark overlay, add slight tint
+    blurOverlay && !shouldShowOverlay && "bg-white/30 dark:bg-black/30"
+  )
   // Drag-to-dismiss state: tracks touch interactions for native-like behavior
   const [isDragging, setIsDragging] = React.useState(false)
   const [dragY, setDragY] = React.useState(0)
@@ -134,12 +151,17 @@ const DrawerContent = React.forwardRef<
 
   return (
     <DrawerPortal>
-      <DrawerOverlay />
+      {(shouldShowOverlay || blurOverlay) && (
+        <DialogPrimitive.Overlay className={overlayClasses} />
+      )}
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
           drawerVariants({ side }),
-          "flex flex-col p-0 shadow-2xl wewrite-card",
+          // Frosted glass effect: mostly opaque white with subtle blur
+          "flex flex-col p-0 shadow-2xl border border-border",
+          "bg-white/95 dark:bg-zinc-900/95",
+          "backdrop-blur-xl",
           className
         )}
         style={{ height, borderRadius: '1.5rem 1.5rem 0 0', borderBottom: 'none' }}
@@ -153,8 +175,8 @@ const DrawerContent = React.forwardRef<
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Drag Handle */}
-          <div className="flex justify-center py-3 px-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
+          {/* Drag Handle - tighter spacing */}
+          <div className="flex justify-center pt-3 pb-1 px-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
             <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full transition-all duration-200 hover:bg-muted-foreground/60 hover:w-12" />
           </div>
 
@@ -180,7 +202,8 @@ const DrawerHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left px-4 pb-4 flex-shrink-0",
+      // Tighter header: relative for absolute close button positioning
+      "relative flex flex-col space-y-1 text-center px-4 pt-1 pb-3 flex-shrink-0",
       className
     )}
     {...props}
@@ -193,7 +216,11 @@ const DrawerFooter = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pb-8 flex-shrink-0", className)}
+    className={cn(
+      // Safe area padding for bottom buttons
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-2 pb-6 flex-shrink-0 border-t border-border/50",
+      className
+    )}
     {...props}
   />
 )

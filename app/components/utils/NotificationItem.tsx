@@ -501,9 +501,7 @@ export default function NotificationItem({ notification }) {
   return (
     <div
       className={cn(
-        "relative rounded-xl border-theme-strong bg-card text-card-foreground shadow-sm transition-all duration-200 cursor-pointer group",
-        "dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30",
-        "p-4 md:p-4",
+        "wewrite-card relative cursor-pointer group",
         notification.read ? "" : "ring-2 ring-primary/20"
       )}
       onClick={(e) => {

@@ -173,7 +173,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const contextValue: SubscriptionContextType = {
     subscription,
     hasActiveSubscription: adminPaywallOverride ? false : hasActiveSubscription,
-    subscriptionAmount: subscription?.status === 'active' ? (subscription.amount || 0) : 0,
+    // When admin override is on, show $0 to simulate no subscription
+    subscriptionAmount: adminPaywallOverride ? 0 : (subscription?.status === 'active' ? (subscription.amount || 0) : 0),
     isLoading,
     lastUpdated,
     refreshSubscription,

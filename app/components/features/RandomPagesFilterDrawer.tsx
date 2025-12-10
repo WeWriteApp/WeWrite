@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '../ui/drawer';
 import { MoreHorizontal, UserX, Grid3X3, Search, X, Check, Loader2 } from 'lucide-react';
 
@@ -29,8 +28,8 @@ interface RandomPagesFilterDrawerProps {
 }
 
 /**
- * RandomPagesFilterDrawer - Responsive filter UI
- * Uses drawer on mobile, modal on desktop
+ * RandomPagesFilterDrawer - Filter UI for random pages
+ * Uses bottom drawer with consistent styling
  * Includes typeahead username search
  */
 export default function RandomPagesFilterDrawer({
@@ -51,21 +50,9 @@ export default function RandomPagesFilterDrawer({
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const currentUsername = filterMode === 'include' ? includeUsername : excludeUsername;
 
-  // Check for mobile on mount and resize
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const currentUsername = filterMode === 'include' ? includeUsername : excludeUsername;
 
   // Initialize search query from current username when opening
   useEffect(() => {
@@ -293,82 +280,50 @@ export default function RandomPagesFilterDrawer({
     </div>
   );
 
-  const triggerButton = (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-8 w-8 rounded-2xl border border-border"
-      aria-label="Filter options"
-      onClick={() => setIsOpen(true)}
-    >
-      <MoreHorizontal className="h-4 w-4" />
-    </Button>
-  );
-
-  const footerButtons = (
-    <div className="flex gap-2 w-full">
-      <Button variant="ghost" className="flex-1" onClick={() => setIsOpen(false)}>
-        Cancel
-      </Button>
-      <Button onClick={handleApply} className="flex-1">
-        <Check className="h-4 w-4 mr-2" />
-        Apply Filters
-      </Button>
-    </div>
-  );
-
-  // Mobile: Use Drawer
-  if (isMobile) {
-    return (
-      <>
-        {triggerButton}
-        <Drawer open={isOpen} onOpenChange={setIsOpen}>
-          <DrawerContent
-            height="85vh"
-            className="border-t-2 border-border"
-          >
-            <DrawerHeader>
-              <DrawerTitle>Filter Random Pages</DrawerTitle>
-              <DrawerDescription>
-                Customize your random page discovery experience
-              </DrawerDescription>
-            </DrawerHeader>
-            
-            <div className="px-4 pb-4">
-              {filterContent}
-            </div>
-
-            <DrawerFooter>
-              {footerButtons}
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-      </>
-    );
-  }
-
-  // Desktop: Use Dialog/Modal
   return (
     <>
-      {triggerButton}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filter Random Pages</DialogTitle>
-            <DialogDescription>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-2xl border border-border"
+        aria-label="Filter options"
+        onClick={() => setIsOpen(true)}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </Button>
+
+      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+        <DrawerContent height="auto">
+          <DrawerHeader className="text-center">
+            <DrawerTitle>Filter Random Pages</DrawerTitle>
+            <DrawerDescription>
               Customize your random page discovery experience
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="flex-1 px-4 pb-4 overflow-y-auto">
             {filterContent}
           </div>
 
-          <DialogFooter>
-            {footerButtons}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <DrawerFooter className="flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleApply}
+              className="flex-1"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Apply Filters
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

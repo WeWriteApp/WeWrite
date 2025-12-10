@@ -30,7 +30,10 @@ import {
   AlertCircle,
   Info,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Type,
+  Globe,
+  AtSign
 } from 'lucide-react';
 import Link from 'next/link';
 import { isAdmin } from '../../utils/isAdmin';
@@ -41,6 +44,11 @@ import PWABanner from '../../components/utils/PWABanner';
 import PillLink from '../../components/utils/PillLink';
 import { InlineError } from '../../components/ui/InlineError';
 import { UsernameBadge } from '../../components/ui/UsernameBadge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../../components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '../../components/ui/drawer';
+import { LoadingState, LoadingSpinner, LoadingDots, SkeletonLine, SkeletonCard } from '../../components/ui/LoadingState';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
+import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../../components/ui/segmented-control';
 
 interface ComponentShowcaseProps {
   title: string;
@@ -84,6 +92,15 @@ export default function DesignSystemPage() {
   const [checkboxChecked, setCheckboxChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [showDrawerWithForm, setShowDrawerWithForm] = useState(false);
+  // Overlay option switches
+  const [overlayDark, setOverlayDark] = useState(true);
+  const [overlayBlur, setOverlayBlur] = useState(false);
+  // Tabs and Segmented Control state
+  const [activeTab, setActiveTab] = useState('tab1');
+  const [activeSegment, setActiveSegment] = useState('segment1');
 
   if (!user) {
     return (
@@ -452,6 +469,25 @@ export default function DesignSystemPage() {
             path="app/components/ui/button.tsx"
             description="Primary interactive element with multiple variants and states"
           >
+            <StateDemo label="Shimmer Base Class (hover me!)">
+              <div className="flex flex-wrap gap-4 items-start">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Add <code className="bg-muted px-1 rounded">shiny-shimmer-base</code> to any element:</p>
+                  <Button className="shiny-shimmer-base">With Shimmer</Button>
+                  <Button>Without Shimmer</Button>
+                </div>
+                <div className="wewrite-card p-3 text-xs text-muted-foreground max-w-sm">
+                  <p className="font-medium text-foreground mb-1">How it works:</p>
+                  <ul className="space-y-1">
+                    <li>• <code className="bg-muted px-0.5 rounded">::before</code> pseudo-element with gradient</li>
+                    <li>• <code className="bg-muted px-0.5 rounded">opacity: 0</code> at rest (invisible)</li>
+                    <li>• On hover: <code className="bg-muted px-0.5 rounded">opacity: 1</code> + animate</li>
+                    <li>• Gradient slides left-to-right once</li>
+                  </ul>
+                </div>
+              </div>
+            </StateDemo>
+
             <StateDemo label="Primary Variants">
               <Button variant="default">Default</Button>
               <Button variant="secondary">Secondary</Button>
@@ -500,6 +536,70 @@ export default function DesignSystemPage() {
               <Button variant="destructive"><X className="mr-2 h-4 w-4" />Delete</Button>
               <Button variant="success-secondary"><Check className="mr-2 h-4 w-4" />Approve</Button>
               <Button variant="destructive-ghost"><X className="mr-2 h-4 w-4" />Remove</Button>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Shiny Button System */}
+          <ComponentShowcase
+            title="Shiny Button System"
+            path="app/globals.css + app/components/ui/button.tsx"
+            description="Shimmer animation system using CSS class inheritance. Shimmer is invisible at rest and slides once on hover."
+          >
+            <StateDemo label="Shiny Buttons (hover me!)">
+              <div className="flex flex-wrap gap-2">
+                <Button className="shiny-shimmer-base shiny-glow-base button-shiny-style">Primary</Button>
+                <Button variant="secondary" className="shiny-shimmer-base shiny-skeuomorphic-base button-secondary-shiny-style">Secondary</Button>
+                <Button variant="outline" className="shiny-shimmer-base button-outline-shiny-style">Outline</Button>
+                <Button variant="destructive" className="shiny-shimmer-base shiny-glow-base button-destructive-shiny-style">Destructive</Button>
+                <Button variant="success" className="shiny-shimmer-base shiny-glow-base button-success-shiny-style">Success</Button>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Light Variants (hover me!)">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="destructive-secondary" className="shiny-shimmer-base shiny-skeuomorphic-base button-destructive-secondary-shiny-style">Destructive Light</Button>
+                <Button variant="success-secondary" className="shiny-shimmer-base shiny-skeuomorphic-base button-success-secondary-shiny-style">Success Light</Button>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="CSS Class Inheritance">
+              <div className="wewrite-card p-4 max-w-2xl space-y-4">
+                <h4 className="font-medium">Base Classes (in globals.css)</h4>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>
+                    <code className="bg-muted px-1 rounded font-mono">.shiny-shimmer-base</code>
+                    <p className="mt-1 ml-4">Provides the shimmer animation via ::before pseudo-element. Invisible at rest, slides left-to-right once on hover.</p>
+                  </li>
+                  <li>
+                    <code className="bg-muted px-1 rounded font-mono">.shiny-glow-base</code>
+                    <p className="mt-1 ml-4">Adds border glow and text shadow. Used for solid colored buttons (primary, destructive, success).</p>
+                  </li>
+                  <li>
+                    <code className="bg-muted px-1 rounded font-mono">.shiny-skeuomorphic-base</code>
+                    <p className="mt-1 ml-4">Adds inset shadows and gradient overlay. Used for light buttons (secondary, *-secondary variants).</p>
+                  </li>
+                </ul>
+
+                <h4 className="font-medium mt-4">Variant-Specific Classes</h4>
+                <p className="text-sm text-muted-foreground mb-2">These only add color-specific box-shadows:</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <code className="bg-muted px-1 rounded">.button-shiny-style</code> - Primary blue glow</li>
+                  <li>• <code className="bg-muted px-1 rounded">.button-destructive-shiny-style</code> - Red glow</li>
+                  <li>• <code className="bg-muted px-1 rounded">.button-success-shiny-style</code> - Green glow</li>
+                  <li>• <code className="bg-muted px-1 rounded">.button-secondary-shiny-style</code> - Subtle neutral glow</li>
+                  <li>• <code className="bg-muted px-1 rounded">.button-outline-shiny-style</code> - Border enhancement</li>
+                  <li>• <code className="bg-muted px-1 rounded">.button-destructive-secondary-shiny-style</code> - Light red glow</li>
+                  <li>• <code className="bg-muted px-1 rounded">.button-success-secondary-shiny-style</code> - Light green glow</li>
+                </ul>
+
+                <h4 className="font-medium mt-4">Composition Pattern</h4>
+                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded font-mono space-y-1">
+                  <p>Solid buttons: shimmer + glow + color</p>
+                  <p className="text-xs opacity-75">shiny-shimmer-base shiny-glow-base button-shiny-style</p>
+                  <p className="mt-2">Light buttons: shimmer + skeuomorphic + color</p>
+                  <p className="text-xs opacity-75">shiny-shimmer-base shiny-skeuomorphic-base button-secondary-shiny-style</p>
+                </div>
+              </div>
             </StateDemo>
           </ComponentShowcase>
 
@@ -566,25 +666,44 @@ export default function DesignSystemPage() {
               <Input placeholder="With value" value="Sample text" readOnly className="w-64" />
             </StateDemo>
             
-            <StateDemo label="With Icons">
-              <div className="relative w-64">
-                <Input placeholder="Search..." className="wewrite-input-with-left-icon" />
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="relative w-64">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
-                  className="wewrite-input-with-right-icon"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+            <StateDemo label="With Left Icon">
+              <Input
+                placeholder="Search..."
+                leftIcon={<Search className="h-4 w-4" />}
+                className="w-64"
+              />
+              <Input
+                placeholder="Email address"
+                leftIcon={<Mail className="h-4 w-4" />}
+                className="w-64"
+              />
+              <Input
+                placeholder="Custom title"
+                leftIcon={<Type className="h-4 w-4" />}
+                className="w-64"
+              />
+            </StateDemo>
+
+            <StateDemo label="With Right Icon">
+              <Input
+                placeholder="Website URL"
+                rightIcon={<Globe className="h-4 w-4" />}
+                className="w-64"
+              />
+              <Input
+                placeholder="Username"
+                rightIcon={<AtSign className="h-4 w-4" />}
+                className="w-64"
+              />
+            </StateDemo>
+
+            <StateDemo label="With Both Icons">
+              <Input
+                placeholder="Search users..."
+                leftIcon={<Search className="h-4 w-4" />}
+                rightIcon={<Check className="h-4 w-4 text-green-500" />}
+                className="w-64"
+              />
             </StateDemo>
           </ComponentShowcase>
 
@@ -657,55 +776,13 @@ export default function DesignSystemPage() {
             </StateDemo>
           </ComponentShowcase>
 
-          {/* Shiny Chips */}
-          <ComponentShowcase
-            title="Shiny Chips"
-            path="app/globals.css (.shiny-chip classes)"
-            description="Eye-catching animated badges with shimmer and glow effects. Use sparingly for high-emphasis elements."
-          >
-            <StateDemo label="Shiny Chip Variants (hover me!)">
-              <Badge className="shiny-chip shiny-chip-success !text-white">$146.70</Badge>
-              <Badge className="shiny-chip shiny-chip-primary !text-white">Featured</Badge>
-              <Badge className="shiny-chip shiny-chip-warning !text-white">In Progress</Badge>
-              <Badge className="shiny-add-funds-chip !text-white">Add Funds</Badge>
-            </StateDemo>
-
-            <StateDemo label="Usage Example">
-              <div className="text-lg text-muted-foreground">
-                Join <Badge variant="secondary" className="mx-1 text-lg text-muted-foreground bg-muted">112 writers</Badge>
-                {' '}who've made{' '}
-                <Badge variant="secondary" className="mx-1 text-lg shiny-chip shiny-chip-success !text-white">$146.70</Badge>
-                {' '}helping to build humanity's shared knowledge.
-              </div>
-            </StateDemo>
-
-            <StateDemo label="Implementation">
-              <div className="wewrite-card p-4 max-w-2xl">
-                <h4 className="font-medium mb-2">How to Use</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Apply the base <code className="bg-muted px-1 rounded">shiny-chip</code> class along with a variant class:
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• <code className="bg-muted px-1 rounded">shiny-chip shiny-chip-success</code> - Green glow for earnings, positive metrics</li>
-                  <li>• <code className="bg-muted px-1 rounded">shiny-chip shiny-chip-primary</code> - Blue glow for primary highlights</li>
-                  <li>• <code className="bg-muted px-1 rounded">shiny-chip shiny-chip-warning</code> - Amber glow for caution, pending states</li>
-                  <li>• <code className="bg-muted px-1 rounded">shiny-add-funds-chip</code> - Special "Add Funds" style (standalone)</li>
-                </ul>
-                <h4 className="font-medium mt-4 mb-2">Animation Details</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• <code className="bg-muted px-1 rounded">shimmer</code> - Gradient sweep animation (2.5s, faster on hover)</li>
-                  <li>• <code className="bg-muted px-1 rounded">glow-pulse</code> - Pulsing box-shadow (2s)</li>
-                  <li>• <code className="bg-muted px-1 rounded">scale(1.05)</code> on hover, <code className="bg-muted px-1 rounded">scale(0.98)</code> on active</li>
-                </ul>
-              </div>
-            </StateDemo>
-          </ComponentShowcase>
+          {/* NOTE: Chips do not exist in our design system. Use Badge instead. */}
 
           {/* Badges */}
           <ComponentShowcase
             title="Badge"
             path="app/components/ui/badge.tsx"
-            description="Interactive status indicators and labels with hover/active states"
+            description="Interactive status indicators and labels. NOTE: 'Chips' do not exist in our design system - use Badge for all pill-shaped indicators. In 'Shiny' UI mode (Settings > Appearance), badges automatically get skeuomorphic styling with shimmer effects on hover."
           >
             <StateDemo label="Interactive Variants (hover me!)">
               <Badge>Default</Badge>
@@ -716,6 +793,7 @@ export default function DesignSystemPage() {
               <Badge variant="destructive">Destructive</Badge>
               <Badge variant="destructive-secondary">Destructive Light</Badge>
               <Badge variant="warning">Warning</Badge>
+              <Badge variant="warning-secondary">Warning Light</Badge>
             </StateDemo>
 
             <StateDemo label="Static Variants (no interaction)">
@@ -724,6 +802,7 @@ export default function DesignSystemPage() {
               <Badge variant="outline-static">Outline</Badge>
               <Badge variant="success-static">Success</Badge>
               <Badge variant="destructive-static">Destructive</Badge>
+              <Badge variant="warning-static">Warning</Badge>
             </StateDemo>
 
             <StateDemo label="Sizes">
@@ -738,6 +817,15 @@ export default function DesignSystemPage() {
               <Badge variant="success"><Check className="mr-1 h-3 w-3" />Success</Badge>
               <Badge variant="destructive"><X className="mr-1 h-3 w-3" />Error</Badge>
             </StateDemo>
+
+            <StateDemo label="Usage Example (in shiny mode, these get shimmer effects)">
+              <div className="text-lg text-muted-foreground">
+                Join <Badge variant="secondary" className="mx-1 text-lg">112 writers</Badge>
+                {' '}who've made{' '}
+                <Badge variant="success" className="mx-1 text-lg">$146.70</Badge>
+                {' '}helping to build humanity's shared knowledge.
+              </div>
+            </StateDemo>
           </ComponentShowcase>
 
           {/* Form Controls */}
@@ -746,21 +834,65 @@ export default function DesignSystemPage() {
             path="app/components/ui/"
             description="Interactive form elements including switches and checkboxes"
           >
-            <StateDemo label="Switch">
-              <div className="flex items-center space-x-2">
+            <StateDemo label="Switch Sizes">
+              <div className="flex items-center space-x-3">
                 <Switch
-                  id="demo-switch"
+                  id="switch-sm"
+                  size="sm"
                   checked={switchChecked}
                   onCheckedChange={setSwitchChecked}
                 />
-                <label htmlFor="demo-switch" className="text-sm">
-                  {switchChecked ? 'Enabled' : 'Disabled'}
+                <label htmlFor="switch-sm" className="text-sm">
+                  Small
                 </label>
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch id="disabled-switch" disabled />
-                <label htmlFor="disabled-switch" className="text-sm text-muted-foreground">
-                  Disabled Switch
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="switch-md"
+                  size="md"
+                  checked={switchChecked}
+                  onCheckedChange={setSwitchChecked}
+                />
+                <label htmlFor="switch-md" className="text-sm">
+                  Medium (default)
+                </label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="switch-lg"
+                  size="lg"
+                  checked={switchChecked}
+                  onCheckedChange={setSwitchChecked}
+                />
+                <label htmlFor="switch-lg" className="text-sm">
+                  Large
+                </label>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Switch States">
+              <div className="flex items-center space-x-3">
+                <Switch id="switch-off" checked={false} />
+                <label htmlFor="switch-off" className="text-sm">
+                  Off State
+                </label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Switch id="switch-on" checked={true} />
+                <label htmlFor="switch-on" className="text-sm">
+                  On State
+                </label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Switch id="disabled-switch-off" disabled checked={false} />
+                <label htmlFor="disabled-switch-off" className="text-sm text-muted-foreground">
+                  Disabled Off
+                </label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Switch id="disabled-switch-on" disabled checked={true} />
+                <label htmlFor="disabled-switch-on" className="text-sm text-muted-foreground">
+                  Disabled On
                 </label>
               </div>
             </StateDemo>
@@ -1135,18 +1267,49 @@ export default function DesignSystemPage() {
             description="WeWrite's glassmorphic color system with theme support"
           >
             <StateDemo label="Card System">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                  ⚠️ IMPORTANT: Always use <code className="bg-red-100 dark:bg-red-800 px-1 rounded">wewrite-card</code> class for ALL card styling.
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                  Never use custom combinations like <code className="bg-red-100 dark:bg-red-800 px-1 rounded">bg-card rounded-xl border</code>.
+                  This ensures consistent glassmorphism, themes, and prevents regressions.
+                </p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="wewrite-card p-4">
+                <div className="wewrite-card">
                   <h4 className="font-medium mb-2">Default Card</h4>
                   <p className="text-sm text-muted-foreground">
                     Uses glassmorphic background with theme-aware colors
                   </p>
                 </div>
-                <div className="wewrite-card p-4 hover:bg-muted/50 transition-colors">
+                <div className="wewrite-card cursor-pointer">
                   <h4 className="font-medium mb-2">Interactive Card</h4>
                   <p className="text-sm text-muted-foreground">
-                    Hover to see the interaction state
+                    Hover to see the built-in interaction state
                   </p>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Card Modifiers">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Use modifier classes to customize cards while keeping base styling:
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="wewrite-card card-50">
+                    <span className="text-xs font-mono">card-50</span>
+                    <p className="text-xs text-muted-foreground">50% opacity</p>
+                  </div>
+                  <div className="wewrite-card wewrite-card-rounded-sm">
+                    <span className="text-xs font-mono">wewrite-card-rounded-sm</span>
+                    <p className="text-xs text-muted-foreground">Small radius</p>
+                  </div>
+                  <div className="wewrite-card wewrite-card-no-padding p-2">
+                    <span className="text-xs font-mono">wewrite-card-no-padding</span>
+                    <p className="text-xs text-muted-foreground">Custom padding</p>
+                  </div>
                 </div>
               </div>
             </StateDemo>
@@ -1480,6 +1643,491 @@ export default function DesignSystemPage() {
               </div>
             </StateDemo>
           </ComponentShowcase>
+
+          {/* Loading States Section */}
+          <ComponentShowcase
+            title="Loading States"
+            path="app/components/ui/LoadingState.tsx"
+            description="Standardized loading states with multiple visual variants. Use for consistent loading experiences across the app."
+          >
+            <StateDemo label="Spinner Variants (default)">
+              <div className="flex flex-wrap gap-8 items-end">
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="spinner" size="sm" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Small</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="spinner" size="md" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Medium</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="spinner" size="lg" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Large</span>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="With Message">
+              <div className="flex flex-wrap gap-6">
+                <div className="wewrite-card p-4 w-64">
+                  <LoadingState variant="spinner" message="Loading..." minHeight="h-24" />
+                </div>
+                <div className="wewrite-card p-4 w-64">
+                  <LoadingState variant="dots" message="Processing..." minHeight="h-24" />
+                </div>
+                <div className="wewrite-card p-4 w-64">
+                  <LoadingState variant="pulse" message="Connecting..." minHeight="h-24" />
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Dots Variant">
+              <div className="flex flex-wrap gap-8 items-end">
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="dots" size="sm" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Small</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="dots" size="md" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Medium</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="dots" size="lg" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Large</span>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Pulse Variant">
+              <div className="flex flex-wrap gap-8 items-end">
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="pulse" size="sm" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Small</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="pulse" size="md" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Medium</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingState variant="pulse" size="lg" minHeight="h-16" />
+                  <span className="text-xs text-muted-foreground">Large</span>
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Skeleton Variant">
+              <div className="wewrite-card p-4 max-w-sm">
+                <LoadingState variant="skeleton" minHeight="h-auto" />
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Inline Components">
+              <div className="flex flex-wrap gap-6 items-center">
+                <div className="flex items-center gap-2">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm">LoadingSpinner</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <LoadingDots />
+                  <span className="text-sm">LoadingDots</span>
+                </div>
+                <Button disabled>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Saving...
+                </Button>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Skeleton Components">
+              <div className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <SkeletonLine width="w-3/4" />
+                  <SkeletonLine width="w-full" />
+                  <SkeletonLine width="w-1/2" />
+                </div>
+                <SkeletonCard />
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Real-World Example">
+              <div className="wewrite-card p-6 w-full max-w-md">
+                <h3 className="text-sm font-medium mb-4">Page Connections</h3>
+                <LoadingState
+                  variant="spinner"
+                  message="Loading page connections..."
+                  minHeight="h-32"
+                />
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Code Usage">
+              <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
+                <pre className="text-xs overflow-x-auto">
+{`// Full loading state with card
+<LoadingState
+  variant="spinner" // 'spinner' | 'dots' | 'pulse' | 'skeleton'
+  size="md"         // 'sm' | 'md' | 'lg'
+  message="Loading..."
+  showCard={true}
+  minHeight="h-64"
+/>
+
+// Inline spinner (e.g., in buttons)
+<Button disabled>
+  <LoadingSpinner size="sm" className="mr-2" />
+  Saving...
+</Button>
+
+// Skeleton placeholders
+<SkeletonLine width="w-3/4" />
+<SkeletonCard />`}
+                </pre>
+              </div>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Drawers & Modals Section */}
+          <ComponentShowcase
+            title="Drawers & Modals"
+            path="app/components/ui/drawer.tsx & app/components/ui/dialog.tsx"
+            description="Test drawer and modal styling. Both should have solid opaque backgrounds (not semi-transparent like cards) for proper light/dark mode support."
+          >
+            <StateDemo label="Overlay Options">
+              <div className="flex flex-wrap gap-6 items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Switch checked={overlayDark} onCheckedChange={setOverlayDark} />
+                  <span className="text-sm">Dark</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Switch checked={overlayBlur} onCheckedChange={setOverlayBlur} />
+                  <span className="text-sm">Blur</span>
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {overlayDark && overlayBlur ? 'Dark + Blur' :
+                   overlayDark ? 'Dark only' :
+                   overlayBlur ? 'Blur only' : 'No overlay'}
+                </span>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Open Test Components">
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => setShowDialog(true)}>
+                  Open Dialog
+                </Button>
+                <Button onClick={() => setShowDrawer(true)} variant="outline">
+                  Open Drawer
+                </Button>
+                <Button onClick={() => setShowDrawerWithForm(true)} variant="secondary">
+                  Drawer with Form
+                </Button>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Styling Notes">
+              <div className="wewrite-card p-4 bg-muted/30 max-w-2xl space-y-2">
+                <p className="text-sm"><strong>Overlay Props (combinable):</strong></p>
+                <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                  <li><code className="bg-muted px-1 rounded">showOverlay=&#123;true&#125;</code> - Dark semi-transparent (bg-black/50)</li>
+                  <li><code className="bg-muted px-1 rounded">blurOverlay=&#123;true&#125;</code> - Adds backdrop blur (backdrop-blur-sm)</li>
+                  <li>Both can be combined for dark + blur effect</li>
+                </ul>
+                <p className="text-sm mt-3"><strong>Content Styling:</strong></p>
+                <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                  <li>High opacity: <code className="bg-muted px-1 rounded">bg-white/95 dark:bg-zinc-900/95</code></li>
+                  <li>Backdrop blur: <code className="bg-muted px-1 rounded">backdrop-blur-xl</code></li>
+                  <li>Border & shadow: <code className="bg-muted px-1 rounded">border border-border shadow-lg</code></li>
+                </ul>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Code Usage">
+              <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
+                <pre className="text-xs overflow-x-auto">
+{`// Drawer Usage
+<Drawer open={isOpen} onOpenChange={setIsOpen}>
+  <DrawerContent
+    height="auto"
+    showOverlay={true}  // dark tint (default)
+    blurOverlay={false} // backdrop blur
+  >
+    <DrawerHeader>
+      <DrawerTitle>Title</DrawerTitle>
+      <DrawerDescription>Description</DrawerDescription>
+    </DrawerHeader>
+    <div className="px-4 pb-4">Content</div>
+    <DrawerFooter className="flex-row gap-2">
+      <Button variant="outline">Cancel</Button>
+      <Button>Confirm</Button>
+    </DrawerFooter>
+  </DrawerContent>
+</Drawer>
+
+// Dialog Usage
+<Dialog open={isOpen} onOpenChange={setIsOpen}>
+  <DialogContent
+    showOverlay={true}  // dark tint (default)
+    blurOverlay={false} // backdrop blur
+  >
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+      <DialogDescription>Description</DialogDescription>
+    </DialogHeader>
+    Content
+    <DialogFooter>
+      <Button variant="outline">Cancel</Button>
+      <Button>Confirm</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>`}
+                </pre>
+              </div>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Tabs */}
+          <ComponentShowcase
+            title="Tabs"
+            path="app/components/ui/tabs.tsx"
+            description="Simple tabs for switching between content sections. Underline style indicates active tab."
+          >
+            <StateDemo label="Basic Tabs">
+              <div className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="w-full justify-start gap-4 bg-transparent p-0">
+                    <TabsTrigger value="tab1">Overview</TabsTrigger>
+                    <TabsTrigger value="tab2">Analytics</TabsTrigger>
+                    <TabsTrigger value="tab3">Settings</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="tab1" className="p-4 border rounded-lg mt-4">
+                    <p className="text-sm text-muted-foreground">Overview content goes here. This is the first tab.</p>
+                  </TabsContent>
+                  <TabsContent value="tab2" className="p-4 border rounded-lg mt-4">
+                    <p className="text-sm text-muted-foreground">Analytics content goes here. This is the second tab.</p>
+                  </TabsContent>
+                  <TabsContent value="tab3" className="p-4 border rounded-lg mt-4">
+                    <p className="text-sm text-muted-foreground">Settings content goes here. This is the third tab.</p>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Tabs with Icons">
+              <div className="w-full">
+                <Tabs defaultValue="users">
+                  <TabsList className="w-full justify-start gap-4 bg-transparent p-0">
+                    <TabsTrigger value="users" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Users
+                    </TabsTrigger>
+                    <TabsTrigger value="settings" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </TabsTrigger>
+                    <TabsTrigger value="mail" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Mail
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="users" className="p-4 border rounded-lg mt-4">
+                    <p className="text-sm text-muted-foreground">Manage users and permissions.</p>
+                  </TabsContent>
+                  <TabsContent value="settings" className="p-4 border rounded-lg mt-4">
+                    <p className="text-sm text-muted-foreground">Configure application settings.</p>
+                  </TabsContent>
+                  <TabsContent value="mail" className="p-4 border rounded-lg mt-4">
+                    <p className="text-sm text-muted-foreground">View and manage email notifications.</p>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Segmented Control */}
+          <ComponentShowcase
+            title="Segmented Control"
+            path="app/components/ui/segmented-control.tsx"
+            description="iOS-style segmented control for switching between mutually exclusive options. Filled style indicates active segment."
+          >
+            <StateDemo label="Basic Segmented Control">
+              <div className="w-full max-w-md">
+                <SegmentedControl value={activeSegment} onValueChange={setActiveSegment}>
+                  <SegmentedControlList>
+                    <SegmentedControlTrigger value="segment1">Day</SegmentedControlTrigger>
+                    <SegmentedControlTrigger value="segment2">Week</SegmentedControlTrigger>
+                    <SegmentedControlTrigger value="segment3">Month</SegmentedControlTrigger>
+                  </SegmentedControlList>
+                  <SegmentedControlContent value="segment1">
+                    <div className="p-4 border rounded-lg">
+                      <p className="text-sm text-muted-foreground">Showing daily view data</p>
+                    </div>
+                  </SegmentedControlContent>
+                  <SegmentedControlContent value="segment2">
+                    <div className="p-4 border rounded-lg">
+                      <p className="text-sm text-muted-foreground">Showing weekly view data</p>
+                    </div>
+                  </SegmentedControlContent>
+                  <SegmentedControlContent value="segment3">
+                    <div className="p-4 border rounded-lg">
+                      <p className="text-sm text-muted-foreground">Showing monthly view data</p>
+                    </div>
+                  </SegmentedControlContent>
+                </SegmentedControl>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="With Icons">
+              <div className="w-full max-w-md">
+                <SegmentedControl defaultValue="grid">
+                  <SegmentedControlList>
+                    <SegmentedControlTrigger value="list" className="flex items-center gap-1">
+                      <Type className="h-4 w-4" />
+                      <span className="hidden sm:inline">List</span>
+                    </SegmentedControlTrigger>
+                    <SegmentedControlTrigger value="grid" className="flex items-center gap-1">
+                      <Palette className="h-4 w-4" />
+                      <span className="hidden sm:inline">Grid</span>
+                    </SegmentedControlTrigger>
+                  </SegmentedControlList>
+                </SegmentedControl>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Two Options">
+              <div className="w-full max-w-xs">
+                <SegmentedControl defaultValue="active">
+                  <SegmentedControlList>
+                    <SegmentedControlTrigger value="active">Active</SegmentedControlTrigger>
+                    <SegmentedControlTrigger value="inactive">Inactive</SegmentedControlTrigger>
+                  </SegmentedControlList>
+                </SegmentedControl>
+              </div>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Test Dialog - uses switch state */}
+          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <DialogContent showOverlay={overlayDark} blurOverlay={overlayBlur}>
+              <DialogHeader>
+                <DialogTitle>Test Dialog</DialogTitle>
+                <DialogDescription>
+                  {overlayDark && overlayBlur ? 'Dark + Blur overlay' :
+                   overlayDark ? 'Dark overlay (default)' :
+                   overlayBlur ? 'Blur only overlay' : 'No overlay'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <p className="text-sm text-muted-foreground">
+                  95% white opacity + backdrop-blur-xl creates a clean, modern look.
+                </p>
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm">Sample content area with muted background</p>
+                </div>
+                <Input placeholder="Test input field..." />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+                <Button onClick={() => setShowDialog(false)}>Confirm</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Test Drawer - uses switch state */}
+          <Drawer open={showDrawer} onOpenChange={setShowDrawer}>
+            <DrawerContent height="auto" showOverlay={overlayDark} blurOverlay={overlayBlur}>
+              <DrawerHeader className="text-center">
+                <DrawerTitle>Test Drawer</DrawerTitle>
+                <DrawerDescription>
+                  {overlayDark && overlayBlur ? 'Dark + Blur overlay' :
+                   overlayDark ? 'Dark overlay (default)' :
+                   overlayBlur ? 'Blur only overlay' : 'No overlay'}
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="px-4 pb-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  95% white opacity + backdrop-blur-xl creates a clean, modern look.
+                </p>
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm">Sample content area with muted background</p>
+                </div>
+              </div>
+              <DrawerFooter className="flex-row gap-2">
+                <Button variant="outline" onClick={() => setShowDrawer(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={() => setShowDrawer(false)} className="flex-1">
+                  Confirm
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+
+          {/* Test Drawer with Form - proper header/body/footer structure */}
+          <Drawer open={showDrawerWithForm} onOpenChange={setShowDrawerWithForm}>
+            <DrawerContent height="70vh">
+              <DrawerHeader>
+                <DrawerTitle>Drawer with Form</DrawerTitle>
+                <DrawerDescription>
+                  Test scrollable body with fixed header and footer
+                </DrawerDescription>
+                <DrawerClose className="absolute right-4 top-1 p-2 rounded-full opacity-70 hover:opacity-100 hover:bg-muted">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </DrawerClose>
+              </DrawerHeader>
+
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto px-4 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Search</label>
+                  <Input
+                    placeholder="Search for something..."
+                    leftIcon={<Search className="h-4 w-4" />}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">URL</label>
+                  <Input
+                    placeholder="https://example.com"
+                    leftIcon={<Globe className="h-4 w-4" />}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Enable feature</label>
+                  <Switch checked={switchChecked} onCheckedChange={setSwitchChecked} />
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-sm font-medium mb-2">Preview</p>
+                  <PillLink href="#" clickable={false}>Sample Link</PillLink>
+                </div>
+
+                {/* Extra content to test scrolling */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Additional Field 1</label>
+                  <Input placeholder="More content..." />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Additional Field 2</label>
+                  <Input placeholder="Even more content..." />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Additional Field 3</label>
+                  <Input placeholder="Scroll to see footer..." />
+                </div>
+              </div>
+
+              {/* Fixed footer */}
+              <DrawerFooter className="flex-row gap-2">
+                <Button variant="outline" onClick={() => setShowDrawerWithForm(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={() => setShowDrawerWithForm(false)} className="flex-1">
+                  <Check className="h-4 w-4 mr-2" />
+                  Apply
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
     </div>

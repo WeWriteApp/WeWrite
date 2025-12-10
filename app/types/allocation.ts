@@ -56,6 +56,10 @@ export interface EmbeddedAllocationBarProps extends BaseAllocationProps {
   disableDetailModal?: boolean;
   /** Disable long-press to change interval - used for landing page */
   disableLongPress?: boolean;
+  /** Highlight the plus button with glow/pulse effect - used for landing page */
+  highlightPlusButton?: boolean;
+  /** Enable click zones on composition bar - left half triggers minus, right half triggers plus */
+  enableBarClickZones?: boolean;
 }
 
 /**

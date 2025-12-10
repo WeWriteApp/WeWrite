@@ -135,11 +135,11 @@ export default function ContentCarousel({
   return (
     <div
       className={`relative ${fullWidth ? 'w-full' : ''}`}
-      style={{ height: `${height}px` }}
+      style={{ minHeight: `${height}px` }}
     >
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide h-full items-center"
+        className="flex gap-4 overflow-x-auto overflow-y-visible scrollbar-hide items-start"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',

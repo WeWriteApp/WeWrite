@@ -17,7 +17,6 @@ import { useDemoBalance, useShouldUseDemoBalance } from "../../contexts/DemoBala
 import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
 import { useSidebarContext } from './UnifiedSidebar';
-import { useBanner } from "../../providers/BannerProvider";
 
 export interface FloatingFinancialHeaderProps {
   className?: string;
@@ -48,7 +47,6 @@ export default function FloatingFinancialHeader({
   const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
   const { demoBalance } = useDemoBalance();
   const { sidebarWidth, isExpanded } = useSidebarContext();
-  const { bannerOffset } = useBanner();
 
 
 
@@ -91,7 +89,7 @@ export default function FloatingFinancialHeader({
       '/', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following',
-      '/user', '/group', '/admin', '/timeline', '/leaderboard'
+      '/user', '/group', '/admin', '/timeline', '/leaderboard', '/map'
     ];
 
     // Hide on content creation pages
@@ -178,19 +176,15 @@ export default function FloatingFinancialHeader({
           direction="southwest"
           trigger={
             <Badge
-              variant="secondary"
-              className={`cursor-pointer transition-colors text-sm ${
-                isZeroEarnings
-                  ? ''
-                  : 'shiny-chip shiny-chip-success !text-white'
-              }`}
+              variant={isZeroEarnings ? "secondary" : "success"}
+              className="cursor-pointer transition-colors text-sm"
             >
               {formatUsdCents(displayAmount * 100)}
             </Badge>
           }
           content={<EarningsBreakdown
             totalEarnings={earnings.totalEarnings || 0}
-            pendingEarnings={displayAmount} // Show the same amount as the chip
+            pendingEarnings={displayAmount} // Show the same amount as the badge
             lastMonthEarnings={earnings.lastMonthEarnings || 0}
             monthlyChange={earnings.monthlyChange || 0}
           />}
@@ -207,7 +201,7 @@ export default function FloatingFinancialHeader({
         trigger={
           <Badge
             variant="secondary"
-            className="cursor-pointer bg-secondary/50 hover:bg-secondary/80 transition-colors text-muted-foreground text-sm"
+            className="cursor-pointer transition-colors text-sm"
           >
             $0.00
           </Badge>
@@ -279,8 +273,8 @@ export default function FloatingFinancialHeader({
     if (shouldShowAddFunds) {
       return (
         <Badge
-          variant="secondary"
-          className="cursor-pointer shiny-add-funds-chip text-sm px-3 py-1 !text-white"
+          variant="success"
+          className="cursor-pointer text-sm"
           onClick={() => router.push('/settings/fund-account')}
           title="Click to add funds"
         >
@@ -355,7 +349,7 @@ export default function FloatingFinancialHeader({
       <div
         className="md:hidden fixed-layer z-fixed-header pointer-events-none transition-all duration-300 ease-out"
         style={{
-          top: `calc(var(--fixed-safe-top) + ${bannerOffset}px)`,
+          top: 'var(--fixed-safe-top)',
           left: 0,
           right: 0
         }}

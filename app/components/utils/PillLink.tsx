@@ -319,12 +319,12 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
     return (
       <span
-        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out max-w-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-pointer hover:bg-neutral-300 dark:hover:bg-neutral-600 px-2 py-0.5 ${className}`}
+        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-pointer hover:bg-neutral-300 dark:hover:bg-neutral-600 px-2 py-0.5 ${className}`}
         onClick={handleDeletedClick}
         title="This page has been deleted. Click to see more options."
       >
         <Trash2 size={12} className="mr-1.5 flex-shrink-0" />
-        <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">{children || "deleted page"}</span>
+        <span className="pill-text">{children || "deleted page"}</span>
       </span>
     );
   }
@@ -361,8 +361,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
   // Use different styling for suggestions vs normal pill links
   const baseStyles = isSuggestion
-    ? `inline-block px-2 py-1 text-sm font-medium text-primary bg-transparent border-b-2 border-dotted border-primary/60 hover:bg-primary/10 transition-colors cursor-pointer max-w-[calc(100vw-2rem)] overflow-hidden ${className}`.trim()
-    : `${getPillStyleClasses()} max-w-[calc(100vw-2rem)] overflow-hidden ${className}`.trim();
+    ? `inline-block px-2 py-1 text-sm font-medium text-primary bg-transparent border-b-2 border-dotted border-primary/60 hover:bg-primary/10 transition-colors cursor-pointer ${className}`.trim()
+    : `${getPillStyleClasses()} ${className}`.trim();
 
   // External link with confirmation modal
   if (isExternalLinkType) {
@@ -405,7 +405,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           data-pill-style={pillStyle}
           tabIndex={0}
         >
-          <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">{formattedDisplayTitle}</span>
+          <span className="pill-text">{formattedDisplayTitle}</span>
           <ExternalLink size={14} className="flex-shrink-0" />
           {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -506,7 +506,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         }}
       >
         {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
-        <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">{formattedDisplayTitle}</span>
+        <span className="pill-text">{formattedDisplayTitle}</span>
         {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
       </a>
 

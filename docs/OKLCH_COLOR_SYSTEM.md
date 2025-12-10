@@ -222,34 +222,93 @@ const gradients = useMemo(() => {
 
 ## CSS Integration
 
-### **CSS Variables**
-All CSS custom properties use OKLCH format:
+### **CSS Variables - DUAL FORMAT SYSTEM**
+
+⚠️ **IMPORTANT**: The codebase uses TWO different color formats for CSS variables:
 
 ```css
 :root {
-  /* OKLCH format: lightness% chroma hue */
-  --primary: 55.93% 0.6617 284.9;    /* Accent color */
-  --neutral: 50% 0.05 240;           /* Neutral color */
-  --background: 98.22% 0.01 240;     /* Background color */
+  /* HSL format variables (use with hsl() wrapper) */
+  --background: 0 0% 100%;          /* Format: H S% L% */
+  --foreground: 222 47% 11%;
+  --muted-foreground: 215 16% 47%;
+  --secondary: 210 40% 96%;
+  --border: 214 32% 91%;
+  --accent: 210 40% 96%;            /* HSL format */
+
+  /* OKLCH format variables (use with oklch() wrapper) */
+  --accent-base: 0.50 0.25 230;     /* Format: L C H (decimal) */
+  --primary: var(--accent-base);
+  --neutral-base: 0.50 0.05 230;
+  --ring: var(--accent-base);
 }
 
-/* Use with oklch() function */
+/* Correct usage */
 .element {
-  background-color: oklch(var(--primary));
-  border-color: oklch(var(--neutral));
+  background-color: hsl(var(--background));     /* HSL variables */
+  color: oklch(var(--primary));                  /* OKLCH variables */
 }
 ```
 
-### **Tailwind Integration**
-Both Tailwind configs use OKLCH consistently:
+### **Dynamic Accent Color**
+
+The `AccentColorContext` dynamically sets the accent color as both:
+1. **OKLCH values** (`--accent-base`, `--primary`) for modern CSS
+2. **Hex value** (`--accent-color`) for compatibility
 
 ```typescript
-// tailwind.config.ts & config/tailwind.config.ts
+// AccentColorContext sets these at runtime:
+document.documentElement.style.setProperty('--accent-color', '#2563EB');    // Hex fallback
+document.documentElement.style.setProperty('--accent-base', '0.50 0.25 230'); // OKLCH
+document.documentElement.style.setProperty('--primary', '0.50 0.25 230');     // OKLCH
+```
+
+### **Tailwind Integration - MIXED FORMAT**
+
+⚠️ **NOTE**: Tailwind uses BOTH HSL and OKLCH formats:
+
+```typescript
+// tailwind.config.ts
 colors: {
-  primary: "oklch(var(--primary))",
-  neutral: "oklch(var(--neutral))",
-  background: "oklch(var(--background))",
+  // HSL format colors (from globals.css)
+  background: "hsl(var(--background))",
+  foreground: "hsl(var(--foreground))",
+  border: "hsl(var(--border))",
+  muted: {
+    foreground: "hsl(var(--muted-foreground))",
+  },
+  secondary: {
+    DEFAULT: "hsl(var(--secondary))",
+  },
+
+  // OKLCH format colors
+  primary: {
+    DEFAULT: "oklch(var(--primary))",
+  },
+  ring: "oklch(var(--ring))",
+  neutral: {
+    DEFAULT: "oklch(var(--neutral))",
+  },
 }
+```
+
+### **SVG and D3.js Color Limitations**
+
+⚠️ **CRITICAL**: SVG `fill` and `stroke` attributes do NOT support CSS variable syntax!
+
+```typescript
+// ❌ WRONG: SVG attributes don't parse CSS functions
+svg.attr("fill", "oklch(var(--primary))");  // Renders as grey/white!
+svg.attr("fill", "hsl(var(--background))"); // Renders as grey/white!
+
+// ✅ CORRECT: Use computed hex values for SVG
+const computedStyle = getComputedStyle(document.documentElement);
+const accentHex = computedStyle.getPropertyValue('--accent-color').trim() || '#2563EB';
+svg.attr("fill", accentHex);  // Works correctly!
+
+// For theme-aware colors without CSS variables:
+const isDarkMode = document.documentElement.classList.contains('dark');
+const bgColor = isDarkMode ? '#000000' : '#ffffff';
 ```
 
 ## Usage Guidelines

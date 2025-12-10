@@ -292,6 +292,7 @@ export function LoginForm() {
 
         <Button
           type="submit"
+          variant="secondary"
           className="w-full"
           disabled={isLoading || isLockedOut}
         >
@@ -309,7 +310,6 @@ export function LoginForm() {
 
         <Button
           type="button"
-          variant="secondary"
           className="w-full"
           onClick={() => router.push('/auth/register')}
         >

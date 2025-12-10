@@ -462,8 +462,15 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
         added: diffResult.added || 0,
         removed: diffResult.removed || 0,
         hasChanges: (diffResult.added > 0 || diffResult.removed > 0) || isNewPage,
-        preview: diffResult.preview || null
-      } : null
+        preview: diffResult.preview || null,
+        isNewPage: isNewPage // Flag for new page creation to show all content as additions
+      } : (isNewPage ? {
+        added: 0,
+        removed: 0,
+        hasChanges: true,
+        preview: null,
+        isNewPage: true
+      } : null)
     };
     console.log('🔵 VERSION: Updating page document with', {
       pageId,

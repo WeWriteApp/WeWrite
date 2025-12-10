@@ -4,6 +4,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "../../lib/utils"
 import { getAccessibleButtonProps } from "../../utils/accessibilityHelpers"
+import { usePillStyle } from "../../contexts/PillStyleContext"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0 text-center",
@@ -53,6 +54,40 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    // Get UI style to determine if shiny effect should be applied
+    let isShinyMode = false;
+    try {
+      const pillStyleContext = usePillStyle();
+      isShinyMode = pillStyleContext?.isShinyUI ?? false;
+    } catch {
+      // Context not available (e.g., during SSR or outside provider)
+      isShinyMode = false;
+    }
+
+    // Determine shiny classes based on variant when shiny mode is enabled
+    // Uses inheritance: shiny-shimmer-base + (shiny-glow-base OR shiny-skeuomorphic-base) + variant-specific
+    let shinyClasses = '';
+    if (isShinyMode) {
+      // Solid colored buttons: shimmer + glow + color-specific
+      if (variant === 'default' || variant === undefined) {
+        shinyClasses = 'shiny-shimmer-base shiny-glow-base button-shiny-style';
+      } else if (variant === 'destructive') {
+        shinyClasses = 'shiny-shimmer-base shiny-glow-base button-destructive-shiny-style';
+      } else if (variant === 'success') {
+        shinyClasses = 'shiny-shimmer-base shiny-glow-base button-success-shiny-style';
+      }
+      // Light/secondary buttons: shimmer + skeuomorphic + variant-specific
+      else if (variant === 'secondary') {
+        shinyClasses = 'shiny-shimmer-base shiny-skeuomorphic-base button-secondary-shiny-style';
+      } else if (variant === 'outline') {
+        shinyClasses = 'shiny-shimmer-base button-outline-shiny-style';
+      } else if (variant === 'destructive-secondary') {
+        shinyClasses = 'shiny-shimmer-base shiny-skeuomorphic-base button-destructive-secondary-shiny-style';
+      } else if (variant === 'success-secondary') {
+        shinyClasses = 'shiny-shimmer-base shiny-skeuomorphic-base button-success-secondary-shiny-style';
+      }
+    }
+
     // Simple implementation without Radix UI Slot to avoid ref composition issues
     if (asChild) {
       // If asChild is true, we need to clone the first child and apply our props
@@ -60,7 +95,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       // Remove asChild from props passed to child
       const { asChild: _, ...childProps } = props;
       return React.cloneElement(child, {
-        className: cn(buttonVariants({ variant, size }), className, child.props.className),
+        className: cn(buttonVariants({ variant, size }), shinyClasses, className, child.props.className),
         ref,
         ...childProps,
         children: child.props.children
@@ -71,7 +106,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const { asChild: _, ...domProps } = props;
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, className }), shinyClasses)}
         ref={ref}
         {...domProps}
       />

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
 import { CreditCard, AlertTriangle, EllipsisVertical, Trash2, CheckCircle2, Plus } from 'lucide-react';
@@ -141,33 +140,16 @@ export function PaymentMethodsOverview() {
 
   if (loading) {
     return (
-      <Card className="wewrite-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Payment Methods
-          </CardTitle>
-          <CardDescription>Quick overview of your payment methods</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="wewrite-card">
+        <div className="flex justify-center items-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="wewrite-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          Payment Methods
-        </CardTitle>
-        <CardDescription>Quick overview of your payment methods</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="wewrite-card space-y-4">
         {error && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -284,7 +266,6 @@ export function PaymentMethodsOverview() {
 
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

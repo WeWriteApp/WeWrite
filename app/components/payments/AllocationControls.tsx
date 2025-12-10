@@ -352,10 +352,10 @@ export function AllocationControls({
             />
           )}
 
-          {/* Available funds - right side */}
+          {/* Available funds - right side (outline style) */}
           {compositionData.availablePercentage > 0 && (
             <div
-              className="bg-muted-foreground/10 rounded-md transition-all duration-300 ease-out"
+              className={ALLOCATION_BAR_STYLES.sections.available}
               style={{ width: `${compositionData.availablePercentage}%` }}
             />
           )}

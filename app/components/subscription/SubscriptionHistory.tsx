@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import '../ui/tooltip.css';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import {
   History,
   Loader2,
   RefreshCw,
-  DollarSign,
   AlertCircle
 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../../providers/AuthProvider';
 import { formatRelativeTime } from '../../utils/formatRelativeTime';
@@ -165,114 +164,70 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
 
   if (loading) {
     return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Subscription History
-          </CardTitle>
-          <CardDescription>
-            Complete record of your WeWrite subscription changes and payments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
+      <div className={cn("wewrite-card", className)}>
+        <div className="flex items-center justify-center py-6">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
               <p className="text-sm text-muted-foreground">Loading subscription history...</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Subscription History
-          </CardTitle>
-          <CardDescription>
-            Complete record of your WeWrite subscription changes and payments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center gap-4 py-8">
-            <AlertCircle className="h-12 w-12 text-destructive" />
-            <div className="text-center">
-              <p className="text-sm font-medium text-destructive mb-2">Failed to load subscription history</p>
-              <p className="text-xs text-muted-foreground mb-4">{error}</p>
-            </div>
-            <Button onClick={fetchHistory} variant="secondary" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
+      <div className={cn("wewrite-card", className)}>
+        <div className="flex flex-col items-center gap-4 py-6">
+          <AlertCircle className="h-12 w-12 text-destructive" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-destructive mb-2">Failed to load subscription history</p>
+            <p className="text-xs text-muted-foreground mb-4">{error}</p>
           </div>
-        </CardContent>
-      </Card>
+          <Button onClick={fetchHistory} variant="secondary" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Subscription History
+    <div className={cn("wewrite-card", className)}>
+      {history.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 py-6">
+          <History className="h-12 w-12 text-muted-foreground" />
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">No subscription history found</p>
+            <p className="text-xs text-muted-foreground">
+              Your subscription changes and payments will appear here
+            </p>
           </div>
-          <Button
-            onClick={fetchHistory}
-            variant="ghost"
-            size="sm"
-            disabled={loading}
-            className="h-8 w-8 p-0"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </CardTitle>
-        <CardDescription>
-          Complete record of your WeWrite subscription changes and payments over time
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {history.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <History className="h-12 w-12 text-muted-foreground" />
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-2">No subscription history found</p>
-              <p className="text-xs text-muted-foreground">
-                Your subscription changes and payments will appear here
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {history.map((event) => (
-              <div key={event.id} className="p-4 border-theme-strong rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant={getEventBadgeVariantByDescription(event.type, event.description)} className="text-xs">
-                    {formatEventType(event.type, event.description)}
-                  </Badge>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {history.map((event) => (
+            <div key={event.id} className="p-3 border border-border rounded-lg">
+              <div className="flex items-start justify-between mb-2">
+                <Badge variant={getEventBadgeVariantByDescription(event.type, event.description)} className="text-xs">
+                  {formatEventType(event.type, event.description)}
+                </Badge>
 
-                  {/* Relative time with tooltip showing absolute date/time */}
-                  <div
-                    className="tooltip-trigger text-xs text-muted-foreground cursor-help"
-                    data-tooltip={`${event.timestamp.toLocaleDateString()} ${event.timestamp.toLocaleTimeString()}`}
-                  >
-                    {formatRelativeTime(event.timestamp)}
-                  </div>
+                {/* Relative time with tooltip showing absolute date/time */}
+                <div
+                  className="tooltip-trigger text-xs text-muted-foreground cursor-help"
+                  data-tooltip={`${event.timestamp.toLocaleDateString()} ${event.timestamp.toLocaleTimeString()}`}
+                >
+                  {formatRelativeTime(event.timestamp)}
                 </div>
-
-                <p className="text-sm font-medium">{event.description}</p>
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+
+              <p className="text-sm font-medium">{event.description}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -93,7 +93,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
       </DropdownMenu>
 
       <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
-        <DialogContent className="max-w-md bg-background text-foreground border border-border shadow-2xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Filters</DialogTitle>
           </DialogHeader>

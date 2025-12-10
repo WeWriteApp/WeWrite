@@ -27,13 +27,38 @@ export interface SimulatedUsdBalance {
 const SIMULATED_MONTHLY_USD_CENTS = 1000; // Equivalent to $10/month
 const STORAGE_KEY_PREFIX = 'wewrite_simulated_usd';
 const LOGGED_OUT_STORAGE_KEY = `${STORAGE_KEY_PREFIX}_logged_out`;
-const DEMO_BALANCE_VERSION = 3; // Force reset to show OTHER section properly
+const DEMO_BALANCE_VERSION = 4; // Force reset to show $2 in OTHER section for landing page
+
+// Default "other pages" allocations for the landing page demo ($2 total)
+const DEFAULT_OTHER_ALLOCATIONS: SimulatedUsdAllocation[] = [
+  { pageId: 'demo-climate-solutions', pageTitle: 'Climate Change Solutions', usdCents: 75, timestamp: Date.now() },
+  { pageId: 'demo-community-garden', pageTitle: 'Local Community Garden', usdCents: 50, timestamp: Date.now() },
+  { pageId: 'demo-music-theory', pageTitle: 'Music Theory Basics', usdCents: 75, timestamp: Date.now() },
+];
+const DEFAULT_OTHER_ALLOCATED_CENTS = 200; // $2.00 total
 
 /**
  * Get storage key for a specific user (logged-in users without subscription)
  */
 const getUserStorageKey = (userId: string): string => {
   return `${STORAGE_KEY_PREFIX}_user_${userId}`;
+};
+
+/**
+ * Save USD balance to localStorage
+ */
+const saveUsdBalance = (storageKey: string, balance: SimulatedUsdBalance): void => {
+  try {
+    const dataToStore = {
+      version: DEMO_BALANCE_VERSION,
+      allocatedUsdCents: balance.allocatedUsdCents,
+      allocations: balance.allocations,
+      lastUpdated: Date.now()
+    };
+    localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+  } catch (error) {
+    console.warn('Error saving USD balance:', error);
+  }
 };
 
 /**
@@ -75,14 +100,20 @@ export const getLoggedOutUsdBalance = (): SimulatedUsdBalance => {
     console.warn('Error reading logged-out USD balance:', error);
   }
 
-  // Return default balance with no allocations
-  return {
+  // Return default balance with pre-set "other pages" allocations ($2 total)
+  // This gives users something to see in the "Other Pages" section on the landing page
+  const defaultBalance: SimulatedUsdBalance = {
     totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
-    allocatedUsdCents: 0,
-    availableUsdCents: SIMULATED_MONTHLY_USD_CENTS,
-    allocations: [],
+    allocatedUsdCents: DEFAULT_OTHER_ALLOCATED_CENTS,
+    availableUsdCents: SIMULATED_MONTHLY_USD_CENTS - DEFAULT_OTHER_ALLOCATED_CENTS,
+    allocations: [...DEFAULT_OTHER_ALLOCATIONS],
     lastUpdated: Date.now()
   };
+
+  // Save the default balance so it persists
+  saveUsdBalance(LOGGED_OUT_STORAGE_KEY, defaultBalance);
+
+  return defaultBalance;
 };
 
 /**
@@ -113,31 +144,19 @@ export const getUserUsdBalance = (userId: string): SimulatedUsdBalance => {
     console.warn('Error reading user USD balance:', error);
   }
 
-  // Return default balance with no allocations
-  return {
+  // Return default balance with pre-set "other pages" allocations ($2 total)
+  const defaultBalance: SimulatedUsdBalance = {
     totalUsdCents: SIMULATED_MONTHLY_USD_CENTS,
-    allocatedUsdCents: 0,
-    availableUsdCents: SIMULATED_MONTHLY_USD_CENTS,
-    allocations: [],
+    allocatedUsdCents: DEFAULT_OTHER_ALLOCATED_CENTS,
+    availableUsdCents: SIMULATED_MONTHLY_USD_CENTS - DEFAULT_OTHER_ALLOCATED_CENTS,
+    allocations: [...DEFAULT_OTHER_ALLOCATIONS],
     lastUpdated: Date.now()
   };
-};
 
-/**
- * Save USD balance to localStorage
- */
-const saveUsdBalance = (storageKey: string, balance: SimulatedUsdBalance): void => {
-  try {
-    const dataToStore = {
-      version: DEMO_BALANCE_VERSION,
-      allocatedUsdCents: balance.allocatedUsdCents,
-      allocations: balance.allocations,
-      lastUpdated: Date.now()
-    };
-    localStorage.setItem(storageKey, JSON.stringify(dataToStore));
-  } catch (error) {
-    console.warn('Error saving USD balance:', error);
-  }
+  // Save the default balance so it persists
+  saveUsdBalance(getUserStorageKey(userId), defaultBalance);
+
+  return defaultBalance;
 };
 
 /**

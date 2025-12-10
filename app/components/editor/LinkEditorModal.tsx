@@ -6,7 +6,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
-import { Link, ExternalLink, Users, FileText, X, Type, Globe } from 'lucide-react';
+import { Link, ExternalLink, Users, FileText, X, Type, Globe, Search, Check } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
@@ -639,56 +639,53 @@ export default function LinkEditorModal({
                 </div>
               </div>
 
-              {/* Page Link Header - Moved below toggle switches */}
-              <div>
-                <Label className="text-sm font-medium text-foreground">
-                  Link Target
-                </Label>
-              </div>
-
               {/* Custom Text Input - Show when enabled */}
               {customText && (
                 <div className="flex-shrink-0 animate-in slide-in-from-top-2 duration-200" style={{ pointerEvents: 'auto' }}>
                   <div className="space-y-2">
-                    <div className="relative">
-                      <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        ref={customTextInputRef}
-                        id="display-text"
-                        value={displayText}
-                        onChange={handleDisplayTextChange}
-                        placeholder="Enter custom link text"
-                        className="w-full min-w-0 pl-9"
-                        autoComplete="off"
-                        onFocus={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onBlur={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onKeyDown={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onKeyUp={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onInput={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      />
-                    </div>
+                    <Label htmlFor="display-text" className="text-sm font-medium text-foreground">
+                      Custom title
+                    </Label>
+                    <Input
+                      ref={customTextInputRef}
+                      id="display-text"
+                      value={displayText}
+                      onChange={handleDisplayTextChange}
+                      placeholder="Enter custom link text"
+                      leftIcon={<Type className="h-4 w-4" />}
+                      className="w-full min-w-0"
+                      autoComplete="off"
+                      onFocus={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onBlur={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onKeyUp={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onInput={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    />
                   </div>
                 </div>
               )}
 
               {/* Search Results with Current Link Inside Input */}
-              <div className="w-full overflow-hidden">
+              <div className="w-full overflow-hidden space-y-2">
+                <Label className="text-sm font-medium text-foreground">
+                  Search for pages
+                </Label>
                 {/* Simplified Current Link Input - Styled to match other form inputs */}
                 {isEditing && editingLink && editingLink.type !== 'external' ? (
                   <div className="mb-3">
@@ -886,7 +883,6 @@ export default function LinkEditorModal({
       }}>
         <DrawerContent
           height="85vh"
-          className="border-t-2 border-border"
           tabIndex={-1}
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
@@ -917,9 +913,9 @@ export default function LinkEditorModal({
           }}
           // REMOVED: onFocus handler that was stealing focus from custom text input
         >
-          <DrawerHeader className="relative">
+          <DrawerHeader>
             <DrawerTitle>{modalTitle}</DrawerTitle>
-            <DrawerClose className="absolute right-0 top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <DrawerClose className="absolute right-4 top-1 p-2 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
             </DrawerClose>

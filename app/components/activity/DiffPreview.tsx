@@ -19,8 +19,8 @@ import { DiffPreview as DiffPreviewType, calculateDiff } from '../../utils/diffS
  * ✅ All diff logic consolidated into a single utility file
  *
  * Styling Standards Applied:
- * - Addition Styling: bg-green-50 dark:bg-green-900/40, text-green-600 dark:text-green-400
- * - Deletion Styling: bg-red-50 dark:bg-red-900/40, text-red-600 dark:text-red-400, line-through
+ * - Addition Styling: bg-green-500/20 dark:bg-green-500/30, text-green-600 dark:text-green-400
+ * - Deletion Styling: bg-red-500/20 dark:bg-red-500/30, text-red-600 dark:text-red-400, line-through
  * - Context Styling: text-muted-foreground
  *
  * Activity Card Locations Using This Component:
@@ -63,6 +63,13 @@ export default function DiffPreview({
 
   // Calculate diff using centralized service when content is provided
   useEffect(() => {
+    // For new pages, use pre-calculated diff data or create a simple "new content" preview
+    if (isNewPage && textDiff?.preview) {
+      // Use pre-calculated diff for new pages
+      setDiffPreview(textDiff.preview);
+      return;
+    }
+
     // Only calculate diff if we have actual content (not null or undefined)
     if (currentContent && previousContent !== undefined) {
       setLoading(true);
@@ -80,7 +87,7 @@ export default function DiffPreview({
       // Use pre-calculated diff for backward compatibility
       setDiffPreview(textDiff.preview);
     }
-  }, [currentContent, previousContent, textDiff]);
+  }, [currentContent, previousContent, textDiff, isNewPage]);
 
   // Use the calculated preview or fallback to textDiff
   const preview = diffPreview || textDiff?.preview;
@@ -136,14 +143,14 @@ export default function DiffPreview({
 
         {/* Show removed text with strikethrough and red background */}
         {preview.hasRemovals && preview.removedText && (
-          <span className="bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-0.5 rounded line-through">
+          <span className="bg-red-500/20 dark:bg-red-500/30 text-red-600 dark:text-red-400 px-0.5 rounded line-through">
             {preview.removedText}
           </span>
         )}
 
         {/* Show added text with green background */}
         {preview.hasAdditions && preview.addedText && (
-          <span className="bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-0.5 rounded">
+          <span className="bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 px-0.5 rounded">
             {preview.addedText}
           </span>
         )}

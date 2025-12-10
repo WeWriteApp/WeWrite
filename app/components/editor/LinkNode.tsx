@@ -5,7 +5,6 @@ import { usePillStyle } from "../../contexts/PillStyleContext";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
-import { UsernameBadge } from "../ui/UsernameBadge";
 import { getPageTitle } from "../../utils/pageUtils";
 import { LinkMigrationHelper } from "../../types/linkNode";
 
@@ -349,62 +348,48 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       });
 
       // Render compound link as two separate pills: [Page Title] by [Author Username]
-
       // Use the extracted displayText which already handles custom text properly
       let pageTitleText = displayText || originalPageTitle || 'Page';
 
-      // Remove @ symbol from username if present, or use empty string if no username
+      // Remove @ symbol from username if present
       const cleanUsername = validatedNode.authorUsername
         ? validatedNode.authorUsername.replace(/^@/, '')
         : '';
 
       // Ensure href is properly formatted for internal links
-      // WeWrite uses /{pageId} format, not /pages/{pageId}
       const formattedHref = href.startsWith('/') ? href : `/${pageId}`;
 
-      // Use PillStyleContext for consistent styling between edit and view modes
-      const { getPillStyleClasses } = usePillStyle();
-      const pillStyles = getPillStyleClasses('paragraph');
-
-      // TextView is now for viewing only - editing is handled by Editor component
-      // Always render in view mode
-      // In view mode, normal navigation behavior
-      // Use inline display so compound links wrap naturally like manually created page+user links
+      // Render as inline content matching regular pill link appearance
       return (
         <span
           {...wrapperProps}
-          className="compound-link-container"
-          style={{
-            ...wrapperProps.style,
-            display: 'inline',
-            verticalAlign: 'baseline'
-          }}
+          className="compound-link-container inline"
         >
           <PillLink
             href={formattedHref}
             isPublic={true}
-            className="page-link page-portion"
+            className="page-link"
             data-page-id={pageId}
             isEditing={isEditing}
             onEditLink={isEditing ? onEditLink : undefined}
           >
             {pageTitleText}
           </PillLink>
-          {' '}
-          <span className="text-muted-foreground text-sm" style={{ verticalAlign: 'middle' }}>by</span>
-          {' '}
-          <UsernameBadge
-            userId={validatedNode.authorUserId}
-            username={cleanUsername || 'Loading...'}
-            tier={validatedNode.authorTier}
-            subscriptionStatus={validatedNode.authorSubscriptionStatus}
-            subscriptionAmount={validatedNode.authorSubscriptionAmount}
-            size="sm"
-            variant="pill"
-            pillVariant="secondary"
-            className="author-portion"
-            showBadge={true}
-          />
+          <span className="text-muted-foreground mx-1">by</span>
+          <PillLink
+            href={`/user/${validatedNode.authorUserId}`}
+            isPublic={true}
+            className="user-link"
+          >
+            <span className="inline-flex items-center gap-1">
+              {cleanUsername || 'Loading...'}
+              {(validatedNode.authorSubscriptionStatus === 'active' && validatedNode.authorSubscriptionAmount) && (
+                <span className="inline-flex items-center justify-center text-[10px] font-bold text-primary-foreground bg-primary rounded px-1 min-w-[18px] h-[14px]">
+                  ${validatedNode.authorSubscriptionAmount}
+                </span>
+              )}
+            </span>
+          </PillLink>
           <span style={{ display: 'none' }}>{children}</span>
         </span>
       );

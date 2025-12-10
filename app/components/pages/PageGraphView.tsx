@@ -1,18 +1,26 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as d3 from 'd3';
-import { useRouter } from 'next/navigation';
-import { usePillStyle } from '../../contexts/PillStyleContext';
-// import { useGraphSettings } from '../../contexts/GraphSettingsContext';
-import { Loader2, Maximize2, X, Eye, EyeOff, Network } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
+import { Maximize2, X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2 } from 'lucide-react';
+import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 import { useRelatedPages } from '../../hooks/useRelatedPages';
-import { graphDataCache } from '../../utils/graphDataCache';
-import GraphSettingsPanel from './GraphSettingsPanel';
 import { useAuth } from '../../providers/AuthProvider';
 import SubscriptionGate from '../subscription/SubscriptionGate';
+import { PillLink } from '../utils/PillLink';
+import { useTheme } from '../../providers/ThemeProvider';
+
+// Dynamically import 3D graph component (WebGL requires client-side only)
+const PageGraph3D = dynamic(() => import('./PageGraph3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+});
 
 interface GraphNode {
   id: string;
@@ -55,6 +63,9 @@ interface PageGraphViewProps {
  * - Styled with current pill link style
  * - Visual key shows different hop levels
  */
+type SortField = 'title' | 'links';
+type SortDirection = 'asc' | 'desc';
+
 export default function PageGraphView({
   pageId,
   pageTitle,
@@ -63,77 +74,39 @@ export default function PageGraphView({
   replyToId,
   replyType
 }: PageGraphViewProps) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
-  const router = useRouter();
-  const { getPillStyleClasses } = usePillStyle();
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
   const { user } = useAuth();
-  // const { settings, openDrawer } = useGraphSettings();
-  const [settings, setSettings] = useState({
-    chargeStrength: -200,    // Reduced repulsion for comfortable clustering
-    linkDistance: 80,        // Shorter links to keep nodes closer together
-    centerStrength: 0.5,     // Balanced center force for natural positioning
-    collisionRadius: 25,     // Smaller collision radius for tighter layout
-    alphaDecay: 0.02,
-    velocityDecay: 0.4       // Slightly higher damping for stability
-  });
-  const openDrawer = () => {};
+  const [isPageListExpanded, setIsPageListExpanded] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('links');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // Handle settings changes
-  const handleSettingsChange = (newSettings: Partial<typeof settings>) => {
-    console.log('Settings change:', newSettings);
-    setSettings(prev => ({ ...prev, ...newSettings }));
-
-    // Trigger simulation update
-    if (simulationRef.current) {
-      const simulation = simulationRef.current;
-
-      // Update forces with new settings
-      simulation
-        .force("charge", d3.forceManyBody().strength(d => {
-          if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
-          return settings.chargeStrength;
-        }))
-        .force("center", d3.forceCenter(containerRef.current?.clientWidth / 2 || 0, (isFullscreen ? window.innerHeight : 400) / 2).strength(settings.centerStrength))
-        .force("collision", d3.forceCollide().radius(d => {
-          if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
-          return settings.collisionRadius;
-        }))
-        .alphaDecay(settings.alphaDecay)
-        .velocityDecay(settings.velocityDecay);
-
-      // Update link distance
-      const linkForce = simulation.force("link") as d3.ForceLink<GraphNode, GraphLink>;
-      if (linkForce) {
-        linkForce.distance(d => {
-          const source = d.source as GraphNode;
-          const target = d.target as GraphNode;
-          if (source.level === 0 || target.level === 0) return settings.linkDistance;
-          return settings.linkDistance * 0.8;
-        });
-      }
-
-      // Restart simulation with new settings
-      simulation.alpha(0.3).restart();
+  // Toggle sort handler
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'links' ? 'desc' : 'asc');
     }
-  };
+  }, [sortField]);
 
-  const handleResetSettings = () => {
-    const defaultSettings = {
-      chargeStrength: -200,    // Reduced repulsion for comfortable clustering
-      linkDistance: 80,        // Shorter links to keep nodes closer together
-      centerStrength: 0.5,     // Balanced center force for natural positioning
-      collisionRadius: 25,     // Smaller collision radius for tighter layout
-      alphaDecay: 0.02,
-      velocityDecay: 0.4       // Slightly higher damping for stability
+  // ESC key handler for fullscreen mode
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullscreen(false);
+      }
     };
-    handleSettingsChange(defaultSettings);
-  };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   // Use consolidated page connections hook
   const {
@@ -149,6 +122,109 @@ export default function PageGraphView({
 
   // Use related pages hook - exclude current user's pages
   const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle, undefined, user?.username);
+
+  // Compute page link statistics for the page list
+  const pageLinkStats = useMemo(() => {
+    // Map to track unique pages and their link counts
+    const pageMap = new Map<string, {
+      id: string;
+      title: string;
+      username?: string;
+      inLinks: number;
+      outLinks: number;
+      totalLinks: number;
+    }>();
+
+    // Add current page
+    pageMap.set(pageId, {
+      id: pageId,
+      title: pageTitle,
+      username: user?.username,
+      inLinks: incoming.length,
+      outLinks: outgoing.length,
+      totalLinks: incoming.length + outgoing.length
+    });
+
+    // Process all direct connections
+    allConnections.forEach(conn => {
+      const isIncoming = incoming.some(inc => inc.id === conn.id);
+      const isOutgoing = outgoing.some(out => out.id === conn.id);
+      const isBidirectional = bidirectional.some(bi => bi.id === conn.id);
+
+      let inCount = 0;
+      let outCount = 0;
+
+      if (isBidirectional) {
+        // Bidirectional means this page links to us AND we link to it
+        inCount = 1;
+        outCount = 1;
+      } else if (isIncoming) {
+        // This page links to us
+        outCount = 1; // From their perspective, it's an outgoing link
+      } else if (isOutgoing) {
+        // We link to this page
+        inCount = 1; // From their perspective, it's an incoming link
+      }
+
+      if (!pageMap.has(conn.id)) {
+        pageMap.set(conn.id, {
+          id: conn.id,
+          title: conn.title,
+          username: conn.username,
+          inLinks: inCount,
+          outLinks: outCount,
+          totalLinks: inCount + outCount
+        });
+      }
+    });
+
+    // Add second-hop connections
+    secondHopConnections.forEach(conn => {
+      if (!pageMap.has(conn.id)) {
+        pageMap.set(conn.id, {
+          id: conn.id,
+          title: conn.title,
+          username: conn.username,
+          inLinks: 1, // Has at least one connection to reach here
+          outLinks: 0,
+          totalLinks: 1
+        });
+      }
+    });
+
+    // Add third-hop connections
+    thirdHopConnections.forEach(conn => {
+      if (!pageMap.has(conn.id)) {
+        pageMap.set(conn.id, {
+          id: conn.id,
+          title: conn.title,
+          username: conn.username,
+          inLinks: 1,
+          outLinks: 0,
+          totalLinks: 1
+        });
+      }
+    });
+
+    // Convert to array (sorting will be applied in sortedPageLinkStats)
+    return Array.from(pageMap.values());
+  }, [pageId, pageTitle, user?.username, incoming, outgoing, bidirectional, allConnections, secondHopConnections, thirdHopConnections]);
+
+  // Sorted page link stats based on sort field and direction
+  const sortedPageLinkStats = useMemo(() => {
+    return [...pageLinkStats].sort((a, b) => {
+      if (sortField === 'links') {
+        const diff = b.totalLinks - a.totalLinks;
+        return sortDirection === 'desc' ? diff : -diff;
+      } else {
+        // Sort by title
+        const titleA = (a.title || '').toLowerCase();
+        const titleB = (b.title || '').toLowerCase();
+        const diff = titleA.localeCompare(titleB);
+        return sortDirection === 'asc' ? diff : -diff;
+      }
+    });
+  }, [pageLinkStats, sortField, sortDirection]);
 
   // Expose refresh function to parent component
   useEffect(() => {
@@ -313,498 +389,14 @@ export default function PageGraphView({
     setLinks(allLinks);
   }, [pageId, pageTitle, loading, relatedLoading, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length, thirdHopConnections.length, relatedPages.length]);
 
-  // D3 visualization
-  useEffect(() => {
-    if (!svgRef.current || nodes.length === 0 || loading || relatedLoading) return;
-
-    const svg = d3.select(svgRef.current);
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Clear previous content
-    svg.selectAll("*").remove();
-
-    // Set up dimensions
-    const width = container.clientWidth;
-    const height = isFullscreen ? window.innerHeight : 400;
-
-    svg.attr("width", width).attr("height", height);
-
-    // Create zoom behavior - only enable in fullscreen mode
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
-      });
-
-    // Only enable zoom/pan in fullscreen mode
-    if (isFullscreen) {
-      svg.call(zoom);
-    } else {
-      // Disable zoom/pan in collapsed mode
-      svg.on('.zoom', null);
-      // Allow pointer events for node clicks and background clicks in collapsed mode
-      svg.style("pointer-events", "auto");
-
-      // Add background click handler to open fullscreen when clicking non-node areas
-      svg.on("click", (event) => {
-        // Only trigger if clicking on the SVG background (not on nodes)
-        if (event.target === svg.node()) {
-          setIsFullscreen(true);
-        }
-      });
-    }
-
-    // Create main group for zooming
-    const g = svg.append("g");
-
-    // Define arrow markers for different link types
-    const defs = svg.append("defs");
-    const agreeColor = "hsl(var(--success, var(--green-500, 140 76% 44%)))";
-    const disagreeColor = "hsl(var(--destructive, var(--red-500, 0 72% 51%)))";
-
-    // Outgoing arrow (from center)
-    defs.append("marker")
-      .attr("id", "arrow-outgoing")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "hsl(var(--primary))");
-
-    // Incoming arrow (to center)
-    defs.append("marker")
-      .attr("id", "arrow-incoming")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "hsl(var(--muted-foreground))");
-
-    // Bidirectional arrows
-    defs.append("marker")
-      .attr("id", "arrow-bidirectional")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "hsl(var(--primary) / 0.8)");
-
-    // Agree arrow
-    defs.append("marker")
-      .attr("id", "arrow-agree")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", agreeColor);
-
-    // Disagree arrow
-    defs.append("marker")
-      .attr("id", "arrow-disagree")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", disagreeColor);
-
-    // Initialize node positions for better distribution
-    const centerNodes = nodes.filter(n => n.level === 0);
-    const connectedNodes = nodes.filter(n => n.level === 1);
-    const relatedNodes = nodes.filter(n => n.level === 2);
-
-    nodes.forEach((node, i) => {
-      if (node.x === undefined || node.y === undefined) {
-        if (node.level === 0) {
-          // Center node in the middle
-          node.x = width / 2;
-          node.y = height / 2;
-        } else if (node.level === 1) {
-          // Connected nodes in inner circle
-          const connectedIndex = connectedNodes.indexOf(node);
-          const angle = (connectedIndex / connectedNodes.length) * 2 * Math.PI;
-          const radius = Math.min(width, height) * 0.25;
-          node.x = width / 2 + Math.cos(angle) * radius;
-          node.y = height / 2 + Math.sin(angle) * radius;
-        } else {
-          // Related nodes in outer circle
-          const relatedIndex = relatedNodes.indexOf(node);
-          const angle = (relatedIndex / relatedNodes.length) * 2 * Math.PI;
-          const radius = Math.min(width, height) * 0.4;
-          node.x = width / 2 + Math.cos(angle) * radius;
-          node.y = height / 2 + Math.sin(angle) * radius;
-        }
-      }
-    });
-
-    // Check for bidirectional connections to make them closer
-    const bidirectionalPairs = new Set<string>();
-    links.forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-
-      // Check if reverse link exists
-      const reverseExists = links.some(otherLink => {
-        const otherSourceId = typeof otherLink.source === 'string' ? otherLink.source : otherLink.source.id;
-        const otherTargetId = typeof otherLink.target === 'string' ? otherLink.target : otherLink.target.id;
-        return otherSourceId === targetId && otherTargetId === sourceId;
-      });
-
-      if (reverseExists) {
-        const pairKey = [sourceId, targetId].sort().join('-');
-        bidirectionalPairs.add(pairKey);
-      }
-    });
-
-    // Apply directional positioning to first-level nodes
-    nodes.forEach(node => {
-      if (node.level === 0) {
-        // Center node stays in the center
-        node.fx = width / 2;
-        node.fy = height / 2;
-      } else if (node.level === 1) {
-        // First level nodes: position based on connection type
-        const isOutgoing = outgoing.some(conn => conn.id === node.id);
-        const isIncoming = incoming.some(conn => conn.id === node.id);
-        const isBidirectional = bidirectional.some(conn => conn.id === node.id);
-
-        if (isBidirectional) {
-          // Bidirectional nodes go slightly to the right (since they're both incoming and outgoing)
-          node.x = width / 2 + settings.linkDistance * 0.8;
-        } else if (isOutgoing) {
-          // Outgoing links (embedded on current page) go to the right
-          node.x = width / 2 + settings.linkDistance * 1.2;
-        } else if (isIncoming) {
-          // Incoming links (backlinks from other pages) go to the left
-          node.x = width / 2 - settings.linkDistance * 1.2;
-        }
-
-        // Add some vertical spread for first-level nodes
-        const firstLevelNodes = nodes.filter(n => n.level === 1);
-        const nodeIndex = firstLevelNodes.indexOf(node);
-        const totalFirstLevel = firstLevelNodes.length;
-
-        if (totalFirstLevel > 1) {
-          const angle = (nodeIndex / (totalFirstLevel - 1)) * Math.PI - Math.PI / 2;
-          node.y = height / 2 + Math.sin(angle) * settings.linkDistance * 0.6;
-        } else {
-          node.y = height / 2;
-        }
-      }
-      // Level 2+ nodes and related nodes start with default positioning
-    });
-
-    // Create force simulation with settings
-    const simulation = d3.forceSimulation<GraphNode>(nodes)
-      .force("link", d3.forceLink<GraphNode, GraphLink>(links)
-        .id(d => d.id)
-        .distance(d => {
-          const source = d.source as GraphNode;
-          const target = d.target as GraphNode;
-          const sourceId = typeof source === 'string' ? source : source.id;
-          const targetId = typeof target === 'string' ? target : target.id;
-          const pairKey = [sourceId, targetId].sort().join('-');
-
-          // Bidirectional connections should be closer together
-          if (bidirectionalPairs.has(pairKey)) {
-            return settings.linkDistance * 0.6;
-          }
-
-          if (source.level === 0 || target.level === 0) return settings.linkDistance; // Center connections
-          return settings.linkDistance * 0.8; // Other connections
-        }))
-      .force("charge", d3.forceManyBody().strength(d => {
-        // Related pages have weaker repulsion so they float more freely
-        if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
-        // First-level nodes have reduced charge to maintain directional positioning
-        if (d.level === 1) return settings.chargeStrength * 0.4;
-        return settings.chargeStrength;
-      }))
-      .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
-      .force("collision", d3.forceCollide().radius(d => {
-        // Related pages have smaller collision radius
-        if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
-        return settings.collisionRadius;
-      }))
-      .force("directional", () => {
-        // Maintain directional positioning for first-level nodes
-        nodes.forEach(node => {
-          if (node.level === 1) {
-            const isOutgoing = outgoing.some(conn => conn.id === node.id);
-            const isIncoming = incoming.some(conn => conn.id === node.id);
-            const isBidirectional = bidirectional.some(conn => conn.id === node.id);
-
-            // Apply gentle force to maintain horizontal positioning
-            if (isBidirectional && node.x !== undefined) {
-              const targetX = width / 2 + settings.linkDistance * 0.8;
-              node.vx = (node.vx || 0) + (targetX - node.x) * 0.08;
-            } else if (isOutgoing && node.x !== undefined) {
-              const targetX = width / 2 + settings.linkDistance * 1.2;
-              node.vx = (node.vx || 0) + (targetX - node.x) * 0.08;
-            } else if (isIncoming && node.x !== undefined) {
-              const targetX = width / 2 - settings.linkDistance * 1.2;
-              node.vx = (node.vx || 0) + (targetX - node.x) * 0.08;
-            }
-          }
-        });
-      })
-      .force("boundary", () => {
-        // Keep nodes within container bounds with gentle constraints
-        const padding = 20;
-        nodes.forEach(node => {
-          if (node.x !== undefined && node.y !== undefined) {
-            // Apply gentle boundary forces instead of hard constraints
-            if (node.x < padding) {
-              node.vx = (node.vx || 0) + (padding - node.x) * 0.05;
-            } else if (node.x > width - padding) {
-              node.vx = (node.vx || 0) + (width - padding - node.x) * 0.05;
-            }
-
-            if (node.y < padding) {
-              node.vy = (node.vy || 0) + (padding - node.y) * 0.05;
-            } else if (node.y > height - padding) {
-              node.vy = (node.vy || 0) + (height - padding - node.y) * 0.05;
-            }
-          }
-        });
-      })
-      .alphaDecay(settings.alphaDecay)
-      .velocityDecay(settings.velocityDecay);
-
-    // Store simulation reference for settings updates
-    simulationRef.current = simulation;
-
-    // Create links with directional arrows
-    const link = g.append("g")
-      .selectAll("line")
-      .data(links)
-      .enter().append("line")
-      .attr("stroke", d => {
-        if (d.sentiment === 'agree') return agreeColor;
-        if (d.sentiment === 'disagree') return disagreeColor;
-        if (d.type === 'bidirectional') return "oklch(var(--primary) / 0.9)"; // Strong primary for bidirectional
-        if (d.type === 'outgoing') return "oklch(var(--primary))"; // Primary for outgoing (to the right)
-        if (d.type === 'incoming') return "oklch(var(--secondary))"; // Secondary for incoming (to the left)
-        return "hsl(var(--muted-foreground) / 0.6)";
-      })
-      .attr("stroke-opacity", 0.7)
-      .attr("stroke-width", d => {
-        if (d.type === 'bidirectional') return 3;
-        if (d.type === 'outgoing') return 2;
-        return 1.5;
-      })
-      .attr("marker-end", d => {
-        if (d.sentiment === 'agree') return "url(#arrow-agree)";
-        if (d.sentiment === 'disagree') return "url(#arrow-disagree)";
-        if (d.type === 'bidirectional') return "url(#arrow-bidirectional)";
-        if (d.type === 'outgoing') return "url(#arrow-outgoing)";
-        return "url(#arrow-incoming)";
-      });
-
-    // Create nodes
-    const node = g.append("g")
-      .selectAll("g")
-      .data(nodes)
-      .enter().append("g")
-      .style("cursor", "pointer"); // Always show pointer cursor for nodes
-
-    // Only enable drag behavior in fullscreen mode
-    if (isFullscreen) {
-      node.call(d3.drag<SVGGElement, GraphNode>()
-        .on("start", (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on("drag", (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on("end", (event, d) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }));
-    }
-
-    // Add circles to nodes
-    node.append("circle")
-      .attr("r", d => {
-        if (d.isCenter) return 12;
-        if (d.nodeType === 'connected') {
-          if (d.level === 1) return 8;
-          if (d.level === 2) return 6;
-          if (d.level === 3) return 5;
-        }
-        if (d.nodeType === 'related') return 4;
-        return 6;
-      })
-      .attr("fill", d => {
-        if (d.isCenter) return "oklch(var(--primary))";
-        if (d.nodeType === 'connected') {
-          if (d.level === 1) return "oklch(var(--primary) / 0.8)";
-          if (d.level === 2) return "oklch(var(--primary) / 0.6)";
-          if (d.level === 3) return "oklch(var(--primary) / 0.4)";
-        }
-        if (d.nodeType === 'related') return "oklch(var(--muted-foreground) / 0.3)"; // Grey for related pages
-        return "oklch(var(--primary) / 0.4)";
-      })
-      .attr("stroke", d => {
-        if (d.nodeType === 'related') return "oklch(var(--muted-foreground) / 0.5)";
-        if (d.level === 1) {
-          // Add directional indicators for first-level nodes
-          const isOutgoing = outgoing.some(conn => conn.id === d.id);
-          const isIncoming = incoming.some(conn => conn.id === d.id);
-          const isBidirectional = bidirectional.some(conn => conn.id === d.id);
-
-          if (isBidirectional) return "oklch(var(--primary))"; // Primary border for bidirectional
-          if (isOutgoing) return "oklch(var(--primary) / 0.8)"; // Lighter primary for outgoing
-          if (isIncoming) return "oklch(var(--secondary))"; // Secondary for incoming
-        }
-        return "hsl(var(--foreground))";
-      })
-      .attr("stroke-width", d => {
-        if (d.level === 1) return 3; // Thicker border for first-level nodes
-        return 2;
-      });
-
-    // Add labels
-    node.append("text")
-      .text(d => d.title.length > 20 ? d.title.substring(0, 20) + "..." : d.title)
-      .attr("x", 0)
-      .attr("y", d => {
-        if (d.isCenter) return -18;
-        if (d.nodeType === 'connected') return d.level === 1 ? -14 : -12;
-        if (d.nodeType === 'related') return -12;
-        return -12;
-      })
-      .attr("text-anchor", "middle")
-      .attr("font-size", d => {
-        if (d.isCenter) return "12px";
-        if (d.nodeType === 'connected') return d.level === 1 ? "10px" : "8px";
-        if (d.nodeType === 'related') return "8px";
-        return "8px";
-      })
-      .attr("font-weight", d => d.isCenter ? "bold" : "normal")
-      .attr("fill", d => d.nodeType === 'related' ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))")
-      .style("pointer-events", "none");
-
-    // Add click handler for nodes in both fullscreen and collapsed modes
-    node.on("click", (event, d) => {
-      // Prevent event bubbling to background click handler
-      event.stopPropagation();
-
-      if (d.id !== pageId) {
-        router.push(`/${d.id}`);
-      }
-    });
-
-    // Start simulation with strong centering
-    simulation.alpha(0.8).restart();
-
-    // Force immediate centering after a short delay
-    setTimeout(() => {
-      if (simulation) {
-        nodes.forEach(node => {
-          if (node.level === 0) {
-            // Ensure center node stays centered
-            node.fx = width / 2;
-            node.fy = height / 2;
-          }
-        });
-        simulation.alpha(0.5).restart();
-
-        // Release fixed positions after centering
-        setTimeout(() => {
-          nodes.forEach(node => {
-            if (node.level === 0) {
-              node.fx = null;
-              node.fy = null;
-            }
-          });
-        }, 1000);
-      }
-    }, 100);
-
-    // Update positions on simulation tick
-    simulation.on("tick", () => {
-      link
-        .attr("x1", d => (d.source as GraphNode).x!)
-        .attr("y1", d => (d.source as GraphNode).y!)
-        .attr("x2", d => (d.target as GraphNode).x!)
-        .attr("y2", d => (d.target as GraphNode).y!);
-
-      node.attr("transform", d => `translate(${d.x},${d.y})`);
-    });
-
-    // Cleanup
-    return () => {
-      simulation.stop();
-    };
-  }, [nodes, links, loading, isFullscreen, pageId, router, settings]);
-
-  // Update simulation when settings change
-  useEffect(() => {
-    if (!simulationRef.current) return;
-
-    const simulation = simulationRef.current;
-
-    // Update forces with new settings
-    simulation
-      .force("charge", d3.forceManyBody().strength(d => {
-        if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
-        return settings.chargeStrength;
-      }))
-      .force("center", d3.forceCenter(containerRef.current?.clientWidth / 2 || 0, (isFullscreen ? window.innerHeight : 400) / 2).strength(settings.centerStrength))
-      .force("collision", d3.forceCollide().radius(d => {
-        if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
-        return settings.collisionRadius;
-      }))
-      .alphaDecay(settings.alphaDecay)
-      .velocityDecay(settings.velocityDecay);
-
-    // Update link distance
-    const linkForce = simulation.force("link") as d3.ForceLink<GraphNode, GraphLink>;
-    if (linkForce) {
-      linkForce.distance(d => {
-        const source = d.source as GraphNode;
-        const target = d.target as GraphNode;
-        if (source.level === 0 || target.level === 0) return settings.linkDistance;
-        return settings.linkDistance * 0.8;
-      });
-    }
-
-    // Restart simulation with new settings
-    simulation.alpha(0.3).restart();
-  }, [settings]);
-
   if (loading || relatedLoading) {
     return (
-      <div className={`flex items-center justify-center h-64 ${className}`}>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading page connections...</span>
-        </div>
+      <div className={className}>
+        <LoadingState
+          variant="spinner"
+          message="Loading page connections..."
+          minHeight="h-64"
+        />
       </div>
     );
   }
@@ -822,191 +414,173 @@ export default function PageGraphView({
     );
   }
 
+  // Compute theme-aware colors for fullscreen
+  const fullscreenBgColor = isDarkMode ? '#000000' : '#ffffff';
+
   if (isFullscreen) {
     return (
       <div
-        className="fixed inset-0 z-[9999] animate-in fade-in-0 duration-300 bg-background text-foreground"
+        className="fixed inset-0 z-[9999] animate-in fade-in-0 duration-300 text-foreground"
         style={{
           touchAction: 'manipulation',
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          backgroundColor: fullscreenBgColor,
         }}
       >
+        {/* Solid background layer with computed color to ensure opacity */}
+        <div className="absolute inset-0" style={{ backgroundColor: fullscreenBgColor, zIndex: -1 }} />
         {/* Header with controls */}
         <div className="absolute top-0 left-0 right-0 z-20 bg-background border-b border-border p-4 shadow-sm">
           {/* Top row: Title and controls */}
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold">Graph view</h3>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={isViewSettingsOpen ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsViewSettingsOpen(!isViewSettingsOpen)}
-                className="transition-all duration-200"
-              >
-                {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setIsFullscreen(false);
-                  setIsViewSettingsOpen(false);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsFullscreen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Bottom row: Legend - responsive layout */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-primary"></div>
-              <span className="whitespace-nowrap">Current page</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-full bg-primary/80"></div>
-              <span className="whitespace-nowrap">1 hop</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-primary/60"></div>
-              <span className="whitespace-nowrap">2 hops</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-              <span className="whitespace-nowrap">3 hops</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
-              <span className="whitespace-nowrap">Related</span>
-            </div>
-          </div>
         </div>
 
         {/* Graph container */}
-        <div className={`absolute inset-0 pt-20 ${isViewSettingsOpen ? 'pb-1/2' : ''}`}>
+        <div className="absolute inset-0 pt-16">
           <SubscriptionGate
             featureName="graph"
-            className={`h-full ${isViewSettingsOpen ? 'pb-[50%]' : ''}`}
+            className="h-full"
             allowInteraction={true}
           >
-            <div
-              ref={containerRef}
-              className="w-full h-full bg-background"
-            >
-              <svg ref={svgRef} className="w-full h-full" />
-            </div>
+            <PageGraph3D
+              nodes={nodes}
+              links={links}
+              pageId={pageId}
+              isFullscreen={true}
+            />
           </SubscriptionGate>
         </div>
-
-        {/* Settings panel (bottom half when open) */}
-        {isViewSettingsOpen && (
-          <div
-            className="absolute bottom-0 left-0 right-0 h-1/2 bg-background border-t border-border overflow-y-auto shadow-[0_-6px_12px_rgba(0,0,0,0.08)]"
-            style={{
-              touchAction: 'manipulation',
-              pointerEvents: 'auto'
-            }}
-          >
-            <GraphSettingsPanel
-              settings={settings}
-              onSettingsChange={handleSettingsChange}
-              onReset={handleResetSettings}
-            />
-          </div>
-        )}
       </div>
     );
   }
 
   return (
     <div className={`${className} animate-in fade-in-0 duration-300`}>
-      <div
-        className="wewrite-card cursor-pointer transition-all duration-200"
-        onClick={() => setIsFullscreen(true)}
-      >
+      <div className="wewrite-card transition-all duration-200">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Network className="w-4 h-4 text-muted-foreground" />
             <h3 className="text-sm font-medium">Graph view</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={isViewSettingsOpen ? "default" : "outline"}
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsViewSettingsOpen(true);
-                setIsFullscreen(true);
-              }}
-              className="transition-all duration-200 hover:scale-105"
-            >
-              {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsViewSettingsOpen(false);
-                setIsFullscreen(true);
-              }}
-              className="transition-all duration-200 hover:scale-105"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-primary"></div>
-            <span>Current page</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary/80"></div>
-            <span>1 hop</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-primary/60"></div>
-            <span>2 hops</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-            <span>3 hops</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
-            <span>Related</span>
-          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsFullscreen(true)}
+            className="transition-all duration-200 hover:scale-105"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Graph container */}
         <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
-          <div
-            ref={containerRef}
-            className="h-96 transition-all duration-300"
-          >
-            <svg ref={svgRef} className="w-full h-full" />
+          <div className="h-96 transition-all duration-300">
+            <PageGraph3D
+              nodes={nodes}
+              links={links}
+              pageId={pageId}
+              isFullscreen={false}
+              height={384}
+            />
+          </div>
+        </SubscriptionGate>
 
+        {/* Page List - as pills with sorting */}
+        {pageLinkStats.length > 1 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPageListExpanded(!isPageListExpanded);
+              }}
+              className="w-full flex items-center justify-between text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className="font-medium">Pages ({pageLinkStats.length})</span>
+              {isPageListExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
 
-
-            {/* Empty state message */}
-            {!loading && !relatedLoading && nodes.length <= 1 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-muted-foreground max-w-md">
-                  <div className="text-sm mb-2">No page connections found</div>
-                  <div className="text-xs">
-                    This page doesn't link to other pages yet. Create links to other pages to see connections in the graph.
-                    {relatedPages.length > 0 && " Related pages are shown based on content similarity."}
-                  </div>
+            {isPageListExpanded && (
+              <div className="mt-3">
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/50 border-b border-border">
+                        <th className="text-left px-4 py-2 font-medium">
+                          <button
+                            onClick={() => handleSort('title')}
+                            className="flex items-center gap-1 hover:text-foreground transition-colors"
+                          >
+                            Page
+                            {sortField === 'title' && (
+                              sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        </th>
+                        <th className="text-right px-4 py-2 font-medium w-24">
+                          <button
+                            onClick={() => handleSort('links')}
+                            className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
+                          >
+                            Links
+                            {sortField === 'links' && (
+                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
+                            )}
+                          </button>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedPageLinkStats.map((page) => (
+                        <tr
+                          key={page.id}
+                          className={`border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors ${
+                            page.id === pageId ? 'bg-primary/5' : ''
+                          }`}
+                        >
+                          <td className="px-4 py-2">
+                            {page.id === pageId ? (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-sm font-medium rounded-lg bg-primary/20 text-primary border border-primary/30">
+                                {page.title}
+                              </span>
+                            ) : (
+                              <PillLink
+                                href={`/${page.id}`}
+                                pageId={page.id}
+                              >
+                                {page.title}
+                              </PillLink>
+                            )}
+                          </td>
+                          <td className="text-right px-4 py-2 tabular-nums">
+                            <span className="inline-flex items-center gap-1 text-muted-foreground">
+                              <Link2 className="h-3 w-3" />
+                              {page.totalLinks}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
           </div>
-        </SubscriptionGate>
+        )}
       </div>
     </div>
   );

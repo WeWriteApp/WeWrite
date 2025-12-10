@@ -230,29 +230,28 @@ export default function CustomDateField({
   // Always render the field, but show different UI based on whether there's a custom date
 
   return (
-    <div className={`w-full ${className}`}>
-      <div
-        className={`wewrite-card w-full flex items-center justify-between ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''}`}
-        onClick={handleDateClick}
-      >
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Custom date</span>
-        </div>
+    <div
+      className={`wewrite-card w-full flex items-center justify-between ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''} ${className}`}
+      onClick={handleDateClick}
+    >
+      <div className="flex items-center gap-2">
+        <Calendar className="h-5 w-5 text-muted-foreground" />
+        <span className="text-sm font-medium">Custom date</span>
+      </div>
 
-        <div className="flex items-center gap-2">
-          {localDate ? (
-            <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
-              {formatCustomDate(localDate) || localDate}
-            </div>
-          ) : (
-            <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
-              {canEdit ? 'Click to set date' : 'No custom date'}
-            </div>
-          )}
-        </div>
+      <div className="flex items-center gap-2">
+        {localDate ? (
+          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+            {formatCustomDate(localDate) || localDate}
+          </div>
+        ) : (
+          <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
+            {canEdit ? 'Click to set date' : 'No custom date'}
+          </div>
+        )}
+      </div>
 
-        {/* Enhanced Date picker overlay */}
+      {/* Enhanced Date picker overlay */}
         {showDatePicker && typeof document !== 'undefined' && createPortal(
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={() => setShowDatePicker(false)}>
             <div
@@ -338,7 +337,6 @@ export default function CustomDateField({
           </div>,
           document.body
         )}
-      </div>
     </div>
   );
 }

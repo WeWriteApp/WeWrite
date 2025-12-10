@@ -3,9 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Plus, DollarSign, Wallet, User, AlertTriangle } from 'lucide-react';
+import { Plus, DollarSign, User, AlertTriangle } from 'lucide-react';
 import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier } from '../../utils/usdConstants';
 import { formatUsdCents, dollarsToCents, parseDollarInputToCents } from '../../utils/formatCurrency';
 import { UsernameBadge } from '../ui/UsernameBadge';
@@ -158,37 +157,28 @@ export default function UsdFundingTierSlider({
   const showDowngradeOverspendWarning = isDowngrade && wouldBeOverspent;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
-          Monthly Account Funding
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Choose how much to fund your account each month to support creators
-        </p>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Username Preview */}
-        {user?.username && user?.uid && (
-          <div className="bg-muted/30 dark:bg-muted/50 border border-border dark:border-muted rounded-lg p-4">
-            <p className="text-sm text-muted-foreground mb-3 text-center">Your username will appear as:</p>
-            <div className="flex items-center justify-center gap-2">
-              <UsernameBadge
-                userId={user.uid}
-                username={user.username}
-                subscriptionStatus={selectedAmount > 0 ? 'active' : 'inactive'}
-                subscriptionAmount={selectedAmount}
-                size="md"
-                showBadge={true}
-                variant="link"
-                onClick={(e) => e.preventDefault()} // Prevent navigation in preview
-              />
-            </div>
+    <div className="space-y-4">
+      {/* Username Preview - Separate container */}
+      {user?.username && user?.uid && (
+        <div className="wewrite-card">
+          <p className="text-sm text-muted-foreground mb-3 text-center">Your username will appear as:</p>
+          <div className="flex items-center justify-center gap-2">
+            <UsernameBadge
+              userId={user.uid}
+              username={user.username}
+              subscriptionStatus={selectedAmount > 0 ? 'active' : 'inactive'}
+              subscriptionAmount={selectedAmount}
+              size="md"
+              showBadge={true}
+              variant="link"
+              onClick={(e) => e.preventDefault()} // Prevent navigation in preview
+            />
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Funding Selection Card */}
+      <div className="wewrite-card space-y-4">
         {/* Current subscription indicator */}
         {showCurrentOption && currentSubscription && currentTierInfo && (
           <div className="bg-muted/50 rounded-lg p-3 space-y-2">
@@ -501,12 +491,12 @@ export default function UsdFundingTierSlider({
         </div>
 
         {/* USD info */}
-        <div className="text-xs text-muted-foreground bg-muted/30 rounded p-3">
+        <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
           <p>
             All amounts are in USD. Payments processed securely via Stripe.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

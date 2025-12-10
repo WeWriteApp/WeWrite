@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Eye, Filter, Users, Loader2, Activity, Check } from 'lucide-react';
+import { Clock, Eye, Users, Loader2, Activity, Check } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -33,8 +33,11 @@ interface RecentEdit {
   pledgeCount?: number;
   lastDiff?: {
     hasChanges: boolean;
-    changeType: string;
+    changeType?: string;
     preview?: string;
+    added?: number;
+    removed?: number;
+    isNewPage?: boolean;
   };
   hasActiveSubscription?: boolean;
   subscriptionTier?: string;
@@ -316,12 +319,12 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
+              className="rounded-2xl"
               data-dropdown-trigger="true"
               data-dropdown-id="recent-edits-filter"
             >
-              <Filter className="h-4 w-4 mr-2" />
               Filters
             </Button>
           </DropdownMenuTrigger>
@@ -387,6 +390,9 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
       ) : (
         <div className="space-y-4">
           {edits.map((edit) => {
+            // Determine if this is a new page creation based on lastDiff flag
+            const isNewPageCreation = edit.lastDiff?.isNewPage === true;
+
             // Convert edit data to activity format expected by ActivityCard
             const activity = {
               pageId: edit.id,
@@ -395,8 +401,8 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
               username: edit.username,
               timestamp: new Date(edit.lastModified),
               isPublic: edit.isPublic || false,
-              isNewPage: false,
-              activityType: 'page_edit',
+              isNewPage: isNewPageCreation,
+              activityType: isNewPageCreation ? 'page_create' : 'page_edit',
               totalPledged: edit.totalPledged || 0,
               pledgeCount: edit.pledgeCount || 0,
               hasActiveSubscription: edit.hasActiveSubscription || false,
@@ -406,7 +412,8 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
               diff: edit.lastDiff ? {
                 added: edit.lastDiff.added || 0,
                 removed: edit.lastDiff.removed || 0,
-                hasChanges: edit.lastDiff.hasChanges || false
+                hasChanges: edit.lastDiff.hasChanges || false,
+                isNewPage: isNewPageCreation
               } : null,
               diffPreview: edit.lastDiff?.preview || null
             };

@@ -194,7 +194,7 @@ export default function HeroCard({
                       )}
                     </span>
                     {' '}who've made{' '}
-                    <Badge variant="secondary" className="mx-1 text-lg md:text-xl shiny-chip shiny-chip-success !text-white">
+                    <Badge variant="success" className="mx-1 text-lg md:text-xl">
                       {isLoading || totalPayouts === null ? (
                         <span className="flex items-center gap-1">
                           $<Loader2 className="h-4 w-4 animate-spin" />
@@ -212,18 +212,19 @@ export default function HeroCard({
           </div>
 
           {/* Action Buttons - Always show Sign In and Sign Up */}
-          <div className={`flex flex-col sm:flex-row justify-center gap-4 ${fadeInClass}`}>
+          <div className={`flex flex-row gap-4 w-full ${fadeInClass}`}>
             <AuthButton
               type="login"
               size="lg"
               variant="secondary"
-              className="bg-muted hover:bg-muted/80 text-foreground"
+              className="flex-1"
               device="hero_card"
             />
             <AuthButton
               type="register"
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              variant="default"
+              className="flex-1"
               device="hero_card"
             >
               Sign Up

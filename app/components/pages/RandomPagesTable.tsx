@@ -240,7 +240,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
       {/* Mobile Card Layout - only show when NOT in dense mode */}
       {!denseMode && (
         <div
-          className="md:hidden space-y-6 relative"
+          className="md:hidden space-y-3 relative"
           style={{ minHeight }}
         >
         {/* Loading overlay for mobile - higher z-index to blur all content including stars */}
@@ -255,19 +255,19 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         {pages.map((page) => (
           <div
             key={page.id}
-            className={cn(wewriteCard('interactive'), "space-y-3 relative")}
+            className={cn(wewriteCard('interactive'), "space-y-1.5 relative p-3")}
           >
             {/* Menu button in top right */}
             {onExcludeUser && page.username && (
-              <div className="absolute top-3 right-3 z-10">
+              <div className="absolute top-2 right-2 z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full hover:bg-muted"
+                      className="h-6 w-6 rounded-full hover:bg-muted"
                     >
-                      <MoreVertical className="h-4 w-4" />
+                      <MoreVertical className="h-3.5 w-3.5" />
                       <span className="sr-only">Page options</span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -285,11 +285,11 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
             )}
 
             {/* Title */}
-            <div className="flex items-center gap-2 pr-8">
+            <div className="flex items-center gap-2 pr-6">
               <PillLink
                 href={`/${page.id}`}
                 groupId={page.groupId}
-                className="text-base font-medium"
+                className="text-sm font-medium"
               >
                 {page.title && isExactDateFormat(page.title)
                   ? formatDateString(page.title)
@@ -297,28 +297,25 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
               </PillLink>
             </div>
 
-            {/* Author and Last Edited */}
-            <div className="space-y-2">
-              <div>
-                {renderAuthor(page)}
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">
-                  Last edited {(() => {
-                    try {
-                      const timestamp = page.lastModified || page.createdAt;
-                      return timestamp ? formatRelativeTime(timestamp) : 'unknown time';
-                    } catch (error) {
-                      console.error('Error formatting page time:', error);
-                      return 'unknown time';
-                    }
-                  })()}
-                </span>
-              </div>
+            {/* Author and Last Edited - inline */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {renderAuthor(page)}
+              <span>·</span>
+              <span>
+                {(() => {
+                  try {
+                    const timestamp = page.lastModified || page.createdAt;
+                    return timestamp ? formatRelativeTime(timestamp) : 'unknown';
+                  } catch (error) {
+                    console.error('Error formatting page time:', error);
+                    return 'unknown';
+                  }
+                })()}
+              </span>
             </div>
 
             {/* Embedded Allocation Bar */}
-            <div className="pt-2">
+            <div className="pt-1">
               <EmbeddedAllocationBar
                 pageId={page.id}
                 authorId={page.userId}

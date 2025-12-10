@@ -62,7 +62,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg border-theme-strong wewrite-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogClose asChild>
           <Button variant="secondary" size="icon" className="absolute right-4 top-4">
             <X className="h-4 w-4" />

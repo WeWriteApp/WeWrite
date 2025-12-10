@@ -14,14 +14,15 @@ export const ALLOCATION_BAR_STYLES = {
     other: 'bg-neutral-alpha-15 rounded-md transition-all duration-300 ease-out',
     current: 'bg-primary rounded-md transition-all duration-300 ease-out',
     overspent: 'bg-warn rounded-md transition-all duration-300 ease-out',
-    available: 'bg-muted rounded-md transition-all duration-300 ease-out',
+    // Available section uses outline style (transparent with solid border)
+    available: 'bg-transparent border border-neutral-alpha-10 rounded-md transition-all duration-300 ease-out',
   },
 
-  // Button styling
+  // Button styling - 1px border for consistency
   buttons: {
-    base: 'h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20',
-    minus: 'h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20',
-    plus: 'h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border-2 border-neutral-20',
+    base: 'h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20',
+    minus: 'h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20',
+    plus: 'h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20',
   },
 
   // Separator lines

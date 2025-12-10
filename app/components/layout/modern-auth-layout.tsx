@@ -1,11 +1,11 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Image } from "../ui/image";
 import Link from "next/link";
-import { cn } from "../../lib/utils";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { LandingColorProvider } from "../landing/LandingColorContext";
+import { LandingBlobs } from "../landing/LandingBlobs";
 
 interface ModernAuthLayoutProps {
   children: ReactNode;
@@ -23,13 +23,16 @@ export function ModernAuthLayout({
   showTerms = true
 }: ModernAuthLayoutProps) {
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row overflow-auto">
-      {/* Left side - Form */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-background">
-        <div className="w-full max-w-md mx-auto">
+    <LandingColorProvider>
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 md:p-10 bg-background relative overflow-hidden">
+        {/* Blob background */}
+        <LandingBlobs />
+
+        {/* Content */}
+        <div className="w-full max-w-md mx-auto relative z-10">
           {/* Back to landing page link */}
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -37,12 +40,12 @@ export function ModernAuthLayout({
           </Link>
 
           <motion.div
-            className="wewrite-card rounded-xl shadow-sm border border-border p-6 md:p-8"
+            className="wewrite-card rounded-xl p-6 md:p-8"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{
               duration: 0.4,
-              ease: [0.25, 0.46, 0.45, 0.94] // Professional easing curve
+              ease: [0.25, 0.46, 0.45, 0.94]
             }}
           >
             {children}
@@ -73,33 +76,6 @@ export function ModernAuthLayout({
           )}
         </div>
       </div>
-
-      {/* Right side - Image and branding */}
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-500 to-indigo-600 relative">
-        <div className="absolute inset-0 bg-black/20 z-10"></div>
-        <div className="relative z-20 flex flex-col items-center justify-center w-full p-12 text-white">
-          <div className="max-w-md text-center">
-            <h2 className="text-3xl font-bold mb-4">WeWrite</h2>
-            <p className="text-lg mb-8">
-              A social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
-            </p>
-            <div className="flex justify-center space-x-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
-                <div className="text-2xl font-bold">Simple</div>
-                <div className="text-sm">Easy to use interface</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
-                <div className="text-2xl font-bold">Creative</div>
-                <div className="text-sm">Express your ideas</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
-                <div className="text-2xl font-bold">Social</div>
-                <div className="text-sm">Connect with writers</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </LandingColorProvider>
   );
 }

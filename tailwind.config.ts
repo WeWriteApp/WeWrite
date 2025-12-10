@@ -1,17 +1,9 @@
 /**
  * Tailwind Configuration
  *
- * IMPORTANT THEME HANDLING REQUIREMENTS:
- * 1. Use CSS variables from globals.css for theme-specific colors
- * 2. Avoid hardcoding colors here - use CSS variables instead
- * 3. All new color definitions should support both light and dark modes
- * 4. System theme preferences should be handled by ThemeProvider, not CSS
- *
- * COLOR FORMAT MAPPING (CRITICAL - DO NOT MIX UP):
- * - HSL format variables (use hsl() wrapper):
- *   border, input, background, foreground, card, popover, secondary, muted, accent
- * - OKLCH format variables (use oklch() wrapper):
- *   ring, primary, neutral, error, success, warning
+ * IMPORTANT: ALL colors use OKLCH format exclusively.
+ * CSS variables in globals.css are defined as: L C H (e.g., "0.50 0.25 230")
+ * Use oklch(var(--variable)) wrapper for all color references.
  */
 
 import type { Config } from "tailwindcss";
@@ -23,19 +15,22 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: 'class', // Enable class-based dark mode
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // HSL format colors (from globals.css)
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        // OKLCH format colors (primary accent uses oklch for perceptual uniformity)
+        // ═══════════════════════════════════════════════════════════════════
+        // OKLCH COLOR SYSTEM - All colors use oklch() wrapper
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Base colors
+        border: "oklch(var(--border))",
+        input: "oklch(var(--input))",
+        background: "oklch(var(--background))",
+        foreground: "oklch(var(--foreground))",
         ring: "oklch(var(--ring))",
-        // Alpha overlay colors - use black in light mode, white in dark mode
-        // These are meant to be layered ON TOP of other colors for hover/active states
+
+        // Alpha overlay colors (rgba for layering)
         alpha: {
           5: "var(--alpha-5)",
           10: "var(--alpha-10)",
@@ -44,6 +39,8 @@ const config: Config = {
           25: "var(--alpha-25)",
           30: "var(--alpha-30)",
         },
+
+        // Primary - dynamic accent color
         primary: {
           DEFAULT: "oklch(var(--primary))",
           foreground: "oklch(var(--primary-foreground))",
@@ -59,11 +56,14 @@ const config: Config = {
           80: "oklch(var(--primary) / 0.80)",
           90: "oklch(var(--primary) / 0.90)",
         },
-        // HSL format UI colors
+
+        // Secondary - UI backgrounds
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "oklch(var(--secondary))",
+          foreground: "oklch(var(--secondary-foreground))",
         },
+
+        // Neutral - for badges and chips
         neutral: {
           DEFAULT: "oklch(var(--neutral))",
           foreground: "oklch(var(--neutral-foreground))",
@@ -80,7 +80,8 @@ const config: Config = {
           80: "oklch(var(--neutral) / 0.80)",
           90: "oklch(var(--neutral) / 0.90)",
         },
-        // OKLCH Semantic Colors with Opacity Variations
+
+        // Semantic colors
         error: {
           DEFAULT: "oklch(var(--error))",
           foreground: "oklch(var(--error-foreground))",
@@ -120,35 +121,36 @@ const config: Config = {
           80: "oklch(var(--warning) / 0.80)",
           90: "oklch(var(--warning) / 0.90)",
         },
-        // Legacy aliases for compatibility (uses OKLCH - same as error)
+
+        // Aliases for compatibility
         destructive: {
-          DEFAULT: "oklch(var(--error))",
-          foreground: "oklch(var(--error-foreground))",
+          DEFAULT: "oklch(var(--destructive))",
+          foreground: "oklch(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "oklch(var(--muted))",
+          foreground: "oklch(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-          10: "hsl(var(--accent) / 0.10)",
-          20: "hsl(var(--accent) / 0.20)",
-          30: "hsl(var(--accent) / 0.30)",
-          40: "hsl(var(--accent) / 0.40)",
-          50: "hsl(var(--accent) / 0.50)",
-          60: "hsl(var(--accent) / 0.60)",
-          70: "hsl(var(--accent) / 0.70)",
-          80: "hsl(var(--accent) / 0.80)",
-          90: "hsl(var(--accent) / 0.90)",
+          DEFAULT: "oklch(var(--accent))",
+          foreground: "oklch(var(--accent-foreground))",
+          10: "oklch(var(--accent) / 0.10)",
+          20: "oklch(var(--accent) / 0.20)",
+          30: "oklch(var(--accent) / 0.30)",
+          40: "oklch(var(--accent) / 0.40)",
+          50: "oklch(var(--accent) / 0.50)",
+          60: "oklch(var(--accent) / 0.60)",
+          70: "oklch(var(--accent) / 0.70)",
+          80: "oklch(var(--accent) / 0.80)",
+          90: "oklch(var(--accent) / 0.90)",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "oklch(var(--popover))",
+          foreground: "oklch(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "oklch(var(--card))",
+          foreground: "oklch(var(--card-foreground))",
         },
       },
       backgroundImage: {
@@ -187,6 +189,8 @@ const config: Config = {
         'fadeInSlow': 'fadeIn 0.8s ease-in-out forwards',
         'collapsible-down': 'collapsible-down 0.2s ease-out',
         'collapsible-up': 'collapsible-up 0.2s ease-out',
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
       keyframes: {
         'gradient-x': {
@@ -214,6 +218,14 @@ const config: Config = {
         },
         'collapsible-up': {
           '0%': { height: 'var(--radix-collapsible-content-height)' },
+          '100%': { height: '0' },
+        },
+        'accordion-down': {
+          '0%': { height: '0' },
+          '100%': { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          '0%': { height: 'var(--radix-accordion-content-height)' },
           '100%': { height: '0' },
         },
       },

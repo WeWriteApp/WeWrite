@@ -324,6 +324,17 @@ html[data-landing-page="true"].dark .wewrite-card:hover {
   border-color: var(--card-border-hover, oklch(0.80 0.12 230 / 0.20));
 }
 
+/* Ensure floating cards on landing page also get the accent-tinted styling */
+html[data-landing-page="true"] .wewrite-card.wewrite-floating {
+  background-color: var(--card-bg, oklch(1.00 0.05 230 / 0.15));
+  border-color: var(--card-border, oklch(0.30 0.15 230 / 0.15));
+}
+
+html[data-landing-page="true"].dark .wewrite-card.wewrite-floating {
+  background-color: var(--card-bg, oklch(0.98 0.10 230 / 0.06));
+  border-color: var(--card-border, oklch(0.80 0.12 230 / 0.15));
+}
+
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */
 
 html[data-high-contrast="true"] .wewrite-card {

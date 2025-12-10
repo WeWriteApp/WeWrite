@@ -73,10 +73,22 @@ export default function FloatingActionButton() {
     router.push('/new?source=fab');
   };
 
+// Track window width for responsive positioning
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Calculate bottom position based on screen size and mobile nav visibility
   const bottomPosition = React.useMemo(() => {
     // On desktop, use fixed bottom position
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    if (!isMobile) {
       return 'calc(var(--fixed-safe-bottom) + 16px)'; // Use fixed-layer system + extra spacing
     }
 
@@ -90,7 +102,7 @@ export default function FloatingActionButton() {
 
     // When mobile nav is hidden, use fixed-layer system with toolbar margin
     return 'calc(var(--fixed-safe-bottom) + 16px)';
-  }, [shouldShowMobileNav]);
+  }, [shouldShowMobileNav, isMobile]);
 
   // Don't render if conditions not met
   if (!shouldShowFAB) {
@@ -103,12 +115,14 @@ export default function FloatingActionButton() {
         onClick={handleNewPageClick}
         size="icon"
         className={cn(
-          "fixed-layer z-fixed-fab right-4 h-14 w-14 rounded-full shadow-lg pointer-events-auto",
+          "fixed z-fixed-fab h-14 w-14 rounded-full shadow-lg pointer-events-auto",
           "bg-primary hover:bg-primary/90 text-primary-foreground",
           "transition-all duration-300 ease-in-out",
           "hover:scale-110 active:scale-95"
         )}
         style={{
+          position: 'fixed',
+          right: '1rem',
           bottom: bottomPosition,
           transition: 'bottom 300ms ease-in-out'
         }}

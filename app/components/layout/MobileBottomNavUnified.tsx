@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield, Pencil, RotateCcw, Check, Trophy } from 'lucide-react';
+import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield, Pencil, RotateCcw, Check, Trophy, Map } from 'lucide-react';
 import { DndProvider } from 'react-dnd';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -21,7 +21,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { WarningDot } from '../ui/warning-dot';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
-import { FloatingToolbar } from '../ui/FloatingCard';
+import { DockedToolbar } from '../ui/FloatingCard';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 import NavDragLayer from './NavDragLayer';
@@ -149,7 +149,7 @@ export default function MobileBottomNavUnified() {
     const navPageRoutes = ['/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following', '/leaderboard',
-      '/settings', '/timeline'];
+      '/settings', '/timeline', '/map'];
     
     // Always show on NavPage routes
     if (navPageRoutes.includes(pathname)) return false;
@@ -268,6 +268,13 @@ export default function MobileBottomNavUnified() {
       ariaLabel: 'Leaderboards',
       label: 'Leaders',
     },
+    map: {
+      icon: Map,
+      onClick: () => { setIsExpanded(false); router.push('/map'); },
+      isActive: pathname === '/map',
+      ariaLabel: 'Map',
+      label: 'Map',
+    },
     admin: {
       icon: Shield,
       onClick: () => { setIsExpanded(false); router.push('/admin'); },
@@ -304,21 +311,24 @@ export default function MobileBottomNavUnified() {
       onClick={() => setIsExpanded(!isExpanded)}
       className={cn(
         "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-1 relative gap-0.5 group",
-        "transition-all duration-75 ease-out",
+        "transition-all duration-150 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
-        "hover:bg-muted/80 active:bg-muted",
-        isExpanded ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+        "active:scale-95 active:duration-75",
+        // Expanded state uses accent color like active nav items
+        isExpanded
+          ? "bg-accent/15 text-accent"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/80 active:bg-muted"
       )}
       aria-label={isExpanded ? "Close More" : "Open More"}
     >
       <div className="relative">
-        {isExpanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {isExpanded ? <X className={cn("h-5 w-5", isExpanded && "text-accent")} /> : <Menu className="h-5 w-5" />}
         {criticalSettingsStatus === 'warning' && !isExpanded && (
           <WarningDot variant="warning" size="sm" position="top-right" offset={{ top: '-2px', right: '-2px' }} />
         )}
       </div>
-      <span className="text-[10px] font-medium leading-tight">More</span>
+      <span className={cn("text-[10px] font-medium leading-tight", isExpanded && "text-accent")}>More</span>
     </Button>
   );
 
@@ -337,16 +347,19 @@ export default function MobileBottomNavUnified() {
           />
         )}
 
-        {/* Main navigation container */}
-        <FloatingToolbar
+        {/* Main navigation container - docked to bottom edge */}
+        <DockedToolbar
           className={cn(
-            "md:hidden fixed-layer fixed-bottom pointer-events-auto left-4 right-4",
+            "md:hidden fixed-layer pointer-events-auto left-0 right-0",
             "transition-all duration-300 ease-in-out",
             !shouldHideNav ? "translate-y-0" : "translate-y-full",
             "touch-manipulation",
             isExpanded ? "z-[95]" : "z-fixed-toolbar"
           )}
-          style={{ paddingBottom: getPWABottomSpacing(isPWAMode) }}
+          style={{
+            bottom: 0,
+            paddingBottom: getPWABottomSpacing(isPWAMode)
+          }}
           isExpanded={isExpanded}
           size="xs"
         >
@@ -496,7 +509,7 @@ export default function MobileBottomNavUnified() {
               );
             })}
           </div>
-        </FloatingToolbar>
+        </DockedToolbar>
       </FixedPortal>
     </DndProvider>
   );

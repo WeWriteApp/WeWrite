@@ -9,14 +9,34 @@ interface SwitchProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
-  ({ className, checked = false, onCheckedChange, disabled = false, id, ...props }, ref) => {
+  ({ className, checked = false, onCheckedChange, disabled = false, id, size = 'md', ...props }, ref) => {
     const handleClick = () => {
       if (!disabled && onCheckedChange) {
         onCheckedChange(!checked);
       }
+    };
+
+    // Size variants
+    const sizeClasses = {
+      sm: "h-4 w-7",
+      md: "h-6 w-11",
+      lg: "h-7 w-14"
+    };
+
+    const thumbSizeClasses = {
+      sm: "h-3 w-3",
+      md: "h-5 w-5",
+      lg: "h-6 w-6"
+    };
+
+    const thumbTranslateClasses = {
+      sm: checked ? "translate-x-3" : "translate-x-0",
+      md: checked ? "translate-x-5" : "translate-x-0",
+      lg: checked ? "translate-x-7" : "translate-x-0"
     };
 
     return (
@@ -29,16 +49,34 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         id={id}
         ref={ref}
         className={cn(
-          "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-          checked ? "bg-primary" : "bg-neutral-20",
+          // Base styles
+          "peer inline-flex shrink-0 cursor-pointer items-center rounded-full transition-all duration-200 ease-in-out",
+          // Focus styles
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          // Disabled styles
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          // Size
+          sizeClasses[size],
+          // State-based colors
+          checked
+            ? "bg-primary shadow-inner"
+            : "bg-alpha-10",
           className
         )}
         {...props}
       >
         <span
           className={cn(
-            "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-            checked ? "translate-x-4" : "translate-x-0"
+            // Base thumb styles
+            "pointer-events-none block rounded-full shadow-md transition-transform duration-200 ease-in-out",
+            // Thumb color - white in both states
+            "bg-white",
+            // Size
+            thumbSizeClasses[size],
+            // Transform based on state
+            thumbTranslateClasses[size],
+            // Add margin for proper positioning
+            "ml-0.5"
           )}
         />
       </button>

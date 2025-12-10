@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from './button';
-import { Check, RotateCcw } from 'lucide-react';
+import { Check, RotateCcw, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 /**
@@ -67,7 +67,7 @@ export function SaveButtonGroup({
     },
     header: {
       container: 'bg-primary text-primary-foreground',
-      saveButton: 'bg-primary-foreground text-primary hover:bg-muted',
+      saveButton: 'bg-white text-green-600 hover:bg-gray-100 dark:bg-white dark:text-green-600 dark:hover:bg-gray-100',
       revertButton: 'text-primary-foreground hover:bg-primary/90 border border-primary-foreground/30 hover:border-primary-foreground/50'
     },
     footer: {
@@ -145,7 +145,11 @@ export function SaveButtonGroup({
         onClick={onSave}
         disabled={disabled || isSaving}
       >
-        <Check className="h-4 w-4" />
+        {isSaving ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Check className="h-4 w-4" />
+        )}
         {isSaving ? savingText : saveText}
       </Button>
     </div>

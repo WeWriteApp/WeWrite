@@ -6,8 +6,9 @@ import UsdFundingTierSlider from '../../components/payments/UsdFundingTierSlider
 import SubscriptionHistory from '../../components/subscription/SubscriptionHistory';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Wallet, CreditCard, History, ChevronDown } from 'lucide-react';
 import { PaymentMethodsOverview } from '../../components/payments/PaymentMethodsOverview';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
@@ -15,10 +16,23 @@ import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-eve
 export default function FundAccountPage() {
   const { user } = useAuth();
   const { refreshUsdBalance } = useUsdBalance();
+  const { subscriptionAmount: contextSubscriptionAmount, hasActiveSubscription, isLoading: subscriptionContextLoading } = useSubscription();
   const searchParams = useSearchParams();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    funding: true,
+    paymentMethods: true,
+    history: false
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   // Track page view
   useEffect(() => {
@@ -197,8 +211,15 @@ export default function FundAccountPage() {
     );
   }
 
+  // Use context subscription amount (respects admin testing mode) or fall back to API data
+  const effectiveSubscriptionAmount = contextSubscriptionAmount ?? currentSubscription?.amount ?? 0;
+  const effectiveSubscription = currentSubscription ? {
+    ...currentSubscription,
+    amount: effectiveSubscriptionAmount
+  } : null;
+
   return (
-    <div className="p-6 lg:p-8 space-y-8">
+    <div className="p-4 lg:p-6 space-y-6">
       {/* Success/Cancellation Messages */}
       {cancelled && (
         <Alert>
@@ -218,24 +239,60 @@ export default function FundAccountPage() {
         </Alert>
       )}
 
-      {/* Current Subscription Management */}
+      {/* Monthly Funding Section */}
       <div>
-        <UsdFundingTierSlider
-          selectedAmount={selectedAmount}
-          onAmountSelect={setSelectedAmount}
-          currentSubscription={currentSubscription}
-          showCurrentOption={true}
-        />
+        <h2
+          className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+          onClick={() => toggleSection('funding')}
+        >
+          <Wallet className="h-5 w-5" />
+          Monthly Funding
+          <ChevronDown
+            className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.funding ? '' : 'rotate-180'}`}
+          />
+        </h2>
+        {expandedSections.funding && (
+          <UsdFundingTierSlider
+            selectedAmount={selectedAmount ?? effectiveSubscriptionAmount}
+            onAmountSelect={setSelectedAmount}
+            currentSubscription={effectiveSubscription}
+            showCurrentOption={true}
+          />
+        )}
       </div>
 
-      {/* Payment methods visibility/management */}
+      {/* Payment Methods Section */}
       <div>
-        <PaymentMethodsOverview />
+        <h2
+          className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+          onClick={() => toggleSection('paymentMethods')}
+        >
+          <CreditCard className="h-5 w-5" />
+          Payment Methods
+          <ChevronDown
+            className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.paymentMethods ? '' : 'rotate-180'}`}
+          />
+        </h2>
+        {expandedSections.paymentMethods && (
+          <PaymentMethodsOverview />
+        )}
       </div>
 
-      {/* Subscription History */}
+      {/* Subscription History Section */}
       <div>
-        <SubscriptionHistory className="w-full" />
+        <h2
+          className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+          onClick={() => toggleSection('history')}
+        >
+          <History className="h-5 w-5" />
+          Subscription History
+          <ChevronDown
+            className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.history ? '' : 'rotate-180'}`}
+          />
+        </h2>
+        {expandedSections.history && (
+          <SubscriptionHistory className="w-full" />
+        )}
       </div>
     </div>
   );

@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     const pageId = searchParams.get('pageId');
     const includeSecondHop = searchParams.get('includeSecondHop') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
+    const skipCache = searchParams.get('skipCache') === 'true';
 
     if (!pageId) {
       return NextResponse.json({
@@ -80,8 +81,42 @@ export async function GET(request: NextRequest) {
     console.log(`🔗 [PAGE_CONNECTIONS_API] Getting connections for page ${pageId}`, {
       includeSecondHop,
       limit,
+      skipCache,
       timestamp: new Date().toISOString()
     });
+
+    // Try to get from cache first (unless skipCache is true)
+    if (!skipCache) {
+      try {
+        const cacheDoc = await db.collection(getCollectionName('pageGraphCache')).doc(pageId).get();
+
+        if (cacheDoc.exists) {
+          const cacheData = cacheDoc.data()!;
+
+          // Check cache version
+          if (cacheData.version === 1) {
+            console.log(`🔗 [PAGE_CONNECTIONS_API] Cache hit for page ${pageId}`, cacheData.stats);
+
+            // Return cached data
+            return NextResponse.json({
+              incoming: cacheData.incoming?.slice(0, limit) || [],
+              outgoing: cacheData.outgoing?.slice(0, limit) || [],
+              bidirectional: cacheData.bidirectional || [],
+              secondHopConnections: includeSecondHop ? (cacheData.secondHopConnections || []) : [],
+              thirdHopConnections: includeSecondHop ? (cacheData.thirdHopConnections || []) : [],
+              stats: cacheData.stats,
+              cached: true,
+              cachedAt: cacheData.cachedAt?.toDate?.()?.toISOString() || null,
+              timestamp: new Date().toISOString()
+            }, { status: 200 });
+          }
+        }
+
+        console.log(`🔗 [PAGE_CONNECTIONS_API] Cache miss for page ${pageId}, computing...`);
+      } catch (cacheError) {
+        console.warn(`🔗 [PAGE_CONNECTIONS_API] Cache read error, falling back to computation:`, cacheError);
+      }
+    }
 
     // Get incoming connections (backlinks) - try index first, then fallback
     let incoming: PageConnection[] = [];

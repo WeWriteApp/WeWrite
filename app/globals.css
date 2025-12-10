@@ -139,6 +139,27 @@ html, body {
   }
 }
 
+/* Full shimmer animation - starts off-screen right, ends off-screen left (single pass) */
+@keyframes shimmer-full {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+/* Single shimmer animation - slides from right to left once
+   With 300% background-size: starts at 200% (off-screen right), ends at -100% (off-screen left) */
+@keyframes shimmer-once {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -100% center;
+  }
+}
+
 @keyframes glow-pulse {
   0%, 100% {
     box-shadow: 0 0 8px rgba(22, 163, 74, 0.5), 0 0 16px rgba(22, 163, 74, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -148,160 +169,684 @@ html, body {
   }
 }
 
-.shiny-add-funds-chip {
-  background: linear-gradient(
-    110deg,
-    #0f6b31 0%,
-    #15803d 25%,
-    #22c55e 50%,
-    #15803d 75%,
-    #0f6b31 100%
-  ) !important;
+/* ============================================
+   SHINY PILL LINK STYLE
+   Uses accent color with shimmer effect on hover/active only
+   ============================================ */
+.pill-shiny-style {
+  position: relative;
+  overflow: hidden;
   background-size: 200% 100%;
-  animation: shimmer 2.5s ease-in-out infinite, glow-pulse 2s ease-in-out infinite;
-  color: white !important;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  transition: transform 0.15s ease, filter 0.15s ease;
-  outline: none !important;
-  box-shadow: 0 0 8px rgba(22, 163, 74, 0.5), 0 0 16px rgba(22, 163, 74, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 4px oklch(var(--accent-base) / 0.3),
+    0 0 8px oklch(var(--accent-base) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.shiny-add-funds-chip:hover {
-  transform: scale(1.05);
+/* Create shimmer gradient overlay - only animates on hover */
+.pill-shiny-style::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     110deg,
-    #15803d 0%,
-    #16a34a 25%,
-    #4ade80 50%,
-    #16a34a 75%,
-    #15803d 100%
-  ) !important;
-  animation: shimmer 1.5s ease-in-out infinite, glow-pulse 1s ease-in-out infinite;
-  outline: none !important;
-  box-shadow: 0 0 14px rgba(34, 197, 94, 0.7), 0 0 28px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-position: -200% center;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: background-position 0s;
 }
 
-.shiny-add-funds-chip:focus {
-  outline: none !important;
-  box-shadow: 0 0 14px rgba(34, 197, 94, 0.7), 0 0 28px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+.pill-shiny-style:hover {
+  box-shadow:
+    0 0 10px oklch(var(--accent-base) / 0.5),
+    0 0 20px oklch(var(--accent-base) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-.shiny-add-funds-chip:active {
-  transform: scale(0.98);
+.pill-shiny-style:hover::before {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.pill-shiny-style:active::before {
+  animation: shimmer 0.8s ease-in-out infinite;
+}
+
+.pill-shiny-style:active {
+  box-shadow:
+    0 0 14px oklch(var(--accent-base) / 0.6),
+    0 0 28px oklch(var(--accent-base) / 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 /* ============================================
-   SHINY CHIP DESIGN SYSTEM
-   Reusable shimmer effect chips for badges/indicators
-   Available variants: success (green), primary (blue)
-   Usage: className="shiny-chip shiny-chip-success"
+   SHINY OUTLINE PILL LINK STYLE
+   Outline variant with brighter top border and accent shimmer
+   ============================================ */
+.pill-outline-shiny-style {
+  position: relative;
+  overflow: hidden;
+  /* Brighter top border using border-image gradient */
+  border-top-color: oklch(var(--accent-base) / 0.4);
+}
+
+.pill-outline-shiny-style:hover {
+  border-top-color: oklch(var(--accent-base) / 0.6);
+}
+
+.pill-outline-shiny-style:active {
+  border-top-color: oklch(var(--accent-base) / 0.7);
+}
+
+/* Override shimmer to use accent color instead of white */
+.pill-outline-shiny-style::before {
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 45%,
+    oklch(var(--accent-base) / 0.3) 50%,
+    transparent 55%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-position: 200% center;
+}
+
+/* ============================================
+   SHINY SHIMMER BASE SYSTEM
+   Single source of truth for shimmer effects.
+   All shiny components inherit from .shiny-shimmer-base
+
+   Inheritance cascade:
+   .shiny-shimmer-base (shimmer animation)
+     └── .shiny-glow-base (adds colored glow for solid buttons)
+           ├── .button-shiny-style (primary color)
+           ├── .button-destructive-shiny-style (error color)
+           └── .button-success-shiny-style (success color)
+     └── .shiny-skeuomorphic-base (adds 3D depth for light buttons)
+           ├── .button-secondary-shiny-style (neutral)
+           ├── .button-outline-shiny-style (minimal)
+           ├── .button-destructive-secondary-shiny-style (error tint)
+           └── .button-success-secondary-shiny-style (success tint)
    ============================================ */
 
-/* Base shiny chip styles */
-.shiny-chip {
+/* Base shimmer - provides the sliding highlight effect */
+.shiny-shimmer-base {
+  position: relative;
+  overflow: hidden;
+}
+
+.shiny-shimmer-base::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Narrow highlight band (10% wide) in a 300% background = completely hidden at edges */
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 45%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 55%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  /* Start off-screen right - at 200%, the 50% highlight is at position 150%, way outside the 0-100% visible area */
+  background-position: 200% center;
+  pointer-events: none;
+  border-radius: inherit;
+  /* Double-ensure invisibility at rest */
+  opacity: 0;
+}
+
+.shiny-shimmer-base:hover::before {
+  opacity: 1;
+  animation: shimmer-once 0.6s ease-out forwards;
+}
+
+/* Glow base - for solid colored buttons (primary, destructive, success) */
+.shiny-glow-base {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Skeuomorphic base - for light/secondary buttons */
+.shiny-skeuomorphic-base {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    0 1px 4px rgba(0, 0, 0, 0.1);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(0, 0, 0, 0.03) 100%
+  );
+}
+
+.shiny-skeuomorphic-base:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.shiny-skeuomorphic-base:active {
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* ============================================
+   PRIMARY BUTTON SHINY - Inherits shimmer + glow
+   ============================================ */
+.button-shiny-style {
+  box-shadow:
+    0 0 4px oklch(var(--primary) / 0.3),
+    0 0 8px oklch(var(--primary) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.button-shiny-style:hover {
+  box-shadow:
+    0 0 10px oklch(var(--primary) / 0.5),
+    0 0 20px oklch(var(--primary) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.button-shiny-style:active {
+  box-shadow:
+    0 0 14px oklch(var(--primary) / 0.6),
+    0 0 28px oklch(var(--primary) / 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   DESTRUCTIVE BUTTON SHINY - Inherits shimmer + glow
+   ============================================ */
+.button-destructive-shiny-style {
+  box-shadow:
+    0 0 4px oklch(var(--error) / 0.3),
+    0 0 8px oklch(var(--error) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.button-destructive-shiny-style:hover {
+  box-shadow:
+    0 0 10px oklch(var(--error) / 0.5),
+    0 0 20px oklch(var(--error) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.button-destructive-shiny-style:active {
+  box-shadow:
+    0 0 14px oklch(var(--error) / 0.6),
+    0 0 28px oklch(var(--error) / 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   SUCCESS BUTTON SHINY - Inherits shimmer + glow
+   ============================================ */
+.button-success-shiny-style {
+  box-shadow:
+    0 0 4px oklch(var(--success) / 0.3),
+    0 0 8px oklch(var(--success) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.button-success-shiny-style:hover {
+  box-shadow:
+    0 0 10px oklch(var(--success) / 0.5),
+    0 0 20px oklch(var(--success) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.button-success-shiny-style:active {
+  box-shadow:
+    0 0 14px oklch(var(--success) / 0.6),
+    0 0 28px oklch(var(--success) / 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   SECONDARY BUTTON SHINY - Inherits shimmer + skeuomorphic
+   ============================================ */
+.button-secondary-shiny-style {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   OUTLINE BUTTON SHINY - Minimal skeuomorphic
+   ============================================ */
+.button-outline-shiny-style {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.button-outline-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.button-outline-shiny-style:active {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================
+   DESTRUCTIVE-SECONDARY SHINY - Inherits shimmer + skeuomorphic with error tint
+   Uses brighter error color for top highlight with faint neutral addition
+   Internal gradient gets redder towards the top
+   ============================================ */
+.button-destructive-secondary-shiny-style {
+  border: 1px solid oklch(var(--error) / 0.15);
+  box-shadow:
+    inset 0 1px 0 oklch(var(--error) / 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 oklch(var(--error) / 0.05),
+    0 1px 4px oklch(var(--error) / 0.1);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--error) / 0.12) 0%,
+    oklch(var(--error) / 0.04) 50%,
+    transparent 100%
+  );
+}
+
+.button-destructive-secondary-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(var(--error) / 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 oklch(var(--error) / 0.08),
+    0 2px 8px oklch(var(--error) / 0.15);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--error) / 0.18) 0%,
+    oklch(var(--error) / 0.06) 50%,
+    transparent 100%
+  );
+}
+
+.button-destructive-secondary-shiny-style:active {
+  box-shadow:
+    inset 0 1px 3px oklch(var(--error) / 0.12),
+    inset 0 -1px 0 oklch(var(--error) / 0.15);
+}
+
+/* ============================================
+   SUCCESS-SECONDARY SHINY - Inherits shimmer + skeuomorphic with success tint
+   Uses brighter success color for top highlight with faint neutral addition
+   Internal gradient gets greener towards the top
+   ============================================ */
+.button-success-secondary-shiny-style {
+  border: 1px solid oklch(var(--success) / 0.15);
+  box-shadow:
+    inset 0 1px 0 oklch(var(--success) / 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 oklch(var(--success) / 0.05),
+    0 1px 4px oklch(var(--success) / 0.1);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--success) / 0.12) 0%,
+    oklch(var(--success) / 0.04) 50%,
+    transparent 100%
+  );
+}
+
+.button-success-secondary-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(var(--success) / 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 oklch(var(--success) / 0.08),
+    0 2px 8px oklch(var(--success) / 0.15);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--success) / 0.18) 0%,
+    oklch(var(--success) / 0.06) 50%,
+    transparent 100%
+  );
+}
+
+.button-success-secondary-shiny-style:active {
+  box-shadow:
+    inset 0 1px 3px oklch(var(--success) / 0.12),
+    inset 0 -1px 0 oklch(var(--success) / 0.15);
+}
+
+/* ============================================
+   SHINY INPUT STYLE
+   Skeuomorphic effect for inputs in shiny mode
+   ============================================ */
+.input-shiny-style {
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.5);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.02) 0%,
+    transparent 20%
+  );
+}
+
+.input-shiny-style:focus {
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 0 0 1px oklch(var(--primary) / 0.3),
+    0 0 0 3px oklch(var(--primary) / 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================
+   SHINY BADGE STYLES
+   Shimmer effects for badges in shiny mode
+   ============================================ */
+
+/* Primary/default badge shiny style */
+.badge-shiny-style {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 3px oklch(var(--primary) / 0.3),
+    0 0 6px oklch(var(--primary) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.badge-shiny-style::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 60%,
+    transparent 100%
+  );
   background-size: 200% 100%;
-  animation: shimmer 2.5s ease-in-out infinite, glow-pulse-base 2s ease-in-out infinite;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  transition: transform 0.15s ease, filter 0.15s ease;
-  outline: none !important;
+  background-position: -200% center;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
-/* CRITICAL: Force white text on ALL shiny chips - override Tailwind utilities */
-/* This must override text-foreground and other Tailwind text color classes */
-.shiny-chip,
-.shiny-chip.text-foreground,
-.shiny-chip[class*="text-"] {
-  --tw-text-opacity: 1 !important;
-  color: rgb(255 255 255 / var(--tw-text-opacity)) !important;
-}
-
-.shiny-chip:hover {
-  transform: scale(1.05);
+.badge-shiny-style:hover::before {
   animation: shimmer 1.5s ease-in-out infinite;
-  outline: none !important;
 }
 
-.shiny-chip:active {
-  transform: scale(0.98);
+.badge-shiny-style:hover {
+  box-shadow:
+    0 0 6px oklch(var(--primary) / 0.4),
+    0 0 12px oklch(var(--primary) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* Success variant (green) - for earnings, positive metrics */
-.shiny-chip-success {
+/* Secondary badge shiny style - skeuomorphic */
+.badge-secondary-shiny-style {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.02) 100%
+  );
+}
+
+.badge-secondary-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.03),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Destructive badge shiny style */
+.badge-destructive-shiny-style {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 3px oklch(var(--error) / 0.3),
+    0 0 6px oklch(var(--error) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.badge-destructive-shiny-style::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     110deg,
-    #0f6b31 0%,
-    #15803d 25%,
-    #22c55e 50%,
-    #15803d 75%,
-    #0f6b31 100%
-  ) !important;
-  box-shadow: 0 0 8px rgba(22, 163, 74, 0.5), 0 0 16px rgba(22, 163, 74, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-position: -200% center;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
-.shiny-chip-success:hover {
-  background: linear-gradient(
-    110deg,
-    #15803d 0%,
-    #16a34a 25%,
-    #4ade80 50%,
-    #16a34a 75%,
-    #15803d 100%
-  ) !important;
-  box-shadow: 0 0 14px rgba(34, 197, 94, 0.7), 0 0 28px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+.badge-destructive-shiny-style:hover::before {
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* Primary variant (blue) - for primary actions, highlights */
-.shiny-chip-primary {
-  background: linear-gradient(
-    110deg,
-    #1e40af 0%,
-    #2563eb 25%,
-    #3b82f6 50%,
-    #2563eb 75%,
-    #1e40af 100%
-  ) !important;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5), 0 0 16px rgba(59, 130, 246, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+.badge-destructive-shiny-style:hover {
+  box-shadow:
+    0 0 6px oklch(var(--error) / 0.4),
+    0 0 12px oklch(var(--error) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-.shiny-chip-primary:hover {
-  background: linear-gradient(
-    110deg,
-    #2563eb 0%,
-    #3b82f6 25%,
-    #60a5fa 50%,
-    #3b82f6 75%,
-    #2563eb 100%
-  ) !important;
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.7), 0 0 28px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+/* Success badge shiny style */
+.badge-success-shiny-style {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 3px oklch(var(--success) / 0.3),
+    0 0 6px oklch(var(--success) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* Warning variant (amber) - for caution, pending states */
-.shiny-chip-warning {
+.badge-success-shiny-style::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     110deg,
-    #b45309 0%,
-    #d97706 25%,
-    #f59e0b 50%,
-    #d97706 75%,
-    #b45309 100%
-  ) !important;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-position: -200% center;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
-.shiny-chip-warning:hover {
+.badge-success-shiny-style:hover::before {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.badge-success-shiny-style:hover {
+  box-shadow:
+    0 0 6px oklch(var(--success) / 0.4),
+    0 0 12px oklch(var(--success) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Warning badge shiny style (solid) */
+.badge-warning-shiny-style {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 3px oklch(var(--warning) / 0.3),
+    0 0 6px oklch(var(--warning) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.badge-warning-shiny-style:hover {
+  box-shadow:
+    0 0 6px oklch(var(--warning) / 0.4),
+    0 0 12px oklch(var(--warning) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Outline badge shiny style - minimal skeuomorphic */
+.badge-outline-shiny-style {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.badge-outline-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Destructive-secondary badge shiny style - uses error tint for highlight and gradient */
+.badge-destructive-secondary-shiny-style {
+  border: 1px solid oklch(var(--error) / 0.15);
+  box-shadow:
+    inset 0 1px 0 oklch(var(--error) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 oklch(var(--error) / 0.05),
+    0 1px 2px oklch(var(--error) / 0.08);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--error) / 0.1) 0%,
+    oklch(var(--error) / 0.03) 50%,
+    transparent 100%
+  );
+}
+
+.badge-destructive-secondary-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(var(--error) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 oklch(var(--error) / 0.08),
+    0 1px 3px oklch(var(--error) / 0.12);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--error) / 0.15) 0%,
+    oklch(var(--error) / 0.05) 50%,
+    transparent 100%
+  );
+}
+
+/* Success-secondary badge shiny style - uses success tint for highlight and gradient */
+.badge-success-secondary-shiny-style {
+  border: 1px solid oklch(var(--success) / 0.15);
+  box-shadow:
+    inset 0 1px 0 oklch(var(--success) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 oklch(var(--success) / 0.05),
+    0 1px 2px oklch(var(--success) / 0.08);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--success) / 0.1) 0%,
+    oklch(var(--success) / 0.03) 50%,
+    transparent 100%
+  );
+}
+
+.badge-success-secondary-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(var(--success) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 oklch(var(--success) / 0.08),
+    0 1px 3px oklch(var(--success) / 0.12);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--success) / 0.15) 0%,
+    oklch(var(--success) / 0.05) 50%,
+    transparent 100%
+  );
+}
+
+/* Warning-secondary badge shiny style - uses warning tint for highlight and gradient */
+.badge-warning-secondary-shiny-style {
+  border: 1px solid oklch(var(--warning) / 0.15);
+  box-shadow:
+    inset 0 1px 0 oklch(var(--warning) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 oklch(var(--warning) / 0.05),
+    0 1px 2px oklch(var(--warning) / 0.08);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--warning) / 0.1) 0%,
+    oklch(var(--warning) / 0.03) 50%,
+    transparent 100%
+  );
+}
+
+.badge-warning-secondary-shiny-style:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(var(--warning) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 oklch(var(--warning) / 0.08),
+    0 1px 3px oklch(var(--warning) / 0.12);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(var(--warning) / 0.15) 0%,
+    oklch(var(--warning) / 0.05) 50%,
+    transparent 100%
+  );
+}
+
+/* ============================================
+   SHINY ALLOCATION BAR STYLE
+   Shimmer effect for the 'this page' section
+   ============================================ */
+.allocation-bar-shiny-style {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 4px oklch(var(--primary) / 0.3),
+    0 0 8px oklch(var(--primary) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.allocation-bar-shiny-style::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     110deg,
-    #d97706 0%,
-    #f59e0b 25%,
-    #fbbf24 50%,
-    #f59e0b 75%,
-    #d97706 100%
-  ) !important;
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7), 0 0 28px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  pointer-events: none;
+  border-radius: inherit;
+  animation: shimmer 2.5s ease-in-out infinite;
 }
 
 /* Custom xs breakpoint utilities for mobile optimization */
@@ -546,7 +1091,7 @@ html, body {
 
 /* Ensure paragraph numbers have correct styling with higher specificity for all screen sizes */
 body .paragraph-number {
-  color: hsl(var(--muted-foreground));
+  color: oklch(var(--muted-foreground));
   font-weight: 400;
   opacity: var(--paragraph-number-opacity);
   font-size: 1em; /* Same size as body text */
@@ -922,17 +1467,17 @@ a.username-badge-link {
 
 a.username-badge-link.text-primary,
 a.username-badge-link:has(.text-primary) {
-  color: hsl(var(--primary));
+  color: oklch(var(--primary));
 }
 
 a.username-badge-link.text-muted-foreground,
 a.username-badge-link:has(.text-muted-foreground) {
-  color: hsl(var(--muted-foreground));
+  color: oklch(var(--muted-foreground));
 }
 
 /* Custom Spinner Animation */
 .loader {
-  color: hsl(var(--primary)); /* Blue in light mode (from primary color) */
+  color: oklch(var(--primary)); /* Blue in light mode (from primary color) */
   font-size: 10px;
   width: 1em;
   height: 1em;
@@ -960,7 +1505,7 @@ a.username-badge-link:has(.text-muted-foreground) {
 
 /* Theme-specific loader colors */
 .loader {
-  color: hsl(var(--primary)); /* Blue in light mode (from primary color) */
+  color: oklch(var(--primary)); /* Blue in light mode (from primary color) */
 }
 
 .dark .loader {
@@ -1268,53 +1813,78 @@ a.username-badge-link:has(.text-muted-foreground) {
     --warn-base: 0.72 0.15 72; /* Orange */
     --error-base: 0.55 0.15 28; /* Red */
 
+    /* Hex fallback for SVG/Canvas that can't use CSS variables - updated by AccentColorContext */
+    --accent-color: #2563EB;
+    --accent-color-rgb: 37, 99, 235;
+
     /* Hover variants - darker in light mode */
     --accent-90: 0.45 0.25 230; /* Darker variant for hover */
     --accent-110: 0.55 0.25 230; /* Brighter variant for active */
 
-    /* Radix Colors - Light Mode */
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* ═══════════════════════════════════════════════════════════════════════════
+       OKLCH COLOR SYSTEM - Light Mode
+       All colors use OKLCH format: L C H (Lightness 0-1, Chroma 0-0.4, Hue 0-360)
+       For neutral colors (black/white/grey), use C=0 to avoid color cast
+       ═══════════════════════════════════════════════════════════════════════════ */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Base surfaces - pure white background, dark text */
+    --background: 1.00 0 0;
+    --foreground: 0.20 0 0;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --card: 1.00 0 0;
+    --card-foreground: 0.20 0 0;
 
+    --popover: 1.00 0 0;
+    --popover-foreground: 0.20 0 0;
+
+    /* Primary uses dynamic accent color */
     --primary: var(--accent-base);
-    --primary-foreground: 100.00% 0.0000 158.2;
+    --primary-foreground: 1.00 0 0;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary - light grey background, dark text */
+    --secondary: 0.95 0 0;
+    --secondary-foreground: 0.20 0 0;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted - subtle grey background, medium text */
+    --muted: 0.95 0 0;
+    --muted-foreground: 0.45 0 0;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    /* Accent - same as secondary for UI backgrounds */
+    --accent: 0.95 0 0;
+    --accent-foreground: 0.20 0 0;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    /* Destructive/Error */
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 1.00 0 0;
 
-    --success: 0.55 0.15 142;
-    --success-foreground: 1.00 0.00 0;
-    --success-90: 0.50 0.15 142; /* Darker green */
-    --success-110: 0.60 0.15 142; /* Brighter green */
-    --error-90: 0.50 0.15 28; /* Darker red */
-    --error-110: 0.60 0.15 28; /* Brighter red */
+    /* Success */
+    --success: 0.55 0.15 145;
+    --success-foreground: 1.00 0 0;
+    --success-90: 0.50 0.15 145;
+    --success-110: 0.60 0.15 145;
+
+    /* Error variants */
+    --error: 0.55 0.22 25;
+    --error-foreground: 1.00 0 0;
+    --error-90: 0.50 0.22 25;
+    --error-110: 0.60 0.22 25;
+
+    /* Warning */
+    --warning: 0.75 0.15 85;
+    --warning-foreground: 0.20 0 0;
 
     /* Neutral color for badges and chips - dark grey in light mode */
-    --neutral: 0.20 0.00 0;
-    --neutral-foreground: 1.00 0.00 0;
+    --neutral: 0.25 0 0;
+    --neutral-foreground: 1.00 0 0;
 
     /* Focus indicator variables */
     --focus-ring-color: var(--accent-base);
     --focus-ring-width: 2px;
     --focus-ring-offset: 2px;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    /* Borders and inputs - light grey */
+    --border: 0.88 0 0;
+    --input: 0.88 0 0;
     --ring: var(--accent-base);
     --radius: 0.5rem;
 
@@ -1362,41 +1932,54 @@ a.username-badge-link:has(.text-muted-foreground) {
     --error-alpha-10: rgba(248, 113, 113, 0.25);
     --error-alpha-15: rgba(248, 113, 113, 0.35);
 
-    /* Radix Colors - Dark Mode */
-    --background: 0 0% 0%;
-    --foreground: 210 40% 98%;
+    /* ═══════════════════════════════════════════════════════════════════════════
+       OKLCH COLOR SYSTEM - Dark Mode
+       All colors use OKLCH format: L C H (Lightness 0-1, Chroma 0-0.4, Hue 0-360)
+       For neutral colors (black/white/grey), use C=0 to avoid color cast
+       ═══════════════════════════════════════════════════════════════════════════ */
 
-    /* Brighter card background in dark mode - completely neutral grey */
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 98%;
+    /* Base surfaces - pure black background, light text */
+    --background: 0.00 0 0;
+    --foreground: 0.93 0 0;
 
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 98%;
+    /* Card background in dark mode - slightly elevated */
+    --card: 0.15 0 0;
+    --card-foreground: 0.93 0 0;
 
+    --popover: 0.10 0 0;
+    --popover-foreground: 0.93 0 0;
+
+    /* Primary uses dynamic accent color */
     --primary: var(--accent-base);
-    --primary-foreground: 100.00% 0.0000 158.2;
+    --primary-foreground: 1.00 0 0;
 
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 98%;
+    /* Secondary - dark grey background, light text */
+    --secondary: 0.22 0 0;
+    --secondary-foreground: 0.93 0 0;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
+    /* Muted - dark grey background, medium-light text */
+    --muted: 0.22 0 0;
+    --muted-foreground: 0.60 0 0;
 
-    --accent: 0 0% 18%;
-    --accent-foreground: 0 0% 98%;
+    /* Accent - same as secondary for UI backgrounds */
+    --accent: 0.22 0 0;
+    --accent-foreground: 0.93 0 0;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    /* Destructive/Error */
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 1.00 0 0;
 
-    --success: 0.60 0.15 142;
-    --success-foreground: 1.00 0.00 0;
+    /* Success - slightly brighter in dark mode */
+    --success: 0.60 0.15 145;
+    --success-foreground: 1.00 0 0;
 
     /* Neutral color for badges and chips - light grey in dark mode */
-    --neutral: 0.90 0.00 0;
-    --neutral-foreground: 0.10 0.00 0;
+    --neutral: 0.88 0 0;
+    --neutral-foreground: 0.15 0 0;
 
-    --border: 0 0% 35%; /* Increased from 25% for better visibility on dark backgrounds */
-    --input: 0 0% 18%;
+    /* Borders and inputs */
+    --border: 0.35 0 0;
+    --input: 0.22 0 0;
     --ring: var(--accent-base);
     --radius: 0.5rem;
 
@@ -1414,90 +1997,90 @@ a.username-badge-link:has(.text-muted-foreground) {
 
   /* High Contrast Mode - Light */
   html[data-high-contrast="true"]:not(.dark) {
-    /* Maximum contrast for text */
-    --foreground: 0 0% 0%;
-    --background: 0 0% 100%;
+    /* Maximum contrast for text - OKLCH format: L C H */
+    --foreground: 0.00 0 0;
+    --background: 1.00 0 0;
 
     /* Card with visible borders */
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card: 1.00 0 0;
+    --card-foreground: 0.00 0 0;
 
     /* Popover with visible borders */
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover: 1.00 0 0;
+    --popover-foreground: 0.00 0 0;
 
-    /* Primary color with high contrast */
-    --primary: 220 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary color with high contrast - blue hue 250 */
+    --primary: 0.50 0.30 250;
+    --primary-foreground: 1.00 0 0;
 
     /* Secondary with higher contrast */
-    --secondary: 220 13% 80%;
-    --secondary-foreground: 0 0% 0%;
+    --secondary: 0.80 0.02 250;
+    --secondary-foreground: 0.00 0 0;
 
     /* Muted with higher contrast */
-    --muted: 220 13% 90%;
-    --muted-foreground: 0 0% 0%;
+    --muted: 0.90 0.02 250;
+    --muted-foreground: 0.00 0 0;
 
     /* Accent with higher contrast */
-    --accent: 220 13% 90%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 0.90 0.02 250;
+    --accent-foreground: 0.00 0 0;
 
-    /* Destructive with higher contrast */
-    --destructive: 0 100% 45%;
-    --destructive-foreground: 0 0% 100%;
+    /* Destructive with higher contrast - red hue 25 */
+    --destructive: 0.50 0.25 25;
+    --destructive-foreground: 1.00 0 0;
 
     /* Borders and inputs with higher contrast */
-    --border: 0 0% 0%;
-    --input: 0 0% 90%;
-    --ring: 220 100% 50%;
+    --border: 0.00 0 0;
+    --input: 0.90 0 0;
+    --ring: 0.50 0.30 250;
 
     /* Enhanced focus indicators */
-    --focus-ring-color: 220 100% 50%;
+    --focus-ring-color: 0.50 0.30 250;
     --focus-ring-width: 3px;
     --focus-ring-offset: 2px;
   }
 
   /* High Contrast Mode - Dark */
   html[data-high-contrast="true"].dark {
-    /* Maximum contrast for text */
-    --foreground: 0 0% 100%;
-    --background: 0 0% 0%;
+    /* Maximum contrast for text - OKLCH format: L C H */
+    --foreground: 1.00 0 0;
+    --background: 0.00 0 0;
 
     /* Card with visible borders */
-    --card: 0 0% 0%;
-    --card-foreground: 0 0% 100%;
+    --card: 0.00 0 0;
+    --card-foreground: 1.00 0 0;
 
     /* Popover with visible borders */
-    --popover: 0 0% 0%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0.00 0 0;
+    --popover-foreground: 1.00 0 0;
 
-    /* Primary color with high contrast */
-    --primary: 220 100% 60%;
-    --primary-foreground: 0 0% 0%;
+    /* Primary color with high contrast - blue hue 250 */
+    --primary: 0.60 0.30 250;
+    --primary-foreground: 0.00 0 0;
 
     /* Secondary with higher contrast */
-    --secondary: 220 13% 20%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0.20 0.02 250;
+    --secondary-foreground: 1.00 0 0;
 
     /* Muted with higher contrast */
-    --muted: 220 13% 20%;
-    --muted-foreground: 0 0% 100%;
+    --muted: 0.20 0.02 250;
+    --muted-foreground: 1.00 0 0;
 
     /* Accent with higher contrast */
-    --accent: 220 13% 20%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0.20 0.02 250;
+    --accent-foreground: 1.00 0 0;
 
-    /* Destructive with higher contrast */
-    --destructive: 0 100% 60%;
-    --destructive-foreground: 0 0% 0%;
+    /* Destructive with higher contrast - red hue 25 */
+    --destructive: 0.60 0.25 25;
+    --destructive-foreground: 0.00 0 0;
 
     /* Borders and inputs with higher contrast */
-    --border: 0 0% 100%;
-    --input: 0 0% 20%;
-    --ring: 220 100% 70%;
+    --border: 1.00 0 0;
+    --input: 0.20 0 0;
+    --ring: 0.70 0.30 250;
 
     /* Enhanced focus indicators */
-    --focus-ring-color: 220 100% 70%;
+    --focus-ring-color: 0.70 0.30 250;
     --focus-ring-width: 3px;
     --focus-ring-offset: 2px;
   }
@@ -1507,15 +2090,15 @@ a.username-badge-link:has(.text-muted-foreground) {
 .glass-card {
   border: 1px solid;
   border-radius: 0.75rem; /* rounded-xl */
-  border-color: hsl(var(--border) / 0.4);
+  border-color: oklch(var(--border) / 0.4);
 }
 
 .glass-panel {
-  border: 1px solid hsl(var(--border) / 0.4);
+  border: 1px solid oklch(var(--border) / 0.4);
 }
 
 .glass-panel:hover {
-  border-color: hsl(var(--border) / 0.6);
+  border-color: oklch(var(--border) / 0.6);
 }
 
 /* Minimal Stripe fixes - no size overrides */
@@ -1540,8 +2123,10 @@ iframe[src*="js.stripe.com"] {
 
 /* Active state styling for theme and link style selectors */
 .wewrite-active-state {
-  border: 1px solid oklch(var(--accent-80)) !important;
+  border: 2px solid oklch(var(--accent-80)) !important;
   background-color: oklch(var(--accent-15)) !important;
+  box-shadow: 0 0 0 3px oklch(var(--accent-30)), 0 2px 8px oklch(var(--accent-20)) !important;
+  transform: scale(1.02);
 }
 
 /* Today card accent border - uses accent color dynamically */
@@ -1562,12 +2147,12 @@ iframe[src*="js.stripe.com"] {
 /* Interactive card styling */
 .wewrite-interactive-card {
   transition: all 0.2s ease-in-out;
-  border: 1px solid hsl(var(--border) / 0.4);
+  border: 1px solid oklch(var(--border) / 0.4);
 }
 
 .wewrite-interactive-card:hover {
-  border-color: hsl(var(--border) / 0.6);
-  background-color: hsl(var(--muted) / 0.5);
+  border-color: oklch(var(--border) / 0.6);
+  background-color: oklch(var(--muted) / 0.5);
 }
 
 /* Base styling for WeWrite inputs - now handled by glassmorphic input system below */
@@ -1729,22 +2314,18 @@ textarea.wewrite-title-input {
 }
 
 /* Specific classes for inputs with icons */
-.wewrite-input-with-left-icon {
-  padding-left: 3rem !important; /* 48px - enough space for icon + padding */
+.wewrite-input-left-icon {
+  padding-left: 2.25rem !important; /* 36px - space for icon + padding */
 }
 
-.wewrite-input-with-left-icon::placeholder {
+.wewrite-input-right-icon {
+  padding-right: 2.75rem !important; /* 44px - enough space for icon + padding */
+}
+
+.wewrite-input-left-icon::placeholder,
+.wewrite-input-right-icon::placeholder {
   text-indent: 0 !important;
   padding-left: 0 !important;
-}
-
-.wewrite-input-with-right-icon {
-  padding-right: 3rem !important; /* 48px - enough space for icon + padding */
-}
-
-.wewrite-input-with-right-icon::placeholder {
-  text-indent: 0 !important;
-  padding-right: 0 !important;
 }
 
 /* Disabled state */
@@ -1815,7 +2396,7 @@ select.wewrite-input:focus-visible {
 html[data-high-contrast="true"] .wewrite-card,
 html[data-high-contrast="true"] [class*="border-theme-"],
 html[data-high-contrast="true"] [class*="border"] {
-  border-color: hsl(var(--border)) !important;
+  border-color: oklch(var(--border)) !important;
   border-width: 1px !important;
 }
 
@@ -1962,9 +2543,9 @@ html[data-high-contrast="true"] [class*="border"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid hsl(var(--border) / 0.2);
+  border: 1px solid oklch(var(--border) / 0.2);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  color: hsl(var(--foreground) / 0.7);
+  color: oklch(var(--foreground) / 0.7);
 }
 
 #roadmap-scroll-left:hover,
@@ -1976,8 +2557,8 @@ html[data-high-contrast="true"] [class*="border"] {
 
 .dark #roadmap-scroll-left,
 .dark #roadmap-scroll-right {
-  border-color: hsl(var(--border) / 0.2);
-  color: hsl(var(--foreground) / 0.9);
+  border-color: oklch(var(--border) / 0.2);
+  color: oklch(var(--foreground) / 0.9);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -2102,12 +2683,12 @@ input[type="number"] {
 
 /* Light mode - slightly darker inner border */
 .inner-border-neutral-alpha-3::after {
-  border: 1px solid hsl(var(--border) / 0.3);
+  border: 1px solid oklch(var(--border) / 0.3);
 }
 
 /* Dark mode - slightly lighter inner border */
 .dark .inner-border-neutral-alpha-3::after {
-  border: 1px solid hsl(var(--border) / 0.3);
+  border: 1px solid oklch(var(--border) / 0.3);
 }
 
 /* Basic styling for html and body */
@@ -2116,7 +2697,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh; /* Use dynamic viewport height on supported browsers */
   overflow-x: hidden;
-  background-color: hsl(var(--background));
+  background-color: oklch(var(--background));
 }
 
 /* Make page containers transparent when background image is present */
@@ -2164,7 +2745,7 @@ body::after {
     background-size: contain;
     background-position: center center; /* Center the image both horizontally and vertically */
     /* Fill empty space with theme-appropriate color */
-    background-color: hsl(var(--background));
+    background-color: oklch(var(--background));
     /* Use standard viewport units for better compatibility */
     min-height: 100vh;
     height: 100vh;
@@ -2258,41 +2839,41 @@ body::before {
 
 /* Centralized border utilities for consistent styling */
 .border-theme-light {
-  border: 1px solid hsl(var(--border) / 0.2);
+  border: 1px solid oklch(var(--border) / 0.2);
 }
 
 .border-theme-medium {
-  border: 1px solid hsl(var(--border) / 0.4);
+  border: 1px solid oklch(var(--border) / 0.4);
 }
 
 .border-theme-strong {
-  border: 1px solid hsl(var(--border) / 0.6);
+  border: 1px solid oklch(var(--border) / 0.6);
 }
 
 .border-theme-solid {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid oklch(var(--border));
 }
 
 /* High contrast mode border styles - only apply higher contrast in high contrast mode */
 :root[data-accent-color="high-contrast"] .border-theme-light {
-  border: 1px solid hsl(var(--border) / 0.4);
+  border: 1px solid oklch(var(--border) / 0.4);
 }
 
 :root[data-accent-color="high-contrast"] .border-theme-medium {
-  border: 1px solid hsl(var(--border) / 0.7);
+  border: 1px solid oklch(var(--border) / 0.7);
 }
 
 :root[data-accent-color="high-contrast"] .border-theme-strong {
-  border: 1px solid hsl(var(--border) / 0.9);
+  border: 1px solid oklch(var(--border) / 0.9);
 }
 
 :root[data-accent-color="high-contrast"] .border-theme-solid {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid oklch(var(--border));
 }
 
 /* Border direction utilities */
 .border-t-only {
-  border-top: 1px solid hsl(var(--border) / 0.4);
+  border-top: 1px solid oklch(var(--border) / 0.4);
   border-right: none;
   border-bottom: none;
   border-left: none;
@@ -2301,13 +2882,13 @@ body::before {
 .border-b-only {
   border-top: none;
   border-right: none;
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
+  border-bottom: 1px solid oklch(var(--border) / 0.4);
   border-left: none;
 }
 
 .border-r-only {
   border-top: none;
-  border-right: 1px solid hsl(var(--border) / 0.4);
+  border-right: 1px solid oklch(var(--border) / 0.4);
   border-bottom: none;
   border-left: none;
 }
@@ -2316,24 +2897,24 @@ body::before {
   border-top: none;
   border-right: none;
   border-bottom: none;
-  border-left: 1px solid hsl(var(--border) / 0.4);
+  border-left: 1px solid oklch(var(--border) / 0.4);
 }
 
 /* High contrast mode border direction utilities */
 :root[data-accent-color="high-contrast"] .border-t-only {
-  border-top: 1px solid hsl(var(--border) / 0.8);
+  border-top: 1px solid oklch(var(--border) / 0.8);
 }
 
 :root[data-accent-color="high-contrast"] .border-b-only {
-  border-bottom: 1px solid hsl(var(--border) / 0.8);
+  border-bottom: 1px solid oklch(var(--border) / 0.8);
 }
 
 :root[data-accent-color="high-contrast"] .border-r-only {
-  border-right: 1px solid hsl(var(--border) / 0.8);
+  border-right: 1px solid oklch(var(--border) / 0.8);
 }
 
 :root[data-accent-color="high-contrast"] .border-l-only {
-  border-left: 1px solid hsl(var(--border) / 0.8);
+  border-left: 1px solid oklch(var(--border) / 0.8);
 }
 
 /* Header border transition */
@@ -2343,7 +2924,7 @@ body::before {
 }
 
 .header-border-transition.border-visible {
-  border-color: hsl(var(--border) / 0.4);
+  border-color: oklch(var(--border) / 0.4);
 }
 
 /* Page header height variable - set conservative initial value to prevent content clipping */
@@ -2409,53 +2990,53 @@ body::before {
 
 /* Interactive border states */
 .hover-border-light:hover {
-  border-color: hsl(var(--border) / 0.3);
+  border-color: oklch(var(--border) / 0.3);
 }
 
 .hover-border-medium:hover {
-  border-color: hsl(var(--border) / 0.5);
+  border-color: oklch(var(--border) / 0.5);
 }
 
 .hover-border-strong:hover {
-  border-color: hsl(var(--border) / 0.7);
+  border-color: oklch(var(--border) / 0.7);
 }
 
 .hover-border-solid:hover {
-  border-color: hsl(var(--border));
+  border-color: oklch(var(--border));
 }
 
 /* Divide utilities for theme-aware borders */
 .divide-theme-light > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border) / 0.2);
+  border-top: 1px solid oklch(var(--border) / 0.2);
 }
 
 .divide-theme-medium > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border) / 0.4);
+  border-top: 1px solid oklch(var(--border) / 0.4);
 }
 
 .divide-theme-strong > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border) / 0.6);
+  border-top: 1px solid oklch(var(--border) / 0.6);
 }
 
 .divide-theme-solid > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border));
+  border-top: 1px solid oklch(var(--border));
 }
 
 /* High contrast mode divide utilities */
 :root[data-accent-color="high-contrast"] .divide-theme-light > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border) / 0.4);
+  border-top: 1px solid oklch(var(--border) / 0.4);
 }
 
 :root[data-accent-color="high-contrast"] .divide-theme-medium > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border) / 0.7);
+  border-top: 1px solid oklch(var(--border) / 0.7);
 }
 
 :root[data-accent-color="high-contrast"] .divide-theme-strong > :not([hidden]) ~ :not([hidden]) {
-  border-top: 1px solid hsl(var(--border) / 0.9);
+  border-top: 1px solid oklch(var(--border) / 0.9);
 }
 
 :root[data-accent-color="high-contrast"] .divide-theme-solid > :not([hidden]) ~ :not([hidden]) {
-  border-top: 2px solid hsl(var(--border));
+  border-top: 2px solid oklch(var(--border));
 }
 
 /* Custom text highlight styles */
@@ -2499,8 +3080,8 @@ body::before {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
-  background-color: hsl(var(--background));
-  border-bottom: 1px solid hsl(var(--border));
+  background-color: oklch(var(--background));
+  border-bottom: 1px solid oklch(var(--border));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -2558,12 +3139,14 @@ input[type="search"], input[type="url"], input[type="tel"] {
 }
 
 /* Global pill text truncation - handles overflow gracefully */
+/* Only truncate when text actually exceeds available space */
 .pill-text {
-  display: inline-block;
+  display: block;
   white-space: nowrap;
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 /* Removed redundant truncation rules - now handled globally by .pill-text */
@@ -2637,26 +3220,26 @@ button.bg-transparent[type] {
 /* Comprehensive fix for text contrast issues */
 /* Ensure all text has sufficient contrast against its background */
 .text-muted-foreground {
-  color: hsl(var(--muted-foreground)) !important;
+  color: oklch(var(--muted-foreground)) !important;
 }
 
 /* Ensure tab text is always readable */
 [role="tab"] {
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* Ensure text in light mode has sufficient contrast */
 .light [role="tab"],
 .light .text-muted-foreground,
 .light .text-foreground {
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* Ensure text in dark mode has sufficient contrast */
 .dark [role="tab"],
 .dark .text-muted-foreground,
 .dark .text-foreground {
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* Systematic Color System - Opacity-based Utility Classes
@@ -3261,7 +3844,7 @@ button.bg-transparent[type] {
   left: 0;
   right: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background-color: hsl(var(--background));
+  background-color: oklch(var(--background));
   animation: slideDown 0.2s ease-out;
   z-index: var(--z-fixed-header);
 }
@@ -3276,7 +3859,7 @@ button.bg-transparent[type] {
   left: 0;
   right: 0;
   width: 100%;
-  background-color: hsl(var(--background));
+  background-color: oklch(var(--background));
   z-index: var(--z-fixed-header);
   transition: opacity 0.2s ease-out;
 }
@@ -3293,13 +3876,13 @@ button.bg-transparent[type] {
 .section-header-sticky {
   position: fixed !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-  background-color: hsl(var(--background)) !important;
+  background-color: oklch(var(--background)) !important;
   backdrop-filter: blur(8px);
   z-index: var(--z-fixed-header) !important;
   margin: 0 !important;
   padding-left: 1.5rem !important;
   padding-right: 1.5rem !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
+  border-bottom: 1px solid oklch(var(--border)) !important;
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3308,7 +3891,7 @@ button.bg-transparent[type] {
 
 .dark .section-header-sticky {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  background-color: hsl(var(--background) / 0.95) !important;
+  background-color: oklch(var(--background) / 0.95) !important;
 }
 
 /* Smooth transition states for sticky headers */
@@ -3449,7 +4032,7 @@ button.bg-transparent[type] {
 .section-header-enhanced {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(8px);
-  background-color: hsl(var(--background) / 0.95);
+  background-color: oklch(var(--background) / 0.95);
 }
 
 .dark .section-header-enhanced {
@@ -3484,12 +4067,12 @@ button.bg-transparent[type] {
 
 /* Leaflet map styling */
 .leaflet-container {
-  background-color: hsl(var(--background)) !important;
+  background-color: oklch(var(--background)) !important;
   z-index: 1 !important;
 }
 
 .dark .leaflet-container {
-  background-color: hsl(var(--background)) !important;
+  background-color: oklch(var(--background)) !important;
 }
 
 .leaflet-pane,

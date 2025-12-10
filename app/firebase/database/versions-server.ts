@@ -170,6 +170,7 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
         added: diffResult.added || 0,
         removed: diffResult.removed || 0,
         hasChanges: (diffResult.added > 0 || diffResult.removed > 0) || isNewPage,
+        isNewPage: isNewPage,
         preview: diffResult.preview || null
       } : null
     };
@@ -185,34 +186,35 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     await pageRef.update(pageUpdateData);
     console.log("✅ VERSION SERVER: Page document updated successfully");
 
-    // Record user activity for streak tracking (server-side)
-    try {
-      const { recordUserActivity } = await import('../streaks');
-      await recordUserActivity(data.userId, 'page_edit', {
-        pageId,
-        versionId: versionRef.id,
-        contentLength: contentString.length,
-        isNewPage
-      });
-      console.log("✅ VERSION SERVER: User activity recorded");
-    } catch (activityError) {
-      console.error("🔴 VERSION SERVER: Error recording user activity (non-fatal):", activityError);
-    }
-
-    // CRITICAL FIX: Invalidate cache after saving new version
-    try {
-      console.log('🗑️ [VERSION SERVER] Invalidating cache for page:', pageId);
-
-      // Import cache invalidation utilities
-      const { invalidatePageData } = await import('../../utils/unifiedCache');
-
-      // Invalidate unified cache
-      invalidatePageData(pageId, data.userId);
-
-      console.log('✅ [VERSION SERVER] Cache invalidation completed for page:', pageId);
-    } catch (cacheError) {
-      console.error('⚠️ [VERSION SERVER] Cache invalidation failed (non-fatal):', cacheError);
-    }
+    // PERFORMANCE: Run non-blocking operations in background (fire and forget)
+    // User activity recording and cache invalidation don't need to block the response
+    Promise.allSettled([
+      // Record user activity for streak tracking
+      (async () => {
+        try {
+          const { recordUserActivity } = await import('../streaks');
+          await recordUserActivity(data.userId, 'page_edit', {
+            pageId,
+            versionId: versionRef.id,
+            contentLength: contentString.length,
+            isNewPage
+          });
+          console.log("✅ [BG] User activity recorded");
+        } catch (err) {
+          console.error("⚠️ [BG] User activity recording failed:", err);
+        }
+      })(),
+      // Invalidate cache
+      (async () => {
+        try {
+          const { invalidatePageData } = await import('../../utils/unifiedCache');
+          invalidatePageData(pageId, data.userId);
+          console.log('✅ [BG] Cache invalidated');
+        } catch (err) {
+          console.error('⚠️ [BG] Cache invalidation failed:', err);
+        }
+      })()
+    ]).catch(err => console.error('⚠️ [BG] Background ops failed:', err));
 
     logger.info('Version saved successfully (server-side)', {
       pageId,

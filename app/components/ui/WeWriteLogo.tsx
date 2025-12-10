@@ -1,9 +1,20 @@
 "use client";
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Logo } from './Logo';
 import { cn } from '../../lib/utils';
+
+// Declare global gtag function for analytics
+declare global {
+  interface Window {
+    gtag?: (
+      command: string,
+      action: string,
+      params?: Record<string, any>
+    ) => void;
+  }
+}
 
 export interface WeWriteLogoProps {
   /** Size variant for the logo and text */
@@ -65,9 +76,19 @@ export function WeWriteLogo({
   priority = false
 }: WeWriteLogoProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const config = sizeConfig[size];
 
   const handleClick = () => {
+    // Track logo tap in Google Analytics
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'logo_tap', {
+        event_category: 'navigation',
+        event_label: 'WeWrite Logo',
+        from_page: pathname
+      });
+    }
+
     if (onClick) {
       onClick();
     } else if (clickable) {

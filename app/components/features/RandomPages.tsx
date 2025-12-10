@@ -254,8 +254,8 @@ const RandomPages = React.memo(function RandomPages({
   // Removed automatic re-fetch to prevent excessive API calls
   // Users can manually shuffle to get more results in dense mode
 
-  // Show proper loading skeleton on initial load
-  if (loading && randomPages.length === 0) {
+  // Show proper loading skeleton on initial load OR while loading with no data
+  if (loading) {
     return <RandomPagesSkeleton limit={limit} />;
   }
 

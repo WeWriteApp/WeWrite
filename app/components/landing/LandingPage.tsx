@@ -15,21 +15,24 @@ import { useAuth } from '../../providers/AuthProvider';
 
 // Import client-side components for simplified stacked layout
 import HeroCard from './HeroCard';
+import HowItWorksSection from './HowItWorksSection';
+import FeaturesCarousel from './FeaturesCarousel';
 
-import { DynamicPagePreviewCard } from './DynamicPagePreviewCard';
 import { LandingColorProvider } from './LandingColorContext';
 import { LandingBlobs } from './LandingBlobs';
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
-import { fetchLandingPageCards, type LandingPageCardConfig } from '../../config/landingPageCards';
+import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
+import { Plus } from 'lucide-react';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
   const [isStackedHeader, setIsStackedHeader] = useState(false);
+  const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
 
   const { setTheme, theme } = useTheme();
   const [session, setUser] = useState<any>(null);
@@ -40,35 +43,8 @@ const LandingPage = () => {
   // Analytics hook for tracking
   const analytics = useWeWriteAnalytics();
 
-  // Landing page cards state
-  const [landingPageCards, setLandingPageCards] = useState<LandingPageCardConfig[]>([]);
-  const [cardsLoading, setCardsLoading] = useState(true);
-
   // Animation classes
   const fadeInClass = "animate-fadeIn";
-
-  // No longer need useLayoutEffect for data-landing-page attribute
-  // The new LandingColorContext handles all colors via React context + inline styles
-
-  // Fetch landing page cards configuration
-  useEffect(() => {
-    const loadCards = async () => {
-      try {
-        setCardsLoading(true);
-        const cards = await fetchLandingPageCards();
-        setLandingPageCards(cards);
-      } catch (error) {
-        console.error('Failed to load landing page cards:', error);
-        // Fallback to static configuration
-        const { getEnabledLandingPageCards } = await import('../../config/landingPageCards');
-        setLandingPageCards(getEnabledLandingPageCards());
-      } finally {
-        setCardsLoading(false);
-      }
-    };
-
-    loadCards();
-  }, []);
 
   // Simple scroll handler for header shadow effect only
   // Color animation is now handled by LandingColorContext
@@ -251,8 +227,8 @@ const LandingPage = () => {
 
       {/* Desktop Navigation */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'}`}>
-        {/* Glassmorphic background with bottom border - uses card theme system for consistent borders */}
-        <div className="absolute inset-0 backdrop-blur-md bg-card/80 border-b" style={{ borderColor: 'var(--card-border)' }} />
+        {/* Glassmorphic background with bottom border - uses card theme CSS variables for consistent styling */}
+        <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
         {/* Row 1: Logo + Navigation + Auth */}
         <div className="py-2 relative z-10">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-6">
@@ -286,13 +262,11 @@ const LandingPage = () => {
                 <AuthButton
                   type="login"
                   variant="secondary"
-                  className="bg-muted hover:bg-muted/80 text-foreground"
                   device="desktop"
                 />
                 <AuthButton
                   type="register"
                   variant="default"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   device="desktop"
                 >
                   Create Account
@@ -314,8 +288,8 @@ const LandingPage = () => {
 
       {/* Mobile Navigation */}
       <div className={`${isMobileView ? 'block' : 'hidden'} fixed top-0 left-0 right-0 z-50 flex flex-col w-full`}>
-        {/* Glassmorphic background with bottom border - uses card theme system for consistent borders */}
-        <div className="absolute inset-0 backdrop-blur-md bg-card/80 border-b" style={{ borderColor: 'var(--card-border)' }} />
+        {/* Glassmorphic background with bottom border - uses card theme CSS variables for consistent styling */}
+        <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
         {/* Title and buttons - hide logo text on very thin screens */}
         <div className="w-full py-2 relative z-10">
           <div className="container mx-auto max-w-4xl flex justify-between items-center px-4">
@@ -344,16 +318,14 @@ const LandingPage = () => {
                 <>
                   <AuthButton
                     type="login"
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
-                    className="bg-muted hover:bg-muted/80 text-foreground"
                     device="mobile"
                   />
                   <AuthButton
                     type="register"
                     variant="default"
                     size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     device="mobile"
                   >
                     Sign Up
@@ -419,7 +391,7 @@ const LandingPage = () => {
 
 
 
-        {/* Simplified Stacked Cards Layout */}
+        {/* Hero Card Section */}
         <section className="py-4 md:py-6 pt-6 md:pt-8">
           <div className="container mx-auto px-6 max-w-4xl space-y-8">
 
@@ -432,36 +404,14 @@ const LandingPage = () => {
               platformRef={React.createRef()}
             />
 
-            {/* Dynamic Page Preview Cards */}
-            {cardsLoading ? (
-              // Loading skeleton for cards
-              <div className="space-y-8">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="min-h-[500px] bg-muted/50 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : (
-              landingPageCards.map((cardConfig) => (
-                <DynamicPagePreviewCard
-                  key={cardConfig.id}
-                  pageId={cardConfig.pageId}
-                  customTitle={cardConfig.customTitle}
-                  buttonText={cardConfig.buttonText}
-                  maxLines={cardConfig.maxLines}
-                  showAllocationBar={cardConfig.showAllocationBar}
-                  authorId={cardConfig.authorId}
-                  allocationSource={cardConfig.allocationSource}
-                  className={cardConfig.className}
-                  // Landing page: use $0.10 interval, disable modal and long-press
-                  allocationIntervalCents={10}
-                  disableAllocationModal={true}
-                  disableAllocationLongPress={true}
-                />
-              ))
-            )}
-
           </div>
         </section>
+
+        {/* How It Works Section */}
+        <HowItWorksSection />
+
+        {/* Features Carousel */}
+        <FeaturesCarousel />
 
         {/* Activity Carousel */}
         <section className="py-8 md:py-12">
@@ -496,6 +446,23 @@ const LandingPage = () => {
 
       {/* Global Footer */}
       <SiteFooter />
+
+      {/* Floating Action Button for logged out users */}
+      {!isAuthenticated && (
+        <button
+          onClick={() => setIsNoteDrawerOpen(true)}
+          className="fixed right-4 bottom-6 z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+          aria-label="Start writing"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* Note Drawer for logged out users */}
+      <LoggedOutNoteDrawer
+        isOpen={isNoteDrawerOpen}
+        onClose={() => setIsNoteDrawerOpen(false)}
+      />
     </div>
     </LandingColorProvider>
   );

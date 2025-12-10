@@ -5,12 +5,12 @@ import { X } from "lucide-react"
 import { Input, InputProps } from "./input"
 import { cn } from "../../lib/utils"
 
-export interface ClearableInputProps extends InputProps {
+export interface ClearableInputProps extends Omit<InputProps, 'rightIcon'> {
   onClear?: () => void
 }
 
 const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
-  ({ className, value, onChange, onClear, ...props }, ref) => {
+  ({ className, value, onChange, onClear, leftIcon, ...props }, ref) => {
     // Create an internal ref if one is not provided
     const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -49,26 +49,30 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
       }
     }
 
+    const hasValue = value && String(value).length > 0;
+
+    // Create the clear button as the right icon when there's a value
+    const clearButton = hasValue ? (
+      <button
+        type="button"
+        onClick={handleClear}
+        className="text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
+        aria-label="Clear input"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    ) : undefined;
+
     return (
-      <div className="relative w-full">
-        <Input
-          className={cn("pr-10", className)} /* Right padding for clear button */
-          value={value}
-          onChange={onChange}
-          ref={setRefs}
-          {...props}
-        />
-        {value && String(value).length > 0 && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Clear input"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      <Input
+        className={cn("pr-10", className)} /* Right padding for clear button */
+        value={value}
+        onChange={onChange}
+        ref={setRefs}
+        leftIcon={leftIcon}
+        rightIcon={clearButton}
+        {...props}
+      />
     )
   }
 )

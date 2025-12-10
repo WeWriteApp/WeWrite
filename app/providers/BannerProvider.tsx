@@ -232,9 +232,9 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Use detected banner height, fallback to estimated height based on visible banners
     let estimatedHeight = 0;
-    if (showEmailBanner) estimatedHeight += 88; // ~80px content + 8px margins
-    if (showUsernameBanner) estimatedHeight += 88; // ~80px content + 8px margins
-    if (showPWABanner) estimatedHeight += 88; // ~80px content + 8px margins
+    if (showEmailBanner) estimatedHeight += 80; // ~76px content + 4px margins
+    if (showUsernameBanner) estimatedHeight += 80; // ~76px content + 4px margins
+    if (showPWABanner) estimatedHeight += 80; // ~76px content + 4px margins
 
     const totalBannerHeight = bannerHeight || estimatedHeight;
 

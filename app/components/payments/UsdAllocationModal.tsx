@@ -295,10 +295,10 @@ export function UsdAllocationModal({
                       />
                     )}
 
-                    {/* AVAILABLE - Available funds (empty, rightmost) */}
+                    {/* AVAILABLE - Available funds (outline style, rightmost) */}
                     {availablePercentage > 0 && (
                       <div
-                        className="bg-muted-foreground/10 transition-all duration-300 rounded-r-md"
+                        className={`${ALLOCATION_BAR_STYLES.sections.available} rounded-r-md`}
                         style={{ width: `${availablePercentage}%` }}
                       />
                     )}

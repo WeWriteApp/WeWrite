@@ -127,13 +127,12 @@ export default function ContentPageFooter({
   // Removed old stats fetching logic - now handled by UnifiedStatsService in PageStats component
 
   // Allow PageFooter to render for new pages and bios (where page is null)
-  // Only return null if we're missing essential props
-  if (!canEdit && !hasUnsavedChanges) return null;
+  // Don't return null - we want to show location card and stats even for non-owners
 
   return (
     <div className="pb-4 px-4 space-y-4">
-      {/* Show PageActions only for existing pages (not for new pages or bios) */}
-      {page && (
+      {/* Show PageActions only for existing pages when user can edit */}
+      {page && canEdit && (
         <ContentPageActions
           page={page}
           content={content}
@@ -150,58 +149,57 @@ export default function ContentPageFooter({
         />
       )}
 
-      {/* Custom Date Field - show in both edit and view modes for existing pages only */}
+      {/* Page metadata and stats section - show for all existing pages */}
       {page && (
-        <CustomDateField
-            customDate={page.customDate}
-            canEdit={isOwner}
-            onCustomDateChange={async (newDate) => {
-              try {
-                const response = await fetch(`/api/pages/${page.id}/custom-date`, {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ customDate: newDate }),
-                });
+        <>
+          {/* Custom Date and Location in a grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CustomDateField
+              customDate={page.customDate}
+              canEdit={isOwner}
+              onCustomDateChange={async (newDate) => {
+                try {
+                  const response = await fetch(`/api/pages/${page.id}/custom-date`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ customDate: newDate }),
+                  });
 
-                if (!response.ok) {
-                  const errorData = await response.json();
-                  throw new Error(errorData.error || 'Failed to update custom date');
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update custom date');
+                  }
+
+                  // Update the page object to reflect the change
+                  page.customDate = newDate;
+
+                  console.log('Custom date updated successfully to:', newDate);
+                } catch (error) {
+                  console.error('Error updating custom date:', error);
+                  toast({
+                    title: "Failed to update date",
+                    description: "There was a problem saving the date. Please try again.",
+                    variant: "destructive"
+                  });
                 }
+              }}
+            />
+            <LocationField
+              location={page.location}
+              canEdit={isOwner}
+              onLocationChange={onLocationChange}
+            />
+          </div>
 
-                // Update the page object to reflect the change
-                page.customDate = newDate;
-
-                console.log('Custom date updated successfully to:', newDate);
-              } catch (error) {
-                console.error('Error updating custom date:', error);
-                toast({
-                  title: "Failed to update date",
-                  description: "There was a problem saving the date. Please try again.",
-                  variant: "destructive"
-                });
-              }
-            }}
+          {/* Page stats section */}
+          <ContentPageStats
+            pageId={page.id}
+            realTime={true}
+            showSparklines={true}
           />
-      )}
-
-      {/* Location Field - show in both edit and view modes for existing pages only */}
-      {page && (
-        <LocationField
-          location={page.location}
-          canEdit={isOwner}
-          onLocationChange={onLocationChange}
-        />
-      )}
-
-      {/* Page stats section - show for all existing pages */}
-      {page && (
-        <ContentPageStats
-          pageId={page.id}
-          realTime={true}
-          showSparklines={true}
-        />
+        </>
       )}
 
       {/* Construction chip removed */}

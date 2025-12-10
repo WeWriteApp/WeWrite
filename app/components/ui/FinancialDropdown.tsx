@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { Button } from './button';
+import { AlertCircle } from 'lucide-react';
 
 /**
  * Simple Financial Dropdown - Clean implementation
@@ -309,6 +310,8 @@ export function EarningsBreakdown({
   monthlyChange = 0,
   onRefresh
 }: EarningsBreakdownProps) {
+  const router = useRouter();
+
   return (
     <div className="space-y-3 text-sm">
       <div className="flex justify-between items-center">
@@ -331,6 +334,15 @@ export function EarningsBreakdown({
           Start writing pages to earn from supporters
         </div>
       )}
+
+      {/* Beta warning */}
+      <div
+        className="flex items-center gap-2 p-2 mt-3 rounded-md bg-warning/10 text-warning cursor-pointer hover:bg-warning/20 transition-colors"
+        onClick={() => router.push('/settings/earnings')}
+      >
+        <AlertCircle className="h-3 w-3 flex-shrink-0" />
+        <span className="text-xs">Earnings are still in beta</span>
+      </div>
     </div>
   );
 }

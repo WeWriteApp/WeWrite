@@ -12,7 +12,7 @@ import { navigateToPage } from "../../utils/pagePermissions";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import debounce from "lodash.debounce";
-import { Search, Filter, Plus } from "lucide-react";
+import { Search, Filter, Plus, Check } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { ClearableInput } from "../ui/clearable-input";
@@ -578,6 +578,7 @@ const FilteredSearchResults = forwardRef(({
                   value={search}
                   onChange={handleSearchChange}
                   onClear={handleClear}
+                  leftIcon={<Search className="h-4 w-4" />}
                   className="w-full"
                   autoComplete="off"
                 />
@@ -685,7 +686,7 @@ const FilteredSearchResults = forwardRef(({
                         } ${isAlreadyLinked ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
+                          <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)] flex-1">
                             <PillLink
                               href={`/${page.id}`}
                               isPublic={page.isPublic}
@@ -721,6 +722,12 @@ const FilteredSearchResults = forwardRef(({
                               )}
                             </div>
                           )}
+                          {/* Checkmark for selected state */}
+                          {selectedId === page.id && (
+                            <div className="flex-shrink-0 ml-auto">
+                              <Check className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
                         </div>
                         {isLinkEditor && page.category && (
                           <div className="text-xs text-muted-foreground mt-1 px-2">
@@ -750,17 +757,25 @@ const FilteredSearchResults = forwardRef(({
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <UsernameBadge
-                          userId={userItem.id}
-                          username={userItem.username}
-                          tier={userItem.tier}
-                          subscriptionStatus={userItem.subscriptionStatus}
-                          subscriptionAmount={userItem.subscriptionAmount}
-                          size="sm"
-                          variant="pill"
-                          isLinkEditor={isLinkEditor}
-                          onLinkEditorSelect={() => handleSelect(userItem)}
-                        />
+                        <div className="flex-1">
+                          <UsernameBadge
+                            userId={userItem.id}
+                            username={userItem.username}
+                            tier={userItem.tier}
+                            subscriptionStatus={userItem.subscriptionStatus}
+                            subscriptionAmount={userItem.subscriptionAmount}
+                            size="sm"
+                            variant="pill"
+                            isLinkEditor={isLinkEditor}
+                            onLinkEditorSelect={() => handleSelect(userItem)}
+                          />
+                        </div>
+                        {/* Checkmark for selected state */}
+                        {selectedId === userItem.id && (
+                          <div className="flex-shrink-0">
+                            <Check className="h-5 w-5 text-primary" />
+                          </div>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -787,7 +802,7 @@ const FilteredSearchResults = forwardRef(({
 
         {/* Create New Page Button - Full-width secondary button at bottom */}
         {isLinkEditor && search.length >= 2 && !hideCreateButton && (
-          <div className="mt-auto pt-4 border-t">
+          <div className="mt-auto pt-4">
             <Button
               variant="secondary"
               disabled={isCreatingPage}

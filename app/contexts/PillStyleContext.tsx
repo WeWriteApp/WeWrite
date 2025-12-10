@@ -6,7 +6,7 @@ import { getBestTextColor } from "../utils/accessibility";
 import { useAccentColor } from "./AccentColorContext";
 import { hexToOklch } from "../lib/oklch-utils";
 
-// Define the available pill styles
+// Define the available pill/link styles (link appearance only)
 export const PILL_STYLES = {
   FILLED: 'filled',
   OUTLINE: 'outline',
@@ -16,11 +16,23 @@ export const PILL_STYLES = {
 
 export type PillStyle = typeof PILL_STYLES[keyof typeof PILL_STYLES];
 
+// Define UI styles (affects buttons, chips, and other UI elements)
+export const UI_STYLES = {
+  SHINY: 'shiny',
+  FLAT: 'flat'
+} as const;
+
+export type UIStyle = typeof UI_STYLES[keyof typeof UI_STYLES];
+
 interface PillStyleContextType {
   pillStyle: PillStyle;
   changePillStyle: (style: PillStyle) => void;
   getPillStyleClasses: (context?: string) => string;
   getTextColorForPill: (backgroundColor: string) => string;
+  // UI style (shiny vs flat) - affects buttons, chips, and other UI elements
+  uiStyle: UIStyle;
+  changeUIStyle: (style: UIStyle) => void;
+  isShinyUI: boolean; // Convenience getter
 }
 
 interface PillStyleProviderProps {
@@ -32,7 +44,10 @@ const PillStyleContext = createContext<PillStyleContextType>({
   pillStyle: PILL_STYLES.FILLED,
   changePillStyle: () => {},
   getPillStyleClasses: () => '',
-  getTextColorForPill: () => '#ffffff'
+  getTextColorForPill: () => '#ffffff',
+  uiStyle: UI_STYLES.SHINY,
+  changeUIStyle: () => {},
+  isShinyUI: true
 });
 
 export function usePillStyle(): PillStyleContextType {
@@ -40,8 +55,9 @@ export function usePillStyle(): PillStyleContextType {
 }
 
 export function PillStyleProvider({ children }: PillStyleProviderProps) {
-  // Try to load from localStorage, default to filled
-  const [pillStyle, setPillStyle] = useState(PILL_STYLES.FILLED);
+  // Try to load from localStorage, default to filled for links and shiny for UI
+  const [pillStyle, setPillStyle] = useState<PillStyle>(PILL_STYLES.FILLED);
+  const [uiStyle, setUIStyle] = useState<UIStyle>(UI_STYLES.SHINY);
   const { theme } = useTheme();
   const { accentColor } = useAccentColor();
 
@@ -54,17 +70,30 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
     return 'text-white'; // Use white text for dark backgrounds (<80% lightness)
   }, [accentColor]);
 
-  // Load saved preference on mount
+  // Load saved preferences on mount
   useEffect(() => {
+    // Load pill/link style
     const savedStyle = localStorage.getItem('pillStyle');
     if (savedStyle) {
-      // Handle backward compatibility: migrate 'classic' to 'text_only'
+      // Handle backward compatibility: migrate 'classic' to 'text_only', 'shiny' to 'filled' + shiny UI
       if (savedStyle === 'classic') {
         setPillStyle(PILL_STYLES.TEXT_ONLY);
         localStorage.setItem('pillStyle', PILL_STYLES.TEXT_ONLY);
-      } else if (Object.values(PILL_STYLES).includes(savedStyle)) {
-        setPillStyle(savedStyle);
+      } else if (savedStyle === 'shiny') {
+        // User had shiny links - migrate to filled links + shiny UI
+        setPillStyle(PILL_STYLES.FILLED);
+        setUIStyle(UI_STYLES.SHINY);
+        localStorage.setItem('pillStyle', PILL_STYLES.FILLED);
+        localStorage.setItem('uiStyle', UI_STYLES.SHINY);
+      } else if (Object.values(PILL_STYLES).includes(savedStyle as PillStyle)) {
+        setPillStyle(savedStyle as PillStyle);
       }
+    }
+
+    // Load UI style (separate from pill style)
+    const savedUIStyle = localStorage.getItem('uiStyle');
+    if (savedUIStyle && Object.values(UI_STYLES).includes(savedUIStyle as UIStyle)) {
+      setUIStyle(savedUIStyle as UIStyle);
     }
   }, []);
 
@@ -75,6 +104,17 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       localStorage.setItem('pillStyle', style);
     }
   }, []);
+
+  // Change UI style and save to localStorage
+  const changeUIStyle = useCallback((style: UIStyle): void => {
+    if (Object.values(UI_STYLES).includes(style)) {
+      setUIStyle(style);
+      localStorage.setItem('uiStyle', style);
+    }
+  }, []);
+
+  // Convenience getter for shiny mode
+  const isShinyUI = uiStyle === UI_STYLES.SHINY;
 
   // Get the complete pill styling classes - memoized to prevent re-computation on every render
   const getPillStyleClasses = useMemo(() => {
@@ -96,8 +136,6 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         text-indent-0
         float-none
         leading-tight
-        w-auto
-        max-w-[calc(100vw-2rem)]
         my-0.5
         vertical-align-baseline
         focus-visible:ring-2
@@ -109,6 +147,8 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       // Style-specific classes
       let styleClasses = '';
       if (pillStyle === PILL_STYLES.OUTLINE) {
+        // Add shiny classes for outline when shiny UI mode is enabled
+        const shinyClasses = isShinyUI ? 'shiny-shimmer-base pill-outline-shiny-style' : '';
         styleClasses = `
           bg-transparent text-accent-100
           border border-accent-70
@@ -116,6 +156,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           active:bg-accent-15 active:border-accent-100
           pill-outline-style
           px-2 py-0.5
+          ${shinyClasses}
         `;
       } else if (pillStyle === PILL_STYLES.TEXT_ONLY) {
         styleClasses = `
@@ -142,6 +183,8 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         // Default filled style - dynamic text color based on accent lightness
         // Use background-image for alpha overlay to preserve base bg-accent-100
         const textColor = getFilledTextColor();
+        // Add shiny classes when shiny UI mode is enabled
+        const shinyClasses = isShinyUI ? 'shiny-shimmer-base shiny-glow-base pill-shiny-style' : '';
         styleClasses = `
           bg-accent-100
           border border-accent-100
@@ -153,12 +196,13 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           ${textColor} !important
           px-2 py-0.5
           pill-filled-style
+          ${shinyClasses}
         `;
       }
 
       return `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
     };
-  }, [pillStyle, accentColor]); // Recompute when pillStyle or accentColor changes
+  }, [pillStyle, accentColor, isShinyUI]); // Recompute when pillStyle, accentColor, or isShinyUI changes
 
   // Get the best text color for a pill based on its background - memoized for performance
   const getTextColorForPill = useCallback((backgroundColor: string): string => {
@@ -233,8 +277,11 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
     pillStyle,
     changePillStyle,
     getPillStyleClasses,
-    getTextColorForPill
-  }), [pillStyle, changePillStyle, getPillStyleClasses, getTextColorForPill]);
+    getTextColorForPill,
+    uiStyle,
+    changeUIStyle,
+    isShinyUI
+  }), [pillStyle, changePillStyle, getPillStyleClasses, getTextColorForPill, uiStyle, changeUIStyle, isShinyUI]);
 
   return (
     <PillStyleContext.Provider value={contextValue}>

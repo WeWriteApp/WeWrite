@@ -19,7 +19,7 @@ import { cn } from '../../lib/utils';
 interface FloatingCardProps {
   children: React.ReactNode;
   className?: string;
-  variant?: 'default' | 'toolbar' | 'header' | 'overlay' | 'pledge';
+  variant?: 'default' | 'toolbar' | 'header' | 'overlay' | 'pledge' | 'docked';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   isExpanded?: boolean;
   noShadowAtTop?: boolean;
@@ -63,8 +63,8 @@ export function FloatingCard({
   const baseClasses = cn(
     // Use universal card system with floating variant
     "wewrite-card wewrite-floating",
-    // Rounded corners
-    "rounded-2xl",
+    // Rounded corners (not for docked variant)
+    variant !== 'docked' && "rounded-2xl",
     // CRITICAL: Shadows - conditional for noShadowAtTop
     noShadowAtTop && !isScrolled
       ? "shadow-none" // No shadow when at top
@@ -76,9 +76,11 @@ export function FloatingCard({
   const variantClasses = {
     default: "",
     toolbar: cn(
-      // Always opaque backgrounds - no transparency, no blur
+      // Semi-transparent with blur when collapsed, opaque when expanded
       // CSS handles expanded state via [data-expanded="true"]
-      "!bg-white dark:!bg-black !border !border-border"
+      isExpanded
+        ? "!bg-white dark:!bg-black !border !border-border !backdrop-filter-none"
+        : "!bg-white/80 dark:!bg-black/80 !border !border-border !backdrop-blur-xl"
     ),
     header: "",
     overlay: cn(
@@ -90,6 +92,14 @@ export function FloatingCard({
       "bg-[var(--card-floating-bg-hover)]",
       "border-[var(--card-border-hover)]",
       "shadow-[0_6px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_6px_24px_rgba(0,0,0,0.25)]"
+    ),
+    docked: cn(
+      // Docked to bottom - no rounded corners, only top border, no side shadows
+      "!rounded-none !shadow-none",
+      "!border-l-0 !border-r-0 !border-b-0 !border-t !border-border",
+      "!bg-background",
+      // When expanded, becomes a drawer with rounded top corners
+      isExpanded && "!rounded-t-2xl"
     )
   };
 
@@ -118,7 +128,7 @@ export function FloatingCard({
 }
 
 /**
- * FloatingToolbar - Specialized variant for mobile bottom navigation
+ * FloatingToolbar - Specialized variant for mobile bottom navigation (floating style)
  */
 export function FloatingToolbar({
   children,
@@ -129,6 +139,28 @@ export function FloatingToolbar({
   return (
     <FloatingCard
       variant="toolbar"
+      className={className}
+      isExpanded={isExpanded}
+      {...props}
+    >
+      {children}
+    </FloatingCard>
+  );
+}
+
+/**
+ * DockedToolbar - Specialized variant for mobile bottom navigation (docked to bottom edge)
+ * No margins, no corners, only top border. Expands upward into drawer with rounded top corners.
+ */
+export function DockedToolbar({
+  children,
+  className = '',
+  isExpanded = false,
+  ...props
+}: Omit<FloatingCardProps, 'variant'>) {
+  return (
+    <FloatingCard
+      variant="docked"
       className={className}
       isExpanded={isExpanded}
       {...props}

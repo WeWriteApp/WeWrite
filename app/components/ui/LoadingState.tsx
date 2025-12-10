@@ -1,0 +1,253 @@
+"use client";
+
+import React from 'react';
+import { cn } from '../../lib/utils';
+import { Loader2 } from 'lucide-react';
+
+export type LoadingVariant = 'spinner' | 'dots' | 'pulse' | 'skeleton';
+export type LoadingSize = 'sm' | 'md' | 'lg';
+
+interface LoadingStateProps {
+  /** The loading message to display */
+  message?: string;
+  /** Visual variant of the loading indicator */
+  variant?: LoadingVariant;
+  /** Size of the loading indicator */
+  size?: LoadingSize;
+  /** Additional CSS classes */
+  className?: string;
+  /** Whether to show inside a card container */
+  showCard?: boolean;
+  /** Minimum height for the container */
+  minHeight?: string;
+}
+
+/**
+ * LoadingState Component
+ *
+ * A standardized loading state component with multiple visual variants.
+ * Use this for consistent loading states across the app.
+ */
+export function LoadingState({
+  message,
+  variant = 'spinner',
+  size = 'md',
+  className,
+  showCard = false,
+  minHeight = 'h-64'
+}: LoadingStateProps) {
+  const sizeClasses = {
+    sm: {
+      spinner: 'h-4 w-4',
+      text: 'text-sm',
+      gap: 'gap-2',
+      dots: 'h-1.5 w-1.5',
+      pulse: 'h-8 w-8'
+    },
+    md: {
+      spinner: 'h-5 w-5',
+      text: 'text-sm',
+      gap: 'gap-3',
+      dots: 'h-2 w-2',
+      pulse: 'h-12 w-12'
+    },
+    lg: {
+      spinner: 'h-6 w-6',
+      text: 'text-base',
+      gap: 'gap-4',
+      dots: 'h-2.5 w-2.5',
+      pulse: 'h-16 w-16'
+    }
+  };
+
+  const sizes = sizeClasses[size];
+
+  const renderIndicator = () => {
+    switch (variant) {
+      case 'spinner':
+        return (
+          <div className="relative">
+            {/* Outer glow ring */}
+            <div className={cn(
+              sizes.spinner,
+              "absolute inset-0 rounded-full bg-accent-30 blur-md animate-pulse"
+            )} />
+            {/* Spinner */}
+            <Loader2 className={cn(
+              sizes.spinner,
+              "animate-spin text-accent-80 relative"
+            )} />
+          </div>
+        );
+
+      case 'dots':
+        return (
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className={cn(
+                  sizes.dots,
+                  "rounded-full bg-accent-60 animate-bounce"
+                )}
+                style={{
+                  animationDelay: `${i * 150}ms`,
+                  animationDuration: '600ms'
+                }}
+              />
+            ))}
+          </div>
+        );
+
+      case 'pulse':
+        return (
+          <div className="relative flex items-center justify-center">
+            {/* Outer pulse ring */}
+            <div className={cn(
+              sizes.pulse,
+              "absolute rounded-full bg-accent-20 animate-ping"
+            )} />
+            {/* Middle ring */}
+            <div className={cn(
+              sizes.pulse,
+              "absolute rounded-full bg-accent-30 animate-pulse"
+            )} />
+            {/* Inner solid circle */}
+            <div className={cn(
+              "rounded-full bg-accent-60",
+              size === 'sm' ? 'h-3 w-3' : size === 'md' ? 'h-4 w-4' : 'h-5 w-5'
+            )} />
+          </div>
+        );
+
+      case 'skeleton':
+        return (
+          <div className="w-full max-w-sm space-y-3">
+            <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-muted rounded animate-pulse w-full" />
+            <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const content = (
+    <div className={cn(
+      "flex flex-col items-center justify-center",
+      sizes.gap,
+      minHeight,
+      className
+    )}>
+      {renderIndicator()}
+      {message && (
+        <span className={cn(
+          "text-muted-foreground font-medium",
+          sizes.text
+        )}>
+          {message}
+        </span>
+      )}
+    </div>
+  );
+
+  if (showCard) {
+    return (
+      <div className="wewrite-card">
+        {content}
+      </div>
+    );
+  }
+
+  return content;
+}
+
+/**
+ * LoadingSpinner - Simple inline spinner
+ *
+ * Use for button loading states or inline indicators.
+ */
+export function LoadingSpinner({
+  className,
+  size = 'md'
+}: {
+  className?: string;
+  size?: LoadingSize;
+}) {
+  const sizeClasses = {
+    sm: 'h-3 w-3',
+    md: 'h-4 w-4',
+    lg: 'h-5 w-5'
+  };
+
+  return (
+    <Loader2 className={cn(
+      sizeClasses[size],
+      "animate-spin",
+      className
+    )} />
+  );
+}
+
+/**
+ * LoadingDots - Three bouncing dots
+ *
+ * Use for inline "typing" or processing indicators.
+ */
+export function LoadingDots({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-1", className)}>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="h-1.5 w-1.5 rounded-full bg-current animate-bounce"
+          style={{
+            animationDelay: `${i * 150}ms`,
+            animationDuration: '600ms'
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * SkeletonLine - Single skeleton loading line
+ */
+export function SkeletonLine({
+  className,
+  width = 'w-full'
+}: {
+  className?: string;
+  width?: string;
+}) {
+  return (
+    <div className={cn(
+      "h-4 bg-muted rounded animate-pulse",
+      width,
+      className
+    )} />
+  );
+}
+
+/**
+ * SkeletonCard - Card-shaped skeleton placeholder
+ */
+export function SkeletonCard({ className }: { className?: string }) {
+  return (
+    <div className={cn(
+      "wewrite-card space-y-3 animate-pulse",
+      className
+    )}>
+      <div className="h-5 bg-muted rounded w-2/3" />
+      <div className="space-y-2">
+        <div className="h-3 bg-muted rounded w-full" />
+        <div className="h-3 bg-muted rounded w-4/5" />
+      </div>
+    </div>
+  );
+}
+
+export default LoadingState;

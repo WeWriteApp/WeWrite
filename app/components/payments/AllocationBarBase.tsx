@@ -20,6 +20,7 @@ import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { AllocationIntervalModal } from './AllocationIntervalModal';
 import { ParticleAnimation, PulseAnimation } from '../ui/ParticleAnimation';
 import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
+import { usePillStyle } from '../../contexts/PillStyleContext';
 
 /**
  * Base component for all allocation bars
@@ -126,6 +127,15 @@ export function AllocationBarBase({
   const { usdBalance } = useUsdBalance();
   const { allocationIntervalCents, isLoading: intervalLoading } = useAllocationInterval();
   const router = useRouter();
+
+  // Get UI style for shiny mode
+  let isShinyMode = false;
+  try {
+    const pillStyleContext = usePillStyle();
+    isShinyMode = pillStyleContext?.isShinyUI ?? false;
+  } catch {
+    isShinyMode = false;
+  }
 
   // Check if current user is the page owner
   const isPageOwner = !!(user && authorId && user.uid === authorId);
@@ -238,7 +248,7 @@ export function AllocationBarBase({
             size={buttonSize}
             variant={buttonVariant}
             className={cn(
-              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20",
+              "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
               buttonVariant === 'ghost' && "hover:bg-destructive/20"
             )}
             onClick={(e) => handleAllocationChangeWithAnimation(-1, e)}
@@ -264,7 +274,8 @@ export function AllocationBarBase({
                   <div
                     className={cn(
                       "bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
-                      showPulse && "animate-allocation-pulse"
+                      showPulse && "animate-allocation-pulse",
+                      isShinyMode && "allocation-bar-shiny-style"
                     )}
                     style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
                   >
@@ -295,10 +306,10 @@ export function AllocationBarBase({
                   />
                 )}
 
-                {/* Available funds - use neutral color system */}
+                {/* Available funds - outline style */}
                 {compositionData.availablePercentage > 0 && (
                   <div
-                    className="bg-muted rounded-md transition-all duration-300 ease-out"
+                    className={ALLOCATION_BAR_STYLES.sections.available}
                     style={{ width: `${compositionData.availablePercentage}%` }}
                   />
                 )}
@@ -310,7 +321,7 @@ export function AllocationBarBase({
           <Button
             size={buttonSize}
             variant={buttonVariant}
-            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border-2 border-neutral-20"
+            className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border border-neutral-20"
             onClick={(e) => handleAllocationChangeWithAnimation(allocationIntervalCents, e)}
             disabled={disabled || isProcessing}
             onContextMenu={onLongPress ? (e) => {

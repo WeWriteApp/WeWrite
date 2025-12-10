@@ -42,18 +42,38 @@ function calculateCharacterDiff(oldText: string, newText: string): { added: numb
   }
 
   if (!oldText) {
+    // For new content (no previous text), create a preview showing the added text
+    const addedPreview = newText.length > 200 ? newText.slice(0, 200) + '…' : newText;
     return {
       added: newText.length,
       removed: 0,
-      operations: [{ type: 'add', text: newText, start: 0 }]
+      operations: [{ type: 'add', text: newText, start: 0 }],
+      preview: {
+        beforeContext: '',
+        addedText: addedPreview.trim(),
+        removedText: '',
+        afterContext: '',
+        hasAdditions: true,
+        hasRemovals: false
+      }
     };
   }
 
   if (!newText) {
+    // For deleted content, create a preview showing the removed text
+    const removedPreview = oldText.length > 200 ? oldText.slice(0, 200) + '…' : oldText;
     return {
       added: 0,
       removed: oldText.length,
-      operations: [{ type: 'remove', text: oldText, start: 0 }]
+      operations: [{ type: 'remove', text: oldText, start: 0 }],
+      preview: {
+        beforeContext: '',
+        addedText: '',
+        removedText: removedPreview.trim(),
+        afterContext: '',
+        hasAdditions: false,
+        hasRemovals: true
+      }
     };
   }
 

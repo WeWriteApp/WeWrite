@@ -41,10 +41,26 @@ export default function AdminPage() {
 
   // Removed user management state - users tab deleted
 
-  // Testing tools state
+  // Testing tools state - initialize from localStorage immediately to prevent flash
   const [showPWABanner, setShowPWABanner] = useState(false);
-  const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(false);
-  const [noSubscriptionMode, setNoSubscriptionMode] = useState(false);
+  const [showUnverifiedEmailBanner, setShowUnverifiedEmailBanner] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('wewrite_admin_email_banner_override') === 'true';
+    }
+    return false;
+  });
+  const [noSubscriptionMode, setNoSubscriptionMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('wewrite_admin_no_subscription_mode') === 'true';
+    }
+    return false;
+  });
+  const [earningsTestingMode, setEarningsTestingMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('wewrite_admin_earnings_testing_mode') === 'true';
+    }
+    return false;
+  });
 
   // Writing ideas state
   const [writingIdeasCount, setWritingIdeasCount] = useState<number | null>(null);
@@ -90,14 +106,6 @@ export default function AdminPage() {
     }
   }, [user, authLoading]);
 
-  // Initialize email banner override from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedOverride = localStorage.getItem('wewrite_admin_email_banner_override') === 'true';
-      setShowUnverifiedEmailBanner(savedOverride);
-    }
-  }, []);
-
   // Handle email banner override changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -112,14 +120,6 @@ export default function AdminPage() {
     }
   }, [showUnverifiedEmailBanner]);
 
-  // Initialize paywall testing mode from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('wewrite_admin_no_subscription_mode') === 'true';
-      setNoSubscriptionMode(savedMode);
-    }
-  }, []);
-
   // Handle paywall testing mode changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -133,6 +133,20 @@ export default function AdminPage() {
       window.dispatchEvent(new CustomEvent('adminPaywallOverrideChange'));
     }
   }, [noSubscriptionMode]);
+
+  // Handle earnings testing mode changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (earningsTestingMode) {
+        localStorage.setItem('wewrite_admin_earnings_testing_mode', 'true');
+      } else {
+        localStorage.removeItem('wewrite_admin_earnings_testing_mode');
+      }
+
+      // Dispatch custom event to notify earnings contexts of changes
+      window.dispatchEvent(new CustomEvent('adminEarningsTestingChange'));
+    }
+  }, [earningsTestingMode]);
 
   // Platform fee revenue state
   const [platformFeeData, setPlatformFeeData] = useState<any[]>([]);
@@ -354,7 +368,13 @@ export default function AdminPage() {
             </div>
 
             {/* Email Banner Testing */}
-            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+            <div
+              className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors cursor-pointer text-left w-full"
+              onClick={() => setShowUnverifiedEmailBanner(!showUnverifiedEmailBanner)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setShowUnverifiedEmailBanner(!showUnverifiedEmailBanner)}
+            >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Email Banner Testing</h3>
               </div>
@@ -366,6 +386,7 @@ export default function AdminPage() {
                 <Switch
                   checked={showUnverifiedEmailBanner}
                   onCheckedChange={setShowUnverifiedEmailBanner}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </div>
@@ -375,7 +396,13 @@ export default function AdminPage() {
 
 
             {/* Paywall Testing */}
-            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+            <div
+              className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors cursor-pointer text-left w-full"
+              onClick={() => setNoSubscriptionMode(!noSubscriptionMode)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setNoSubscriptionMode(!noSubscriptionMode)}
+            >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Paywall Testing</h3>
               </div>
@@ -387,30 +414,34 @@ export default function AdminPage() {
                 <Switch
                   checked={noSubscriptionMode}
                   onCheckedChange={setNoSubscriptionMode}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </div>
-            {/* Landing Page Management */}
-            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+
+            {/* Earnings Testing */}
+            <div
+              className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors cursor-pointer text-left w-full"
+              onClick={() => setEarningsTestingMode(!earningsTestingMode)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setEarningsTestingMode(!earningsTestingMode)}
+            >
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Landing Page Cards</h3>
+                <h3 className="font-medium">Earnings Testing</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
-                Manage which pages appear on the landing page and their display order
+                Simulate fake earnings to test earnings display states. When enabled, shows mock earnings data in the financial header ($127.50 pending, $89.25 available).
               </span>
-              <div className="mt-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => router.push('/admin/landing-page-cards')}
-                >
-                  <Eye className="h-4 w-4" />
-                  Manage Landing Cards
-                </Button>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Show fake earnings</span>
+                <Switch
+                  checked={earningsTestingMode}
+                  onCheckedChange={setEarningsTestingMode}
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
             </div>
-
             {/* Design System */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">

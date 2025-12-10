@@ -24,6 +24,7 @@ const DEFAULT_MOBILE_ORDER = ['home', 'search', 'notifications'];
 const DEFAULT_SIDEBAR_ORDER = [
   'home',
   'search',
+  'map',           // map after search
   'random-pages',
   'new',
   'trending-pages',

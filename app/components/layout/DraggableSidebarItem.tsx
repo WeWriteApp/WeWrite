@@ -99,7 +99,7 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* 
+      {/*
         Button structure:
         - Always h-10 (40px) tall
         - Collapsed: w-10 (40px), centered via mx-auto on parent or flex justify-center
@@ -110,15 +110,21 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         onMouseEnter={onMouseEnter}
         className={cn(
           "h-10 flex items-center rounded-lg cursor-pointer border-0",
-          "transition-[width,background-color,padding] duration-300 ease-out",
+          "transition-all duration-200 ease-out",
           // Collapsed: square button, Expanded: full width with left padding to align icon
-          showContent 
-            ? "w-full pl-3 pr-2 bg-transparent" 
+          showContent
+            ? "w-full pl-3 pr-2 bg-transparent"
             : "w-10 justify-center bg-transparent",
-          // Active/hover states
-          isActive
-            ? "bg-accent/15 text-accent"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          // Active state - accent color background and text
+          isActive && "bg-accent/15 text-accent",
+          // Non-active states - hover and click feedback
+          !isActive && [
+            "text-muted-foreground",
+            // Hover state - subtle background
+            "hover:text-foreground hover:bg-muted/60 dark:hover:bg-muted/40",
+            // Active/pressed state - darker background with slight scale
+            "active:bg-muted active:scale-[0.98] active:duration-75"
+          ]
         )}
         title={!showContent ? label : undefined}
         aria-label={label}

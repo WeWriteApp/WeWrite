@@ -2,16 +2,13 @@
 
 import { useAuth } from '../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
   User,
-  CreditCard,
   DollarSign,
   Settings as SettingsIcon,
   Trash2,
   ChevronRight,
-  AlertTriangle,
-  ShoppingCart,
   Coins,
   Palette,
   Wallet,
@@ -20,16 +17,11 @@ import {
   Mail
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
-
-// Removed old optimized subscription import - using API-first approach
-import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
 import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
 import { useEarnings } from '../contexts/EarningsContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { UsdPieChart } from '../components/ui/UsdPieChart';
-import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
 import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextPayoutCountdown';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
@@ -47,19 +39,17 @@ interface SettingsSection {
 export default function SettingsIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
-  const [subscriptionAmount, setSubscriptionAmount] = useState<number | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState<boolean>(true);
   // Get bank setup status, earnings, and balances from consolidated context
   const bankSetupStatus = useBankSetupStatus();
-  const { usdBalance, hasActiveSubscription: contextHasActiveSubscription } = useUsdBalance();
+  const { usdBalance } = useUsdBalance();
   const { earnings } = useEarnings();
+  const { hasActiveSubscription, subscriptionAmount, isLoading: isLoadingSubscription } = useSubscription();
   const payoutCountdown = useNextPayoutCountdown();
   // Get username status to show warning dot on Profile section
   const { needsUsername } = useUsernameStatus();
 
-  // Derive subscription warning state from consolidated context
-  const shouldShowSubscriptionWarning = contextHasActiveSubscription === false;
+  // Derive subscription warning state from subscription context (respects admin testing mode)
+  const shouldShowSubscriptionWarning = hasActiveSubscription === false;
 
   const settingsSections: SettingsSection[] = [
     {
@@ -122,105 +112,6 @@ export default function SettingsIndexPage() {
     }
   ];
 
-  // Check subscription status when user is available
-  // Cache for subscription data
-  const subscriptionCacheRef = useRef<{
-    data: { hasActiveSubscription: boolean; amount: number } | null;
-    timestamp: number;
-    userId: string | null;
-  }>({ data: null, timestamp: 0, userId: null });
-
-  useEffect(() => {
-    if (!user) {
-      setHasActiveSubscription(null);
-      setSubscriptionAmount(null);
-      setIsLoadingSubscription(false);
-      return;
-    }
-
-    const checkSubscriptionStatus = async () => {
-      setIsLoadingSubscription(true);
-
-      try {
-        // Check cache first (5 minute cache)
-        const now = Date.now();
-        const cacheAge = now - subscriptionCacheRef.current.timestamp;
-        const isCacheValid = cacheAge < 5 * 60 * 1000; // 5 minutes
-        const isSameUser = subscriptionCacheRef.current.userId === user.uid;
-
-        if (isCacheValid && isSameUser && subscriptionCacheRef.current.data) {
-          console.log('[Settings] Using cached subscription data');
-          const cachedData = subscriptionCacheRef.current.data;
-          setHasActiveSubscription(cachedData.hasActiveSubscription);
-          setSubscriptionAmount(cachedData.amount);
-          setIsLoadingSubscription(false);
-          return;
-        }
-
-        // Fetch fresh data
-        console.log('[Settings] Fetching fresh subscription data');
-        const response = await fetch('/api/account-subscription');
-        const data = response.ok ? await response.json() : null;
-        const subscription = data?.hasSubscription ? data.fullData : null;
-
-        if (subscription) {
-          const isActive = isActiveSubscription(
-            subscription.status,
-            subscription.cancelAtPeriodEnd,
-            subscription.currentPeriodEnd
-          );
-          setHasActiveSubscription(isActive);
-
-          // Get subscription amount - try multiple sources for compatibility
-          let amount = 0;
-
-          // First try the direct amount field (our current data structure)
-          if (subscription.amount) {
-            amount = subscription.amount;
-          }
-          // Fallback to Stripe price data format if available
-          else if (subscription.items?.data?.[0]?.price?.unit_amount) {
-            amount = subscription.items.data[0].price.unit_amount / 100;
-          }
-
-          console.log('[Settings] Subscription data:', {
-            hasSubscription: data.hasSubscription,
-            amount: amount,
-            subscriptionAmount: subscription.amount,
-            stripeAmount: subscription.items?.data?.[0]?.price?.unit_amount
-          });
-
-          setSubscriptionAmount(amount);
-
-          // Cache the result
-          subscriptionCacheRef.current = {
-            data: { hasActiveSubscription: isActive, amount },
-            timestamp: now,
-            userId: user.uid
-          };
-        } else {
-          setHasActiveSubscription(false);
-          setSubscriptionAmount(0); // This is a real value: no subscription = $0
-
-          // Cache the result
-          subscriptionCacheRef.current = {
-            data: { hasActiveSubscription: false, amount: 0 },
-            timestamp: now,
-            userId: user.uid
-          };
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-        setHasActiveSubscription(false);
-        setSubscriptionAmount(0); // This is a real value: error state = $0
-      } finally {
-        setIsLoadingSubscription(false);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, [user]);
-
   // Track settings page view
   useEffect(() => {
     if (user) {
@@ -228,10 +119,10 @@ export default function SettingsIndexPage() {
       analytics.trackEvent({
         category: EVENT_CATEGORIES.SETTINGS,
         action: SETTINGS_EVENTS.SETTINGS_PAGE_VIEWED,
-        has_subscription: contextHasActiveSubscription
+        has_subscription: hasActiveSubscription
       });
     }
-  }, [user, contextHasActiveSubscription]);
+  }, [user, hasActiveSubscription]);
 
   useEffect(() => {
     if (!user) {
@@ -289,7 +180,7 @@ export default function SettingsIndexPage() {
     <div>
       {/* Mobile Settings List */}
       <div className="lg:hidden p-4">
-        <div className="wewrite-card divide-y divide-border">
+        <div className="wewrite-card wewrite-card-no-padding divide-y divide-border overflow-hidden">
           {availableSections.map((section) => {
             const IconComponent = section.icon;
 

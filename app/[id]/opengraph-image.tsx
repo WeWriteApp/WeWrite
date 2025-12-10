@@ -24,35 +24,46 @@ function stripHtml(html: string): string {
 }
 
 // Helper function to extract text from rich content
-function extractTextFromContent(content: string): string {
+function extractTextFromContent(content: string | any[]): string {
   if (!content) return '';
 
-  try {
-    const parsed = JSON.parse(content);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((node: any) => {
-          if (node.children) {
-            return node.children
-              .map((child: any) => {
-                if (child.text) {
-                  return child.text;
-                } else if (child.type === 'link' && child.children) {
-                  return child.children.map((linkChild: any) => linkChild.text || '').join('');
-                }
-                return '';
-              })
-              .join('')
-              .trim();
-          }
-          return '';
-        })
-        .join(' ')
-        .trim();
+  // If content is already an array (from API), process it directly
+  let parsed: any[] | null = null;
+
+  if (Array.isArray(content)) {
+    parsed = content;
+  } else if (typeof content === 'string') {
+    try {
+      const result = JSON.parse(content);
+      if (Array.isArray(result)) {
+        parsed = result;
+      }
+    } catch {
+      // If not JSON, treat as plain text/HTML
+      return stripHtml(content);
     }
-  } catch {
-    // If not JSON, treat as plain text/HTML
-    return stripHtml(content);
+  }
+
+  if (parsed && Array.isArray(parsed)) {
+    return parsed
+      .map((node: any) => {
+        if (node.children) {
+          return node.children
+            .map((child: any) => {
+              if (child.text) {
+                return child.text;
+              } else if (child.type === 'link' && child.children) {
+                return child.children.map((linkChild: any) => linkChild.text || '').join('');
+              }
+              return '';
+            })
+            .join('')
+            .trim();
+        }
+        return '';
+      })
+      .join(' ')
+      .trim();
   }
 
   return '';
@@ -60,7 +71,7 @@ function extractTextFromContent(content: string): string {
 
 interface PageData {
   title?: string;
-  content?: string;
+  content?: string | any[];
   username?: string;
   authorUsername?: string;
   sponsorCount?: number;

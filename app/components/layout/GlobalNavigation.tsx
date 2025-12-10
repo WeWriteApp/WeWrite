@@ -34,11 +34,6 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <>
-      {/* Banner system - shows at top of content (priority: email > username > PWA) */}
-      <VerifyEmailBanner />
-      <UsernameSetupBanner />
-      <PWABanner />
-
       {/* Floating elements - render outside SidebarLayout to ensure proper viewport positioning */}
       <FloatingFinancialHeader />
       <MobileBottomNavUnified />
@@ -46,6 +41,10 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
       <SidebarProvider>
         <SidebarLayout>
+          {/* Banner system - inside content flow (priority: email > username > PWA) */}
+          <VerifyEmailBanner />
+          <UsernameSetupBanner />
+          <PWABanner />
           {children}
         </SidebarLayout>
         {/* Username enforcement modal - shows when user needs to set username */}

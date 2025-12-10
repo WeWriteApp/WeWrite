@@ -32,6 +32,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { PillLink } from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
+import { Trash2 } from 'lucide-react';
 
 // Simple error boundary - no complex recovery mechanisms
 class SimpleErrorBoundary extends React.Component<
@@ -359,9 +360,21 @@ const Editor: React.FC<EditorProps> = ({
             pageTitle: node.pageTitle,
             originalPageTitle: node.originalPageTitle || node.pageTitle,
             url: node.url,
+            // Compound link properties
             showAuthor: node.showAuthor || false,
             authorUsername: node.authorUsername,
             authorUserId: node.authorUserId,
+            authorTier: node.authorTier,
+            authorSubscriptionStatus: node.authorSubscriptionStatus,
+            authorSubscriptionAmount: node.authorSubscriptionAmount,
+            // Custom text properties
+            isCustomText: node.isCustomText,
+            customText: node.customText,
+            // Link type properties
+            isExternal: node.isExternal,
+            isPageLink: node.isPageLink,
+            isPublic: node.isPublic,
+            isOwned: node.isOwned,
             children: normalizedChildren
           };
 
@@ -847,6 +860,87 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [onInsertLinkRequest, triggerLinkInsertion]);
 
+  // Helper to check if a paragraph is empty (only contains empty text)
+  const isEmptyParagraph = useCallback((element: any): boolean => {
+    if (element.type !== 'paragraph' && element.type !== undefined) return false;
+    if (!element.children || element.children.length === 0) return true;
+    // Check if all children are empty text nodes
+    return element.children.every((child: any) => {
+      if (Text.isText(child)) {
+        return child.text === '';
+      }
+      return false;
+    });
+  }, []);
+
+  // Count empty paragraphs (excluding the first one which is the default typing area)
+  const emptyParagraphCount = useMemo(() => {
+    if (!editorValue || editorValue.length <= 1) return 0;
+    // Skip the first paragraph, count empty ones after that
+    return editorValue.slice(1).filter((node: any) => {
+      if (node.type !== 'paragraph' && node.type !== undefined) return false;
+      if (!node.children || node.children.length === 0) return true;
+      return node.children.every((child: any) => {
+        if (Text.isText(child)) {
+          return child.text === '';
+        }
+        return false;
+      });
+    }).length;
+  }, [editorValue]);
+
+  // Check if an element is the first paragraph in the document
+  const isFirstParagraph = useCallback((element: any): boolean => {
+    try {
+      const path = ReactEditor.findPath(editor, element);
+      return path.length === 1 && path[0] === 0;
+    } catch {
+      return false;
+    }
+  }, [editor]);
+
+  // Delete an empty paragraph
+  const deleteEmptyParagraph = useCallback((element: any) => {
+    try {
+      const path = ReactEditor.findPath(editor, element);
+      // Don't delete if it's the only paragraph in the document
+      if (editorValue.length <= 1) {
+        return;
+      }
+      Transforms.removeNodes(editor, { at: path });
+    } catch (error) {
+      console.error('Error deleting empty paragraph:', error);
+    }
+  }, [editor, editorValue.length]);
+
+  // Delete all empty paragraphs (except the first one)
+  const deleteAllEmptyParagraphs = useCallback(() => {
+    if (!editorValue || editorValue.length <= 1) return;
+
+    // Find all empty paragraph paths (in reverse order to avoid path shifting issues)
+    const emptyPaths: Path[] = [];
+    editorValue.forEach((node: any, index: number) => {
+      // Skip the first paragraph
+      if (index === 0) return;
+
+      const isEmpty = (node.type === 'paragraph' || node.type === undefined) &&
+        node.children?.every((child: any) => Text.isText(child) && child.text === '');
+
+      if (isEmpty) {
+        emptyPaths.push([index]);
+      }
+    });
+
+    // Delete in reverse order to maintain correct paths
+    emptyPaths.reverse().forEach(path => {
+      try {
+        Transforms.removeNodes(editor, { at: path });
+      } catch (error) {
+        console.error('Error deleting empty paragraph at path:', path, error);
+      }
+    });
+  }, [editor, editorValue]);
+
   // Simple element renderer - renders inline pill links using LinkNode
   const renderElement = useCallback((props: any) => {
     const { attributes, children, element } = props;
@@ -922,9 +1016,51 @@ const Editor: React.FC<EditorProps> = ({
       case 'list-item':
         return <li {...attributes}>{children}</li>;
       default:
+        // Check if this is an empty paragraph that should be highlighted
+        const isEmpty = isEmptyParagraph(element);
+        const isFirst = isFirstParagraph(element);
+        // Don't highlight the first empty paragraph (that's where users type)
+        const shouldHighlight = isEmpty && !isFirst && !readOnly;
+        const canDelete = !readOnly && isEmpty && !isFirst && editorValue.length > 1;
+
+        if (shouldHighlight) {
+          return (
+            <div {...attributes} className="relative">
+              <p className={cn(
+                "rounded-md transition-colors",
+                "bg-orange-100/80 dark:bg-orange-950/50"
+              )}>
+                {children}
+              </p>
+              {canDelete && (
+                <button
+                  contentEditable={false}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteEmptyParagraph(element);
+                  }}
+                  className={cn(
+                    "absolute right-2 top-1/2 -translate-y-1/2",
+                    "p-1 rounded-md",
+                    "bg-orange-200/80 dark:bg-orange-900/60",
+                    "hover:bg-orange-300 dark:hover:bg-orange-800/80",
+                    "active:scale-95",
+                    "text-orange-700 dark:text-orange-300",
+                    "cursor-pointer transition-all"
+                  )}
+                  title="Delete empty line"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        }
+
         return <p {...attributes}>{children}</p>;
     }
-  }, [editor, readOnly]);
+  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, deleteEmptyParagraph, editorValue.length]);
 
   // Simple leaf renderer with suggestion underline support
   const renderLeaf = useCallback((props: any) => {
@@ -1038,6 +1174,26 @@ const Editor: React.FC<EditorProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Delete all empty lines button - only show when there are empty lines to delete */}
+          {!readOnly && emptyParagraphCount > 0 && (
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={deleteAllEmptyParagraphs}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm",
+                  "bg-orange-100/80 dark:bg-orange-950/50",
+                  "hover:bg-orange-200 dark:hover:bg-orange-900/60",
+                  "active:scale-[0.98]",
+                  "text-orange-700 dark:text-orange-300",
+                  "transition-all"
+                )}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete {emptyParagraphCount} empty {emptyParagraphCount === 1 ? 'line' : 'lines'}</span>
+              </button>
+            </div>
+          )}
         </Slate>
 
         {/* Loading indicator for link suggestions */}

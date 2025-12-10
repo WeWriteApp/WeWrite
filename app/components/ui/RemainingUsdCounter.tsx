@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { formatUsdCents, centsToDollars } from '../../utils/formatCurrency';
+import { Badge } from './badge';
 
 interface RemainingFundsDisplayProps {
   allocatedUsdCents: number;
@@ -27,6 +28,7 @@ export function RemainingFundsDisplay({
   className = '',
   onClick
 }: RemainingFundsDisplayProps) {
+
   // Calculate remaining USD and allocation percentage
   const remainingUsdCents = Math.max(0, totalUsdCents - allocatedUsdCents);
   const allocationPercentage = totalUsdCents > 0 ? (allocatedUsdCents / totalUsdCents) * 100 : 0;
@@ -104,10 +106,13 @@ export function RemainingFundsDisplay({
         </svg>
       </div>
 
-      {/* Dollar amount chip - separate from pie chart */}
-      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border-transparent bg-neutral-10 text-foreground hover:bg-neutral-15 transition-colors text-sm font-semibold">
-        <span>{displayText}</span>
-      </div>
+      {/* Dollar amount badge - Badge auto-applies shiny styling when in shiny mode */}
+      <Badge
+        variant="secondary"
+        className="cursor-pointer text-sm"
+      >
+        {displayText}
+      </Badge>
     </div>
   );
 }
@@ -178,10 +183,13 @@ export function OverspendWarningDisplay({
         </svg>
       </div>
 
-      {/* "Out" text chip */}
-      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border-transparent bg-orange-500 text-white hover:bg-orange-600 transition-colors text-sm font-semibold">
-        <span>Out</span>
-      </div>
+      {/* "Out" text badge - Badge auto-applies shiny styling when in shiny mode */}
+      <Badge
+        variant="warning"
+        className="cursor-pointer text-sm"
+      >
+        Out
+      </Badge>
     </div>
   );
 }
