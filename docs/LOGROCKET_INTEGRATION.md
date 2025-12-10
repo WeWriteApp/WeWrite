@@ -212,6 +212,7 @@ const botPatterns = [
 ### Environment Filtering
 
 - **Production Only**: Only runs in `NODE_ENV === 'production'`
+- **Production Domains**: Only runs on `getwewrite.app`, `www.getwewrite.app`, `wewrite.app`, or `www.wewrite.app`
 - **Client-Side Only**: Never runs on server
 - **Localhost Ignored**: Skips localhost and .local domains
 
@@ -309,8 +310,9 @@ LogRocket is disabled in development. To test:
 
 1. **LogRocket not initializing**
    - Check `NODE_ENV === 'production'`
-   - Verify `NEXT_PUBLIC_LOGROCKET_APP_ID` is set
-   - Check browser console for errors
+   - Verify `NEXT_PUBLIC_LOGROCKET_APP_ID` is set in Vercel environment variables
+   - Ensure you're on a production domain (`getwewrite.app` or `www.getwewrite.app`)
+   - Check browser console for errors (look for "LogRocket skipped" messages)
 
 2. **Events not appearing**
    - Ensure using production environment

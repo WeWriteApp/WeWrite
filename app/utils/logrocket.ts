@@ -55,7 +55,9 @@ class LogRocketService {
 
     // Client-side: check actual domain
     const hostname = window.location.hostname;
-    const isProductionDomain = hostname === 'wewrite.app' ||
+    const isProductionDomain = hostname === 'getwewrite.app' ||
+                              hostname === 'www.getwewrite.app' ||
+                              hostname === 'wewrite.app' ||
                               hostname === 'www.wewrite.app';
 
     return process.env.NODE_ENV === 'production' && isProductionDomain;
