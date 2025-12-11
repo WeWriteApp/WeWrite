@@ -12,6 +12,7 @@ interface AllocationAmountDisplayProps {
   flashType?: 'accent' | 'red' | null;
   allocationIntervalCents?: number;
   hideWhenZero?: boolean;
+  isDemoBalance?: boolean;
 }
 
 /**
@@ -29,7 +30,8 @@ export function AllocationAmountDisplay({
   className,
   flashType = null,
   allocationIntervalCents = 10, // Default to $0.10
-  hideWhenZero = false
+  hideWhenZero = false,
+  isDemoBalance = false
 }: AllocationAmountDisplayProps) {
   // Show interval amount during flash animation
   const isFlashing = flashType !== null;
@@ -54,15 +56,18 @@ export function AllocationAmountDisplay({
   }
 
   const hasAllocation = allocationCents > 0;
-  
+
   // If hideWhenZero is true and there's no allocation, don't render anything
   if (hideWhenZero && !hasAllocation) {
     return null;
   }
-  
+
   const displayText = hasAllocation
     ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
     : `Available: ${formatUsdCents(availableBalanceCents)}`;
+
+  // Demo balance suffix text
+  const demoSuffix = isDemoBalance ? " (Demo funds, log in to make it real!)" : "";
 
   // Color and font weight based on whether there's an allocation
   const textColorClass = hasAllocation ? "text-primary" : "text-muted-foreground";
@@ -71,7 +76,8 @@ export function AllocationAmountDisplay({
   return (
     <div
       className={cn(
-        "overflow-hidden transition-all duration-300 ease-in-out max-h-8 mb-2",
+        "overflow-hidden transition-all duration-300 ease-in-out mb-2",
+        isDemoBalance ? "max-h-12" : "max-h-8",
         className
       )}
     >
@@ -83,6 +89,9 @@ export function AllocationAmountDisplay({
         )}
       >
         {displayText}
+        {isDemoBalance && (
+          <span className="text-muted-foreground font-normal">{demoSuffix}</span>
+        )}
       </div>
     </div>
   );

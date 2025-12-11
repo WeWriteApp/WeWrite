@@ -96,7 +96,7 @@ export default function FeaturesCarousel() {
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-4xl mx-auto">
         {/* Carousel container */}
         <div className="overflow-hidden px-4">
           <div

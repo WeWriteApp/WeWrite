@@ -4,9 +4,28 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database } from 'lucide-react';
+import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { formatUsdCents } from '../../utils/formatCurrency';
+
+// Simple hover tooltip component with backdrop blur
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="relative inline-flex group ml-1 align-middle">
+      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-foreground text-xs rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-normal w-64 z-[100]">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+// Helper to format cents with fainter styling for zero values
+function formatCentsWithStyle(cents: number, baseClass: string = '') {
+  const isZero = cents === 0;
+  const className = isZero ? 'opacity-30' : baseClass;
+  return { text: formatUsdCents(cents), className };
+}
 
 interface MonthlyFinancialData {
   month: string;
@@ -21,6 +40,20 @@ interface MonthlyFinancialData {
   status: 'in_progress' | 'processed' | 'pending';
 }
 
+interface SubscriberDetail {
+  id: string;
+  email: string;
+  name: string | null;
+  subscriptionAmountCents: number;
+  allocatedCents: number;
+  unallocatedCents: number;
+  grossEarningsCents: number;
+  platformFeeCents: number;
+  netCreatorPayoutCents: number;
+  stripeCustomerId: string;
+  status: string;
+}
+
 interface StripeSubscriptionData {
   totalActiveSubscriptions: number;
   totalMRRCents: number;
@@ -28,6 +61,24 @@ interface StripeSubscriptionData {
     amount: number;
     count: number;
   }[];
+  subscribers: SubscriberDetail[];
+}
+
+interface DiscrepancyDetail {
+  type: 'stale_firebase' | 'missing_firebase' | 'amount_mismatch';
+  stripeCustomerId: string;
+  email: string;
+  stripeAmountCents: number;
+  firebaseAmountCents: number;
+  firebaseDocId?: string;
+}
+
+interface SyncResults {
+  synced: boolean;
+  staleRecordsFixed: number;
+  missingRecordsCreated: number;
+  amountMismatchesFixed: number;
+  errors: string[];
 }
 
 interface ReconciliationData {
@@ -38,6 +89,8 @@ interface ReconciliationData {
   firebaseUserCount: number;
   userCountDiscrepancy: number;
   isInSync: boolean;
+  discrepancies: DiscrepancyDetail[];
+  syncResults: SyncResults | null;
 }
 
 interface DataSources {
@@ -86,6 +139,7 @@ export default function MonthlyFinancialsPage() {
   const [data, setData] = useState<FinancialsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -101,12 +155,17 @@ export default function MonthlyFinancialsPage() {
   }, [user, authLoading, router]);
 
   // Fetch data
-  const fetchData = async () => {
+  const fetchData = async (sync: boolean = false) => {
     try {
-      setIsLoading(true);
+      if (sync) {
+        setIsSyncing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
-      const response = await fetch('/api/admin/monthly-financials');
+      const url = sync ? '/api/admin/monthly-financials?sync=true' : '/api/admin/monthly-financials';
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch financial data');
       }
@@ -117,7 +176,13 @@ export default function MonthlyFinancialsPage() {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
+  };
+
+  // Sync Firebase with Stripe
+  const handleSync = () => {
+    fetchData(true);
   };
 
   useEffect(() => {
@@ -137,7 +202,7 @@ export default function MonthlyFinancialsPage() {
   if (authLoading || !user || !user.email || !isAdmin(user.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <Loader className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }
@@ -195,12 +260,12 @@ export default function MonthlyFinancialsPage() {
         {data && (
           <>
             {/* Fund Flow Model Explanation */}
-            <div className="wewrite-card bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+            <div className="wewrite-card border">
               <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <Info className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">Monthly Bulk Processing Model</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  <h3 className="font-semibold">Monthly Bulk Processing Model</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     {data.metadata.description}
                   </p>
                 </div>
@@ -211,48 +276,72 @@ export default function MonthlyFinancialsPage() {
             <div className="wewrite-card">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
+                  <Calendar className="h-5 w-5" />
                   <h2 className="text-xl font-bold">Current Month: {formatMonth(data.currentMonth.data.month)}</h2>
                 </div>
-                <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted">
                   In Progress
                 </span>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Total Subscriptions</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Subscriptions
+                    <InfoTooltip text="Sum of all active subscription amounts from Stripe. This is the source of truth for monthly revenue coming in from subscribers." />
+                  </p>
                   <p className="text-2xl font-bold">{formatUsdCents(data.currentMonth.data.totalSubscriptionCents)}</p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Allocated to Creators</p>
-                  <p className="text-2xl font-bold text-green-600">{formatUsdCents(data.currentMonth.data.totalAllocatedCents)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Allocated to Creators
+                    <InfoTooltip text="Total amount subscribers have allocated to creators this month. Calculated from Firebase USD_BALANCES.allocatedUsdCents field. This is what creators will earn (minus 7% fee)." />
+                  </p>
+                  <p className="text-2xl font-bold">{formatUsdCents(data.currentMonth.data.totalAllocatedCents)}</p>
+                </div>
+                <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Unallocated
+                    <InfoTooltip text="Total Subscriptions minus Allocated to Creators. This is money subscribers paid but haven't directed to any creators yet. At month-end, unallocated funds become platform revenue." />
+                  </p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.totalUnallocatedCents)}</p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Unallocated</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatUsdCents(data.currentMonth.data.totalUnallocatedCents)}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Allocation Rate</p>
+                  <p className="text-sm text-muted-foreground">
+                    Allocation Rate
+                    <InfoTooltip text="Percentage of subscription revenue that has been allocated to creators. Formula: (Allocated / Total Subscriptions) * 100. Higher is better for creators." />
+                  </p>
                   <p className="text-2xl font-bold">{data.currentMonth.data.allocationRate.toFixed(1)}%</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="p-4 bg-primary/10 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Platform Fee (7%)</p>
-                  <p className="text-xl font-bold text-primary">{formatUsdCents(data.currentMonth.data.platformFeeCents)}</p>
-                </div>
                 <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Creator Payouts</p>
-                  <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.creatorPayoutsCents)}</p>
-                </div>
-                <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Platform Revenue</p>
-                  <p className="text-xl font-bold text-blue-700 dark:text-blue-400">{formatUsdCents(data.currentMonth.data.platformRevenueCents)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Platform Fee (7%)
+                    <InfoTooltip text="7% fee charged on allocated funds only. Formula: Allocated to Creators * 0.07. This fee is deducted from creator payouts." />
+                  </p>
+                  <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.platformFeeCents)}</p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Active Users</p>
+                  <p className="text-sm text-muted-foreground">
+                    Creator Payouts
+                    <InfoTooltip text="What creators actually receive after platform fee. Formula: Allocated to Creators - Platform Fee (7%). This is the net amount paid out to creators." />
+                  </p>
+                  <p className="text-xl font-bold">{formatUsdCents(data.currentMonth.data.creatorPayoutsCents)}</p>
+                </div>
+                <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Platform Revenue
+                    <InfoTooltip text="Total revenue for WeWrite. Formula: Unallocated + Platform Fee (7%). Includes both the 7% fee on allocations AND any unallocated subscription funds." />
+                  </p>
+                  <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.platformRevenueCents)}</p>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Active Users
+                    <InfoTooltip text="Number of active subscriptions from Stripe. This counts unique paying subscribers with active recurring subscriptions." />
+                  </p>
                   <p className="text-xl font-bold">{data.currentMonth.data.userCount}</p>
                 </div>
               </div>
@@ -267,18 +356,18 @@ export default function MonthlyFinancialsPage() {
             {data.stripeBalance && (
               <div className="wewrite-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="h-5 w-5 text-primary" />
+                  <DollarSign className="h-5 w-5" />
                   <h2 className="text-xl font-bold">Stripe Balance</h2>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Available</p>
-                    <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.stripeBalance.availableCents)}</p>
+                    <p className="text-2xl font-bold">{formatUsdCents(data.stripeBalance.availableCents)}</p>
                   </div>
-                  <div className="p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{formatUsdCents(data.stripeBalance.pendingCents)}</p>
+                    <p className="text-2xl font-bold">{formatUsdCents(data.stripeBalance.pendingCents)}</p>
                   </div>
                   <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total</p>
@@ -288,13 +377,13 @@ export default function MonthlyFinancialsPage() {
               </div>
             )}
 
-            {/* Stripe Subscriptions Breakdown */}
+            {/* Stripe Subscriptions - Detailed Table Only */}
             {data.stripeSubscriptions && (
               <div className="wewrite-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <Users className="h-5 w-5 text-primary" />
+                  <Users className="h-5 w-5" />
                   <h2 className="text-xl font-bold">Active Subscriptions (from Stripe)</h2>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
                     Source of Truth
                   </span>
                 </div>
@@ -318,17 +407,102 @@ export default function MonthlyFinancialsPage() {
                   </div>
                 </div>
 
-                {data.stripeSubscriptions.subscriptionBreakdown.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Breakdown by Plan</h3>
-                    <div className="space-y-2">
-                      {data.stripeSubscriptions.subscriptionBreakdown.map((tier) => (
-                        <div key={tier.amount} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                          <span className="font-medium">{formatUsdCents(tier.amount)}/mo</span>
-                          <span className="text-muted-foreground">{tier.count} subscriber{tier.count !== 1 ? 's' : ''}</span>
-                          <span className="font-medium">{formatUsdCents(tier.amount * tier.count)} total</span>
-                        </div>
-                      ))}
+                {/* Detailed Subscriber Breakdown Table */}
+                {data.stripeSubscriptions.subscribers && data.stripeSubscriptions.subscribers.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
+                      Detailed Subscriber Breakdown
+                      <InfoTooltip text="Shows each subscriber's plan, allocation status, and financial breakdown including gross earnings (before fees), platform fee (7%), net payout to creators, and any unallocated funds." />
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b bg-muted/30">
+                            <th className="text-left py-2 px-2">Subscriber</th>
+                            <th className="text-right py-2 px-2">
+                              <span className="inline-flex items-center">
+                                Plan
+                                <InfoTooltip text="Monthly subscription amount from Stripe" />
+                              </span>
+                            </th>
+                            <th className="text-right py-2 px-2">
+                              <span className="inline-flex items-center">
+                                Allocated
+                                <InfoTooltip text="Amount this subscriber has allocated to creators this month" />
+                              </span>
+                            </th>
+                            <th className="text-right py-2 px-2">
+                              <span className="inline-flex items-center">
+                                Unallocated
+                                <InfoTooltip text="Plan - Allocated. Funds not yet directed to creators (becomes platform revenue at month-end)" />
+                              </span>
+                            </th>
+                            <th className="text-right py-2 px-2">
+                              <span className="inline-flex items-center">
+                                Platform Fee
+                                <InfoTooltip text="7% of allocated amount. This is WeWrite's fee on allocations." />
+                              </span>
+                            </th>
+                            <th className="text-right py-2 px-2">
+                              <span className="inline-flex items-center">
+                                Net to Creators
+                                <InfoTooltip text="Allocated - Platform Fee. What creators actually receive from this subscriber's allocations." />
+                              </span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.stripeSubscriptions.subscribers.map((sub) => (
+                            <tr key={sub.id} className="border-b hover:bg-muted/30">
+                              <td className="py-2 px-2">
+                                <div className="font-medium truncate max-w-[150px]" title={sub.email}>
+                                  {sub.name || sub.email}
+                                </div>
+                                {sub.name && (
+                                  <div className="text-muted-foreground truncate max-w-[150px]" title={sub.email}>
+                                    {sub.email}
+                                  </div>
+                                )}
+                              </td>
+                              <td className={`text-right py-2 px-2 ${sub.subscriptionAmountCents === 0 ? 'opacity-30' : ''}`}>
+                                {formatUsdCents(sub.subscriptionAmountCents)}
+                              </td>
+                              <td className={`text-right py-2 px-2 ${sub.allocatedCents === 0 ? 'opacity-30' : ''}`}>
+                                {formatUsdCents(sub.allocatedCents)}
+                              </td>
+                              <td className={`text-right py-2 px-2 ${sub.unallocatedCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
+                                {formatUsdCents(sub.unallocatedCents)}
+                              </td>
+                              <td className={`text-right py-2 px-2 ${sub.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
+                                {formatUsdCents(sub.platformFeeCents)}
+                              </td>
+                              <td className={`text-right py-2 px-2 ${sub.netCreatorPayoutCents === 0 ? 'opacity-30' : ''}`}>
+                                {formatUsdCents(sub.netCreatorPayoutCents)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="font-bold bg-muted/50">
+                            <td className="py-2 px-2">Totals</td>
+                            <td className="text-right py-2 px-2">
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.subscriptionAmountCents, 0))}
+                            </td>
+                            <td className="text-right py-2 px-2">
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.allocatedCents, 0))}
+                            </td>
+                            <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.unallocatedCents, 0))}
+                            </td>
+                            <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.platformFeeCents, 0))}
+                            </td>
+                            <td className="text-right py-2 px-2">
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.netCreatorPayoutCents, 0))}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
                   </div>
                 )}
@@ -337,37 +511,57 @@ export default function MonthlyFinancialsPage() {
 
             {/* Data Reconciliation Status */}
             {data.reconciliation && (
-              <div className={`wewrite-card ${data.reconciliation.isInSync
-                ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'
-                : 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800'}`}>
-                <div className="flex items-center gap-2 mb-4">
-                  {data.reconciliation.isInSync ? (
-                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  ) : (
-                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              <div className="wewrite-card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    {data.reconciliation.isInSync ? (
+                      <CheckCircle className="h-5 w-5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5" />
+                    )}
+                    <h2 className="text-xl font-bold">Data Reconciliation</h2>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${data.reconciliation.isInSync
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : 'bg-muted'}`}>
+                      {data.reconciliation.isInSync ? 'In Sync' : `${data.reconciliation.discrepancies?.length || 0} Discrepancies`}
+                    </span>
+                  </div>
+                  {!data.reconciliation.isInSync && data.reconciliation.discrepancies?.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSync}
+                      disabled={isSyncing}
+                    >
+                      {isSyncing ? (
+                        <>
+                          <Loader className="h-4 w-4 mr-2 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Sync with Stripe
+                        </>
+                      )}
+                    </Button>
                   )}
-                  <h2 className="text-xl font-bold">Data Reconciliation</h2>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${data.reconciliation.isInSync
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'}`}>
-                    {data.reconciliation.isInSync ? 'In Sync' : 'Discrepancy Detected'}
-                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Stripe Subscriptions</p>
                     <p className="text-xl font-bold">{formatUsdCents(data.reconciliation.stripeSubscriptionsCents)}</p>
                     <p className="text-xs text-muted-foreground">{data.reconciliation.stripeSubscriberCount} subscribers</p>
                   </div>
-                  <div className="p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Firebase Recorded</p>
                     <p className="text-xl font-bold">{formatUsdCents(data.reconciliation.firebaseRecordedCents)}</p>
                     <p className="text-xs text-muted-foreground">{data.reconciliation.firebaseUserCount} users</p>
                   </div>
-                  <div className="p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Discrepancy</p>
-                    <p className={`text-xl font-bold ${data.reconciliation.discrepancyCents !== 0 ? 'text-orange-600' : ''}`}>
+                    <p className="text-xl font-bold">
                       {data.reconciliation.discrepancyCents >= 0 ? '+' : ''}{formatUsdCents(data.reconciliation.discrepancyCents)}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -376,11 +570,67 @@ export default function MonthlyFinancialsPage() {
                   </div>
                 </div>
 
-                {!data.reconciliation.isInSync && (
-                  <p className="text-sm text-orange-700 dark:text-orange-300 mt-3">
-                    Firebase records may not match Stripe due to: new subscriptions not yet synced, cancelled subscriptions,
-                    or subscription amount changes. Stripe is the source of truth for revenue calculations.
-                  </p>
+                {/* Sync Results */}
+                {data.reconciliation.syncResults && (
+                  <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Sync Completed</p>
+                    <ul className="text-xs text-green-700 dark:text-green-300 mt-1 space-y-0.5">
+                      {data.reconciliation.syncResults.staleRecordsFixed > 0 && (
+                        <li>Fixed {data.reconciliation.syncResults.staleRecordsFixed} stale records (cancelled subscriptions)</li>
+                      )}
+                      {data.reconciliation.syncResults.amountMismatchesFixed > 0 && (
+                        <li>Fixed {data.reconciliation.syncResults.amountMismatchesFixed} amount mismatches</li>
+                      )}
+                      {data.reconciliation.syncResults.errors.length > 0 && (
+                        <li className="text-red-600 dark:text-red-400">{data.reconciliation.syncResults.errors.length} errors occurred</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Discrepancy Details */}
+                {!data.reconciliation.isInSync && data.reconciliation.discrepancies?.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Discrepancy Details</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b bg-muted/30">
+                            <th className="text-left py-2 px-2">Type</th>
+                            <th className="text-left py-2 px-2">Email</th>
+                            <th className="text-right py-2 px-2">Stripe Amount</th>
+                            <th className="text-right py-2 px-2">Firebase Amount</th>
+                            <th className="text-right py-2 px-2">Difference</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.reconciliation.discrepancies.map((d, idx) => (
+                            <tr key={idx} className="border-b hover:bg-muted/30">
+                              <td className="py-2 px-2">
+                                <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                  d.type === 'stale_firebase' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                                  d.type === 'missing_firebase' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                }`}>
+                                  {d.type === 'stale_firebase' ? 'Cancelled' :
+                                   d.type === 'missing_firebase' ? 'Missing' : 'Mismatch'}
+                                </span>
+                              </td>
+                              <td className="py-2 px-2 truncate max-w-[200px]" title={d.email}>{d.email}</td>
+                              <td className={`text-right py-2 px-2 ${d.stripeAmountCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(d.stripeAmountCents)}</td>
+                              <td className={`text-right py-2 px-2 ${d.firebaseAmountCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(d.firebaseAmountCents)}</td>
+                              <td className={`text-right py-2 px-2 ${(d.stripeAmountCents - d.firebaseAmountCents) === 0 ? 'opacity-30' : ''}`}>
+                                {formatUsdCents(d.stripeAmountCents - d.firebaseAmountCents)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Click &quot;Sync with Stripe&quot; to fix stale and mismatched records. Missing records will be created when users log in.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -389,7 +639,7 @@ export default function MonthlyFinancialsPage() {
             {data.dataSources && (
               <div className="wewrite-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <Database className="h-5 w-5 text-primary" />
+                  <Database className="h-5 w-5" />
                   <h2 className="text-xl font-bold">Data Sources</h2>
                 </div>
 
@@ -413,7 +663,7 @@ export default function MonthlyFinancialsPage() {
             {/* Historical Data Table */}
             <div className="wewrite-card">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <TrendingUp className="h-5 w-5" />
                 <h2 className="text-xl font-bold">Historical Monthly Data</h2>
               </div>
 
@@ -442,14 +692,14 @@ export default function MonthlyFinancialsPage() {
                       {data.historicalData.map((row) => (
                         <tr key={row.month} className="border-b hover:bg-muted/50">
                           <td className="py-3 px-2 font-medium">{formatMonth(row.month)}</td>
-                          <td className="text-right py-3 px-2">{formatUsdCents(row.totalSubscriptionCents)}</td>
-                          <td className="text-right py-3 px-2 text-green-600">{formatUsdCents(row.totalAllocatedCents)}</td>
-                          <td className="text-right py-3 px-2 text-orange-600">{formatUsdCents(row.totalUnallocatedCents)}</td>
-                          <td className="text-right py-3 px-2">{formatUsdCents(row.platformFeeCents)}</td>
-                          <td className="text-right py-3 px-2">{formatUsdCents(row.creatorPayoutsCents)}</td>
-                          <td className="text-right py-3 px-2 text-primary font-medium">{formatUsdCents(row.platformRevenueCents)}</td>
-                          <td className="text-right py-3 px-2">{row.allocationRate.toFixed(1)}%</td>
-                          <td className="text-right py-3 px-2">{row.userCount}</td>
+                          <td className={`text-right py-3 px-2 ${row.totalSubscriptionCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalSubscriptionCents)}</td>
+                          <td className={`text-right py-3 px-2 ${row.totalAllocatedCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalAllocatedCents)}</td>
+                          <td className={`text-right py-3 px-2 ${row.totalUnallocatedCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.totalUnallocatedCents)}</td>
+                          <td className={`text-right py-3 px-2 ${row.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.platformFeeCents)}</td>
+                          <td className={`text-right py-3 px-2 ${row.creatorPayoutsCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.creatorPayoutsCents)}</td>
+                          <td className={`text-right py-3 px-2 font-medium ${row.platformRevenueCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.platformRevenueCents)}</td>
+                          <td className={`text-right py-3 px-2 ${row.allocationRate === 0 ? 'opacity-30' : ''}`}>{row.allocationRate.toFixed(1)}%</td>
+                          <td className={`text-right py-3 px-2 ${row.userCount === 0 ? 'opacity-30' : ''}`}>{row.userCount}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -458,11 +708,11 @@ export default function MonthlyFinancialsPage() {
                         <tr className="font-bold bg-muted/30">
                           <td className="py-3 px-2">Totals</td>
                           <td className="text-right py-3 px-2">{formatUsdCents(data.totals.totalSubscriptionCents)}</td>
-                          <td className="text-right py-3 px-2 text-green-600">{formatUsdCents(data.totals.totalAllocatedCents)}</td>
-                          <td className="text-right py-3 px-2 text-orange-600">{formatUsdCents(data.totals.totalUnallocatedCents)}</td>
-                          <td className="text-right py-3 px-2">{formatUsdCents(data.totals.totalPlatformFeeCents)}</td>
+                          <td className="text-right py-3 px-2">{formatUsdCents(data.totals.totalAllocatedCents)}</td>
+                          <td className="text-right py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(data.totals.totalUnallocatedCents)}</td>
+                          <td className="text-right py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(data.totals.totalPlatformFeeCents)}</td>
                           <td className="text-right py-3 px-2">{formatUsdCents(data.totals.totalCreatorPayoutsCents)}</td>
-                          <td className="text-right py-3 px-2 text-primary">{formatUsdCents(data.totals.totalPlatformRevenueCents)}</td>
+                          <td className="text-right py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(data.totals.totalPlatformRevenueCents)}</td>
                           <td className="text-right py-3 px-2">{data.totals.averageAllocationRate.toFixed(1)}%</td>
                           <td className="text-right py-3 px-2">-</td>
                         </tr>
@@ -476,7 +726,7 @@ export default function MonthlyFinancialsPage() {
             {/* Historical Chart Placeholder */}
             <div className="wewrite-card">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <TrendingUp className="h-5 w-5" />
                 <h2 className="text-xl font-bold">Monthly Trends</h2>
               </div>
 
@@ -499,12 +749,12 @@ export default function MonthlyFinancialsPage() {
                           <span className="w-24 text-sm text-muted-foreground">{formatMonth(row.month)}</span>
                           <div className="flex-1 flex h-6 gap-0.5 bg-muted rounded overflow-hidden">
                             <div
-                              className="h-full bg-green-500 transition-all"
+                              className="h-full bg-zinc-400 dark:bg-zinc-600 transition-all"
                               style={{ width: `${allocatedWidth}%` }}
                               title={`Allocated: ${formatUsdCents(row.totalAllocatedCents)}`}
                             />
                             <div
-                              className="h-full bg-orange-400 transition-all"
+                              className="h-full bg-green-500 transition-all"
                               style={{ width: `${unallocatedWidth}%` }}
                               title={`Unallocated: ${formatUsdCents(row.totalUnallocatedCents)}`}
                             />
@@ -517,11 +767,11 @@ export default function MonthlyFinancialsPage() {
 
                   <div className="flex items-center gap-4 text-sm pt-2">
                     <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-green-500 rounded" />
+                      <div className="w-3 h-3 bg-zinc-400 dark:bg-zinc-600 rounded" />
                       <span>Allocated to Creators</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-orange-400 rounded" />
+                      <div className="w-3 h-3 bg-green-500 rounded" />
                       <span>Unallocated (Platform Revenue)</span>
                     </div>
                   </div>

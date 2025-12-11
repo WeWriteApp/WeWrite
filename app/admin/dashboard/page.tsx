@@ -32,8 +32,7 @@ import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsW
 import { DesktopOptimizedDashboard } from "../../components/admin/DesktopOptimizedDashboard";
 
 import {
-  WriterEarningsWidget,
-  WriterPayoutsWidget as NewWriterPayoutsWidget
+  WriterEarningsWidget
 } from "../../components/admin/WriterEarningsPayoutsWidget";
 import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
 import { UsdPaymentsOverviewWidget } from "../../components/admin/UsdPaymentsOverviewWidget";
@@ -131,7 +130,6 @@ const initialWidgets = [
 
   // Writer Analytics Widgets
   { id: 'writer-earnings', component: WriterEarningsWidget },
-  { id: 'writer-payouts-new', component: NewWriterPayoutsWidget },
 
   // Content Management Widgets
   { id: 'writing-ideas-manager', component: WritingIdeasManager },

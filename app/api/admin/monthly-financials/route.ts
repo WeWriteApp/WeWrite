@@ -14,11 +14,14 @@
  * - Allocations are tracked in Firebase throughout the month
  * - At month-end, bulk processing moves funds to Storage Balance for payouts
  * - Unallocated funds become platform revenue ("use it or lose it")
+ *
+ * Query Parameters:
+ * - sync=true: Automatically sync Firebase USD_BALANCES with Stripe subscription data
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getFirebaseAdmin, FieldValue } from '../../../firebase/firebaseAdmin';
 import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
@@ -43,6 +46,21 @@ interface StripeSubscriptionData {
     amount: number;
     count: number;
   }[];
+  subscribers: SubscriberDetail[];
+}
+
+interface SubscriberDetail {
+  id: string;
+  email: string;
+  name: string | null;
+  subscriptionAmountCents: number;
+  allocatedCents: number;
+  unallocatedCents: number;
+  grossEarningsCents: number;  // What creators earn before fees
+  platformFeeCents: number;    // 7% of allocated
+  netCreatorPayoutCents: number; // What creators actually receive
+  stripeCustomerId: string;
+  status: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -52,6 +70,10 @@ export async function GET(request: NextRequest) {
     if (!adminCheck.success) {
       return NextResponse.json({ error: adminCheck.error }, { status: 403 });
     }
+
+    // Check for sync parameter
+    const { searchParams } = new URL(request.url);
+    const shouldSync = searchParams.get('sync') === 'true';
 
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
@@ -71,18 +93,38 @@ export async function GET(request: NextRequest) {
     let stripeSubscriptionData: StripeSubscriptionData = {
       totalActiveSubscriptions: 0,
       totalMRRCents: 0,
-      subscriptionBreakdown: []
+      subscriptionBreakdown: [],
+      subscribers: []
     };
+
+    // Map to store customer ID -> Firebase user allocation data
+    const customerAllocations: Map<string, { allocatedCents: number; userId: string }> = new Map();
 
     try {
       // Get all active subscriptions from Stripe
       const subscriptions = await stripe.subscriptions.list({
         status: 'active',
         limit: 100, // Adjust if you have more than 100 subscribers
-        expand: ['data.items.data.price']
+        expand: ['data.items.data.price', 'data.customer']
       });
 
       const amountCounts: Record<number, number> = {};
+
+      // First, get allocation data from Firebase for each subscriber
+      const balancesRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
+      const balancesSnapshot = await balancesRef.get();
+
+      // Build a map of Stripe customer ID to allocation data
+      for (const doc of balancesSnapshot.docs) {
+        const data = doc.data();
+        const stripeCustomerId = data.stripeCustomerId;
+        if (stripeCustomerId) {
+          customerAllocations.set(stripeCustomerId, {
+            allocatedCents: typeof data.allocatedUsdCents === 'number' ? data.allocatedUsdCents : 0,
+            userId: doc.id
+          });
+        }
+      }
 
       for (const sub of subscriptions.data) {
         // Get the subscription amount from the first item
@@ -94,8 +136,38 @@ export async function GET(request: NextRequest) {
 
           // Track breakdown by amount
           amountCounts[amountCents] = (amountCounts[amountCents] || 0) + 1;
+
+          // Get customer details
+          const customer = sub.customer as Stripe.Customer;
+          const customerId = typeof sub.customer === 'string' ? sub.customer : customer?.id || '';
+          const customerEmail = customer?.email || 'Unknown';
+          const customerName = customer?.name || null;
+
+          // Get allocation data for this customer
+          const allocationData = customerAllocations.get(customerId);
+          const allocatedCents = allocationData?.allocatedCents || 0;
+          const unallocatedCents = Math.max(0, amountCents - allocatedCents);
+          const platformFeeCents = Math.round(allocatedCents * 0.07);
+          const netCreatorPayoutCents = allocatedCents - platformFeeCents;
+
+          stripeSubscriptionData.subscribers.push({
+            id: allocationData?.userId || customerId,
+            email: customerEmail,
+            name: customerName,
+            subscriptionAmountCents: amountCents,
+            allocatedCents,
+            unallocatedCents,
+            grossEarningsCents: allocatedCents, // Gross = what was allocated to creators
+            platformFeeCents,
+            netCreatorPayoutCents,
+            stripeCustomerId: customerId,
+            status: sub.status
+          });
         }
       }
+
+      // Sort subscribers by subscription amount descending
+      stripeSubscriptionData.subscribers.sort((a, b) => b.subscriptionAmountCents - a.subscriptionAmountCents);
 
       // Convert breakdown to array
       stripeSubscriptionData.subscriptionBreakdown = Object.entries(amountCounts)
@@ -110,18 +182,20 @@ export async function GET(request: NextRequest) {
     }
 
     // ========================================
-    // 2. Get allocation data from Firebase (tracks what users have allocated)
+    // 2. Calculate Firebase totals from already-fetched data
+    // (balancesSnapshot was fetched above in section 1)
     // ========================================
-    const balancesRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
-    const balancesSnapshot = await balancesRef.get();
-
     let firebaseData = {
       totalAllocatedCents: 0,
       totalMonthlyAllocationCents: 0, // What Firebase thinks subscriptions are
       usersWithBalances: 0
     };
 
-    for (const doc of balancesSnapshot.docs) {
+    // Re-use the balancesSnapshot from above (already fetched)
+    const balancesRefForTotals = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
+    const balancesSnapshotForTotals = await balancesRefForTotals.get();
+
+    for (const doc of balancesSnapshotForTotals.docs) {
       const data = doc.data();
 
       // What Firebase thinks the monthly allocation is
@@ -241,9 +315,159 @@ export async function GET(request: NextRequest) {
     const daysRemaining = lastDayOfMonth.getDate() - now.getDate();
 
     // ========================================
-    // 7. Data reconciliation check
+    // 7. Data reconciliation check with detailed discrepancy analysis
     // Compare Stripe subscription amounts vs Firebase recorded amounts
     // ========================================
+
+    // Build a map of Stripe customer ID -> subscription data for easy lookup
+    const stripeCustomerMap = new Map<string, { email: string; amountCents: number }>();
+    for (const sub of stripeSubscriptionData.subscribers) {
+      stripeCustomerMap.set(sub.stripeCustomerId, {
+        email: sub.email,
+        amountCents: sub.subscriptionAmountCents
+      });
+    }
+
+    // Build a map of all Firebase balance records with stripeCustomerId
+    const firebaseBalanceMap = new Map<string, {
+      docId: string;
+      stripeCustomerId: string;
+      monthlyAllocationCents: number;
+      allocatedCents: number;
+    }>();
+
+    const balancesCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
+    const allBalancesSnapshot = await db.collection(balancesCollectionName).get();
+
+    for (const doc of allBalancesSnapshot.docs) {
+      const data = doc.data();
+      const stripeCustomerId = data.stripeCustomerId;
+      if (stripeCustomerId) {
+        firebaseBalanceMap.set(stripeCustomerId, {
+          docId: doc.id,
+          stripeCustomerId,
+          monthlyAllocationCents: typeof data.monthlyAllocationCents === 'number' ? data.monthlyAllocationCents : 0,
+          allocatedCents: typeof data.allocatedUsdCents === 'number' ? data.allocatedUsdCents : 0
+        });
+      }
+    }
+
+    // Identify discrepancies
+    const discrepancies: Array<{
+      type: 'stale_firebase' | 'missing_firebase' | 'amount_mismatch';
+      stripeCustomerId: string;
+      email: string;
+      stripeAmountCents: number;
+      firebaseAmountCents: number;
+      firebaseDocId?: string;
+    }> = [];
+
+    // Check for stale Firebase records (no active Stripe subscription)
+    for (const [stripeCustomerId, fbData] of firebaseBalanceMap) {
+      if (!stripeCustomerMap.has(stripeCustomerId) && fbData.monthlyAllocationCents > 0) {
+        discrepancies.push({
+          type: 'stale_firebase',
+          stripeCustomerId,
+          email: 'Unknown (no active subscription)',
+          stripeAmountCents: 0,
+          firebaseAmountCents: fbData.monthlyAllocationCents,
+          firebaseDocId: fbData.docId
+        });
+      }
+    }
+
+    // Check for missing Firebase records and amount mismatches
+    for (const [stripeCustomerId, stripeData] of stripeCustomerMap) {
+      const fbData = firebaseBalanceMap.get(stripeCustomerId);
+      if (!fbData) {
+        discrepancies.push({
+          type: 'missing_firebase',
+          stripeCustomerId,
+          email: stripeData.email,
+          stripeAmountCents: stripeData.amountCents,
+          firebaseAmountCents: 0
+        });
+      } else if (fbData.monthlyAllocationCents !== stripeData.amountCents) {
+        discrepancies.push({
+          type: 'amount_mismatch',
+          stripeCustomerId,
+          email: stripeData.email,
+          stripeAmountCents: stripeData.amountCents,
+          firebaseAmountCents: fbData.monthlyAllocationCents,
+          firebaseDocId: fbData.docId
+        });
+      }
+    }
+
+    // If sync=true, fix the discrepancies
+    let syncResults: {
+      synced: boolean;
+      staleRecordsFixed: number;
+      missingRecordsCreated: number;
+      amountMismatchesFixed: number;
+      errors: string[];
+    } | null = null;
+
+    if (shouldSync && discrepancies.length > 0) {
+      syncResults = {
+        synced: true,
+        staleRecordsFixed: 0,
+        missingRecordsCreated: 0,
+        amountMismatchesFixed: 0,
+        errors: []
+      };
+
+      const batch = db.batch();
+      let batchCount = 0;
+
+      for (const discrepancy of discrepancies) {
+        try {
+          if (discrepancy.type === 'stale_firebase' && discrepancy.firebaseDocId) {
+            // Zero out the monthlyAllocationCents for stale records
+            const docRef = db.collection(balancesCollectionName).doc(discrepancy.firebaseDocId);
+            const fbData = firebaseBalanceMap.get(discrepancy.stripeCustomerId);
+            const allocatedCents = fbData?.allocatedCents || 0;
+            batch.update(docRef, {
+              monthlyAllocationCents: 0,
+              totalUsdCents: 0,
+              availableUsdCents: -allocatedCents,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            syncResults.staleRecordsFixed++;
+            batchCount++;
+          } else if (discrepancy.type === 'amount_mismatch' && discrepancy.firebaseDocId) {
+            // Update the monthlyAllocationCents to match Stripe
+            const docRef = db.collection(balancesCollectionName).doc(discrepancy.firebaseDocId);
+            const fbData = firebaseBalanceMap.get(discrepancy.stripeCustomerId);
+            const allocatedCents = fbData?.allocatedCents || 0;
+            batch.update(docRef, {
+              monthlyAllocationCents: discrepancy.stripeAmountCents,
+              totalUsdCents: discrepancy.stripeAmountCents,
+              availableUsdCents: discrepancy.stripeAmountCents - allocatedCents,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            syncResults.amountMismatchesFixed++;
+            batchCount++;
+          }
+          // Note: We don't create missing Firebase records here as that requires
+          // knowing the Firebase userId, which we don't have from just the Stripe customer ID.
+          // Missing records will be created when the user logs in next.
+        } catch (err) {
+          syncResults.errors.push(`Error processing ${discrepancy.stripeCustomerId}: ${err}`);
+        }
+      }
+
+      if (batchCount > 0) {
+        try {
+          await batch.commit();
+          console.log(`[MONTHLY FINANCIALS] Synced ${batchCount} Firebase records with Stripe`);
+        } catch (batchError) {
+          console.error('[MONTHLY FINANCIALS] Error committing sync batch:', batchError);
+          syncResults.errors.push(`Batch commit error: ${batchError}`);
+        }
+      }
+    }
+
     const reconciliation = {
       stripeSubscriptionsCents: stripeSubscriptionData.totalMRRCents,
       firebaseRecordedCents: firebaseData.totalMonthlyAllocationCents,
@@ -251,7 +475,9 @@ export async function GET(request: NextRequest) {
       stripeSubscriberCount: stripeSubscriptionData.totalActiveSubscriptions,
       firebaseUserCount: firebaseData.usersWithBalances,
       userCountDiscrepancy: stripeSubscriptionData.totalActiveSubscriptions - firebaseData.usersWithBalances,
-      isInSync: Math.abs(stripeSubscriptionData.totalMRRCents - firebaseData.totalMonthlyAllocationCents) < 100 // Allow $1 margin
+      isInSync: discrepancies.length === 0,
+      discrepancies,
+      syncResults
     };
 
     return NextResponse.json({

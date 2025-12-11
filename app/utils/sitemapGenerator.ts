@@ -106,15 +106,15 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
 }
 
 export async function generateUsersSitemap(options: SitemapOptions = {}): Promise<string> {
-  const { limit: maxUsers = 10000 } = options
+  const { limit: maxUsers = 5000 } = options
   // Use www.getwewrite.app as the canonical domain
   const baseUrl = 'https://www.getwewrite.app'
-  
+
   try {
     const usersRef = collection(firestore, getCollectionName('users'))
+    // Query users - just get all users and filter in memory since field names vary
     const usersQuery = query(
       usersRef,
-      orderBy('lastActive', 'desc'),
       limit(maxUsers)
     )
 
@@ -124,15 +124,36 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
     usersSnapshot.forEach((doc) => {
       const data = doc.data()
       const userId = doc.id
-      
-      // Skip users without usernames or inactive users
-      if (!data.username || !data.lastActive) {
+
+      // Skip users without usernames
+      if (!data.username) {
         return
       }
 
-      const lastActive = data.lastActive?.toDate() || new Date()
+      // Handle both lastActive and lastActiveAt field names, and multiple date formats
+      const rawLastActive = data.lastActive || data.lastActiveAt || data.lastModified || data.createdAt
+      let lastActive: Date
+
+      if (rawLastActive?.toDate) {
+        lastActive = rawLastActive.toDate()
+      } else if (rawLastActive instanceof Date) {
+        lastActive = rawLastActive
+      } else if (typeof rawLastActive === 'string') {
+        lastActive = new Date(rawLastActive)
+      } else if (typeof rawLastActive === 'number') {
+        lastActive = new Date(rawLastActive)
+      } else {
+        // No activity date found, skip this user
+        return
+      }
+
+      // Validate the date is valid
+      if (isNaN(lastActive.getTime())) {
+        return
+      }
+
       const daysSinceActive = (Date.now() - lastActive.getTime()) / (1000 * 60 * 60 * 24)
-      
+
       // Only include users active within the last year
       if (daysSinceActive > 365) {
         return
@@ -150,6 +171,9 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
         priority
       })
     })
+
+    // Sort entries by lastModified descending
+    entries.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
 
     // Generate XML sitemap
     const xmlEntries = entries.map(entry => `
