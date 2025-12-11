@@ -2,7 +2,9 @@
 // This file should ONLY be imported in API routes and server components
 
 import { initAdmin } from "./admin";
-import { getSubCollectionPath, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
+import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionNameAsync } from "../utils/environmentConfig";
+import Stripe from 'stripe';
+import { getStripeSecretKey } from '../utils/stripeConfig';
 
 // Initialize Firebase Admin lazily
 let adminApp;
@@ -224,6 +226,56 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     // Log subscription status for debugging but don't automatically change it
     if (verbose) {
       console.log(`[getUserSubscriptionServer] Current subscription status: '${subscriptionData.status}'`);
+    }
+
+    // CRITICAL: Verify subscription status against Stripe (source of truth)
+    // This handles cases where Firebase status is stale due to missed webhooks
+    if (subscriptionData.stripeSubscriptionId && subscriptionData.status === 'active') {
+      try {
+        const stripeKey = getStripeSecretKey();
+        if (stripeKey) {
+          const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
+          const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId);
+
+          // Check if Stripe says the subscription is NOT active
+          const stripeStatus = stripeSubscription.status;
+          const isStripeActive = stripeStatus === 'active' || stripeStatus === 'trialing';
+
+          if (!isStripeActive) {
+            if (verbose) {
+              console.log(`[getUserSubscriptionServer] 🔄 STRIPE SYNC: Firebase says 'active' but Stripe says '${stripeStatus}' for user ${userId}`);
+            }
+
+            // Update Firebase to match Stripe (sync the data)
+            subscriptionData.status = stripeStatus === 'canceled' ? 'canceled' : stripeStatus;
+
+            // Also update Firebase for future requests
+            await updateSubscriptionServer(userId, {
+              status: subscriptionData.status,
+              canceledAt: stripeSubscription.canceled_at ? new Date(stripeSubscription.canceled_at * 1000).toISOString() : undefined,
+              updatedAt: new Date().toISOString()
+            });
+
+            console.log(`[getUserSubscriptionServer] ✅ Updated Firebase subscription status to '${subscriptionData.status}' for user ${userId}`);
+          }
+        }
+      } catch (stripeError) {
+        // If the subscription doesn't exist in Stripe, mark it as canceled
+        if ((stripeError as any)?.code === 'resource_missing') {
+          if (verbose) {
+            console.log(`[getUserSubscriptionServer] 🔄 STRIPE SYNC: Subscription ${subscriptionData.stripeSubscriptionId} not found in Stripe, marking as canceled`);
+          }
+          subscriptionData.status = 'canceled';
+
+          await updateSubscriptionServer(userId, {
+            status: 'canceled',
+            canceledAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          console.warn(`[getUserSubscriptionServer] Could not verify Stripe subscription:`, stripeError);
+        }
+      }
     }
 
     if (verbose) {

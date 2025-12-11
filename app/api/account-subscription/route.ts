@@ -114,11 +114,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(inactiveResponse);
     }
 
+    // Determine if subscription is truly active (not canceled, past_due, etc.)
+    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+
     // Return the subscription data in the expected format
     const activeResponse = {
-      hasSubscription: true,
+      hasSubscription: isActive,
       status: subscription.status,
-      amount: subscription.amount,
+      amount: isActive ? subscription.amount : 0, // Only show amount if active
       tokens: (subscription as any).tokens,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       fullData: subscription

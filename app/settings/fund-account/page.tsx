@@ -8,7 +8,8 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Loader2, CheckCircle, Wallet, History, ChevronDown } from 'lucide-react';
+import { Loader2, CheckCircle, Wallet, History, AlertCircle } from 'lucide-react';
+import { Button } from '../../components/ui/button';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
@@ -18,19 +19,12 @@ export default function FundAccountPage() {
   const { subscriptionAmount: contextSubscriptionAmount, hasActiveSubscription, isLoading: subscriptionContextLoading } = useSubscription();
   const searchParams = useSearchParams();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [currentSubscription, setCurrentSubscription] = useState(null);
+  const [currentSubscription, setCurrentSubscription] = useState<{
+    amount?: number;
+    status?: string;
+    [key: string]: any;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    funding: true,
-    history: false
-  });
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
 
   // Track page view
   useEffect(() => {
@@ -216,6 +210,11 @@ export default function FundAccountPage() {
     amount: effectiveSubscriptionAmount
   } : null;
 
+  // Check if subscription is cancelled (from context or local data)
+  const isSubscriptionCancelled = !hasActiveSubscription && !subscriptionContextLoading && currentSubscription !== null;
+  const subscriptionStatus = currentSubscription?.status;
+  const isCancelled = subscriptionStatus === 'canceled' || subscriptionStatus === 'cancelled' || isSubscriptionCancelled;
+
   return (
     <div className="p-4 lg:p-6 space-y-6">
       {/* Success/Cancellation Messages */}
@@ -237,43 +236,49 @@ export default function FundAccountPage() {
         </Alert>
       )}
 
+      {/* Cancelled Subscription Banner */}
+      {isCancelled && !cancelled && (
+        <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-800">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between w-full">
+            <span>Your subscription is currently inactive.</span>
+            <Button
+              variant="default"
+              size="sm"
+              className="ml-4"
+              onClick={() => {
+                // Scroll to the funding slider or set a default amount
+                setSelectedAmount(10);
+                // The UsdFundingTierSlider will handle the reactivation flow
+              }}
+            >
+              Reactivate Subscription
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Monthly Funding Section */}
       <div>
-        <h2
-          className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
-          onClick={() => toggleSection('funding')}
-        >
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Wallet className="h-5 w-5" />
           Monthly Funding
-          <ChevronDown
-            className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.funding ? '' : 'rotate-180'}`}
-          />
         </h2>
-        {expandedSections.funding && (
-          <UsdFundingTierSlider
-            selectedAmount={selectedAmount ?? effectiveSubscriptionAmount}
-            onAmountSelect={setSelectedAmount}
-            currentSubscription={effectiveSubscription}
-            showCurrentOption={true}
-          />
-        )}
+        <UsdFundingTierSlider
+          selectedAmount={selectedAmount ?? effectiveSubscriptionAmount}
+          onAmountSelect={setSelectedAmount}
+          currentSubscription={effectiveSubscription}
+          showCurrentOption={true}
+        />
       </div>
 
       {/* Subscription History Section */}
       <div>
-        <h2
-          className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
-          onClick={() => toggleSection('history')}
-        >
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <History className="h-5 w-5" />
           Subscription History
-          <ChevronDown
-            className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.history ? '' : 'rotate-180'}`}
-          />
         </h2>
-        {expandedSections.history && (
-          <SubscriptionHistory className="w-full" />
-        )}
+        <SubscriptionHistory className="w-full" />
       </div>
     </div>
   );
