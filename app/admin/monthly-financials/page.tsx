@@ -99,6 +99,14 @@ interface DataSources {
   historicalData: string;
 }
 
+interface DebugInfo {
+  environment: string;
+  stripeMode: string;
+  firebaseCollection: string;
+  stripeSubscriptionCount: number;
+  firebaseRecordCount: number;
+}
+
 interface FinancialsResponse {
   success: boolean;
   currentMonth: {
@@ -130,6 +138,7 @@ interface FinancialsResponse {
     fundFlowModel: string;
     description: string;
   };
+  debug?: DebugInfo;
 }
 
 export default function MonthlyFinancialsPage() {
@@ -259,6 +268,40 @@ export default function MonthlyFinancialsPage() {
 
         {data && (
           <>
+            {/* Environment Debug Info (if in dev mode or showing TEST data) */}
+            {data.debug && (data.debug.environment === 'development' || data.debug.stripeMode === 'TEST') && (
+              <div className="wewrite-card border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0 text-yellow-600" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">Development Environment Detected</h3>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                      You are viewing <strong>{data.debug.stripeMode}</strong> Stripe data and <strong>{data.debug.firebaseCollection}</strong> Firebase collection.
+                      Production subscribers and allocations will not appear here.
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 text-xs">
+                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                        <p className="text-yellow-600 dark:text-yellow-400">Environment</p>
+                        <p className="font-mono font-medium">{data.debug.environment}</p>
+                      </div>
+                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                        <p className="text-yellow-600 dark:text-yellow-400">Stripe Mode</p>
+                        <p className="font-mono font-medium">{data.debug.stripeMode}</p>
+                      </div>
+                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                        <p className="text-yellow-600 dark:text-yellow-400">Firebase Collection</p>
+                        <p className="font-mono font-medium">{data.debug.firebaseCollection}</p>
+                      </div>
+                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                        <p className="text-yellow-600 dark:text-yellow-400">Records</p>
+                        <p className="font-mono font-medium">{data.debug.stripeSubscriptionCount} Stripe / {data.debug.firebaseRecordCount} Firebase</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Fund Flow Model Explanation */}
             <div className="wewrite-card border">
               <div className="flex items-start gap-3">

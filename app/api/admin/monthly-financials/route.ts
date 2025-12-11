@@ -83,8 +83,18 @@ export async function GET(request: NextRequest) {
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     // Initialize Stripe
-    const stripe = new Stripe(getStripeSecretKey() || '', {
+    const stripeKey = getStripeSecretKey() || '';
+    const stripe = new Stripe(stripeKey, {
       apiVersion: '2024-06-20'
+    });
+
+    // DEBUG: Log environment info
+    const usdBalancesCollection = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
+    console.log('[MONTHLY FINANCIALS DEBUG] Environment:', {
+      nodeEnv: process.env.NODE_ENV,
+      stripeKeyPrefix: stripeKey.substring(0, 12),
+      usdBalancesCollection,
+      isDev: process.env.NODE_ENV === 'development'
     });
 
     // ========================================
@@ -114,10 +124,29 @@ export async function GET(request: NextRequest) {
       const balancesRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
       const balancesSnapshot = await balancesRef.get();
 
+      // Also get users collection to look up stripeCustomerId
+      const usersCollectionName = await getCollectionNameAsync('users');
+      const usersRef = db.collection(usersCollectionName);
+
       // Build a map of Stripe customer ID to allocation data
+      // Try USD_BALANCES.stripeCustomerId first, then fall back to users collection
       for (const doc of balancesSnapshot.docs) {
         const data = doc.data();
-        const stripeCustomerId = data.stripeCustomerId;
+        const userId = doc.id;
+        let stripeCustomerId = data.stripeCustomerId;
+
+        // If stripeCustomerId not in USD_BALANCES, look it up in users collection
+        if (!stripeCustomerId) {
+          try {
+            const userDoc = await usersRef.doc(userId).get();
+            if (userDoc.exists) {
+              stripeCustomerId = userDoc.data()?.stripeCustomerId;
+            }
+          } catch (err) {
+            console.warn(`[MONTHLY FINANCIALS] Could not fetch user doc for ${userId}:`, err);
+          }
+        }
+
         if (stripeCustomerId) {
           customerAllocations.set(stripeCustomerId, {
             allocatedCents: typeof data.allocatedUsdCents === 'number' ? data.allocatedUsdCents : 0,
@@ -339,9 +368,27 @@ export async function GET(request: NextRequest) {
     const balancesCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
     const allBalancesSnapshot = await db.collection(balancesCollectionName).get();
 
+    // Re-use the usersRef from earlier for looking up stripeCustomerId
+    const reconUsersCollectionName = await getCollectionNameAsync('users');
+    const reconUsersRef = db.collection(reconUsersCollectionName);
+
     for (const doc of allBalancesSnapshot.docs) {
       const data = doc.data();
-      const stripeCustomerId = data.stripeCustomerId;
+      const userId = doc.id;
+      let stripeCustomerId = data.stripeCustomerId;
+
+      // If stripeCustomerId not in USD_BALANCES, look it up in users collection
+      if (!stripeCustomerId) {
+        try {
+          const userDoc = await reconUsersRef.doc(userId).get();
+          if (userDoc.exists) {
+            stripeCustomerId = userDoc.data()?.stripeCustomerId;
+          }
+        } catch (err) {
+          console.warn(`[MONTHLY FINANCIALS] Recon: Could not fetch user doc for ${userId}:`, err);
+        }
+      }
+
       if (stripeCustomerId) {
         firebaseBalanceMap.set(stripeCustomerId, {
           docId: doc.id,
@@ -501,6 +548,14 @@ export async function GET(request: NextRequest) {
         platformFeeRate: 0.07,
         fundFlowModel: 'monthly_bulk_processing',
         description: 'Subscription revenue from Stripe. Allocations tracked in Firebase. Bulk transfer to Storage Balance at month-end for payouts. Unallocated funds become platform revenue.'
+      },
+      // DEBUG: Include environment info in response
+      debug: {
+        environment: process.env.NODE_ENV,
+        stripeMode: stripeKey.startsWith('sk_test') ? 'TEST' : stripeKey.startsWith('sk_live') ? 'LIVE' : 'UNKNOWN',
+        firebaseCollection: usdBalancesCollection,
+        stripeSubscriptionCount: stripeSubscriptionData.totalActiveSubscriptions,
+        firebaseRecordCount: firebaseData.usersWithBalances
       }
     });
 
