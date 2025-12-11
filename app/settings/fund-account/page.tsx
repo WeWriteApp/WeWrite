@@ -53,37 +53,44 @@ export default function FundAccountPage() {
         const response = await fetch('/api/account-subscription');
         if (response.ok) {
           const data = await response.json();
+          // Get subscription amount - try multiple sources for compatibility
+          let amount = 0;
+
+          // First try the direct amount field (our current data structure)
+          if (data.fullData?.amount) {
+            amount = data.fullData.amount;
+          }
+          // Fallback to Stripe price data format if available
+          else if (data.fullData?.items?.data?.[0]?.price?.unit_amount) {
+            amount = data.fullData.items.data[0].price.unit_amount / 100;
+          }
+          // Fallback to API response amount field
+          else if (data.amount) {
+            amount = data.amount;
+          }
+
+          console.log('[Fund Account] Subscription data:', {
+            hasSubscription: data.hasSubscription,
+            status: data.status,
+            amount: amount,
+            fullDataAmount: data.fullData?.amount,
+            apiAmount: data.amount,
+            stripeAmount: data.fullData?.items?.data?.[0]?.price?.unit_amount
+          });
+
           if (data.hasSubscription && data.fullData) {
-            // Get subscription amount - try multiple sources for compatibility
-            let amount = 0;
-
-            // First try the direct amount field (our current data structure)
-            if (data.fullData.amount) {
-              amount = data.fullData.amount;
-            }
-            // Fallback to Stripe price data format if available
-            else if (data.fullData.items?.data?.[0]?.price?.unit_amount) {
-              amount = data.fullData.items.data[0].price.unit_amount / 100;
-            }
-            // Fallback to API response amount field
-            else if (data.amount) {
-              amount = data.amount;
-            }
-
-            console.log('[Fund Account] Subscription data:', {
-              hasSubscription: data.hasSubscription,
-              amount: amount,
-              fullDataAmount: data.fullData.amount,
-              apiAmount: data.amount,
-              stripeAmount: data.fullData.items?.data?.[0]?.price?.unit_amount
-            });
-
+            // Active subscription - use current amount
             setCurrentSubscription({
               ...data.fullData,
               amount: amount
             });
             setSelectedAmount(amount);
+          } else if (amount > 0) {
+            // Cancelled/inactive subscription with previous amount - default slider to previous amount
+            setCurrentSubscription(data.fullData || null);
+            setSelectedAmount(amount);
           } else {
+            // No previous subscription at all
             setCurrentSubscription(null);
             setSelectedAmount(10); // Default to $10 instead of $0
           }

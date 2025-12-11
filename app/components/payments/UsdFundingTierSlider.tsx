@@ -10,6 +10,7 @@ import { formatUsdCents, dollarsToCents, parseDollarInputToCents } from '../../u
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import Link from 'next/link';
 import { SubscriptionCheckoutDrawer } from './SubscriptionCheckoutDrawer';
 
@@ -56,6 +57,7 @@ export default function UsdFundingTierSlider({
 }: UsdFundingTierSliderProps) {
   const { user } = useAuth();
   const { usdBalance, refreshUsdBalance } = useUsdBalance();
+  const { hasActiveSubscription } = useSubscription();
   const [sliderNodes, setSliderNodes] = useState(INITIAL_NODES);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
@@ -168,7 +170,7 @@ export default function UsdFundingTierSlider({
             <UsernameBadge
               userId={user.uid}
               username={user.username}
-              subscriptionStatus={selectedAmount > 0 ? 'active' : 'inactive'}
+              subscriptionStatus={hasActiveSubscription ? 'active' : 'inactive'}
               subscriptionAmount={selectedAmount}
               size="md"
               showBadge={true}
@@ -470,6 +472,13 @@ export default function UsdFundingTierSlider({
               <Link href="/settings/fund-account/cancel">
                 Cancel Subscription
               </Link>
+            </Button>
+          ) : !hasActiveSubscription ? (
+            <Button
+              onClick={() => setCheckoutDrawerOpen(true)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              Re-activate Subscription at ${selectedAmount}/month
             </Button>
           ) : (
             <Button

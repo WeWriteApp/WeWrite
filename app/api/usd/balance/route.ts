@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { ServerUsdService } from '../../../services/usdService.server';
+import { getUserSubscriptionServer } from '../../../firebase/subscription-server';
 
 /**
  * GET /api/usd/balance
  * Get user's current USD balance and allocation summary
+ *
+ * IMPORTANT: When subscription is cancelled/inactive, totalUsdCents is set to 0
+ * to reflect that the user has no active funding, even if they have stale balance data.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +22,15 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`🎯 USD Balance API: Getting balance for user ${userId}`);
+
+    // CRITICAL: Check subscription status first (uses Stripe as source of truth)
+    const subscription = await getUserSubscriptionServer(userId);
+    const isSubscriptionActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+
+    console.log(`🎯 USD Balance API: Subscription status for ${userId}:`, {
+      status: subscription?.status,
+      isActive: isSubscriptionActive
+    });
 
     // Get USD balance (fast path - no heavy operations)
     const balance = await ServerUsdService.getUserUsdBalance(userId);
@@ -41,8 +54,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // CRITICAL FIX: If subscription is not active, set totalUsdCents to 0
+    // This ensures cancelled/failed subscriptions show $0 budget with overspending
+    let effectiveTotalUsdCents = balance.totalUsdCents;
+    if (!isSubscriptionActive) {
+      console.log(`🎯 USD Balance API: Subscription not active, setting totalUsdCents to 0 (was ${balance.totalUsdCents})`);
+      effectiveTotalUsdCents = 0;
+    }
+
     // Fast path: Use existing balance without heavy sync operations
-    let finalBalance = balance;
+    let finalBalance = {
+      ...balance,
+      totalUsdCents: effectiveTotalUsdCents,
+      availableUsdCents: effectiveTotalUsdCents - balance.allocatedUsdCents
+    };
 
     // Get current allocations (fast path - only essential data)
     const allocations = await ServerUsdService.getUserUsdAllocations(userId);
@@ -55,14 +80,17 @@ export async function GET(request: NextRequest) {
         allocatedUsdCents: finalBalance.allocatedUsdCents,
         availableUsdCents: finalBalance.availableUsdCents,
         allocationCount: allocations.length
-      }
+      },
+      // Include subscription status for UI to use
+      subscriptionActive: isSubscriptionActive
     };
 
     console.log(`🎯 USD Balance API: Returning response:`, {
       totalUsdCents: finalBalance.totalUsdCents,
       allocatedUsdCents: finalBalance.allocatedUsdCents,
       availableUsdCents: finalBalance.availableUsdCents,
-      allocationCount: allocations.length
+      allocationCount: allocations.length,
+      subscriptionActive: isSubscriptionActive
     });
 
     return NextResponse.json(response);
