@@ -12,12 +12,13 @@ interface SparklineProps {
 }
 
 /**
- * A standardized sparkline component for WeWrite
+ * A standardized sparkline bar chart component for WeWrite
+ * Renders bars instead of a line - accent colored for values, neutral for zeros
  */
 export function Sparkline({
   data = [],
   height = 40,
-  color = "hsl(var(--primary))",
+  color = "hsl(var(--accent))",
   strokeWidth = 1.5,
   fillOpacity = 0.1,
   className = ""
@@ -28,51 +29,41 @@ export function Sparkline({
 
   // Filter out any NaN or undefined values
   const cleanData = data.map(val => (isNaN(val) || val === undefined) ? 0 : val);
-  
+
   const maxValue = Math.max(...cleanData, 1); // Ensure we don't divide by zero
   const width = 100; // Use percentage for responsive width
   const paddingTop = 2;
-  const paddingBottom = 4; // Extra padding at bottom to avoid baseline appearing as a line
+  const paddingBottom = 2;
   const graphHeight = height - paddingTop - paddingBottom;
 
-  // Generate points for the polyline
-  const points = cleanData.map((value, index) => {
-    const x = (index / (cleanData.length - 1)) * width;
-    const y = graphHeight - ((value / maxValue) * graphHeight) + paddingTop;
-    return `${x},${y}`;
-  }).join(' ');
-
-  // Generate points for the area under the line - don't extend to full height
-  const bottomY = height - paddingBottom; // Stop before the bottom edge
-  const areaPoints = [
-    `0,${bottomY}`, // Bottom left
-    ...cleanData.map((value, index) => {
-      const x = (index / (cleanData.length - 1)) * width;
-      const y = graphHeight - ((value / maxValue) * graphHeight) + paddingTop;
-      return `${x},${y}`;
-    }),
-    `${width},${bottomY}` // Bottom right
-  ].join(' ');
+  // Calculate bar dimensions
+  const barCount = cleanData.length;
+  const gap = 1; // Gap between bars in viewBox units
+  const totalGapWidth = gap * (barCount - 1);
+  const barWidth = (width - totalGapWidth) / barCount;
 
   return (
     <div className={`w-full ${className}`} style={{ height: `${height}px` }}>
       <svg width="100%" height={height} preserveAspectRatio="none" viewBox={`0 0 ${width} ${height}`}>
-        {/* Area under the line */}
-        <polygon
-          points={areaPoints}
-          fill={color}
-          fillOpacity={fillOpacity}
-        />
+        {cleanData.map((value, index) => {
+          const x = index * (barWidth + gap);
+          const barHeight = value > 0 ? (value / maxValue) * graphHeight : 2; // Min height of 2 for zero values
+          const y = height - paddingBottom - barHeight;
+          const isZero = value === 0;
 
-        {/* The line itself */}
-        <polyline
-          points={points}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+          return (
+            <rect
+              key={index}
+              x={x}
+              y={y}
+              width={barWidth}
+              height={barHeight}
+              rx={1}
+              ry={1}
+              fill={isZero ? "var(--neutral-alpha-15)" : "hsl(var(--accent))"}
+            />
+          );
+        })}
       </svg>
     </div>
   );

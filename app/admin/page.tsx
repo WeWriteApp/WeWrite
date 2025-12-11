@@ -20,7 +20,6 @@ import Link from 'next/link';
 // UserManagement import removed - users tab deleted
 
 import { isAdmin } from '../utils/isAdmin';
-import { FloatingHeader } from '../components/ui/FloatingCard';
 import { Flag } from 'lucide-react';
 
 interface User {
@@ -253,7 +252,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-5xl">
-      <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
+      <header className="border-b bg-background px-4 py-3 mb-6 flex items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
         <div>
           <h1 className="text-3xl font-bold leading-tight">Admin Panel</h1>
           <p className="text-muted-foreground">
@@ -268,10 +267,10 @@ export default function AdminPage() {
         >
           <X className="h-5 w-5" />
         </Button>
-      </FloatingHeader>
+      </header>
 
       {/* Simplified admin interface - no tabs needed */}
-      <div className="space-y-6 pt-24 lg:pt-0">
+      <div className="space-y-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-2">Admin Tools</h2>
           <p className="text-muted-foreground">Administrative dashboard and testing utilities</p>
@@ -390,25 +389,46 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Email Banner Testing */}
+            {/* Email Not Verified Testing */}
             <div
               className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors cursor-pointer text-left w-full"
-              onClick={() => setShowUnverifiedEmailBanner(!showUnverifiedEmailBanner)}
+              onClick={() => {
+                const newValue = !showUnverifiedEmailBanner;
+                setShowUnverifiedEmailBanner(newValue);
+                // Clear dismissal flag when turning on so blocking screen shows first
+                if (newValue && typeof window !== 'undefined') {
+                  localStorage.removeItem('wewrite_email_verification_dismissed');
+                }
+              }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && setShowUnverifiedEmailBanner(!showUnverifiedEmailBanner)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const newValue = !showUnverifiedEmailBanner;
+                  setShowUnverifiedEmailBanner(newValue);
+                  if (newValue && typeof window !== 'undefined') {
+                    localStorage.removeItem('wewrite_email_verification_dismissed');
+                  }
+                }
+              }}
             >
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Email Banner Testing</h3>
+                <h3 className="font-medium">Email Not Verified</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
-                Control unverified email banner visibility for testing. When enabled, the banner will show even for verified users. Navigate away from admin to see the banner.
+                Simulate unverified email state. When enabled, shows the blocking "Verify Your Email" screen first. Click "Do this later" to dismiss and see the email banner instead. Navigate to home page to test.
               </span>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Show unverified email banner</span>
+                <span className="text-sm font-medium">Simulate unverified email</span>
                 <Switch
                   checked={showUnverifiedEmailBanner}
-                  onCheckedChange={setShowUnverifiedEmailBanner}
+                  onCheckedChange={(checked) => {
+                    setShowUnverifiedEmailBanner(checked);
+                    // Clear dismissal flag when turning on so blocking screen shows first
+                    if (checked && typeof window !== 'undefined') {
+                      localStorage.removeItem('wewrite_email_verification_dismissed');
+                    }
+                  }}
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>

@@ -19,7 +19,8 @@ import HowItWorksSection from './HowItWorksSection';
 import FeaturesCarousel from './FeaturesCarousel';
 
 import { LandingColorProvider } from './LandingColorContext';
-import { LandingBlobs } from './LandingBlobs';
+// LandingBlobs is now rendered globally via GlobalLandingBlobs in root layout
+// This ensures blobs persist across page transitions between landing and auth pages
 import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
@@ -222,8 +223,7 @@ const LandingPage = () => {
   return (
     <LandingColorProvider>
     <div className="landing-page-root min-h-screen bg-background dark:bg-background">
-      {/* Animated Background Blobs - GPU-accelerated, changes color with scroll */}
-      <LandingBlobs />
+      {/* Background blobs are now rendered globally via GlobalLandingBlobs for persistence */}
 
       {/* Desktop Navigation */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'}`}>

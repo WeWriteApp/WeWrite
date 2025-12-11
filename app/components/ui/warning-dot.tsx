@@ -9,7 +9,7 @@ interface WarningDotProps {
   /** Size of the warning dot */
   size?: 'sm' | 'md' | 'lg';
   /** Color variant of the warning dot */
-  variant?: 'warning' | 'error' | 'critical';
+  variant?: 'warning' | 'error' | 'critical' | 'info';
   /** Additional CSS classes */
   className?: string;
   /** Position relative to parent element */
@@ -55,7 +55,8 @@ export function WarningDot({
   const variantClasses = {
     warning: 'bg-orange-500 border-orange-600',
     error: 'bg-red-500 border-red-600',
-    critical: 'bg-destructive border-destructive'
+    critical: 'bg-destructive border-destructive',
+    info: 'bg-primary border-primary'
   };
 
   // Position classes

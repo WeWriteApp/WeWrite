@@ -299,9 +299,9 @@ export function RegisterForm({
           console.warn('[Register] Auth refresh warning (non-blocking):', refreshError)
         }
 
-        // Navigate to home page after a short delay
+        // Navigate to email verification pending page after a short delay
         setTimeout(() => {
-          router.push('/')
+          router.push('/auth/verify-email-pending')
         }, 500)
 
       } else {

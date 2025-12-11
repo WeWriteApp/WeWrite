@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, BarChart, Bar, ComposedChart, AreaChart, Area } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
 import { TrendingUp, TrendingDown, Users, FileText, Share2, Edit3, DollarSign, Smartphone, Eye } from 'lucide-react';
 
 // Safe tooltip component that handles malformed data
@@ -251,16 +251,16 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <ComposedChart data={data}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis 
+            <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
               className="text-xs"
               tick={{ fontSize: 10 }}
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
               className="text-xs"
@@ -268,10 +268,9 @@ export function DesktopOptimizedDashboard({
               width={40}
             />
             <Tooltip content={<SafeTooltip />} />
-            <Bar dataKey="charactersAdded" stackId="changes" fill="#10b981" />
-            <Bar dataKey="charactersDeleted" stackId="changes" fill="#ef4444" />
-            <Bar dataKey="netChange" fill="#f59e0b" />
-          </ComposedChart>
+            <Bar dataKey="charactersAdded" stackId="changes" fill="#10b981" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="charactersDeleted" stackId="changes" fill="#ef4444" radius={[0, 0, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       )
     },
@@ -287,16 +286,16 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <AreaChart data={data}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis 
+            <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
               className="text-xs"
               tick={{ fontSize: 10 }}
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
               className="text-xs"
@@ -304,23 +303,19 @@ export function DesktopOptimizedDashboard({
               width={40}
             />
             <Tooltip content={<SafeTooltip />} />
-            <Area
-              type="monotone" 
-              dataKey="successful" 
+            <Bar
+              dataKey="successful"
               stackId="1"
-              stroke="#8b5cf6" 
               fill="#8b5cf6"
-              fillOpacity={0.6}
+              radius={[2, 2, 0, 0]}
             />
-            <Area 
-              type="monotone" 
-              dataKey="aborted" 
+            <Bar
+              dataKey="aborted"
               stackId="1"
-              stroke="#ef4444" 
               fill="#ef4444"
-              fillOpacity={0.3}
+              radius={[0, 0, 0, 0]}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       )
     },
@@ -374,16 +369,16 @@ export function DesktopOptimizedDashboard({
       },
       chartComponent: ({ data, height }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <AreaChart data={data}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis 
+            <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
               className="text-xs"
               tick={{ fontSize: 10 }}
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
               className="text-xs"
@@ -391,14 +386,12 @@ export function DesktopOptimizedDashboard({
               width={40}
             />
             <Tooltip content={<SafeTooltip />} />
-            <Area
-              type="monotone" 
-              dataKey="total" 
-              stroke="#84cc16" 
+            <Bar
+              dataKey="total"
               fill="#84cc16"
-              fillOpacity={0.6}
+              radius={[2, 2, 0, 0]}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       )
     },
@@ -437,15 +430,7 @@ export function DesktopOptimizedDashboard({
               width={50}
               tickFormatter={(value) => `$${value}`}
             />
-            <Tooltip
-              formatter={(value: number) => [
-                new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: 'USD'
-                }).format(value),
-                'Revenue'
-              ]}
-            />
+            <Tooltip content={<SafeTooltip />} />
             <Bar
               dataKey="revenue"
               fill="#10b981"
@@ -483,12 +468,7 @@ export function DesktopOptimizedDashboard({
               tick={{ fontSize: 10 }}
               width={40}
             />
-            <Tooltip
-              labelFormatter={(label) => `Date: ${label}`}
-              formatter={[
-                (value: number) => [value.toLocaleString(), 'User Follows']
-              ]}
-            />
+            <Tooltip content={<SafeTooltip />} />
             <Bar
               dataKey="count"
               fill="#8b5cf6"
@@ -504,8 +484,7 @@ export function DesktopOptimizedDashboard({
       icon: <DollarSign className="h-5 w-5" />,
       color: '#059669',
       hook: (dateRange: DateRange, granularity: number, globalFilters?: any) => {
-        const cumulative = globalFilters?.timeDisplayMode === 'cumulative';
-        return usePayoutAnalytics(dateRange, cumulative);
+        return usePayoutAnalytics(dateRange, false);
       },
       valueFormatter: (data, stats, metadata) => {
         const totalPayouts = metadata?.totalPayouts || 0;
@@ -516,77 +495,34 @@ export function DesktopOptimizedDashboard({
           maximumFractionDigits: 0
         }).format(totalPayouts);
       },
-      chartComponent: ({ data, height, globalFilters }) => {
-        const cumulative = globalFilters?.timeDisplayMode === 'cumulative';
-
-        if (cumulative) {
-          return (
-            <ResponsiveContainer width="100%" height={height}>
-              <AreaChart data={data}>
-                <defs>
-                  <linearGradient id="payoutGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#059669" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  className="text-xs"
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  className="text-xs"
-                  tick={{ fontSize: 10 }}
-                  width={60}
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
-                />
-                <Tooltip content={<SafeTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="payouts"
-                  stroke="#059669"
-                  fill="url(#payoutGradient)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          );
-        } else {
-          return (
-            <ResponsiveContainer width="100%" height={height}>
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  className="text-xs"
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  className="text-xs"
-                  tick={{ fontSize: 10 }}
-                  width={60}
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
-                />
-                <Tooltip content={<SafeTooltip />} />
-                <Bar
-                  dataKey="payouts"
-                  fill="#059669"
-                  radius={[2, 2, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          );
-        }
-      }
+      chartComponent: ({ data, height }) => (
+        <ResponsiveContainer width="100%" height={height}>
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              className="text-xs"
+              tick={{ fontSize: 10 }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              className="text-xs"
+              tick={{ fontSize: 10 }}
+              width={60}
+              tickFormatter={(value) => `$${value.toLocaleString()}`}
+            />
+            <Tooltip content={<SafeTooltip />} />
+            <Bar
+              dataKey="payouts"
+              fill="#059669"
+              radius={[2, 2, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      )
     }
   ];
 

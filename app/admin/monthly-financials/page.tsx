@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info } from 'lucide-react';
+import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { formatUsdCents } from '../../utils/formatCurrency';
 
@@ -21,6 +21,31 @@ interface MonthlyFinancialData {
   status: 'in_progress' | 'processed' | 'pending';
 }
 
+interface StripeSubscriptionData {
+  totalActiveSubscriptions: number;
+  totalMRRCents: number;
+  subscriptionBreakdown: {
+    amount: number;
+    count: number;
+  }[];
+}
+
+interface ReconciliationData {
+  stripeSubscriptionsCents: number;
+  firebaseRecordedCents: number;
+  discrepancyCents: number;
+  stripeSubscriberCount: number;
+  firebaseUserCount: number;
+  userCountDiscrepancy: number;
+  isInSync: boolean;
+}
+
+interface DataSources {
+  subscriptionRevenue: string;
+  allocations: string;
+  historicalData: string;
+}
+
 interface FinancialsResponse {
   success: boolean;
   currentMonth: {
@@ -35,6 +60,9 @@ interface FinancialsResponse {
     totalCents: number;
     lastUpdated: string;
   } | null;
+  stripeSubscriptions: StripeSubscriptionData;
+  reconciliation: ReconciliationData;
+  dataSources: DataSources;
   totals: {
     totalSubscriptionCents: number;
     totalAllocatedCents: number;
@@ -255,6 +283,128 @@ export default function MonthlyFinancialsPage() {
                   <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total</p>
                     <p className="text-2xl font-bold">{formatUsdCents(data.stripeBalance.totalCents)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Stripe Subscriptions Breakdown */}
+            {data.stripeSubscriptions && (
+              <div className="wewrite-card">
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-bold">Active Subscriptions (from Stripe)</h2>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                    Source of Truth
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Active Subscribers</p>
+                    <p className="text-2xl font-bold">{data.stripeSubscriptions.totalActiveSubscriptions}</p>
+                  </div>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Monthly Recurring Revenue</p>
+                    <p className="text-2xl font-bold">{formatUsdCents(data.stripeSubscriptions.totalMRRCents)}</p>
+                  </div>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Avg per Subscriber</p>
+                    <p className="text-2xl font-bold">
+                      {data.stripeSubscriptions.totalActiveSubscriptions > 0
+                        ? formatUsdCents(Math.round(data.stripeSubscriptions.totalMRRCents / data.stripeSubscriptions.totalActiveSubscriptions))
+                        : '$0'}
+                    </p>
+                  </div>
+                </div>
+
+                {data.stripeSubscriptions.subscriptionBreakdown.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Breakdown by Plan</h3>
+                    <div className="space-y-2">
+                      {data.stripeSubscriptions.subscriptionBreakdown.map((tier) => (
+                        <div key={tier.amount} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                          <span className="font-medium">{formatUsdCents(tier.amount)}/mo</span>
+                          <span className="text-muted-foreground">{tier.count} subscriber{tier.count !== 1 ? 's' : ''}</span>
+                          <span className="font-medium">{formatUsdCents(tier.amount * tier.count)} total</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Data Reconciliation Status */}
+            {data.reconciliation && (
+              <div className={`wewrite-card ${data.reconciliation.isInSync
+                ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'
+                : 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800'}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  {data.reconciliation.isInSync ? (
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  )}
+                  <h2 className="text-xl font-bold">Data Reconciliation</h2>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${data.reconciliation.isInSync
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'}`}>
+                    {data.reconciliation.isInSync ? 'In Sync' : 'Discrepancy Detected'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Stripe Subscriptions</p>
+                    <p className="text-xl font-bold">{formatUsdCents(data.reconciliation.stripeSubscriptionsCents)}</p>
+                    <p className="text-xs text-muted-foreground">{data.reconciliation.stripeSubscriberCount} subscribers</p>
+                  </div>
+                  <div className="p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Firebase Recorded</p>
+                    <p className="text-xl font-bold">{formatUsdCents(data.reconciliation.firebaseRecordedCents)}</p>
+                    <p className="text-xs text-muted-foreground">{data.reconciliation.firebaseUserCount} users</p>
+                  </div>
+                  <div className="p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Discrepancy</p>
+                    <p className={`text-xl font-bold ${data.reconciliation.discrepancyCents !== 0 ? 'text-orange-600' : ''}`}>
+                      {data.reconciliation.discrepancyCents >= 0 ? '+' : ''}{formatUsdCents(data.reconciliation.discrepancyCents)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {data.reconciliation.userCountDiscrepancy >= 0 ? '+' : ''}{data.reconciliation.userCountDiscrepancy} users
+                    </p>
+                  </div>
+                </div>
+
+                {!data.reconciliation.isInSync && (
+                  <p className="text-sm text-orange-700 dark:text-orange-300 mt-3">
+                    Firebase records may not match Stripe due to: new subscriptions not yet synced, cancelled subscriptions,
+                    or subscription amount changes. Stripe is the source of truth for revenue calculations.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Data Sources */}
+            {data.dataSources && (
+              <div className="wewrite-card">
+                <div className="flex items-center gap-2 mb-4">
+                  <Database className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-bold">Data Sources</h2>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-3 p-2 bg-muted/30 rounded">
+                    <span className="font-medium min-w-[140px]">Subscription Revenue:</span>
+                    <span className="text-muted-foreground">{data.dataSources.subscriptionRevenue}</span>
+                  </div>
+                  <div className="flex items-start gap-3 p-2 bg-muted/30 rounded">
+                    <span className="font-medium min-w-[140px]">Allocations:</span>
+                    <span className="text-muted-foreground">{data.dataSources.allocations}</span>
+                  </div>
+                  <div className="flex items-start gap-3 p-2 bg-muted/30 rounded">
+                    <span className="font-medium min-w-[140px]">Historical Data:</span>
+                    <span className="text-muted-foreground">{data.dataSources.historicalData}</span>
                   </div>
                 </div>
               </div>

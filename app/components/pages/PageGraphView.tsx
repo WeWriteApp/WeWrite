@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Maximize2, X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2, Loader2 } from 'lucide-react';
+import { X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2, Loader2, Share2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
@@ -11,6 +11,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import SubscriptionGate from '../subscription/SubscriptionGate';
 import { PillLink } from '../utils/PillLink';
 import { useTheme } from '../../providers/ThemeProvider';
+import { Drawer, DrawerContent, DrawerClose } from '../ui/drawer';
 
 // Dynamically import 3D graph component (WebGL requires client-side only)
 const PageGraph3D = dynamic(() => import('./PageGraph3D'), {
@@ -389,14 +390,39 @@ export default function PageGraphView({
     setLinks(allLinks);
   }, [pageId, pageTitle, loading, relatedLoading, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length, thirdHopConnections.length, relatedPages.length]);
 
+  // Share the graph view URL - must be defined before any early returns
+  const handleShare = useCallback(async () => {
+    const graphUrl = `${window.location.origin}/${pageId}#graph`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Graph view: ${pageTitle}`,
+          url: graphUrl,
+        });
+      } catch {
+        // User cancelled or share failed, fall back to clipboard
+        await navigator.clipboard.writeText(graphUrl);
+      }
+    } else {
+      await navigator.clipboard.writeText(graphUrl);
+    }
+  }, [pageId, pageTitle]);
+
   if (loading || relatedLoading) {
     return (
       <div className={className}>
-        <LoadingState
-          variant="spinner"
-          message="Loading page connections..."
-          minHeight="h-64"
-        />
+        <div className="wewrite-card">
+          <div className="flex items-center gap-2 mb-4">
+            <Network className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">Graph view</h3>
+          </div>
+          <LoadingState
+            variant="spinner"
+            message="Loading page connections..."
+            minHeight="h-64"
+          />
+        </div>
       </div>
     );
   }
@@ -417,36 +443,50 @@ export default function PageGraphView({
   // Compute theme-aware colors for fullscreen
   const fullscreenBgColor = isDarkMode ? '#000000' : '#ffffff';
 
-  if (isFullscreen) {
-    return (
-      <div
-        className="fixed inset-0 z-[9999] animate-in fade-in-0 duration-300 text-foreground"
-        style={{
-          touchAction: 'manipulation',
-          pointerEvents: 'auto',
-          backgroundColor: fullscreenBgColor,
-        }}
+  // Fullscreen mode rendered as a drawer
+  const fullscreenDrawer = (
+    <Drawer
+      open={isFullscreen}
+      onOpenChange={setIsFullscreen}
+      hashId="graph"
+      analyticsId="graph_view"
+    >
+      <DrawerContent
+        height="calc(100dvh - 40px)"
+        showOverlay={true}
+        className="!rounded-t-3xl"
       >
-        {/* Solid background layer with computed color to ensure opacity */}
-        <div className="absolute inset-0" style={{ backgroundColor: fullscreenBgColor, zIndex: -1 }} />
         {/* Header with controls */}
-        <div className="absolute top-0 left-0 right-0 z-20 bg-background border-b border-border p-4 shadow-sm">
-          {/* Top row: Title and controls */}
-          <div className="flex items-center justify-between mb-3">
+        <div className="px-4 pb-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Graph view</h3>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsFullscreen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="text-muted-foreground hover:text-foreground"
+                title="Share graph view"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <DrawerClose asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </div>
           </div>
-
         </div>
 
         {/* Graph container */}
-        <div className="absolute inset-0 pt-16">
+        <div
+          className="flex-1 min-h-0"
+          style={{ backgroundColor: fullscreenBgColor }}
+        >
           <SubscriptionGate
             featureName="graph"
             className="h-full"
@@ -460,46 +500,47 @@ export default function PageGraphView({
             />
           </SubscriptionGate>
         </div>
-      </div>
-    );
-  }
+      </DrawerContent>
+    </Drawer>
+  );
 
   return (
-    <div className={`${className} animate-in fade-in-0 duration-300`}>
-      <div className="wewrite-card transition-all duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Network className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium">Graph view</h3>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsFullscreen(true)}
-            className="transition-all duration-200 hover:scale-105"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-        </div>
+    <>
+      {/* Fullscreen Drawer */}
+      {fullscreenDrawer}
 
-        {/* Graph container - preview mode with auto-rotation */}
-        <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
-          <div className="h-96 transition-all duration-300">
-            <PageGraph3D
-              nodes={nodes}
-              links={links}
-              pageId={pageId}
-              isFullscreen={false}
-              height={384}
-              isPreview={true}
-            />
+      <div className={`${className} animate-in fade-in-0 duration-300`}>
+        <button
+          onClick={() => setIsFullscreen(true)}
+          className="wewrite-card transition-all duration-200 cursor-pointer hover:shadow-md w-full text-left"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Network className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium">Graph view</h3>
+            </div>
+            <span className="text-xs text-muted-foreground">Tap to view interactive graph</span>
           </div>
-        </SubscriptionGate>
+
+          {/* Graph container - preview mode with auto-rotation */}
+          <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
+            <div className="h-96 transition-all duration-300 pointer-events-none">
+              <PageGraph3D
+                nodes={nodes}
+                links={links}
+                pageId={pageId}
+                isFullscreen={false}
+                height={384}
+                isPreview={true}
+              />
+            </div>
+          </SubscriptionGate>
+        </button>
 
         {/* Page List - as pills with sorting */}
         {pageLinkStats.length > 1 && (
-          <div className="mt-4 pt-4 border-t border-border">
+          <div className="wewrite-card mt-4">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -583,6 +624,6 @@ export default function PageGraphView({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

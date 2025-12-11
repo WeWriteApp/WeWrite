@@ -3,7 +3,6 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { ChevronLeft, X } from 'lucide-react';
-import { FloatingHeader } from '../ui/FloatingCard';
 
 interface SettingsHeaderProps {
   title?: string;
@@ -16,7 +15,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
   // Get the page title based on the current path
   const getPageTitle = () => {
     if (title) return title;
-    
+
     switch (pathname) {
       case '/settings':
         return 'Settings';
@@ -44,12 +43,8 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
 
   return (
     <>
-      {/* Mobile Header - Always visible on mobile */}
-      <FloatingHeader
-        className="lg:hidden fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-50 px-4 py-3 flex items-center justify-between"
-        noShadowAtTop
-        data-component="main-header"
-      >
+      {/* Mobile Header - Normal static header */}
+      <header className="lg:hidden border-b bg-background px-4 py-3 flex items-center justify-between">
         {/* Left: Back button */}
         <div className="flex items-center">
           {isMainSettings ? (
@@ -92,7 +87,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
             <X className="h-5 w-5" />
           </Button>
         </div>
-      </FloatingHeader>
+      </header>
 
       {/* Desktop: No header needed since we have sidebar context */}
     </>

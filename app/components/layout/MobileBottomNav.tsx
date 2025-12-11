@@ -26,6 +26,7 @@ import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
+import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { WarningDot } from '../ui/warning-dot';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 import { FloatingToolbar } from '../ui/FloatingCard';
@@ -102,6 +103,7 @@ export default function MobileBottomNav() {
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useEarnings();
   const { hasActiveSubscription } = useSubscription();
+  const emailVerificationStatus = useEmailVerificationStatus();
 
   // Navigation optimization temporarily disabled
   const shouldRender = true;
@@ -111,6 +113,10 @@ export default function MobileBottomNav() {
   const getMostCriticalSettingsStatus = () => {
     // Payments are always enabled
 
+    // Check for email verification first (info level - blinking dot to guide user)
+    // Only show if user has dismissed the modal but email is still not verified
+    const hasEmailVerificationNeeded = emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed;
+
     // Check for warnings first (most critical)
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
     // Only show bank setup warning if user has funds but bank isn't set up
@@ -118,6 +124,11 @@ export default function MobileBottomNav() {
 
     if (hasSubscriptionWarning || hasBankSetupWarning) {
       return 'warning';
+    }
+
+    // Email verification is info level (less critical than warnings)
+    if (hasEmailVerificationNeeded) {
+      return 'info';
     }
 
     // Check for success states
@@ -471,6 +482,7 @@ export default function MobileBottomNav() {
       isActive: isProfileActive,
       ariaLabel: 'Profile',
       label: 'Profile',
+      // Email verification dot moved to Settings > Profile menu item
     },
 
     'random-pages': {
@@ -848,9 +860,15 @@ export default function MobileBottomNav() {
                           isNavigating={false}
                           editMode={isToolbarEditMode}
                         >
-                          {itemId === 'settings' && criticalSettingsStatus === 'warning' && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-background"></div>
+                          {itemId === 'settings' && criticalSettingsStatus && (
+                            <WarningDot
+                              variant="warning"
+                              size="sm"
+                              position="top-right"
+                              offset={{ top: '-4px', right: '-4px' }}
+                            />
                           )}
+                          {/* Email verification dot moved to Settings > Profile menu item */}
                         </CrossComponentMobileNavButton>
                       );
                     })}
@@ -881,7 +899,7 @@ export default function MobileBottomNav() {
             ariaLabel={isExpanded ? "Close More" : "Open More"}
             label="More"
           >
-            {criticalSettingsStatus === 'warning' && (
+            {criticalSettingsStatus && (
               <WarningDot
                 variant="warning"
                 size="sm"

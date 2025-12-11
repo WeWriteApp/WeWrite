@@ -10,9 +10,9 @@ import FloatingActionButton from './FloatingActionButton';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 import FloatingFinancialHeader from './FloatingFinancialHeader';
-import VerifyEmailBanner from '../utils/VerifyEmailBanner';
 import UsernameSetupBanner from '../utils/UsernameSetupBanner';
 import PWABanner from '../utils/PWABanner';
+import EmailVerificationTopBanner from './EmailVerificationTopBanner';
 
 
 /**
@@ -34,6 +34,9 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <>
+      {/* Desktop top banner - fixed at very top, pushes all content down */}
+      <EmailVerificationTopBanner />
+
       {/* Floating elements - render outside SidebarLayout to ensure proper viewport positioning */}
       <FloatingFinancialHeader />
       <MobileBottomNavUnified />
@@ -41,8 +44,7 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
       <SidebarProvider>
         <SidebarLayout>
-          {/* Banner system - inside content flow (priority: email > username > PWA) */}
-          <VerifyEmailBanner />
+          {/* Banner system - inside content flow */}
           <UsernameSetupBanner />
           <PWABanner />
           {children}

@@ -11,6 +11,7 @@ import GlobalRecentEdits from "./GlobalRecentEdits";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
+import { EmailVerificationModal } from "../auth/EmailVerificationModal";
 
 
 
@@ -22,6 +23,51 @@ const Home: React.FC = () => {
   console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!user });
   const router = useRouter();
   // Removed recentEditsFilterState - now handled by UnifiedRecentActivity component
+
+  // State for email verification modal
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [isAdminTestingMode, setIsAdminTestingMode] = useState(false);
+
+  // Check if we should show the verification modal
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user) return;
+
+    const checkVerificationState = () => {
+      const adminOverride = localStorage.getItem('wewrite_admin_email_banner_override') === 'true';
+      const verificationDismissed = localStorage.getItem('wewrite_email_verification_dismissed') === 'true';
+
+      setIsAdminTestingMode(adminOverride);
+
+      // Show modal for real unverified users (no dismiss option)
+      if (!user.emailVerified) {
+        setShowVerificationModal(true);
+        return;
+      }
+
+      // Show modal for admin testing mode if not dismissed
+      if (adminOverride && !verificationDismissed) {
+        setShowVerificationModal(true);
+        return;
+      }
+
+      setShowVerificationModal(false);
+    };
+
+    checkVerificationState();
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      checkVerificationState();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('bannerOverrideChange', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('bannerOverrideChange', handleStorageChange);
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -67,6 +113,14 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Email verification modal - blocks access until verified */}
+      {showVerificationModal && (
+        <EmailVerificationModal
+          showDismissButton={isAdminTestingMode && user?.emailVerified}
+          onDismiss={() => setShowVerificationModal(false)}
+        />
+      )}
+
       {/* Main content area with proper sidebar spacing */}
       <main
         className="transition-all duration-300 ease-in-out"

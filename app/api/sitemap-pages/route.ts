@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50000')
+    const limit = parseInt(searchParams.get('limit') || '5000')
     const includePrivate = searchParams.get('includePrivate') === 'true'
 
     const sitemap = await generatePagesSitemap({
@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Error generating pages sitemap:', error)
-    return new NextResponse('Error generating sitemap', { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return new NextResponse(`Error generating sitemap: ${errorMessage}`, { status: 500 })
   }
 }

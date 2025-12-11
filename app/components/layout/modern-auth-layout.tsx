@@ -4,8 +4,6 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { LandingColorProvider } from "../landing/LandingColorContext";
-import { LandingBlobs } from "../landing/LandingBlobs";
 
 interface ModernAuthLayoutProps {
   children: ReactNode;
@@ -22,11 +20,10 @@ export function ModernAuthLayout({
   showLogo = true,
   showTerms = true
 }: ModernAuthLayoutProps) {
+  // Note: Blob background is now rendered globally via GlobalLandingBlobs in root layout
+  // This ensures blobs persist across page transitions between landing and auth pages
   return (
-    <LandingColorProvider>
-      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 md:p-10 bg-background relative overflow-hidden">
-        {/* Blob background */}
-        <LandingBlobs />
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 md:p-10 bg-background relative overflow-hidden">
 
         {/* Content */}
         <div className="w-full max-w-md mx-auto relative z-10">
@@ -76,6 +73,5 @@ export function ModernAuthLayout({
           )}
         </div>
       </div>
-    </LandingColorProvider>
   );
 }

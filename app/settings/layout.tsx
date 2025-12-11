@@ -33,6 +33,7 @@ import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextP
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
 import { UsdPieChart } from '../components/ui/UsdPieChart';
+import { useEmailVerificationStatus } from '../hooks/useEmailVerificationStatus';
 
 
 interface SettingsSection {
@@ -62,6 +63,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const { earnings } = useEarnings();
   const { usdBalance } = useUsdBalance();
   const payoutCountdown = useNextPayoutCountdown();
+  // Get email verification status for Profile menu item
+  const emailVerificationStatus = useEmailVerificationStatus();
 
   useEffect(() => {
     console.log('🎯 Settings Layout: Auth check', {
@@ -210,7 +213,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       {/* Settings Header - handles mobile/desktop logic */}
       <SettingsHeader />
 
-      <div className="lg:flex h-[calc(100vh-3.5rem)] pt-20 lg:pt-0">
+      <div className="lg:flex h-[calc(100vh-3.5rem)]">
         {/* Desktop Persistent Sidebar */}
         <div className="hidden lg:block lg:w-64 lg:border-r-only">
           <div className="flex flex-col h-full">
@@ -221,12 +224,16 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
 
-                  // Show warning dots only for truly problematic states
-                  // Don't show warning dots when we have status icons or when loading
-                  const showWarning = false; // No longer needed for USD system
+                  // Show warning dots for email verification on profile
+                  const showEmailVerificationWarning = section.id === 'profile' &&
+                    emailVerificationStatus.needsVerification &&
+                    emailVerificationStatus.isModalDismissed;
 
-                  // Get warning variant based on subscription status
+                  const showWarning = showEmailVerificationWarning;
+
+                  // Get warning variant - always orange for email verification
                   const getWarningVariant = () => {
+                    if (showEmailVerificationWarning) return 'warning'; // Orange
                     if (!subscriptionStatusInfo) return 'warning';
                     switch (subscriptionStatusInfo.status) {
                       case 'past_due':
@@ -320,6 +327,13 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                             );
                           }
                         })()}
+
+                        {/* Email verification indicator on Profile */}
+                        {section.id === 'profile' && emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed && (
+                          <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                            Verify email
+                          </span>
+                        )}
 
 
                       </button>

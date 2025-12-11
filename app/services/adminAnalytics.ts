@@ -1,10 +1,27 @@
 /**
  * Admin Analytics Service - Uses Firebase Admin SDK for admin dashboard
  * This service bypasses Firestore security rules and is only for admin use
+ *
+ * DATA SOURCES:
+ * - User/Page/Event data: Firebase (source of truth for content)
+ * - Subscription/Revenue data: Stripe (source of truth for payments)
  */
 
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName } from '../utils/environmentConfig';
+import Stripe from 'stripe';
+import { getStripeSecretKey } from '../utils/stripeConfig';
+
+// Initialize Stripe - lazy initialization to avoid issues during build
+let stripeInstance: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    stripeInstance = new Stripe(getStripeSecretKey() || '', {
+      apiVersion: '2024-06-20'
+    });
+  }
+  return stripeInstance;
+}
 
 // Helper function to get Firestore instance from Firebase Admin
 function getAdminFirestore() {
@@ -336,42 +353,54 @@ export class AdminAnalyticsService {
 
   /**
    * Get subscriptions created within date range
+   * SOURCE OF TRUTH: Stripe API
    */
   static async getSubscriptionsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting subscriptions created...');
+    console.log('🔍 [Admin Analytics] Getting subscriptions created from Stripe (source of truth)...');
 
     try {
-      const db = getAdminFirestore();
-      const subscriptionsRef = db.collection(getCollectionName('subscriptions'));
+      const stripe = getStripe();
 
-      // Fetch all subscriptions and filter in memory
-      const snapshot = await subscriptionsRef.limit(1000).get();
-      console.log(`✅ [Admin Analytics] Found ${snapshot.size} subscriptions`);
+      // Convert dates to Unix timestamps for Stripe API
+      const startTimestamp = Math.floor(dateRange.startDate.getTime() / 1000);
+      const endTimestamp = Math.floor(dateRange.endDate.getTime() / 1000);
+
+      // Fetch subscriptions from Stripe within date range
+      // Use created filter to get subscriptions created in the date range
+      const subscriptions: Stripe.Subscription[] = [];
+      let hasMore = true;
+      let startingAfter: string | undefined;
+
+      while (hasMore) {
+        const params: Stripe.SubscriptionListParams = {
+          limit: 100,
+          created: {
+            gte: startTimestamp,
+            lte: endTimestamp
+          }
+        };
+        if (startingAfter) {
+          params.starting_after = startingAfter;
+        }
+
+        const response = await stripe.subscriptions.list(params);
+        subscriptions.push(...response.data);
+        hasMore = response.has_more;
+        if (response.data.length > 0) {
+          startingAfter = response.data[response.data.length - 1].id;
+        }
+      }
+
+      console.log(`✅ [Admin Analytics] Found ${subscriptions.length} subscriptions from Stripe`);
 
       // Group by day
       const dailyCounts = new Map<string, number>();
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const createdAt = data.createdAt;
-
-        if (createdAt) {
-          let date: Date;
-          if (createdAt.toDate) {
-            date = createdAt.toDate();
-          } else if (typeof createdAt === 'string') {
-            date = new Date(createdAt);
-          } else {
-            return; // Skip invalid dates
-          }
-
-          // Filter by date range
-          if (date >= dateRange.startDate && date <= dateRange.endDate) {
-            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
-          }
-        }
-      });
+      for (const sub of subscriptions) {
+        const date = new Date(sub.created * 1000);
+        const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+      }
 
       // Convert to chart data
       const result: ChartDataPoint[] = [];
@@ -394,59 +423,76 @@ export class AdminAnalyticsService {
       return result;
 
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching subscriptions:', error);
+      console.error('❌ [Admin Analytics] Error fetching subscriptions from Stripe:', error);
       return [];
     }
   }
 
   /**
    * Get subscription revenue within date range (including refunds)
+   * SOURCE OF TRUTH: Stripe Charges API
    */
   static async getSubscriptionRevenue(dateRange: DateRange): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting subscription revenue...');
+    console.log('🔍 [Admin Analytics] Getting subscription revenue from Stripe (source of truth)...');
 
     try {
-      const db = getAdminFirestore();
-      const subscriptionsRef = db.collection(getCollectionName('subscriptions'));
+      const stripe = getStripe();
 
-      // Fetch all subscriptions and filter in memory
-      const snapshot = await subscriptionsRef.limit(1000).get();
-      console.log(`✅ [Admin Analytics] Found ${snapshot.size} subscriptions for revenue calculation`);
+      // Convert dates to Unix timestamps for Stripe API
+      const startTimestamp = Math.floor(dateRange.startDate.getTime() / 1000);
+      const endTimestamp = Math.floor(dateRange.endDate.getTime() / 1000);
 
       // Group by day and calculate revenue
       const dailyRevenue = new Map<string, number>();
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const createdAt = data.createdAt;
-        const amount = data.amount || 0; // Revenue amount
-        const refunded = data.refunded || false;
-        const refundAmount = data.refundAmount || 0;
+      // Fetch successful charges from Stripe within date range
+      let hasMore = true;
+      let startingAfter: string | undefined;
+      let totalCharges = 0;
 
-        if (createdAt) {
-          let date: Date;
-          if (createdAt.toDate) {
-            date = createdAt.toDate();
-          } else if (typeof createdAt === 'string') {
-            date = new Date(createdAt);
-          } else {
-            return; // Skip invalid dates
+      while (hasMore) {
+        const params: Stripe.ChargeListParams = {
+          limit: 100,
+          created: {
+            gte: startTimestamp,
+            lte: endTimestamp
           }
+        };
+        if (startingAfter) {
+          params.starting_after = startingAfter;
+        }
 
-          // Filter by date range
-          if (date >= dateRange.startDate && date <= dateRange.endDate) {
+        const response = await stripe.charges.list(params);
+
+        for (const charge of response.data) {
+          // Only count successful charges
+          if (charge.status === 'succeeded' && charge.paid) {
+            const date = new Date(charge.created * 1000);
             const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            let revenue = amount;
 
-            // Subtract refunds (making revenue negative if refunded)
-            if (refunded) {
-              revenue = -Math.abs(refundAmount || amount);
+            // Amount is in cents, convert to dollars
+            let revenue = charge.amount / 100;
+
+            // Subtract refunds
+            if (charge.refunded) {
+              revenue = -(charge.amount_refunded / 100);
+            } else if (charge.amount_refunded > 0) {
+              // Partial refund
+              revenue = (charge.amount - charge.amount_refunded) / 100;
             }
 
             dailyRevenue.set(dayKey, (dailyRevenue.get(dayKey) || 0) + revenue);
+            totalCharges++;
           }
         }
-      });
+
+        hasMore = response.has_more;
+        if (response.data.length > 0) {
+          startingAfter = response.data[response.data.length - 1].id;
+        }
+      }
+
+      console.log(`✅ [Admin Analytics] Found ${totalCharges} charges from Stripe`);
 
       // Convert to chart data
       const result: ChartDataPoint[] = [];
@@ -458,7 +504,7 @@ export class AdminAnalyticsService {
 
         result.push({
           date: dayKey,
-          count, // Revenue amount (can be negative)
+          count, // Revenue amount in dollars (can be negative for refunds)
           label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         });
 
@@ -470,7 +516,7 @@ export class AdminAnalyticsService {
       return result;
 
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching subscription revenue:', error);
+      console.error('❌ [Admin Analytics] Error fetching subscription revenue from Stripe:', error);
       return [];
     }
   }

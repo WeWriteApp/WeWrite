@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from './providers/AuthProvider';
 import { ActivityFilterProvider } from './contexts/ActivityFilterContext';
 import LandingPage from './components/landing/LandingPage';
@@ -9,9 +10,13 @@ import Home from './components/features/Home';
 
 export default function HomePage() {
   console.log('🔴 HomePage: Component rendering');
+  const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [authRedirectPending, setAuthRedirectPending] = useState(false);
+
+  // Note: Email verification modal is now shown in Home component for logged-in users
+  // Real unverified users will see the full-screen modal that blocks access
 
   useEffect(() => {
     setMounted(true);

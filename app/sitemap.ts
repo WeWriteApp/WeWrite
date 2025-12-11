@@ -35,7 +35,8 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
 
   return [
     // Homepage - highest priority

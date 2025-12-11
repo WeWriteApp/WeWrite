@@ -26,6 +26,7 @@ import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextP
 import { getAnalyticsService } from '../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 import { useUsernameStatus } from '../hooks/useUsernameStatus';
+import { useEmailVerificationStatus } from '../hooks/useEmailVerificationStatus';
 
 
 interface SettingsSection {
@@ -47,6 +48,8 @@ export default function SettingsIndexPage() {
   const payoutCountdown = useNextPayoutCountdown();
   // Get username status to show warning dot on Profile section
   const { needsUsername } = useUsernameStatus();
+  // Get email verification status to show blinking orange dot on Profile section
+  const emailVerificationStatus = useEmailVerificationStatus();
 
   // Derive subscription warning state from subscription context (respects admin testing mode)
   const shouldShowSubscriptionWarning = hasActiveSubscription === false;
@@ -195,8 +198,14 @@ export default function SettingsIndexPage() {
             // Show warning for profile section if username is needed
             const showProfileWarning = section.id === 'profile' && needsUsername;
 
-            const showWarning = showFundingWarning || showProfileWarning;
-            const warningVariantToUse = showProfileWarning ? 'warning' : 'error';
+            // Show blinking orange dot for email verification needed (after modal dismissed)
+            const showEmailVerificationWarning = section.id === 'profile' &&
+              emailVerificationStatus.needsVerification &&
+              emailVerificationStatus.isModalDismissed;
+
+            const showWarning = showFundingWarning || showProfileWarning || showEmailVerificationWarning;
+            // Use orange 'warning' variant for both username and email verification
+            const warningVariantToUse = (showProfileWarning || showEmailVerificationWarning) ? 'warning' : 'error';
 
             return (
               <div key={section.id} className="relative">
@@ -223,6 +232,12 @@ export default function SettingsIndexPage() {
                     {section.id === 'profile' && needsUsername && (
                       <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
                         Set username
+                      </span>
+                    )}
+
+                    {section.id === 'profile' && !needsUsername && emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed && (
+                      <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                        Verify email
                       </span>
                     )}
 

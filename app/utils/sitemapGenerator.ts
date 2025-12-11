@@ -17,8 +17,9 @@ interface SitemapEntry {
 }
 
 export async function generatePagesSitemap(options: SitemapOptions = {}): Promise<string> {
-  const { limit: maxPages = 50000, includePrivate = false } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+  const { limit: maxPages = 5000, includePrivate = false } = options
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
   
   try {
     const pagesRef = collection(firestore, getCollectionName('pages'))
@@ -57,7 +58,17 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
       else if (data.viewCount > 10) priority = 0.6
 
       // Determine change frequency based on last modified date
-      const lastModified = data.lastModified?.toDate() || new Date()
+      // Handle both Firestore Timestamp and plain Date/number
+      let lastModified: Date
+      if (data.lastModified?.toDate) {
+        lastModified = data.lastModified.toDate()
+      } else if (data.lastModified instanceof Date) {
+        lastModified = data.lastModified
+      } else if (typeof data.lastModified === 'number') {
+        lastModified = new Date(data.lastModified)
+      } else {
+        lastModified = new Date()
+      }
       const daysSinceModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60 * 24)
       
       let changeFrequency: SitemapEntry['changeFrequency'] = 'monthly'
@@ -89,13 +100,15 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
 
   } catch (error) {
     console.error('Error generating pages sitemap:', error)
+    console.error('Collection name:', getCollectionName('pages'))
     throw error
   }
 }
 
 export async function generateUsersSitemap(options: SitemapOptions = {}): Promise<string> {
   const { limit: maxUsers = 10000 } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
   
   try {
     const usersRef = collection(firestore, getCollectionName('users'))
@@ -160,7 +173,8 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
 
 export async function generateGroupsSitemap(options: SitemapOptions = {}): Promise<string> {
   const { limit: maxGroups = 5000 } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
   
   try {
     // Query public groups from RTDB (not Firestore)
@@ -191,13 +205,14 @@ export async function generateGroupsSitemap(options: SitemapOptions = {}): Promi
 }
 
 export async function generateSitemapIndex(): Promise<string> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
 
   const sitemaps = [
-    { url: `${baseUrl}/sitemap-pages.xml`, lastmod: new Date().toISOString() },
-    { url: `${baseUrl}/sitemap-users.xml`, lastmod: new Date().toISOString() },
-    // Groups functionality removed
-    { url: `${baseUrl}/sitemap-news.xml`, lastmod: new Date().toISOString() }
+    { url: `${baseUrl}/sitemap.xml`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/api/sitemap-pages`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/api/sitemap-users`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/api/sitemap-news`, lastmod: new Date().toISOString() }
   ]
 
   const xmlEntries = sitemaps.map(sitemap => `
@@ -214,7 +229,8 @@ export async function generateSitemapIndex(): Promise<string> {
 
 export async function generateNewsSitemap(options: SitemapOptions = {}): Promise<string> {
   const { limit: maxPages = 1000 } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
 
   try {
     const pagesRef = collection(firestore, getCollectionName('pages'))

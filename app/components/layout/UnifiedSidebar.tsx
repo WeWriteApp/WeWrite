@@ -26,6 +26,7 @@ import { CheckCircle } from 'lucide-react';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
+import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 
@@ -194,6 +195,7 @@ function UnifiedSidebarContent({
   const { hasActiveSubscription } = useSubscription();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useEarnings();
+  const emailVerificationStatus = useEmailVerificationStatus();
 
   // Derive subscription warning state
   const shouldShowSubscriptionWarning = hasActiveSubscription === false;
@@ -202,13 +204,22 @@ function UnifiedSidebarContent({
   const getMostCriticalSettingsStatus = () => {
     // Payments are always enabled
 
-    // Check for warnings first (most critical)
+    // Check for email verification first (info level - blinking dot to guide user)
+    // Only show if user has dismissed the modal but email is still not verified
+    const hasEmailVerificationNeeded = emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed;
+
+    // Check for warnings (most critical)
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
     // Only show bank setup warning if user has funds but bank isn't set up (and not loading)
     const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.loading && !bankSetupStatus.isSetup;
 
     if (hasSubscriptionWarning || hasBankSetupWarning) {
       return 'warning';
+    }
+
+    // Email verification is info level (less critical than warnings)
+    if (hasEmailVerificationNeeded) {
+      return 'info';
     }
 
     // If no warnings and we have data, don't show any icon (success is hidden)
@@ -365,7 +376,7 @@ function UnifiedSidebarContent({
       {/* Desktop Sidebar - Hidden on mobile */}
       <div
         className={cn(
-          "hidden md:flex fixed left-0 top-0 h-screen z-fixed-toolbar flex-col",
+          "hidden md:flex fixed left-0 z-fixed-toolbar flex-col",
           // Use full wewrite-card system (includes glassmorphism backdrop blur)
           "wewrite-card border-r border-[var(--card-border)]",
           // Slightly higher opacity in light mode when expanded/hovered to match toolbar behavior
@@ -376,6 +387,10 @@ function UnifiedSidebarContent({
           showContent ? "w-64" : "w-16",
           isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
         )}
+        style={{
+          top: 'var(--email-banner-height, 0px)',
+          height: 'calc(100vh - var(--email-banner-height, 0px))',
+        }}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
@@ -452,21 +467,23 @@ function UnifiedSidebarContent({
                     moveItem={reorderCompleteItems}
                     showContent={showContent}
                   >
-                    {/* Settings warning indicator */}
-                    {isSettings && criticalSettingsStatus === 'warning' && (
+                    {/* Settings status indicator - always use orange warning dot (not blue info icon) */}
+                    {isSettings && criticalSettingsStatus && (
                       <>
                         {!showContent && (
-                          <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
+                          <WarningDot
+                            variant="warning"
+                            size="sm"
+                            position="top-right"
+                            offset={{ top: '-4px', right: '-4px' }}
+                          />
                         )}
                         {showContent && (
-                          <StatusIcon
-                            status="warning"
-                            size="sm"
-                            position="static"
-                          />
+                          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse ml-auto flex-shrink-0" />
                         )}
                       </>
                     )}
+                    {/* Email verification dot moved to Settings > Profile menu item */}
                   </DraggableSidebarItem>
                 );
               })}

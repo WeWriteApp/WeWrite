@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
-  
+  // Use www.getwewrite.app as the canonical domain
+  const baseUrl = 'https://www.getwewrite.app'
+
   return {
     rules: [
       {
@@ -11,15 +12,21 @@ export default function robots(): MetadataRoute.Robots {
           '/',
           '/user/',
           '/group/',
+          '/trending',
+          '/leaderboard',
+          '/groups',
+          '/users',
           '/api/og/',
-          '/api/sitemap'
+          '/api/sitemap-pages',
+          '/api/sitemap-users',
+          '/api/sitemap-index'
         ],
         disallow: [
           '/admin/',
           '/api/',
           '/auth/',
           '/dashboard/',
-          '/settings/fund-account/',
+          '/settings/',
           '/new',
           '/create',
           '/scripts/',
@@ -34,9 +41,9 @@ export default function robots(): MetadataRoute.Robots {
     ],
     sitemap: [
       `${baseUrl}/sitemap.xml`,
-      `${baseUrl}/sitemap-pages.xml`,
-      `${baseUrl}/sitemap-users.xml`,
-      `${baseUrl}/sitemap-groups.xml`
+      `${baseUrl}/api/sitemap-pages`,
+      `${baseUrl}/api/sitemap-users`,
+      `${baseUrl}/api/sitemap-index`
     ]
   }
 }
