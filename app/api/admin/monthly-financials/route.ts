@@ -410,12 +410,29 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     // Check for stale Firebase records (no active Stripe subscription)
+    // Build a map of userId -> email for looking up user emails
+    const userEmailMap = new Map<string, string>();
+    for (const doc of allBalancesSnapshot.docs) {
+      const userId = doc.id;
+      try {
+        const userDoc = await reconUsersRef.doc(userId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          userEmailMap.set(userId, userData?.email || 'Unknown email');
+        }
+      } catch (err) {
+        console.warn(`[MONTHLY FINANCIALS] Could not fetch email for ${userId}:`, err);
+      }
+    }
+
     for (const [stripeCustomerId, fbData] of firebaseBalanceMap) {
       if (!stripeCustomerMap.has(stripeCustomerId) && fbData.monthlyAllocationCents > 0) {
+        // Look up the user's email from our map
+        const userEmail = userEmailMap.get(fbData.docId) || 'Unknown email';
         discrepancies.push({
           type: 'stale_firebase',
           stripeCustomerId,
-          email: 'Unknown (no active subscription)',
+          email: `${userEmail} (cancelled)`,
           stripeAmountCents: 0,
           firebaseAmountCents: fbData.monthlyAllocationCents,
           firebaseDocId: fbData.docId

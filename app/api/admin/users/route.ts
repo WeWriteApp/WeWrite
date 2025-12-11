@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions, isAdminServer } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName, getEnvironmentType, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import Stripe from 'stripe';
+import { getStripeSecretKey } from '../../../utils/stripeConfig';
 
 interface UserData {
   uid: string;
@@ -69,6 +71,37 @@ export async function GET(request: NextRequest) {
     const countOnly = searchParams.get('countOnly') === 'true';
 
     console.log('Loading users from Firestore via API...');
+
+    // Pre-fetch active Stripe subscriptions if financial data is requested
+    // This ensures we show accurate subscription status from Stripe (source of truth)
+    const activeStripeSubscriptions = new Map<string, { amountCents: number; status: string }>();
+    if (includeFinancial) {
+      try {
+        const stripeKey = getStripeSecretKey();
+        if (stripeKey) {
+          const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
+          const subscriptions = await stripe.subscriptions.list({
+            status: 'active',
+            limit: 100,
+            expand: ['data.items.data.price']
+          });
+
+          for (const sub of subscriptions.data) {
+            const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
+            if (customerId) {
+              const item = sub.items.data[0];
+              activeStripeSubscriptions.set(customerId, {
+                amountCents: item?.price?.unit_amount || 0,
+                status: sub.status
+              });
+            }
+          }
+          console.log(`[Admin Users] Fetched ${activeStripeSubscriptions.size} active Stripe subscriptions`);
+        }
+      } catch (stripeErr) {
+        console.warn('[Admin Users] Could not fetch Stripe subscriptions:', stripeErr);
+      }
+    }
 
     // Query Firestore for user documents
     let usersQuery = db.collection(getCollectionName('users'))
@@ -161,14 +194,25 @@ export async function GET(request: NextRequest) {
             const balanceData = balanceDoc.data() || {};
             const writerBalance = writerBalanceDoc.data() || {};
 
-            const subscriptionAmount =
-              balanceData.subscriptionAmount ??
-              (balanceData.monthlyAllocationCents ? balanceData.monthlyAllocationCents / 100 : null);
+            // Get user's Stripe customer ID to verify subscription status against Stripe
+            const stripeCustomerId = data.stripeCustomerId;
+            const stripeSubData = stripeCustomerId ? activeStripeSubscriptions.get(stripeCustomerId) : null;
 
-            const subscriptionStatus =
-              balanceData.subscriptionStatus ??
-              balanceData.status ??
-              null;
+            // Use Stripe as source of truth for subscription status
+            // Firebase data may be stale if webhook didn't update correctly
+            let subscriptionAmount: number | null = null;
+            let subscriptionStatus: string | null = null;
+
+            if (stripeSubData) {
+              // User has active subscription in Stripe
+              subscriptionAmount = stripeSubData.amountCents / 100;
+              subscriptionStatus = 'active';
+            } else if (balanceData.monthlyAllocationCents > 0 || balanceData.subscriptionAmount > 0) {
+              // Firebase shows subscription but Stripe doesn't have active one - cancelled
+              subscriptionAmount = balanceData.subscriptionAmount ??
+                (balanceData.monthlyAllocationCents ? balanceData.monthlyAllocationCents / 100 : null);
+              subscriptionStatus = 'cancelled';
+            }
 
             const subscriptionCancelReason =
               balanceData.subscriptionCancellationReason ??
@@ -187,7 +231,7 @@ export async function GET(request: NextRequest) {
               writerBalance.pendingUsdCents !== undefined ? writerBalance.pendingUsdCents / 100 : undefined;
 
             user.financial = {
-              hasSubscription: Boolean(subscriptionAmount && subscriptionAmount > 0),
+              hasSubscription: subscriptionStatus === 'active',
               subscriptionAmount: subscriptionAmount ?? null,
               subscriptionStatus,
               subscriptionCancelReason,
