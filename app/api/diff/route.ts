@@ -222,8 +222,14 @@ function longestCommonSubsequence(oldWords: string[], newWords: string[]): Array
 }
 
 /**
- * Generate enhanced diff preview showing the first meaningful change
- * Shows both additions AND deletions together with context
+ * Generate enhanced diff preview showing the first meaningful change WITH context
+ *
+ * CRITICAL REQUIREMENT: The preview MUST show surrounding unchanged words/text
+ * so that users can understand the context in which the change occurred.
+ * A typo fix should show: "...the algorithm [~manipualtes~][manipulates] the data..."
+ * NOT just: "[~manipualtes~][manipulates]"
+ *
+ * Shows both additions AND deletions together with surrounding context
  * Limited to ~3 lines worth of content for readability
  */
 function generateDiffPreview(oldText: string, newText: string, operations: DiffOperation[]): DiffPreview | null {
@@ -244,16 +250,30 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
     return null;
   }
 
-  const contextLength = 50; // Shorter context for ~3 line display
+  const contextLength = 50; // Characters of context to show on each side
   const maxChangeLength = 200; // Max characters for added/removed text
 
-  // Get context before the change
-  let beforeContext = '';
-  for (let i = firstChangeIndex - 1; i >= 0; i--) {
+  // IMPROVED: Collect ALL equal text before the first change to build context
+  // This ensures we always show surrounding unchanged words
+  let beforeContextParts: string[] = [];
+  for (let i = 0; i < firstChangeIndex; i++) {
     const op = operations[i];
     if (op.type === 'equal') {
-      beforeContext = op.text.slice(-contextLength);
-      break;
+      beforeContextParts.push(op.text);
+    }
+  }
+
+  // Join all equal parts and take the last N characters
+  let beforeContext = beforeContextParts.join('');
+  if (beforeContext.length > contextLength) {
+    // Find a word boundary to break at for cleaner display
+    const truncated = beforeContext.slice(-contextLength);
+    const firstSpace = truncated.indexOf(' ');
+    if (firstSpace > 0 && firstSpace < 15) {
+      // Break at word boundary if within reasonable range
+      beforeContext = truncated.slice(firstSpace + 1);
+    } else {
+      beforeContext = truncated;
     }
   }
 
@@ -263,40 +283,63 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
   let removedText = '';
   let hasAdditions = false;
   let hasRemovals = false;
-  let afterContext = '';
-  let foundAfterContext = false;
+  let afterContextParts: string[] = [];
+  let collectingAfterContext = false;
+  let afterContextLength = 0;
 
   for (let i = firstChangeIndex; i < operations.length; i++) {
     const op = operations[i];
 
     if (op.type === 'add') {
+      // If we were collecting after context and hit another change, stop
+      if (collectingAfterContext && afterContextLength > 10) {
+        break;
+      }
       // Don't exceed max length
       if (addedText.length < maxChangeLength) {
         addedText += op.text;
         hasAdditions = true;
       }
+      collectingAfterContext = false;
     } else if (op.type === 'remove') {
+      // If we were collecting after context and hit another change, stop
+      if (collectingAfterContext && afterContextLength > 10) {
+        break;
+      }
       // Don't exceed max length
       if (removedText.length < maxChangeLength) {
         removedText += op.text;
         hasRemovals = true;
       }
-    } else if (op.type === 'equal' && !foundAfterContext) {
-      // Get after context from first equal block after changes
-      afterContext = op.text.slice(0, contextLength);
-      foundAfterContext = true;
-      // Don't break - continue to collect more changes if they're nearby
-      // Only break if we've collected enough
-      if (addedText.length >= maxChangeLength || removedText.length >= maxChangeLength) {
+      collectingAfterContext = false;
+    } else if (op.type === 'equal') {
+      // Collect equal text as after context
+      collectingAfterContext = true;
+      afterContextParts.push(op.text);
+      afterContextLength += op.text.length;
+
+      // Stop if we have enough after context
+      if (afterContextLength >= contextLength) {
         break;
       }
-    } else if (op.type === 'equal' && foundAfterContext) {
-      // We've hit a second equal block, stop collecting
-      break;
     }
   }
 
-  // Truncate with ellipsis if needed
+  // Join all after context parts and take the first N characters
+  let afterContext = afterContextParts.join('');
+  if (afterContext.length > contextLength) {
+    // Find a word boundary to break at for cleaner display
+    const truncated = afterContext.slice(0, contextLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > contextLength - 15) {
+      // Break at word boundary if within reasonable range
+      afterContext = truncated.slice(0, lastSpace);
+    } else {
+      afterContext = truncated;
+    }
+  }
+
+  // Truncate change text with ellipsis if needed
   if (addedText.length > maxChangeLength) {
     addedText = addedText.slice(0, maxChangeLength) + '…';
   }
@@ -304,11 +347,13 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
     removedText = removedText.slice(0, maxChangeLength) + '…';
   }
 
+  // IMPORTANT: Don't trim aggressively - preserve spacing for readability
+  // Only trim leading/trailing whitespace from the overall context
   return {
-    beforeContext: beforeContext.trim(),
-    addedText: addedText.trim(),
-    removedText: removedText.trim(),
-    afterContext: afterContext.trim(),
+    beforeContext: beforeContext.trimStart(),
+    addedText: addedText,
+    removedText: removedText,
+    afterContext: afterContext.trimEnd(),
     hasAdditions,
     hasRemovals
   };

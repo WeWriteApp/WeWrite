@@ -4,6 +4,43 @@
 
 WeWrite uses a centralized diff calculation system to provide consistent, reliable text comparison across all features. This system powers version comparisons, activity feeds, and content change tracking.
 
+## Critical Requirement: Context is Essential
+
+**IMPORTANT**: Diff previews MUST show surrounding unchanged words/text so users can understand the context in which the change occurred.
+
+### Why Context Matters
+
+Without context, users cannot determine if a change is a simple typo fix or a significant semantic modification. For example:
+
+**Good - Shows context:**
+```
+...the algorithm manipualtes → manipulates the data...
+```
+
+**Bad - No context:**
+```
+manipualtes → manipulates
+```
+
+### Context Rules
+
+1. **Always show surrounding text** - The diff preview must include unchanged words before and after the change
+2. **50 characters of context** - Show approximately 50 characters on each side of the change
+3. **Break at word boundaries** - Truncate at word boundaries for clean display
+4. **Use ellipsis for truncation** - Show "..." when text is truncated
+5. **Preserve spacing** - Don't aggressively trim whitespace that aids readability
+
+### Expected Display Format
+
+```
+...preceding context [removed text] → [added text] following context...
+```
+
+Where:
+- **Context text**: Muted color (gray)
+- **Removed text**: Red background with strikethrough
+- **Added text**: Green background
+
 ## Architecture
 
 ### Core Components
@@ -132,10 +169,12 @@ The system uses word-level diffing for more intelligent change detection:
 ### Context Generation
 
 For UI previews, the system:
-1. Finds the most significant change (largest addition/removal)
-2. Extracts 50 characters of context before and after
-3. Collects all changes in the context window
-4. Trims and formats for display
+1. Finds the **first** change (most intuitive for users reading sequentially)
+2. Collects ALL equal text before the change and takes the last 50 characters
+3. Collects additions and removals from the change point
+4. Collects equal text after changes until 50 characters of after-context
+5. Breaks at word boundaries for clean display
+6. Preserves spacing for readability (only trims outer whitespace)
 
 ## Performance Features
 
