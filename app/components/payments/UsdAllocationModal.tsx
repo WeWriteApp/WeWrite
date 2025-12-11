@@ -398,18 +398,16 @@ export function UsdAllocationModal({
               </Button>
 
               {/* Input field */}
-              <div className="relative flex-1">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="amount"
-                  type="text"
-                  placeholder="0.00"
-                  value={inputValue}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  className="wewrite-input-with-left-icon"
-                  disabled={isLoading}
-                />
-              </div>
+              <Input
+                id="amount"
+                type="text"
+                placeholder="0.00"
+                value={inputValue}
+                onChange={(e) => handleInputChange(e.target.value)}
+                leftIcon={<DollarSign className="h-4 w-4" />}
+                wrapperClassName="flex-1"
+                disabled={isLoading}
+              />
 
               {/* Plus button */}
               <Button

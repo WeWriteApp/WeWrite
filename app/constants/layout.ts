@@ -112,6 +112,49 @@ export function getContainerStylesWithSidebar(sidebarWidth: number = 0) {
 }
 
 // ============================================================================
+// SITE-WIDE CONTENT CONTAINER
+// ============================================================================
+
+/**
+ * Default max-width for the main content area
+ * This is applied at the SidebarLayout level for consistent site-wide layout
+ */
+export const SITE_CONTENT_MAX_WIDTH = '4xl' as const;
+export const SITE_CONTENT_MAX_WIDTH_PX = '1024px';
+
+/**
+ * CSS classes for the main content container
+ * Applied by SidebarLayout to ensure consistent content width across all pages
+ */
+export const SITE_CONTENT_CONTAINER_CLASSES = `${MAX_WIDTH_CLASSES['4xl']} mx-auto w-full`;
+
+// ============================================================================
+// BREAKOUT UTILITIES (for carousels that need to scroll outside container)
+// ============================================================================
+
+/**
+ * CSS classes for elements that need to "break out" of the container
+ * Use this for carousels and other horizontally scrolling elements
+ *
+ * How it works:
+ * - Uses negative margins to extend beyond the container padding
+ * - Re-adds padding inside so content aligns with container edges
+ * - Allows horizontal scrolling to extend edge-to-edge
+ *
+ * Usage:
+ * <div className={BREAKOUT_CLASSES}>
+ *   <div className="flex overflow-x-auto">...</div>
+ * </div>
+ */
+export const BREAKOUT_CLASSES = '-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8';
+
+/**
+ * Full breakout for elements that need true edge-to-edge scrolling
+ * Content will scroll from viewport edge to viewport edge
+ */
+export const BREAKOUT_FULL_CLASSES = '-mx-4 sm:-mx-6 lg:-mx-8';
+
+// ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 

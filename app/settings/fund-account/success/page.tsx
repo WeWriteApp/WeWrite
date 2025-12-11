@@ -150,7 +150,7 @@ export default function FundAccountSuccessPage() {
             </Button>
 
             <Button
-              onClick={() => router.push('/settings/fund-account')}
+              onClick={() => router.push('/settings/fund-account?success=true')}
               variant="secondary"
               size="lg"
               className="w-full max-w-xs mx-auto"

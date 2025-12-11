@@ -5,32 +5,34 @@ import { ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 /**
- * Mini sparkline component for showing trends
+ * Mini bar chart component for showing trends over time
  */
-function Sparkline({ data, color }: { data: number[]; color: string }) {
+function BarChart({ data, color }: { data: number[]; color: string }) {
   const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
   const width = 80;
   const height = 24;
-  const padding = 2;
-
-  const points = data.map((value, index) => {
-    const x = padding + (index / (data.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((value - min) / range) * (height - padding * 2);
-    return `${x},${y}`;
-  }).join(' ');
+  const barCount = data.length;
+  const gap = 2;
+  const barWidth = (width - (barCount - 1) * gap) / barCount;
 
   return (
     <svg width={width} height={height} className="opacity-80">
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {data.map((value, index) => {
+        const barHeight = (value / max) * height;
+        const x = index * (barWidth + gap);
+        const y = height - barHeight;
+        return (
+          <rect
+            key={index}
+            x={x}
+            y={y}
+            width={barWidth}
+            height={barHeight}
+            fill={color}
+            rx={1}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -49,9 +51,10 @@ export default function ReplyFeatureCard() {
       label: 'Agree',
       chipBg: 'bg-green-500/15',
       chipText: 'text-green-600 dark:text-green-400',
-      sparkColor: '#22c55e',
+      barColor: '#22c55e',
       count: 12,
-      trend: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      // Agrees increasing over time
+      trend: [2, 3, 4, 5, 6, 7, 8, 9, 11, 12]
     },
     {
       type: 'disagree',
@@ -59,9 +62,10 @@ export default function ReplyFeatureCard() {
       label: 'Disagree',
       chipBg: 'bg-red-500/15',
       chipText: 'text-red-600 dark:text-red-400',
-      sparkColor: '#ef4444',
-      count: 5,
-      trend: [8, 7, 6, 5, 5, 5, 5, 5, 5, 5]
+      barColor: '#ef4444',
+      count: 3,
+      // Disagrees decreasing over time
+      trend: [10, 9, 8, 7, 6, 5, 4, 4, 3, 3]
     },
     {
       type: 'neutral',
@@ -69,9 +73,10 @@ export default function ReplyFeatureCard() {
       label: 'Neutral',
       chipBg: 'bg-gray-500/15',
       chipText: 'text-gray-600 dark:text-gray-400',
-      sparkColor: '#6b7280',
+      barColor: '#6b7280',
       count: 8,
-      trend: [5, 7, 6, 8, 7, 9, 8, 7, 8, 8]
+      // Neutral with ups and downs
+      trend: [4, 7, 5, 9, 6, 8, 5, 10, 7, 8]
     }
   ];
 
@@ -99,8 +104,8 @@ export default function ReplyFeatureCard() {
                 {replyType.count}
               </span>
             </div>
-            {/* Sparkline on the right */}
-            <Sparkline data={replyType.trend} color={replyType.sparkColor} />
+            {/* Bar chart on the right */}
+            <BarChart data={replyType.trend} color={replyType.barColor} />
           </div>
         );
       })}

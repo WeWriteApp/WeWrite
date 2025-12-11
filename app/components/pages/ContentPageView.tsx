@@ -1675,12 +1675,7 @@ export default function ContentPageView({
             />
             </div>
 
-            {/* Page Actions - Reply and Add to Page buttons for other users' pages */}
-            {page && !canEdit && (
-              <div className="px-4 mb-8">
-                <ContentPageActions page={page} />
-              </div>
-            )}
+            {/* Page Actions for non-owners are now rendered inside ContentPageFooter */}
 
             {/* Page Connections and Related Pages - show for all pages */}
             {page && (

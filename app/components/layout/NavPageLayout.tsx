@@ -1,14 +1,15 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { MAX_WIDTH_CLASSES, RESPONSIVE_PADDING_CLASSES, type MaxWidthOption } from "../../constants/layout";
+import { RESPONSIVE_PADDING_CLASSES } from "../../constants/layout";
 
 export interface NavPageLayoutProps {
   children: React.ReactNode;
-  maxWidth?: MaxWidthOption;
   className?: string;
   loading?: boolean;
   loadingFallback?: React.ReactNode;
+  /** @deprecated maxWidth is now controlled at SidebarLayout level. Use BREAKOUT_CLASSES for full-width carousels. */
+  maxWidth?: string;
 }
 
 /**
@@ -16,17 +17,21 @@ export interface NavPageLayoutProps {
  *
  * Provides consistent:
  * - Page structure with min-h-screen
- * - Container sizing and responsive padding
- * - NavHeader integration (loads instantly)
- * - Progressive content loading below header
+ * - Responsive padding (px-4/6/8)
+ * - Progressive content loading
  * - Bottom padding for mobile navigation
+ * - Top padding for floating header clearance
+ *
+ * NOTE: Max-width is now controlled at the SidebarLayout level (max-w-4xl).
+ * For carousels or elements that need to scroll edge-to-edge, use
+ * BREAKOUT_CLASSES from constants/layout.ts.
  */
 export default function NavPageLayout({
   children,
-  maxWidth = "4xl",
   className = "",
   loading = false,
-  loadingFallback
+  loadingFallback,
+  maxWidth // deprecated but kept for backwards compatibility
 }: NavPageLayoutProps) {
 
   const defaultLoadingFallback = (
@@ -37,8 +42,8 @@ export default function NavPageLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Content area with proper top padding to account for floating header */}
-      <div className={`${MAX_WIDTH_CLASSES[maxWidth]} mx-auto ${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 pt-24 ${className}`}>
+      {/* Content area with padding - max-width is handled by SidebarLayout */}
+      <div className={`${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 pt-24 ${className}`}>
         {/* Content loads progressively below header */}
         {loading ? (
           loadingFallback || defaultLoadingFallback

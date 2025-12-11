@@ -4,7 +4,124 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 import { cn } from "../../lib/utils"
 
-const Drawer = DialogPrimitive.Root
+/**
+ * Custom Drawer Root that adds:
+ * - URL hash tracking (optional hashId prop)
+ * - Analytics tracking (optional analyticsId prop)
+ * - Body scroll locking when open
+ */
+interface DrawerProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> {
+  /** Hash ID to add to URL when drawer is open (e.g., "checkout" -> #checkout) */
+  hashId?: string
+  /** Analytics ID for tracking drawer open/close events */
+  analyticsId?: string
+}
+
+const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
+  ({ hashId, analyticsId, open, onOpenChange, children, ...props }, ref) => {
+    // Track previous hash to restore on close
+    const previousHashRef = React.useRef<string>('')
+
+    // Handle URL hash and body scroll lock
+    React.useEffect(() => {
+      if (typeof window === 'undefined') return
+
+      if (open) {
+        // Store current hash before changing
+        previousHashRef.current = window.location.hash
+
+        // Set hash if provided
+        if (hashId) {
+          const newHash = `#${hashId}`
+          // Use replaceState to avoid adding to history
+          window.history.replaceState(null, '', newHash)
+        }
+
+        // Lock body scroll
+        const scrollY = window.scrollY
+        document.body.style.position = 'fixed'
+        document.body.style.top = `-${scrollY}px`
+        document.body.style.width = '100%'
+        document.body.style.overflow = 'hidden'
+        document.body.setAttribute('data-drawer-open', 'true')
+
+        // Track analytics
+        if (analyticsId) {
+          try {
+            const { getAnalyticsService } = require('../../utils/analytics-service')
+            const analytics = getAnalyticsService()
+            analytics.trackEvent({
+              category: 'drawer',
+              action: `drawer_opened`,
+              label: analyticsId
+            })
+          } catch (e) {
+            // Analytics not available
+          }
+        }
+      } else {
+        // Restore hash
+        if (hashId) {
+          const newUrl = previousHashRef.current || window.location.pathname + window.location.search
+          window.history.replaceState(null, '', newUrl)
+        }
+
+        // Unlock body scroll
+        const scrollY = document.body.style.top
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.overflow = ''
+        document.body.removeAttribute('data-drawer-open')
+
+        // Restore scroll position
+        if (scrollY) {
+          window.scrollTo(0, parseInt(scrollY || '0', 10) * -1)
+        }
+
+        // Track analytics
+        if (analyticsId) {
+          try {
+            const { getAnalyticsService } = require('../../utils/analytics-service')
+            const analytics = getAnalyticsService()
+            analytics.trackEvent({
+              category: 'drawer',
+              action: `drawer_closed`,
+              label: analyticsId
+            })
+          } catch (e) {
+            // Analytics not available
+          }
+        }
+      }
+
+      // Handle browser back button (popstate) to close drawer
+      const handlePopState = () => {
+        if (open && hashId && !window.location.hash.includes(hashId)) {
+          onOpenChange?.(false)
+        }
+      }
+
+      window.addEventListener('popstate', handlePopState)
+      return () => {
+        window.removeEventListener('popstate', handlePopState)
+        // Cleanup scroll lock on unmount
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.overflow = ''
+        document.body.removeAttribute('data-drawer-open')
+      }
+    }, [open, hashId, analyticsId, onOpenChange])
+
+    return (
+      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props}>
+        {children}
+      </DialogPrimitive.Root>
+    )
+  }
+)
+Drawer.displayName = "Drawer"
 
 const DrawerTrigger = DialogPrimitive.Trigger
 
@@ -217,8 +334,8 @@ const DrawerFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      // Safe area padding for bottom buttons
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-2 pb-6 flex-shrink-0 border-t border-border/50",
+      // Safe area padding for bottom buttons - extra bottom margin for mobile safe area
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-2 pb-10 flex-shrink-0 border-t border-border/50",
       className
     )}
     {...props}

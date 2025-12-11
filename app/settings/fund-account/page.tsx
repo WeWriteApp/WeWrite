@@ -8,8 +8,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Loader2, CheckCircle, Wallet, CreditCard, History, ChevronDown } from 'lucide-react';
-import { PaymentMethodsOverview } from '../../components/payments/PaymentMethodsOverview';
+import { Loader2, CheckCircle, Wallet, History, ChevronDown } from 'lucide-react';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
@@ -23,7 +22,6 @@ export default function FundAccountPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     funding: true,
-    paymentMethods: true,
     history: false
   });
 
@@ -258,23 +256,6 @@ export default function FundAccountPage() {
             currentSubscription={effectiveSubscription}
             showCurrentOption={true}
           />
-        )}
-      </div>
-
-      {/* Payment Methods Section */}
-      <div>
-        <h2
-          className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
-          onClick={() => toggleSection('paymentMethods')}
-        >
-          <CreditCard className="h-5 w-5" />
-          Payment Methods
-          <ChevronDown
-            className={`h-5 w-5 ml-auto transition-transform duration-200 ${expandedSections.paymentMethods ? '' : 'rotate-180'}`}
-          />
-        </h2>
-        {expandedSections.paymentMethods && (
-          <PaymentMethodsOverview />
         )}
       </div>
 

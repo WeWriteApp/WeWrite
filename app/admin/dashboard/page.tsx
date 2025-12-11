@@ -324,7 +324,7 @@ export default function AdminDashboardPage() {
                 Back
               </Button>
 
-              <h1 className="text-2xl font-bold">WeWrite Dashboard</h1>
+              <h1 className="text-2xl font-bold">Admin Product KPIs</h1>
 
               {/* Options Controls */}
               {!dashboardLoading && (

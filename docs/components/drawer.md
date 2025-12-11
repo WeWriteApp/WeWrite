@@ -12,6 +12,9 @@ The Drawer component provides a mobile-first bottom sheet interface with native-
 - **Responsive Height**: Configurable height (default 85vh)
 - **Accessibility**: Full keyboard navigation and screen reader support
 - **Touch Optimized**: Optimized for mobile touch interactions
+- **URL Hash Tracking**: Optional URL hash updates for analytics and deep linking
+- **Analytics Integration**: Built-in analytics tracking for drawer open/close events
+- **Body Scroll Lock**: Prevents background scrolling when drawer is open
 
 ## Usage
 
@@ -63,6 +66,8 @@ The root component that manages the drawer state.
 **Props:**
 - `open: boolean` - Controls drawer visibility
 - `onOpenChange: (open: boolean) => void` - Called when drawer state changes
+- `hashId?: string` - Hash ID to add to URL when drawer is open (e.g., "checkout" → `#checkout`)
+- `analyticsId?: string` - Analytics ID for tracking drawer open/close events
 
 ### DrawerContent
 The main drawer container with slide animations and drag functionality.
@@ -145,18 +150,72 @@ The drawer uses WeWrite's card system by default:
 4. **Content Structure**: Always include DrawerHeader for accessibility
 5. **Drag Handle**: The built-in drag handle provides clear affordance
 
+## URL Hash Tracking
+
+The drawer supports optional URL hash tracking for analytics and deep linking:
+
+```tsx
+<Drawer
+  open={isOpen}
+  onOpenChange={setIsOpen}
+  hashId="checkout"  // URL becomes #checkout when open
+>
+  <DrawerContent>
+    {/* Content */}
+  </DrawerContent>
+</Drawer>
+```
+
+**Behavior:**
+- When drawer opens: URL updates to `#checkout` (using `replaceState` to avoid history pollution)
+- When drawer closes: URL hash is restored to previous value
+- Browser back button: Closes the drawer if hash changes
+
+## Analytics Integration
+
+Built-in analytics tracking for drawer open/close events:
+
+```tsx
+<Drawer
+  open={isOpen}
+  onOpenChange={setIsOpen}
+  analyticsId="subscription_checkout"
+>
+  <DrawerContent>
+    {/* Content */}
+  </DrawerContent>
+</Drawer>
+```
+
+**Events tracked:**
+- `drawer_opened` with label = analyticsId
+- `drawer_closed` with label = analyticsId
+
+## Body Scroll Lock
+
+The drawer automatically prevents background scrolling when open:
+
+- Body position is fixed when drawer opens
+- Scroll position is preserved and restored on close
+- `data-drawer-open="true"` attribute is added to body for CSS targeting
+
 ## Example: Link Editor Modal
 
 ```tsx
-// Mobile drawer implementation
+// Mobile drawer implementation with hash and analytics
 if (isMobile) {
   return (
-    <Drawer open={isOpen} onOpenChange={onClose}>
+    <Drawer
+      open={isOpen}
+      onOpenChange={onClose}
+      hashId="link-editor"
+      analyticsId="link_editor"
+    >
       <DrawerContent height="85vh" className="card-100">
         <DrawerHeader>
           <DrawerTitle>Insert Link</DrawerTitle>
         </DrawerHeader>
-        
+
         <div className="flex-1 min-h-0 flex flex-col px-4 pb-4">
           <LinkEditorContent />
         </div>
@@ -166,4 +225,4 @@ if (isMobile) {
 }
 ```
 
-This creates a native-feeling bottom sheet that slides up smoothly and can be dismissed with a downward drag gesture.
+This creates a native-feeling bottom sheet that slides up smoothly, can be dismissed with a downward drag gesture, and tracks analytics events while showing `#link-editor` in the URL.

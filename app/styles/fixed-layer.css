@@ -11,6 +11,12 @@
   /* Safe positioning */
   --fixed-safe-top: 16px;
   --fixed-safe-bottom: max(env(safe-area-inset-bottom), 16px);
+
+  /* Sidebar content offset - set by SidebarProvider via JS
+   * This is the width that fixed elements should offset from the left edge
+   * to avoid overlapping the desktop sidebar. Default to 0px (no sidebar).
+   * Values: 0px (no user), 64px (collapsed), 256px (expanded) */
+  --sidebar-content-offset: 0px;
 }
 
 /* FixedPortal root container */
@@ -23,6 +29,39 @@
 .fixed-layer { position: fixed; pointer-events: auto; }
 .fixed-top { top: var(--fixed-safe-top); left: 0; right: 0; }
 .fixed-bottom { bottom: var(--fixed-safe-bottom); left: 0; right: 0; }
+
+/* Sidebar-aware fixed header positioning
+ * Use this class on desktop (md:) fixed headers to automatically offset from the sidebar
+ * Mobile: Uses standard left: 12px positioning
+ * Desktop: Uses left: calc(var(--sidebar-content-offset) + 12px) to clear the sidebar
+ */
+.fixed-header-sidebar-aware {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: var(--z-fixed-header);
+  transition: left 300ms ease-in-out;
+}
+
+@media (min-width: 768px) {
+  .fixed-header-sidebar-aware {
+    left: calc(var(--sidebar-content-offset) + 24px);
+    right: 24px;
+  }
+}
+
+/* For desktop-only sidebar awareness (when mobile uses different positioning) */
+@media (min-width: 1024px) {
+  .lg\:fixed-header-sidebar-aware {
+    position: fixed;
+    top: 12px;
+    left: calc(var(--sidebar-content-offset) + 24px);
+    right: 24px;
+    z-index: var(--z-fixed-header);
+    transition: left 300ms ease-in-out;
+  }
+}
 
 .z-fixed-header { z-index: var(--z-fixed-header); }
 .z-fixed-toolbar { z-index: var(--z-fixed-toolbar); }

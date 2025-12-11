@@ -35,12 +35,12 @@ const buttonVariants = cva(
         ghost: "hover:bg-alpha-5 active:bg-alpha-10 hover:text-foreground hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-muted disabled:cursor-not-allowed", // Interactive ghost
         link: "text-primary underline-offset-4 hover:underline active:text-primary/60 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-primary disabled:cursor-not-allowed"},
       size: {
-        default: "h-9 px-4 py-2 [&_svg]:size-4",
-        sm: "h-8 px-3 text-xs [&_svg]:size-3.5",
-        lg: "h-10 px-8 [&_svg]:size-5",
-        icon: "h-9 w-9 p-0 [&_svg]:size-[18px]",
-        "icon-sm": "h-8 w-8 p-0 [&_svg]:size-4",
-        "icon-lg": "h-10 w-10 p-0 [&_svg]:size-5"}},
+        default: "h-10 px-4 py-2 [&_svg]:size-4",
+        sm: "h-9 px-3 text-xs [&_svg]:size-3.5",
+        lg: "h-11 px-8 [&_svg]:size-5",
+        icon: "h-10 w-10 p-0 [&_svg]:size-[18px]",
+        "icon-sm": "h-9 w-9 p-0 [&_svg]:size-4",
+        "icon-lg": "h-11 w-11 p-0 [&_svg]:size-5"}},
     defaultVariants: {
       variant: "default",
       size: "default"}}

@@ -880,7 +880,7 @@ export default function LinkEditorModal({
         if (!open) {
           onClose();
         }
-      }}>
+      }} hashId="link-editor" analyticsId="link_editor">
         <DrawerContent
           height="85vh"
           tabIndex={-1}

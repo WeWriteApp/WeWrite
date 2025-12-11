@@ -1174,7 +1174,6 @@ const Editor: React.FC<EditorProps> = ({
         >
           <div className={cn(
             "wewrite-input min-h-[200px] w-full rounded-lg p-4",
-            "focus-within:border-accent focus-within:bg-accent/5 focus-within:shadow-sm",
             "transition-all duration-200"
           )}>
             <div className="flex">

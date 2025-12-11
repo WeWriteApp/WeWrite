@@ -158,11 +158,11 @@ export default function MapFeatureCard() {
   }, [isLoaded, hue]);
 
   return (
-    <div className="relative h-full min-h-[200px] overflow-hidden">
+    <div className="relative h-full min-h-[200px] overflow-hidden rounded-lg">
       {/* Map container */}
       <div
         ref={mapRef}
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-0 rounded-lg"
         style={{ background: isDark ? '#1a1a2e' : '#e8e8e8' }}
       />
 

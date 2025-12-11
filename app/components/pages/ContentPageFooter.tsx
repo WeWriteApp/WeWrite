@@ -131,7 +131,7 @@ export default function ContentPageFooter({
 
   return (
     <div className="pb-4 px-4 space-y-4">
-      {/* Show PageActions only for existing pages when user can edit */}
+      {/* Show PageActions for editors (when editing) */}
       {page && canEdit && (
         <ContentPageActions
           page={page}
@@ -149,49 +149,70 @@ export default function ContentPageFooter({
         />
       )}
 
+      {/* Show Reply and Add to Page actions for non-owners ABOVE the stats */}
+      {page && !isOwner && !canEdit && (
+        <ContentPageActions
+          page={page}
+          content={content}
+          isOwner={false}
+          isEditing={false}
+          setIsEditing={() => {}}
+          className="action-buttons-container"
+          showFollowButton={!!user}
+        />
+      )}
+
       {/* Page metadata and stats section - show for all existing pages */}
       {page && (
         <>
-          {/* Custom Date and Location in a grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <CustomDateField
-              customDate={page.customDate}
-              canEdit={isOwner}
-              onCustomDateChange={async (newDate) => {
-                try {
-                  const response = await fetch(`/api/pages/${page.id}/custom-date`, {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ customDate: newDate }),
-                  });
+          {/* Custom Date and Location in a grid - hide on others' pages if both are empty */}
+          {(isOwner || page.customDate || page.location) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Show custom date if owner OR if it has a value */}
+              {(isOwner || page.customDate) && (
+                <CustomDateField
+                  customDate={page.customDate}
+                  canEdit={isOwner}
+                  onCustomDateChange={async (newDate) => {
+                    try {
+                      const response = await fetch(`/api/pages/${page.id}/custom-date`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ customDate: newDate }),
+                      });
 
-                  if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to update custom date');
-                  }
+                      if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to update custom date');
+                      }
 
-                  // Update the page object to reflect the change
-                  page.customDate = newDate;
+                      // Update the page object to reflect the change
+                      page.customDate = newDate;
 
-                  console.log('Custom date updated successfully to:', newDate);
-                } catch (error) {
-                  console.error('Error updating custom date:', error);
-                  toast({
-                    title: "Failed to update date",
-                    description: "There was a problem saving the date. Please try again.",
-                    variant: "destructive"
-                  });
-                }
-              }}
-            />
-            <LocationField
-              location={page.location}
-              canEdit={isOwner}
-              onLocationChange={onLocationChange}
-            />
-          </div>
+                      console.log('Custom date updated successfully to:', newDate);
+                    } catch (error) {
+                      console.error('Error updating custom date:', error);
+                      toast({
+                        title: "Failed to update date",
+                        description: "There was a problem saving the date. Please try again.",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                />
+              )}
+              {/* Show location if owner OR if it has a value */}
+              {(isOwner || page.location) && (
+                <LocationField
+                  location={page.location}
+                  canEdit={isOwner}
+                  onLocationChange={onLocationChange}
+                />
+              )}
+            </div>
+          )}
 
           {/* Page stats section */}
           <ContentPageStats

@@ -14,6 +14,7 @@ import { useAccentColor } from '../contexts/AccentColorContext';
 import DailyNotesCarousel from '../components/daily-notes/DailyNotesCarousel';
 import DailyNotesCalendar from '../components/daily-notes/DailyNotesCalendar';
 import TimelineCarousel from '../components/timeline/TimelineCarousel';
+import { BREAKOUT_FULL_CLASSES } from '../constants/layout';
 
 /**
  * Timeline Content Component (uses useSearchParams)
@@ -144,9 +145,7 @@ function TimelineContent() {
   }
 
   return (
-    <NavPageLayout
-      maxWidth="full"
-    >
+    <NavPageLayout>
         {/* Page header with actions */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -182,27 +181,29 @@ function TimelineContent() {
           </div>
         )}
 
-        {/* Content based on type and view mode */}
+        {/* Content based on type and view mode - carousels break out for edge-to-edge scrolling */}
         {type === 'daily-notes' ? (
           viewMode === 'timeline' ? (
-            <DailyNotesCarousel
+            <div className={BREAKOUT_FULL_CLASSES}>
+              <DailyNotesCarousel
+                accentColor={getAccentColorValue()}
+                isFullPage={true}
+                focusDate={focusDate}
+              />
+            </div>
+          ) : (
+            <DailyNotesCalendar
+              accentColor={getAccentColorValue()}
+            />
+          )
+        ) : (
+          <div className={BREAKOUT_FULL_CLASSES}>
+            <TimelineCarousel
               accentColor={getAccentColorValue()}
               isFullPage={true}
               focusDate={focusDate}
             />
-          ) : (
-            <div className="max-w-4xl mx-auto">
-              <DailyNotesCalendar
-                accentColor={getAccentColorValue()}
-              />
-            </div>
-          )
-        ) : (
-          <TimelineCarousel
-            accentColor={getAccentColorValue()}
-            isFullPage={true}
-            focusDate={focusDate}
-          />
+          </div>
         )}
     </NavPageLayout>
   );

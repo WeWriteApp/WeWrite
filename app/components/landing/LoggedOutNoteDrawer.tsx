@@ -129,7 +129,7 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
   );
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()} hashId="new-note" analyticsId="logged_out_note">
       <DrawerContent height="85vh">
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-center">Start Writing</DrawerTitle>

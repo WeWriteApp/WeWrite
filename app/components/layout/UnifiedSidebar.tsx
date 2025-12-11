@@ -104,6 +104,18 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   // Calculate sidebar width based on state - only for authenticated users
   const sidebarWidth = user && (isExpanded || isHovering) ? 256 : user ? 64 : 0;
 
+  // Calculate content offset width (for fixed elements that need to respect sidebar)
+  // This only responds to persistent expanded state, not hover state
+  const contentOffset = user ? (isExpanded ? 256 : 64) : 0;
+
+  // Set CSS custom property for sidebar-aware fixed elements
+  // This allows any fixed element to use: left: calc(var(--sidebar-content-offset) + 12px)
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--sidebar-content-offset', `${contentOffset}px`);
+    }
+  }, [contentOffset]);
+
   const contextValue: SidebarContextType = {
     isExpanded,
     isHovering,

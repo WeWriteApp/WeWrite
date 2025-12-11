@@ -2296,9 +2296,16 @@ textarea.wewrite-title-input {
   -moz-appearance: none !important;
 }
 
-/* Active/Focus state for inputs */
+/* Active/Focus state for inputs
+ * Includes:
+ * - :focus for direct element focus
+ * - :focus-visible for keyboard focus
+ * - :focus-within for container elements with focused children (e.g., Editor wrapper)
+ * - .wewrite-active-input for programmatic active state
+ */
 .wewrite-input:focus,
 .wewrite-input:focus-visible,
+.wewrite-input:focus-within,
 .wewrite-input.wewrite-active-input {
   border: 1px solid oklch(var(--accent-base)) !important;
   background-color: oklch(var(--accent-base) / 0.1) !important;

@@ -210,12 +210,12 @@ export default function RandomPagesFilterDrawer({
         {/* Username Search with Typeahead */}
         <div className="relative">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={filterMode === 'include' ? 'Search username to include...' : 'Search username to exclude...'}
-              className="pl-9 pr-9"
+              leftIcon={<Search className="h-4 w-4" />}
+              className="pr-9"
               onFocus={() => {
                 if (suggestions.length > 0) {
                   setShowSuggestions(true);
@@ -234,13 +234,13 @@ export default function RandomPagesFilterDrawer({
             {searchQuery && (
               <button
                 onClick={handleClearUsername}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
             {isSearching && (
-              <Loader2 className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              <Loader2 className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground z-10" />
             )}
           </div>
 

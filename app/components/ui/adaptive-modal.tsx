@@ -9,6 +9,10 @@ interface AdaptiveModalProps {
   children: React.ReactNode;
   className?: string;
   mobileHeight?: string;
+  /** Hash ID to add to URL when drawer is open (e.g., "modal" -> #modal) */
+  hashId?: string;
+  /** Analytics ID for tracking drawer open/close events */
+  analyticsId?: string;
 }
 
 /**
@@ -21,7 +25,9 @@ export function AdaptiveModal({
   title,
   children,
   className = "",
-  mobileHeight = "85vh"
+  mobileHeight = "85vh",
+  hashId,
+  analyticsId
 }: AdaptiveModalProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -48,7 +54,7 @@ export function AdaptiveModal({
 
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={handleOpenChange}>
+      <Drawer open={isOpen} onOpenChange={handleOpenChange} hashId={hashId} analyticsId={analyticsId}>
         <DrawerContent height={mobileHeight} className={className}>
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>

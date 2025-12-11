@@ -483,7 +483,7 @@ export default function PageGraphView({
           </Button>
         </div>
 
-        {/* Graph container */}
+        {/* Graph container - preview mode with auto-rotation */}
         <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
           <div className="h-96 transition-all duration-300">
             <PageGraph3D
@@ -492,6 +492,7 @@ export default function PageGraphView({
               pageId={pageId}
               isFullscreen={false}
               height={384}
+              isPreview={true}
             />
           </div>
         </SubscriptionGate>

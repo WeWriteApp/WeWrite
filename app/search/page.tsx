@@ -127,17 +127,13 @@ const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onCl
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full wewrite-input-with-left-icon pr-24"
+          leftIcon={<Search className="h-5 w-5" />}
+          className="w-full pr-24"
           autoComplete="off"
         />
 
-        {/* Search icon on the left */}
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="h-5 w-5 text-muted-foreground" />
-        </div>
-
         {/* Right side buttons */}
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1 z-20">
           {/* Clear button */}
           {inputValue.trim() && (
             <button

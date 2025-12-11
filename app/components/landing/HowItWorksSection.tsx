@@ -70,7 +70,7 @@ export default function HowItWorksSection() {
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How does it work?</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Every page on WeWrite has an allocation bar. Use it to direct your monthly fund to creators you want to support.
+            At the bottom of every page, you'll see a little bar. Hit the plus button to send that writer some of your monthly funds!
           </p>
         </div>
 

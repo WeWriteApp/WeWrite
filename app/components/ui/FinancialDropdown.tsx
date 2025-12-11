@@ -335,13 +335,19 @@ export function EarningsBreakdown({
         </div>
       )}
 
-      {/* Beta warning */}
-      <div
-        className="flex items-center gap-2 p-2 mt-3 rounded-md bg-warning/10 text-warning cursor-pointer hover:bg-warning/20 transition-colors"
-        onClick={() => router.push('/settings/earnings')}
-      >
-        <AlertCircle className="h-3 w-3 flex-shrink-0" />
-        <span className="text-xs">Earnings are still in beta</span>
+      {/* Beta warning card */}
+      <div className="mt-4 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <div className="text-sm font-medium text-amber-600 dark:text-amber-400">
+              Earnings are in beta
+            </div>
+            <div className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+              Payouts are not yet available. We're working on it!
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

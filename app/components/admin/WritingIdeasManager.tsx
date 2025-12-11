@@ -297,16 +297,14 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-semibold">Writing Ideas Management</CardTitle>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search ideas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="wewrite-input-with-left-icon w-64"
-                disabled={isLoading}
-              />
-            </div>
+            <Input
+              placeholder="Search ideas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              leftIcon={<Search className="h-4 w-4" />}
+              className="w-64"
+              disabled={isLoading}
+            />
             <Button
               onClick={loadIdeas}
               variant="outline"

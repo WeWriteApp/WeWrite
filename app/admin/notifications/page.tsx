@@ -702,7 +702,7 @@ export default function AdminEmailsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-7xl">
-        <FloatingHeader className="fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-40 px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
+        <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -742,15 +742,12 @@ export default function AdminEmailsPage() {
             {/* Template List */}
             <div className="w-full lg:w-1/3 space-y-4">
               {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search templates..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <Input
+                placeholder="Search templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
 
               {/* Template Categories */}
               <div className="space-y-6">

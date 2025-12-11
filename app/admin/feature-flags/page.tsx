@@ -105,7 +105,7 @@ export default function FeatureFlagsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-4xl">
-        <FloatingHeader className="fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-40 px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
+        <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
           <div>
             <h1 className="text-3xl font-bold leading-tight">Feature Flags</h1>
             <p className="text-muted-foreground">Admin-only preview controls</p>

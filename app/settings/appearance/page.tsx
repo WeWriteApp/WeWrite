@@ -91,7 +91,7 @@ export default function AppearancePage() {
                       data-theme={option.value}
                       data-active={theme === option.value}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-3 border rounded-lg transition-all duration-200 nav-hover-state",
+                        "flex flex-col items-center gap-2 p-3 border rounded-lg transition-[background-color,transform,opacity] duration-200 nav-hover-state outline-none focus:outline-none focus:ring-0",
                         theme === option.value
                           ? "nav-selected-state border-accent"
                           : "border-theme-medium"
@@ -99,9 +99,14 @@ export default function AppearancePage() {
                     >
                       {option.icon}
                       <div className="font-medium text-sm">{option.label}</div>
-                      {theme === option.value && (
-                        <Check className="h-4 w-4 text-primary" />
-                      )}
+                      <Check
+                        className={cn(
+                          "h-4 w-4 text-primary transition-all duration-200",
+                          theme === option.value
+                            ? "opacity-100 scale-100"
+                            : "opacity-0 scale-75"
+                        )}
+                      />
                     </button>
                   ))}
                 </div>

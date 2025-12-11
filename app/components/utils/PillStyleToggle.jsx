@@ -78,7 +78,7 @@ export default function PillStyleToggle() {
             data-pill-style={style}
             data-active={pillStyle === style}
             className={cn(
-              "flex flex-col items-center justify-center gap-3 p-4 text-sm border rounded-lg transition-all duration-200 nav-hover-state",
+              "flex flex-col items-center justify-center gap-3 p-4 text-sm border rounded-lg transition-[background-color,transform,opacity] duration-200 nav-hover-state outline-none focus:outline-none focus:ring-0",
               pillStyle === style
                 ? "nav-selected-state border-accent"
                 : "border-theme-medium"
@@ -86,9 +86,14 @@ export default function PillStyleToggle() {
           >
             {/* Centered pill preview */}
             <PillPreview style={style} label={label} />
-            {pillStyle === style && (
-              <Check className="h-4 w-4 text-primary" />
-            )}
+            <Check
+              className={cn(
+                "h-4 w-4 text-primary transition-all duration-200",
+                pillStyle === style
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 scale-75"
+              )}
+            />
           </button>
         ))}
       </div>

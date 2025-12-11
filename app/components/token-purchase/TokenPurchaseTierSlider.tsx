@@ -364,24 +364,23 @@ export default function TokenPurchaseTierSlider({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      placeholder="Enter amount above 100"
-                      value={customAmount}
-                      onChange={handleCustomAmountChange}
-                      className={`pl-8 ${
-                        isCancellation
-                          ? 'border-destructive/30 focus:border-destructive'
-                          : isDowngrade
-                            ? 'border-yellow-500/30 focus:border-yellow-500'
-                            : ''
-                      }`}
-                      min="101"
-                      max="1000"
-                    />
-                  </div>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount above 100"
+                    value={customAmount}
+                    onChange={handleCustomAmountChange}
+                    leftIcon={<DollarSign className="h-4 w-4" />}
+                    wrapperClassName="flex-1"
+                    className={
+                      isCancellation
+                        ? 'border-destructive/30 focus:border-destructive'
+                        : isDowngrade
+                          ? 'border-yellow-500/30 focus:border-yellow-500'
+                          : ''
+                    }
+                    min="101"
+                    max="1000"
+                  />
                   <span className="text-sm text-muted-foreground">/month</span>
                 </div>
                 {customError && (

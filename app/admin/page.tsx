@@ -11,7 +11,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 // Swipeable tabs removed - simplified admin interface
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Mail } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Mail, Calendar } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -253,7 +253,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-5xl">
-      <FloatingHeader className="fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-40 px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
+      <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
         <div>
           <h1 className="text-3xl font-bold leading-tight">Admin Panel</h1>
           <p className="text-muted-foreground">
@@ -279,17 +279,18 @@ export default function AdminPage() {
 
           {/* Platform fee revenue moved to admin dashboard */}
 
-          {/* Admin Dashboard - Moved to top */}
-          <div className="mb-6">
+          {/* Top admin tools - Product KPIs and Monthly Financials */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Admin Product KPIs */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold">Admin Dashboard</h3>
+                <h3 className="text-lg font-semibold">Admin Product KPIs</h3>
                 <BarChart3 className="h-5 w-5 text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-4">
-                View comprehensive analytics including user registrations, page creation metrics, platform fee revenue, and sharing statistics with interactive charts and date filtering.
+                View comprehensive analytics including user registrations, page creation metrics, platform fee revenue, and sharing statistics.
               </span>
-              <div className="mt-2">
+              <div className="mt-auto">
                 <Button
                   variant="default"
                   size="sm"
@@ -297,7 +298,29 @@ export default function AdminPage() {
                   onClick={() => router.push('/admin/dashboard')}
                 >
                   <BarChart3 className="h-4 w-4" />
-                  Open Admin Dashboard
+                  Open Product KPIs
+                </Button>
+              </div>
+            </div>
+
+            {/* Monthly Financials */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Monthly Financials</h3>
+                <Calendar className="h-5 w-5 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-4">
+                View current month fund status, creator obligations, Stripe balance breakdown, and historical monthly financial data with charts.
+              </span>
+              <div className="mt-auto">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/monthly-financials')}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Open Monthly Financials
                 </Button>
               </div>
             </div>

@@ -16,7 +16,7 @@ export function AdminSubpageHeader({ title, description }: Props) {
 
   return (
     <>
-      <FloatingHeader className="fixed top-3 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 z-40 px-3 py-3 mb-4 flex items-start justify-between gap-3 lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2" noShadowAtTop>
+      <FloatingHeader className="fixed-header-sidebar-aware px-3 py-3 mb-4 flex items-start justify-between gap-3 lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2" noShadowAtTop>
         <div>
           <button
             className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"

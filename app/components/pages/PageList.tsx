@@ -142,12 +142,11 @@ export default function PageList({
       {(showSearch || showCreateButton) && (
         <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4">
           {showSearch && (
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="w-full sm:max-w-xs">
               <Input
                 type="search"
                 placeholder="Search pages..."
-                className="wewrite-input-with-left-icon"
+                leftIcon={<Search className="h-4 w-4" />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />

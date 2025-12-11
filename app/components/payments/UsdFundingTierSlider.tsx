@@ -11,6 +11,7 @@ import { UsernameBadge } from '../ui/UsernameBadge';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import Link from 'next/link';
+import { SubscriptionCheckoutDrawer } from './SubscriptionCheckoutDrawer';
 
 interface UsdFundingTierSliderProps {
   selectedAmount: number;
@@ -54,12 +55,13 @@ export default function UsdFundingTierSlider({
   showCurrentOption = false
 }: UsdFundingTierSliderProps) {
   const { user } = useAuth();
-  const { usdBalance } = useUsdBalance();
+  const { usdBalance, refreshUsdBalance } = useUsdBalance();
   const [sliderNodes, setSliderNodes] = useState(INITIAL_NODES);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [customError, setCustomError] = useState('');
   const customInputRef = useRef<HTMLInputElement>(null);
+  const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
 
   // Determine if we need extended nodes - only expand, don't contract
   useEffect(() => {
@@ -431,17 +433,15 @@ export default function UsdFundingTierSlider({
           {/* Custom amount input */}
           {showCustomInput && (
             <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  ref={customInputRef}
-                  type="text"
-                  placeholder="100.00"
-                  value={customAmount}
-                  onChange={(e) => handleCustomAmountChange(e.target.value)}
-                  className={`wewrite-input-with-left-icon ${customError ? 'border-destructive' : ''}`}
-                />
-              </div>
+              <Input
+                ref={customInputRef}
+                type="text"
+                placeholder="100.00"
+                value={customAmount}
+                onChange={(e) => handleCustomAmountChange(e.target.value)}
+                leftIcon={<DollarSign className="h-4 w-4" />}
+                className={customError ? 'border-destructive' : ''}
+              />
 
               {customError && (
                 <p className="text-sm text-destructive animate-in slide-in-from-top-1 duration-150">{customError}</p>
@@ -473,19 +473,17 @@ export default function UsdFundingTierSlider({
             </Button>
           ) : (
             <Button
-              asChild
+              onClick={() => setCheckoutDrawerOpen(true)}
               className={`w-full text-white ${
                 selectedAmount > (currentSubscription?.amount || 0)
                   ? 'bg-green-600 hover:bg-green-700'
                   : 'bg-yellow-600 hover:bg-yellow-700'
               }`}
             >
-              <Link href={`/settings/fund-account/checkout?amount=${selectedAmount}`}>
-                {selectedAmount > (currentSubscription?.amount || 0)
-                  ? `Upgrade to $${selectedAmount}/month`
-                  : `Downgrade to $${selectedAmount}/month`
-                }
-              </Link>
+              {selectedAmount > (currentSubscription?.amount || 0)
+                ? `Upgrade to $${selectedAmount}/month`
+                : `Downgrade to $${selectedAmount}/month`
+              }
             </Button>
           )}
         </div>
@@ -497,6 +495,18 @@ export default function UsdFundingTierSlider({
           </p>
         </div>
       </div>
+
+      {/* Checkout Drawer */}
+      <SubscriptionCheckoutDrawer
+        open={checkoutDrawerOpen}
+        onOpenChange={setCheckoutDrawerOpen}
+        amount={selectedAmount}
+        currentSubscriptionAmount={currentSubscription?.amount}
+        onSuccess={() => {
+          // Refresh USD balance after successful subscription change
+          refreshUsdBalance();
+        }}
+      />
     </div>
   );
 }

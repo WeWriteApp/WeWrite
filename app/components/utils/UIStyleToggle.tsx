@@ -38,7 +38,7 @@ export default function UIStyleToggle() {
           data-ui-style={style}
           data-active={uiStyle === style}
           className={cn(
-            "flex flex-col items-center justify-center gap-2 p-4 text-sm border rounded-lg transition-all duration-200 nav-hover-state",
+            "flex flex-col items-center justify-center gap-2 p-4 text-sm border rounded-lg transition-[background-color,transform,opacity] duration-200 nav-hover-state outline-none focus:outline-none focus:ring-0",
             uiStyle === style
               ? "nav-selected-state border-accent"
               : "border-theme-medium"
@@ -47,9 +47,14 @@ export default function UIStyleToggle() {
           {icon}
           <span className="font-medium">{label}</span>
           <span className="text-xs text-muted-foreground text-center">{description}</span>
-          {uiStyle === style && (
-            <Check className="h-4 w-4 text-primary" />
-          )}
+          <Check
+            className={cn(
+              "h-4 w-4 text-primary transition-all duration-200",
+              uiStyle === style
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-75"
+            )}
+          />
         </button>
       ))}
     </div>

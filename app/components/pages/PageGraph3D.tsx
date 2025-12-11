@@ -33,6 +33,8 @@ interface PageGraph3DProps {
   pageId: string;
   isFullscreen: boolean;
   height?: number;
+  /** When true, graph auto-rotates and is non-interactive (preview mode) */
+  isPreview?: boolean;
 }
 
 // Helper to add opacity to hex color
@@ -49,13 +51,18 @@ export default function PageGraph3D({
   pageId,
   isFullscreen,
   height = 400,
+  isPreview = false,
 }: PageGraph3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const router = useRouter();
   const { getCurrentThemeColor } = useAccentColor();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
+
+  // In preview mode (non-fullscreen), disable interactions
+  const isInteractive = isFullscreen || !isPreview;
 
   // Compute accent hex color from OKLCH
   const accentHex = useMemo(() => {
@@ -183,14 +190,17 @@ export default function PageGraph3D({
         .d3VelocityDecay(0.3)
         .warmupTicks(50)
         .cooldownTicks(100)
-        // Interactions
+        // Interactions - only enable in interactive mode
+        .enableNodeDrag(isInteractive)
+        .enableNavigationControls(isInteractive)
+        .enablePointerInteraction(isInteractive)
         .onNodeClick((node: any) => {
-          if (node.id !== pageId) {
+          if (isInteractive && node.id !== pageId) {
             router.push(`/${node.id}`);
           }
         })
         .onNodeHover((node: any) => {
-          container.style.cursor = node ? 'pointer' : 'default';
+          container.style.cursor = isInteractive && node ? 'pointer' : 'default';
         });
 
       // Configure forces after graph initialization
@@ -237,6 +247,31 @@ export default function PageGraph3D({
             );
           }
         }
+
+        // Start auto-rotation in preview mode (non-interactive)
+        if (!isInteractive && graphRef.current) {
+          let angle = 0;
+          const distance = 200;
+          const rotationSpeed = 0.002; // Slow rotation
+
+          const rotate = () => {
+            if (!graphRef.current) return;
+
+            angle += rotationSpeed;
+            const x = distance * Math.sin(angle);
+            const z = distance * Math.cos(angle);
+
+            graphRef.current.cameraPosition({
+              x,
+              y: 50, // Slight overhead view
+              z
+            });
+
+            animationFrameRef.current = requestAnimationFrame(rotate);
+          };
+
+          rotate();
+        }
       }, 500);
     };
 
@@ -244,12 +279,17 @@ export default function PageGraph3D({
 
     // Cleanup
     return () => {
+      // Cancel auto-rotation animation
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
       if (graphRef.current) {
         graphRef.current._destructor?.();
         graphRef.current = null;
       }
     };
-  }, [nodes, links, pageId, isFullscreen, height, accentHex, isDarkMode, router]);
+  }, [nodes, links, pageId, isFullscreen, height, accentHex, isDarkMode, router, isInteractive]);
 
   // Handle window resize
   useEffect(() => {
