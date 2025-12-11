@@ -86,7 +86,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     };
 
     return (
-      <div className={cn("relative inline-flex", widthClasses, wrapperClassName)}>
+      <div className={cn("relative flex", widthClasses, wrapperClassName)}>
         {leftIcon && (
           <div className={cn(
             "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center z-10 transition-colors",

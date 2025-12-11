@@ -2317,12 +2317,12 @@ textarea.wewrite-title-input {
   padding-left: 0 !important; /* The pl-12 class already handles the spacing */
 }
 
-/* Specific classes for inputs with icons */
-.wewrite-input-left-icon {
-  padding-left: 2.25rem !important; /* 36px - space for icon + padding */
+/* Specific classes for inputs with icons - use compound selector for higher specificity */
+.wewrite-input.wewrite-input-left-icon {
+  padding-left: 2.5rem !important; /* 40px - space for icon + padding */
 }
 
-.wewrite-input-right-icon {
+.wewrite-input.wewrite-input-right-icon {
   padding-right: 2.75rem !important; /* 44px - enough space for icon + padding */
 }
 

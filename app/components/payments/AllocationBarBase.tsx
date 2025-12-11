@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Plus, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { 
+import {
   BaseAllocationProps,
   AllocationBarVariant,
   CompositionBarData,
@@ -38,7 +38,6 @@ interface AllocationBarBaseProps extends BaseAllocationProps {
   buttonSize?: 'sm' | 'md' | 'lg';
   buttonVariant?: 'default' | 'outline' | 'ghost';
   disabled?: boolean;
-  onLongPress?: () => void;
 }
 
 // Hook for composition bar calculations with optimistic updates
@@ -120,8 +119,7 @@ export function AllocationBarBase({
   showControls = true,
   buttonSize = 'sm',
   buttonVariant = 'outline',
-  disabled = false,
-  onLongPress
+  disabled = false
 }: AllocationBarBaseProps) {
   const { user } = useAuth();
   const { usdBalance } = useUsdBalance();
@@ -175,8 +173,64 @@ export function AllocationBarBase({
   const [showParticles, setShowParticles] = useState(false);
   const [showPulse, setShowPulse] = useState(false);
 
+  // Long press handling for interval modal
+  const [showIntervalModal, setShowIntervalModal] = useState(false);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressing = useRef(false);
+
+  // Long press handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    longPressTimeoutRef.current = setTimeout(() => {
+      isLongPressing.current = true;
+      setShowIntervalModal(true);
+    }, 500);
+  };
+
+  const handleMouseUp = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    isLongPressing.current = false;
+  };
+
+  const closeIntervalModal = () => {
+    isLongPressing.current = false;
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    setShowIntervalModal(false);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Wrapper for allocation change that triggers animations
   const handleAllocationChangeWithAnimation = (amount: number, event?: React.MouseEvent) => {
+    // Skip if long pressing
+    if (isLongPressing.current) {
+      isLongPressing.current = false;
+      return;
+    }
+
     // Trigger game-like animations for increases
     if (amount > 0) {
       setShowPulse(true);
@@ -251,7 +305,10 @@ export function AllocationBarBase({
               "h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
               buttonVariant === 'ghost' && "hover:bg-destructive/20"
             )}
-            onClick={(e) => handleAllocationChangeWithAnimation(-1, e)}
+            onClick={(e) => handleAllocationChangeWithAnimation(-allocationIntervalCents, e)}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
             disabled={disabled || isProcessing || allocationState.currentAllocationCents <= 0}
           >
             <Minus className="h-4 w-4" />
@@ -323,11 +380,10 @@ export function AllocationBarBase({
             variant={buttonVariant}
             className="h-8 w-8 p-0 active:scale-95 transition-all duration-150 flex-shrink-0 bg-secondary hover:bg-secondary/80 border border-neutral-20"
             onClick={(e) => handleAllocationChangeWithAnimation(allocationIntervalCents, e)}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
             disabled={disabled || isProcessing}
-            onContextMenu={onLongPress ? (e) => {
-              e.preventDefault();
-              onLongPress();
-            } : undefined}
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -341,6 +397,11 @@ export function AllocationBarBase({
         </div>
       )}
 
+      {/* Allocation Interval Modal */}
+      <AllocationIntervalModal
+        isOpen={showIntervalModal}
+        onClose={closeIntervalModal}
+      />
     </div>
   );
 }

@@ -899,6 +899,60 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [editor]);
 
+  // Check if an element is the last paragraph in the document
+  const isLastParagraph = useCallback((element: any): boolean => {
+    try {
+      const path = ReactEditor.findPath(editor, element);
+      return path.length === 1 && path[0] === editorValue.length - 1;
+    } catch {
+      return false;
+    }
+  }, [editor, editorValue.length]);
+
+  // Track if we should show the delayed highlight for the last empty line
+  const [showLastEmptyHighlight, setShowLastEmptyHighlight] = useState(false);
+  const lastEmptyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if the last paragraph is empty and manage the delayed highlight
+  useEffect(() => {
+    if (readOnly || !editorValue || editorValue.length === 0) {
+      setShowLastEmptyHighlight(false);
+      return;
+    }
+
+    const lastNode = editorValue[editorValue.length - 1] as any;
+    const isLastEmpty = (lastNode.type === 'paragraph' || lastNode.type === undefined) &&
+      lastNode.children?.every((child: any) => Text.isText(child) && child.text === '');
+
+    // Don't highlight if it's the only paragraph (that's the default typing area)
+    const shouldDelay = isLastEmpty && editorValue.length > 1;
+
+    if (shouldDelay) {
+      // Clear any existing timeout
+      if (lastEmptyTimeoutRef.current) {
+        clearTimeout(lastEmptyTimeoutRef.current);
+      }
+      // Reset highlight immediately when content changes
+      setShowLastEmptyHighlight(false);
+      // Set a 1 second delay before showing the highlight
+      lastEmptyTimeoutRef.current = setTimeout(() => {
+        setShowLastEmptyHighlight(true);
+      }, 1000);
+    } else {
+      // Last paragraph is not empty, clear highlight and timeout
+      if (lastEmptyTimeoutRef.current) {
+        clearTimeout(lastEmptyTimeoutRef.current);
+      }
+      setShowLastEmptyHighlight(false);
+    }
+
+    return () => {
+      if (lastEmptyTimeoutRef.current) {
+        clearTimeout(lastEmptyTimeoutRef.current);
+      }
+    };
+  }, [editorValue, readOnly]);
+
   // Delete an empty paragraph
   const deleteEmptyParagraph = useCallback((element: any) => {
     try {
@@ -1019,9 +1073,12 @@ const Editor: React.FC<EditorProps> = ({
         // Check if this is an empty paragraph that should be highlighted
         const isEmpty = isEmptyParagraph(element);
         const isFirst = isFirstParagraph(element);
-        // Don't highlight the first empty paragraph (that's where users type)
-        const shouldHighlight = isEmpty && !isFirst && !readOnly;
-        const canDelete = !readOnly && isEmpty && !isFirst && editorValue.length > 1;
+        const isLast = isLastParagraph(element);
+        // For the last empty paragraph, only highlight after the 1s delay
+        // For other empty paragraphs (middle ones), highlight immediately
+        // Never highlight the first paragraph (that's where users type)
+        const shouldHighlight = isEmpty && !isFirst && !readOnly && (!isLast || showLastEmptyHighlight);
+        const canDelete = !readOnly && isEmpty && !isFirst && editorValue.length > 1 && (!isLast || showLastEmptyHighlight);
 
         if (shouldHighlight) {
           return (
@@ -1060,7 +1117,7 @@ const Editor: React.FC<EditorProps> = ({
 
         return <p {...attributes}>{children}</p>;
     }
-  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, deleteEmptyParagraph, editorValue.length]);
+  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, isLastParagraph, deleteEmptyParagraph, editorValue.length, showLastEmptyHighlight]);
 
   // Simple leaf renderer with suggestion underline support
   const renderLeaf = useCallback((props: any) => {
@@ -1163,8 +1220,8 @@ const Editor: React.FC<EditorProps> = ({
                   onPaste={handlePaste}
                   readOnly={readOnly}
                   spellCheck={true}
-                  autoCorrect="off"
-                  autoCapitalize="off"
+                  autoCorrect="on"
+                  autoCapitalize="sentences"
                   style={{
                     // Performance optimization for mobile: use GPU acceleration
                     transform: 'translateZ(0)',

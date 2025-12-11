@@ -2,8 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Search, X, Pin } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 
 /**
@@ -159,28 +158,25 @@ const SearchInput = ({
 
   return (
     <form onSubmit={handleSubmit} className="mb-8">
-      <div className="relative">
+      <div className="flex gap-2">
         <Input
           ref={searchInputRef}
           type="text"
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full wewrite-input-with-left-icon wewrite-input-with-right-icon"
+          className="w-full"
+          wrapperClassName="flex-1"
           autoComplete="off"
+          leftIcon={<Search className="h-5 w-5" />}
         />
 
-        {/* Search icon on the left */}
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="h-5 w-5 text-muted-foreground" />
-        </div>
-
-        {/* Clear button - larger size */}
+        {/* Clear button - outside input */}
         {inputValue.trim() && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
+            className="flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Clear search"
           >
             <X className="h-5 w-5" />
