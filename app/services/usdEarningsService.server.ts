@@ -130,10 +130,32 @@ export class ServerUsdEarningsService {
             // Calculate funding ratio: what percentage of allocations are actually funded
             const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
             fundedUsdCents = Math.round(usdCentsChange * fundingRatio);
+            console.log(`💰 [EARNINGS] [${correlationId}] Applied funding ratio`, {
+              fromUserId,
+              recipientUserId,
+              fundingRatio: fundingRatio.toFixed(4),
+              originalUsdCents: usdCentsChange,
+              fundedUsdCents,
+              sponsorSubscriptionCents,
+              sponsorAllocatedCents
+            });
+          } else {
+            console.log(`💰 [EARNINGS] [${correlationId}] Sponsor fully funded`, {
+              fromUserId,
+              recipientUserId,
+              usdCents: fundedUsdCents,
+              sponsorSubscriptionCents,
+              sponsorAllocatedCents
+            });
           }
         } else {
           // No balance record means no subscription - allocation is completely unfunded
           fundedUsdCents = 0;
+          console.log(`💰 [EARNINGS] [${correlationId}] No sponsor balance record (unfunded)`, {
+            fromUserId,
+            recipientUserId,
+            originalUsdCents: usdCentsChange
+          });
         }
       } catch (balanceError) {
         console.warn(`[ServerUsdEarningsService] [${correlationId}] Error checking sponsor balance:`, balanceError);
@@ -142,6 +164,15 @@ export class ServerUsdEarningsService {
 
       // Skip recording if there's nothing funded
       if (fundedUsdCents <= 0) {
+        console.log(`💰 [EARNINGS SKIPPED] [${correlationId}] No funded amount for allocation`, {
+          fromUserId,
+          recipientUserId,
+          resourceId,
+          resourceType,
+          originalUsdCents: usdCentsChange,
+          fundedUsdCents,
+          reason: 'Allocation is unfunded (sponsor has no active subscription or is over-allocated)'
+        });
         return;
       }
 
@@ -193,6 +224,19 @@ export class ServerUsdEarningsService {
 
         // Update writer balance
         await this.updateWriterBalanceInTransaction(transaction, recipientUserId, balanceRef, balanceDoc);
+      });
+
+      // Log successful earnings recording
+      const duration = Date.now() - startTime;
+      console.log(`💰 [EARNINGS SUCCESS] [${correlationId}] Recorded earnings (${duration}ms)`, {
+        fromUserId,
+        recipientUserId,
+        resourceId,
+        resourceType,
+        fundedUsdCents,
+        originalUsdCents: usdCentsChange,
+        month,
+        earningsId: `${recipientUserId}_${month}`
       });
     } catch (error) {
       const duration = Date.now() - startTime;
