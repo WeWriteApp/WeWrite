@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
       },
       collections: {
         usdAllocations: getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS),
-        writerUsdBalances: getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES),
         writerUsdEarnings: getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)
       },
       checks: {
@@ -68,21 +67,41 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // Check if user has USD balance record
+    // Calculate balance from earnings records (Phase 2 - single source of truth)
     try {
-      const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId);
-      const balanceDoc = await balanceRef.get();
-      debugInfo.checks.hasUsdBalanceRecord = balanceDoc.exists;
-      
-      if (balanceDoc.exists) {
-        const balanceData = balanceDoc.data();
-        debugInfo.checks.balanceData = {
-          hasTotalEarned: typeof balanceData?.totalUsdCentsEarned === 'number',
-          hasPending: typeof balanceData?.pendingUsdCents === 'number',
-          hasAvailable: typeof balanceData?.availableUsdCents === 'number',
-          totalEarnedCents: balanceData?.totalUsdCentsEarned || 0,
-          pendingCents: balanceData?.pendingUsdCents || 0,
-          availableCents: balanceData?.availableUsdCents || 0
+      const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+        .where('userId', '==', userId);
+      const earningsSnapshot = await earningsQuery.get();
+
+      debugInfo.checks.hasEarningsRecords = !earningsSnapshot.empty;
+      debugInfo.checks.earningsRecordCount = earningsSnapshot.size;
+
+      if (!earningsSnapshot.empty) {
+        let totalEarnedCents = 0;
+        let pendingCents = 0;
+        let availableCents = 0;
+        let paidOutCents = 0;
+
+        earningsSnapshot.docs.forEach(doc => {
+          const earning = doc.data();
+          const cents = earning.totalUsdCentsReceived || earning.totalCentsReceived || 0;
+          totalEarnedCents += cents;
+
+          if (earning.status === 'pending') {
+            pendingCents += cents;
+          } else if (earning.status === 'available') {
+            availableCents += cents;
+          } else if (earning.status === 'paid_out') {
+            paidOutCents += cents;
+          }
+        });
+
+        debugInfo.checks.calculatedBalance = {
+          totalEarnedCents,
+          pendingCents,
+          availableCents,
+          paidOutCents,
+          note: 'Calculated from earnings records (single source of truth)'
         };
       }
     } catch (error) {

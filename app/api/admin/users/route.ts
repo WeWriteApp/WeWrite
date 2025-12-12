@@ -190,9 +190,38 @@ export async function GET(request: NextRequest) {
         if (includeFinancial) {
           try {
             const balanceDoc = await db.collection(getCollectionName('usdBalances')).doc(userDoc.id).get();
-            const writerBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userDoc.id).get();
             const balanceData = balanceDoc.data() || {};
-            const writerBalance = writerBalanceDoc.data() || {};
+
+            // Phase 2: Calculate writer balance from earnings records (single source of truth)
+            let availableEarningsUsd: number | undefined;
+            let earningsTotalUsd: number | undefined;
+            let earningsThisMonthUsd: number | undefined;
+
+            const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+              .where('userId', '==', userDoc.id);
+            const earningsSnapshot = await earningsQuery.get();
+
+            if (!earningsSnapshot.empty) {
+              let totalCents = 0;
+              let availableCents = 0;
+              let pendingCents = 0;
+
+              earningsSnapshot.docs.forEach(doc => {
+                const earning = doc.data();
+                const cents = earning.totalUsdCentsReceived || earning.totalCentsReceived || 0;
+                totalCents += cents;
+
+                if (earning.status === 'pending') {
+                  pendingCents += cents;
+                } else if (earning.status === 'available') {
+                  availableCents += cents;
+                }
+              });
+
+              earningsTotalUsd = totalCents / 100;
+              availableEarningsUsd = availableCents / 100;
+              earningsThisMonthUsd = pendingCents / 100;
+            }
 
             // Get user's Stripe customer ID to verify subscription status against Stripe
             const stripeCustomerId = data.stripeCustomerId;
@@ -218,17 +247,6 @@ export async function GET(request: NextRequest) {
               balanceData.subscriptionCancellationReason ??
               balanceData.cancelReason ??
               null;
-
-            const availableEarningsUsd =
-              writerBalance.availableCents !== undefined ? writerBalance.availableCents / 100 : undefined;
-            const earningsTotalUsd =
-              writerBalance.totalUsdCentsEarned !== undefined
-                ? writerBalance.totalUsdCentsEarned / 100
-                : writerBalance.totalCents !== undefined
-                ? writerBalance.totalCents / 100
-                : undefined;
-            const earningsThisMonthUsd =
-              writerBalance.pendingUsdCents !== undefined ? writerBalance.pendingUsdCents / 100 : undefined;
 
             user.financial = {
               hasSubscription: subscriptionStatus === 'active',

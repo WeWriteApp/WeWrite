@@ -2,196 +2,213 @@
 
 ## Overview
 
-WeWrite uses a direct USD payment system that replaced the previous token-based virtual currency. This document provides a comprehensive overview of the USD system architecture, features, and implementation.
+WeWrite uses a subscription-based USD payment system where subscribers allocate their monthly funds to creators, and creators can withdraw their earnings (minus a 10% platform fee) via Stripe Connect.
 
-## 🎉 System Status
+## Core Concepts
 
-- ✅ **Migration Complete** - All systems now use USD (January 2025)
-- ✅ **Production Ready** - USD system is live and operational
-- ✅ **Legacy Support** - Token endpoints deprecated with warnings
-- ✅ **Data Integrity** - All financial data migrated successfully
-
-## 💰 Core Architecture
-
-### Design Principles
-
-1. **Transparent Pricing** - All amounts displayed in real USD
-2. **Direct Payments** - No virtual currency conversion needed
-3. **Precision Handling** - USD cents used for accurate calculations
-4. **Separation of Concerns** - Dedicated contexts for each data domain
-5. **Performance Optimized** - Components only load data they need
-
-### System Components
-
-#### 1. UsdBalanceContext
-**Purpose**: Manages user's available spending balance
-**File**: `app/contexts/UsdBalanceContext.tsx`
-**Features**:
-- Real-time balance tracking
-- Optimistic updates for allocations
-- Automatic refresh on subscription changes
-- Caching for performance
-
-#### 2. EarningsContext
-**Purpose**: Manages creator earnings and payout data
-**File**: `app/contexts/EarningsContext.tsx`
-**Features**:
-- Storage balance (allocated funds)
-- Payments balance (withdrawable funds)
-- Payout history and status
-- Platform fee calculations (10%)
-
-#### 3. AllocationContext
-**Purpose**: Manages fund allocations to pages and users
-**File**: `app/contexts/AllocationContext.tsx`
-**Features**:
-- Page-specific allocations
-- User-specific allocations
-- Allocation history and analytics
-- Batch allocation operations
-
-### Data Flow Architecture
+### The Simple Model
 
 ```
-Subscription Purchase → UsdBalanceContext (Available Funds)
-                    ↓
-User Allocations → AllocationContext (Track Allocations)
-                    ↓
-Monthly Processing → EarningsContext (Creator Earnings)
-                    ↓
-Payout Requests → Payments Balance (Withdrawable)
+SUBSCRIBER                           CREATOR
+    |                                   |
+    | Subscribes ($5-$100/month)        |
+    v                                   |
++----------------+                      |
+| subscriptions  | (Stripe-managed)     |
++----------------+                      |
+    |                                   |
+    | Allocates to pages/users          |
+    v                                   |
++----------------+                      |
+| usdAllocations | ------------------>  | Earns from allocations
++----------------+                      |
+                                        v
+                                +------------------+
+                                | writerUsdEarnings| (monthly records)
+                                +------------------+
+                                        |
+                                        | Requests payout
+                                        v
+                                +------------------+
+                                | usdPayouts       | (10% fee applied)
+                                +------------------+
 ```
 
-## 💳 Payment Features
+### Key Rules
 
-### Subscription System
-- **Monthly Subscriptions**: $5, $10, $25, $50, $100 tiers
-- **Automatic Renewal**: Stripe-managed recurring payments
-- **Instant Activation**: Immediate balance credit
-- **Upgrade/Downgrade**: Prorated billing adjustments
+1. **Subscription = Monthly Budget**: Your subscription tier ($5, $10, $25, $50, $100) is your monthly allocation budget
+2. **Allocations Are Intentions**: You can allocate more than your subscription (overspend), but only funded portions are earned by creators
+3. **Funded = Earned**: Writers only earn from the funded portion of allocations (subscription amount / total allocated)
+4. **Platform Fee on Payout**: 10% fee is deducted when creators withdraw, not when allocations happen
 
-### Allocation System
-- **Real-time Allocations**: Instant fund allocation to creators
-- **Optimistic Updates**: UI updates immediately
-- **Batch Processing**: Efficient backend operations
-- **Allocation History**: Complete audit trail
+### Funding Ratio Example
 
-### Payout System
-- **Storage Balance**: Funds allocated to creators (held until month-end)
-- **Payments Balance**: Withdrawable funds after platform fee
-- **Platform Fee**: 10% on all payouts
-- **Bank Integration**: Stripe Connect for direct deposits
+If you subscribe for $10/month but allocate $20 total:
+- Your **funding ratio** = $10 / $20 = 50%
+- Creator allocated $5 → earns $2.50 (50% funded)
+- Creator allocated $15 → earns $7.50 (50% funded)
+- Total earnings to creators = $10.00 (matches subscription)
 
-## 🔧 Technical Implementation
+## Firestore Collections
 
-### USD Cents Precision
-```typescript
-// All financial calculations use cents for precision
-const usdCents = 1000; // $10.00
-const displayAmount = formatCurrency(usdCents); // "$10.00"
+### Primary Collections
+
+| Collection | Purpose | Key Fields |
+|-----------|---------|-----------|
+| `subscriptions` | Stripe subscription data | userId, status, amount, stripeSubscriptionId |
+| `usdAllocations` | Monthly allocation records | userId, recipientUserId, resourceType, resourceId, usdCents, month, status |
+| `writerUsdEarnings` | Creator earnings per month | userId, month, totalUsdCentsReceived, status, allocations[] |
+| `usdPayouts` | Payout request records | userId, amountCents, status, stripePayoutId |
+
+### Derived/Cache Collections (Can Be Recalculated)
+
+| Collection | Purpose | Source of Truth |
+|-----------|---------|-----------------|
+| `usdBalances` | Subscriber's current balance | Calculated from subscription amount and sum of active allocations |
+| ~~`writerUsdBalances`~~ | ~~Creator's balance summary~~ | **DEPRECATED (Phase 2)** - Now calculated on-demand from `writerUsdEarnings` |
+
+## Data Flow
+
+### 1. Subscription Created
+```
+Stripe Webhook → /api/account-subscription
+  → Create/update subscriptions record
+  → usdBalances.totalUsdCents = subscription amount
+  → usdBalances.availableUsdCents = subscription - allocated
 ```
 
-### Context Architecture
-```typescript
-// Separated contexts for focused data management
-const { balance, allocateUsd } = useUsdBalance();
-const { storageBalance, paymentsBalance } = useEarnings();
-const { pageAllocations } = useAllocations();
+### 2. Allocation Made
+```
+User Action → /api/usd/allocate or /api/usd/allocate-user
+  → Create/update usdAllocations record (month-specific)
+  → Calculate funding ratio (subscription / totalAllocated)
+  → Create writerUsdEarnings entry with FUNDED amount
+  → allocatedUsdCents is calculated on-demand from SUM(active allocations)
 ```
 
-### API Integration
-```typescript
-// Environment-aware API calls
-const response = await fetch('/api/usd/balance');
-const allocation = await fetch('/api/usd/allocate', {
-  method: 'POST',
-  body: JSON.stringify({ pageId, amount })
-});
+### 3. Month End Processing
+```
+Cron Job → /api/usd/process-writer-earnings
+  → Previous month's pending earnings → available
+  → Copy active allocations to new month
+  → (Balance calculated on-demand from earnings)
 ```
 
-## 📊 Financial Data Architecture
+### 4. Payout Requested
+```
+Creator Action → /api/earnings/request-payout
+  → Validate available balance >= minimum ($10)
+  → Create usdPayouts record (status: pending)
+  → Initiate Stripe Connect transfer
+  → Deduct 10% platform fee
+  → Update writerUsdEarnings status → paid_out
+```
 
-### Balance Types
-1. **Available Balance**: Funds available for allocation
-2. **Storage Balance**: Funds allocated to creators (pending)
-3. **Payments Balance**: Funds available for withdrawal
+## API Endpoints
 
-### Transaction Types
-1. **Subscription**: Monthly payment from user
-2. **Allocation**: User allocates funds to creator
-3. **Payout**: Creator withdraws earnings
-4. **Platform Fee**: 10% fee on payouts
+### Core Endpoints
+- `GET /api/usd/balance` - Get subscriber's balance
+- `POST /api/usd/allocate` - Allocate to a page
+- `POST /api/usd/allocate-user` - Allocate to a user
+- `GET /api/usd/allocations` - Get user's allocations
+- `GET /api/usd/earnings` - Get creator's earnings
+- `POST /api/earnings/request-payout` - Request payout
 
-### Data Storage
-- **Collections**: `usdBalances`, `usdAllocations`, `usdEarnings`
-- **Environment**: Uses `getCollectionName()` for dev/prod separation
-- **Caching**: Optimized for performance with TTL caching
+### Admin Endpoints
+- `GET /api/admin/financial-overview` - Platform-wide financial summary
+- `POST /api/admin/backfill-earnings` - Reconcile allocation/earnings discrepancies
 
-## 🎯 User Experience
+## Earnings States
 
-### For Supporters
-1. **Subscribe**: Choose monthly subscription tier
-2. **Allocate**: Distribute funds to favorite creators
-3. **Track**: Monitor allocation history and impact
+```
+pending      → Current month, not yet withdrawable
+available    → Past months, can be withdrawn
+paid_out     → Already withdrawn
+```
 
-### For Creators
-1. **Earn**: Receive allocations from supporters
-2. **Track**: Monitor earnings in real-time
-3. **Withdraw**: Request payouts to bank account
+## Error Recovery
 
-### Financial Transparency
-- **Real USD**: No virtual currency confusion
-- **Clear Fees**: 10% platform fee clearly displayed
-- **Instant Updates**: Real-time balance and earnings
-- **Complete History**: Full transaction audit trail
+### Allocation/Earnings Mismatch
+If allocations exist but earnings records are missing:
+1. Run backfill endpoint: `POST /api/admin/backfill-earnings`
+2. Script recalculates earnings from active allocations
+3. Creates/updates writerUsdEarnings to match
 
-## 🔒 Security & Compliance
+### Balance Discrepancy
+Balance discrepancies are now self-healing since allocatedUsdCents is always calculated:
+- `allocatedUsdCents` = SUM(usdAllocations WHERE status='active' AND month=currentMonth)
+- `availableUsdCents` = totalUsdCents - allocatedUsdCents
+- No manual intervention needed - values are computed on every API call
 
-### Payment Security
-- **Stripe Integration**: PCI-compliant payment processing
-- **Secure Storage**: Encrypted financial data
-- **Audit Trail**: Complete transaction logging
-- **Fraud Protection**: Stripe's built-in fraud detection
+## Platform Fee
 
-### Data Protection
-- **Environment Isolation**: Dev/prod data separation
-- **Access Controls**: Role-based permissions
-- **Encryption**: Sensitive data encrypted at rest
-- **Compliance**: GDPR and financial regulations
+- **Rate**: 10% of withdrawal amount
+- **Applied**: At payout time, not allocation time
+- **Example**: Creator has $100 available → Withdraws → Receives $90
 
-## 📈 Performance Optimizations
+## Environment Handling
 
-### Caching Strategy
-- **Balance Cache**: 5-minute TTL for balance data
-- **Allocation Cache**: Real-time with optimistic updates
-- **Earnings Cache**: 1-hour TTL for earnings data
+Collections use environment-aware prefixes:
+- **Production (Vercel)**: `usdAllocations`, `writerUsdEarnings`, etc.
+- **Development**: `DEV_usdAllocations`, `DEV_writerUsdEarnings`, etc.
 
-### Database Optimization
-- **Indexed Queries**: Optimized for common patterns
-- **Batch Operations**: Efficient bulk updates
-- **Connection Pooling**: Optimized database connections
-
-## 🚀 Future Enhancements
-
-### Planned Features
-1. **Multi-currency Support**: International payment options
-2. **Advanced Analytics**: Detailed financial reporting
-3. **Automated Payouts**: Scheduled automatic withdrawals
-4. **Tax Reporting**: Creator tax document generation
-
-### Performance Improvements
-1. **Edge Caching**: Global CDN for financial data
-2. **Real-time Updates**: WebSocket-based live updates
-3. **Predictive Caching**: ML-based cache optimization
-
-## 📚 Related Documentation
-
-- [ALLOCATION_SYSTEM.md](./ALLOCATION_SYSTEM.md) - Allocation mechanics
-- [PAYOUT_SYSTEM_INDEX.md](./PAYOUT_SYSTEM_INDEX.md) - Payout processes
-- [SUBSCRIPTION_SYSTEM.md](./SUBSCRIPTION_SYSTEM.md) - Subscription management
-- [FINANCIAL_DATA_ARCHITECTURE.md](./FINANCIAL_DATA_ARCHITECTURE.md) - Data architecture
+Use `getCollectionNameAsync()` for proper collection name resolution in server code.
 
 ---
 
-**Last Updated**: August 2025  
-**Status**: Active - Production system with ongoing enhancements
+## Simplification Roadmap
+
+### Remaining Complexity Issues
+
+1. **Funding Ratio Applied Late**: Applied at earnings recording, not visible at allocation time
+2. **Double Earnings Tracking**: Both allocations[] array and totalUsdCentsReceived in same document
+3. **Pre-existing Build Warning**: `FieldValue` import warning in `usdEarningsService.server.ts`
+
+### Completed Simplifications
+
+#### Phase 1: Single Source of Truth for Subscriber Balances ✅ (December 2025)
+- Removed stored `allocatedUsdCents` from usdBalances writes
+- Always calculate from SUM(active allocations) via `calculateActualAllocatedUsdCents()`
+- Trade-off: More queries, but eliminates drift entirely
+- API responses still include `allocatedUsdCents` (computed on-demand)
+
+#### Phase 2: Single Source of Truth for Creator Balances ✅ (December 2025)
+- Removed stored `writerUsdBalances` collection writes
+- Creator balance now calculated on-demand from `writerUsdEarnings` records
+- `getWriterUsdBalance()` sums earnings by status (pending/available/paid_out)
+- `processUsdAllocation()` only writes to earnings, not balance
+- `processMonthlyDistribution()` only updates earnings status
+- Deprecated methods kept for backwards compatibility but are no-ops
+- Trade-off: More queries per balance request, but eliminates drift entirely
+
+### Proposed Simplifications
+
+#### Phase 3: Upfront Funding Calculation
+- Store funding ratio at allocation time
+- Show creators "expected earnings" immediately
+- Simpler monthly processing
+
+#### Phase 4: Final Cleanup (Optional)
+- [x] All API routes now calculate balance from `writerUsdEarnings` records
+- [x] `WRITER_USD_BALANCES` collection marked as `@deprecated` in code
+- [x] Backfill/migration scripts can still reference collection for historical data
+- [ ] Consider removing `writerUsdBalances` type from database types (or keep as legacy)
+- [ ] Consider archiving/deleting `writerUsdBalances` collection data (after validation period)
+
+---
+
+**Last Updated**: December 2025
+**Status**: Active - Production system (Phase 1, 2 & partial Phase 4 complete)
+
+### Migration Summary
+
+The following files were updated to calculate balance from `writerUsdEarnings` records:
+- `app/api/earnings/user/route.ts` - User earnings API
+- `app/api/payouts/route.ts` - Payout overview API
+- `app/api/payouts/request/route.ts` - Payout eligibility and request
+- `app/api/admin/writer-earnings/route.ts` - Admin analytics
+- `app/api/admin/users/route.ts` - Admin user panel
+- `app/api/debug/earnings-status/route.ts` - Debug endpoint
+- `app/api/public/platform-stats/route.ts` - Public stats
+- `app/services/payoutServiceUnified.ts` - Payout processing
+- `app/services/unifiedEarningsService.ts` - Client-side service

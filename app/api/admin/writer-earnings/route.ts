@@ -42,16 +42,19 @@ export async function GET(request: NextRequest) {
     let cumulativeEarnings = 0;
 
     if (cumulative) {
-      // Get all-time earnings data
-      const earningsSnapshot = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).get();
-      
+      // Get all-time earnings data by aggregating from earnings records (Phase 2 - single source of truth)
+      const earningsSnapshot = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).get();
+
       const writerEarnings = new Map<string, number>();
-      
+
       earningsSnapshot.docs.forEach(doc => {
-        const balance = doc.data();
-        if (balance.totalUsdCentsEarned > 0) {
-          const earnings = balance.totalUsdCentsEarned / 100; // Convert cents to dollars
-          writerEarnings.set(balance.userId || doc.id, earnings);
+        const earning = doc.data();
+        const cents = earning.totalUsdCentsReceived || earning.totalCentsReceived || 0;
+        if (cents > 0) {
+          const earnings = cents / 100; // Convert cents to dollars
+          const userId = earning.userId;
+          const currentTotal = writerEarnings.get(userId) || 0;
+          writerEarnings.set(userId, currentTotal + earnings);
           cumulativeEarnings += earnings;
         }
       });

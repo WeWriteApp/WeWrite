@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     // Always use production collections for public stats
     const PRODUCTION_USERS_COLLECTION = 'users';
-    const PRODUCTION_WRITER_USD_BALANCES_COLLECTION = 'writerUsdBalances';
+    const PRODUCTION_WRITER_USD_EARNINGS_COLLECTION = 'writerUsdEarnings';
     const PRODUCTION_PAGES_COLLECTION = 'pages';
 
     // Calculate first day of current month for pages query
@@ -49,12 +49,12 @@ export async function GET(request: NextRequest) {
     startOfMonth.setHours(0, 0, 0, 0);
 
     // Parallel execution for faster response
-    const [usersSnapshot, balancesSnapshot, pagesThisMonthSnapshot] = await Promise.all([
+    const [usersSnapshot, earningsSnapshot, pagesThisMonthSnapshot] = await Promise.all([
       // Get total user count (fast count operation)
       db.collection(PRODUCTION_USERS_COLLECTION).count().get(),
-      // Get writer balances (limit to reduce processing time)
-      db.collection(PRODUCTION_WRITER_USD_BALANCES_COLLECTION)
-        .select('pendingUsdCents', 'availableUsdCents', 'totalPaidUsdCents')
+      // Get writer earnings (Phase 2 - single source of truth)
+      db.collection(PRODUCTION_WRITER_USD_EARNINGS_COLLECTION)
+        .select('totalUsdCentsReceived', 'totalCentsReceived', 'status')
         .get(),
       // Get pages created this month (count operation)
       db.collection(PRODUCTION_PAGES_COLLECTION)
@@ -68,29 +68,25 @@ export async function GET(request: NextRequest) {
     console.log(`Total users in production: ${totalUsers}`);
     console.log(`Pages created this month: ${pagesThisMonth}`);
 
-    // Process balances efficiently
-    let totalFromBalances = 0;
-    let balanceRecordsProcessed = 0;
+    // Calculate total earnings from earnings records (Phase 2 - single source of truth)
+    let totalFromEarnings = 0;
+    let earningsRecordsProcessed = 0;
 
-    balancesSnapshot.docs.forEach(doc => {
-      const balance = doc.data();
-      balanceRecordsProcessed++;
+    earningsSnapshot.docs.forEach(doc => {
+      const earning = doc.data();
+      earningsRecordsProcessed++;
 
-      // Sum all earnings (pending + available + paid)
-      const pendingCents = balance.pendingUsdCents || 0;
-      const availableCents = balance.availableUsdCents || 0;
-      const paidCents = balance.totalPaidUsdCents || 0;
-
-      // Total includes all earnings (pending + available + paid)
-      totalFromBalances += pendingCents + availableCents + paidCents;
+      // Sum all earnings regardless of status (pending, available, paid_out)
+      const cents = earning.totalUsdCentsReceived || earning.totalCentsReceived || 0;
+      totalFromEarnings += cents;
     });
 
-    console.log(`Processed ${balanceRecordsProcessed} writer balance records`);
-    console.log(`Total from balances: $${(totalFromBalances / 100).toFixed(2)}`);
+    console.log(`Processed ${earningsRecordsProcessed} writer earnings records`);
+    console.log(`Total from earnings: $${(totalFromEarnings / 100).toFixed(2)}`);
 
-    // Use total from balances (includes pending + available + paid) for transparency
+    // Use total from earnings (includes pending + available + paid_out) for transparency
     // This shows the total value that has been earned by writers
-    const totalPayouts = Math.round(totalFromBalances / 100 * 100) / 100; // Convert cents to dollars
+    const totalPayouts = Math.round(totalFromEarnings / 100 * 100) / 100; // Convert cents to dollars
 
     const stats: PlatformStats = {
       totalUsers,

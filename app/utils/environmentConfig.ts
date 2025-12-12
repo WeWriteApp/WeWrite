@@ -339,6 +339,7 @@ export const COLLECTIONS = {
   USD_ALLOCATIONS: 'usdAllocations',
   PENDING_USD_ALLOCATIONS: 'pendingUsdAllocations',
   USD_EARNINGS: 'usdEarnings',
+  /** @deprecated Phase 2 complete - Balance now calculated from WRITER_USD_EARNINGS records. Do not use for reads. */
   WRITER_USD_BALANCES: 'writerUsdBalances',
   WRITER_USD_EARNINGS: 'writerUsdEarnings',
   USD_PAYOUTS: 'usdPayouts',
@@ -398,6 +399,7 @@ export const USD_COLLECTIONS = {
   USD_ALLOCATIONS: COLLECTIONS.USD_ALLOCATIONS,
   PENDING_USD_ALLOCATIONS: COLLECTIONS.PENDING_USD_ALLOCATIONS,
   USD_EARNINGS: COLLECTIONS.USD_EARNINGS,
+  /** @deprecated Phase 2 complete - Balance now calculated from WRITER_USD_EARNINGS records. Do not use for reads. */
   WRITER_USD_BALANCES: COLLECTIONS.WRITER_USD_BALANCES,
   WRITER_USD_EARNINGS: COLLECTIONS.WRITER_USD_EARNINGS,
   USD_PAYOUTS: COLLECTIONS.USD_PAYOUTS,

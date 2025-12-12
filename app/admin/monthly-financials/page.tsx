@@ -1,12 +1,35 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle } from 'lucide-react';
+import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle, GripVertical } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { formatUsdCents } from '../../utils/formatCurrency';
+
+// KPI Configuration for draggable cards
+interface KpiConfig {
+  id: string;
+  label: string;
+  tooltip: string;
+  getValue: (data: MonthlyFinancialData) => string;
+  bgClass: string;
+  valueClass?: string;
+}
+
+const DEFAULT_KPI_ORDER = [
+  'totalSubscriptions',
+  'allocatedToCreators',
+  'unallocated',
+  'allocationRate',
+  'platformFee',
+  'creatorPayouts',
+  'platformRevenue',
+  'activeUsers',
+];
+
+const KPI_STORAGE_KEY = 'monthly-financials-kpi-order';
 
 // Simple hover tooltip component with backdrop blur
 // Uses fixed positioning to prevent clipping by table overflow
@@ -61,6 +84,110 @@ function formatCentsWithStyle(cents: number, baseClass: string = '') {
   const isZero = cents === 0;
   const className = isZero ? 'opacity-30' : baseClass;
   return { text: formatUsdCents(cents), className };
+}
+
+// KPI definitions with all the metadata
+const KPI_DEFINITIONS: Record<string, KpiConfig> = {
+  totalSubscriptions: {
+    id: 'totalSubscriptions',
+    label: 'Total Subscriptions',
+    tooltip: 'Sum of all active subscription amounts from Stripe. This is the source of truth for monthly revenue coming in from subscribers.',
+    getValue: (d) => formatUsdCents(d.totalSubscriptionCents),
+    bgClass: 'bg-muted/50',
+  },
+  allocatedToCreators: {
+    id: 'allocatedToCreators',
+    label: 'Allocated to Creators',
+    tooltip: 'Total amount subscribers have allocated to creators this month. Calculated from Firebase USD_BALANCES.allocatedUsdCents field. This is what creators will earn (minus 7% fee).',
+    getValue: (d) => formatUsdCents(d.totalAllocatedCents),
+    bgClass: 'bg-muted/50',
+  },
+  unallocated: {
+    id: 'unallocated',
+    label: 'Unallocated',
+    tooltip: 'Total Subscriptions minus Allocated to Creators. This is money subscribers paid but haven\'t directed to any creators yet. At month-end, unallocated funds become platform revenue.',
+    getValue: (d) => formatUsdCents(d.totalUnallocatedCents),
+    bgClass: 'bg-green-100 dark:bg-green-900/30',
+    valueClass: 'text-green-700 dark:text-green-400',
+  },
+  allocationRate: {
+    id: 'allocationRate',
+    label: 'Allocation Rate',
+    tooltip: 'Percentage of subscription revenue that has been allocated to creators. Formula: (Allocated / Total Subscriptions) * 100. Higher is better for creators.',
+    getValue: (d) => `${d.allocationRate.toFixed(1)}%`,
+    bgClass: 'bg-muted/50',
+  },
+  platformFee: {
+    id: 'platformFee',
+    label: 'Platform Fee (7%)',
+    tooltip: '7% fee charged on allocated funds only. Formula: Allocated to Creators * 0.07. This fee is deducted from creator payouts.',
+    getValue: (d) => formatUsdCents(d.platformFeeCents),
+    bgClass: 'bg-green-100 dark:bg-green-900/30',
+    valueClass: 'text-green-700 dark:text-green-400',
+  },
+  creatorPayouts: {
+    id: 'creatorPayouts',
+    label: 'Creator Payouts',
+    tooltip: 'What creators actually receive after platform fee. Formula: Allocated to Creators - Platform Fee (7%). This is the net amount paid out to creators.',
+    getValue: (d) => formatUsdCents(d.creatorPayoutsCents),
+    bgClass: 'bg-muted/50',
+  },
+  platformRevenue: {
+    id: 'platformRevenue',
+    label: 'Platform Revenue',
+    tooltip: 'Total revenue for WeWrite. Formula: Unallocated + Platform Fee (7%). Includes both the 7% fee on allocations AND any unallocated subscription funds.',
+    getValue: (d) => formatUsdCents(d.platformRevenueCents),
+    bgClass: 'bg-green-100 dark:bg-green-900/30',
+    valueClass: 'text-green-700 dark:text-green-400',
+  },
+  activeUsers: {
+    id: 'activeUsers',
+    label: 'Active Users',
+    tooltip: 'Number of active subscriptions from Stripe. This counts unique paying subscribers with active recurring subscriptions.',
+    getValue: (d) => String(d.userCount),
+    bgClass: 'bg-muted/50',
+  },
+};
+
+// Draggable KPI Card component
+interface DraggableKpiProps {
+  kpi: KpiConfig;
+  data: MonthlyFinancialData;
+  index: number;
+  draggedIndex: number | null;
+  onDragStart: (index: number) => void;
+  onDragOver: (e: React.DragEvent, index: number) => void;
+  onDragEnd: () => void;
+  onDrop: (index: number) => void;
+  isLarge?: boolean;
+}
+
+function DraggableKpiCard({ kpi, data, index, draggedIndex, onDragStart, onDragOver, onDragEnd, onDrop, isLarge = true }: DraggableKpiProps) {
+  const isDragging = draggedIndex === index;
+
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDragEnd={onDragEnd}
+      onDrop={() => onDrop(index)}
+      className={`p-4 ${kpi.bgClass} rounded-lg cursor-grab active:cursor-grabbing transition-all duration-200 ${
+        isDragging ? 'opacity-50 scale-95 ring-2 ring-primary' : 'hover:ring-1 hover:ring-border'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm text-muted-foreground flex items-center flex-1">
+          {kpi.label}
+          <InfoTooltip text={kpi.tooltip} />
+        </p>
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+      </div>
+      <p className={`${isLarge ? 'text-2xl' : 'text-xl'} font-bold ${kpi.valueClass || ''}`}>
+        {kpi.getValue(data)}
+      </p>
+    </div>
+  );
 }
 
 interface MonthlyFinancialData {
@@ -202,6 +329,72 @@ export default function MonthlyFinancialsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // KPI order state for drag-and-drop
+  const [kpiOrder, setKpiOrder] = useState<string[]>(DEFAULT_KPI_ORDER);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Load KPI order from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(KPI_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Validate that all expected KPIs are present
+        if (Array.isArray(parsed) && parsed.length === DEFAULT_KPI_ORDER.length) {
+          const hasAllKpis = DEFAULT_KPI_ORDER.every(kpi => parsed.includes(kpi));
+          if (hasAllKpis) {
+            setKpiOrder(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load KPI order from localStorage:', e);
+    }
+  }, []);
+
+  // Drag handlers for KPI reordering
+  const handleDragStart = useCallback((index: number) => {
+    setDraggedIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedIndex(null);
+  }, []);
+
+  const handleDrop = useCallback((dropIndex: number) => {
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    setKpiOrder(prevOrder => {
+      const newOrder = [...prevOrder];
+      const [draggedItem] = newOrder.splice(draggedIndex, 1);
+      newOrder.splice(dropIndex, 0, draggedItem);
+
+      // Save to localStorage
+      try {
+        localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(newOrder));
+      } catch (e) {
+        console.warn('Failed to save KPI order to localStorage:', e);
+      }
+
+      return newOrder;
+    });
+    setDraggedIndex(null);
+  }, [draggedIndex]);
+
+  // Reset KPI order to default
+  const resetKpiOrder = useCallback(() => {
+    setKpiOrder(DEFAULT_KPI_ORDER);
+    try {
+      localStorage.removeItem(KPI_STORAGE_KEY);
+    } catch (e) {
+      console.warn('Failed to reset KPI order in localStorage:', e);
+    }
+  }, []);
 
   // Check if user is admin
   useEffect(() => {
@@ -380,66 +573,41 @@ export default function MonthlyFinancialsPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Total Subscriptions
-                    <InfoTooltip text="Sum of all active subscription amounts from Stripe. This is the source of truth for monthly revenue coming in from subscribers." />
-                  </p>
-                  <p className="text-2xl font-bold">{formatUsdCents(data.currentMonth.data.totalSubscriptionCents)}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Allocated to Creators
-                    <InfoTooltip text="Total amount subscribers have allocated to creators this month. Calculated from Firebase USD_BALANCES.allocatedUsdCents field. This is what creators will earn (minus 7% fee)." />
-                  </p>
-                  <p className="text-2xl font-bold">{formatUsdCents(data.currentMonth.data.totalAllocatedCents)}</p>
-                </div>
-                <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Unallocated
-                    <InfoTooltip text="Total Subscriptions minus Allocated to Creators. This is money subscribers paid but haven't directed to any creators yet. At month-end, unallocated funds become platform revenue." />
-                  </p>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.totalUnallocatedCents)}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Allocation Rate
-                    <InfoTooltip text="Percentage of subscription revenue that has been allocated to creators. Formula: (Allocated / Total Subscriptions) * 100. Higher is better for creators." />
-                  </p>
-                  <p className="text-2xl font-bold">{data.currentMonth.data.allocationRate.toFixed(1)}%</p>
-                </div>
+              {/* Draggable KPIs - Hint */}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground">
+                  Drag KPIs to reorder them
+                </p>
+                {JSON.stringify(kpiOrder) !== JSON.stringify(DEFAULT_KPI_ORDER) && (
+                  <button
+                    onClick={resetKpiOrder}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Reset order
+                  </button>
+                )}
               </div>
 
+              {/* Draggable KPI Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Platform Fee (7%)
-                    <InfoTooltip text="7% fee charged on allocated funds only. Formula: Allocated to Creators * 0.07. This fee is deducted from creator payouts." />
-                  </p>
-                  <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.platformFeeCents)}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Creator Payouts
-                    <InfoTooltip text="What creators actually receive after platform fee. Formula: Allocated to Creators - Platform Fee (7%). This is the net amount paid out to creators." />
-                  </p>
-                  <p className="text-xl font-bold">{formatUsdCents(data.currentMonth.data.creatorPayoutsCents)}</p>
-                </div>
-                <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Platform Revenue
-                    <InfoTooltip text="Total revenue for WeWrite. Formula: Unallocated + Platform Fee (7%). Includes both the 7% fee on allocations AND any unallocated subscription funds." />
-                  </p>
-                  <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.platformRevenueCents)}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Active Users
-                    <InfoTooltip text="Number of active subscriptions from Stripe. This counts unique paying subscribers with active recurring subscriptions." />
-                  </p>
-                  <p className="text-xl font-bold">{data.currentMonth.data.userCount}</p>
-                </div>
+                {kpiOrder.map((kpiId, index) => {
+                  const kpi = KPI_DEFINITIONS[kpiId];
+                  if (!kpi) return null;
+                  return (
+                    <DraggableKpiCard
+                      key={kpi.id}
+                      kpi={kpi}
+                      data={data.currentMonth.data}
+                      index={index}
+                      draggedIndex={draggedIndex}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragEnd={handleDragEnd}
+                      onDrop={handleDrop}
+                      isLarge={index < 4}
+                    />
+                  );
+                })}
               </div>
 
               <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
