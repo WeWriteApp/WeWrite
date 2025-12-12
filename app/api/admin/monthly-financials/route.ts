@@ -585,72 +585,45 @@ export async function GET(request: NextRequest) {
 
     // ========================================
     // 8. Get writer earnings data for CURRENT MONTH only
-    // IMPORTANT: Use FUNDED allocations only (from active subscribers, capped at their subscription)
-    // This ensures consistency with the "Total Allocated by Subscribers" calculation
+    // IMPORTANT: Scale writer earnings to match funded subscriber allocations
+    // This ensures "Total Gross Earnings" = "Total Allocated by Subscribers"
     // ========================================
     const writerEarnings: WriterEarningsDetail[] = [];
 
     try {
-      // Build a map of sponsor userId -> their funding ratio (subscription / allocated)
-      // This allows us to calculate what portion of each allocation is actually funded
-      const sponsorFundingRatios = new Map<string, number>();
-
-      // First, build map from Stripe customer ID to subscriber data
-      const stripeCustomerIdToSubscriber = new Map<string, SubscriberDetail>();
-      for (const sub of stripeSubscriptionData.subscribers) {
-        stripeCustomerIdToSubscriber.set(sub.stripeCustomerId, sub);
-      }
-
-      // Map userId to funding info - use USD_BALANCES to link users to their Stripe data
-      const usdBalancesCollection = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
-      const usdBalancesSnapshot = await db.collection(usdBalancesCollection).get();
-      const usersCollectionName = await getCollectionNameAsync('users');
-
-      for (const doc of usdBalancesSnapshot.docs) {
-        const userId = doc.id;
-        const data = doc.data();
-        let stripeCustomerId = data.stripeCustomerId;
-
-        // Look up stripeCustomerId from users collection if not in USD_BALANCES
-        if (!stripeCustomerId) {
-          try {
-            const userDoc = await db.collection(usersCollectionName).doc(userId).get();
-            if (userDoc.exists) {
-              stripeCustomerId = userDoc.data()?.stripeCustomerId;
-            }
-          } catch (err) {
-            // Ignore lookup errors
-          }
-        }
-
-        if (stripeCustomerId && stripeCustomerIdToSubscriber.has(stripeCustomerId)) {
-          const subscriber = stripeCustomerIdToSubscriber.get(stripeCustomerId)!;
-          // Funding ratio: what portion of this user's allocations are backed by their subscription
-          const allocatedCents = subscriber.allocatedCents || 0;
-          const subscriptionCents = subscriber.subscriptionAmountCents || 0;
-
-          if (allocatedCents > 0 && subscriptionCents > 0) {
-            // If over-allocated: ratio < 1, if under-allocated: ratio = 1
-            const fundingRatio = Math.min(1, subscriptionCents / allocatedCents);
-            sponsorFundingRatios.set(userId, fundingRatio);
-          } else if (subscriptionCents > 0) {
-            // Has subscription but no allocations: fully funded
-            sponsorFundingRatios.set(userId, 1);
-          } else {
-            // No subscription: unfunded
-            sponsorFundingRatios.set(userId, 0);
-          }
-        } else {
-          // No active Stripe subscription: unfunded
-          sponsorFundingRatios.set(userId, 0);
-        }
-      }
-
       // Get writer earnings for the CURRENT MONTH from writerUsdEarnings collection
       const writerEarningsCollectionName = await getCollectionNameAsync('writerUsdEarnings');
       const currentMonthEarningsSnapshot = await db.collection(writerEarningsCollectionName)
         .where('month', '==', currentMonth)
         .get();
+
+      // First pass: calculate total raw writer earnings
+      let totalRawWriterEarningsCents = 0;
+      const rawEarningsMap = new Map<string, number>();
+
+      for (const doc of currentMonthEarningsSnapshot.docs) {
+        const earningsData = doc.data();
+        const userId = earningsData.userId;
+        const rawEarnings = earningsData.totalUsdCentsReceived || 0;
+        if (rawEarnings > 0) {
+          rawEarningsMap.set(userId, rawEarnings);
+          totalRawWriterEarningsCents += rawEarnings;
+        }
+      }
+
+      // Calculate global funding ratio to scale writer earnings to match funded allocations
+      // This ensures Total Gross Earnings = Total Funded Allocations from subscriber table
+      // Cap at 1.0 (never inflate, only reduce if raw > funded)
+      const globalFundingRatio = totalRawWriterEarningsCents > 0
+        ? Math.min(1, totalFundedAllocatedCents / totalRawWriterEarningsCents)
+        : 1;
+
+      console.log('[MONTHLY FINANCIALS] Writer earnings scaling:', {
+        totalRawWriterEarningsCents,
+        totalFundedAllocatedCents,
+        globalFundingRatio,
+        writerCount: rawEarningsMap.size
+      });
 
       // Get user data for each writer
       const usersCollectionForWriters = await getCollectionNameAsync('users');
@@ -658,23 +631,13 @@ export async function GET(request: NextRequest) {
       for (const doc of currentMonthEarningsSnapshot.docs) {
         const earningsData = doc.data();
         const userId = earningsData.userId;
-        const allocations = earningsData.allocations || [];
 
-        // Calculate FUNDED earnings by applying funding ratio to each allocation
-        let fundedEarningsCents = 0;
-        let rawEarningsCents = 0;
+        // Get raw earnings and apply global funding ratio
+        const rawEarningsCents = earningsData.totalUsdCentsReceived || 0;
+        if (rawEarningsCents <= 0) continue;
 
-        for (const allocation of allocations) {
-          const fromUserId = allocation.fromUserId;
-          const allocationCents = allocation.usdCents || 0;
-          rawEarningsCents += allocationCents;
-
-          // Get funding ratio for this sponsor (defaults to 0 if not an active subscriber)
-          const fundingRatio = sponsorFundingRatios.get(fromUserId) ?? 0;
-          fundedEarningsCents += Math.round(allocationCents * fundingRatio);
-        }
-
-        // Skip writers with no funded earnings this month
+        // Scale to funded amount using global ratio
+        const fundedEarningsCents = Math.round(rawEarningsCents * globalFundingRatio);
         if (fundedEarningsCents <= 0) continue;
 
         // Calculate platform fee (7%) and net payout based on FUNDED earnings
