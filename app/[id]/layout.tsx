@@ -48,6 +48,19 @@ interface SchemaMarkup {
   };
 }
 
+interface BreadcrumbItem {
+  '@type': string;
+  position: number;
+  name: string;
+  item: string;
+}
+
+interface BreadcrumbSchema {
+  '@context': string;
+  '@type': string;
+  itemListElement: BreadcrumbItem[];
+}
+
 // Server-side page metadata fetching using internal API
 // This ensures usernames are correctly fetched from RTDB
 async function getPageMetadataServer(pageId: string): Promise<any> {
@@ -192,6 +205,7 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
 export default async function GlobalIDLayout({ children, params }: LayoutProps) {
   // Get the page metadata for schema markup
   let schemaMarkup: SchemaMarkup | null = null;
+  let breadcrumbSchema: BreadcrumbSchema | null = null;
 
   try {
     // Properly extract id from params - ensure params is awaited
@@ -199,6 +213,52 @@ export default async function GlobalIDLayout({ children, params }: LayoutProps) 
     const { id } = unwrappedParams;
     // Use server-side API fetch to get page metadata with correct username from RTDB
     const metadata = await getPageMetadataServer(id);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app';
+
+    // Generate BreadcrumbList schema for all pages
+    const pageTitle = metadata?.title || 'Untitled';
+    breadcrumbSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: baseUrl
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: pageTitle,
+          item: `${baseUrl}/${id}`
+        }
+      ]
+    };
+
+    // If page has an author, add them to breadcrumbs
+    if (metadata?.username && !metadata?.groupId) {
+      breadcrumbSchema.itemListElement = [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: baseUrl
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: metadata.username,
+          item: `${baseUrl}/user/${metadata.username}`
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: pageTitle,
+          item: `${baseUrl}/${id}`
+        }
+      ];
+    }
 
     if (metadata) {
       // Create schema markup for the page
@@ -264,6 +324,13 @@ export default async function GlobalIDLayout({ children, params }: LayoutProps) 
           id="schema-markup"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+        />
+      )}
+      {breadcrumbSchema && (
+        <Script
+          id="breadcrumb-schema"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
       )}
       {children}

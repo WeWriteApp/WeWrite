@@ -49,8 +49,63 @@ import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
-  title: 'WeWrite',
-  description: 'A platform for writers to share and monetize their content',
+  title: {
+    default: 'WeWrite - Collaborative Writing Platform for Writers & Readers',
+    template: '%s | WeWrite'
+  },
+  description: 'WeWrite is a collaborative writing platform where writers share ideas, earn from their content, and connect with readers. Create, discover, and support writing you love.',
+  keywords: [
+    'writing platform',
+    'collaborative writing',
+    'content creation',
+    'writer community',
+    'monetize writing',
+    'publish articles',
+    'creative writing',
+    'blog platform',
+    'writer earnings',
+    'content sharing'
+  ],
+  authors: [{ name: 'WeWrite', url: 'https://www.getwewrite.app' }],
+  creator: 'WeWrite',
+  publisher: 'WeWrite',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://www.getwewrite.app',
+    siteName: 'WeWrite',
+    title: 'WeWrite - Collaborative Writing Platform',
+    description: 'Create, discover, and support writing you love. Join our community of writers and readers.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'WeWrite - Collaborative Writing Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'WeWrite - Collaborative Writing Platform',
+    description: 'Create, discover, and support writing you love.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://www.getwewrite.app',
+  },
+  category: 'writing',
 }
 
 export const viewport = {
@@ -73,6 +128,54 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Preload critical API routes */}
         <link rel="prefetch" href="/api/pages" />
+        {/* Organization Schema for WeWrite */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'WeWrite',
+              url: 'https://www.getwewrite.app',
+              logo: 'https://www.getwewrite.app/logo.png',
+              description: 'A collaborative writing platform where writers share ideas, earn from their content, and connect with readers.',
+              sameAs: [],
+              contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'customer support',
+                url: 'https://www.getwewrite.app/support'
+              },
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: 'https://www.getwewrite.app/search?q={search_term_string}'
+                },
+                'query-input': 'required name=search_term_string'
+              }
+            })
+          }}
+        />
+        {/* WebSite Schema for sitelinks search box */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'WeWrite',
+              url: 'https://www.getwewrite.app',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: 'https://www.getwewrite.app/search?q={search_term_string}'
+                },
+                'query-input': 'required name=search_term_string'
+              }
+            })
+          }}
+        />
       </head>
       <body className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
         {/* Early Firebase error suppression - must run before any other scripts */}
