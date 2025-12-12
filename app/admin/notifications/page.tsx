@@ -304,7 +304,7 @@ function PushNotificationPreview({ templateId }: { templateId: string }) {
   return (
     <div className="max-w-[360px] mx-auto">
       {/* iOS-style push notification with WeWrite app icon */}
-      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700">
+      <div className="relative bg-card rounded-2xl shadow-2xl p-4 border border-border">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden">
             {/* WeWrite app icon - in production this is /icons/icon-192x192.png */}

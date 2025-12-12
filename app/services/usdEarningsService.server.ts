@@ -127,6 +127,10 @@ export class ServerUsdEarningsService {
   /**
    * Process USD allocation for a writer (server-side)
    * Called when USD is allocated to their content
+   *
+   * CRITICAL: Only records the FUNDED portion of the allocation.
+   * If a sponsor has over-allocated beyond their subscription, we apply a funding ratio
+   * so recipients only see/receive what the sponsor can actually fund.
    */
   static async processUsdAllocation(
     fromUserId: string,
@@ -146,7 +150,52 @@ export class ServerUsdEarningsService {
       }
 
       const { admin, db } = getFirebaseAdminAndDb();
-      console.log(`[ServerUsdEarningsService] [${correlationId}] Processing USD allocation: ${centsToDollars(usdCentsChange)} from ${fromUserId} to ${recipientUserId}`);
+
+      // CRITICAL FIX: Calculate the funded portion of this allocation
+      // Recipients should only receive earnings for allocations that are backed by actual subscription funds
+      let fundedUsdCents = usdCentsChange;
+
+      try {
+        const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
+          .doc(fromUserId)
+          .get();
+
+        if (sponsorBalanceDoc.exists) {
+          const sponsorBalance = sponsorBalanceDoc.data();
+          const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
+          const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
+
+          // Check if sponsor is over-allocated (unfunded allocations exist)
+          if (sponsorAllocatedCents > sponsorSubscriptionCents && sponsorAllocatedCents > 0) {
+            // Calculate funding ratio: what percentage of allocations are actually funded
+            const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
+            fundedUsdCents = Math.round(usdCentsChange * fundingRatio);
+
+            console.log(`[ServerUsdEarningsService] [${correlationId}] Sponsor ${fromUserId} over-allocated:`, {
+              sponsorSubscriptionCents,
+              sponsorAllocatedCents,
+              fundingRatio: fundingRatio.toFixed(4),
+              originalAllocation: usdCentsChange,
+              fundedAllocation: fundedUsdCents
+            });
+          }
+        } else {
+          // No balance record means no subscription - allocation is completely unfunded
+          console.log(`[ServerUsdEarningsService] [${correlationId}] Sponsor ${fromUserId} has no balance record - allocation is unfunded`);
+          fundedUsdCents = 0;
+        }
+      } catch (balanceError) {
+        console.warn(`[ServerUsdEarningsService] [${correlationId}] Error checking sponsor balance:`, balanceError);
+        // If we can't check, default to recording the full amount (fail open)
+      }
+
+      // Skip recording if there's nothing funded
+      if (fundedUsdCents <= 0) {
+        console.log(`[ServerUsdEarningsService] [${correlationId}] Skipping earnings record - allocation is unfunded`);
+        return;
+      }
+
+      console.log(`[ServerUsdEarningsService] [${correlationId}] Processing FUNDED USD allocation: ${centsToDollars(fundedUsdCents)} (of ${centsToDollars(usdCentsChange)} total) from ${fromUserId} to ${recipientUserId}`);
 
       const earningsId = `${recipientUserId}_${month}`;
       const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
@@ -157,12 +206,14 @@ export class ServerUsdEarningsService {
         const earningsDoc = await transaction.get(earningsRef);
         const balanceDoc = await transaction.get(balanceRef);
 
+        // CRITICAL: Store the FUNDED amount, not the raw allocation amount
         const allocationData = {
           allocationId: `${fromUserId}_${resourceId}_${Date.now()}`,
           fromUserId,
           resourceType,
           resourceId,
-          usdCents: usdCentsChange,
+          usdCents: fundedUsdCents, // Store funded amount only
+          originalUsdCents: usdCentsChange, // Keep track of original for auditing
           timestamp: new Date() // Use regular Date instead of FieldValue.serverTimestamp() in arrays
         };
 
@@ -178,11 +229,11 @@ export class ServerUsdEarningsService {
             updatedAt: FieldValue.serverTimestamp()
           });
         } else {
-          // Create new earnings record
+          // Create new earnings record with funded amount
           const newEarnings = {
             userId: recipientUserId,
             month,
-            totalUsdCentsReceived: usdCentsChange,
+            totalUsdCentsReceived: fundedUsdCents,
             status: 'pending',
             allocations: [allocationData],
             createdAt: FieldValue.serverTimestamp(),

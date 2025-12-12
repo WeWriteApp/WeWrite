@@ -105,7 +105,7 @@ export interface AnnualTaxSummary {
   
   // Breakdown by source
   earningsBySource: {
-    tokenAllocations: number;
+    usdAllocations: number;
     subscriptions: number;
     bonuses: number;
     other: number;
@@ -271,7 +271,7 @@ export class TaxReportingService {
         acc[source] = (acc[source] || 0) + earning.amount;
         return acc;
       }, {
-        tokenAllocations: 0,
+        usdAllocations: 0,
         subscriptions: 0,
         bonuses: 0,
         other: 0
@@ -832,8 +832,8 @@ export class TaxReportingService {
    * Categorize earning source for tax reporting
    */
   private categorizeEarningSource(earning: any): keyof AnnualTaxSummary['earningsBySource'] {
-    if (earning.source === 'token_allocation' || earning.type === 'token_allocation') {
-      return 'tokenAllocations';
+    if (earning.source === 'usd_allocation' || earning.type === 'usd_allocation') {
+      return 'usdAllocations';
     } else if (earning.source === 'subscription' || earning.type === 'subscription') {
       return 'subscriptions';
     } else if (earning.source === 'bonus' || earning.type === 'bonus') {

@@ -32,12 +32,12 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
     }
 
     return {
-      icon: <StatusIcon status="info" size="sm" position="static" />,
+      icon: <StatusIcon status="warning" size="sm" position="static" />,
       text: "Email not verified",
-      bgColor: "bg-primary/10 dark:bg-primary/20",
-      borderColor: "border-primary/30",
-      textColor: "text-primary dark:text-primary",
-      iconColor: "text-primary dark:text-primary",
+      bgColor: "bg-warning/10 dark:bg-warning/20",
+      borderColor: "border-warning/30",
+      textColor: "text-warning dark:text-warning",
+      iconColor: "text-warning dark:text-warning",
       showAction: true
     };
   };
@@ -88,7 +88,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
           variant="ghost"
           size="sm"
           onClick={handleResendEmail}
-          className="h-7 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
+          className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
         >
           <Mail className="h-3 w-3 mr-1" />
           Resend

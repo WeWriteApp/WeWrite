@@ -337,6 +337,70 @@ export const clearUserUsd = (userId: string): void => {
 };
 
 /**
+ * Transfer logged-out simulated allocations to a user's account
+ * Called when a user logs in to persist their logged-out allocations
+ * This is synchronous and just moves localStorage data
+ */
+export const transferLoggedOutAllocationsToUser = (userId: string): { success: boolean; transferredCount: number } => {
+  try {
+    // Check if we're on the server side
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return { success: true, transferredCount: 0 };
+    }
+
+    const loggedOutBalance = getLoggedOutUsdBalance();
+
+    // If there are no logged-out allocations (besides the default demo ones), nothing to transfer
+    if (loggedOutBalance.allocations.length === 0) {
+      return { success: true, transferredCount: 0 };
+    }
+
+    // Get or create user's balance
+    const userBalance = getUserUsdBalance(userId);
+
+    // Merge logged-out allocations into user's balance
+    let transferredCount = 0;
+    for (const allocation of loggedOutBalance.allocations) {
+      // Skip demo allocations
+      if (allocation.pageId.startsWith('demo-')) {
+        continue;
+      }
+
+      // Check if user already has an allocation for this page
+      const existingIndex = userBalance.allocations.findIndex(a => a.pageId === allocation.pageId);
+
+      if (existingIndex >= 0) {
+        // Update existing allocation with the logged-out amount (take the higher)
+        if (allocation.usdCents > userBalance.allocations[existingIndex].usdCents) {
+          userBalance.allocations[existingIndex] = allocation;
+          transferredCount++;
+        }
+      } else {
+        // Add new allocation
+        userBalance.allocations.push(allocation);
+        transferredCount++;
+      }
+    }
+
+    // Recalculate totals
+    userBalance.allocatedUsdCents = userBalance.allocations.reduce((sum, a) => sum + a.usdCents, 0);
+    userBalance.availableUsdCents = userBalance.totalUsdCents - userBalance.allocatedUsdCents;
+    userBalance.lastUpdated = Date.now();
+
+    // Save updated user balance
+    saveUsdBalance(getUserStorageKey(userId), userBalance);
+
+    // Clear logged-out allocations (reset to demo state)
+    clearLoggedOutUsd();
+
+    return { success: true, transferredCount };
+  } catch (error) {
+    console.warn('Error transferring logged-out allocations to user:', error);
+    return { success: false, transferredCount: 0 };
+  }
+};
+
+/**
  * Convert simulated allocations to real USD allocations when user activates subscription
  * This would be called when a user successfully activates their subscription
  */

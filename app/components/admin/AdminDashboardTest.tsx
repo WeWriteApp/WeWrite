@@ -54,31 +54,31 @@ export function AdminDashboardTest() {
 
     setTests([...testResults]);
 
-    // Test 2: Token Data Verification
+    // Test 2: USD Data Verification
     try {
-      testResults.push({ name: 'Token Data Pipeline', status: 'loading', message: 'Verifying token allocation data...' });
+      testResults.push({ name: 'USD Data Pipeline', status: 'loading', message: 'Verifying USD allocation data...' });
       setTests([...testResults]);
 
-      const tokenResponse = await fetch('/api/admin/verify-token-data');
-      if (tokenResponse.ok) {
-        const tokenData = await tokenResponse.json();
+      const usdResponse = await fetch('/api/admin/verify-usd-data');
+      if (usdResponse.ok) {
+        const usdData = await usdResponse.json();
         testResults[testResults.length - 1] = {
-          name: 'Token Data Pipeline',
+          name: 'USD Data Pipeline',
           status: 'success',
-          message: `Found ${tokenData.data.tokenBalances.count} token balances, ${tokenData.data.tokenAllocations.count} allocations`,
-          data: tokenData.data
+          message: `Found ${usdData.data.usdBalances.count} USD balances, ${usdData.data.usdAllocations.count} allocations`,
+          data: usdData.data
         };
       } else {
-        const errorData = await tokenResponse.json();
+        const errorData = await usdResponse.json();
         testResults[testResults.length - 1] = {
-          name: 'Token Data Pipeline',
+          name: 'USD Data Pipeline',
           status: 'error',
-          message: errorData.error || 'Failed to verify token data'
+          message: errorData.error || 'Failed to verify USD data'
         };
       }
     } catch (error) {
       testResults[testResults.length - 1] = {
-        name: 'Token Data Pipeline',
+        name: 'USD Data Pipeline',
         status: 'error',
         message: error instanceof Error ? error.message : 'Network error'
       };

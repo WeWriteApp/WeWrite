@@ -45,11 +45,13 @@ interface SubscriberDetail {
   email: string;
   name: string | null;
   subscriptionAmountCents: number;
-  allocatedCents: number;
-  unallocatedCents: number;
-  grossEarningsCents: number;
-  platformFeeCents: number;
-  netCreatorPayoutCents: number;
+  allocatedCents: number;           // Total allocated (may exceed subscription)
+  fundedAllocatedCents: number;     // Min(allocated, subscription) - backed by money
+  overspentUnfundedCents: number;   // Max(0, allocated - subscription) - unfunded portion
+  unallocatedCents: number;         // Max(0, subscription - allocated) - leftover
+  grossEarningsCents: number;       // Funded earnings before fees
+  platformFeeCents: number;         // 7% of funded
+  netCreatorPayoutCents: number;    // Funded minus fee
   stripeCustomerId: string;
   status: string;
 }
@@ -71,6 +73,20 @@ interface DiscrepancyDetail {
   stripeAmountCents: number;
   firebaseAmountCents: number;
   firebaseDocId?: string;
+}
+
+interface WriterEarningsDetail {
+  userId: string;
+  email: string;
+  name: string | null;
+  grossEarningsCents: number;
+  platformFeeCents: number;
+  netPayoutCents: number;
+  pendingEarningsCents: number;
+  availableEarningsCents: number;
+  bankAccountStatus: 'not_setup' | 'pending' | 'verified' | 'restricted' | 'rejected';
+  stripeConnectedAccountId: string | null;
+  canReceivePayout: boolean;
 }
 
 interface SyncResults {
@@ -122,6 +138,7 @@ interface FinancialsResponse {
     lastUpdated: string;
   } | null;
   stripeSubscriptions: StripeSubscriptionData;
+  writerEarnings?: WriterEarningsDetail[];
   reconciliation: ReconciliationData;
   dataSources: DataSources;
   totals: {
@@ -455,12 +472,12 @@ export default function MonthlyFinancialsPage() {
                   <div className="mt-6">
                     <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
                       Detailed Subscriber Breakdown
-                      <InfoTooltip text="Shows each subscriber's plan, allocation status, and financial breakdown including gross earnings (before fees), platform fee (7%), net payout to creators, and any unallocated funds." />
+                      <InfoTooltip text="Shows each subscriber's plan, allocation status, and financial breakdown. Only FUNDED allocations (backed by subscription) count toward creator earnings." />
                     </h3>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b bg-muted/30">
+                          <tr className="border-b border-border bg-muted/30">
                             <th className="text-left py-2 px-2">Subscriber</th>
                             <th className="text-right py-2 px-2">
                               <span className="inline-flex items-center">
@@ -471,7 +488,13 @@ export default function MonthlyFinancialsPage() {
                             <th className="text-right py-2 px-2">
                               <span className="inline-flex items-center">
                                 Allocated
-                                <InfoTooltip text="Amount this subscriber has allocated to creators this month" />
+                                <InfoTooltip text="Total amount this subscriber has allocated to creators (may exceed their plan)" />
+                              </span>
+                            </th>
+                            <th className="text-right py-2 px-2">
+                              <span className="inline-flex items-center">
+                                Overspent
+                                <InfoTooltip text="Unfunded allocations - amount allocated beyond their subscription. These allocations are NOT paid to creators." />
                               </span>
                             </th>
                             <th className="text-right py-2 px-2">
@@ -482,21 +505,15 @@ export default function MonthlyFinancialsPage() {
                             </th>
                             <th className="text-right py-2 px-2">
                               <span className="inline-flex items-center">
-                                Platform Fee
-                                <InfoTooltip text="7% of allocated amount. This is WeWrite's fee on allocations." />
-                              </span>
-                            </th>
-                            <th className="text-right py-2 px-2">
-                              <span className="inline-flex items-center">
                                 Net to Creators
-                                <InfoTooltip text="Allocated - Platform Fee. What creators actually receive from this subscriber's allocations." />
+                                <InfoTooltip text="FUNDED allocations minus 7% platform fee. Only backed allocations count - overspent amounts excluded." />
                               </span>
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           {data.stripeSubscriptions.subscribers.map((sub) => (
-                            <tr key={sub.id} className="border-b hover:bg-muted/30">
+                            <tr key={sub.id} className="border-b border-border/50 hover:bg-muted/30">
                               <td className="py-2 px-2">
                                 <div className="font-medium truncate max-w-[150px]" title={sub.email}>
                                   {sub.name || sub.email}
@@ -513,11 +530,11 @@ export default function MonthlyFinancialsPage() {
                               <td className={`text-right py-2 px-2 ${sub.allocatedCents === 0 ? 'opacity-30' : ''}`}>
                                 {formatUsdCents(sub.allocatedCents)}
                               </td>
+                              <td className={`text-right py-2 px-2 ${sub.overspentUnfundedCents === 0 ? 'opacity-30' : 'text-red-600 dark:text-red-400'}`}>
+                                {formatUsdCents(sub.overspentUnfundedCents)}
+                              </td>
                               <td className={`text-right py-2 px-2 ${sub.unallocatedCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
                                 {formatUsdCents(sub.unallocatedCents)}
-                              </td>
-                              <td className={`text-right py-2 px-2 ${sub.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
-                                {formatUsdCents(sub.platformFeeCents)}
                               </td>
                               <td className={`text-right py-2 px-2 ${sub.netCreatorPayoutCents === 0 ? 'opacity-30' : ''}`}>
                                 {formatUsdCents(sub.netCreatorPayoutCents)}
@@ -534,11 +551,11 @@ export default function MonthlyFinancialsPage() {
                             <td className="text-right py-2 px-2">
                               {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.allocatedCents, 0))}
                             </td>
-                            <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
-                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.unallocatedCents, 0))}
+                            <td className={`text-right py-2 px-2 ${data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.overspentUnfundedCents, 0) > 0 ? 'text-red-600 dark:text-red-400' : 'opacity-30'}`}>
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.overspentUnfundedCents, 0))}
                             </td>
                             <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
-                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.platformFeeCents, 0))}
+                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.unallocatedCents, 0))}
                             </td>
                             <td className="text-right py-2 px-2">
                               {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.netCreatorPayoutCents, 0))}
@@ -551,6 +568,140 @@ export default function MonthlyFinancialsPage() {
                 )}
               </div>
             )}
+
+            {/* Writer Earnings - from subscriber allocations */}
+            <div className="wewrite-card">
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Writer Earnings</h2>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
+                  {data.writerEarnings?.length || 0} writers with earnings
+                </span>
+              </div>
+
+              {(!data.writerEarnings || data.writerEarnings.length === 0) ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No writers with pending earnings yet.</p>
+                  <p className="text-sm mt-1">Writers will appear here once they have allocations from subscribers.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Total Gross Earnings</p>
+                      <p className="text-2xl font-bold">{formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.grossEarningsCents, 0))}</p>
+                    </div>
+                    <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        Platform Fee (7%)
+                        <InfoTooltip text="7% fee deducted from writer earnings. This is the fee taken from payouts, not from subscriber subscriptions." />
+                      </p>
+                      <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.platformFeeCents, 0))}</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Total Net Payouts</p>
+                      <p className="text-2xl font-bold">{formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Ready for Payout</p>
+                      <p className="text-2xl font-bold">{data.writerEarnings.filter(w => w.canReceivePayout).length} / {data.writerEarnings.length}</p>
+                    </div>
+                  </div>
+
+                  {/* Writer Earnings Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/30">
+                          <th className="text-left py-2 px-2">Writer</th>
+                          <th className="text-right py-2 px-2">
+                            <span className="inline-flex items-center">
+                              Gross Earnings
+                              <InfoTooltip text="Total amount allocated to this writer before fees" />
+                            </span>
+                          </th>
+                          <th className="text-right py-2 px-2">
+                            <span className="inline-flex items-center">
+                              Platform Fee (7%)
+                              <InfoTooltip text="7% fee deducted from writer earnings" />
+                            </span>
+                          </th>
+                          <th className="text-right py-2 px-2">
+                            <span className="inline-flex items-center">
+                              Net Payout
+                              <InfoTooltip text="Amount writer will receive after fee deduction" />
+                            </span>
+                          </th>
+                          <th className="text-center py-2 px-2">
+                            <span className="inline-flex items-center">
+                              Bank Account
+                              <InfoTooltip text="Whether writer has set up their Stripe account to receive payouts" />
+                            </span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.writerEarnings.map((writer) => (
+                          <tr key={writer.userId} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-2 px-2">
+                              <div className="font-medium truncate max-w-[150px]" title={writer.email}>
+                                {writer.name || writer.email}
+                              </div>
+                              {writer.name && (
+                                <div className="text-muted-foreground truncate max-w-[150px]" title={writer.email}>
+                                  {writer.email}
+                                </div>
+                              )}
+                            </td>
+                            <td className={`text-right py-2 px-2 ${writer.grossEarningsCents === 0 ? 'opacity-30' : ''}`}>
+                              {formatUsdCents(writer.grossEarningsCents)}
+                            </td>
+                            <td className={`text-right py-2 px-2 ${writer.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
+                              {formatUsdCents(writer.platformFeeCents)}
+                            </td>
+                            <td className={`text-right py-2 px-2 ${writer.netPayoutCents === 0 ? 'opacity-30' : ''}`}>
+                              {formatUsdCents(writer.netPayoutCents)}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                writer.bankAccountStatus === 'verified' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                writer.bankAccountStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                writer.bankAccountStatus === 'restricted' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' :
+                                writer.bankAccountStatus === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                                'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                              }`}>
+                                {writer.bankAccountStatus === 'verified' ? 'Ready' :
+                                 writer.bankAccountStatus === 'pending' ? 'Pending' :
+                                 writer.bankAccountStatus === 'restricted' ? 'Restricted' :
+                                 writer.bankAccountStatus === 'rejected' ? 'Rejected' :
+                                 'Not Set Up'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="font-bold bg-muted/50">
+                          <td className="py-2 px-2">Totals</td>
+                          <td className="text-right py-2 px-2">
+                            {formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.grossEarningsCents, 0))}
+                          </td>
+                          <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
+                            {formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.platformFeeCents, 0))}
+                          </td>
+                          <td className="text-right py-2 px-2">
+                            {formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}
+                          </td>
+                          <td className="text-center py-2 px-2">
+                            {data.writerEarnings.filter(w => w.canReceivePayout).length} ready
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Data Reconciliation Status */}
             {data.reconciliation && (
@@ -638,7 +789,7 @@ export default function MonthlyFinancialsPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b bg-muted/30">
+                          <tr className="border-b border-border bg-muted/30">
                             <th className="text-left py-2 px-2">Type</th>
                             <th className="text-left py-2 px-2">Email</th>
                             <th className="text-right py-2 px-2">Stripe Amount</th>
@@ -648,7 +799,7 @@ export default function MonthlyFinancialsPage() {
                         </thead>
                         <tbody>
                           {data.reconciliation.discrepancies.map((d, idx) => (
-                            <tr key={idx} className="border-b hover:bg-muted/30">
+                            <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
                               <td className="py-2 px-2">
                                 <span className={`px-1.5 py-0.5 rounded text-xs ${
                                   d.type === 'stale_firebase' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
@@ -719,7 +870,7 @@ export default function MonthlyFinancialsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
+                      <tr className="border-b border-border">
                         <th className="text-left py-3 px-2">Month</th>
                         <th className="text-right py-3 px-2">Subscriptions</th>
                         <th className="text-right py-3 px-2">Allocated</th>
@@ -733,7 +884,7 @@ export default function MonthlyFinancialsPage() {
                     </thead>
                     <tbody>
                       {data.historicalData.map((row) => (
-                        <tr key={row.month} className="border-b hover:bg-muted/50">
+                        <tr key={row.month} className="border-b border-border/50 hover:bg-muted/50">
                           <td className="py-3 px-2 font-medium">{formatMonth(row.month)}</td>
                           <td className={`text-right py-3 px-2 ${row.totalSubscriptionCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalSubscriptionCents)}</td>
                           <td className={`text-right py-3 px-2 ${row.totalAllocatedCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalAllocatedCents)}</td>

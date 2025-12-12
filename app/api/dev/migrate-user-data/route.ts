@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
         // Collections to migrate
         const collections = [
           'pages',
-          'subscriptions', 
-          'tokenBalances',
-          'tokenAllocations',
+          'subscriptions',
+          'usdBalances',
+          'usdAllocations',
           'notifications',
           'activity'
         ];

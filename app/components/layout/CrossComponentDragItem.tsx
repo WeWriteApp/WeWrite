@@ -142,7 +142,7 @@ export default function CrossComponentDragItem({
 
       {/* Visual feedback for drop zones */}
       {isOver && canDrop && (
-        <div className="absolute inset-0 border-2 border-neutral-30 rounded-md pointer-events-none" />
+        <div className="absolute inset-0 border-2 border-border rounded-md pointer-events-none" />
       )}
       {isOver && !canDrop && (
         <div className="absolute inset-0 border-2 border-error-30 rounded-md pointer-events-none" />

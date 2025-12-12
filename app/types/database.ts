@@ -161,22 +161,6 @@ export interface TokenBalance {
   updatedAt: string | Timestamp;
 }
 
-/**
- * @deprecated Use UsdAllocation instead
- */
-export interface TokenAllocation {
-  id: string;
-  userId: string;
-  recipientUserId: string;
-  resourceType: 'page' | 'user_bio' | 'user' | 'wewrite';
-  resourceId: string;
-  tokens: number;
-  month: string; // YYYY-MM format
-  status: 'active' | 'cancelled';
-  createdAt: string | Timestamp;
-  updatedAt: string | Timestamp;
-}
-
 // Payment Analytics Types
 export interface SubscriptionConversionFunnelData {
   stage: string;
@@ -218,27 +202,11 @@ export interface UsdAllocationMetrics {
   label: string;
 }
 
-/**
- * @deprecated Use UsdAllocationMetrics instead
- */
-export interface TokenAllocationMetrics {
-  date: string;
-  totalSubscribers: number;
-  subscribersWithAllocations: number;
-  allocationPercentage: number;
-  averageAllocationPercentage: number;
-  totalTokensAllocated: number;
-  totalTokensAvailable: number;
-  label: string;
-}
-
 export interface PaymentAnalyticsData {
   conversionFunnel: SubscriptionConversionFunnelData[];
   subscriptionMetrics: SubscriptionMetrics[];
   revenueMetrics: RevenueMetrics[];
   usdAllocationMetrics: UsdAllocationMetrics[];
-  // Legacy support during migration
-  tokenAllocationMetrics?: TokenAllocationMetrics[];
 }
 
 // Writer USD Earnings Types (replacing Token Earnings)
@@ -273,50 +241,6 @@ export interface WriterUsdBalance {
   updatedAt: string | Timestamp;
 }
 
-// Legacy Writer Token Types - DEPRECATED, will be removed after migration
-/**
- * @deprecated Use WriterUsdEarnings instead
- */
-export interface WriterTokenEarnings {
-  id: string;
-  userId: string; // Writer/recipient
-  month: string; // YYYY-MM format
-  totalTokensReceived: number;
-  totalUsdValue: number; // Tokens converted to USD ($1 = 10 tokens)
-  status: 'pending' | 'available' | 'paid_out';
-  allocations: {
-    allocationId: string;
-    fromUserId: string;
-    fromUsername?: string;
-    resourceType: 'page' | 'user_bio' | 'user';
-    resourceId: string;
-    resourceTitle?: string;
-    tokens: number;
-    usdValue: number;
-  }[];
-  processedAt?: string | Timestamp;
-  createdAt: string | Timestamp;
-  updatedAt: string | Timestamp;
-}
-
-/**
- * @deprecated Use WriterUsdBalance instead
- */
-export interface WriterTokenBalance {
-  userId: string;
-  totalTokensEarned: number;
-  totalUsdEarned: number;
-  pendingTokens: number; // Current month tokens (not yet available for payout)
-  pendingUsdValue: number;
-  availableTokens: number; // Previous months tokens (available for payout)
-  availableUsdValue: number;
-  paidOutTokens: number;
-  paidOutUsdValue: number;
-  lastProcessedMonth: string;
-  createdAt: string | Timestamp;
-  updatedAt: string | Timestamp;
-}
-
 export interface UsdPayout {
   id: string;
   userId: string; // Writer requesting payout
@@ -341,41 +265,6 @@ export interface MonthlyUsdDistribution {
   wewriteUsdCents: number; // Unallocated USD that goes to WeWrite
   status: 'pending' | 'processing' | 'completed';
   processedAt?: string | Timestamp;
-}
-
-// Legacy Types - DEPRECATED, will be removed after migration
-/**
- * @deprecated Use UsdPayout instead
- */
-export interface TokenPayout {
-  id: string;
-  userId: string; // Writer requesting payout
-  amount: number; // USD amount
-  tokens: number; // Number of tokens being paid out
-  currency: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  stripePayoutId?: string;
-  stripeTransferId?: string;
-  earningsIds: string[]; // References to WriterTokenEarnings
-  requestedAt: string | Timestamp;
-  processedAt?: string | Timestamp;
-  completedAt?: string | Timestamp;
-  failureReason?: string;
-  minimumThresholdMet: boolean;
-}
-
-/**
- * @deprecated Use MonthlyUsdDistribution instead
- */
-export interface MonthlyTokenDistribution {
-  id: string;
-  month: string; // YYYY-MM format
-  totalTokensDistributed: number;
-  totalUsersParticipating: number;
-  wewriteTokens: number; // Unallocated tokens that go to WeWrite
-  status: 'pending' | 'processing' | 'completed';
-  processedAt?: string | Timestamp;
-  createdAt: string | Timestamp;
 }
 
 // Counter types

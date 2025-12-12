@@ -7,8 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
-import { ServerTokenService } from '../../../services/tokenService.server';
+import { determineTierFromAmount } from '../../../utils/subscriptionTiers';
+import { ServerUsdService } from '../../../services/usdService.server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { serverTimestamp } from 'firebase-admin/firestore';
 

@@ -731,7 +731,7 @@ export default function MobileBottomNav() {
             )}>
               {/* Account info at top */}
               {user && (
-                <div className="p-3 border-b border-neutral-20">
+                <div className="p-3 border-b border-border">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <div className="text-sm font-medium text-foreground truncate">

@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
 
       // Payment collections
       subscriptions: getCollectionName('subscriptions'),
-      tokenBalances: getCollectionName('tokenBalances'),
-      tokenAllocations: getCollectionName('tokenAllocations'),
-      writerTokenBalances: getCollectionName('writerTokenBalances'),
-      writerTokenEarnings: getCollectionName('writerTokenEarnings'),
-      tokenPayouts: getCollectionName('tokenPayouts'),
+      usdBalances: getCollectionName('usdBalances'),
+      usdAllocations: getCollectionName('usdAllocations'),
+      writerUsdBalances: getCollectionName('writerUsdBalances'),
+      writerUsdEarnings: getCollectionName('writerUsdEarnings'),
+      usdPayouts: getCollectionName('usdPayouts'),
       payouts: getCollectionName('payouts'),
       transactions: getCollectionName('transactions'),
 

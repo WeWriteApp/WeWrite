@@ -47,6 +47,7 @@ type Column = {
   label: string;
   sticky?: boolean;
   sortable?: boolean;
+  minWidth?: number;
   render: (u: User) => React.ReactNode;
 };
 
@@ -140,13 +141,14 @@ export default function AdminUsersPage() {
     });
   }, [users, search]);
 
-  // Column definitions
+  // Column definitions with minimum widths to prevent collision
   const columns: Column[] = useMemo(() => [
     {
       id: "user",
       label: "User",
       sticky: false,
       sortable: true,
+      minWidth: 220,
       render: (u) => (
         <div className="space-y-1 whitespace-nowrap">
           <div className="font-medium">{u.email}</div>
@@ -158,6 +160,7 @@ export default function AdminUsersPage() {
       id: "username",
       label: "Username",
       sortable: true,
+      minWidth: 160,
       render: (u) => (
         <div className="flex items-center gap-2">
           <span className="whitespace-nowrap font-medium">{u.username || "—"}</span>
@@ -180,12 +183,14 @@ export default function AdminUsersPage() {
       id: "subscription",
       label: "Subscription",
       sortable: true,
+      minWidth: 150,
       render: (u) => renderSubscription(u.financial)
     },
     {
       id: "emailVerified",
       label: "Email verified",
       sortable: true,
+      minWidth: 120,
       render: (u) => (
         <div className="relative inline-flex">
           <Button
@@ -205,6 +210,7 @@ export default function AdminUsersPage() {
       id: "admin",
       label: "Admin",
       sortable: true,
+      minWidth: 100,
       render: (u) =>
         u.isAdmin ? (
           <Badge variant="success-secondary">Admin</Badge>
@@ -216,12 +222,14 @@ export default function AdminUsersPage() {
       id: "payouts",
       label: "Payouts",
       sortable: true,
+      minWidth: 110,
       render: (u) => renderPayout(u.financial, u.stripeConnectedAccountId)
     },
     {
       id: "earningsMonth",
       label: "Earnings (month)",
       sortable: true,
+      minWidth: 140,
       render: (u) => (
         <span className={`font-medium ${earningColor(u.financial?.earningsThisMonthUsd)}`}>
           {u.financial?.earningsThisMonthUsd !== undefined
@@ -234,6 +242,7 @@ export default function AdminUsersPage() {
       id: "earningsTotal",
       label: "Earnings (total)",
       sortable: true,
+      minWidth: 130,
       render: (u) => (
         <span className={`font-medium ${earningColor(u.financial?.earningsTotalUsd)}`}>
           {u.financial?.earningsTotalUsd !== undefined
@@ -246,6 +255,7 @@ export default function AdminUsersPage() {
       id: "available",
       label: "Avail. earnings",
       sortable: true,
+      minWidth: 120,
       render: (u) =>
         u.financial?.availableEarningsUsd !== undefined
           ? `$${(u.financial.availableEarningsUsd ?? 0).toFixed(2)}`
@@ -255,6 +265,7 @@ export default function AdminUsersPage() {
       id: "created",
       label: "Created",
       sortable: true,
+      minWidth: 100,
       render: (u) => {
         const rel = formatRelative(u.createdAt);
         return <span title={rel.title}>{rel.display}</span>;
@@ -264,6 +275,7 @@ export default function AdminUsersPage() {
       id: "lastLogin",
       label: "Last login",
       sortable: true,
+      minWidth: 100,
       render: (u) => {
         const rel = formatRelative(u.lastLogin);
         return <span title={rel.title}>{rel.display}</span>;
@@ -273,35 +285,41 @@ export default function AdminUsersPage() {
       id: "totalPages",
       label: "Total pages",
       sortable: true,
+      minWidth: 100,
       render: (u) => u.totalPages !== undefined ? u.totalPages : "—"
     },
     {
       id: "allocated",
       label: "Allocated",
       sortable: true,
+      minWidth: 90,
       render: () => "—" // TODO
     },
     {
       id: "unallocated",
       label: "Unallocated",
       sortable: true,
+      minWidth: 100,
       render: () => "—" // TODO
     },
     {
       id: "pwa",
       label: "PWA installed",
       sortable: true,
+      minWidth: 110,
       render: () => "—" // TODO
     },
     {
       id: "notifications",
       label: "Notifications",
       sortable: true,
+      minWidth: 110,
       render: () => "—" // TODO
     },
     {
       id: "adminActions",
       label: "Actions",
+      minWidth: 220,
       render: (u) => (
         <div className="space-x-2 whitespace-nowrap">
           <Button
@@ -868,18 +886,18 @@ export default function AdminUsersPage() {
             <>
               <div className="overflow-x-auto">
                 <Table
-                  className="hidden md:table border-separate table-auto min-w-max"
-                  style={{ borderSpacing: '18px 0' }}
+                  className="hidden md:table border-separate table-fixed"
+                  style={{ borderSpacing: '8px 0' }}
                 >
                   <TableHeader className="sticky top-0 z-30 bg-background">
-                    <TableRow className="[&>th]:px-5 [&>th]:py-3 [&>th]:align-top">
+                    <TableRow className="[&>th]:px-3 [&>th]:py-3 [&>th]:align-top">
                       {activeColumns.map((col) => (
                         <TableHead
                           key={col.id}
                           className="whitespace-nowrap"
                           style={{
-                            width: col.id === "user" ? "360px" : "auto",
-                            minWidth: col.id === "user" ? "360px" : "150px"
+                            width: col.minWidth ? `${col.minWidth}px` : 'auto',
+                            minWidth: col.minWidth ? `${col.minWidth}px` : '80px'
                           }}
                           onClick={() => handleSort(col.id, col.sortable)}
                         >
@@ -901,7 +919,7 @@ export default function AdminUsersPage() {
                       ))}
                     </TableRow>
                   </TableHeader>
-                  <TableBody className="[&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:align-top">
+                  <TableBody className="[&>tr>td]:px-3 [&>tr>td]:py-3 [&>tr>td]:align-top">
                     {sorted.map((u) => (
                       <TableRow
                         key={u.uid}
@@ -913,8 +931,8 @@ export default function AdminUsersPage() {
                             key={col.id}
                             className="whitespace-nowrap"
                             style={{
-                              width: col.id === "user" ? "360px" : "auto",
-                              minWidth: col.id === "user" ? "360px" : "150px"
+                              width: col.minWidth ? `${col.minWidth}px` : 'auto',
+                              minWidth: col.minWidth ? `${col.minWidth}px` : '80px'
                             }}
                           >
                             {col.render(u)}

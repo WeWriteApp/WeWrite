@@ -190,7 +190,7 @@ export function FinancialDropdown({
 
         {showNavigationButton && (
           <>
-            <div className="border-t border-gray-200/50 dark:border-white/10 my-3" />
+            <div className="border-t border-border my-3" />
             <div className="space-y-2">
               <Button
                 size="sm"
@@ -223,7 +223,7 @@ export function FinancialDropdown({
         {/* Demo mode notice */}
         {isDemo && (
           <>
-            <div className="border-t border-gray-200/50 dark:border-white/10 my-3" />
+            <div className="border-t border-border my-3" />
             <div className="text-xs text-muted-foreground bg-gray-100/50 dark:bg-white/5 p-2 rounded text-center">
               {demoMessage}
             </div>

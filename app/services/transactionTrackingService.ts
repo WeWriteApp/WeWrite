@@ -123,7 +123,7 @@ export interface TransactionChain {
   
   // Summary
   subscriptionPayment?: FinancialTransaction;
-  tokenAllocations: FinancialTransaction[];
+  usdAllocations: FinancialTransaction[];
   writerEarnings: FinancialTransaction[];
   payoutRequests: FinancialTransaction[];
   stripePayouts: FinancialTransaction[];
@@ -411,7 +411,7 @@ export class TransactionTrackingService {
     
     // Categorize transactions by type
     const subscriptionPayment = sortedTransactions.find(t => t.type === TransactionType.SUBSCRIPTION_PAYMENT);
-    const tokenAllocations = sortedTransactions.filter(t => t.type === TransactionType.TOKEN_ALLOCATION);
+    const usdAllocations = sortedTransactions.filter(t => t.type === TransactionType.USD_ALLOCATION);
     const writerEarnings = sortedTransactions.filter(t => t.type === TransactionType.WRITER_EARNINGS);
     const payoutRequests = sortedTransactions.filter(t => t.type === TransactionType.PAYOUT_REQUEST);
     const stripePayouts = sortedTransactions.filter(t => t.type === TransactionType.STRIPE_PAYOUT);
@@ -442,7 +442,7 @@ export class TransactionTrackingService {
       startedAt: rootTransaction.createdAt,
       completedAt: allCompleted ? sortedTransactions[sortedTransactions.length - 1].completedAt : undefined,
       subscriptionPayment,
-      tokenAllocations,
+      usdAllocations,
       writerEarnings,
       payoutRequests,
       stripePayouts

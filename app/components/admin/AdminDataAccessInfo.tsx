@@ -117,7 +117,7 @@ export function AdminDataAccessInfo() {
             <div><strong>Analytics:</strong> analytics_events</div>
             <div><strong>Users:</strong> users</div>
             <div><strong>Pages:</strong> pages</div>
-            <div><strong>Tokens:</strong> tokenBalances</div>
+            <div><strong>USD Balances:</strong> usdBalances</div>
           </div>
         </div>
       </div>

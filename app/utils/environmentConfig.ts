@@ -334,7 +334,7 @@ export const COLLECTIONS = {
   SUBSCRIPTIONS: 'subscriptions', // Note: This is a subcollection under users
   BANK_ACCOUNTS: 'bankAccounts',
 
-  // USD-based collections (new system)
+  // USD-based payment collections
   USD_BALANCES: 'usdBalances',
   USD_ALLOCATIONS: 'usdAllocations',
   PENDING_USD_ALLOCATIONS: 'pendingUsdAllocations',
@@ -342,15 +342,6 @@ export const COLLECTIONS = {
   WRITER_USD_BALANCES: 'writerUsdBalances',
   WRITER_USD_EARNINGS: 'writerUsdEarnings',
   USD_PAYOUTS: 'usdPayouts',
-
-  // Legacy token collections (deprecated, will be removed after migration)
-  TOKEN_BALANCES: 'tokenBalances',
-  TOKEN_ALLOCATIONS: 'tokenAllocations',
-  PENDING_TOKEN_ALLOCATIONS: 'pendingTokenAllocations',
-  TOKEN_EARNINGS: 'tokenEarnings',
-  WRITER_TOKEN_BALANCES: 'writerTokenBalances',
-  WRITER_TOKEN_EARNINGS: 'writerTokenEarnings',
-  TOKEN_PAYOUTS: 'tokenPayouts',
 
   // General payment collections
   PAYOUTS: 'payouts',
@@ -418,24 +409,9 @@ export const USD_COLLECTIONS = {
 } as const;
 
 /**
- * Legacy alias for backward compatibility during migration
- * @deprecated Use USD_COLLECTIONS instead
+ * Alias for USD_COLLECTIONS for backward compatibility
  */
-export const PAYMENT_COLLECTIONS = {
-  USERS: COLLECTIONS.USERS,
-  SUBSCRIPTIONS: COLLECTIONS.SUBSCRIPTIONS,
-  TOKEN_BALANCES: COLLECTIONS.TOKEN_BALANCES,
-  TOKEN_ALLOCATIONS: COLLECTIONS.TOKEN_ALLOCATIONS,
-  PENDING_TOKEN_ALLOCATIONS: COLLECTIONS.PENDING_TOKEN_ALLOCATIONS,
-  TOKEN_EARNINGS: COLLECTIONS.TOKEN_EARNINGS,
-  WRITER_TOKEN_BALANCES: COLLECTIONS.WRITER_TOKEN_BALANCES,
-  WRITER_TOKEN_EARNINGS: COLLECTIONS.WRITER_TOKEN_EARNINGS,
-  TOKEN_PAYOUTS: COLLECTIONS.TOKEN_PAYOUTS,
-  PAYOUTS: COLLECTIONS.PAYOUTS,
-  PAYOUT_REQUESTS: COLLECTIONS.PAYOUT_REQUESTS,
-  TRANSACTIONS: COLLECTIONS.TRANSACTIONS,
-  PAYMENT_RECOVERY: COLLECTIONS.PAYMENT_RECOVERY
-} as const;
+export const PAYMENT_COLLECTIONS = USD_COLLECTIONS;
 
 /**
  * Get all environment-specific collection names
@@ -451,11 +427,10 @@ export const getAllCollectionNames = () => {
 
 /**
  * Get all environment-specific payment collection names
- * @deprecated Use getAllCollectionNames instead
  */
 export const getPaymentCollectionNames = () => {
   return Object.fromEntries(
-    Object.entries(PAYMENT_COLLECTIONS).map(([key, value]) => [
+    Object.entries(USD_COLLECTIONS).map(([key, value]) => [
       key,
       getCollectionName(value)
     ])

@@ -218,20 +218,20 @@ export class FinancialReconciliationService {
     const discrepancies: ReconciliationDiscrepancy[] = [];
     
     try {
-      // Get all token allocations for the period
+      // Get all USD allocations for the period
       const allocationsQuery = query(
-        collection(db, getCollectionName('tokenAllocations')),
+        collection(db, getCollectionName('usdAllocations')),
         where('createdAt', '>=', startDate),
         where('createdAt', '<=', endDate),
         orderBy('createdAt', 'desc')
       );
       
       const allocationsSnapshot = await getDocs(allocationsQuery);
-      const allocationsByRecipient = new Map<string, TokenAllocation[]>();
-      
+      const allocationsByRecipient = new Map<string, UsdAllocation[]>();
+
       // Group allocations by recipient
       allocationsSnapshot.docs.forEach(doc => {
-        const allocation = doc.data() as TokenAllocation;
+        const allocation = doc.data() as UsdAllocation;
         const existing = allocationsByRecipient.get(allocation.recipientUserId) || [];
         existing.push(allocation);
         allocationsByRecipient.set(allocation.recipientUserId, existing);

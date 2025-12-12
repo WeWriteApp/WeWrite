@@ -18,7 +18,7 @@ import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
 import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSuggestions } from "../../utils/usernameValidation"
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
-import { transferLoggedOutAllocationsToUser } from "../../utils/simulatedTokens"
+import { transferLoggedOutAllocationsToUser } from "../../utils/simulatedUsd"
 import { useAuth } from "../../providers/AuthProvider"
 
 export function RegisterForm({
@@ -244,10 +244,10 @@ export function RegisterForm({
           console.log('[Register] Session created successfully:', sessionData)
         }
 
-        // Transfer any logged-out token allocations to the new user
+        // Transfer any logged-out USD allocations to the new user
         const transferResult = transferLoggedOutAllocationsToUser(user.uid)
         if (transferResult.success && transferResult.transferredCount > 0) {
-          console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
+          console.log(`Transferred ${transferResult.transferredCount} USD allocations to new user`)
         }
 
         // Send verification email via our custom Resend template

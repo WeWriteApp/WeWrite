@@ -54,13 +54,29 @@ interface SubscriberDetail {
   email: string;
   name: string | null;
   subscriptionAmountCents: number;
-  allocatedCents: number;
-  unallocatedCents: number;
-  grossEarningsCents: number;  // What creators earn before fees
-  platformFeeCents: number;    // 7% of allocated
-  netCreatorPayoutCents: number; // What creators actually receive
+  allocatedCents: number;           // Total allocated (may exceed subscription)
+  fundedAllocatedCents: number;     // Min(allocated, subscription) - what's actually backed by money
+  overspentUnfundedCents: number;   // Max(0, allocated - subscription) - unfunded portion
+  unallocatedCents: number;         // Max(0, subscription - allocated) - leftover subscription
+  grossEarningsCents: number;       // Funded earnings before fees (= fundedAllocatedCents)
+  platformFeeCents: number;         // 7% of funded allocated
+  netCreatorPayoutCents: number;    // Funded allocated minus platform fee
   stripeCustomerId: string;
   status: string;
+}
+
+interface WriterEarningsDetail {
+  userId: string;
+  email: string;
+  name: string | null;
+  grossEarningsCents: number;       // Total earnings before platform fee
+  platformFeeCents: number;         // 7% fee taken from earnings
+  netPayoutCents: number;           // Amount writer receives after fee
+  pendingEarningsCents: number;     // Current month earnings (not yet available)
+  availableEarningsCents: number;   // Previous months (available for payout)
+  bankAccountStatus: 'not_setup' | 'pending' | 'verified' | 'restricted' | 'rejected';
+  stripeConnectedAccountId: string | null;
+  canReceivePayout: boolean;
 }
 
 export async function GET(request: NextRequest) {
@@ -175,9 +191,18 @@ export async function GET(request: NextRequest) {
           // Get allocation data for this customer
           const allocationData = customerAllocations.get(customerId);
           const allocatedCents = allocationData?.allocatedCents || 0;
+
+          // CRITICAL: Calculate funded vs unfunded allocations
+          // Funded = min(allocated, subscription) - what's actually backed by money
+          // Overspent/Unfunded = max(0, allocated - subscription) - allocations exceeding subscription
+          // Unallocated = max(0, subscription - allocated) - leftover subscription money
+          const fundedAllocatedCents = Math.min(allocatedCents, amountCents);
+          const overspentUnfundedCents = Math.max(0, allocatedCents - amountCents);
           const unallocatedCents = Math.max(0, amountCents - allocatedCents);
-          const platformFeeCents = Math.round(allocatedCents * 0.07);
-          const netCreatorPayoutCents = allocatedCents - platformFeeCents;
+
+          // Platform fee and net payout are based on FUNDED allocations only
+          const platformFeeCents = Math.round(fundedAllocatedCents * 0.07);
+          const netCreatorPayoutCents = fundedAllocatedCents - platformFeeCents;
 
           stripeSubscriptionData.subscribers.push({
             id: allocationData?.userId || customerId,
@@ -185,8 +210,10 @@ export async function GET(request: NextRequest) {
             name: customerName,
             subscriptionAmountCents: amountCents,
             allocatedCents,
+            fundedAllocatedCents,
+            overspentUnfundedCents,
             unallocatedCents,
-            grossEarningsCents: allocatedCents, // Gross = what was allocated to creators
+            grossEarningsCents: fundedAllocatedCents, // Gross = FUNDED allocations only
             platformFeeCents,
             netCreatorPayoutCents,
             stripeCustomerId: customerId,
@@ -247,27 +274,39 @@ export async function GET(request: NextRequest) {
     // ========================================
     // 3. Calculate current month financials
     // Use Stripe as source of truth for subscription revenue
+    // Use FUNDED allocations (from subscribers) for accurate creator payouts
     // ========================================
     const totalSubscriptionCents = stripeSubscriptionData.totalMRRCents;
     const totalAllocatedCents = firebaseData.totalAllocatedCents;
 
+    // Calculate funded totals from the subscriber data we already computed
+    const totalFundedAllocatedCents = stripeSubscriptionData.subscribers.reduce(
+      (sum, sub) => sum + sub.fundedAllocatedCents, 0
+    );
+    const totalOverspentUnfundedCents = stripeSubscriptionData.subscribers.reduce(
+      (sum, sub) => sum + sub.overspentUnfundedCents, 0
+    );
+
+    // Platform fee and creator payouts are based on FUNDED allocations only
+    const fundedPlatformFeeCents = Math.round(totalFundedAllocatedCents * 0.07);
+    const fundedCreatorPayoutsCents = totalFundedAllocatedCents - fundedPlatformFeeCents;
+
     let currentMonthData: MonthlyFinancialData = {
       month: currentMonth,
       totalSubscriptionCents,
-      totalAllocatedCents,
-      totalUnallocatedCents: Math.max(0, totalSubscriptionCents - totalAllocatedCents),
-      platformFeeCents: Math.round(totalAllocatedCents * 0.07),
-      creatorPayoutsCents: 0,
+      totalAllocatedCents: totalFundedAllocatedCents, // Only show funded allocations
+      totalUnallocatedCents: Math.max(0, totalSubscriptionCents - totalFundedAllocatedCents),
+      platformFeeCents: fundedPlatformFeeCents,
+      creatorPayoutsCents: fundedCreatorPayoutsCents,
       platformRevenueCents: 0,
       userCount: stripeSubscriptionData.totalActiveSubscriptions,
       allocationRate: totalSubscriptionCents > 0
-        ? (totalAllocatedCents / totalSubscriptionCents) * 100
+        ? (totalFundedAllocatedCents / totalSubscriptionCents) * 100
         : 0,
       status: 'in_progress'
     };
 
-    // Calculate derived values
-    currentMonthData.creatorPayoutsCents = totalAllocatedCents - currentMonthData.platformFeeCents;
+    // Calculate platform revenue (unallocated + platform fee)
     currentMonthData.platformRevenueCents = currentMonthData.totalUnallocatedCents + currentMonthData.platformFeeCents;
 
     // ========================================
@@ -544,6 +583,100 @@ export async function GET(request: NextRequest) {
       syncResults
     };
 
+    // ========================================
+    // 8. Get writer earnings data for CURRENT MONTH only
+    // Use writerUsdEarnings collection filtered by current month
+    // ========================================
+    const writerEarnings: WriterEarningsDetail[] = [];
+
+    try {
+      // Get writer earnings for the CURRENT MONTH from writerUsdEarnings collection
+      const writerEarningsCollectionName = await getCollectionNameAsync('writerUsdEarnings');
+      const currentMonthEarningsSnapshot = await db.collection(writerEarningsCollectionName)
+        .where('month', '==', currentMonth)
+        .get();
+
+      // Get user data for each writer
+      const usersCollectionForWriters = await getCollectionNameAsync('users');
+
+      for (const doc of currentMonthEarningsSnapshot.docs) {
+        const earningsData = doc.data();
+        const userId = earningsData.userId;
+
+        // writerUsdEarnings stores current month earnings
+        const currentMonthEarningsCents = earningsData.totalUsdCentsReceived || 0;
+
+        // Skip writers with no earnings this month
+        if (currentMonthEarningsCents <= 0) continue;
+
+        // Calculate platform fee (7%) and net payout for THIS MONTH
+        const platformFeeCents = Math.round(currentMonthEarningsCents * 0.07);
+        const netPayoutCents = currentMonthEarningsCents - platformFeeCents;
+
+        // Get user details
+        let email = 'Unknown';
+        let name = null;
+        let stripeConnectedAccountId: string | null = null;
+
+        try {
+          const userDoc = await db.collection(usersCollectionForWriters).doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            email = userData?.email || 'Unknown';
+            name = userData?.username || userData?.displayName || null;
+            stripeConnectedAccountId = userData?.stripeConnectedAccountId || null;
+          }
+        } catch (err) {
+          console.warn(`[MONTHLY FINANCIALS] Could not fetch user data for writer ${userId}:`, err);
+        }
+
+        // Determine bank account status
+        let bankAccountStatus: WriterEarningsDetail['bankAccountStatus'] = 'not_setup';
+        if (stripeConnectedAccountId) {
+          // If they have a connected account, check its status via Stripe
+          try {
+            const connectedAccount = await stripe.accounts.retrieve(stripeConnectedAccountId);
+            if (connectedAccount.payouts_enabled) {
+              bankAccountStatus = 'verified';
+            } else if (connectedAccount.requirements?.currently_due?.length) {
+              bankAccountStatus = 'pending';
+            } else if (connectedAccount.requirements?.disabled_reason) {
+              bankAccountStatus = 'restricted';
+            }
+          } catch (stripeErr) {
+            console.warn(`[MONTHLY FINANCIALS] Could not fetch Stripe account for ${stripeConnectedAccountId}:`, stripeErr);
+            bankAccountStatus = 'pending';
+          }
+        }
+
+        // For current month earnings: all are pending (not yet available for payout)
+        // The earnings doc status tells us, but for current month it's always pending
+        const earningsStatus = earningsData.status || 'pending';
+        const pendingEarningsCents = earningsStatus === 'pending' ? currentMonthEarningsCents : 0;
+        const availableEarningsCents = earningsStatus === 'available' ? currentMonthEarningsCents : 0;
+
+        writerEarnings.push({
+          userId,
+          email,
+          name,
+          grossEarningsCents: currentMonthEarningsCents,
+          platformFeeCents,
+          netPayoutCents,
+          pendingEarningsCents,
+          availableEarningsCents,
+          bankAccountStatus,
+          stripeConnectedAccountId,
+          canReceivePayout: bankAccountStatus === 'verified' && availableEarningsCents > 0
+        });
+      }
+
+      // Sort by gross earnings descending
+      writerEarnings.sort((a, b) => b.grossEarningsCents - a.grossEarningsCents);
+
+    } catch (writerEarningsError) {
+      console.error('[MONTHLY FINANCIALS] Error fetching writer earnings:', writerEarningsError);
+    }
+
     return NextResponse.json({
       success: true,
       currentMonth: {
@@ -554,6 +687,7 @@ export async function GET(request: NextRequest) {
       historicalData,
       stripeBalance,
       stripeSubscriptions: stripeSubscriptionData,
+      writerEarnings,
       totals,
       reconciliation,
       dataSources: {

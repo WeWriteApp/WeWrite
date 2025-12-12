@@ -381,7 +381,7 @@ export default function MobileBottomNavUnified() {
               )}>
                 {/* User info */}
                 {user && (
-                  <div className="px-2 py-3 border-b border-neutral-20">
+                  <div className="px-2 py-3 border-b border-border">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-foreground truncate">
                         {user.username || 'User'}

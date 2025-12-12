@@ -11,9 +11,7 @@ import { doc, updateDoc, getDoc, setDoc, serverTimestamp, collection, addDoc } f
 import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-import { ServerTokenService } from '../../../services/tokenService.server';
 import { ServerUsdService } from '../../../services/usdService.server';
-import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
@@ -253,8 +251,8 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
       // Don't fail the webhook if audit logging fails
     }
 
-    // Reset token allocation to 0
-    await ServerTokenService.updateMonthlyTokenAllocation(userId, 0);
+    // Reset USD allocation to 0
+    await ServerUsdService.updateMonthlyUsdAllocation(userId, 0);
 
     console.log(`[SUBSCRIPTION WEBHOOK] Subscription deleted for user ${userId} - Status set to cancelled`);
 
@@ -431,14 +429,6 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     console.log(`[PAYMENT SUCCEEDED] Updating USD allocation for user ${userId}: $${amount} (funds held in platform account)`);
     await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
 
-    // Also maintain backward compatibility with token system during migration
-    console.log(`[PAYMENT SUCCEEDED] Maintaining token system compatibility for user ${userId}`);
-    await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
-
-    // Log that funds are being held for month-end processing
-    console.log(`[PAYMENT SUCCEEDED] Payment funds held in platform account for month-end payout processing`);
-
-    // Funds are held in platform account for month-end payout processing
     console.log(`[PAYMENT SUCCEEDED] Payment processed, funds held in platform account for allocation and payout processing`);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance

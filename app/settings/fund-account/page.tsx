@@ -245,14 +245,14 @@ export default function FundAccountPage() {
 
       {/* Cancelled Subscription Banner */}
       {isCancelled && !cancelled && (
-        <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-800">
+        <Alert variant="warning">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between w-full">
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
             <span>Your subscription is currently inactive.</span>
             <Button
               variant="default"
               size="sm"
-              className="ml-4"
+              className="shrink-0 w-full sm:w-auto"
               onClick={() => {
                 // Scroll to the funding slider or set a default amount
                 setSelectedAmount(10);

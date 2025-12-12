@@ -110,7 +110,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
         <div className="grid gap-3 pt-2">
           <button
-            className="flex items-center gap-3 w-full h-auto py-4 px-4 text-left border border-neutral-20 rounded-lg hover:bg-alpha-5 active:bg-alpha-10 transition-all"
+            className="flex items-center gap-3 w-full h-auto py-4 px-4 text-left border border-border rounded-lg hover:bg-alpha-5 active:bg-alpha-10 transition-all"
             onClick={handleReadFeedback}
           >
             <Eye className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -121,7 +121,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           </button>
 
           <button
-            className="flex items-center gap-3 w-full h-auto py-4 px-4 text-left border border-neutral-20 rounded-lg hover:bg-alpha-5 active:bg-alpha-10 transition-all"
+            className="flex items-center gap-3 w-full h-auto py-4 px-4 text-left border border-border rounded-lg hover:bg-alpha-5 active:bg-alpha-10 transition-all"
             onClick={handleSendFeedback}
           >
             <PenLine className="h-5 w-5 text-muted-foreground shrink-0" />
