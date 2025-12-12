@@ -75,6 +75,17 @@ export async function GET(request: NextRequest) {
         const notificationsSnapshot = await query.get();
         const notifications = notificationsSnapshot.docs.map(doc => {
           const data = doc.data();
+          // Convert Firestore Timestamps to ISO strings for proper client-side parsing
+          const createdAt = data.createdAt?.toDate?.()
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt?._seconds
+              ? new Date(data.createdAt._seconds * 1000).toISOString()
+              : data.createdAt || null;
+          const readAt = data.readAt?.toDate?.()
+            ? data.readAt.toDate().toISOString()
+            : data.readAt?._seconds
+              ? new Date(data.readAt._seconds * 1000).toISOString()
+              : data.readAt || null;
           return {
             id: doc.id,
             userId: data.userId || userId,
@@ -82,13 +93,15 @@ export async function GET(request: NextRequest) {
             title: data.title || '',
             message: data.message || '',
             sourceUserId: data.sourceUserId,
+            sourcePageId: data.sourcePageId,
+            sourcePageTitle: data.sourcePageTitle,
             targetPageId: data.targetPageId,
             targetPageTitle: data.targetPageTitle,
             actionUrl: data.actionUrl,
             metadata: data.metadata || {},
             read: data.read || false,
-            createdAt: data.createdAt,
-            readAt: data.readAt
+            createdAt,
+            readAt
           };
         });
 

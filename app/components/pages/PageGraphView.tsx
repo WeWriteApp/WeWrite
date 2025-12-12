@@ -467,6 +467,7 @@ export default function PageGraphView({
         height="calc(100dvh - 40px)"
         showOverlay={true}
         className="!rounded-t-3xl"
+        disableSwipeDismiss={true}
       >
         {/* Header with controls */}
         <div className="px-4 pb-3 border-b border-border flex-shrink-0">

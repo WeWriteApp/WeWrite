@@ -118,9 +118,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get incoming connections (backlinks) - try index first, then fallback
+    // Get incoming connections (backlinks) - optimized with parallel validation
     let incoming: PageConnection[] = [];
-    
+
     try {
       // Get all backlinks (no isPublic filter since private pages no longer exist)
       const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
@@ -128,29 +128,38 @@ export async function GET(request: NextRequest) {
         .limit(limit * 2) // Get more to account for filtering
         .get();
 
-      // Filter out backlinks from deleted pages
+      // OPTIMIZATION: Batch fetch all source pages in parallel instead of sequential
+      const sourcePageIds = backlinksSnapshot.docs.map(doc => doc.data().sourcePageId);
+      const uniqueSourceIds = [...new Set(sourcePageIds)];
+
+      // Fetch all source pages in parallel (Firestore supports up to 500 in a batch)
+      const sourcePagePromises = uniqueSourceIds.map(id =>
+        db.collection(getCollectionName('pages')).doc(id).get()
+      );
+      const sourcePageDocs = await Promise.all(sourcePagePromises);
+
+      // Create a map for quick lookup
+      const sourcePageMap = new Map<string, any>();
+      sourcePageDocs.forEach(doc => {
+        if (doc.exists) {
+          sourcePageMap.set(doc.id, doc.data());
+        }
+      });
+
+      // Filter out backlinks from deleted pages using the cached map
       const validIncoming = [];
       for (const doc of backlinksSnapshot.docs) {
         const data = doc.data();
+        const sourcePageData = sourcePageMap.get(data.sourcePageId);
 
-        try {
-          // Check if the source page still exists and isn't deleted
-          const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
-
-          if (sourcePageDoc.exists) {
-            const sourcePageData = sourcePageDoc.data();
-            if (!sourcePageData.deleted) {
-              validIncoming.push({
-                id: data.sourcePageId,
-                title: data.sourcePageTitle,
-                username: data.sourceUsername,
-                lastModified: data.lastModified,
-                linkText: data.linkText
-              });
-            }
-          }
-        } catch (pageCheckError) {
-          console.warn(`Failed to check source page ${data.sourcePageId}:`, pageCheckError);
+        if (sourcePageData && !sourcePageData.deleted) {
+          validIncoming.push({
+            id: data.sourcePageId,
+            title: data.sourcePageTitle,
+            username: data.sourceUsername,
+            lastModified: data.lastModified,
+            linkText: data.linkText
+          });
         }
 
         // Stop if we have enough valid results
@@ -159,7 +168,7 @@ export async function GET(request: NextRequest) {
 
       incoming = validIncoming;
 
-      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${incoming.length} incoming connections using index (filtered from ${backlinksSnapshot.size} total)`);
+      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${incoming.length} incoming connections using index (filtered from ${backlinksSnapshot.size} total, ${uniqueSourceIds.length} unique sources)`);
     } catch (error) {
       console.log('🔗 [PAGE_CONNECTIONS_API] Backlinks index not available, using fallback');
       // Fallback method would go here if needed
@@ -207,29 +216,27 @@ export async function GET(request: NextRequest) {
         console.log(`🔗 [PAGE_CONNECTIONS_API] After filtering: ${linkedPageIds.length} unique outgoing links:`, linkedPageIds);
         
         if (linkedPageIds.length > 0) {
-          // Get details for linked pages (batch them to avoid too many queries)
-          const batchSize = 10;
-          for (let i = 0; i < linkedPageIds.length && i < limit; i += batchSize) {
-            const batch = linkedPageIds.slice(i, i + batchSize);
-            
-            for (const linkedPageId of batch) {
-              try {
-                const linkedPageDoc = await db.collection(getCollectionName('pages')).doc(linkedPageId).get();
-                
-                if (linkedPageDoc.exists) {
-                  const linkedPageData = linkedPageDoc.data();
-                  // Only exclude deleted pages (no isPublic check since private pages no longer exist)
-                  if (!linkedPageData.deleted) {
-                    outgoing.push({
-                      id: linkedPageId,
-                      title: linkedPageData.title || 'Untitled',
-                      username: linkedPageData.username || 'Unknown',
-                      lastModified: linkedPageData.lastModified
-                    });
-                  }
-                }
-              } catch (error) {
-                console.warn(`Failed to fetch linked page ${linkedPageId}:`, error);
+          // OPTIMIZATION: Fetch all linked pages in parallel instead of sequential batches
+          const pagesToFetch = linkedPageIds.slice(0, limit);
+          const linkedPagePromises = pagesToFetch.map(id =>
+            db.collection(getCollectionName('pages')).doc(id).get()
+          );
+          const linkedPageDocs = await Promise.all(linkedPagePromises);
+
+          for (let i = 0; i < linkedPageDocs.length; i++) {
+            const linkedPageDoc = linkedPageDocs[i];
+            const linkedPageId = pagesToFetch[i];
+
+            if (linkedPageDoc.exists) {
+              const linkedPageData = linkedPageDoc.data();
+              // Only exclude deleted pages (no isPublic check since private pages no longer exist)
+              if (!linkedPageData?.deleted) {
+                outgoing.push({
+                  id: linkedPageId,
+                  title: linkedPageData?.title || 'Untitled',
+                  username: linkedPageData?.username || 'Unknown',
+                  lastModified: linkedPageData?.lastModified
+                });
               }
             }
           }
@@ -251,7 +258,7 @@ export async function GET(request: NextRequest) {
     let thirdHopConnections: PageConnection[] = [];
 
     if (includeSecondHop) {
-      console.log('🔗 [PAGE_CONNECTIONS_API] Fetching second-hop connections');
+      console.log('🔗 [PAGE_CONNECTIONS_API] Fetching second-hop connections (optimized)');
 
       // Get second-hop from incoming connections (backlinks to backlinks)
       const incomingSample = incoming.slice(0, 5);
@@ -262,99 +269,109 @@ export async function GET(request: NextRequest) {
       // Combine both samples for comprehensive second-hop discovery
       const firstLevelSample = [...incomingSample, ...outgoingSample];
 
-      for (const firstLevelPage of firstLevelSample) {
-        try {
-          // Get backlinks to this first-level page (second-hop connections)
-          const secondHopSnapshot = await db.collection(getCollectionName('backlinks'))
-            .where('targetPageId', '==', firstLevelPage.id)
-            .limit(3) // Limit per first-level page
-            .get();
+      // OPTIMIZATION: Fetch all second-hop backlinks in parallel
+      const secondHopPromises = firstLevelSample.map(page =>
+        db.collection(getCollectionName('backlinks'))
+          .where('targetPageId', '==', page.id)
+          .limit(3)
+          .get()
+      );
+      const secondHopSnapshots = await Promise.all(secondHopPromises);
 
-          // Filter second-hop connections to exclude deleted pages
-          for (const doc of secondHopSnapshot.docs) {
-            const data = doc.data();
-            // Exclude if it's the original page or already in first-level connections
-            if (data.sourcePageId !== pageId &&
-                !incoming.some(p => p.id === data.sourcePageId) &&
-                !outgoing.some(p => p.id === data.sourcePageId) &&
-                !secondHopConnections.some(p => p.id === data.sourcePageId)) {
+      // Collect all candidate second-hop pages
+      const secondHopCandidates: Array<{id: string; title: string; username: string; lastModified: any; linkText?: string}> = [];
+      const existingIds = new Set([pageId, ...incoming.map(p => p.id), ...outgoing.map(p => p.id)]);
 
-              try {
-                // Check if the source page still exists and isn't deleted
-                const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
-
-                if (sourcePageDoc.exists) {
-                  const sourcePageData = sourcePageDoc.data();
-                  if (!sourcePageData.deleted) {
-                    secondHopConnections.push({
-                      id: data.sourcePageId,
-                      title: data.sourcePageTitle,
-                      username: data.sourceUsername,
-                      lastModified: data.lastModified,
-                      linkText: data.linkText
-                    });
-                  }
-                }
-              } catch (pageCheckError) {
-                console.warn(`Failed to check second-hop source page ${data.sourcePageId}:`, pageCheckError);
-              }
-            }
+      for (const snapshot of secondHopSnapshots) {
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          if (!existingIds.has(data.sourcePageId) && !secondHopCandidates.some(p => p.id === data.sourcePageId)) {
+            secondHopCandidates.push({
+              id: data.sourcePageId,
+              title: data.sourcePageTitle,
+              username: data.sourceUsername,
+              lastModified: data.lastModified,
+              linkText: data.linkText
+            });
           }
-        } catch (error) {
-          console.warn(`Failed to fetch second-hop for ${firstLevelPage.id}:`, error);
         }
+      }
+
+      // OPTIMIZATION: Batch validate all second-hop pages in parallel
+      if (secondHopCandidates.length > 0) {
+        const uniqueSecondHopIds = [...new Set(secondHopCandidates.map(c => c.id))];
+        const secondHopPagePromises = uniqueSecondHopIds.map(id =>
+          db.collection(getCollectionName('pages')).doc(id).get()
+        );
+        const secondHopPageDocs = await Promise.all(secondHopPagePromises);
+
+        const validSecondHopIds = new Set<string>();
+        secondHopPageDocs.forEach(doc => {
+          if (doc.exists && !doc.data()?.deleted) {
+            validSecondHopIds.add(doc.id);
+          }
+        });
+
+        // Filter to only valid pages
+        secondHopConnections = secondHopCandidates.filter(c => validSecondHopIds.has(c.id));
       }
 
       console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${secondHopConnections.length} second-hop connections`);
 
       // Get third-hop connections from second-hop pages
       if (secondHopConnections.length > 0) {
-        console.log('🔗 [PAGE_CONNECTIONS_API] Fetching third-hop connections');
+        console.log('🔗 [PAGE_CONNECTIONS_API] Fetching third-hop connections (optimized)');
 
         // Sample second-level connections to avoid too many requests
         const secondLevelSample = secondHopConnections.slice(0, 3);
 
-        for (const secondLevelPage of secondLevelSample) {
-          try {
-            const thirdHopSnapshot = await db.collection(getCollectionName('backlinks'))
-              .where('targetPageId', '==', secondLevelPage.id)
-              .limit(2) // Limit per second-level page
-              .get();
+        // OPTIMIZATION: Fetch all third-hop backlinks in parallel
+        const thirdHopPromises = secondLevelSample.map(page =>
+          db.collection(getCollectionName('backlinks'))
+            .where('targetPageId', '==', page.id)
+            .limit(2)
+            .get()
+        );
+        const thirdHopSnapshots = await Promise.all(thirdHopPromises);
 
-            // Filter third-hop connections to exclude deleted pages
-            for (const doc of thirdHopSnapshot.docs) {
-              const data = doc.data();
-              // Exclude if already in previous levels
-              if (data.sourcePageId !== pageId &&
-                  !incoming.some(p => p.id === data.sourcePageId) &&
-                  !outgoing.some(p => p.id === data.sourcePageId) &&
-                  !secondHopConnections.some(p => p.id === data.sourcePageId) &&
-                  !thirdHopConnections.some(p => p.id === data.sourcePageId)) {
+        // Collect all candidate third-hop pages
+        const thirdHopCandidates: Array<{id: string; title: string; username: string; lastModified: any; linkText?: string}> = [];
+        const secondHopIds = new Set(secondHopConnections.map(p => p.id));
 
-                try {
-                  // Check if the source page still exists and isn't deleted
-                  const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
-
-                  if (sourcePageDoc.exists) {
-                    const sourcePageData = sourcePageDoc.data();
-                    if (!sourcePageData.deleted) {
-                      thirdHopConnections.push({
-                        id: data.sourcePageId,
-                        title: data.sourcePageTitle,
-                        username: data.sourceUsername,
-                        lastModified: data.lastModified,
-                        linkText: data.linkText
-                      });
-                    }
-                  }
-                } catch (pageCheckError) {
-                  console.warn(`Failed to check third-hop source page ${data.sourcePageId}:`, pageCheckError);
-                }
-              }
+        for (const snapshot of thirdHopSnapshots) {
+          for (const doc of snapshot.docs) {
+            const data = doc.data();
+            if (!existingIds.has(data.sourcePageId) &&
+                !secondHopIds.has(data.sourcePageId) &&
+                !thirdHopCandidates.some(p => p.id === data.sourcePageId)) {
+              thirdHopCandidates.push({
+                id: data.sourcePageId,
+                title: data.sourcePageTitle,
+                username: data.sourceUsername,
+                lastModified: data.lastModified,
+                linkText: data.linkText
+              });
             }
-          } catch (error) {
-            console.warn(`Failed to fetch third-hop for ${secondLevelPage.id}:`, error);
           }
+        }
+
+        // OPTIMIZATION: Batch validate all third-hop pages in parallel
+        if (thirdHopCandidates.length > 0) {
+          const uniqueThirdHopIds = [...new Set(thirdHopCandidates.map(c => c.id))];
+          const thirdHopPagePromises = uniqueThirdHopIds.map(id =>
+            db.collection(getCollectionName('pages')).doc(id).get()
+          );
+          const thirdHopPageDocs = await Promise.all(thirdHopPagePromises);
+
+          const validThirdHopIds = new Set<string>();
+          thirdHopPageDocs.forEach(doc => {
+            if (doc.exists && !doc.data()?.deleted) {
+              validThirdHopIds.add(doc.id);
+            }
+          });
+
+          // Filter to only valid pages
+          thirdHopConnections = thirdHopCandidates.filter(c => validThirdHopIds.has(c.id));
         }
 
         console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${thirdHopConnections.length} third-hop connections`);

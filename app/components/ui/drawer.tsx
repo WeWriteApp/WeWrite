@@ -195,12 +195,18 @@ interface DrawerContentProps
   blurOverlay?: boolean
   /** @deprecated Use showOverlay={false} instead */
   noOverlay?: boolean
+  /**
+   * Disable swipe-to-dismiss gesture.
+   * Useful for content that requires drag interactions (e.g., 3D graph views).
+   * When true, the drawer can only be closed via explicit close actions.
+   */
+  disableSwipeDismiss?: boolean
 }
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
->(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, ...props }, ref) => {
+>(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, ...props }, ref) => {
   // Handle legacy noOverlay prop
   const shouldShowOverlay = noOverlay ? false : showOverlay
 
@@ -219,6 +225,9 @@ const DrawerContent = React.forwardRef<
   const contentRef = React.useRef<HTMLDivElement>(null)
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Skip if swipe-to-dismiss is disabled (e.g., for graph views that need drag interactions)
+    if (disableSwipeDismiss) return
+
     // Don't handle touch events on input fields or interactive elements
     const target = e.target as HTMLElement
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"]')) {
