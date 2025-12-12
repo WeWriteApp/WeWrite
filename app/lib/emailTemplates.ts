@@ -53,8 +53,51 @@ export interface EmailTemplate {
   sampleData: Record<string, any>;
 }
 
+/**
+ * Email footer options for customizing unsubscribe links
+ */
+interface EmailFooterOptions {
+  /** User's email settings token for no-login preferences access */
+  emailSettingsToken?: string;
+  /** The type of email being sent (for one-click unsubscribe) */
+  emailType?: string;
+}
+
+/**
+ * Generate footer links based on whether we have a token
+ */
+const generateFooterLinks = (options?: EmailFooterOptions): string => {
+  const baseUrl = 'https://getwewrite.app';
+  const { emailSettingsToken, emailType } = options || {};
+
+  if (emailSettingsToken) {
+    // Token-based links (no login required)
+    const preferencesUrl = `${baseUrl}/email-preferences/${emailSettingsToken}`;
+    const unsubscribeUrl = emailType
+      ? `${baseUrl}/api/email/unsubscribe?token=${emailSettingsToken}&type=${emailType}`
+      : null;
+
+    return `
+      <p>
+        <a href="${preferencesUrl}" style="color: #999;">Manage email preferences</a>
+        ${unsubscribeUrl ? `
+          <span style="color: #ccc;"> | </span>
+          <a href="${unsubscribeUrl}" style="color: #999;">Unsubscribe from this type of email</a>
+        ` : ''}
+      </p>
+    `;
+  }
+
+  // Fallback to login-required preferences page
+  return `
+    <p>
+      <a href="${baseUrl}/settings/email-preferences" style="color: #999;">Manage email preferences</a>
+    </p>
+  `;
+};
+
 // Base wrapper for all emails
-const wrapEmail = (title: string, content: string): string => `
+const wrapEmail = (title: string, content: string, footerOptions?: EmailFooterOptions): string => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -78,9 +121,7 @@ const wrapEmail = (title: string, content: string): string => `
   ${content}
   <div style="${emailStyles.footer}">
     <p>© ${new Date().getFullYear()} WeWrite. All rights reserved.</p>
-    <p>
-      <a href="https://getwewrite.app/settings/email-preferences" style="color: #999;">Manage email preferences</a>
-    </p>
+    ${generateFooterLinks(footerOptions)}
   </div>
 </body>
 </html>
@@ -224,8 +265,9 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
   sampleData: {
     username: 'JohnDoe',
     pendingEarnings: '$12.50',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, pendingEarnings }) => wrapEmail('Set Up Your Payouts', `
+  generateHtml: ({ username, pendingEarnings, emailSettingsToken }) => wrapEmail('Set Up Your Payouts', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">You Have Earnings Waiting! 💰</h2>
       <p>Hi ${username},</p>
@@ -245,7 +287,7 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
         </p>
       </div>
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'payout-reminder' }),
 };
 
 export const payoutProcessedTemplate: EmailTemplate = {
@@ -259,8 +301,9 @@ export const payoutProcessedTemplate: EmailTemplate = {
     amount: '$45.00',
     processingDate: 'December 1, 2025',
     arrivalDate: 'December 3-5, 2025',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, amount, processingDate, arrivalDate }) => wrapEmail('Payout Processed', `
+  generateHtml: ({ username, amount, processingDate, arrivalDate, emailSettingsToken }) => wrapEmail('Payout Processed', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">Payout Processed! 🎉</h2>
       <p>Hi ${username},</p>
@@ -293,7 +336,7 @@ export const payoutProcessedTemplate: EmailTemplate = {
         </a>
       </div>
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'payout-processed' }),
 };
 
 export const subscriptionConfirmationTemplate: EmailTemplate = {
@@ -367,8 +410,9 @@ export const weeklyDigestTemplate: EmailTemplate = {
       { title: 'Creative Writing Tips', author: 'StoryMaster' },
       { title: 'Building in Public', author: 'StartupDev' },
     ],
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, pageViews, newFollowers, earningsThisWeek, trendingPages }) => wrapEmail('Weekly Digest', `
+  generateHtml: ({ username, pageViews, newFollowers, earningsThisWeek, trendingPages, emailSettingsToken }) => wrapEmail('Weekly Digest', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">Your Week on WeWrite 📚</h2>
       <p>Hi ${username},</p>
@@ -403,7 +447,7 @@ export const weeklyDigestTemplate: EmailTemplate = {
         </a>
       </div>
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'weekly-digest' }),
 };
 
 export const newFollowerTemplate: EmailTemplate = {
@@ -416,26 +460,27 @@ export const newFollowerTemplate: EmailTemplate = {
     username: 'JohnDoe',
     followerUsername: 'JaneSmith',
     followerBio: 'Writer and coffee enthusiast ☕',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, followerUsername, followerBio }) => wrapEmail('New Follower', `
+  generateHtml: ({ username, followerUsername, followerBio, emailSettingsToken }) => wrapEmail('New Follower', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">New Follower! 🎉</h2>
       <p>Hi ${username},</p>
       <p><strong>@${followerUsername}</strong> is now following you on WeWrite.</p>
-      
+
       ${followerBio ? `
       <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
         <p style="margin: 0; font-style: italic; color: #666;">"${followerBio}"</p>
       </div>
       ` : ''}
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/user/${followerUsername}" style="${emailStyles.button}">
           View Profile
         </a>
       </div>
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'new-follower' }),
 };
 
 export const pageLinkedTemplate: EmailTemplate = {
@@ -449,24 +494,25 @@ export const pageLinkedTemplate: EmailTemplate = {
     linkedPageTitle: 'My Awesome Article',
     linkerUsername: 'JaneSmith',
     linkerPageTitle: 'Related Thoughts on Writing',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle }) => wrapEmail('Page Linked', `
+  generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle, emailSettingsToken }) => wrapEmail('Page Linked', `
     <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #000;">Your Page Was Linked! 🔗</h2>
       <p>Hi ${username},</p>
       <p><strong>@${linkerUsername}</strong> linked to your page "<strong>${linkedPageTitle}</strong>" in their page "<strong>${linkerPageTitle}</strong>".</p>
-      
+
       <p style="${emailStyles.muted}">
         When others link to your pages, it helps more people discover your writing and can increase your earnings!
       </p>
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app" style="${emailStyles.button}">
           View on WeWrite
         </a>
       </div>
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'page-linked' }),
 };
 
 // ============================================================================

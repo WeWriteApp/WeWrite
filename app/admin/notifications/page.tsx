@@ -1146,6 +1146,96 @@ export default function AdminEmailsPage() {
               )}
             </div>
           </div>
+
+          {/* Email Unsubscribe System Documentation */}
+          <div className="mt-8 wewrite-card">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Email Unsubscribe System</h3>
+            </div>
+            <p className="text-muted-foreground text-sm mb-4">
+              Users can manage their email preferences without logging in using token-based authentication.
+            </p>
+
+            <div className="space-y-4">
+              {/* How it works */}
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-medium text-sm mb-2">How it works</h4>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">1</span>
+                    <span>Each user has a unique <code className="bg-muted px-1 rounded">emailSettingsToken</code> stored in their user document</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">2</span>
+                    <span>Email footers include token-based links for "Manage preferences" and "Unsubscribe"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">3</span>
+                    <span>Users can view and modify preferences at <code className="bg-muted px-1 rounded">/email-preferences/[token]</code></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">4</span>
+                    <span>One-click unsubscribe available via <code className="bg-muted px-1 rounded">/api/email/unsubscribe?token=xxx&type=xxx</code></span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Email Types */}
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-medium text-sm mb-2">Email Type Identifiers</h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Pass <code className="bg-muted px-1 rounded">emailSettingsToken</code> to templates to enable unsubscribe links.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">weekly-digest</code>
+                    <span className="text-muted-foreground">Weekly Digest</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">new-follower</code>
+                    <span className="text-muted-foreground">New Followers</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">page-linked</code>
+                    <span className="text-muted-foreground">Page Links</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">payout-reminder</code>
+                    <span className="text-muted-foreground">Payout Reminders</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">payout-processed</code>
+                    <span className="text-muted-foreground">Payment Receipts</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">product-update</code>
+                    <span className="text-muted-foreground">Product Updates</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">earnings-summary</code>
+                    <span className="text-muted-foreground">Earnings Summary</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-1.5 py-0.5 rounded">all</code>
+                    <span className="text-muted-foreground">All Non-Essential</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Files */}
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-medium text-sm mb-2">Key Files</h4>
+                <ul className="text-xs space-y-1.5 text-muted-foreground font-mono">
+                  <li><code className="text-foreground">app/services/emailSettingsTokenService.ts</code> - Token generation & validation</li>
+                  <li><code className="text-foreground">app/email-preferences/[token]/page.tsx</code> - No-login preferences UI</li>
+                  <li><code className="text-foreground">app/api/email/preferences/route.ts</code> - Token-based preferences API</li>
+                  <li><code className="text-foreground">app/api/email/unsubscribe/route.ts</code> - One-click unsubscribe endpoint</li>
+                  <li><code className="text-foreground">app/lib/emailTemplates.ts</code> - Templates with unsubscribe support</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

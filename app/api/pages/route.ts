@@ -1096,6 +1096,20 @@ export async function PUT(request: NextRequest) {
         }
       }
 
+      // Parse previous content for link comparison (to avoid duplicate notifications)
+      let previousContentNodes: any[] = [];
+      if (pageData?.content) {
+        if (typeof pageData.content === 'string') {
+          try {
+            previousContentNodes = JSON.parse(pageData.content);
+          } catch (parseError) {
+            console.warn('Could not parse previous content string:', parseError);
+          }
+        } else if (Array.isArray(pageData.content)) {
+          previousContentNodes = pageData.content;
+        }
+      }
+
       // Run backlinks and notifications in parallel (non-blocking)
       const backgroundOps = async () => {
         const pageTitle = title?.trim() || pageData?.title || 'Untitled';
@@ -1121,7 +1135,7 @@ export async function PUT(request: NextRequest) {
             }
           })(),
 
-          // Process link mentions for notifications
+          // Process link mentions for notifications (only for NEW links)
           (async () => {
             try {
               console.log('🔔 [BG] Processing link mentions for page:', id);
@@ -1131,7 +1145,8 @@ export async function PUT(request: NextRequest) {
                 pageTitle,
                 currentUserId,
                 pageUsername,
-                contentNodes
+                contentNodes,
+                previousContentNodes // Pass previous content to compare and only notify about NEW links
               );
               console.log('✅ [BG] Link mentions processed');
             } catch (err) {

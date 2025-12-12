@@ -143,49 +143,84 @@ export async function createLinkMentionNotification(data: LinkMentionData): Prom
 }
 
 /**
+ * Helper to extract all link targets from content
+ */
+function extractLinksFromContent(content: any[], authorId: string, pageId: string): { userIds: Set<string>, pageIds: Set<string> } {
+  const linkedUserIds = new Set<string>();
+  const linkedPageIds = new Set<string>();
+
+  const extractLinks = (nodes: any[]) => {
+    for (const node of nodes) {
+      if (node.type === 'link') {
+        // Check if it's a user link
+        if (node.url && node.url.startsWith('/user/')) {
+          const userId = node.url.replace('/user/', '').split('?')[0];
+          if (userId && userId !== authorId) {
+            linkedUserIds.add(userId);
+          }
+        }
+        // Check if it's a page link
+        else if (node.pageId && node.pageId !== pageId) {
+          linkedPageIds.add(node.pageId);
+        }
+      }
+
+      // Recursively check children
+      if (node.children && Array.isArray(node.children)) {
+        extractLinks(node.children);
+      }
+    }
+  };
+
+  if (content && Array.isArray(content)) {
+    extractLinks(content);
+  }
+
+  return { userIds: linkedUserIds, pageIds: linkedPageIds };
+}
+
+/**
  * Extract link mentions from page content and create notifications
  * Call this when a page is saved/updated
+ *
+ * @param previousContent - Optional previous content to compare against.
+ *                          If provided, only NEW links (not in previous) will trigger notifications.
+ *                          If not provided (new page), all links trigger notifications.
  */
 export async function processPageLinksForNotifications(
   pageId: string,
   pageTitle: string,
   authorId: string,
   authorUsername: string,
-  content: any
+  content: any,
+  previousContent?: any
 ): Promise<void> {
   try {
     if (!content || !Array.isArray(content)) {
       return;
     }
 
-    const linkedUserIds = new Set<string>();
-    const linkedPageIds = new Set<string>();
+    // Extract links from current content
+    const currentLinks = extractLinksFromContent(content, authorId, pageId);
 
-    // Extract all links from the content
-    const extractLinks = (nodes: any[]) => {
-      for (const node of nodes) {
-        if (node.type === 'link') {
-          // Check if it's a user link
-          if (node.url && node.url.startsWith('/user/')) {
-            const userId = node.url.replace('/user/', '').split('?')[0];
-            if (userId && userId !== authorId) {
-              linkedUserIds.add(userId);
-            }
-          }
-          // Check if it's a page link
-          else if (node.pageId && node.pageId !== pageId) {
-            linkedPageIds.add(node.pageId);
-          }
-        }
+    // Extract links from previous content (if provided)
+    const previousLinks = previousContent
+      ? extractLinksFromContent(previousContent, authorId, pageId)
+      : { userIds: new Set<string>(), pageIds: new Set<string>() };
 
-        // Recursively check children
-        if (node.children && Array.isArray(node.children)) {
-          extractLinks(node.children);
-        }
-      }
-    };
+    // Only notify about NEW links (not in previous content)
+    const newUserIds = new Set([...currentLinks.userIds].filter(id => !previousLinks.userIds.has(id)));
+    const newPageIds = new Set([...currentLinks.pageIds].filter(id => !previousLinks.pageIds.has(id)));
 
-    extractLinks(content);
+    // Log for debugging
+    if (previousContent) {
+      console.log(`[LinkMention] Previous links: ${previousLinks.userIds.size} users, ${previousLinks.pageIds.size} pages`);
+      console.log(`[LinkMention] Current links: ${currentLinks.userIds.size} users, ${currentLinks.pageIds.size} pages`);
+      console.log(`[LinkMention] NEW links to notify: ${newUserIds.size} users, ${newPageIds.size} pages`);
+    }
+
+    const linkedUserIds = newUserIds;
+    const linkedPageIds = newPageIds;
 
     // Create notifications for user mentions
     for (const userId of linkedUserIds) {
@@ -231,7 +266,7 @@ export async function processPageLinksForNotifications(
       }
     }
 
-    console.log(`[LinkMention] Processed ${linkedUserIds.size} user mentions and ${linkedPageIds.size} page links`);
+    console.log(`[LinkMention] Notified about ${linkedUserIds.size} NEW user mentions and ${linkedPageIds.size} NEW page links`);
   } catch (error) {
     console.error('[LinkMention] Error processing page links:', error);
     // Don't throw - notifications are non-critical

@@ -169,6 +169,7 @@ export default function UserProfileTabs({ profile }) {
   const { targetRef: pagesScrollTarget } = useInfiniteScrollWithLoadMore({
     hasMore: hasMore || false,
     onLoadMore: loadMore || (() => {}),
+    isLoading: loadingMore, // Pass actual loading state to prevent multiple concurrent loads
   });
 
   // Helper function to get descriptive sort labels

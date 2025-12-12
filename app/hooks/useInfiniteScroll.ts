@@ -146,6 +146,8 @@ interface UseInfiniteScrollWithLoadMoreOptions {
   hasMore: boolean;
   onLoadMore: () => void;
   threshold?: number;
+  /** External loading state from parent - if provided, overrides internal loading state */
+  isLoading?: boolean;
 }
 
 interface UseInfiniteScrollWithLoadMoreResult {
@@ -157,22 +159,28 @@ interface UseInfiniteScrollWithLoadMoreResult {
 export function useInfiniteScrollWithLoadMore({
   hasMore,
   onLoadMore,
-  threshold = 200
+  threshold = 200,
+  isLoading
 }: UseInfiniteScrollWithLoadMoreOptions): UseInfiniteScrollWithLoadMoreResult {
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [internalLoadingMore, setInternalLoadingMore] = useState(false);
   const targetRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Use external loading state if provided, otherwise use internal state
+  const loadingMore = isLoading !== undefined ? isLoading : internalLoadingMore;
 
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore) return;
 
-    setLoadingMore(true);
-    onLoadMore();
+    // Only set internal state if not using external loading state
+    if (isLoading === undefined) {
+      setInternalLoadingMore(true);
+      // Reset loading state after a reasonable delay to prevent rapid calls
+      setTimeout(() => setInternalLoadingMore(false), 2000);
+    }
 
-    // Reset loading state after a reasonable delay to prevent rapid calls
-    // The component should handle its own loading state for better UX
-    setTimeout(() => setLoadingMore(false), 2000);
-  }, [hasMore, loadingMore, onLoadMore]);
+    onLoadMore();
+  }, [hasMore, loadingMore, onLoadMore, isLoading]);
 
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
