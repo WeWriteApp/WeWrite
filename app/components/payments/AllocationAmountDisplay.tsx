@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { cn } from '../../lib/utils';
 
@@ -66,9 +67,6 @@ export function AllocationAmountDisplay({
     ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
     : `Available: ${formatUsdCents(availableBalanceCents)}`;
 
-  // Demo balance suffix text
-  const demoSuffix = isDemoBalance ? " (Demo funds, log in to make it real!)" : "";
-
   // Color and font weight based on whether there's an allocation
   const textColorClass = hasAllocation ? "text-primary" : "text-muted-foreground";
   const fontWeightClass = hasAllocation ? "font-bold" : "font-normal";
@@ -90,7 +88,13 @@ export function AllocationAmountDisplay({
       >
         {displayText}
         {isDemoBalance && (
-          <span className="text-muted-foreground font-normal">{demoSuffix}</span>
+          <span className="text-muted-foreground font-normal">
+            {" (Demo funds, "}
+            <Link href="/login" className="underline hover:text-foreground">
+              log in
+            </Link>
+            {" to make it real!)"}
+          </span>
         )}
       </div>
     </div>

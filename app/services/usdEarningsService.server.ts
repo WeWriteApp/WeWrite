@@ -1,48 +1,19 @@
 /**
  * Server-side USD Earnings Service for WeWrite
- * 
+ *
  * Manages USD earnings tracking, monthly processing, and payout functionality
  * for content creators using Firebase Admin SDK for elevated permissions.
- * 
+ *
  * This file should ONLY be imported in API routes and server components.
  */
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirebaseAdmin, FieldValue } from '../firebase/firebaseAdmin';
 
-// Robust Firebase Admin initialization function - uses the same pattern as working endpoints
+// Use shared Firebase Admin initialization
 function getFirebaseAdminAndDb() {
-  try {
-    // Check if we already have an app for USD earnings services
-    let earningsServiceApp = getApps().find(app => app.name === 'earnings-service-app');
-
-    if (!earningsServiceApp) {
-      // Initialize a new app specifically for USD earnings services
-      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-      if (!base64Json) {
-        throw new Error('GOOGLE_CLOUD_KEY_JSON environment variable not found');
-      }
-
-      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(decodedJson);
-
-      earningsServiceApp = initializeApp({
-        credential: cert({
-          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-          clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-        })
-      }, 'earnings-service-app');
-
-      console.log('[USD Earnings Service] Firebase Admin initialized successfully');
-    }
-
-    const db = getFirestore(earningsServiceApp);
-    return { admin: earningsServiceApp, db };
-  } catch (error) {
-    console.error('[USD Earnings Service] Error initializing Firebase Admin:', error);
-    throw error;
-  }
+  const admin = getFirebaseAdmin();
+  const db = admin.firestore();
+  return { admin, db };
 }
 import { WriterUsdEarnings, WriterUsdBalance, UsdPayout, UsdAllocation } from '../types/database';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
@@ -56,15 +27,13 @@ export class ServerUsdEarningsService {
    */
   static async getWriterUsdBalance(userId: string): Promise<WriterUsdBalance | null> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
-      console.log('[ServerUsdEarningsService] Getting writer USD balance for:', userId);
-      
+      const { db } = getFirebaseAdminAndDb();
       const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (balanceDoc.exists) {
         const data = balanceDoc.data();
-        const balance: WriterUsdBalance = {
+        return {
           userId: data?.userId,
           totalUsdCentsEarned: data?.totalUsdCentsEarned || 0,
           pendingUsdCents: data?.pendingUsdCents || 0,
@@ -74,12 +43,8 @@ export class ServerUsdEarningsService {
           createdAt: data?.createdAt,
           updatedAt: data?.updatedAt
         };
-        
-        console.log('[ServerUsdEarningsService] Found writer USD balance:', balance);
-        return balance;
       }
 
-      console.log('[ServerUsdEarningsService] No USD balance found for user:', userId);
       return null;
     } catch (error) {
       console.error('[ServerUsdEarningsService] Error getting writer USD balance:', error);
@@ -92,16 +57,14 @@ export class ServerUsdEarningsService {
    */
   static async getWriterEarningsHistory(userId: string, limitCount: number = 12): Promise<WriterUsdEarnings[]> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
-      console.log('[ServerUsdEarningsService] Getting writer earnings history for:', userId);
-      
+      const { db } = getFirebaseAdminAndDb();
       const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
         .where('userId', '==', userId)
         .orderBy('month', 'desc')
         .limit(limitCount);
 
       const earningsSnapshot = await earningsQuery.get();
-      const earnings = earningsSnapshot.docs.map(doc => {
+      return earningsSnapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -115,9 +78,6 @@ export class ServerUsdEarningsService {
           updatedAt: data.updatedAt
         } as WriterUsdEarnings;
       });
-      
-      console.log('[ServerUsdEarningsService] Found earnings history:', earnings.length, 'records');
-      return earnings;
     } catch (error) {
       console.error('[ServerUsdEarningsService] Error getting writer earnings history:', error);
       return [];
@@ -149,9 +109,9 @@ export class ServerUsdEarningsService {
         throw new Error(`[${correlationId}] Invalid allocation parameters: fromUserId=${fromUserId}, recipientUserId=${recipientUserId}, resourceId=${resourceId}, usdCentsChange=${usdCentsChange}`);
       }
 
-      const { admin, db } = getFirebaseAdminAndDb();
+      const { db } = getFirebaseAdminAndDb();
 
-      // CRITICAL FIX: Calculate the funded portion of this allocation
+      // Calculate the funded portion of this allocation
       // Recipients should only receive earnings for allocations that are backed by actual subscription funds
       let fundedUsdCents = usdCentsChange;
 
@@ -170,18 +130,9 @@ export class ServerUsdEarningsService {
             // Calculate funding ratio: what percentage of allocations are actually funded
             const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
             fundedUsdCents = Math.round(usdCentsChange * fundingRatio);
-
-            console.log(`[ServerUsdEarningsService] [${correlationId}] Sponsor ${fromUserId} over-allocated:`, {
-              sponsorSubscriptionCents,
-              sponsorAllocatedCents,
-              fundingRatio: fundingRatio.toFixed(4),
-              originalAllocation: usdCentsChange,
-              fundedAllocation: fundedUsdCents
-            });
           }
         } else {
           // No balance record means no subscription - allocation is completely unfunded
-          console.log(`[ServerUsdEarningsService] [${correlationId}] Sponsor ${fromUserId} has no balance record - allocation is unfunded`);
           fundedUsdCents = 0;
         }
       } catch (balanceError) {
@@ -191,11 +142,8 @@ export class ServerUsdEarningsService {
 
       // Skip recording if there's nothing funded
       if (fundedUsdCents <= 0) {
-        console.log(`[ServerUsdEarningsService] [${correlationId}] Skipping earnings record - allocation is unfunded`);
         return;
       }
-
-      console.log(`[ServerUsdEarningsService] [${correlationId}] Processing FUNDED USD allocation: ${centsToDollars(fundedUsdCents)} (of ${centsToDollars(usdCentsChange)} total) from ${fromUserId} to ${recipientUserId}`);
 
       const earningsId = `${recipientUserId}_${month}`;
       const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
@@ -246,8 +194,6 @@ export class ServerUsdEarningsService {
         // Update writer balance
         await this.updateWriterBalanceInTransaction(transaction, recipientUserId, balanceRef, balanceDoc);
       });
-
-      console.log(`[ServerUsdEarningsService] Successfully processed USD allocation for ${recipientUserId}`);
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(`[ServerUsdEarningsService] [${correlationId}] Error processing USD allocation (${duration}ms):`, {
@@ -265,9 +211,6 @@ export class ServerUsdEarningsService {
       const enhancedError = new Error(`[${correlationId}] USD allocation processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       enhancedError.cause = error;
       throw enhancedError;
-    } finally {
-      const duration = Date.now() - startTime;
-      console.log(`[ServerUsdEarningsService] [${correlationId}] Allocation processing completed in ${duration}ms`);
     }
   }
 
@@ -281,7 +224,7 @@ export class ServerUsdEarningsService {
     balanceDoc: any
   ): Promise<void> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const { db } = getFirebaseAdminAndDb();
 
       // Get all earnings for this writer
       const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
@@ -348,8 +291,7 @@ export class ServerUsdEarningsService {
     affectedWriters: number;
   }> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
-      console.log(`[ServerUsdEarningsService] Processing monthly USD distribution for ${month}`);
+      const { db } = getFirebaseAdminAndDb();
 
       // Get all pending earnings for the specified month
       const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
@@ -382,13 +324,10 @@ export class ServerUsdEarningsService {
         await this.updateWriterBalance(writerId);
       }
 
-      const result = {
+      return {
         processedCount: earningsSnapshot.size,
         affectedWriters: affectedWriters.size
       };
-
-      console.log(`[ServerUsdEarningsService] Monthly distribution complete:`, result);
-      return result;
 
     } catch (error) {
       console.error('[ServerUsdEarningsService] Error processing monthly distribution:', error);
@@ -401,7 +340,7 @@ export class ServerUsdEarningsService {
    */
   static async updateWriterBalance(userId: string): Promise<void> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const { db } = getFirebaseAdminAndDb();
 
       await db.runTransaction(async (transaction) => {
         const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId);
