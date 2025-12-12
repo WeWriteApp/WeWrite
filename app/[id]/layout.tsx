@@ -124,7 +124,8 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.getwewrite.app');
 
       const canonicalUrl = `${baseUrl}/${id}`;
-      const imageUrl = `${baseUrl}/api/og?id=${id}`;
+      // Use the file-based OG image convention - Next.js generates this from opengraph-image.tsx
+      const imageUrl = `${baseUrl}/${id}/opengraph-image`;
 
       return {
         title: formattedTitle,

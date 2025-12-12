@@ -53,7 +53,6 @@ const SearchResultsDisplay = React.memo(({
     // Create a combined array of all results
     let combined = [
       ...(results.users || []).map(user => {
-        // Only use username field - displayName is fully deprecated
         const username = sanitizeUsername(user?.username || `user_${user?.id?.slice(0, 8)}`);
         return {
           ...user,
@@ -65,7 +64,6 @@ const SearchResultsDisplay = React.memo(({
       ...(results.pages || []).map(page => ({
         ...page,
         type: 'page',
-        displayName: page.title,
         url: `/${page.id}`
       }))
     ];
@@ -77,15 +75,17 @@ const SearchResultsDisplay = React.memo(({
         ...results.groups.map(group => ({
           ...group,
           type: 'group',
-          displayName: group.name,
           url: `/group/${group.id}`
         }))
       ];
     }
 
-    // Sort by relevance (could be enhanced with actual relevance scoring)
-    // For now, we'll just sort alphabetically by display name
-    return combined.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    // Sort alphabetically by username (for users) or title (for pages) or name (for groups)
+    return combined.sort((a, b) => {
+      const aName = a.username || a.title || a.name || '';
+      const bName = b.username || b.title || b.name || '';
+      return aName.localeCompare(bName);
+    });
   }, [results, groupsEnabled]);
 
   // Fetch user subscription data when results change
@@ -157,7 +157,21 @@ const SearchResultsDisplay = React.memo(({
         {!isLoading && error && (
           <div className="text-center py-8">
             <p className="text-destructive mb-2">Search error occurred</p>
-            <p className="text-sm text-muted-foreground">{error}</p>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <div className="text-xs text-muted-foreground/60 bg-muted/30 rounded-md p-3 max-w-md mx-auto">
+              <p className="font-mono break-all">
+                Query: "{query}" | Time: {new Date().toISOString()}
+              </p>
+              <button
+                onClick={() => {
+                  const errorDetails = `Search Error Report\n-------------------\nQuery: ${query}\nError: ${error}\nTimestamp: ${new Date().toISOString()}\nUser Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'}`;
+                  navigator.clipboard?.writeText(errorDetails);
+                }}
+                className="mt-2 text-primary hover:underline"
+              >
+                Copy error details for support
+              </button>
+            </div>
           </div>
         )}
 
