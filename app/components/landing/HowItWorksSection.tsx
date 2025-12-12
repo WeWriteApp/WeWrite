@@ -127,7 +127,7 @@ export default function HowItWorksSection() {
                     )}
                   />
                 </div>
-                <span className="font-medium text-sm">{formatUsdCents(otherPagesCents)}</span>
+                <span className="font-medium text-sm tabular-nums">{formatUsdCents(otherPagesCents)}</span>
               </button>
 
               {/* Expanded breakdown of other pages - hard-coded with PillLinks */}
@@ -146,7 +146,7 @@ export default function HowItWorksSection() {
                       >
                         {page.title}
                       </PillLink>
-                      <span className="text-sm text-muted-foreground">{formatUsdCents(page.amount)}</span>
+                      <span className="text-sm text-muted-foreground tabular-nums">{formatUsdCents(page.amount)}</span>
                     </div>
                   ))}
                 </div>
@@ -159,7 +159,7 @@ export default function HowItWorksSection() {
                 <div className="w-3 h-3 rounded bg-primary flex-shrink-0" />
                 <span className="text-sm">This Page</span>
               </div>
-              <span className="font-medium text-sm text-primary">{formatUsdCents(thisPageAllocation)}</span>
+              <span className="font-medium text-sm text-primary tabular-nums">{formatUsdCents(thisPageAllocation)}</span>
             </div>
 
             {/* Available - outline style to match allocation bar */}
@@ -168,13 +168,13 @@ export default function HowItWorksSection() {
                 <div className="w-3 h-3 rounded bg-transparent border border-neutral-alpha-10 flex-shrink-0" />
                 <span className="text-sm">Available</span>
               </div>
-              <span className="font-medium text-sm text-success">{formatUsdCents(availableCents)}</span>
+              <span className="font-medium text-sm tabular-nums">{formatUsdCents(availableCents)}</span>
             </div>
 
             {/* Total - separator line */}
             <div className="flex items-center justify-between pt-2 mt-1 border-t border-border">
               <span className="text-sm">Monthly Subscription</span>
-              <span className="font-bold text-sm">{formatUsdCents(totalCents)}</span>
+              <span className="font-bold text-sm tabular-nums">{formatUsdCents(totalCents)}</span>
             </div>
           </div>
 

@@ -8,7 +8,7 @@ import { getStripePublishableKey } from '../../utils/stripeConfig';
 import { useTheme } from '../../providers/ThemeProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
-import { Loader2, CreditCard, Building2, X } from 'lucide-react';
+import { Loader2, CreditCard, Building2, X, Trash2 } from 'lucide-react';
 import { ErrorCard } from '../ui/ErrorCard';
 import {
   Drawer,
@@ -65,6 +65,7 @@ function CheckoutForm({
   const [useExistingPayment, setUseExistingPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [existingSubscription, setExistingSubscription] = useState<any>(null);
+  const [deletingPaymentMethod, setDeletingPaymentMethod] = useState<string | null>(null);
 
   const isUpgrade = currentSubscriptionAmount !== undefined && amount > currentSubscriptionAmount;
   const isDowngrade = currentSubscriptionAmount !== undefined && amount < currentSubscriptionAmount && currentSubscriptionAmount > 0;
@@ -134,6 +135,44 @@ function CheckoutForm({
       return `Expires ${method.expMonth.toString().padStart(2, '0')}/${method.expYear}`;
     }
     return null;
+  };
+
+  const handleDeletePaymentMethod = async (paymentMethodId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deletingPaymentMethod) return;
+
+    setDeletingPaymentMethod(paymentMethodId);
+    try {
+      const response = await fetch('/api/payment-methods', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethodId }),
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        const updatedMethods = paymentMethods.filter(pm => pm.id !== paymentMethodId);
+        setPaymentMethods(updatedMethods);
+
+        // If we deleted the selected method, select the first remaining one
+        if (selectedPaymentMethod === paymentMethodId) {
+          if (updatedMethods.length > 0) {
+            setSelectedPaymentMethod(updatedMethods[0].id);
+          } else {
+            setSelectedPaymentMethod(null);
+            setUseExistingPayment(false);
+            setIsFormComplete(false);
+          }
+        }
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete payment method');
+      }
+    } catch (err) {
+      setError('Failed to delete payment method');
+    } finally {
+      setDeletingPaymentMethod(null);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -298,26 +337,22 @@ function CheckoutForm({
             <span className="text-sm text-muted-foreground">Loading your payment methods...</span>
           </div>
         ) : paymentMethods.length > 0 ? (
-          <div className="p-4 rounded-lg border border-border bg-muted/30 mb-4 space-y-3">
+          <div className="mb-4 space-y-4">
+            {/* Current payment method header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 {(() => {
                   const method = paymentMethods.find((pm) => pm.id === selectedPaymentMethod);
                   const icon =
                     method?.type === 'us_bank_account'
-                      ? <Building2 className="h-4 w-4 text-muted-foreground" />
-                      : <CreditCard className="h-4 w-4 text-muted-foreground" />;
+                      ? <Building2 className="h-5 w-5 text-muted-foreground" />
+                      : <CreditCard className="h-5 w-5 text-muted-foreground" />;
                   return (
                     <>
-                      <div className="mt-1">{icon}</div>
+                      <div className="mt-0.5">{icon}</div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Current payment method</p>
-                        <p className="text-sm font-medium">{getPaymentMethodDisplay(method || paymentMethods[0])}</p>
-                        {getPaymentMethodExpiry(method || paymentMethods[0]) && (
-                          <p className="text-xs text-muted-foreground">
-                            {getPaymentMethodExpiry(method || paymentMethods[0])}
-                          </p>
-                        )}
+                        <p className="text-sm text-muted-foreground">Current payment method</p>
+                        <p className="text-base font-medium">{getPaymentMethodDisplay(method || paymentMethods[0])}</p>
                       </div>
                     </>
                   );
@@ -336,9 +371,11 @@ function CheckoutForm({
                 {useExistingPayment ? 'Use a different method' : 'Keep this method'}
               </Button>
             </div>
+
+            {/* Saved payment methods list */}
             {useExistingPayment && paymentMethods.length > 1 && (
-              <div className="space-y-2 pt-2 border-t border-border/60">
-                <p className="text-xs text-muted-foreground">Choose a saved payment method</p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Choose a saved payment method</p>
                 <div className="space-y-2">
                   {paymentMethods.map((method) => (
                     <button
@@ -347,30 +384,44 @@ function CheckoutForm({
                         setSelectedPaymentMethod(method.id);
                         setIsFormComplete(true);
                       }}
-                      className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-left transition ${
+                      className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition ${
                         selectedPaymentMethod === method.id
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:bg-muted/40'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         {method.type === 'us_bank_account' ? (
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
                         ) : (
-                          <CreditCard className="h-4 w-4 text-muted-foreground" />
+                          <CreditCard className="h-5 w-5 text-muted-foreground" />
                         )}
                         <div>
-                          <p className="text-sm font-medium">{getPaymentMethodDisplay(method)}</p>
+                          <p className="text-base font-medium">{getPaymentMethodDisplay(method)}</p>
                           {getPaymentMethodExpiry(method) && (
-                            <p className="text-xs text-muted-foreground">{getPaymentMethodExpiry(method)}</p>
+                            <p className="text-sm text-muted-foreground">{getPaymentMethodExpiry(method)}</p>
                           )}
                         </div>
                       </div>
-                      {method.isPrimary && (
-                        <span className="text-[11px] px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                          Primary
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {method.isPrimary && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                            Primary
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => handleDeletePaymentMethod(method.id, e)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label="Delete payment method"
+                          disabled={deletingPaymentMethod === method.id}
+                        >
+                          {deletingPaymentMethod === method.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </button>
                   ))}
                 </div>

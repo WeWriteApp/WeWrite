@@ -440,7 +440,7 @@ const LandingPage = () => {
         </section>
 
         {/* Bottom spacing for footer visibility */}
-        <div className="pb-32 md:pb-24"></div>
+        <div className="pb-8 md:pb-6"></div>
 
       </main>
 

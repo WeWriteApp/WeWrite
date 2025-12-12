@@ -148,9 +148,9 @@ export default function FeaturesCarousel() {
                     <Card className="wewrite-card overflow-hidden h-full">
                       <CardContent className="p-0">
                         {/* Feature header */}
-                        <div className="px-4 py-3 bg-muted/30">
-                          <h3 className="font-semibold text-base">{feature.title}</h3>
-                          <p className="text-xs text-muted-foreground">{feature.description}</p>
+                        <div className="px-4 py-3 bg-muted/30 text-center">
+                          <h3 className="font-semibold text-xl">{feature.title}</h3>
+                          <p className="text-sm text-muted-foreground">{feature.description}</p>
                         </div>
 
                         {/* Feature preview */}

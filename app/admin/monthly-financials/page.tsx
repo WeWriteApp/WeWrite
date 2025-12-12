@@ -9,14 +9,50 @@ import { isAdmin } from '../../utils/isAdmin';
 import { formatUsdCents } from '../../utils/formatCurrency';
 
 // Simple hover tooltip component with backdrop blur
+// Uses fixed positioning to prevent clipping by table overflow
 function InfoTooltip({ text }: { text: string }) {
+  const [isVisible, setIsVisible] = React.useState(false);
+  const [position, setPosition] = React.useState({ top: 0, left: 0 });
+  const iconRef = React.useRef<HTMLSpanElement>(null);
+
+  const handleMouseEnter = () => {
+    if (iconRef.current) {
+      const rect = iconRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.top - 8, // Position above the icon
+        left: rect.left + rect.width / 2, // Center horizontally
+      });
+    }
+    setIsVisible(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsVisible(false);
+  };
+
   return (
-    <span className="relative inline-flex group ml-1 align-middle">
-      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-foreground text-xs rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-normal w-64 z-[100]">
-        {text}
+    <>
+      <span
+        ref={iconRef}
+        className="inline-flex ml-1 align-middle cursor-help"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
       </span>
-    </span>
+      {isVisible && (
+        <div
+          className="fixed z-[9999] px-3 py-2 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-foreground text-xs rounded-lg shadow-lg border whitespace-normal w-64 pointer-events-none"
+          style={{
+            top: position.top,
+            left: position.left,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          {text}
+        </div>
+      )}
+    </>
   );
 }
 

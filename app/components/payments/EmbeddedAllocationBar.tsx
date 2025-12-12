@@ -116,18 +116,21 @@ export function EmbeddedAllocationBar({
     const currentPageCents = allocationState.currentAllocationCents;
 
     if (shouldUseDemoBalance) {
-      // For demo balance: balance data is NOT optimistically updated
-      // So we need to calculate optimistic values manually
-      const originalAllocatedCents = currentBalance.allocatedUsdCents;
-      const originalAvailableCents = currentBalance.availableUsdCents;
+      // For demo balance: we need to calculate the bar segments correctly
+      // The key insight: "other pages" should NEVER change when we allocate to "this page"
+      //
+      // The context's allocatedUsdCents includes the allocation for this page.
+      // To get "other pages", we subtract the OPTIMISTIC current page value (not localStorage).
+      const contextAllocatedCents = currentBalance.allocatedUsdCents;
 
-      // Calculate what the original allocation for this page was
-      // We can get this from the demo balance localStorage
-      const originalCurrentPageCents = !user?.uid ?
+      // Get the saved (non-optimistic) allocation for this page from localStorage
+      const savedCurrentPageCents = !user?.uid ?
         getLoggedOutPageAllocation(pageId) :
         getUserPageAllocation(user.uid, pageId);
 
-      const otherPagesCents = Math.max(0, originalAllocatedCents - originalCurrentPageCents);
+      // Calculate other pages as: total allocated (from context) minus saved this page value
+      // This gives us the "other pages" total which should remain constant
+      const otherPagesCents = Math.max(0, contextAllocatedCents - savedCurrentPageCents);
 
       // Split current page allocation into funded and overfunded portions
       const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);

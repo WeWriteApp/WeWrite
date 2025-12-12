@@ -106,12 +106,13 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
     // Build the new page URL
     const newPageUrl = `/new?title=${encodedTitle}&initialContent=${encodedContent}&source=landing-drawer`;
 
-    // Redirect to registration (signup) with return URL to the new page creation
-    router.push(`/auth/signup?from=${encodeURIComponent(newPageUrl)}`);
-
-    // Close the drawer
+    // Close the drawer first to clear hash from URL
     onClose();
-  }, [title, editorContent, router, onClose]);
+
+    // Use window.location for a hard navigation to ensure it works
+    // router.push can have issues when there's a hash in the URL
+    window.location.href = `/auth/signup?from=${encodeURIComponent(newPageUrl)}`;
+  }, [title, editorContent, onClose]);
 
   const handleClose = useCallback(() => {
     // Clear state and close
@@ -131,8 +132,15 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()} hashId="new-note" analyticsId="logged_out_note">
       <DrawerContent height="85vh">
-        <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-center">Start Writing</DrawerTitle>
+        <DrawerHeader className="pb-2 relative">
+          <DrawerTitle className="text-center">Write your first note!</DrawerTitle>
+          <button
+            onClick={handleClose}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-muted transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </DrawerHeader>
 
         <div className="flex-1 px-4 pb-4 flex flex-col gap-4 overflow-y-auto">
