@@ -22,13 +22,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize Firebase Admin using standardized function
+    // NOTE: We only use Firestore here, NOT Auth, to avoid jose/jwks-rsa dependency issues on Vercel
     const admin = getFirebaseAdmin();
     if (!admin) {
       return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
     }
 
     const adminDb = admin.firestore();
-    const adminAuth = admin.auth();
 
     const body = await request.json();
     const { tier, amount, tierName, tokens, successUrl, cancelUrl } = body;

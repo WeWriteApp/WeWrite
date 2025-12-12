@@ -8,6 +8,11 @@
 /* Import allocation bar animations */
 @import './styles/allocation-bar-animations.css';
 
+/* Hide 3D force graph library navigation info overlay */
+.scene-nav-info {
+  display: none !important;
+}
+
 /* Fixed layer tokens and utilities */
 @import './styles/fixed-layer.css';
 

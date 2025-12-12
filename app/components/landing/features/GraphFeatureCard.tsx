@@ -553,6 +553,11 @@ export default function GraphFeatureCard() {
           className="absolute inset-0"
         />
 
+        {/* Helper text for controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-sm text-muted-foreground">
+          Left-click: rotate · Scroll: zoom · Right-click: pan
+        </div>
+
         {/* Close button */}
         <button
           onClick={() => setIsFullscreen(false)}
@@ -570,7 +575,7 @@ export default function GraphFeatureCard() {
     <>
       <div
         ref={containerRef}
-        className="relative h-full min-h-[200px] overflow-hidden cursor-pointer"
+        className="relative h-full min-h-[200px] overflow-hidden cursor-pointer [&_canvas]:pointer-events-none"
         style={{ touchAction: 'pan-y' }}
         onClick={() => setIsFullscreen(true)}
         title="Click to expand"
