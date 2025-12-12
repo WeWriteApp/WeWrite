@@ -503,17 +503,11 @@ export default function MonthlyFinancialsPage() {
                                 <InfoTooltip text="Plan - Allocated. Funds not yet directed to creators (becomes platform revenue at month-end)" />
                               </span>
                             </th>
-                            <th className="text-right py-2 px-2">
-                              <span className="inline-flex items-center">
-                                Net to Creators
-                                <InfoTooltip text="FUNDED allocations minus 7% platform fee. Only backed allocations count - overspent amounts excluded." />
-                              </span>
-                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {data.stripeSubscriptions.subscribers.map((sub) => (
-                            <tr key={sub.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <tr key={sub.id} className="border-b border-border hover:bg-muted/30">
                               <td className="py-2 px-2">
                                 <div className="font-medium truncate max-w-[150px]" title={sub.email}>
                                   {sub.name || sub.email}
@@ -536,9 +530,6 @@ export default function MonthlyFinancialsPage() {
                               <td className={`text-right py-2 px-2 ${sub.unallocatedCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
                                 {formatUsdCents(sub.unallocatedCents)}
                               </td>
-                              <td className={`text-right py-2 px-2 ${sub.netCreatorPayoutCents === 0 ? 'opacity-30' : ''}`}>
-                                {formatUsdCents(sub.netCreatorPayoutCents)}
-                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -556,9 +547,6 @@ export default function MonthlyFinancialsPage() {
                             </td>
                             <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
                               {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.unallocatedCents, 0))}
-                            </td>
-                            <td className="text-right py-2 px-2">
-                              {formatUsdCents(data.stripeSubscriptions.subscribers.reduce((sum, s) => sum + s.netCreatorPayoutCents, 0))}
                             </td>
                           </tr>
                         </tfoot>
@@ -603,8 +591,8 @@ export default function MonthlyFinancialsPage() {
                       <p className="text-2xl font-bold">{formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}</p>
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Ready for Payout</p>
-                      <p className="text-2xl font-bold">{data.writerEarnings.filter(w => w.canReceivePayout).length} / {data.writerEarnings.length}</p>
+                      <p className="text-sm text-muted-foreground">Bank Account Verified</p>
+                      <p className="text-2xl font-bold">{data.writerEarnings.filter(w => w.bankAccountStatus === 'verified').length} / {data.writerEarnings.length}</p>
                     </div>
                   </div>
 
@@ -642,7 +630,7 @@ export default function MonthlyFinancialsPage() {
                       </thead>
                       <tbody>
                         {data.writerEarnings.map((writer) => (
-                          <tr key={writer.userId} className="border-b border-border/50 hover:bg-muted/30">
+                          <tr key={writer.userId} className="border-b border-border hover:bg-muted/30">
                             <td className="py-2 px-2">
                               <div className="font-medium truncate max-w-[150px]" title={writer.email}>
                                 {writer.name || writer.email}
@@ -693,7 +681,7 @@ export default function MonthlyFinancialsPage() {
                             {formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}
                           </td>
                           <td className="text-center py-2 px-2">
-                            {data.writerEarnings.filter(w => w.canReceivePayout).length} ready
+                            {data.writerEarnings.filter(w => w.bankAccountStatus === 'verified').length} verified
                           </td>
                         </tr>
                       </tfoot>
@@ -799,7 +787,7 @@ export default function MonthlyFinancialsPage() {
                         </thead>
                         <tbody>
                           {data.reconciliation.discrepancies.map((d, idx) => (
-                            <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
+                            <tr key={idx} className="border-b border-border hover:bg-muted/30">
                               <td className="py-2 px-2">
                                 <span className={`px-1.5 py-0.5 rounded text-xs ${
                                   d.type === 'stale_firebase' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
@@ -884,7 +872,7 @@ export default function MonthlyFinancialsPage() {
                     </thead>
                     <tbody>
                       {data.historicalData.map((row) => (
-                        <tr key={row.month} className="border-b border-border/50 hover:bg-muted/50">
+                        <tr key={row.month} className="border-b border-border hover:bg-muted/50">
                           <td className="py-3 px-2 font-medium">{formatMonth(row.month)}</td>
                           <td className={`text-right py-3 px-2 ${row.totalSubscriptionCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalSubscriptionCents)}</td>
                           <td className={`text-right py-3 px-2 ${row.totalAllocatedCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalAllocatedCents)}</td>
