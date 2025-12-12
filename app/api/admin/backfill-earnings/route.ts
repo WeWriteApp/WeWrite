@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getCurrentMonth } from '../../../utils/subscriptionTiers';
 import { centsToDollars } from '../../../utils/formatCurrency';
 import * as adminSDK from 'firebase-admin';
@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Get collection name for allocations
-    const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
-    const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+    // Get collection name for allocations (MUST use async version in production)
+    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+    const earningsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS);
 
     console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Collection names:`, {
       allocations: allocationsCollectionName,
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     // Get existing earnings for the month
     const earningsSnapshot = await db
-      .collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+      .collection(earningsCollectionName)
       .where('month', '==', month)
       .get();
 
@@ -244,9 +244,20 @@ export async function POST(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
+    // Get collection names (MUST use async version in production)
+    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+    const earningsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+    const balancesCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_BALANCES);
+
+    console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Collection names:`, {
+      allocations: allocationsCollectionName,
+      earnings: earningsCollectionName,
+      balances: balancesCollectionName
+    });
+
     // Get all active allocations for the month
     const allocationsSnapshot = await db
-      .collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS))
+      .collection(allocationsCollectionName)
       .where('month', '==', month)
       .where('status', '==', 'active')
       .get();
@@ -283,8 +294,8 @@ export async function POST(request: NextRequest) {
     const recipientEntries = Array.from(allocationsByRecipient.entries());
     for (const [recipientUserId, recipientAllocations] of recipientEntries) {
       const earningsId = `${recipientUserId}_${month}`;
-      const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
-      const balanceRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(recipientUserId);
+      const earningsRef = db.collection(earningsCollectionName).doc(earningsId);
+      const balanceRef = db.collection(balancesCollectionName).doc(recipientUserId);
 
       // Calculate expected total
       const expectedCents = recipientAllocations.reduce((sum, a) => sum + a.usdCents, 0);
@@ -379,7 +390,7 @@ export async function POST(request: NextRequest) {
             // Since we're in a transaction and just created/updated earnings,
             // we need to calculate what the total should be after this transaction
             const allEarningsSnapshot = await db
-              .collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+              .collection(earningsCollectionName)
               .where('userId', '==', recipientUserId)
               .get();
 
