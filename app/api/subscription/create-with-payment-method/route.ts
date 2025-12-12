@@ -52,6 +52,11 @@ async function getFirebaseAdminAndDb() {
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
+  // Declare variables at function scope so they're accessible in the catch block
+  let userId: string | null = null;
+  let tier: string | undefined;
+  let amount: number | undefined;
+
   try {
     // Initialize Firebase Admin
     const { adminApp, db: adminDb, FieldValue } = await getFirebaseAdminAndDb();
@@ -63,13 +68,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Get authenticated user
-    const userId = await getUserIdFromRequest(request);
+    userId = await getUserIdFromRequest(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { paymentMethodId, tier, amount, tierName } = body;
+    const { paymentMethodId, tierName } = body;
+    tier = body.tier;
+    amount = body.amount;
 
     if (!paymentMethodId || !amount || !tier) {
       return NextResponse.json({
@@ -196,10 +203,10 @@ export async function POST(request: NextRequest) {
       product: product.id,
       metadata: {
         tier,
-        usdAmount: amount.toString(),
-        usdCents: dollarsToCents(amount).toString(),
-        // Legacy token metadata for backward compatibility
-        tokens: tokens?.toString() || (amount * 10).toString()
+        usdAmount: amount!.toString(),
+        usdCents: dollarsToCents(amount!).toString(),
+        // Legacy token metadata for backward compatibility (amount * 10 simulates old token system)
+        tokens: (amount! * 10).toString()
       }
     });
 
@@ -359,7 +366,8 @@ export async function POST(request: NextRequest) {
         metadata: {
           tier,
           tierName,
-          tokens: finalTokens,
+          // Legacy tokens field for backward compatibility (amount * 10)
+          tokens: amount! * 10,
           stripeSubscriptionId: subscription.id,
           paymentMethodId
         }
@@ -374,9 +382,9 @@ export async function POST(request: NextRequest) {
       await SubscriptionAnalyticsService.trackSubscriptionCompleted(
         userId,
         subscription.id,
-        tier,
-        amount,
-        finalTokens,
+        tier!,
+        amount!,
+        amount! * 10, // Legacy tokens for backward compatibility
         {
           tierName,
           paymentMethodId,
