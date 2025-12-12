@@ -55,15 +55,53 @@ export async function GET(request: NextRequest) {
     // Verify admin access via cookie-based auth (from middleware)
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month') || getCurrentMonth();
+    const debug = searchParams.get('debug') === 'true';
 
     console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Starting preview for month: ${month}`);
 
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
+    // Get collection name for allocations
+    const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
+    const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+
+    console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Collection names:`, {
+      allocations: allocationsCollectionName,
+      earnings: earningsCollectionName
+    });
+
+    // DEBUG: First, get ALL allocations without any filters to see what exists
+    let debugInfo: any = {};
+    if (debug) {
+      const allAllocationsSnapshot = await db
+        .collection(allocationsCollectionName)
+        .limit(100)
+        .get();
+
+      debugInfo.totalAllocationsInCollection = allAllocationsSnapshot.size;
+      debugInfo.sampleAllocations = allAllocationsSnapshot.docs.slice(0, 5).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Get unique months and statuses
+      const months = new Set<string>();
+      const statuses = new Set<string>();
+      allAllocationsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.month) months.add(data.month);
+        if (data.status) statuses.add(data.status);
+      });
+      debugInfo.uniqueMonths = Array.from(months);
+      debugInfo.uniqueStatuses = Array.from(statuses);
+
+      console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Debug info:`, debugInfo);
+    }
+
     // Get all active allocations for the month
     const allocationsSnapshot = await db
-      .collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS))
+      .collection(allocationsCollectionName)
       .where('month', '==', month)
       .where('status', '==', 'active')
       .get();
@@ -149,6 +187,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         month,
+        collectionNames: {
+          allocations: allocationsCollectionName,
+          earnings: earningsCollectionName
+        },
+        debug: debug ? debugInfo : undefined,
         summary: {
           totalAllocations: allocations.length,
           uniqueRecipients: allocationsByRecipient.size,
