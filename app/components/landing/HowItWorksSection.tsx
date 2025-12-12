@@ -69,7 +69,7 @@ export default function HowItWorksSection() {
       <div className="container mx-auto px-6 max-w-4xl">
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How does it work?</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
             At the bottom of every page, you'll see a little bar. Hit the plus button to send that writer some of your monthly funds!
           </p>
         </div>

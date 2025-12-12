@@ -116,6 +116,13 @@ const nextConfig = {
     'jose',
   ],
 
+  // Explicitly include jose in serverless function traces
+  // This fixes the "Cannot find package 'jose'" error on Vercel when using bun lockfile
+  // bun creates a .bun folder symlink structure that Vercel's runtime can't resolve
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./node_modules/jose/**/*', './node_modules/jwks-rsa/**/*'],
+  },
+
   // Enhanced logging for development - increase verbosity for debugging
   logging: {
     fetches: {

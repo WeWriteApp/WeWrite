@@ -417,8 +417,8 @@ const LandingPage = () => {
         <section className="py-8 md:py-12">
           <div className="text-center mb-8 px-6">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent Activity</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              See what the WeWrite community is creating and editing right now
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+              See what people are writing about right now
             </p>
           </div>
           <div className="w-full overflow-visible">
@@ -430,8 +430,8 @@ const LandingPage = () => {
         <section className="py-8 md:py-12">
           <div className="text-center mb-8 px-6">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Discover the most popular content on WeWrite
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+              The pages getting the most attention this week
             </p>
           </div>
           <div className="w-full overflow-visible">

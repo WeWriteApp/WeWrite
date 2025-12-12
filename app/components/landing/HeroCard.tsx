@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { AuthButton } from '../auth/AuthButton';
 import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../../providers/AuthProvider';
@@ -13,7 +12,7 @@ import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
 
 // Client-side cache for platform statistics (5 minute cache)
 interface PlatformStatsCache {
-  data: { totalUsers: number; totalPayouts: number };
+  data: { totalUsers: number; totalPayouts: number; pagesThisMonth: number };
   timestamp: number;
 }
 
@@ -35,12 +34,14 @@ const preloadPlatformStats = async () => {
 
       const userCount = Number(statsData.totalUsers);
       const payoutTotal = Number(statsData.totalPayouts);
+      const pagesCount = Number(statsData.pagesThisMonth);
 
-      if (!isNaN(userCount) && !isNaN(payoutTotal) && userCount >= 0 && payoutTotal >= 0) {
+      if (!isNaN(userCount) && !isNaN(payoutTotal) && !isNaN(pagesCount) && userCount >= 0 && payoutTotal >= 0 && pagesCount >= 0) {
         platformStatsCache = {
           data: {
             totalUsers: userCount,
-            totalPayouts: payoutTotal
+            totalPayouts: payoutTotal,
+            pagesThisMonth: pagesCount
           },
           timestamp: now
         };
@@ -74,7 +75,7 @@ export default function HeroCard({
   const analytics = useWeWriteAnalytics();
   const isAuthenticated = !!user;
   const [writerCount, setWriterCount] = useState<number | null>(null);
-  const [totalPayouts, setTotalPayouts] = useState<number | null>(null);
+  const [pagesThisMonth, setPagesThisMonth] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,7 +95,7 @@ export default function HeroCard({
         if (platformStatsCache && (now - platformStatsCache.timestamp) < CACHE_DURATION) {
           console.log('📦 HeroCard: Using cached platform stats');
           setWriterCount(platformStatsCache.data.totalUsers);
-          setTotalPayouts(platformStatsCache.data.totalPayouts);
+          setPagesThisMonth(platformStatsCache.data.pagesThisMonth);
           setIsLoading(false);
           return;
         }
@@ -124,14 +125,14 @@ export default function HeroCard({
             return;
           }
 
-          // Validate and set payout total
-          const payoutTotal = Number(statsData.totalPayouts);
-          if (!isNaN(payoutTotal) && payoutTotal >= 0) {
-            console.log('✅ HeroCard: Setting total payouts to:', payoutTotal);
-            setTotalPayouts(payoutTotal);
+          // Validate and set pages this month
+          const pagesCount = Number(statsData.pagesThisMonth);
+          if (!isNaN(pagesCount) && pagesCount >= 0) {
+            console.log('✅ HeroCard: Setting pages this month to:', pagesCount);
+            setPagesThisMonth(pagesCount);
           } else {
-            console.error('❌ HeroCard: Invalid payout total:', statsData.totalPayouts);
-            setError(`Invalid payout total received: ${statsData.totalPayouts}`);
+            console.error('❌ HeroCard: Invalid pages count:', statsData.pagesThisMonth);
+            setError(`Invalid pages count received: ${statsData.pagesThisMonth}`);
             return;
           }
 
@@ -139,7 +140,8 @@ export default function HeroCard({
           platformStatsCache = {
             data: {
               totalUsers: userCount,
-              totalPayouts: payoutTotal
+              totalPayouts: Number(statsData.totalPayouts),
+              pagesThisMonth: pagesCount
             },
             timestamp: now
           };
@@ -176,37 +178,33 @@ export default function HeroCard({
             {/* Platform Statistics */}
             <div className="mb-4 max-w-3xl mx-auto">
               {error ? (
-                <p className="text-lg text-red-600 dark:text-red-400">
+                <p className="text-xl md:text-2xl text-red-600 dark:text-red-400">
                   Unable to load platform statistics: {error}
                 </p>
               ) : (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="text-lg md:text-xl text-muted-foreground text-center">
-                    Join{' '}
-                    <span className="font-semibold text-foreground">
-                      {isLoading || writerCount === null ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          writers
-                        </span>
-                      ) : (
-                        `${writerCount.toLocaleString()} writers`
-                      )}
-                    </span>
-                    {' '}who've made{' '}
-                    <Badge variant="success" className="mx-1 text-lg md:text-xl">
-                      {isLoading || totalPayouts === null ? (
-                        <span className="flex items-center gap-1">
-                          $<Loader2 className="h-4 w-4 animate-spin" />
-                          USD
-                        </span>
-                      ) : (
-                        `$${totalPayouts.toFixed(2)}`
-                      )}
-                    </Badge>
-                    {' '}helping to build the future of humanity's shared knowledge.
-                  </div>
-                </div>
+                <p className="text-xl md:text-2xl text-muted-foreground text-center">
+                  Join{' '}
+                  <span className="font-semibold text-foreground">
+                    {isLoading || writerCount === null ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      </span>
+                    ) : (
+                      writerCount.toLocaleString()
+                    )}
+                  </span>
+                  {' '}writers who've written{' '}
+                  <span className="font-semibold text-foreground">
+                    {isLoading || pagesThisMonth === null ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      </span>
+                    ) : (
+                      pagesThisMonth.toLocaleString()
+                    )}
+                  </span>
+                  {' '}pages this month.
+                </p>
               )}
             </div>
           </div>

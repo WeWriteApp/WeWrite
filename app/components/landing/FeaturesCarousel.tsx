@@ -21,19 +21,19 @@ const features: FeatureConfig[] = [
   {
     id: 'graph',
     title: 'Graph View',
-    description: 'Visualize connections between pages and discover related content',
+    description: 'See how ideas link and uncover content you\'d never find alone',
     component: GraphFeatureCard
   },
   {
     id: 'map',
     title: 'Map View',
-    description: 'Add locations to your pages and explore content on a map',
+    description: 'Tag your pages with places and explore what others are writing nearby',
     component: MapFeatureCard
   },
   {
     id: 'reply',
     title: 'Reply',
-    description: 'Respond to any page with agree, disagree, or neutral replies',
+    description: 'Agree, disagree, or stay neutral - every response earns the original author',
     component: ReplyFeatureCard
   }
 ];
@@ -91,8 +91,8 @@ export default function FeaturesCarousel() {
     <section className="py-8 md:py-12">
       <div className="text-center mb-8 px-6">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">Features</h2>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Discover the powerful tools that make WeWrite unique
+        <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+          Tools that help you write, connect, and get paid
         </p>
       </div>
 

@@ -11,6 +11,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 interface PlatformStats {
   totalUsers: number;
   totalPayouts: number;
+  pagesThisMonth: number;
   lastUpdated: string;
 }
 
@@ -40,19 +41,32 @@ export async function GET(request: NextRequest) {
     // Always use production collections for public stats
     const PRODUCTION_USERS_COLLECTION = 'users';
     const PRODUCTION_WRITER_USD_BALANCES_COLLECTION = 'writerUsdBalances';
+    const PRODUCTION_PAGES_COLLECTION = 'pages';
+
+    // Calculate first day of current month for pages query
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
     // Parallel execution for faster response
-    const [usersSnapshot, balancesSnapshot] = await Promise.all([
+    const [usersSnapshot, balancesSnapshot, pagesThisMonthSnapshot] = await Promise.all([
       // Get total user count (fast count operation)
       db.collection(PRODUCTION_USERS_COLLECTION).count().get(),
       // Get writer balances (limit to reduce processing time)
       db.collection(PRODUCTION_WRITER_USD_BALANCES_COLLECTION)
         .select('pendingUsdCents', 'availableUsdCents', 'totalPaidUsdCents')
+        .get(),
+      // Get pages created this month (count operation)
+      db.collection(PRODUCTION_PAGES_COLLECTION)
+        .where('createdAt', '>=', startOfMonth)
+        .count()
         .get()
     ]);
 
     const totalUsers = usersSnapshot.data().count;
+    const pagesThisMonth = pagesThisMonthSnapshot.data().count;
     console.log(`Total users in production: ${totalUsers}`);
+    console.log(`Pages created this month: ${pagesThisMonth}`);
 
     // Process balances efficiently
     let totalFromBalances = 0;
@@ -81,6 +95,7 @@ export async function GET(request: NextRequest) {
     const stats: PlatformStats = {
       totalUsers,
       totalPayouts,
+      pagesThisMonth,
       lastUpdated: new Date().toISOString()
     };
 
