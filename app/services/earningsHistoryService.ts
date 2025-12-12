@@ -1,11 +1,12 @@
 /**
  * Earnings History Service
- * 
+ *
  * Tracks and manages historical earnings data for users,
  * providing audit trails and transparency for the payout system.
  */
 
 import { db } from '../firebase/config';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 import {
   doc,
   getDoc,
@@ -337,7 +338,7 @@ export class EarningsHistoryService {
       const discrepancies = [];
       for (const entry of earningsEntries) {
         // Verify platform fee calculation
-        const expectedFee = entry.earningsData.totalAllocationsReceived * 0.07;
+        const expectedFee = entry.earningsData.totalAllocationsReceived * PLATFORM_FEE_CONFIG.ALLOCATION_FEE_PERCENTAGE;
         const actualFee = entry.earningsData.platformFee;
         
         if (Math.abs(expectedFee - actualFee) > 0.01) { // Allow for small rounding differences

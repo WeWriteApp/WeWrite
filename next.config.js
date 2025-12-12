@@ -112,6 +112,8 @@ const nextConfig = {
     'firebase-admin',
     '@google-cloud/firestore',
     '@google-cloud/storage',
+    'jwks-rsa',
+    'jose',
   ],
 
   // Enhanced logging for development - increase verbosity for debugging
