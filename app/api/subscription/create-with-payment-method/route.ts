@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(validationError, { status: validationError.statusCode });
     }
 
-    // Create subscription with transfer_group for fund tracking (Stripe Connect model)
+    // Create subscription (transfer_group tracking moved to subscription metadata)
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
     const transferGroup = `subscription_${userId}_${currentMonth}`;
 
@@ -238,23 +238,15 @@ export async function POST(request: NextRequest) {
         payment_method_types: ['card', 'link'],
         save_default_payment_method: 'on_subscription'
       },
-      // Add transfer_group to payment_intent_data for Stripe Connect tracking
-      payment_intent_data: {
-        transfer_group: transferGroup,
-        metadata: {
-          userId,
-          subscriptionType: 'monthly_funding',
-          fundHoldingModel: 'platform_account'
-        }
-      },
       metadata: {
         userId,
         tier,
         tierName: tierName || tier,
-        usdAmount: amount.toString(),
-        usdCents: dollarsToCents(amount).toString(),
-        transferGroup, // Also keep in subscription metadata for reference
-        fundHoldingModel: 'platform_account' // Indicate new model
+        usdAmount: amount!.toString(),
+        usdCents: dollarsToCents(amount!).toString(),
+        transferGroup,
+        subscriptionType: 'monthly_funding',
+        fundHoldingModel: 'platform_account'
       },
       expand: ['latest_invoice.payment_intent']
     });
