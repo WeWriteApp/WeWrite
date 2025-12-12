@@ -140,21 +140,23 @@ export const searchUsers = async (searchQuery: string, limitCount: number = 10) 
 
     // Sort results by relevance (exact matches first, then partial matches)
     const sortedResults = Array.from(results.values()).sort((a, b) => {
-      const aUsernameExact = a.username.toLowerCase() === searchLower;
-      const bUsernameExact = b.username.toLowerCase() === searchLower;
+      const aUsername = a.username || '';
+      const bUsername = b.username || '';
+      const aUsernameExact = aUsername.toLowerCase() === searchLower;
+      const bUsernameExact = bUsername.toLowerCase() === searchLower;
 
       // Exact username matches first
       if (aUsernameExact) return -1;
       if (bUsernameExact) return 1;
 
       // Then by username starts with
-      const aUsernameStarts = a.username.toLowerCase().startsWith(searchLower);
-      const bUsernameStarts = b.username.toLowerCase().startsWith(searchLower);
+      const aUsernameStarts = aUsername.toLowerCase().startsWith(searchLower);
+      const bUsernameStarts = bUsername.toLowerCase().startsWith(searchLower);
       if (aUsernameStarts && !bUsernameStarts) return -1;
       if (bUsernameStarts && !aUsernameStarts) return 1;
 
       // Finally alphabetical
-      return a.username.localeCompare(b.username);
+      return aUsername.localeCompare(bUsername);
     });
 
     return sortedResults.slice(0, limitCount);

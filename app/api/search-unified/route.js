@@ -651,7 +651,9 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
       if (a.matchScore !== b.matchScore) {
         return b.matchScore - a.matchScore;
       }
-      return a.username.localeCompare(b.username);
+      const aUsername = a.username || '';
+      const bUsername = b.username || '';
+      return aUsername.localeCompare(bUsername);
     });
 
     return sortedResults.slice(0, maxResults);
