@@ -11,7 +11,7 @@ import { Badge } from '../ui/badge';
 // Constants for free graph views
 const FREE_GRAPH_VIEWS_KEY = 'wewrite_free_graph_views';
 const FREE_GRAPH_VIEWS_DATE_KEY = 'wewrite_free_graph_views_date';
-const MAX_FREE_VIEWS = 2;
+const MAX_FREE_VIEWS = 3;
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
@@ -20,6 +20,9 @@ interface SubscriptionGateProps {
   blurIntensity?: 'light' | 'medium' | 'heavy';
   isOwnContent?: boolean; // Whether the user is viewing their own content (for user profiles)
   allowInteraction?: boolean; // Whether to allow pan/drag interactions behind the paywall
+  requireActivation?: boolean; // If true, don't auto-consume view - wait for onActivate callback
+  isActivated?: boolean; // If requireActivation is true, this controls whether content is shown
+  onActivate?: () => void; // Callback when user wants to activate/use a free view
 }
 
 /**
@@ -73,13 +76,19 @@ function incrementFreeGraphViews(): void {
  * For logged-out users viewing graphs, allows 3 free views per day.
  * Shows blurred content with subscription prompt for non-subscribers.
  */
+// Export getFreeGraphViews for use by other components
+export { getFreeGraphViews };
+
 export default function SubscriptionGate({
   children,
   featureName,
   className = "",
   blurIntensity = 'medium',
   isOwnContent = false,
-  allowInteraction = false
+  allowInteraction = false,
+  requireActivation = false,
+  isActivated = false,
+  onActivate
 }: SubscriptionGateProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -91,8 +100,37 @@ export default function SubscriptionGate({
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showFreeViewBanner, setShowFreeViewBanner] = useState(false);
 
-  // Check and track free views for users without active subscription viewing graphs
+  // Check free views count on mount (but don't consume unless activated)
   useEffect(() => {
+    if (featureName === 'graph' && !isOwnContent && !isLoading && !hasActiveSubscription) {
+      const { remaining } = getFreeGraphViews();
+      setFreeViewsRemaining(remaining);
+    }
+  }, [featureName, isOwnContent, isLoading, hasActiveSubscription]);
+
+  // Track view when activated (for requireActivation mode)
+  useEffect(() => {
+    if (!requireActivation) return;
+
+    const shouldTrackFreeViews = featureName === 'graph' && !hasTrackedView && !isOwnContent && isActivated;
+
+    if (shouldTrackFreeViews && !isLoading && !hasActiveSubscription) {
+      const { remaining } = getFreeGraphViews();
+
+      // If they have remaining views, increment the counter
+      if (remaining > 0) {
+        incrementFreeGraphViews();
+        setFreeViewsRemaining(remaining - 1);
+        setShowFreeViewBanner(true);
+        setHasTrackedView(true);
+      }
+    }
+  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription, requireActivation, isActivated]);
+
+  // Legacy: auto-track for non-requireActivation mode
+  useEffect(() => {
+    if (requireActivation) return;
+
     // Track free views for graph feature when user doesn't have subscription and not viewing own content
     // This applies to both logged-out AND logged-in users without subscription
     const shouldTrackFreeViews = featureName === 'graph' && !hasTrackedView && !isOwnContent;
@@ -109,7 +147,7 @@ export default function SubscriptionGate({
         setHasTrackedView(true);
       }
     }
-  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription]);
+  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription, requireActivation]);
 
   // Show loading state while checking subscription
   if (isLoading) {
@@ -140,6 +178,76 @@ export default function SubscriptionGate({
   // This now applies to BOTH logged-out AND logged-in users without subscription
   const isGraphFeature = featureName === 'graph';
   const canUseFreeView = isGraphFeature && (freeViewsRemaining > 0 || hasTrackedView);
+
+  // If requireActivation mode and not yet activated, show "tap to view" prompt
+  if (requireActivation && !isActivated && isGraphFeature) {
+    const hasViewsLeft = freeViewsRemaining > 0;
+
+    return (
+      <div className={`relative ${className}`}>
+        {/* Blurred preview content */}
+        <div className="blur-sm pointer-events-none select-none">
+          {children}
+        </div>
+
+        {/* Activation overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] z-10">
+          <div className="text-center max-w-sm mx-auto p-6">
+            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+              <Eye className="h-8 w-8 text-primary" />
+            </div>
+            {hasViewsLeft ? (
+              <>
+                <h3 className="text-lg font-semibold mb-2">
+                  Tap to view graph
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You have {freeViewsRemaining} free graph view{freeViewsRemaining !== 1 ? 's' : ''} remaining today
+                </p>
+                <Button
+                  onClick={onActivate}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View graph
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold mb-2">
+                  {!user?.uid ? 'Sign up to view more graphs' : 'Subscribe to view more graphs'}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You've used your {MAX_FREE_VIEWS} free graph views for today.
+                </p>
+                {user?.uid ? (
+                  <Button
+                    onClick={() => router.push('/settings/fund-account')}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Subscribe now
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      const redirect = pathname || '/';
+                      router.push(`/auth/register?redirect=${encodeURIComponent(redirect)}`);
+                    }}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Sign up free
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If user has free views remaining for graphs, show content with banner
   if (canUseFreeView) {

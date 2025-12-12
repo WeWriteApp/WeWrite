@@ -80,12 +80,19 @@ export default function PageGraphView({
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasActivatedGraph, setHasActivatedGraph] = useState(false);
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
   const { user } = useAuth();
 
   // Determine if user is viewing their own content (allows viewing without subscription)
   const isOwnContent = Boolean(user?.uid && pageOwnerId && user.uid === pageOwnerId);
+
+  // Handle graph activation (user taps to use a free view)
+  const handleActivateGraph = useCallback(() => {
+    setHasActivatedGraph(true);
+    setIsFullscreen(true);
+  }, []);
   const [isPageListExpanded, setIsPageListExpanded] = useState(false);
   const [sortField, setSortField] = useState<SortField>('links');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -497,6 +504,9 @@ export default function PageGraphView({
             className="h-full"
             allowInteraction={true}
             isOwnContent={isOwnContent}
+            requireActivation={!isOwnContent}
+            isActivated={hasActivatedGraph}
+            onActivate={() => setHasActivatedGraph(true)}
           >
             <PageGraph3D
               nodes={nodes}
@@ -516,21 +526,32 @@ export default function PageGraphView({
       {fullscreenDrawer}
 
       <div className={`${className} animate-in fade-in-0 duration-300`}>
-        <button
-          onClick={() => setIsFullscreen(true)}
+        <div
           className="wewrite-card transition-all duration-200 cursor-pointer hover:shadow-md w-full text-left"
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setIsFullscreen(true)}
+            className="flex items-center justify-between mb-4 w-full"
+          >
             <div className="flex items-center gap-2">
               <Network className="w-4 h-4 text-muted-foreground" />
               <h3 className="text-sm font-medium">Graph view</h3>
             </div>
             <span className="text-xs text-muted-foreground">Tap to view interactive graph</span>
-          </div>
+          </button>
 
           {/* Graph container - preview mode with auto-rotation */}
-          <SubscriptionGate featureName="graph" className="relative" allowInteraction={true} isOwnContent={isOwnContent}>
+          {/* Use requireActivation mode for non-owners so tapping to view consumes a free view */}
+          <SubscriptionGate
+            featureName="graph"
+            className="relative"
+            allowInteraction={true}
+            isOwnContent={isOwnContent}
+            requireActivation={!isOwnContent}
+            isActivated={hasActivatedGraph}
+            onActivate={handleActivateGraph}
+          >
             <div className="h-96 transition-all duration-300 pointer-events-none">
               <PageGraph3D
                 nodes={nodes}
@@ -542,7 +563,7 @@ export default function PageGraphView({
               />
             </div>
           </SubscriptionGate>
-        </button>
+        </div>
 
         {/* Page List - as pills with sorting */}
         {pageLinkStats.length > 1 && (
