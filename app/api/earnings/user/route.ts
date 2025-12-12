@@ -20,6 +20,7 @@ import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
+import { ServerUsdEarningsService } from '../../../services/usdEarningsService.server';
 
 // 🚨 CRITICAL COST OPTIMIZATION: Aggressive caching for earnings data
 const earningsCache = new Map<string, { data: any; timestamp: number }>();
@@ -299,14 +300,10 @@ export async function GET(request: NextRequest) {
 
     const db = admin.firestore();
 
-    // Get balance data directly from database
-    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES))
-      .doc(userId)
-      .get();
+    // Phase 2: Use calculated balance from earnings (single source of truth)
+    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
 
-    const balance = balanceDoc.exists ? balanceDoc.data() : null;
-
-    // Simple earnings breakdown - use the correct field names from the database
+    // Simple earnings breakdown - uses calculated values from earnings records
     const earningsBreakdown = {
       totalEarnings: balance?.totalUsdCentsEarned ? balance.totalUsdCentsEarned / 100 : 0,
       availableBalance: balance?.availableUsdCents ? balance.availableUsdCents / 100 : 0,

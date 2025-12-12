@@ -121,3 +121,9 @@ export function getFirebaseAdmin(): typeof admin | null {
 export function getFirebaseAdminError(): string | null {
   return initializationError;
 }
+
+/**
+ * Export FieldValue for server-side Firestore operations
+ * Allows using FieldValue.serverTimestamp(), FieldValue.increment(), etc.
+ */
+export const FieldValue = admin.firestore.FieldValue;

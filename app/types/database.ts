@@ -125,9 +125,11 @@ export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due
 export interface UsdBalance {
   userId: string;
   totalUsdCents: number;        // Total USD in cents (e.g., 1000 = $10.00)
-  allocatedUsdCents: number;    // Allocated USD in cents
-  availableUsdCents: number;    // Available USD in cents
-  monthlyAllocationCents: number; // Monthly allocation in cents
+  // Phase 1 Simplification: allocatedUsdCents is now ALWAYS calculated from SUM(active allocations)
+  // It's included in the interface for API responses, but is NOT stored in Firestore
+  allocatedUsdCents: number;    // Calculated: SUM of active allocations for current month
+  availableUsdCents: number;    // Calculated: totalUsdCents - allocatedUsdCents
+  monthlyAllocationCents: number; // Monthly allocation in cents (same as totalUsdCents)
   lastAllocationDate: string;
   createdAt: string | Timestamp;
   updatedAt: string | Timestamp;
@@ -142,6 +144,9 @@ export interface UsdAllocation {
   usdCents: number;             // USD amount in cents
   month: string; // YYYY-MM format
   status: 'active' | 'cancelled';
+  // Optional: stored at allocation time for historical record (prevents "Page not found" if page is deleted)
+  pageTitle?: string;
+  authorUsername?: string;
   createdAt: string | Timestamp;
   updatedAt: string | Timestamp;
 }

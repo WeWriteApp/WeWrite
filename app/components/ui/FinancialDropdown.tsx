@@ -261,6 +261,8 @@ export function SpendBreakdown({
   availableUsdCents
 }: SpendBreakdownProps) {
   const isOutOfFunds = availableUsdCents === 0;
+  const isOverspent = allocatedUsdCents > totalUsdCents;
+  const overspentAmount = isOverspent ? allocatedUsdCents - totalUsdCents : 0;
 
   return (
     <div className="space-y-2 text-sm">
@@ -270,14 +272,14 @@ export function SpendBreakdown({
       </div>
       <div className="flex justify-between">
         <span className="text-muted-foreground">Allocated:</span>
-        <span className={`font-medium ${isOutOfFunds ? 'text-orange-600' : 'text-primary'}`}>
+        <span className={`font-medium ${(isOutOfFunds || isOverspent) ? 'text-orange-600' : 'text-primary'}`}>
           {formatUsdCents(allocatedUsdCents)}
         </span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Available:</span>
-        <span className={`font-medium ${isOutOfFunds ? 'text-orange-500' : 'text-green-600'}`}>
-          {isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents)}
+        <span className="text-muted-foreground">{isOverspent ? 'Overspent:' : 'Available:'}</span>
+        <span className={`font-medium ${(isOutOfFunds || isOverspent) ? 'text-orange-500' : 'text-green-600'}`}>
+          {isOverspent ? formatUsdCents(overspentAmount) : (isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents))}
         </span>
       </div>
       

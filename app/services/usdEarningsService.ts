@@ -43,21 +43,65 @@ export class UsdEarningsService {
   
   /**
    * Get writer's USD balance (pending + available + paid out)
+   *
+   * Phase 2 Simplification: Now calculates balance from writerUsdEarnings records
+   * instead of reading from stored writerUsdBalances collection.
    */
   static async getWriterUsdBalance(userId: string): Promise<WriterUsdBalance | null> {
     try {
       console.log('[UsdEarningsService] Getting writer USD balance for:', userId);
-      const balanceRef = doc(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES), userId);
-      const balanceDoc = await getDoc(balanceRef);
 
-      if (balanceDoc.exists()) {
-        const balance = balanceDoc.data() as WriterUsdBalance;
-        console.log('[UsdEarningsService] Found writer USD balance:', balance);
-        return balance;
+      // Calculate balance from earnings records (Phase 2 - single source of truth)
+      const earningsQuery = query(
+        collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
+        where('userId', '==', userId)
+      );
+
+      const earningsSnapshot = await getDocs(earningsQuery);
+
+      // If no earnings, return null (user has no balance)
+      if (earningsSnapshot.empty) {
+        console.log('[UsdEarningsService] No earnings found for user:', userId);
+        return null;
       }
 
-      console.log('[UsdEarningsService] No USD balance found for user:', userId);
-      return null;
+      // Calculate totals from earnings
+      let totalUsdCentsEarned = 0;
+      let pendingUsdCents = 0;
+      let availableUsdCents = 0;
+      let paidOutUsdCents = 0;
+      let lastProcessedMonth = '';
+
+      earningsSnapshot.docs.forEach(doc => {
+        const earnings = doc.data() as WriterUsdEarnings;
+        totalUsdCentsEarned += earnings.totalUsdCentsReceived || 0;
+
+        if (earnings.status === 'pending') {
+          pendingUsdCents += earnings.totalUsdCentsReceived || 0;
+        } else if (earnings.status === 'available') {
+          availableUsdCents += earnings.totalUsdCentsReceived || 0;
+        } else if (earnings.status === 'paid_out') {
+          paidOutUsdCents += earnings.totalUsdCentsReceived || 0;
+        }
+
+        if (earnings.month > lastProcessedMonth) {
+          lastProcessedMonth = earnings.month;
+        }
+      });
+
+      const balance: WriterUsdBalance = {
+        userId,
+        totalUsdCentsEarned,
+        pendingUsdCents,
+        availableUsdCents,
+        paidOutUsdCents,
+        lastProcessedMonth,
+        createdAt: new Date().toISOString() as any,
+        updatedAt: new Date().toISOString() as any
+      };
+
+      console.log('[UsdEarningsService] Calculated writer USD balance:', balance);
+      return balance;
     } catch (error) {
       console.error('[UsdEarningsService] Error getting writer USD balance:', error);
       throw error;
@@ -132,11 +176,9 @@ export class UsdEarningsService {
       await runTransaction(db, async (transaction) => {
         const earningsId = `${recipientUserId}_${month}`;
         const earningsRef = doc(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS), earningsId);
-        const balanceRef = doc(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES), recipientUserId);
 
         // Read current state within transaction
         const earningsDoc = await transaction.get(earningsRef);
-        const balanceDoc = await transaction.get(balanceRef);
 
         const allocationData = {
           allocationId: allocation.id,
@@ -183,8 +225,7 @@ export class UsdEarningsService {
           transaction.set(earningsRef, fullEarnings);
         }
 
-        // Update writer balance
-        await this.updateWriterBalanceInTransaction(transaction, recipientUserId, balanceRef, balanceDoc, corrId);
+        // Phase 2: No longer update writerUsdBalances - balance is calculated on-demand from earnings
       });
 
       FinancialLogger.logOperationSuccess(operation, corrId, {
@@ -207,89 +248,6 @@ export class UsdEarningsService {
 
       FinancialLogger.logOperationError(operation, corrId, financialError);
       return FinancialUtils.createErrorResult(financialError, operation, allocation.userId);
-    }
-  }
-
-  /**
-   * Update writer's overall USD balance (non-atomic version for standalone use)
-   * For atomic operations, use updateWriterBalanceInTransaction instead
-   */
-  static async updateWriterBalance(userId: string): Promise<void> {
-    try {
-      await runTransaction(db, async (transaction) => {
-        const balanceRef = doc(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES), userId);
-        const balanceDoc = await transaction.get(balanceRef);
-
-        await this.updateWriterBalanceInTransaction(transaction, userId, balanceRef, balanceDoc);
-      });
-    } catch (error) {
-      console.error('Error updating writer USD balance:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update writer balance within a transaction (atomic operation)
-   * This method calculates the balance from all earnings records
-   */
-  static async updateWriterBalanceInTransaction(
-    transaction: any,
-    userId: string,
-    balanceRef: any,
-    balanceDoc: any,
-    correlationId?: CorrelationId
-  ): Promise<void> {
-    // Get all earnings for this writer
-    const earningsQuery = query(
-      collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
-      where('userId', '==', userId)
-    );
-
-    const earningsSnapshot = await getDocs(earningsQuery);
-    const allEarnings = earningsSnapshot.docs.map(doc => doc.data() as WriterUsdEarnings);
-
-    // Calculate totals
-    let totalUsdCentsEarned = 0;
-    let pendingUsdCents = 0;
-    let availableUsdCents = 0;
-    let paidOutUsdCents = 0;
-    let lastProcessedMonth = '';
-
-    allEarnings.forEach(earnings => {
-      totalUsdCentsEarned += earnings.totalUsdCentsReceived;
-
-      if (earnings.status === 'pending') {
-        pendingUsdCents += earnings.totalUsdCentsReceived;
-      } else if (earnings.status === 'available') {
-        availableUsdCents += earnings.totalUsdCentsReceived;
-      } else if (earnings.status === 'paid_out') {
-        paidOutUsdCents += earnings.totalUsdCentsReceived;
-      }
-
-      if (earnings.month > lastProcessedMonth) {
-        lastProcessedMonth = earnings.month;
-      }
-    });
-
-    // Prepare balance data
-    const balanceData: Omit<WriterUsdBalance, 'createdAt'> = {
-      userId,
-      totalUsdCentsEarned,
-      pendingUsdCents,
-      availableUsdCents,
-      paidOutUsdCents,
-      lastProcessedMonth,
-      updatedAt: serverTimestamp()
-    };
-
-    // Update or create balance document within transaction
-    if (balanceDoc.exists()) {
-      transaction.update(balanceRef, balanceData);
-    } else {
-      transaction.set(balanceRef, {
-        ...balanceData,
-        createdAt: serverTimestamp()
-      });
     }
   }
 
@@ -329,17 +287,12 @@ export class UsdEarningsService {
 
       await batch.commit();
 
-      // Update all affected writer balances
+      // Track affected writers for reporting (Phase 2: no longer update balances - calculated on-demand)
       const affectedWriters = new Set<string>();
       earningsSnapshot.docs.forEach(doc => {
         const earnings = doc.data() as WriterUsdEarnings;
         affectedWriters.add(earnings.userId);
       });
-
-      // Update balances with correlation tracking
-      for (const writerId of affectedWriters) {
-        await this.updateWriterBalance(writerId);
-      }
 
       const result = {
         processedCount: earningsSnapshot.size,

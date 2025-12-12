@@ -261,7 +261,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
       {/* Navigation buttons above card */}
       <div className="flex items-center justify-between gap-3">
         <Button
-          variant="secondary"
+          variant="ghost"
           onClick={onBack}
           className="gap-2"
         >
@@ -269,7 +269,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
           Leaderboards
         </Button>
         <Button
-          variant="secondary"
+          variant="ghost"
           onClick={handleShare}
           className="gap-2"
         >
@@ -280,23 +280,28 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
 
       {/* Content Card with header inside */}
       <div className="wewrite-card rounded-xl overflow-hidden">
-        {/* Card Header */}
+        {/* Card Header - mobile optimized */}
         <div className="px-4 py-4 border-b border-border">
-          <div className="flex items-start gap-4">
-            {/* Icon Container */}
-            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
-              <Icon className="h-7 w-7 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold">{category.label}</h1>
-              <p className="text-sm text-muted-foreground">{category.description}</p>
-            </div>
-            {/* Date Badge - right aligned */}
-            <div className="flex-shrink-0">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
-                {formatMonth(selectedMonth)}
-              </span>
+          {/* Mobile: stack vertically, Desktop: horizontal */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+            {/* Top row on mobile: Icon + Title + Date */}
+            <div className="flex items-center gap-3 sm:contents">
+              {/* Icon Container */}
+              <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
+                <Icon className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+              </div>
+              {/* Title + Description */}
+              <div className="flex-1 min-w-0 sm:order-2">
+                <h1 className="text-lg sm:text-xl font-bold">{category.label}</h1>
+                <p className="text-sm text-muted-foreground">{category.description}</p>
+              </div>
+              {/* Date Badge - inline on mobile, right-aligned on desktop */}
+              <div className="flex-shrink-0 sm:order-3">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground whitespace-nowrap">
+                  <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  {formatMonth(selectedMonth)}
+                </span>
+              </div>
             </div>
           </div>
         </div>

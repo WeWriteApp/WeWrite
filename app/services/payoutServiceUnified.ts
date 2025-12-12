@@ -15,6 +15,7 @@ import Stripe from 'stripe';
 import { sendUserNotification } from '../utils/notifications';
 import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 import { sendPayoutProcessed } from './emailService';
+import { ServerUsdEarningsService } from './usdEarningsService.server';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-12-18.acacia'
@@ -50,14 +51,41 @@ export class PayoutService {
       if (!admin) throw new Error('Database not available');
 
       const db = admin.firestore();
-      const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId).get();
 
-      if (!balanceDoc.exists) {
+      // Idempotency check: Prevent duplicate payout requests within 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const recentPayoutsQuery = await db
+        .collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
+        .where('userId', '==', userId)
+        .where('status', 'in', ['pending', 'completed'])
+        .orderBy('requestedAt', 'desc')
+        .limit(1)
+        .get();
+
+      if (!recentPayoutsQuery.empty) {
+        const recentPayout = recentPayoutsQuery.docs[0].data();
+        const requestedAt = recentPayout.requestedAt?.toDate?.() || new Date(0);
+
+        if (requestedAt > fiveMinutesAgo) {
+          if (recentPayout.status === 'pending') {
+            console.log('[Payout] Duplicate request blocked - pending payout exists:', recentPayout.id);
+            return { success: false, error: 'A payout is already being processed. Please wait a few minutes before trying again.' };
+          }
+          if (recentPayout.status === 'completed') {
+            console.log('[Payout] Duplicate request blocked - recently completed:', recentPayout.id);
+            return { success: false, error: 'Your payout was just processed. Please wait before requesting another payout.' };
+          }
+        }
+      }
+
+      // Phase 2: Use calculated balance from earnings (single source of truth)
+      const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+
+      if (!balance) {
         return { success: false, error: 'No earnings found' };
       }
 
-      const balance = balanceDoc.data();
-      const availableCents = balance?.availableCents || 0;
+      const availableCents = balance.availableUsdCents || 0;
       const requestedCents = amountCents || availableCents;
       const requestedDollars = requestedCents / 100;
 
@@ -137,6 +165,27 @@ export class PayoutService {
         return { success: false, error: 'No bank account connected' };
       }
 
+      // Verify Stripe account has payouts enabled before processing
+      try {
+        const stripeAccount = await stripe.accounts.retrieve(stripeAccountId);
+        if (!stripeAccount.payouts_enabled) {
+          await payoutDoc.ref.update({
+            status: 'failed',
+            failureReason: 'Stripe account not enabled for payouts',
+            completedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          return { success: false, error: 'Your bank account is not yet verified for payouts. Please complete your Stripe account setup.' };
+        }
+      } catch (stripeError) {
+        console.error('[Payout] Error verifying Stripe account:', stripeError);
+        await payoutDoc.ref.update({
+          status: 'failed',
+          failureReason: 'Failed to verify bank account status',
+          completedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return { success: false, error: 'Unable to verify your bank account. Please try again later.' };
+      }
+
       const amountDollars = payout.amountCents / 100;
       // Platform fee from centralized config (10%)
       const platformFeeAmount = amountDollars * PLATFORM_FEE_CONFIG.PERCENTAGE;
@@ -174,10 +223,25 @@ export class PayoutService {
         completedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(payout.userId).update({
-        availableCents: admin.firestore.FieldValue.increment(-payout.amountCents),
-        paidOutCents: admin.firestore.FieldValue.increment(payout.amountCents)
+      // Phase 2: Mark earnings records as paid_out instead of updating balance collection
+      // Get all 'available' earnings for this user and mark them as paid_out
+      const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+        .where('userId', '==', payout.userId)
+        .where('status', '==', 'available');
+
+      const earningsSnapshot = await earningsQuery.get();
+      const batch = db.batch();
+
+      earningsSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, {
+          status: 'paid_out',
+          paidOutAt: admin.firestore.FieldValue.serverTimestamp(),
+          payoutId: payout.id,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       });
+
+      await batch.commit();
 
       console.log('[Payout] Payout completed successfully:', payoutId, 'transferId:', payoutResult.transferId);
       await sendUserNotification(payout.userId, {

@@ -8,8 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { payoutRateLimiter } from '../../utils/rateLimiter';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
-import { getCollectionName, USD_COLLECTIONS } from '../../utils/environmentConfig';
+import { getCollectionName } from '../../utils/environmentConfig';
 import { PayoutService } from '../../services/payoutServiceUnified';
+import { ServerUsdEarningsService } from '../../services/usdEarningsService.server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,11 +48,10 @@ export async function GET(request: NextRequest) {
     const userData = userDoc.data() || {};
     const stripeConnectedAccountId = userData.stripeConnectedAccountId || null;
 
-    // Get balances
-    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId).get();
-    const balance = balanceDoc.data() || {};
-    const availableCents = balance.availableCents || 0;
-    const totalEarnedCents = balance.totalUsdCentsEarned || balance.totalCents || 0;
+    // Get balances calculated from earnings (Phase 2 - single source of truth)
+    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+    const availableCents = balance?.availableUsdCents || 0;
+    const totalEarnedCents = balance?.totalUsdCentsEarned || 0;
 
     // Get recent payouts from unified service
     const recentPayouts = await PayoutService.getPayoutHistory(userId);

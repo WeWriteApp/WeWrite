@@ -611,19 +611,19 @@ function MapPageContent() {
         {/* Bottom Page Cards - Carousel with peeking cards */}
         {pages.length > 0 && !showNewPinDrawer && (
           <div className="absolute bottom-20 left-0 right-0 z-10" style={{ touchAction: 'pan-x' }}>
-            {/* Floating Navigation Buttons */}
+            {/* Floating Navigation Buttons - positioned relative to carousel */}
             {pages.length > 1 && (
               <>
                 <button
                   onClick={navigateToPrevious}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
+                  className="absolute left-2 bottom-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
                   aria-label="Previous page"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={navigateToNext}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
+                  className="absolute right-2 bottom-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
                   aria-label="Next page"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -631,7 +631,7 @@ function MapPageContent() {
               </>
             )}
 
-            {/* Carousel Container - horizontally scrollable */}
+            {/* Carousel Container - horizontally scrollable, bottom-aligned */}
             <div
               ref={carouselRef}
               className="overflow-x-auto scrollbar-hide snap-x snap-mandatory"
@@ -641,7 +641,7 @@ function MapPageContent() {
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               <div
-                className="flex gap-3 px-4 md:px-0"
+                className="flex gap-3 px-4 md:px-0 items-end"
                 style={{
                   // On mobile: 9% padding for peeking cards
                   // On desktop: center the first card with calc((100vw - cardWidth) / 2)

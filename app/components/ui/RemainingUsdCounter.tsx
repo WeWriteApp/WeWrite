@@ -183,12 +183,12 @@ export function OverspendWarningDisplay({
         </svg>
       </div>
 
-      {/* "Out" text badge - Badge auto-applies shiny styling when in shiny mode */}
+      {/* "Top off account" text badge - Badge auto-applies shiny styling when in shiny mode */}
       <Badge
         variant="warning"
         className="cursor-pointer text-sm"
       >
-        Out
+        Top off account
       </Badge>
     </div>
   );

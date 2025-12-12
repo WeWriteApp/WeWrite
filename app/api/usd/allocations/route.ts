@@ -145,18 +145,30 @@ export async function GET(request: NextRequest) {
           const pageData = pageDoc.exists ? pageDoc.data() : null;
 
           if (!pageData) {
-            // Page might be deleted, try to get username from recipient user ID as fallback
-            let authorUsername = 'Unknown';
-            try {
-              authorUsername = await getUsernameById(allocation.recipientUserId);
-            } catch (usernameError) {
-              console.error(`Error fetching username for deleted page ${allocation.resourceId}:`, usernameError);
+            // Page might be deleted - use stored page title and author username from allocation if available
+            // This prevents "Page not found" for deleted pages
+            let storedPageTitle = (allocation as any).pageTitle || '';
+            let storedAuthorUsername = (allocation as any).authorUsername || '';
+
+            // If we don't have stored values, try to get username from recipient user ID as fallback
+            let authorUsername = storedAuthorUsername || 'Unknown';
+            if (!storedAuthorUsername && allocation.recipientUserId) {
+              try {
+                authorUsername = await getUsernameByIdServer(allocation.recipientUserId);
+              } catch (usernameError) {
+                console.error(`Error fetching username for deleted page ${allocation.resourceId}:`, usernameError);
+              }
             }
+
+            // Use stored page title if available, otherwise show "Page deleted" with author info
+            const pageTitle = storedPageTitle
+              ? `${storedPageTitle} (deleted)`
+              : 'Page not found';
 
             return {
               id: allocation.id,
               pageId: allocation.resourceId,
-              pageTitle: 'Page not found',
+              pageTitle,
               authorId: allocation.recipientUserId,
               authorUsername,
               usdCents: allocation.usdCents,

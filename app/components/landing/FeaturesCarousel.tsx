@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,7 +14,7 @@ interface FeatureConfig {
   id: string;
   title: string;
   description: string;
-  component: React.ComponentType;
+  component: React.ComponentType<any>;
 }
 
 const features: FeatureConfig[] = [
@@ -50,6 +50,73 @@ export default function FeaturesCarousel() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const minSwipeDistance = 50;
+
+  // State for graph fullscreen modal - controlled entirely here
+  const [graphFullscreenOpen, setGraphFullscreenOpen] = useState(false);
+
+  // Store scroll position for restoration
+  const scrollPositionRef = useRef<number>(0);
+
+  // Handle scroll lock when fullscreen opens/closes
+  useEffect(() => {
+    if (graphFullscreenOpen) {
+      // Save current scroll position
+      scrollPositionRef.current = window.scrollY;
+
+      // Lock scrolling on both html and body
+      const scrollY = scrollPositionRef.current;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+    } else {
+      // Check if we were in locked state
+      if (document.body.style.position === 'fixed') {
+        // Get the saved scroll position before unlocking
+        const scrollY = scrollPositionRef.current;
+
+        // Unlock scrolling
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+
+        // Restore scroll position immediately
+        window.scrollTo(0, scrollY);
+      }
+    }
+  }, [graphFullscreenOpen]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (document.body.style.position === 'fixed') {
+        const scrollY = scrollPositionRef.current;
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      }
+    };
+  }, []);
+
+  const handleOpenGraph = useCallback(() => {
+    setGraphFullscreenOpen(true);
+  }, []);
+
+  const handleCloseGraph = useCallback(() => {
+    setGraphFullscreenOpen(false);
+  }, []);
 
   const navigateFeature = useCallback((direction: 'next' | 'prev') => {
     let newIndex;
@@ -131,7 +198,7 @@ export default function FeaturesCarousel() {
             >
               {features.map((feature, index) => {
                 const isActive = index === selectedIndex;
-                const FeatureComponent = feature.component;
+                const isGraph = feature.id === 'graph';
 
                 return (
                   <div
@@ -147,16 +214,49 @@ export default function FeaturesCarousel() {
                   >
                     <Card className="wewrite-card overflow-hidden h-full">
                       <CardContent className="p-0">
-                        {/* Feature header */}
-                        <div className="px-4 py-3 bg-muted/30 text-center">
-                          <h3 className="font-semibold text-xl">{feature.title}</h3>
-                          <p className="text-sm text-muted-foreground">{feature.description}</p>
-                        </div>
+                        {isGraph ? (
+                          // Graph card - special handling with overlay for clicks
+                          <>
+                            {/* Feature header - clickable */}
+                            <div
+                              className="px-4 py-3 bg-muted/30 text-center cursor-pointer"
+                              onClick={handleOpenGraph}
+                            >
+                              <h3 className="font-semibold text-xl">{feature.title}</h3>
+                              <p className="text-sm text-muted-foreground">{feature.description}</p>
+                            </div>
 
-                        {/* Feature preview */}
-                        <div className="p-4">
-                          <FeatureComponent />
-                        </div>
+                            {/* Feature preview with click overlay */}
+                            <div className="p-4 relative" data-feature-id={feature.id}>
+                              {/* The actual graph component */}
+                              <GraphFeatureCard
+                                isFullscreenOpen={graphFullscreenOpen}
+                                onCloseFullscreen={handleCloseGraph}
+                              />
+                              {/* Transparent overlay ON TOP of canvas to catch clicks */}
+                              <div
+                                className="absolute inset-0 z-50 cursor-pointer"
+                                onClick={handleOpenGraph}
+                                style={{ background: 'transparent' }}
+                                aria-label="Click to explore graph view"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          // Other cards - normal rendering
+                          <>
+                            {/* Feature header */}
+                            <div className="px-4 py-3 bg-muted/30 text-center">
+                              <h3 className="font-semibold text-xl">{feature.title}</h3>
+                              <p className="text-sm text-muted-foreground">{feature.description}</p>
+                            </div>
+
+                            {/* Feature preview */}
+                            <div className="p-4" data-feature-id={feature.id}>
+                              <feature.component />
+                            </div>
+                          </>
+                        )}
                       </CardContent>
                     </Card>
                   </div>

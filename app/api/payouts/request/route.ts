@@ -17,6 +17,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verify user's email is verified before allowing payout
+    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+    const admin = getFirebaseAdmin();
+    if (admin) {
+      try {
+        const userRecord = await admin.auth().getUser(userId);
+        if (!userRecord.emailVerified) {
+          return NextResponse.json({
+            success: false,
+            error: 'Please verify your email address before requesting a payout'
+          }, { status: 403 });
+        }
+      } catch (authError) {
+        console.error('[PAYOUT REQUEST] Error checking email verification:', authError);
+        // Allow to continue if we can't check - Stripe will handle verification
+      }
+    }
+
     // Optional: Get requested amount from body (defaults to full available balance)
     let requestedAmountCents: number | undefined;
     try {
@@ -69,9 +87,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's available balance
+    // Get user's available balance using calculated balance (Phase 2)
     const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
-    const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
+    const { getCollectionName } = await import('../../../utils/environmentConfig');
+    const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
 
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -79,10 +98,9 @@ export async function GET(request: NextRequest) {
     }
     const db = admin.firestore();
 
-    // Get balance
-    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES)).doc(userId).get();
-    const balance = balanceDoc.data() || {};
-    const availableCents = balance.availableUsdCents || 0;
+    // Get balance calculated from earnings (Phase 2 - single source of truth)
+    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+    const availableCents = balance?.availableUsdCents || 0;
     const availableDollars = availableCents / 100;
 
     // Get user's Stripe account status

@@ -1,16 +1,69 @@
 /**
  * USD Earnings API Endpoint
- * 
+ *
  * Handles USD earnings operations including payout requests
  * Replaces the token-based earnings endpoint
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-// Use simple database queries instead of complex services
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { centsToDollars } from '../../../utils/formatCurrency';
+import { ServerUsdEarningsService } from '../../../services/usdEarningsService.server';
+import { UsdEarningsService } from '../../../services/usdEarningsService';
+
+/**
+ * Calculate funded pending allocations for current month
+ * This shows what the user will earn from current month allocations
+ * after applying funding ratios for over-allocated sponsors
+ */
+async function calculateFundedPendingAllocations(userId: string): Promise<number> {
+  const admin = getFirebaseAdmin();
+  if (!admin) return 0;
+
+  const db = admin.firestore();
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+
+  const allocationsQuery = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS))
+    .where('recipientUserId', '==', userId)
+    .where('month', '==', currentMonth)
+    .where('status', '==', 'active');
+
+  const allocationsSnapshot = await allocationsQuery.get();
+  let totalFundedPendingCents = 0;
+
+  for (const doc of allocationsSnapshot.docs) {
+    const allocation = doc.data();
+    let allocationCents = allocation.usdCents || 0;
+
+    // Check sponsor's funding status
+    try {
+      const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
+        .doc(allocation.userId)
+        .get();
+
+      if (sponsorBalanceDoc.exists) {
+        const sponsorBalance = sponsorBalanceDoc.data();
+        const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
+        const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
+
+        // Calculate funded portion if sponsor is over-allocated
+        if (sponsorAllocatedCents > sponsorSubscriptionCents && sponsorAllocatedCents > 0) {
+          const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
+          allocationCents = Math.round(allocationCents * fundingRatio);
+        }
+      }
+    } catch (error) {
+      // If we can't check sponsor balance, use the full allocation (fail open)
+      console.warn(`[USD Earnings API] Error checking sponsor balance for ${allocation.userId}:`, error);
+    }
+
+    totalFundedPendingCents += allocationCents;
+  }
+
+  return totalFundedPendingCents;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,91 +73,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`[USD Earnings API] Loading simple earnings data for user: ${userId}`);
+    console.log(`[USD Earnings API] Loading earnings data for user: ${userId}`);
 
-    // Get earnings data using simple database queries
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    // Use ServerUsdEarningsService to get balance (single source of truth)
+    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
 
-    const db = admin.firestore();
+    // Calculate funded pending from current month allocations
+    const totalFundedPendingCents = await calculateFundedPendingAllocations(userId);
 
-    // Get balance data directly from database
-    const balanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES))
-      .doc(userId)
-      .get();
-
-    const balance = balanceDoc.exists ? balanceDoc.data() : null;
-
-    // CRITICAL FIX: Get current month's funded allocations instead of stored balance
-    // This ensures recipients only see earnings from funded allocations
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    const allocationsRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS));
-    const allocationsQuery = allocationsRef
-      .where('recipientUserId', '==', userId)
-      .where('month', '==', currentMonth)
-      .where('status', '==', 'active');
-
-    const allocationsSnapshot = await allocationsQuery.get();
-    let totalFundedPendingCents = 0;
-
-    // Process each allocation and calculate funded portion
-    for (const doc of allocationsSnapshot.docs) {
-      const allocation = doc.data();
-      let allocationCents = allocation.usdCents || 0;
-
-      // Check sponsor's funding status
-      try {
-        const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
-          .doc(allocation.userId)
-          .get();
-
-        if (sponsorBalanceDoc.exists) {
-          const sponsorBalance = sponsorBalanceDoc.data();
-          const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
-          const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
-
-          // Calculate funded portion if sponsor is over-allocated
-          if (sponsorAllocatedCents > sponsorSubscriptionCents) {
-            const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
-            const fundedAllocationCents = Math.round(allocationCents * fundingRatio);
-            console.log(`[USD Earnings API] Sponsor ${allocation.userId} over-allocated. Original: ${allocationCents}, Funded: ${fundedAllocationCents}`);
-            allocationCents = fundedAllocationCents;
-          }
-        }
-      } catch (error) {
-        console.warn(`[USD Earnings API] Error checking sponsor balance for ${allocation.userId}:`, error);
-        // If we can't check sponsor balance, use the full allocation (fail open)
-      }
-
-      totalFundedPendingCents += allocationCents;
-    }
-
-    const completeData = {
-      balance: balance ? {
-        totalEarnings: balance.totalUsdCentsEarned ? balance.totalUsdCentsEarned / 100 : 0,
-        availableBalance: balance.availableUsdCents ? balance.availableUsdCents / 100 : 0,
-        pendingBalance: totalFundedPendingCents / 100, // Use calculated funded pending balance
-        paidOutBalance: balance.paidOutUsdCents ? balance.paidOutUsdCents / 100 : 0
-      } : {
-        totalEarnings: 0,
-        availableBalance: 0,
-        pendingBalance: totalFundedPendingCents / 100, // Even if no balance doc, show funded pending
-        paidOutBalance: 0
-      }
-    };
-
-    // Always return data, even if no balance doc exists (user might have pending funded allocations)
-
-    // Format response data using the actual balance data structure
+    // Format response data
     const responseData = {
-      totalEarnings: completeData.balance.totalEarnings,
-      availableBalance: completeData.balance.availableBalance,
-      pendingBalance: completeData.balance.pendingBalance,
-      paidOutBalance: completeData.balance.paidOutBalance,
-      lastProcessedMonth: balance.lastProcessedMonth || null,
-      hasEarnings: (completeData.balance.totalEarnings || 0) > 0,
+      totalEarnings: balance ? balance.totalUsdCentsEarned / 100 : 0,
+      availableBalance: balance ? balance.availableUsdCents / 100 : 0,
+      pendingBalance: totalFundedPendingCents / 100,
+      paidOutBalance: balance ? balance.paidOutUsdCents / 100 : 0,
+      lastProcessedMonth: balance?.lastProcessedMonth || null,
+      hasEarnings: balance ? balance.totalUsdCentsEarned > 0 : false,
       // For now, return empty arrays for history data - these would need separate queries
       earningsHistory: [],
       pendingAllocations: null,

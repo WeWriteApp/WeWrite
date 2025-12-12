@@ -471,10 +471,10 @@ export default function PageGraphView({
         {/* Header with controls */}
         <div className="px-4 pb-3 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Graph view</h3>
+            <h3 className="text-lg font-semibold">Connections to {pageTitle}</h3>
             <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleShare}
                 className="text-muted-foreground hover:text-foreground"
@@ -528,18 +528,16 @@ export default function PageGraphView({
       <div className={`${className} animate-in fade-in-0 duration-300`}>
         <div
           className="wewrite-card transition-all duration-200 cursor-pointer hover:shadow-md w-full text-left"
+          onClick={() => setIsFullscreen(true)}
         >
           {/* Header */}
-          <button
-            onClick={() => setIsFullscreen(true)}
-            className="flex items-center justify-between mb-4 w-full"
-          >
+          <div className="flex items-center justify-between mb-4 w-full">
             <div className="flex items-center gap-2">
               <Network className="w-4 h-4 text-muted-foreground" />
               <h3 className="text-sm font-medium">Graph view</h3>
             </div>
             <span className="text-xs text-muted-foreground">Tap to view interactive graph</span>
-          </button>
+          </div>
 
           {/* Graph container - preview mode with auto-rotation */}
           {/* Use requireActivation mode for non-owners so tapping to view consumes a free view */}
@@ -552,15 +550,20 @@ export default function PageGraphView({
             isActivated={hasActivatedGraph}
             onActivate={handleActivateGraph}
           >
-            <div className="h-96 transition-all duration-300 pointer-events-none">
-              <PageGraph3D
-                nodes={nodes}
-                links={links}
-                pageId={pageId}
-                isFullscreen={false}
-                height={384}
-                isPreview={true}
-              />
+            <div className="h-96 transition-all duration-300 relative">
+              {/* Graph preview with pointer-events disabled */}
+              <div className="absolute inset-0 pointer-events-none">
+                <PageGraph3D
+                  nodes={nodes}
+                  links={links}
+                  pageId={pageId}
+                  isFullscreen={false}
+                  height={384}
+                  isPreview={true}
+                />
+              </div>
+              {/* Transparent click overlay on top */}
+              <div className="absolute inset-0 z-10" />
             </div>
           </SubscriptionGate>
         </div>

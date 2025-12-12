@@ -37,13 +37,17 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
           window.history.replaceState(null, '', newHash)
         }
 
-        // Lock body scroll
+        // Lock body scroll - lock BOTH html and body for robust scroll prevention
         const scrollY = window.scrollY
+        document.documentElement.style.overflow = 'hidden'
         document.body.style.position = 'fixed'
         document.body.style.top = `-${scrollY}px`
+        document.body.style.left = '0'
+        document.body.style.right = '0'
         document.body.style.width = '100%'
         document.body.style.overflow = 'hidden'
         document.body.setAttribute('data-drawer-open', 'true')
+        document.body.setAttribute('data-scroll-y', String(scrollY))
 
         // Track analytics
         if (analyticsId) {
@@ -60,24 +64,33 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
           }
         }
       } else {
+        // Only restore if we were actually locked (data-drawer-open attribute exists)
+        const wasLocked = document.body.getAttribute('data-drawer-open') === 'true'
+        if (!wasLocked) return // Don't do anything if drawer wasn't open
+
         // Restore hash
         if (hashId) {
           const newUrl = previousHashRef.current || window.location.pathname + window.location.search
           window.history.replaceState(null, '', newUrl)
         }
 
-        // Unlock body scroll
-        const scrollY = document.body.style.top
+        // Get the stored scroll position from data attribute (more reliable)
+        const storedScrollY = document.body.getAttribute('data-scroll-y')
+        const scrollY = storedScrollY ? parseInt(storedScrollY, 10) : 0
+
+        // Unlock body scroll - unlock BOTH html and body
+        document.documentElement.style.overflow = ''
         document.body.style.position = ''
         document.body.style.top = ''
+        document.body.style.left = ''
+        document.body.style.right = ''
         document.body.style.width = ''
         document.body.style.overflow = ''
         document.body.removeAttribute('data-drawer-open')
+        document.body.removeAttribute('data-scroll-y')
 
-        // Restore scroll position
-        if (scrollY) {
-          window.scrollTo(0, parseInt(scrollY || '0', 10) * -1)
-        }
+        // Restore scroll position immediately
+        window.scrollTo(0, scrollY)
 
         // Track analytics
         if (analyticsId) {
@@ -105,12 +118,26 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
       window.addEventListener('popstate', handlePopState)
       return () => {
         window.removeEventListener('popstate', handlePopState)
-        // Cleanup scroll lock on unmount
+        // Only cleanup if we were actually locked
+        const wasLocked = document.body.getAttribute('data-drawer-open') === 'true'
+        if (!wasLocked) return
+
+        // Cleanup scroll lock on unmount - get scroll position first
+        const storedScrollY = document.body.getAttribute('data-scroll-y')
+        const scrollY = storedScrollY ? parseInt(storedScrollY, 10) : 0
+
+        document.documentElement.style.overflow = ''
         document.body.style.position = ''
         document.body.style.top = ''
+        document.body.style.left = ''
+        document.body.style.right = ''
         document.body.style.width = ''
         document.body.style.overflow = ''
         document.body.removeAttribute('data-drawer-open')
+        document.body.removeAttribute('data-scroll-y')
+
+        // Restore scroll position
+        window.scrollTo(0, scrollY)
       }
     }, [open, hashId, analyticsId, onOpenChange])
 

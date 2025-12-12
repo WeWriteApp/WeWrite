@@ -130,33 +130,8 @@ export class ServerUsdService {
 
       await batch.commit();
 
-      // Best-effort balance normalization so summaries stay consistent.
-      try {
-        const balanceCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
-        const balanceRef = db.collection(balanceCollectionName).doc(userId);
-        const balanceDoc = await balanceRef.get();
-        if (balanceDoc.exists) {
-          const balanceData = balanceDoc.data() || {};
-          const totalUsdCentsBalance =
-            typeof balanceData.totalUsdCents === 'number'
-              ? balanceData.totalUsdCents
-              : typeof balanceData.monthlyAllocationCents === 'number'
-                ? balanceData.monthlyAllocationCents
-                : 0;
-
-          await balanceRef.update({
-            allocatedUsdCents: totalUsdCents,
-            availableUsdCents: totalUsdCentsBalance - totalUsdCents,
-            lastAllocationDate: currentMonth,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-        }
-      } catch (balanceError) {
-        console.warn(
-          `[USD ALLOCATION] Balance normalization skipped after rollover for user ${userId}:`,
-          balanceError
-        );
-      }
+      // Note: We no longer store allocatedUsdCents in usdBalances (Phase 1 simplification).
+      // The allocated amount is always calculated from SUM(active allocations) to prevent drift.
 
       console.log(
         `[USD ALLOCATION] Rolled forward ${sourceAllocations.length} allocations from ${sourceMonth} to ${currentMonth} for user ${userId}`
@@ -193,21 +168,19 @@ export class ServerUsdService {
 
       if (balanceDoc.exists) {
         // Update existing balance
-        const existingData = balanceDoc.data();
+        // Note: allocatedUsdCents is no longer stored - always calculated from allocations
         await balanceRef.update({
           totalUsdCents: usdCents,
-          availableUsdCents: usdCents - (existingData?.allocatedUsdCents || 0),
           monthlyAllocationCents: usdCents,
           lastAllocationDate: currentMonth,
           updatedAt: FieldValue.serverTimestamp()
         });
       } else {
         // Create new balance record
+        // Note: allocatedUsdCents is no longer stored - always calculated from allocations
         await balanceRef.set({
           userId,
           totalUsdCents: usdCents,
-          allocatedUsdCents: 0,
-          availableUsdCents: usdCents,
           monthlyAllocationCents: usdCents,
           lastAllocationDate: currentMonth,
           createdAt: FieldValue.serverTimestamp(),
@@ -470,10 +443,8 @@ export class ServerUsdService {
       const data = doc.data();
       const userId = doc.id;
 
-      // Use stored allocation fields first; fall back to recalculation if missing
-      let allocatedCents = typeof data.allocatedUsdCents === 'number'
-        ? data.allocatedUsdCents
-        : await this.calculateActualAllocatedUsdCents(userId);
+      // Always calculate from allocations (Phase 1 simplification - no stored allocatedUsdCents)
+      let allocatedCents = await this.calculateActualAllocatedUsdCents(userId);
 
       // Total subscription for the month (monthly allocation is authoritative)
       const monthlyCents = typeof data.monthlyAllocationCents === 'number'
@@ -634,8 +605,10 @@ export class ServerUsdService {
       // Allow overspending - users can allocate more USD than available
       // Unfunded allocations will be indicated in the UI
 
-      // Get page owner (recipient) for the allocation
+      // Get page owner (recipient) and page details for the allocation
       let recipientUserId = '';
+      let pageTitle = '';
+      let authorUsername = '';
       if (newPageAllocationCents > 0) {
         try {
           const pageRef = db.collection(await getCollectionNameAsync('pages')).doc(pageId);
@@ -644,6 +617,8 @@ export class ServerUsdService {
           if (pageDoc.exists) {
             const pageData = pageDoc.data();
             recipientUserId = pageData?.userId || '';
+            pageTitle = pageData?.title || 'Untitled';
+            authorUsername = pageData?.username || '';
 
             if (!recipientUserId) {
               console.warn(`Page ${pageId} exists but has no userId field`);
@@ -687,9 +662,10 @@ export class ServerUsdService {
         // Allow negative available for now, but log it for investigation
       }
 
+      // Note: We no longer store allocatedUsdCents or availableUsdCents in usdBalances (Phase 1 simplification).
+      // These are always calculated from SUM(active allocations) to prevent drift.
+      // Only update the timestamp to indicate the balance was touched.
       batch.update(balanceRef, {
-        allocatedUsdCents: newAllocatedCents,
-        availableUsdCents: newAvailableCents,
         updatedAt: FieldValue.serverTimestamp()
       });
 
@@ -715,7 +691,8 @@ export class ServerUsdService {
             updatedAt: FieldValue.serverTimestamp()
           });
         } else {
-          // Create new allocation
+          // Create new allocation - store page title and author username at allocation time
+          // This prevents "Page not found" if the page is later deleted
           const newAllocationRef = allocationsRef.doc();
           batch.set(newAllocationRef, {
             userId,
@@ -725,6 +702,9 @@ export class ServerUsdService {
             usdCents: newPageAllocationCents,
             month: currentMonth,
             status: 'active',
+            // Store page details at allocation time for historical record
+            pageTitle,
+            authorUsername,
             createdAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp()
           });
@@ -854,9 +834,9 @@ export class ServerUsdService {
         // Allow negative available for now, but log it for investigation
       }
 
+      // Note: We no longer store allocatedUsdCents or availableUsdCents in usdBalances (Phase 1 simplification).
+      // These are always calculated from SUM(active allocations) to prevent drift.
       batch.update(balanceRef, {
-        allocatedUsdCents: newAllocatedCents,
-        availableUsdCents: newAvailableCents,
         updatedAt: FieldValue.serverTimestamp()
       });
 
