@@ -1687,6 +1687,7 @@ export default function ContentPageView({
                   replyToId={page.replyTo || null}
                   replyType={replyTypeForGraph}
                   onRefreshReady={handleGraphRefreshReady}
+                  pageOwnerId={page.userId}
                 />
 
                 {page.replyTo && (

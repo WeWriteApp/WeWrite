@@ -11,7 +11,7 @@ import { Badge } from '../ui/badge';
 // Constants for free graph views
 const FREE_GRAPH_VIEWS_KEY = 'wewrite_free_graph_views';
 const FREE_GRAPH_VIEWS_DATE_KEY = 'wewrite_free_graph_views_date';
-const MAX_FREE_VIEWS = 3;
+const MAX_FREE_VIEWS = 2;
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
@@ -86,15 +86,18 @@ export default function SubscriptionGate({
   const { user } = useAuth();
   const { hasActiveSubscription, isLoading } = useSubscription();
 
-  // State for free graph views (for logged-out users)
+  // State for free graph views (for users without subscription)
   const [freeViewsRemaining, setFreeViewsRemaining] = useState(MAX_FREE_VIEWS);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showFreeViewBanner, setShowFreeViewBanner] = useState(false);
 
-  // Check and track free views for logged-out users viewing graphs
+  // Check and track free views for users without active subscription viewing graphs
   useEffect(() => {
-    // Only track free views for logged-out users viewing graphs
-    if (!user?.uid && featureName === 'graph' && !hasTrackedView) {
+    // Track free views for graph feature when user doesn't have subscription and not viewing own content
+    // This applies to both logged-out AND logged-in users without subscription
+    const shouldTrackFreeViews = featureName === 'graph' && !hasTrackedView && !isOwnContent;
+
+    if (shouldTrackFreeViews && !isLoading && !hasActiveSubscription) {
       const { remaining } = getFreeGraphViews();
       setFreeViewsRemaining(remaining);
 
@@ -106,7 +109,7 @@ export default function SubscriptionGate({
         setHasTrackedView(true);
       }
     }
-  }, [user?.uid, featureName, hasTrackedView]);
+  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription]);
 
   // Show loading state while checking subscription
   if (isLoading) {
@@ -133,11 +136,12 @@ export default function SubscriptionGate({
     return <div className={className}>{children}</div>;
   }
 
-  // For logged-out users viewing graphs, check free view quota
+  // For users without subscription viewing graphs, check free view quota
+  // This now applies to BOTH logged-out AND logged-in users without subscription
   const isGraphFeature = featureName === 'graph';
-  const canUseFreeView = !user?.uid && isGraphFeature && (freeViewsRemaining > 0 || hasTrackedView);
+  const canUseFreeView = isGraphFeature && (freeViewsRemaining > 0 || hasTrackedView);
 
-  // If logged-out user has free views remaining for graphs, show content with banner
+  // If user has free views remaining for graphs, show content with banner
   if (canUseFreeView) {
     return (
       <div className={`relative ${className}`}>
@@ -177,8 +181,8 @@ export default function SubscriptionGate({
     router.push(`/auth/register?redirect=${encodeURIComponent(redirect)}`);
   };
 
-  // For logged-out users who've used all free views
-  const isLoggedOutNoFreeViews = !user?.uid && isGraphFeature && freeViewsRemaining <= 0 && !hasTrackedView;
+  // Check if user has used all free views for graphs
+  const hasUsedAllFreeViews = isGraphFeature && freeViewsRemaining <= 0 && !hasTrackedView;
 
   return (
     <div className={`relative ${className}`}>
@@ -195,18 +199,22 @@ export default function SubscriptionGate({
               {user?.uid ? <Lock className="h-8 w-8 text-primary" /> : <Eye className="h-8 w-8 text-primary" />}
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {isLoggedOutNoFreeViews
-                ? 'Sign up to view more graphs'
-                : user?.uid
-                  ? `Subscribe to view other people's ${featureName}s`
-                  : `Sign up to view ${featureName}`}
+              {!user?.uid
+                ? hasUsedAllFreeViews
+                  ? 'Sign up to view more graphs'
+                  : `Sign up to view ${featureName}`
+                : hasUsedAllFreeViews
+                  ? 'Subscribe to view more graphs'
+                  : `Subscribe to view other people's ${featureName}s`}
             </h3>
             <p className="text-sm text-muted-foreground mb-6">
-              {isLoggedOutNoFreeViews
-                ? `You've used your ${MAX_FREE_VIEWS} free graph views for today. Sign up to get unlimited access and explore the knowledge graph!`
-                : user?.uid
-                  ? `You can view your own ${featureName}s anytime. Subscribe to explore other creators' ${featureName}s and support the WeWrite community.`
-                  : `Create a free account to explore page connections and the knowledge graph.`}
+              {!user?.uid
+                ? hasUsedAllFreeViews
+                  ? `You've used your ${MAX_FREE_VIEWS} free graph views for today. Sign up to get unlimited access and explore the knowledge graph!`
+                  : `Create a free account to explore page connections and the knowledge graph.`
+                : hasUsedAllFreeViews
+                  ? `You've used your ${MAX_FREE_VIEWS} free graph views for today. Subscribe to get unlimited access to other people's graphs.`
+                  : `You can view your own ${featureName}s anytime. Subscribe to explore other creators' ${featureName}s and support the WeWrite community.`}
             </p>
           </div>
 

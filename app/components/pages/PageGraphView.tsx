@@ -50,6 +50,7 @@ interface PageGraphViewProps {
   onRefreshReady?: (refreshFn: () => void) => void;
   replyToId?: string | null;
   replyType?: 'agree' | 'disagree' | 'standard' | 'neutral' | null;
+  pageOwnerId?: string; // The user ID of the page owner, to determine if viewing own content
 }
 
 /**
@@ -73,7 +74,8 @@ export default function PageGraphView({
   className = "",
   onRefreshReady,
   replyToId,
-  replyType
+  replyType,
+  pageOwnerId
 }: PageGraphViewProps) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
@@ -81,6 +83,9 @@ export default function PageGraphView({
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
   const { user } = useAuth();
+
+  // Determine if user is viewing their own content (allows viewing without subscription)
+  const isOwnContent = Boolean(user?.uid && pageOwnerId && user.uid === pageOwnerId);
   const [isPageListExpanded, setIsPageListExpanded] = useState(false);
   const [sortField, setSortField] = useState<SortField>('links');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -491,6 +496,7 @@ export default function PageGraphView({
             featureName="graph"
             className="h-full"
             allowInteraction={true}
+            isOwnContent={isOwnContent}
           >
             <PageGraph3D
               nodes={nodes}
@@ -524,7 +530,7 @@ export default function PageGraphView({
           </div>
 
           {/* Graph container - preview mode with auto-rotation */}
-          <SubscriptionGate featureName="graph" className="relative" allowInteraction={true}>
+          <SubscriptionGate featureName="graph" className="relative" allowInteraction={true} isOwnContent={isOwnContent}>
             <div className="h-96 transition-all duration-300 pointer-events-none">
               <PageGraph3D
                 nodes={nodes}
