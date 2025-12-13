@@ -97,9 +97,9 @@ html, body {
   height: 20px;
   width: 20px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: oklch(var(--accent));
   cursor: pointer;
-  border: 2px solid #ffffff;
+  border: 2px solid hsl(var(--background));
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -107,9 +107,9 @@ html, body {
   height: 20px;
   width: 20px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: oklch(var(--accent));
   cursor: pointer;
-  border: 2px solid #ffffff;
+  border: 2px solid hsl(var(--background));
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 

@@ -1,9 +1,78 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AllocationBarBase } from './components/payments/AllocationBarBase';
+import { Slider } from './components/ui/slider';
+
+/**
+ * Circular Progress Pie Chart Component
+ * Used to show progress toward a threshold (e.g., payout progress)
+ */
+function CircularProgress({
+  percentage,
+  size = 'md',
+  label,
+  sublabel
+}: {
+  percentage: number;
+  size?: 'sm' | 'md' | 'lg';
+  label?: string;
+  sublabel?: string;
+}) {
+  const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
+
+  const sizes = {
+    sm: { svg: 16, stroke: 2.5 },
+    md: { svg: 32, stroke: 3 },
+    lg: { svg: 48, stroke: 4 }
+  };
+
+  const { svg: svgSize, stroke: strokeWidth } = sizes[size];
+  const radius = (svgSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (clampedPercentage / 100) * circumference;
+
+  return (
+    <div className="flex items-center gap-2">
+      <svg width={svgSize} height={svgSize} className="-rotate-90">
+        {/* Background circle */}
+        <circle
+          cx={svgSize / 2}
+          cy={svgSize / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          className="text-muted-foreground/20"
+        />
+        {/* Progress circle */}
+        <circle
+          cx={svgSize / 2}
+          cy={svgSize / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="text-accent transition-all duration-300"
+        />
+      </svg>
+      {(label || sublabel) && (
+        <div className="flex flex-col">
+          {label && <span className="text-sm font-medium">{label}</span>}
+          {sublabel && <span className="text-xs text-muted-foreground">{sublabel}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TestColors() {
+  const [sliderValue, setSliderValue] = useState([50]);
+  const [nativeSliderValue, setNativeSliderValue] = useState(50);
+
   React.useEffect(() => {
     // Debug CSS variables
     const root = document.documentElement;
@@ -101,6 +170,190 @@ export default function TestColors() {
             variant="default"
             source="test"
           />
+        </div>
+      </div>
+
+      {/* Sliders Section */}
+      <div className="space-y-4 border-t pt-4">
+        <h2 className="text-lg font-semibold">Sliders</h2>
+
+        {/* Radix UI Slider */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Radix UI Slider (shadcn)</h3>
+          <div className="max-w-md space-y-2">
+            <Slider
+              value={sliderValue}
+              onValueChange={setSliderValue}
+              max={100}
+              step={1}
+            />
+            <p className="text-xs text-muted-foreground">Value: {sliderValue[0]}</p>
+          </div>
+        </div>
+
+        {/* Native HTML Slider (Fund Account style) */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Native Slider (Fund Account style)</h3>
+          <div className="max-w-md space-y-2">
+            <div className="relative">
+              {/* Track background */}
+              <div className="w-full h-2 bg-muted rounded-full relative overflow-hidden">
+                {/* Filled portion */}
+                <div
+                  className="absolute top-0 left-0 h-full bg-accent rounded-full"
+                  style={{ width: `${nativeSliderValue}%` }}
+                />
+              </div>
+              {/* Invisible input on top */}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={nativeSliderValue}
+                onChange={(e) => setNativeSliderValue(parseInt(e.target.value))}
+                className="absolute top-0 left-0 w-full h-2 appearance-none cursor-pointer slider"
+                style={{ background: 'transparent' }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0%</span>
+              <span>50%</span>
+              <span>100%</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Value: {nativeSliderValue}%</p>
+          </div>
+        </div>
+
+        {/* Slider variants */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Slider Variants</h3>
+          <div className="max-w-md space-y-4">
+            {/* Downgrade variant */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Downgrade (yellow)</p>
+              <div className="relative">
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow-500 rounded-full" style={{ width: '30%' }} />
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  defaultValue="30"
+                  className="absolute top-0 left-0 w-full h-2 appearance-none cursor-pointer slider-downgrade"
+                  style={{ background: 'transparent' }}
+                />
+              </div>
+            </div>
+            {/* Cancellation variant */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Cancellation (red)</p>
+              <div className="relative">
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-red-500 rounded-full" style={{ width: '70%' }} />
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  defaultValue="70"
+                  className="absolute top-0 left-0 w-full h-2 appearance-none cursor-pointer slider-cancellation"
+                  style={{ background: 'transparent' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Circular Progress / Pie Charts Section */}
+      <div className="space-y-4 border-t pt-4">
+        <h2 className="text-lg font-semibold">Circular Progress (Payout Progress)</h2>
+        <p className="text-sm text-muted-foreground">
+          These pie charts show progress toward a threshold, used in the floating financial header and settings earnings menu.
+        </p>
+
+        {/* Size variants */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Size Variants</h3>
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={60} size="sm" />
+              <span className="text-xs text-muted-foreground">Small (16px)</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={60} size="md" />
+              <span className="text-xs text-muted-foreground">Medium (32px)</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={60} size="lg" />
+              <span className="text-xs text-muted-foreground">Large (48px)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Fill states */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Fill States</h3>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={0} size="md" />
+              <span className="text-xs text-muted-foreground">0%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={10} size="md" />
+              <span className="text-xs text-muted-foreground">10%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={25} size="md" />
+              <span className="text-xs text-muted-foreground">25%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={50} size="md" />
+              <span className="text-xs text-muted-foreground">50%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={75} size="md" />
+              <span className="text-xs text-muted-foreground">75%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={90} size="md" />
+              <span className="text-xs text-muted-foreground">90%</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <CircularProgress percentage={100} size="md" />
+              <span className="text-xs text-muted-foreground">100%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* With labels (settings menu style) */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">With Labels (Settings Menu Style)</h3>
+          <div className="space-y-3">
+            <CircularProgress percentage={20} size="sm" label="$20.00 to payout" />
+            <CircularProgress percentage={60} size="sm" label="$10.00 to payout" />
+            <CircularProgress percentage={92} size="sm" label="$2.00 to payout" />
+          </div>
+        </div>
+
+        {/* Floating header style */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Large with Sublabel (Header Style)</h3>
+          <div className="flex gap-6">
+            <CircularProgress
+              percentage={35}
+              size="lg"
+              label="$16.25 earned"
+              sublabel="$8.75 to payout"
+            />
+            <CircularProgress
+              percentage={80}
+              size="lg"
+              label="$20.00 earned"
+              sublabel="$5.00 to payout"
+            />
+          </div>
         </div>
       </div>
     </div>
