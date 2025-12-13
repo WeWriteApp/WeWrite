@@ -494,6 +494,7 @@ export default function PageGraphView({
         <div className="flex-1 min-h-0">
           <SubscriptionGate
             featureName="graph"
+            contentId={pageId}
             className="h-full"
             allowInteraction={true}
             isOwnContent={isOwnContent}
@@ -536,6 +537,7 @@ export default function PageGraphView({
           {/* Use requireActivation mode for non-owners so tapping to view consumes a free view */}
           <SubscriptionGate
             featureName="graph"
+            contentId={pageId}
             className="relative"
             allowInteraction={true}
             isOwnContent={isOwnContent}

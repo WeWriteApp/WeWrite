@@ -1,48 +1,13 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import UnifiedLoader from "../components/ui/unified-loader";
-import { Button } from "../components/ui/button";
-import {
-  ChevronLeft,
-  User,
-  CreditCard,
-  DollarSign,
-  Settings as SettingsIcon,
-  Trash2,
-  AlertTriangle,
-  ShoppingCart,
-  Coins,
-  Palette,
-  X,
-  Loader2
-} from 'lucide-react';
-import { StatusIcon } from '../components/ui/status-icon';
 import SettingsHeader from '../components/settings/SettingsHeader';
-
 import { cn } from '../lib/utils';
-// Removed old optimized subscription import - using API-first approach
-import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
-import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
-import { useEarnings } from '../contexts/EarningsContext';
-import { useUsdBalance } from '../contexts/UsdBalanceContext';
-import { useNextPayoutCountdown, formatPayoutCountdown } from '../hooks/useNextPayoutCountdown';
-import { useSubscription } from '../contexts/SubscriptionContext';
-import { RemainingUsdCounter } from '../components/ui/RemainingUsdCounter';
-import { UsdPieChart } from '../components/ui/UsdPieChart';
-import { useEmailVerificationStatus } from '../hooks/useEmailVerificationStatus';
-
-
-interface SettingsSection {
-  id: string;
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-  requiresPayments?: boolean;
-}
+import { useSettingsSections } from '../hooks/useSettingsSections';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -52,19 +17,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
-  const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
-  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
 
-
-
-  // Get bank setup status, user earnings, and USD balance
-  const bankSetupStatus = useBankSetupStatus();
-  const { earnings } = useEarnings();
-  const { usdBalance } = useUsdBalance();
-  const payoutCountdown = useNextPayoutCountdown();
-  // Get email verification status for Profile menu item
-  const emailVerificationStatus = useEmailVerificationStatus();
+  // Use the shared settings sections hook - single source of truth
+  const { sections } = useSettingsSections();
 
   useEffect(() => {
     console.log('🎯 Settings Layout: Auth check', {
@@ -87,52 +42,6 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     }
   }, [isAuthenticated, isLoading, router, user]);
 
-  // Check subscription status when user is available
-  useEffect(() => {
-    if (!user) {
-      setHasActiveSubscription(null);
-      return;
-    }
-
-    const checkSubscriptionStatus = async () => {
-      try {
-        // Use API-first approach instead of complex optimized subscription
-        const response = await fetch('/api/account-subscription');
-        const data = response.ok ? await response.json() : null;
-        const subscription = data?.hasSubscription ? data.fullData : null;
-
-        if (subscription) {
-          const statusInfo = getSubscriptionStatusInfo(
-            subscription.status,
-            subscription.cancelAtPeriodEnd,
-            subscription.currentPeriodEnd
-          );
-          const isActive = isActiveSubscription(
-            subscription.status,
-            subscription.cancelAtPeriodEnd,
-            subscription.currentPeriodEnd
-          );
-          setHasActiveSubscription(isActive);
-          setSubscriptionStatusInfo(statusInfo);
-
-          // Get subscription amount directly from the subscription data
-          const amount = subscription.amount || 0;
-          setSubscriptionAmount(amount);
-        } else {
-          setHasActiveSubscription(false);
-          setSubscriptionStatusInfo(null);
-          setSubscriptionAmount(0);
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-        setHasActiveSubscription(false);
-        setSubscriptionAmount(0);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, [user]);
-
   if (!isAuthenticated) {
     return <UnifiedLoader isLoading={true} message="Loading settings..." />;
   }
@@ -140,57 +49,6 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   if (!user) {
     return null;
   }
-
-  const settingsSections: SettingsSection[] = [
-    {
-      id: 'fund-account',
-      title: 'Fund Account',
-      icon: ShoppingCart,
-      href: '/settings/fund-account',
-      requiresPayments: true
-    },
-    {
-      id: 'spend',
-      title: 'Manage Spending',
-      icon: Coins,
-      href: '/settings/spend',
-      requiresPayments: true
-    },
-    {
-      id: 'earnings',
-      title: 'Get paid',
-      icon: DollarSign,
-      href: '/settings/earnings',
-      requiresPayments: true
-    },
-    {
-      id: 'profile',
-      title: 'Profile',
-      icon: User,
-      href: '/settings/profile'
-    },
-    {
-      id: 'appearance',
-      title: 'Appearance',
-      icon: Palette,
-      href: '/settings/appearance'
-    },
-    {
-      id: 'deleted',
-      title: 'Recently deleted',
-      icon: Trash2,
-      href: '/settings/deleted'
-    },
-    {
-      id: 'advanced',
-      title: 'Advanced',
-      icon: SettingsIcon,
-      href: '/settings/advanced'
-    }
-  ];
-
-  // Filter sections based on feature flags
-  const availableSections = settingsSections;
 
   const handleSectionClick = (href: string) => {
     router.push(href);
@@ -219,32 +77,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
           <div className="flex flex-col h-full">
             <nav className="flex-1 px-3 py-4">
               <div className="space-y-1">
-                {availableSections.map((section) => {
+                {sections.map((section) => {
                   const IconComponent = section.icon;
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
-
-                  // Show warning dots for email verification on profile
-                  const showEmailVerificationWarning = section.id === 'profile' &&
-                    emailVerificationStatus.needsVerification &&
-                    emailVerificationStatus.isModalDismissed;
-
-                  const showWarning = showEmailVerificationWarning;
-
-                  // Get warning variant - always orange for email verification
-                  const getWarningVariant = () => {
-                    if (showEmailVerificationWarning) return 'warning'; // Orange
-                    if (!subscriptionStatusInfo) return 'warning';
-                    switch (subscriptionStatusInfo.status) {
-                      case 'past_due':
-                      case 'unpaid':
-                        return 'critical';
-                      case 'incomplete':
-                        return 'error';
-                      default:
-                        return 'warning';
-                    }
-                  };
 
                   return (
                     <div key={section.id} className="relative">
@@ -263,83 +99,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         )} />
                         <span className="flex-1 text-left">{section.title}</span>
 
-                        {/* Status icons for specific sections - show success and warnings */}
-                        {section.id === 'fund-account' && (
-                          <span className="text-xs text-muted-foreground font-medium">
-                            ${subscriptionAmount}/mo
-                          </span>
-                        )}
-
-
-
-                        {section.id === 'earnings' && (() => {
-                          // Only show bank setup notices if user has earnings to pay out
-                          if (earnings?.hasEarnings) {
-                            // Show loading state while checking bank status
-                            if (bankSetupStatus.loading) {
-                              return (
-                                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full font-medium flex items-center gap-1">
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                  Loading...
-                                </span>
-                              );
-                            }
-                            // Show "Set up bank" if bank isn't set up but user has earnings
-                            if (!bankSetupStatus.isSetup) {
-                              return (
-                                <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full font-medium">
-                                  Set up bank
-                                </span>
-                              );
-                            }
-                            // Show success with countdown if bank is set up properly
-                            if (bankSetupStatus.isSetup) {
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <StatusIcon status="success" size="sm" position="static" />
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatPayoutCountdown(payoutCountdown)}
-                                  </span>
-                                </div>
-                              );
-                            }
-                          }
-                          return null;
-                        })()}
-
-                        {section.id === 'spend' && usdBalance && (() => {
-                          const allocatedCents = usdBalance.allocatedUsdCents || 0;
-                          const totalCents = usdBalance.totalUsdCents || 0;
-                          const remainingCents = totalCents - allocatedCents;
-                          const remainingDollars = Math.abs(remainingCents) / 100;
-
-                          if (remainingCents >= 0) {
-                            return (
-                              <span className="text-xs text-muted-foreground font-medium">
-                                ${remainingDollars.toFixed(0)} remaining
-                              </span>
-                            );
-                          } else {
-                            return (
-                              <span className="text-xs text-red-600 font-medium">
-                                ${remainingDollars.toFixed(0)} over
-                              </span>
-                            );
-                          }
-                        })()}
-
-                        {/* Email verification indicator on Profile */}
-                        {section.id === 'profile' && emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed && (
-                          <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                            Verify email
-                          </span>
-                        )}
-
-
+                        {/* Status indicator from shared hook */}
+                        {section.statusIndicator}
                       </button>
-                      {showWarning && (
+                      {section.showWarning && (
                         <WarningDot
-                          variant={getWarningVariant()}
+                          variant={section.warningVariant}
                           size="sm"
                           position="top-right"
                           offset={{ top: '8px', right: '8px' }}

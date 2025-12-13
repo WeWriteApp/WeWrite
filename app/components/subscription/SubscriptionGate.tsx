@@ -11,11 +11,12 @@ import { Badge } from '../ui/badge';
 // Constants for free graph views
 const FREE_GRAPH_VIEWS_KEY = 'wewrite_free_graph_views';
 const FREE_GRAPH_VIEWS_DATE_KEY = 'wewrite_free_graph_views_date';
-const MAX_FREE_VIEWS = 3;
+const MAX_FREE_VIEWS = 5;
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
   featureName: string; // e.g., "graph", "map"
+  contentId?: string; // Unique ID for this content (e.g., pageId, userId) - used to track unique views
   className?: string;
   blurIntensity?: 'light' | 'medium' | 'heavy';
   isOwnContent?: boolean; // Whether the user is viewing their own content (for user profiles)
@@ -26,12 +27,11 @@ interface SubscriptionGateProps {
 }
 
 /**
- * Get the number of free graph views remaining for today
- * Returns { remaining: number, used: number }
+ * Get the set of viewed content IDs for today
  */
-function getFreeGraphViews(): { remaining: number; used: number } {
+function getViewedContentIds(): Set<string> {
   if (typeof window === 'undefined') {
-    return { remaining: MAX_FREE_VIEWS, used: 0 };
+    return new Set();
   }
 
   const today = new Date().toDateString();
@@ -41,19 +41,42 @@ function getFreeGraphViews(): { remaining: number; used: number } {
   // Reset views if it's a new day
   if (storedDate !== today) {
     localStorage.setItem(FREE_GRAPH_VIEWS_DATE_KEY, today);
-    localStorage.setItem(FREE_GRAPH_VIEWS_KEY, '0');
-    return { remaining: MAX_FREE_VIEWS, used: 0 };
+    localStorage.setItem(FREE_GRAPH_VIEWS_KEY, '[]');
+    return new Set();
   }
 
-  const used = parseInt(storedViews || '0', 10);
-  return { remaining: Math.max(0, MAX_FREE_VIEWS - used), used };
+  try {
+    const viewedIds = JSON.parse(storedViews || '[]');
+    return new Set(Array.isArray(viewedIds) ? viewedIds : []);
+  } catch {
+    return new Set();
+  }
 }
 
 /**
- * Increment the free graph view counter
+ * Get the number of free graph views remaining for today
+ * Returns { remaining: number, used: number, viewedIds: Set<string> }
  */
-function incrementFreeGraphViews(): void {
-  if (typeof window === 'undefined') return;
+function getFreeGraphViews(): { remaining: number; used: number; viewedIds: Set<string> } {
+  const viewedIds = getViewedContentIds();
+  const used = viewedIds.size;
+  return { remaining: Math.max(0, MAX_FREE_VIEWS - used), used, viewedIds };
+}
+
+/**
+ * Check if a specific content ID has already been viewed today
+ */
+function hasViewedContent(contentId: string): boolean {
+  const viewedIds = getViewedContentIds();
+  return viewedIds.has(contentId);
+}
+
+/**
+ * Add a content ID to the viewed list (only if not already viewed)
+ * Returns true if this was a new view, false if already viewed
+ */
+function addViewedContent(contentId: string): boolean {
+  if (typeof window === 'undefined') return false;
 
   const today = new Date().toDateString();
   const storedDate = localStorage.getItem(FREE_GRAPH_VIEWS_DATE_KEY);
@@ -61,12 +84,21 @@ function incrementFreeGraphViews(): void {
   // Reset if new day
   if (storedDate !== today) {
     localStorage.setItem(FREE_GRAPH_VIEWS_DATE_KEY, today);
-    localStorage.setItem(FREE_GRAPH_VIEWS_KEY, '1');
-    return;
+    localStorage.setItem(FREE_GRAPH_VIEWS_KEY, JSON.stringify([contentId]));
+    return true;
   }
 
-  const currentViews = parseInt(localStorage.getItem(FREE_GRAPH_VIEWS_KEY) || '0', 10);
-  localStorage.setItem(FREE_GRAPH_VIEWS_KEY, String(currentViews + 1));
+  const viewedIds = getViewedContentIds();
+
+  // Already viewed this content today - no new view consumed
+  if (viewedIds.has(contentId)) {
+    return false;
+  }
+
+  // New content - add to viewed list
+  viewedIds.add(contentId);
+  localStorage.setItem(FREE_GRAPH_VIEWS_KEY, JSON.stringify([...viewedIds]));
+  return true;
 }
 
 /**
@@ -82,6 +114,7 @@ export { getFreeGraphViews };
 export default function SubscriptionGate({
   children,
   featureName,
+  contentId,
   className = "",
   blurIntensity = 'medium',
   isOwnContent = false,
@@ -99,14 +132,21 @@ export default function SubscriptionGate({
   const [freeViewsRemaining, setFreeViewsRemaining] = useState(MAX_FREE_VIEWS);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showFreeViewBanner, setShowFreeViewBanner] = useState(false);
+  const [isAlreadyViewed, setIsAlreadyViewed] = useState(false);
 
-  // Check free views count on mount (but don't consume unless activated)
+  // Check free views count on mount and if this content was already viewed
   useEffect(() => {
     if (featureName === 'graph' && !isOwnContent && !isLoading && !hasActiveSubscription) {
-      const { remaining } = getFreeGraphViews();
+      const { remaining, viewedIds } = getFreeGraphViews();
       setFreeViewsRemaining(remaining);
+
+      // Check if this specific content was already viewed today
+      if (contentId && viewedIds.has(contentId)) {
+        setIsAlreadyViewed(true);
+        setHasTrackedView(true); // Already counted, don't count again
+      }
     }
-  }, [featureName, isOwnContent, isLoading, hasActiveSubscription]);
+  }, [featureName, isOwnContent, isLoading, hasActiveSubscription, contentId]);
 
   // Track view when activated (for requireActivation mode)
   useEffect(() => {
@@ -114,18 +154,29 @@ export default function SubscriptionGate({
 
     const shouldTrackFreeViews = featureName === 'graph' && !hasTrackedView && !isOwnContent && isActivated;
 
-    if (shouldTrackFreeViews && !isLoading && !hasActiveSubscription) {
+    if (shouldTrackFreeViews && !isLoading && !hasActiveSubscription && contentId) {
+      // Check if already viewed this content today
+      if (hasViewedContent(contentId)) {
+        // Already viewed - show content without consuming a new view
+        setIsAlreadyViewed(true);
+        setHasTrackedView(true);
+        setShowFreeViewBanner(true);
+        return;
+      }
+
       const { remaining } = getFreeGraphViews();
 
-      // If they have remaining views, increment the counter
+      // If they have remaining views, add this content to viewed list
       if (remaining > 0) {
-        incrementFreeGraphViews();
-        setFreeViewsRemaining(remaining - 1);
+        const isNewView = addViewedContent(contentId);
+        if (isNewView) {
+          setFreeViewsRemaining(remaining - 1);
+        }
         setShowFreeViewBanner(true);
         setHasTrackedView(true);
       }
     }
-  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription, requireActivation, isActivated]);
+  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription, requireActivation, isActivated, contentId]);
 
   // Legacy: auto-track for non-requireActivation mode
   useEffect(() => {
@@ -135,19 +186,30 @@ export default function SubscriptionGate({
     // This applies to both logged-out AND logged-in users without subscription
     const shouldTrackFreeViews = featureName === 'graph' && !hasTrackedView && !isOwnContent;
 
-    if (shouldTrackFreeViews && !isLoading && !hasActiveSubscription) {
+    if (shouldTrackFreeViews && !isLoading && !hasActiveSubscription && contentId) {
+      // Check if already viewed this content today
+      if (hasViewedContent(contentId)) {
+        // Already viewed - show content without consuming a new view
+        setIsAlreadyViewed(true);
+        setHasTrackedView(true);
+        setShowFreeViewBanner(true);
+        return;
+      }
+
       const { remaining } = getFreeGraphViews();
       setFreeViewsRemaining(remaining);
 
-      // If they have remaining views, increment the counter
+      // If they have remaining views, add this content to viewed list
       if (remaining > 0) {
-        incrementFreeGraphViews();
-        setFreeViewsRemaining(remaining - 1);
+        const isNewView = addViewedContent(contentId);
+        if (isNewView) {
+          setFreeViewsRemaining(remaining - 1);
+        }
         setShowFreeViewBanner(true);
         setHasTrackedView(true);
       }
     }
-  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription, requireActivation]);
+  }, [featureName, hasTrackedView, isOwnContent, isLoading, hasActiveSubscription, requireActivation, contentId]);
 
   // Show loading state while checking subscription
   if (isLoading) {
@@ -177,11 +239,13 @@ export default function SubscriptionGate({
   // For users without subscription viewing graphs, check free view quota
   // This now applies to BOTH logged-out AND logged-in users without subscription
   const isGraphFeature = featureName === 'graph';
-  const canUseFreeView = isGraphFeature && (freeViewsRemaining > 0 || hasTrackedView);
+  // Can use free view if: already viewed this content today, or has views remaining, or already tracked this session
+  const canUseFreeView = isGraphFeature && (isAlreadyViewed || freeViewsRemaining > 0 || hasTrackedView);
 
   // If requireActivation mode and not yet activated, show "tap to view" prompt
   if (requireActivation && !isActivated && isGraphFeature) {
-    const hasViewsLeft = freeViewsRemaining > 0;
+    // Can view if already viewed today OR has views remaining
+    const hasViewsLeft = isAlreadyViewed || freeViewsRemaining > 0;
 
     return (
       <div className={`relative ${className}`}>

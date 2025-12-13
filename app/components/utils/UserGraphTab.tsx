@@ -249,6 +249,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
         <div className="flex-1 min-h-0">
           <SubscriptionGate
             featureName="graph"
+            contentId={`user:${userId}`}
             className="h-full"
             isOwnContent={isOwnContent}
             allowInteraction={true}
@@ -287,6 +288,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
           {/* Graph Preview - non-interactive with auto-rotation */}
           <SubscriptionGate
             featureName="graph"
+            contentId={`user:${userId}`}
             className="relative"
             isOwnContent={isOwnContent}
             allowInteraction={true}
