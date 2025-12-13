@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, Loader2, Activity } from 'lucide-react';
 import ActivityCard from '../activity/ActivityCard';
+import EmptyState from '../ui/EmptyState';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { SectionTitle } from '../ui/section-title';
 
@@ -205,13 +206,12 @@ export default function UserRecentEdits({
 
       {/* Content */}
       {edits.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No recent edits found</p>
-          <p className="text-sm">
-            {username} hasn't made any recent page edits
-          </p>
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No recent edits found"
+          description={`${username} hasn't made any recent page edits.`}
+          size="md"
+        />
       ) : (
         <div className="space-y-4">
           {edits.map((edit) => {

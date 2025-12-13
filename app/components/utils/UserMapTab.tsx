@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
+import EmptyState from '../ui/EmptyState';
 import { PillLink } from './PillLink';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -567,16 +568,12 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
   if (pages.length === 0) {
     console.log('🗺️ CRITICAL: Showing no pages state');
     return (
-      <div className="text-center py-12">
-        <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">No pages with locations</h3>
-        <p className="text-muted-foreground mb-4">
-          {username} hasn't added location data to any pages yet.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Pages can have locations added by clicking the map icon when editing.
-        </p>
-      </div>
+      <EmptyState
+        icon={MapPin}
+        title="No pages with locations"
+        description={`${username} hasn't added location data to any pages yet. Pages can have locations added by clicking the map icon when editing.`}
+        size="lg"
+      />
     );
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useTransition } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, usePathname } from 'next/navigation';
 
 interface UseTabNavigationOptions {
   /** The query parameter name to use (default: 'tab') */
@@ -56,10 +56,8 @@ export function useTabNavigation({
   replaceHistory = true,
   migrateFromHash = false,
 }: UseTabNavigationOptions): UseTabNavigationReturn {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
 
   // Track the last tab we set programmatically to avoid sync loops
   const lastSetTabRef = useRef<string | null>(null);
@@ -88,51 +86,56 @@ export function useTabNavigation({
     return getTabFromUrl();
   });
 
-  // Handle legacy hash migration and URL sync
+  // Handle legacy hash migration on mount only
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!migrateFromHash) return;
 
-    // Check for legacy hash-based tabs and migrate them
-    if (migrateFromHash) {
-      const hash = window.location.hash.slice(1);
-      const currentTabParam = searchParams.get(paramName);
+    const hash = window.location.hash.slice(1);
+    const currentTabParam = searchParams.get(paramName);
 
-      // If there's a valid hash but no query param, migrate it
-      if (hash && (!currentTabParam || currentTabParam === defaultTab)) {
-        if (!validTabs || validTabs.includes(hash)) {
-          console.log(`[useTabNavigation] Migrating from hash #${hash} to ?${paramName}=${hash}`);
+    // If there's a valid hash but no query param, migrate it
+    if (hash && (!currentTabParam || currentTabParam === defaultTab)) {
+      if (!validTabs || validTabs.includes(hash)) {
+        console.log(`[useTabNavigation] Migrating from hash #${hash} to ?${paramName}=${hash}`);
 
-          // Build new URL with query param
-          const params = new URLSearchParams(searchParams.toString());
-          params.set(paramName, hash);
+        // Build new URL with query param
+        const params = new URLSearchParams(searchParams.toString());
+        params.set(paramName, hash);
 
-          // Remove the hash and set query param
-          const newUrl = `${pathname}?${params.toString()}`;
+        // Remove the hash and set query param
+        const newUrl = `${pathname}?${params.toString()}`;
 
-          // Set state first, then update URL in a transition
-          setActiveTabState(hash);
-          lastSetTabRef.current = hash;
-          startTransition(() => {
-            router.replace(newUrl);
-          });
-          return;
-        }
+        // Set state first, then update URL
+        setActiveTabState(hash);
+        lastSetTabRef.current = hash;
+        window.history.replaceState(null, '', newUrl);
       }
     }
 
-    // Sync state with URL, but skip if we just set this tab ourselves
+    isInitializedRef.current = true;
+    // Only run on mount - hash migration is a one-time operation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync state with URL changes (e.g., from external navigation or browser buttons)
+  // But NOT when we just set the tab ourselves
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const urlTab = getTabFromUrl();
-    if (urlTab !== activeTab && urlTab !== lastSetTabRef.current) {
+
+    // Skip sync if we just set this tab ourselves (prevents the double-click issue)
+    if (lastSetTabRef.current === activeTab) {
+      // URL will catch up eventually, don't reset state
+      return;
+    }
+
+    // Only sync if URL differs from state and we didn't just set it
+    if (urlTab !== activeTab) {
       setActiveTabState(urlTab);
     }
-
-    // Clear the ref after sync to allow future URL-driven changes
-    if (lastSetTabRef.current === urlTab) {
-      lastSetTabRef.current = null;
-    }
-
-    isInitializedRef.current = true;
-  }, [searchParams, pathname, migrateFromHash, paramName, defaultTab, validTabs, getTabFromUrl, activeTab, router]);
+  }, [searchParams, getTabFromUrl, activeTab]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -181,17 +184,21 @@ export function useTabNavigation({
       ? `${pathname}?${queryString}${hash}`
       : `${pathname}${hash}`;
 
-    // Use startTransition to prevent the URL update from causing a flicker
-    startTransition(() => {
-      if (replaceHistory) {
-        router.replace(newUrl, { scroll: false });
-      } else {
-        router.push(newUrl, { scroll: false });
-      }
-    });
+    // Update URL - using direct history API for immediate effect without triggering re-renders
+    if (replaceHistory) {
+      window.history.replaceState(null, '', newUrl);
+    } else {
+      window.history.pushState(null, '', newUrl);
+    }
+
+    // Clear the ref after URL is updated
+    // Use setTimeout to ensure it clears after any sync effects run
+    setTimeout(() => {
+      lastSetTabRef.current = null;
+    }, 0);
 
     console.log(`[useTabNavigation] Tab changed to "${newTab}", URL: ${newUrl}`);
-  }, [searchParams, pathname, paramName, defaultTab, validTabs, replaceHistory, router, activeTab]);
+  }, [searchParams, pathname, paramName, defaultTab, validTabs, replaceHistory, activeTab]);
 
   // Helper to check if a tab is active
   const isActiveTab = useCallback((tab: string): boolean => {

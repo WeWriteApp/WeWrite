@@ -17,24 +17,119 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSearchClient, getAlgoliaIndexName, ALGOLIA_INDICES, type AlgoliaPageRecord } from '../../lib/algolia';
 
-// Extract key terms from title for better search
-function extractSearchTerms(title: string): string {
-  if (!title) return '';
+// Extended stop words list for better keyword extraction
+const STOP_WORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+  'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those',
+  'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'my', 'your', 'his', 'her', 'its', 'our',
+  'just', 'like', 'about', 'into', 'over', 'after', 'than', 'then', 'when', 'where', 'which',
+  'who', 'what', 'how', 'why', 'from', 'out', 'up', 'down', 'off', 'all', 'any', 'both', 'each',
+  'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
+  'very', 'too', 'also', 'back', 'even', 'still', 'way', 'well', 'new', 'now', 'old', 'see',
+  'get', 'got', 'make', 'made', 'take', 'took', 'give', 'gave', 'go', 'went', 'come', 'came',
+  'say', 'said', 'think', 'thought', 'know', 'knew', 'want', 'wanted', 'use', 'used', 'find',
+  'found', 'tell', 'told', 'ask', 'asked', 'work', 'worked', 'seem', 'seemed', 'feel', 'felt',
+  'try', 'tried', 'leave', 'left', 'call', 'called', 'need', 'needed', 'keep', 'kept', 'let',
+  'begin', 'began', 'seem', 'seemed', 'help', 'helped', 'show', 'showed', 'hear', 'heard',
+  'play', 'played', 'run', 'ran', 'move', 'moved', 'live', 'lived', 'believe', 'believed',
+  'bring', 'brought', 'happen', 'happened', 'write', 'wrote', 'provide', 'provided', 'sit',
+  'sat', 'stand', 'stood', 'lose', 'lost', 'pay', 'paid', 'meet', 'met', 'include', 'included',
+  'continue', 'continued', 'set', 'learn', 'learned', 'change', 'changed', 'lead', 'led',
+  'understand', 'understood', 'watch', 'watched', 'follow', 'followed', 'stop', 'stopped',
+  'create', 'created', 'speak', 'spoke', 'read', 'allow', 'allowed', 'add', 'added', 'spend',
+  'spent', 'grow', 'grew', 'open', 'opened', 'walk', 'walked', 'win', 'won', 'offer', 'offered',
+  'remember', 'remembered', 'love', 'loved', 'consider', 'considered', 'appear', 'appeared',
+  'buy', 'bought', 'wait', 'waited', 'serve', 'served', 'die', 'died', 'send', 'sent', 'expect',
+  'expected', 'build', 'built', 'stay', 'stayed', 'fall', 'fell', 'cut', 'reach', 'reached',
+  'kill', 'killed', 'remain', 'remained', 'text', 'type', 'children', 'paragraph', 'true', 'false',
+  'null', 'undefined', 'object', 'array', 'string', 'number', 'boolean', 'function', 'class'
+]);
 
-  const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
-    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those',
-    'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'my', 'your', 'his', 'her', 'its', 'our'
-  ]);
+// Extract key terms from text for better search
+function extractSearchTerms(text: string, maxWords: number = 10): string {
+  if (!text) return '';
 
-  return title
+  // Clean up JSON artifacts if content is stringified JSON
+  let cleanText = text;
+  try {
+    // Try to parse as JSON and extract text nodes
+    if (text.startsWith('[') || text.startsWith('{')) {
+      const parsed = JSON.parse(text);
+      cleanText = extractTextFromSlateContent(parsed);
+    }
+  } catch {
+    // Not JSON, use as-is
+  }
+
+  return cleanText
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.has(word))
-    .slice(0, 10) // Top 10 meaningful words
+    .filter(word => word.length > 2 && !STOP_WORDS.has(word))
+    .slice(0, maxWords)
     .join(' ');
+}
+
+// Extract plain text from Slate.js JSON content
+function extractTextFromSlateContent(content: any): string {
+  if (!content) return '';
+
+  // Handle array of nodes (top-level Slate content)
+  if (Array.isArray(content)) {
+    return content.map(node => extractTextFromSlateContent(node)).join(' ');
+  }
+
+  // Handle text leaf nodes
+  if (typeof content === 'object') {
+    if (content.text) {
+      return content.text;
+    }
+    // Handle element nodes with children
+    if (content.children) {
+      return extractTextFromSlateContent(content.children);
+    }
+  }
+
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  return '';
+}
+
+// Extract significant keywords with frequency analysis
+function extractKeywords(text: string, maxKeywords: number = 15): string[] {
+  if (!text) return [];
+
+  // Clean up JSON artifacts if content is stringified JSON
+  let cleanText = text;
+  try {
+    if (text.startsWith('[') || text.startsWith('{')) {
+      const parsed = JSON.parse(text);
+      cleanText = extractTextFromSlateContent(parsed);
+    }
+  } catch {
+    // Not JSON, use as-is
+  }
+
+  const words = cleanText
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !STOP_WORDS.has(word));
+
+  // Count word frequency
+  const wordFreq: Record<string, number> = {};
+  for (const word of words) {
+    wordFreq[word] = (wordFreq[word] || 0) + 1;
+  }
+
+  // Sort by frequency and return top keywords
+  return Object.entries(wordFreq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxKeywords)
+    .map(([word]) => word);
 }
 
 export async function GET(request: NextRequest) {
@@ -62,16 +157,27 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 [RELATED_V2] Finding related pages for ${pageId}`);
     console.log(`🔍 [RELATED_V2] Title: "${pageTitle}", Author: ${authorUsername || authorId || 'unknown'}`);
+    console.log(`🔍 [RELATED_V2] Content length: ${pageContent?.length || 0} chars`);
 
     // Build exclusion list
     const excludeIds = new Set([pageId, ...excludePageIds]);
 
-    // Extract search terms from title (prioritized) and content
-    const titleTerms = extractSearchTerms(pageTitle);
-    const contentTerms = extractSearchTerms(pageContent.substring(0, 500));
+    // Extract search terms from title (prioritized) and content keywords (frequency-based)
+    const titleTerms = extractSearchTerms(pageTitle, 8);
+    const contentKeywords = extractKeywords(pageContent, 12);
 
-    // Combine with title terms weighted more heavily (repeated)
-    const searchQuery = `${titleTerms} ${titleTerms} ${contentTerms}`.trim();
+    console.log(`🔍 [RELATED_V2] Title terms: "${titleTerms}"`);
+    console.log(`🔍 [RELATED_V2] Content keywords: [${contentKeywords.join(', ')}]`);
+
+    // Build a more effective search query:
+    // - Title terms appear twice (higher weight)
+    // - Content keywords from frequency analysis
+    // - Join keywords for phrase-like matching
+    const searchQuery = [
+      titleTerms,
+      titleTerms, // Repeat for higher weight
+      contentKeywords.join(' ')
+    ].filter(Boolean).join(' ').trim();
 
     const client = getSearchClient();
     const indexName = getAlgoliaIndexName(ALGOLIA_INDICES.PAGES);

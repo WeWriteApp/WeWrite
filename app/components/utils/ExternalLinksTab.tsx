@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, Loader2, Globe, Link, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import PillLink from './PillLink';
+import EmptyState from '../ui/EmptyState';
 import ExternalLinkPreviewModal from '../ui/ExternalLinkPreviewModal';
 
 interface ExternalLinkData {
@@ -123,15 +124,12 @@ export default function ExternalLinksTab({
 
   if (!externalLinks || externalLinks.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">
-          No external links found
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {username} hasn't added any external links to their pages yet.
-        </p>
-      </div>
+      <EmptyState
+        icon={Globe}
+        title="No external links found"
+        description={`${username} hasn't added any external links to their pages yet.`}
+        size="lg"
+      />
     );
   }
 

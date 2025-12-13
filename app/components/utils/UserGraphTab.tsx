@@ -29,6 +29,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { X, Link2, FileText, ArrowUp, ArrowDown, Loader2, Network, Share2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
+import EmptyState from '../ui/EmptyState';
 import { Button } from '../ui/button';
 import SubscriptionGate from '../subscription/SubscriptionGate';
 import { PillLink } from './PillLink';
@@ -196,9 +197,12 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
 
   if (nodes.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32 text-muted-foreground">
-        <p>No connected pages found for {username}</p>
-      </div>
+      <EmptyState
+        icon={Network}
+        title="No connected pages"
+        description={`${username} doesn't have any pages with connections yet. Pages become connected when they link to each other.`}
+        size="lg"
+      />
     );
   }
 
