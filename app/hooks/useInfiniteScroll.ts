@@ -165,27 +165,47 @@ export function useInfiniteScrollWithLoadMore({
   const [internalLoadingMore, setInternalLoadingMore] = useState(false);
   const targetRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  // Track if we've already triggered a load for the current intersection
+  const hasTriggeredRef = useRef(false);
 
   // Use external loading state if provided, otherwise use internal state
   const loadingMore = isLoading !== undefined ? isLoading : internalLoadingMore;
 
   const loadMore = useCallback(() => {
-    if (!hasMore || loadingMore) return;
+    if (!hasMore || loadingMore || hasTriggeredRef.current) {
+      console.log('📄 InfiniteScroll: Skipping load more', { hasMore, loadingMore, hasTriggered: hasTriggeredRef.current });
+      return;
+    }
+
+    console.log('📄 InfiniteScroll: Triggering load more');
+    hasTriggeredRef.current = true;
 
     // Only set internal state if not using external loading state
     if (isLoading === undefined) {
       setInternalLoadingMore(true);
-      // Reset loading state after a reasonable delay to prevent rapid calls
-      setTimeout(() => setInternalLoadingMore(false), 2000);
     }
 
     onLoadMore();
   }, [hasMore, loadingMore, onLoadMore, isLoading]);
 
+  // Reset the trigger flag when loading completes (external state changes from true to false)
+  useEffect(() => {
+    if (!loadingMore && hasTriggeredRef.current) {
+      // Small delay before allowing another trigger to prevent rapid re-triggers
+      const timeout = setTimeout(() => {
+        console.log('📄 InfiniteScroll: Resetting trigger flag');
+        hasTriggeredRef.current = false;
+        // Also reset internal loading state
+        setInternalLoadingMore(false);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [loadingMore]);
+
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const [entry] = entries;
-      if (entry.isIntersecting && hasMore && !loadingMore) {
+      if (entry.isIntersecting && hasMore && !loadingMore && !hasTriggeredRef.current) {
         loadMore();
       }
     },

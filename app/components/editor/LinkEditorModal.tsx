@@ -360,6 +360,22 @@ export default function LinkEditorModal({
 
     const linkType = isUserLink ? 'user' : (showAuthor ? 'compound' : 'page');
 
+    // Resolve author data - check page first, then editingLink data, then current user
+    let resolvedAuthorUsername = page.username;
+    let resolvedAuthorUserId = page.userId;
+
+    // If no author data from selected page, try editingLink data
+    if (!resolvedAuthorUsername && isEditing && editingLink?.data) {
+      resolvedAuthorUsername = editingLink.data.authorUsername || editingLink.data.username || editingLink.data.ownerUsername;
+      resolvedAuthorUserId = editingLink.data.authorUserId || editingLink.data.userId || editingLink.data.ownerId;
+    }
+
+    // Final fallback to current user if showAuthor is enabled but no author found
+    if (showAuthor && !resolvedAuthorUsername && user) {
+      resolvedAuthorUsername = user.username;
+      resolvedAuthorUserId = user.uid;
+    }
+
     const linkData = {
       type: linkType,
       pageId,
@@ -369,12 +385,12 @@ export default function LinkEditorModal({
       isCustomText: isCustomTextValue, // STANDARDIZED: Use only isCustomText for consistency
       customText: isCustomTextValue ? finalCustomText : undefined, // Set customText field
       showAuthor: isUserLink ? false : showAuthor,
-      authorUsername: isUserLink ? undefined : page.username,
-      authorUserId: isUserLink ? undefined : page.userId,
+      authorUsername: isUserLink ? undefined : resolvedAuthorUsername,
+      authorUserId: isUserLink ? undefined : resolvedAuthorUserId,
       // Include subscription data if available
-      authorTier: isUserLink ? undefined : page.tier,
-      authorSubscriptionStatus: isUserLink ? undefined : page.subscriptionStatus,
-      authorSubscriptionAmount: isUserLink ? undefined : page.subscriptionAmount,
+      authorTier: isUserLink ? undefined : (page.tier || editingLink?.data?.authorTier),
+      authorSubscriptionStatus: isUserLink ? undefined : (page.subscriptionStatus || editingLink?.data?.authorSubscriptionStatus),
+      authorSubscriptionAmount: isUserLink ? undefined : (page.subscriptionAmount || editingLink?.data?.authorSubscriptionAmount),
       isEditing,
       element: editingLink?.element,
       isNew: page.isNew,
@@ -398,7 +414,7 @@ export default function LinkEditorModal({
     });
 
     return linkData;
-  }, [showAuthor, customText, isEditing, editingLink]);
+  }, [showAuthor, customText, isEditing, editingLink, user]);
 
   // CRITICAL FIX: Memoize page selection to prevent React state errors
   const handlePageSelect = useCallback((page: any) => {
@@ -541,10 +557,13 @@ export default function LinkEditorModal({
         authorUserId = selectedPage.userId;
       } else if (isEditing && editingLink?.data) {
         // Use editing link data - check multiple possible fields
-        authorUsername = editingLink.data.authorUsername || editingLink.data.username;
-        authorUserId = editingLink.data.authorUserId || editingLink.data.userId;
-      } else {
-        // Fallback to current user
+        // Also fetch from page owner data if available
+        authorUsername = editingLink.data.authorUsername || editingLink.data.username || editingLink.data.ownerUsername;
+        authorUserId = editingLink.data.authorUserId || editingLink.data.userId || editingLink.data.ownerId;
+      }
+
+      // Final fallback: if showAuthor is toggled but no author data found, use current user
+      if (showAuthor && !authorUsername) {
         authorUsername = user?.username;
         authorUserId = user?.uid;
       }
@@ -726,10 +745,10 @@ export default function LinkEditorModal({
                 <Label className="text-sm font-medium text-foreground">
                   Search for pages
                 </Label>
-                {/* Simplified Current Link Input - Styled to match other form inputs */}
+                {/* Simplified Current Link Input - Styled to match wewrite-input */}
                 {isEditing && editingLink && editingLink.type !== 'external' ? (
                   <div className="mb-3">
-                    <div className="flex items-center gap-2 p-3 rounded-md bg-muted/40 border border-border/80 min-h-[40px] focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                    <div className="wewrite-input flex items-center gap-2 px-3 min-h-[40px]">
                       <PillLink
                         href={editingLink.data?.url || '#'}
                         isPublic={true}
@@ -994,7 +1013,7 @@ export default function LinkEditorModal({
       if (!open) {
         onClose();
       }
-    }}>
+    }} hashId="link-editor" analyticsId="link_editor">
       <DialogContent
         className="w-[95vw] max-w-2xl max-h-[90vh] overflow-hidden p-4 sm:p-6 transition-all duration-200 ease-out flex flex-col"
         tabIndex={-1}

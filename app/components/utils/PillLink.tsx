@@ -11,7 +11,7 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
 import Modal from "../ui/modal";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { Button } from "../ui/button";
-import { usePillStyle } from "../../contexts/PillStyleContext";
+import { usePillStyle, PILL_STYLES } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
 import PillLinkContextMenu from "./PillLinkContextMenu";
 import { getPageById } from "../../utils/apiClient";
@@ -324,7 +324,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         title="This page has been deleted. Click to see more options."
       >
         <Trash2 size={12} className="mr-1.5 flex-shrink-0" />
-        <span className="pill-text">{children || "deleted page"}</span>
+        <span className="pill-text truncate max-w-[300px]">{children || "deleted page"}</span>
       </span>
     );
   }
@@ -358,6 +358,15 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
       formattedDisplayTitle = formatPageTitle(displayTitle);
     }
   }
+
+  // Determine if this is a container style that needs truncation (filled/outline have visual boundaries)
+  // Text styles (text_only/underlined) can wrap naturally since they have no container
+  const isContainerStyle = pillStyle === PILL_STYLES.FILLED || pillStyle === PILL_STYLES.OUTLINE;
+
+  // Classes for the pill-text span based on style type
+  const pillTextClasses = isContainerStyle
+    ? 'pill-text truncate max-w-[300px]' // Container styles: single-line with ellipsis
+    : 'pill-text'; // Text styles: allow natural wrapping
 
   // Use different styling for suggestions vs normal pill links
   const baseStyles = isSuggestion
@@ -405,7 +414,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           data-pill-style={pillStyle}
           tabIndex={0}
         >
-          <span className="pill-text">{formattedDisplayTitle}</span>
+          <span className={pillTextClasses}>{formattedDisplayTitle}</span>
           <ExternalLink size={14} className="flex-shrink-0" />
           {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -506,7 +515,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         }}
       >
         {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
-        <span className="pill-text">{formattedDisplayTitle}</span>
+        <span className={pillTextClasses}>{formattedDisplayTitle}</span>
         {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
       </a>
 

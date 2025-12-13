@@ -26,6 +26,7 @@ import ExternalLinksTab from './ExternalLinksTab';
 import UserGraphTab from './UserGraphTab';
 import UserMapTab from './UserMapTab';
 import TimelineSection from '../timeline/TimelineSection';
+import { useTabNavigation } from '../../hooks/useTabNavigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,21 +104,15 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
   );
 };
 
+// Valid tabs for user profile
+const VALID_PROFILE_TABS = ["bio", "pages", "recent-edits", "timeline", "graph", "map", "external-links"];
+
 export default function UserProfileTabs({ profile }) {
-  // Initialize activeTab from URL hash if available, otherwise use default
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.slice(1);
-      // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "recent-edits", "timeline", "graph", "map", "external-links"];
-      console.log('🗺️ UserProfileTabs: Initializing with hash:', hash, 'valid:', basicValidTabs.includes(hash));
-      if (hash && basicValidTabs.includes(hash)) {
-        console.log('🗺️ UserProfileTabs: Setting initial activeTab to:', hash);
-        return hash;
-      }
-    }
-    console.log('🗺️ UserProfileTabs: Setting initial activeTab to default: bio');
-    return "bio"; // Default tab
+  // Use query param based tab navigation (migrates from old hash-based URLs)
+  const { activeTab, setActiveTab: setActiveTabFromHook } = useTabNavigation({
+    defaultTab: 'bio',
+    validTabs: VALID_PROFILE_TABS,
+    migrateFromHash: true, // Handle old #tab URLs gracefully
   });
 
   console.log('🗺️ UserProfileTabs: Current activeTab state:', activeTab);
@@ -269,26 +264,9 @@ export default function UserProfileTabs({ profile }) {
     return tabs;
   }, [isCurrentUser]);
 
-  // Handle browser navigation (back/forward) for hash-based tab navigation
-  React.useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash && visibleTabs.includes(hash) && hash !== activeTab) {
-        setActiveTab(hash);
-      } else if (!hash && activeTab !== "bio") {
-        // If no hash, default to bio tab
-        setActiveTab("bio");
-      }
-    };
-
-    // Listen for hash changes (browser back/forward)
-    window.addEventListener('hashchange', handleHashChange);
-
-    // Also check on mount in case the component was rendered with a hash
-    handleHashChange();
-
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [visibleTabs, activeTab]);
+  // Tab navigation is now handled by useTabNavigation hook
+  // which uses query params (?tab=) instead of hash (#tab)
+  // This allows tabs and drawers to coexist: /user/123?tab=graph#checkout
 
   // Function to scroll the selected tab into view
   const scrollTabIntoView = (tabValue) => {
@@ -353,15 +331,10 @@ export default function UserProfileTabs({ profile }) {
       });
     }
 
-    // Update URL hash
-    if (typeof window !== 'undefined') {
-      window.location.hash = newTab;
-      console.log('🗺️ UserProfileTabs: Updated URL hash to:', newTab);
-    }
+    // Use the hook to update tab (which updates query param)
+    setActiveTabFromHook(newTab);
+    console.log('🗺️ UserProfileTabs: Updated URL to ?tab=' + newTab);
 
-    // Set active tab immediately
-    console.log('🗺️ UserProfileTabs: Setting activeTab to:', newTab);
-    setActiveTab(newTab);
     scrollTabIntoView(newTab);
   };
 
@@ -439,7 +412,6 @@ export default function UserProfileTabs({ profile }) {
         defaultValue="bio"
         value={activeTab}
         onValueChange={handleTabChange}
-        urlNavigation="hash"
         className="w-full"
       >
         <div id="profile-tabs-header" className="relative border-b border-neutral-30 mb-4 z-10">
@@ -500,11 +472,6 @@ export default function UserProfileTabs({ profile }) {
                 value="map"
                 data-value="map"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-                onClick={() => {
-                  console.log('🗺️ UserProfileTabs: Map tab clicked! Current activeTab:', activeTab);
-                  setActiveTab('map');
-                  console.log('🗺️ UserProfileTabs: Map tab setActiveTab called with "map"');
-                }}
               >
                 <MapPin className="h-4 w-4" />
                 <span>Map</span>

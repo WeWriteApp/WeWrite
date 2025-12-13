@@ -7,7 +7,115 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "../../lib/utils"
 
-const Dialog = DialogPrimitive.Root
+/**
+ * Custom Dialog Root that adds:
+ * - URL hash tracking (optional hashId prop) - uses #dialog-{hashId} format
+ * - Analytics tracking (optional analyticsId prop)
+ */
+interface DialogProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> {
+  /** Hash ID to add to URL when dialog is open (e.g., "link-editor" -> #dialog-link-editor) */
+  hashId?: string
+  /** Analytics ID for tracking dialog open/close events */
+  analyticsId?: string
+}
+
+const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
+  ({ hashId, analyticsId, open, onOpenChange, children, ...props }, ref) => {
+    // Track previous hash to restore on close
+    const previousHashRef = React.useRef<string>('')
+    // Track if we've already checked the initial hash
+    const hasCheckedInitialHash = React.useRef(false)
+
+    // Generate full hash with dialog- prefix to distinguish from drawer hashes
+    const fullHashId = hashId ? `dialog-${hashId}` : undefined
+
+    // Check if URL hash matches on mount and open dialog if so
+    React.useEffect(() => {
+      if (typeof window === 'undefined' || !fullHashId || hasCheckedInitialHash.current) return
+
+      hasCheckedInitialHash.current = true
+
+      // Check if current URL has the matching hash
+      const currentHash = window.location.hash.replace('#', '')
+      if (currentHash === fullHashId && !open) {
+        // URL has the hash but dialog is closed - open it
+        onOpenChange?.(true)
+      }
+    }, [fullHashId, open, onOpenChange])
+
+    // Handle URL hash and analytics
+    React.useEffect(() => {
+      if (typeof window === 'undefined') return
+
+      if (open) {
+        // Store current hash before changing
+        previousHashRef.current = window.location.hash
+
+        // Set hash if provided
+        if (fullHashId) {
+          const newHash = `#${fullHashId}`
+          // Use replaceState to avoid adding to history
+          window.history.replaceState(null, '', newHash)
+        }
+
+        // Track analytics
+        if (analyticsId) {
+          try {
+            const { getAnalyticsService } = require('../../utils/analytics-service')
+            const analytics = getAnalyticsService()
+            analytics.trackEvent({
+              category: 'dialog',
+              action: `dialog_opened`,
+              label: analyticsId
+            })
+          } catch (e) {
+            // Analytics not available
+          }
+        }
+      } else if (previousHashRef.current !== '' || fullHashId) {
+        // Restore hash when closing
+        if (fullHashId) {
+          const newUrl = previousHashRef.current || window.location.pathname + window.location.search
+          window.history.replaceState(null, '', newUrl)
+        }
+
+        // Track analytics
+        if (analyticsId) {
+          try {
+            const { getAnalyticsService } = require('../../utils/analytics-service')
+            const analytics = getAnalyticsService()
+            analytics.trackEvent({
+              category: 'dialog',
+              action: `dialog_closed`,
+              label: analyticsId
+            })
+          } catch (e) {
+            // Analytics not available
+          }
+        }
+      }
+
+      // Handle browser back button (popstate) to close dialog
+      const handlePopState = () => {
+        if (open && fullHashId && !window.location.hash.includes(fullHashId)) {
+          onOpenChange?.(false)
+        }
+      }
+
+      window.addEventListener('popstate', handlePopState)
+      return () => {
+        window.removeEventListener('popstate', handlePopState)
+      }
+    }, [open, fullHashId, analyticsId, onOpenChange])
+
+    return (
+      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props}>
+        {children}
+      </DialogPrimitive.Root>
+    )
+  }
+)
+Dialog.displayName = 'Dialog'
 
 const DialogTrigger = DialogPrimitive.Trigger
 

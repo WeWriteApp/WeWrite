@@ -3221,10 +3221,10 @@ button.bg-transparent[type] {
 
 
 
-/* COMPOUND LINK FIXES - Ensure proper separation and styling with inline-block layout */
+/* COMPOUND LINK FIXES - Ensure proper inline alignment with flexbox */
 .compound-link-container {
-  display: inline-block !important;
-  vertical-align: baseline !important;
+  display: inline-flex !important;
+  align-items: center !important;
   white-space: nowrap !important;
 }
 
@@ -3234,16 +3234,12 @@ button.bg-transparent[type] {
   margin-left: 0.125rem !important;
   margin-right: 0.125rem !important;
   border-radius: 0.5rem !important; /* Maintain individual pill border radius */
-  display: inline-block !important;
-  vertical-align: baseline !important;
 }
 
 /* Ensure compound link "by" text is properly spaced and styled */
 .compound-link-container > .text-muted-foreground {
   margin: 0 0.125rem !important;
   padding: 0 !important;
-  display: inline !important;
-  vertical-align: baseline !important;
 }
 
 /* REMOVED: Legacy contentEditable styles - using Slate.js now */

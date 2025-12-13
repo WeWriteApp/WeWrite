@@ -10,6 +10,26 @@
 - **Immediate Updates**: Changes to link text must appear immediately in both editor and view modes
 - **Line Numbers**: Editor must display line numbers to help users understand line manipulation in dense mode
 
+### Long Title Truncation Requirements
+Links with long titles must handle overflow appropriately based on their visual style:
+
+**Container Styles (filled, outline):**
+- Must truncate to single line with ellipsis (`...`)
+- These styles have visual boundaries (background color, border) that define a container
+- Long text breaking across lines would distort the pill shape
+- Apply `max-width`, `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`
+
+**Text Styles (text_only, underlined):**
+- May wrap across multiple lines naturally
+- These styles have no visual container/boundary
+- Wrapping text behaves like normal inline text
+- Do NOT apply truncation - allow natural text flow
+
+**Implementation:**
+- The `.pill-text` class within PillLink applies truncation conditionally
+- Container styles use `truncate` (Tailwind) or equivalent CSS
+- Text styles allow `white-space: normal` for natural wrapping
+
 ### User Interaction Requirements
 - **Toggle Switch**: Users must be able to enable/disable custom text with a simple toggle switch
 - **Input Field Behavior**: When custom text is enabled, input field must appear with current custom text pre-populated

@@ -105,28 +105,24 @@ a[data-user-id]::before {
    COMPOUND LINK STYLING
    ============================================================================ */
 
-/* Compound link container */
+/* Compound link container - use inline-flex for proper alignment */
 .compound-link-container {
-  display: inline-block;
-  vertical-align: baseline;
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
 }
 
 /* Compound link parts */
 .compound-link-container .page-portion,
 .compound-link-container .author-portion {
-  display: inline-block;
-  vertical-align: baseline;
   margin: 0 0.125rem;
 }
 
 /* "by" text in compound links */
 .compound-link-container .text-muted-foreground {
-  display: inline;
   margin: 0 0.125rem;
   padding: 0;
   white-space: nowrap;
-  vertical-align: baseline;
 }
 
 /* ============================================================================

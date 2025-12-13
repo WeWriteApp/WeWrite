@@ -360,10 +360,21 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
       const formattedHref = href.startsWith('/') ? href : `/${pageId}`;
 
       // Render as inline content matching regular pill link appearance
+      // Use inline-flex to properly align all elements on the same baseline
+      const compoundWrapperProps = hasSlateAttributes
+        ? {
+            ...attributes,
+            contentEditable: false,
+            style: { userSelect: 'none' } as React.CSSProperties
+          }
+        : {
+            style: { userSelect: 'none' } as React.CSSProperties
+          };
+
       return (
         <span
-          {...wrapperProps}
-          className="compound-link-container inline"
+          {...compoundWrapperProps}
+          className="compound-link-container inline-flex items-center"
         >
           <PillLink
             href={formattedHref}
@@ -380,6 +391,8 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
             href={`/user/${validatedNode.authorUserId}`}
             isPublic={true}
             className="user-link"
+            isEditing={isEditing}
+            onEditLink={isEditing ? onEditLink : undefined}
           >
             <span className="inline-flex items-center gap-1">
               {cleanUsername || 'Loading...'}
