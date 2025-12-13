@@ -233,6 +233,12 @@ const SearchPage = React.memo(() => {
         console.log('Initial search completed successfully');
         hasPerformedInitialSearch.current = true;
       }).catch((error) => {
+        // Ignore AbortError - it's expected when a new search cancels this one
+        if (error?.name === 'AbortError') {
+          console.log('Initial search aborted (expected if user started typing)');
+          return;
+        }
+
         console.error('Initial search failed, attempt', initialSearchAttempts.current, ':', error);
 
         // If we haven't reached max attempts, try again after a short delay
@@ -373,9 +379,9 @@ const SearchPage = React.memo(() => {
     const shareTitle = searchTerm
       ? `WeWrite Search: "${searchTerm}"`
       : "WeWrite Search";
-    const shareText = searchTerm
-      ? `Check out these search results for "${searchTerm}" on WeWrite`
-      : "Check out WeWrite search";
+    // Note: We intentionally don't include 'text' in the share payload
+    // because many apps concatenate text+url, which pollutes the search query
+    // when the link is opened
 
     // Get analytics service
     const analytics = getAnalyticsService();
@@ -392,7 +398,6 @@ const SearchPage = React.memo(() => {
     if (navigator.share) {
       navigator.share({
         title: shareTitle,
-        text: shareText,
         url: url.toString()
       })
       .then(() => {

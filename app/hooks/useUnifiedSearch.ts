@@ -283,20 +283,26 @@ export const useUnifiedSearch = (
       });
 
     } catch (error) {
+      // AbortError is expected when a new search cancels an old one - don't treat as error
       if (error.name === 'AbortError') {
-        console.log('Search aborted:', trimmedSearchTerm);
+        console.log('Search aborted (expected behavior):', trimmedSearchTerm);
+        // Don't set error state for AbortError - this is normal during typing
         return Promise.resolve();
       }
-      
+
       console.error('Error in unified search:', error);
       setError(error.message || 'Search failed');
       setResults({ pages: [], users: [] });
       setSearchStats({});
-      
+
       // Re-throw for caller error handling
       throw error;
     } finally {
-      setIsLoading(false);
+      // Only set loading to false if the request wasn't aborted
+      // (aborted requests will be replaced by a new search that handles its own loading state)
+      if (!abortControllerRef.current?.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [generateCacheKey, getCachedResults, setCachedResults, results.pages.length]);
 

@@ -513,6 +513,34 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       console.error('⚠️ [VERSION CLIENT] Cache invalidation failed (non-fatal):', cacheError);
     }
 
+    // Sync to Algolia for real-time search updates
+    try {
+      const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
+
+      // Get the page data for Algolia sync
+      const pageRefForSync = doc(db, getCollectionName("pages"), pageId);
+      const pageSyncSnap = await getDoc(pageRefForSync);
+
+      if (pageSyncSnap.exists()) {
+        const pageSyncData = pageSyncSnap.data();
+        await syncPageToAlgolia({
+          pageId,
+          title: pageSyncData.title || '',
+          content: contentString,
+          authorId: data.userId,
+          authorUsername: data.username || pageSyncData.username || '',
+          isPublic: pageSyncData.isPublic ?? true,
+          alternativeTitles: pageSyncData.alternativeTitles || [],
+          lastModified: now,
+          createdAt: pageSyncData.createdAt,
+        });
+        console.log('✅ VERSION: Algolia sync completed');
+      }
+    } catch (algoliaError) {
+      // Don't fail the save if Algolia sync fails
+      console.error('⚠️ VERSION: Algolia sync failed (non-fatal):', algoliaError);
+    }
+
     console.log("✅ VERSION: Successfully saved new version and updated page");
     return {
       success: true,

@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
+import { ErrorCard } from "../ui/ErrorCard";
 import { getBatchUserData } from '../../utils/apiDeduplication';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 import PerformanceMonitor from '../utils/PerformanceMonitor';
@@ -153,26 +154,25 @@ const SearchResultsDisplay = React.memo(({
       </div>
 
       <div className="space-y-6">
-        {/* Error State */}
-        {!isLoading && error && (
-          <div className="text-center py-8">
-            <p className="text-destructive mb-2">Search error occurred</p>
-            <p className="text-sm text-muted-foreground mb-4">{error}</p>
-            <div className="text-xs text-muted-foreground/60 bg-muted/30 rounded-md p-3 max-w-md mx-auto">
-              <p className="font-mono break-all">
-                Query: "{query}" | Time: {new Date().toISOString()}
-              </p>
-              <button
-                onClick={() => {
-                  const errorDetails = `Search Error Report\n-------------------\nQuery: ${query}\nError: ${error}\nTimestamp: ${new Date().toISOString()}\nUser Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'}`;
-                  navigator.clipboard?.writeText(errorDetails);
-                }}
-                className="mt-2 text-primary hover:underline"
-              >
-                Copy error details for support
-              </button>
-            </div>
-          </div>
+        {/* Error State - ignore AbortError as it's expected behavior during typing */}
+        {!isLoading && error && !error.toLowerCase().includes('abort') && (
+          <ErrorCard
+            title="Search failed"
+            message="We couldn't complete your search. Please try again."
+            error={error}
+            onRetry={() => {
+              // Trigger a retry by clearing and re-searching
+              if (typeof window !== 'undefined') {
+                const urlParams = new URLSearchParams(window.location.search);
+                const q = urlParams.get('q');
+                if (q) {
+                  window.location.reload();
+                }
+              }
+            }}
+            retryLabel="Retry Search"
+            className="max-w-md mx-auto"
+          />
         )}
 
         {/* Loading State */}

@@ -294,6 +294,30 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
         }
 
+        // Sync to Algolia for real-time search updates
+        try {
+          const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
+          const contentString = typeof versionData.content === 'string'
+            ? versionData.content
+            : JSON.stringify(versionData.content);
+
+          await syncPageToAlgolia({
+            pageId: pageRef.id,
+            title: pageData.title,
+            content: contentString,
+            authorId: data.userId,
+            authorUsername: pageData.username || '',
+            isPublic: pageData.isPublic ?? true,
+            alternativeTitles: [],
+            lastModified: now,
+            createdAt: now,
+          });
+          console.log('✅ Algolia sync completed for new page');
+        } catch (algoliaError) {
+          // Don't fail page creation if Algolia sync fails
+          console.error('⚠️ Algolia sync failed (non-fatal):', algoliaError);
+        }
+
         return pageRef.id;
       } catch (versionError) {
         console.error("Error creating version:", versionError);
