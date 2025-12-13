@@ -60,10 +60,11 @@ function debounce(func: (...args: any[]) => void, wait: number, immediate = fals
   return debounced;
 }
 
-// Simple search input with button - no automatic searching
-const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
+// Real-time search input - searches as you type with debouncing
+const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: boolean }>(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder, isLoading }) => {
   const [inputValue, setInputValue] = useState(initialValue || '');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update input value when initialValue changes (for recent search selection)
   useEffect(() => {
@@ -82,41 +83,58 @@ const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onCl
     }
   }, [autoFocus]);
 
-  // Simple input change handler - ONLY updates input state, NO search logic
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, []);
 
-  // Handle search button click or Enter key
-  const handleSearch = useCallback(() => {
-    if (onSearch) {
-      onSearch(inputValue);
+  // Real-time input change handler with debouncing
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+
+    // Clear existing debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Debounce the search - wait 200ms after user stops typing
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (onSearch) {
+        onSearch(newValue);
+      }
+    }, 200);
+  }, [onSearch]);
+
+  // Handle form submission (Enter key) - immediate search
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    // Clear debounce and search immediately
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
     if (onSubmit) {
       onSubmit(inputValue);
+    } else if (onSearch) {
+      onSearch(inputValue);
     }
   }, [inputValue, onSearch, onSubmit]);
 
-  // Handle form submission (Enter key)
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    handleSearch();
-  }, [handleSearch]);
-
   // Handle clear button
   const handleClear = useCallback(() => {
+    // Clear debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
     setInputValue("");
     if (onClear) {
       onClear();
     }
   }, [onClear]);
-
-  // Handle save button
-  const handleSave = useCallback(() => {
-    if (onSave && inputValue.trim()) {
-      onSave(inputValue.trim());
-    }
-  }, [inputValue, onSave]);
 
   return (
     <form onSubmit={handleSubmit} className="mb-8">
@@ -128,14 +146,15 @@ const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onCl
           value={inputValue}
           onChange={handleInputChange}
           leftIcon={<Search className="h-5 w-5" />}
-          className="w-full pr-24"
+          className="w-full pr-12"
           autoComplete="off"
         />
 
-        {/* Right side buttons */}
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1 z-20">
-          {/* Clear button */}
-          {inputValue.trim() && (
+        {/* Right side - loading indicator or clear button */}
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 gap-1 z-20">
+          {isLoading ? (
+            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+          ) : inputValue.trim() ? (
             <button
               type="button"
               onClick={handleClear}
@@ -144,17 +163,7 @@ const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onCl
             >
               <X className="h-4 w-4" />
             </button>
-          )}
-
-          {/* Search button */}
-          <Button
-            type="submit"
-            size="sm"
-            className="h-8 px-3"
-            disabled={!inputValue.trim()}
-          >
-            Search
-          </Button>
+          ) : null}
         </div>
       </div>
     </form>
@@ -168,11 +177,12 @@ const SimpleSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onCl
     prevProps.onSearch === nextProps.onSearch &&
     prevProps.onClear === nextProps.onClear &&
     prevProps.onSave === nextProps.onSave &&
-    prevProps.onSubmit === nextProps.onSubmit
+    prevProps.onSubmit === nextProps.onSubmit &&
+    prevProps.isLoading === nextProps.isLoading
   );
 });
 
-SimpleSearchInput.displayName = 'SimpleSearchInput';
+RealtimeSearchInput.displayName = 'RealtimeSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
@@ -239,25 +249,27 @@ const SearchPage = React.memo(() => {
     }
   }, [initialQuery, performSearch, userId]); // Removed authLoading dependency
 
-  // Search handler - simple and direct, no debouncing needed
+  // Search handler - real-time search as user types
   const handleSearch = useCallback((searchTerm) => {
-    // Perform search immediately when user clicks search or presses enter
+    // Perform search (already debounced by the input component)
     performSearch(searchTerm);
 
-    // Handle side effects
-    if (searchTerm && searchTerm.trim()) {
-      // Save recent search
-      addRecentSearchDebounced(searchTerm.trim(), userId, 2000);
+    // Handle side effects - save recent search after a delay (only for meaningful searches)
+    if (searchTerm && searchTerm.trim() && searchTerm.trim().length >= 2) {
+      // Use longer debounce for recent search saving since user is still typing
+      addRecentSearchDebounced(searchTerm.trim(), userId, 3000);
     }
 
-    // Update URL to reflect the search query
-    const url = new URL(window.location);
-    if (searchTerm && searchTerm.trim()) {
-      url.searchParams.set('q', searchTerm.trim());
-    } else {
-      url.searchParams.delete('q');
+    // Update URL to reflect the search query (without triggering navigation)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location);
+      if (searchTerm && searchTerm.trim()) {
+        url.searchParams.set('q', searchTerm.trim());
+      } else {
+        url.searchParams.delete('q');
+      }
+      window.history.replaceState({}, '', url);
     }
-    window.history.replaceState({}, '', url);
   }, [performSearch, userId]);
 
   // Handle recent search selection - this will update the input and perform search
@@ -456,8 +468,8 @@ const SearchPage = React.memo(() => {
         <p className="text-muted-foreground">Find pages, users, and content across WeWrite</p>
       </div>
 
-      {/* Search Input Component - Simple with Button */}
-      <SimpleSearchInput
+      {/* Search Input Component - Real-time search as you type */}
+      <RealtimeSearchInput
         initialValue={initialQuery || currentQuery}
         onSearch={handleSearch}
         onClear={handleClear}
@@ -465,6 +477,7 @@ const SearchPage = React.memo(() => {
         onSubmit={handleSubmit}
         autoFocus={true}
         placeholder="Search for pages, users..."
+        isLoading={isLoading}
       />
 
       {/* Recent Searches - only show when no active search */}
