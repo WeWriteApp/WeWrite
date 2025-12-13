@@ -1,96 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import PillLink from "../utils/PillLink";
-import { Loader2, Info, Search } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "../ui/tooltip";
-import { useAuth } from '../../providers/AuthProvider';
-
-// Import related pages function with working algorithm
-const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageContent: string, linkedPageIds: string[] = [], limit: number = 10) => {
-  try {
-    const { collection, query, where, getDocs, limit: firestoreLimit } = await import('firebase/firestore');
-    const { db } = await import("../../firebase/config");
-    const { getCollectionName } = await import('../../utils/environmentConfig');
-
-    // Extract meaningful words from title and content
-    const extractMeaningfulWords = (text: string): string[] => {
-      if (!text) return [];
-
-      const stopWords = new Set([
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
-      ]);
-
-      return text
-        .toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .split(/\s+/)
-        .filter(word => word.length > 2 && !stopWords.has(word))
-        .slice(0, 40); // Limit to top 40 words for better matching
-    };
-
-    const titleWords = extractMeaningfulWords(pageTitle);
-    const contentWords = pageContent ? extractMeaningfulWords(pageContent.substring(0, 1000)) : [];
-    const allWords = [...new Set([...titleWords, ...contentWords])];
-
-    if (allWords.length === 0) {
-      return [];
-    }
-
-    // Query for pages
-    const pagesQuery = query(
-      collection(db, getCollectionName('pages')),
-      where('isPublic', '==', true),
-      firestoreLimit(200)
-    );
-
-    const snapshot = await getDocs(pagesQuery);
-    const candidates: any[] = [];
-
-    snapshot.forEach(doc => {
-      const pageData = { id: doc.id, ...doc.data() };
-      if (pageData.id !== pageId && !linkedPageIds.includes(pageData.id) && !pageData.deleted && pageData.title) {
-        candidates.push(pageData);
-      }
-    });
-
-    // Score candidates based on word overlap
-    const scoredCandidates = Array.isArray(candidates) ? candidates.map(candidate => {
-      const candidateTitle = candidate.title || '';
-      const candidateContent = candidate.content || '';
-
-      const candidateTitleWords = extractMeaningfulWords(candidateTitle);
-      const candidateContentWords = extractMeaningfulWords(candidateContent.substring(0, 1000));
-      const candidateAllWords = [...new Set([...candidateTitleWords, ...candidateContentWords])];
-
-      // Calculate overlap score
-      const titleOverlap = titleWords.filter(word => candidateTitleWords.includes(word)).length;
-      const contentOverlap = allWords.filter(word => candidateAllWords.includes(word)).length;
-
-      const score = (titleOverlap * 3) + contentOverlap; // Weight title matches higher
-
-      return {
-        ...candidate,
-        similarity: Math.min(score / Math.max(allWords.length, 1), 1),
-        score
-      };
-    }) : [];
-
-    return scoredCandidates
-      .filter(candidate => candidate.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-
-  } catch (error) {
-    console.error('Error getting related pages:', error);
-    return [];
-  }
-};
+import { PillLink } from "../utils/PillLink";
+import { Loader2, User, Users } from 'lucide-react';
+import { useRelatedPagesV2, type RelatedPage } from '../../hooks/useRelatedPagesV2';
 
 interface RelatedPagesSectionProps {
   page: {
@@ -98,142 +11,112 @@ interface RelatedPagesSectionProps {
     title: string;
     content?: string;
     username?: string;
+    userId?: string;
     isPublic?: boolean;
   };
   linkedPageIds?: string[];
 }
 
+// Sub-component for rendering a list of related pages
+function RelatedPagesList({ pages, emptyMessage }: { pages: RelatedPage[]; emptyMessage: string }) {
+  if (pages.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground italic">{emptyMessage}</p>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {pages.map((relatedPage) => (
+        <PillLink key={relatedPage.id} href={`/${relatedPage.id}`}>
+          {relatedPage.title || "Untitled"}
+        </PillLink>
+      ))}
+    </div>
+  );
+}
+
 export default function RelatedPagesSection({ page, linkedPageIds = [] }: RelatedPagesSectionProps) {
-  const [relatedPages, setRelatedPages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { user } = useAuth();
+
+  // Use the v2 hook with Algolia-powered search
+  const {
+    relatedByOthers,
+    relatedByAuthor,
+    authorUsername,
+    loading,
+    error,
+  } = useRelatedPagesV2({
+    pageId: page?.id || '',
+    pageTitle: page?.title,
+    pageContent: typeof page?.content === 'string' ? page.content : JSON.stringify(page?.content || ''),
+    authorId: page?.userId,
+    authorUsername: page?.username,
+    excludePageIds: linkedPageIds,
+    limitByOthers: 8,
+    limitByAuthor: 5,
+  });
 
   // Set mounted state
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fetch related pages from API
-  useEffect(() => {
-    if (!page?.id || !mounted) return;
-
-    const fetchRelatedPages = async () => {
-      try {
-        setLoading(true);
-        console.log('📄 RelatedPagesSection: Fetching related pages for:', {
-          pageId: page.id,
-          pageTitle: page.title,
-          hasContent: !!page.content,
-          linkedPageIds: linkedPageIds?.length || 0
-        });
-
-        // Build API URL with parameters
-        const params = new URLSearchParams({
-          pageId: page.id,
-          pageTitle: page.title || '',
-          pageContent: String(page.content || '').substring(0, 2000), // Limit content length for URL
-          limit: '10'
-        });
-
-        if (linkedPageIds && linkedPageIds.length > 0) {
-          params.set('linkedPageIds', linkedPageIds.join(','));
-        }
-
-        if (user?.username) {
-          params.set('excludeUsername', user.username);
-        }
-
-        if (user?.uid) {
-          params.set('excludeUserId', user.uid);
-        }
-
-        const response = await fetch(`/api/related-pages?${params.toString()}`);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('📄 RelatedPagesSection: Related pages found:', data.relatedPages?.length || 0);
-        setRelatedPages(data.relatedPages || []);
-      } catch (error) {
-        console.error('Error fetching related pages:', error);
-        setRelatedPages([]);
-      }
-      setLoading(false);
-    };
-
-    fetchRelatedPages();
-  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted, user?.username, user?.uid]);
-
   if (!mounted) {
     return null;
   }
 
-  // Don't render the card if no related pages found (and not loading)
-  if (!loading && (!relatedPages || relatedPages.length === 0)) {
+  // Don't render if no results and not loading
+  const hasAnyResults = relatedByOthers.length > 0 || relatedByAuthor.length > 0;
+  if (!loading && !hasAnyResults) {
     return null;
   }
 
   return (
-    <div>
+    <div className="space-y-4">
+      {/* Related Pages by Others */}
       <div className="wewrite-card">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <Search className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">
-            Related pages by others
-          </h3>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">Pages with similar content or topics</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Related pages by others</h3>
         </div>
 
-        {/* Content */}
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Loading related pages by others...</span>
+            <span>Finding related content...</span>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {relatedPages.map((relatedPage) => (
-              <div key={relatedPage.id} className="flex items-center">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <PillLink href={`/${relatedPage.id}`}>
-                        {relatedPage.title || "Untitled"}
-                      </PillLink>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs space-y-1">
-                        <div className="font-medium">{relatedPage.title || "Untitled"}</div>
-                        {relatedPage.username && (
-                          <div className="text-muted-foreground">by {relatedPage.username}</div>
-                        )}
-                        {relatedPage.similarity && (
-                          <div className="text-muted-foreground">
-                            {Math.round(relatedPage.similarity * 100)}% similar
-                          </div>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            ))}
-          </div>
+          <RelatedPagesList
+            pages={relatedByOthers}
+            emptyMessage="No related pages found"
+          />
         )}
       </div>
+
+      {/* More by Same Author */}
+      {(loading || relatedByAuthor.length > 0) && (
+        <div className="wewrite-card">
+          <div className="flex items-center gap-2 mb-3">
+            <User className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">
+              More by {authorUsername || page?.username || 'this author'}
+            </h3>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Loading author's pages...</span>
+            </div>
+          ) : (
+            <RelatedPagesList
+              pages={relatedByAuthor}
+              emptyMessage="No other public pages by this author"
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 interface UseTabNavigationOptions {
@@ -59,6 +59,11 @@ export function useTabNavigation({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+
+  // Track the last tab we set programmatically to avoid sync loops
+  const lastSetTabRef = useRef<string | null>(null);
+  const isInitializedRef = useRef(false);
 
   // Get tab from URL or use default
   const getTabFromUrl = useCallback((): string => {
@@ -103,19 +108,30 @@ export function useTabNavigation({
 
           // Remove the hash and set query param
           const newUrl = `${pathname}?${params.toString()}`;
-          router.replace(newUrl);
 
+          // Set state first, then update URL in a transition
           setActiveTabState(hash);
+          lastSetTabRef.current = hash;
+          startTransition(() => {
+            router.replace(newUrl);
+          });
           return;
         }
       }
     }
 
-    // Sync state with URL
+    // Sync state with URL, but skip if we just set this tab ourselves
     const urlTab = getTabFromUrl();
-    if (urlTab !== activeTab) {
+    if (urlTab !== activeTab && urlTab !== lastSetTabRef.current) {
       setActiveTabState(urlTab);
     }
+
+    // Clear the ref after sync to allow future URL-driven changes
+    if (lastSetTabRef.current === urlTab) {
+      lastSetTabRef.current = null;
+    }
+
+    isInitializedRef.current = true;
   }, [searchParams, pathname, migrateFromHash, paramName, defaultTab, validTabs, getTabFromUrl, activeTab, router]);
 
   // Handle browser back/forward
@@ -137,10 +153,18 @@ export function useTabNavigation({
       return;
     }
 
-    // Update state
+    // Skip if already on this tab
+    if (newTab === activeTab) {
+      return;
+    }
+
+    // Update state immediately for instant UI feedback
     setActiveTabState(newTab);
 
-    // Update URL
+    // Track that we're setting this tab to avoid sync loops
+    lastSetTabRef.current = newTab;
+
+    // Update URL in a transition to avoid flicker
     const params = new URLSearchParams(searchParams.toString());
 
     if (newTab === defaultTab) {
@@ -157,14 +181,17 @@ export function useTabNavigation({
       ? `${pathname}?${queryString}${hash}`
       : `${pathname}${hash}`;
 
-    if (replaceHistory) {
-      router.replace(newUrl, { scroll: false });
-    } else {
-      router.push(newUrl, { scroll: false });
-    }
+    // Use startTransition to prevent the URL update from causing a flicker
+    startTransition(() => {
+      if (replaceHistory) {
+        router.replace(newUrl, { scroll: false });
+      } else {
+        router.push(newUrl, { scroll: false });
+      }
+    });
 
     console.log(`[useTabNavigation] Tab changed to "${newTab}", URL: ${newUrl}`);
-  }, [searchParams, pathname, paramName, defaultTab, validTabs, replaceHistory, router]);
+  }, [searchParams, pathname, paramName, defaultTab, validTabs, replaceHistory, router, activeTab]);
 
   // Helper to check if a tab is active
   const isActiveTab = useCallback((tab: string): boolean => {

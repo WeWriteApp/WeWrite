@@ -124,7 +124,7 @@ export default function UserPage({ params }: UserPageProps) {
   }
 
   return (
-    <NavPageLayout>
+    <NavPageLayout reducedPaddingForLoggedOut>
       <PageProvider>
         <SingleProfileView profile={profile} />
       </PageProvider>

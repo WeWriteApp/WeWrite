@@ -2,6 +2,7 @@
 
 import React, { Suspense } from "react";
 import { RESPONSIVE_PADDING_CLASSES } from "../../constants/layout";
+import { useAuth } from "../../providers/AuthProvider";
 
 export interface NavPageLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,8 @@ export interface NavPageLayoutProps {
   loadingFallback?: React.ReactNode;
   /** @deprecated maxWidth is now controlled at SidebarLayout level. Use BREAKOUT_CLASSES for full-width carousels. */
   maxWidth?: string;
+  /** When true, reduces top padding for pages where logged-out users don't have a floating header */
+  reducedPaddingForLoggedOut?: boolean;
 }
 
 /**
@@ -31,8 +34,14 @@ export default function NavPageLayout({
   className = "",
   loading = false,
   loadingFallback,
-  maxWidth // deprecated but kept for backwards compatibility
+  maxWidth, // deprecated but kept for backwards compatibility
+  reducedPaddingForLoggedOut = false
 }: NavPageLayoutProps) {
+  const { user } = useAuth();
+
+  // For logged-out users on pages that opt-in, use reduced top padding (pt-6)
+  // since there's no floating financial header to clear
+  const topPaddingClass = reducedPaddingForLoggedOut && !user ? 'pt-6' : 'pt-24';
 
   const defaultLoadingFallback = (
     <div className="flex items-center justify-center min-h-[200px] w-full">
@@ -43,7 +52,7 @@ export default function NavPageLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Content area with padding - max-width is handled by SidebarLayout */}
-      <div className={`${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 pt-24 ${className}`}>
+      <div className={`${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 ${topPaddingClass} ${className}`}>
         {/* Content loads progressively below header */}
         {loading ? (
           loadingFallback || defaultLoadingFallback

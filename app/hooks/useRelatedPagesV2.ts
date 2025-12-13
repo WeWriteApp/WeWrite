@@ -1,0 +1,142 @@
+"use client";
+
+import { useState, useEffect, useCallback } from 'react';
+
+export interface RelatedPage {
+  id: string;
+  title: string;
+  username?: string;
+  authorId?: string;
+  lastModified?: any;
+  isPublic?: boolean;
+}
+
+export interface RelatedPagesV2Data {
+  relatedByOthers: RelatedPage[];
+  relatedByAuthor: RelatedPage[];
+  authorUsername: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface UseRelatedPagesV2Options {
+  pageId: string;
+  pageTitle?: string;
+  pageContent?: string;
+  authorId?: string;
+  authorUsername?: string;
+  excludePageIds?: string[];
+  limitByOthers?: number;
+  limitByAuthor?: number;
+}
+
+/**
+ * Hook to fetch related pages using Algolia-powered v2 API
+ * Returns both "related by others" and "more by same author" sections
+ */
+export function useRelatedPagesV2({
+  pageId,
+  pageTitle,
+  pageContent,
+  authorId,
+  authorUsername,
+  excludePageIds = [],
+  limitByOthers = 8,
+  limitByAuthor = 5,
+}: UseRelatedPagesV2Options): RelatedPagesV2Data & { refresh: () => void } {
+  const [relatedByOthers, setRelatedByOthers] = useState<RelatedPage[]>([]);
+  const [relatedByAuthor, setRelatedByAuthor] = useState<RelatedPage[]>([]);
+  const [resultAuthorUsername, setResultAuthorUsername] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const fetchRelatedPages = useCallback(async () => {
+    if (!pageId) {
+      setRelatedByOthers([]);
+      setRelatedByAuthor([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔍 [RELATED_V2] Fetching related pages for:', pageId);
+
+      const params = new URLSearchParams({
+        pageId,
+        limitByOthers: limitByOthers.toString(),
+        limitByAuthor: limitByAuthor.toString(),
+      });
+
+      if (pageTitle) {
+        params.append('pageTitle', pageTitle);
+      }
+
+      if (pageContent) {
+        // Send first 1000 chars for search context
+        params.append('pageContent', pageContent.substring(0, 1000));
+      }
+
+      if (authorId) {
+        params.append('authorId', authorId);
+      }
+
+      if (authorUsername) {
+        params.append('authorUsername', authorUsername);
+      }
+
+      if (excludePageIds.length > 0) {
+        params.append('excludePageIds', excludePageIds.join(','));
+      }
+
+      const response = await fetch(`/api/related-pages-v2?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔍 [RELATED_V2] API error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      console.log('🔍 [RELATED_V2] Results:', {
+        byOthers: data.relatedByOthers?.length || 0,
+        byAuthor: data.relatedByAuthor?.length || 0,
+        responseTime: data.responseTime,
+      });
+
+      setRelatedByOthers(data.relatedByOthers || []);
+      setRelatedByAuthor(data.relatedByAuthor || []);
+      setResultAuthorUsername(data.authorUsername || authorUsername || null);
+
+    } catch (err: any) {
+      console.error('🔍 [RELATED_V2] Error:', err);
+      setError(err.message);
+      setRelatedByOthers([]);
+      setRelatedByAuthor([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [pageId, pageTitle, pageContent, authorId, authorUsername, excludePageIds.join(','), limitByOthers, limitByAuthor, refreshTrigger]);
+
+  useEffect(() => {
+    fetchRelatedPages();
+  }, [fetchRelatedPages]);
+
+  const refresh = useCallback(() => {
+    console.log('🔄 [RELATED_V2] Manual refresh triggered');
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  return {
+    relatedByOthers,
+    relatedByAuthor,
+    authorUsername: resultAuthorUsername,
+    loading,
+    error,
+    refresh,
+  };
+}
