@@ -292,11 +292,11 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     // STEP 1: Search user's own pages with optimized query
     if (userId) {
       // MAJOR OPTIMIZATION: Reduced limit and server-side filtering
+      // Using equality query (deleted == false) is more efficient than inequality (deleted != true)
       const userQuery = query(
         collection(db, getCollectionName(COLLECTIONS.PAGES)),
         where('userId', '==', filterByUserId || userId),
-        where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
-        orderBy('deleted'), // Required for != queries
+        where('deleted', '==', false), // Equality query - more efficient than != true
         orderBy('lastModified', 'desc'),
         limit(isEmptySearch ? 50 : 100) // Reasonable limits - MAJOR OPTIMIZATION
       );
@@ -399,10 +399,10 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       const remainingSlots = (isEmptySearch ? 100 : 150) - allResults.length;
 
       // MAJOR OPTIMIZATION: Server-side filtering and reduced limits
+      // Using equality query (deleted == false) is more efficient than inequality (deleted != true)
       const pagesQuery = query(
         collection(db, getCollectionName(COLLECTIONS.PAGES)),
-        where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
-        orderBy('deleted'), // Required for != queries
+        where('deleted', '==', false), // Equality query - more efficient than != true
         orderBy('lastModified', 'desc'),
         limit(Math.min(remainingSlots * 2, isEmptySearch ? 100 : 200)) // Reasonable limits - MAJOR OPTIMIZATION
       );

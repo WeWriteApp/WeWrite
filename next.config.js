@@ -24,8 +24,8 @@ const nextConfig = {
     pagesBufferLength: 2,
   },
 
-  // Enable all source maps for debugging
-  productionBrowserSourceMaps: true,
+  // Disable source maps in production for security (use error tracking services instead)
+  productionBrowserSourceMaps: false,
 
   // Minimal webpack logging for development
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
@@ -174,7 +174,7 @@ const nextConfig = {
   // Maximum error details in production
   generateEtags: false,
   poweredByHeader: false,
-  compress: false, // Disable compression to see full error details
+  compress: true, // Enable gzip compression for ~70% smaller payloads
 }
 
 module.exports = nextConfig

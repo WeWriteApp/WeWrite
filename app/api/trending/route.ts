@@ -127,17 +127,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     // Get real 24-hour view data from pageViews collection
-    await Promise.all(trendingPages.map(async (page) => {
-      try {
-        const realViewData = await getRealPageViewData(db, page.id);
-        page.views24h = realViewData.total;
-        page.views = realViewData.total; // For trending, show 24h views as the main view count
-        page.hourlyViews = realViewData.hourly;
-      } catch (error) {
-        console.warn(`Failed to get real view data for page ${page.id}:`, error.message);
-        // Keep defaults: views24h = 0, hourlyViews = [], views = 0
+    // OPTIMIZATION: Batch fetch all pageViews documents in 2 reads instead of N*2 reads
+    const viewData = await getBatchPageViewData(db, trendingPages.map(p => p.id));
+
+    trendingPages.forEach((page) => {
+      const pageViewData = viewData.get(page.id);
+      if (pageViewData) {
+        page.views24h = pageViewData.total;
+        page.views = pageViewData.total; // For trending, show 24h views as the main view count
+        page.hourlyViews = pageViewData.hourly;
       }
-    }));
+      // Keep defaults if not found: views24h = 0, hourlyViews = [], views = 0
+    });
 
     // Note: User data (including usernames and subscription info) should be fetched
     // by the client using the standardized /api/users/batch endpoint.
@@ -176,7 +177,94 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-// Helper function to get real page view data from pageViews collection
+// OPTIMIZED: Batch fetch page view data for multiple pages
+// Reduces N*2 reads to just 2 reads (one for today, one for yesterday)
+async function getBatchPageViewData(db: any, pageIds: string[]): Promise<Map<string, PageViewData>> {
+  const result = new Map<string, PageViewData>();
+
+  if (pageIds.length === 0) return result;
+
+  try {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const currentHour = now.getHours();
+
+    // Build document IDs for batch retrieval
+    const todayDocIds = pageIds.map(id => `${id}_${todayStr}`);
+    const yesterdayDocIds = pageIds.map(id => `${id}_${yesterdayStr}`);
+
+    // Batch fetch using getAll (much more efficient than N individual reads)
+    const pageViewsCollection = db.collection(getCollectionName('pageViews'));
+    const todayRefs = todayDocIds.map(id => pageViewsCollection.doc(id));
+    const yesterdayRefs = yesterdayDocIds.map(id => pageViewsCollection.doc(id));
+
+    const [todayDocs, yesterdayDocs] = await Promise.all([
+      db.getAll(...todayRefs),
+      db.getAll(...yesterdayRefs)
+    ]);
+
+    // Build lookup maps
+    const todayDataMap = new Map();
+    const yesterdayDataMap = new Map();
+
+    todayDocs.forEach((doc, index) => {
+      if (doc.exists) {
+        todayDataMap.set(pageIds[index], doc.data());
+      }
+    });
+
+    yesterdayDocs.forEach((doc, index) => {
+      if (doc.exists) {
+        yesterdayDataMap.set(pageIds[index], doc.data());
+      }
+    });
+
+    // Process each page's view data
+    for (const pageId of pageIds) {
+      const hourlyViews = Array(24).fill(0);
+      let totalViews24h = 0;
+
+      const yesterdayData = yesterdayDataMap.get(pageId);
+      const todayData = todayDataMap.get(pageId);
+
+      // Add yesterday's hours that are within the last 24 hours
+      if (yesterdayData) {
+        for (let hour = currentHour + 1; hour < 24; hour++) {
+          const views = yesterdayData.hours?.[hour] || 0;
+          hourlyViews[hour - (currentHour + 1)] = views;
+          totalViews24h += views;
+        }
+      }
+
+      // Add today's hours up to current hour
+      if (todayData) {
+        for (let hour = 0; hour <= currentHour; hour++) {
+          const views = todayData.hours?.[hour] || 0;
+          hourlyViews[hour + (24 - (currentHour + 1))] = views;
+          totalViews24h += views;
+        }
+      }
+
+      result.set(pageId, {
+        total: totalViews24h,
+        hourly: hourlyViews
+      });
+    }
+
+    console.log(`🔥 [TRENDING_API] Batch fetched view data for ${pageIds.length} pages in 2 reads`);
+    return result;
+  } catch (error) {
+    console.warn(`Error batch fetching page view data:`, error.message);
+    // Return empty data for all pages
+    for (const pageId of pageIds) {
+      result.set(pageId, { total: 0, hourly: Array(24).fill(0) });
+    }
+    return result;
+  }
+}
+
+// Helper function to get real page view data from pageViews collection (kept for backwards compatibility)
 async function getRealPageViewData(db: any, pageId: string): Promise<PageViewData> {
   try {
     const now = new Date();

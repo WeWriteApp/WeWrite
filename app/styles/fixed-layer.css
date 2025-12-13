@@ -11,6 +11,9 @@
   /* Email banner height - set by EmailVerificationTopBanner component */
   --email-banner-height: 0px;
 
+  /* PWA banner height - set by PWABanner component */
+  --pwa-banner-height: 0px;
+
   /* Safe positioning - includes banner offset on desktop */
   --fixed-safe-top: 16px;
   --fixed-safe-bottom: max(env(safe-area-inset-bottom), 16px);
@@ -40,7 +43,7 @@
  */
 .fixed-header-sidebar-aware {
   position: fixed;
-  top: calc(12px + var(--email-banner-height, 0px));
+  top: calc(12px + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px));
   left: 12px;
   right: 12px;
   z-index: var(--z-fixed-header);
@@ -58,7 +61,7 @@
 @media (min-width: 1024px) {
   .lg\:fixed-header-sidebar-aware {
     position: fixed;
-    top: calc(12px + var(--email-banner-height, 0px));
+    top: calc(12px + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px));
     left: calc(var(--sidebar-content-offset) + 24px);
     right: 24px;
     z-index: var(--z-fixed-header);
@@ -80,7 +83,7 @@
 /* Main content spacing */
 @media (max-width: 767px) {
   main {
-    padding-top: calc(72px + var(--email-banner-height, 0px));
+    padding-top: calc(72px + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px));
     padding-bottom: 20px;
     transition: padding-top 300ms ease-in-out;
   }
@@ -88,7 +91,7 @@
 
 @media (min-width: 768px) {
   main {
-    padding-top: calc(72px + var(--email-banner-height, 0px));
+    padding-top: calc(72px + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px));
     transition: padding-top 300ms ease-in-out;
   }
 }

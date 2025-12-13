@@ -161,81 +161,69 @@ export async function GET(request: NextRequest) {
     }
 
     if (sortBy === 'lastModified' || sortBy === 'recently-edited') {
-      // CRITICAL FIX: Use proper lastModified index with deleted filter
-      // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
+      // OPTIMIZED: Use equality query (all pages now have deleted: false set on creation)
       actualSortField = 'lastModified';
       pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
-        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
-        .orderBy('deleted') // Required for != queries
-        .orderBy('lastModified', 'desc'); // Always use desc to avoid index issues
+        .where('deleted', '==', false) // More efficient equality query
+        .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        // For Firestore startAfter with orderBy, we need to pass the field values
-        // Since we're ordering by 'deleted' then 'lastModified', we need both values
-        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field value
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
       }
 
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     } else if (sortBy === 'createdAt' || sortBy === 'recently-created') {
-      // CRITICAL FIX: Use proper createdAt index that DOES exist!
-      // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
-      console.log('[my-pages API] CRITICAL FIX - Using proper createdAt index with deleted filter');
+      // OPTIMIZED: Use equality query (all pages now have deleted: false set on creation)
       actualSortField = 'createdAt';
       pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
-        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
-        .orderBy('deleted') // Required for != queries
-        .orderBy('createdAt', 'desc'); // Always use desc to avoid index issues
+        .where('deleted', '==', false) // More efficient equality query
+        .orderBy('createdAt', 'desc');
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        // For Firestore startAfter with orderBy, we need to pass the field values
-        // Since we're ordering by 'deleted' then 'createdAt', we need both values
-        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field value
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
       }
 
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     } else if (sortBy === 'title' || sortBy === 'alphabetical') {
-      // CRITICAL FIX: Use proper title index with deleted filter and correct direction
+      // OPTIMIZED: Use equality query (all pages now have deleted: false set on creation)
       actualSortField = 'title';
       const titleDirection = sortDirection === 'asc' ? 'asc' : 'desc';
       pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
-        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
-        .orderBy('deleted') // Required for != queries
-        .orderBy('title', titleDirection); // Use the requested direction
+        .where('deleted', '==', false) // More efficient equality query
+        .orderBy('title', titleDirection);
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        // For Firestore startAfter with orderBy, we need to pass the field values
-        // Since we're ordering by 'deleted' then 'title', we need both values
-        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field value
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
       }
 
       if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     } else {
-      // Fallback to lastModified with proper deleted filter
-      // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
+      // OPTIMIZED: Fallback using equality query
       actualSortField = 'lastModified (fallback)';
       pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
-        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
-        .orderBy('deleted') // Required for != queries
-        .orderBy('lastModified', 'desc'); // Always use desc to avoid index issues
+        .where('deleted', '==', false) // More efficient equality query
+        .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
       if (startAfterDoc) {
-        // For Firestore startAfter with orderBy, we need to pass the field values
-        // Since we're ordering by 'deleted' then 'lastModified', we need both values
-        pagesQuery = pagesQuery.startAfter(false, startAfterDoc);
+        // For Firestore startAfter with orderBy, we need to pass the field value
+        pagesQuery = pagesQuery.startAfter(startAfterDoc);
       }
 
       if (queryLimit !== null) {

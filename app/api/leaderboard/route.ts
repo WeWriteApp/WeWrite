@@ -2,6 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../firebase/admin';
 import admin from 'firebase-admin';
 
+// ==================== CACHING LAYER ====================
+// Cache leaderboard results to avoid expensive full-collection scans on every request
+// Leaderboard data is inherently tolerant of staleness (5-10 minute delay is acceptable)
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
+const leaderboardCache = new Map<string, CacheEntry<any>>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+const MAX_CACHE_ENTRIES = 100; // Prevent memory leak
+
+function getCacheKey(type: string, category: string, month: string, limit: number, isDev: boolean): string {
+  return `${type}:${category}:${month}:${limit}:${isDev}`;
+}
+
+function getFromCache<T>(key: string): T | null {
+  const entry = leaderboardCache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() > entry.expiresAt) {
+    leaderboardCache.delete(key);
+    return null;
+  }
+
+  return entry.data;
+}
+
+function setInCache<T>(key: string, data: T): void {
+  // Evict oldest entries if cache is full
+  if (leaderboardCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = leaderboardCache.keys().next().value;
+    if (oldestKey) leaderboardCache.delete(oldestKey);
+  }
+
+  leaderboardCache.set(key, {
+    data,
+    timestamp: Date.now(),
+    expiresAt: Date.now() + CACHE_TTL_MS
+  });
+}
+
 // Types for the month-based leaderboard system
 export type UserLeaderboardCategory = 'pages-created' | 'links-received' | 'sponsors-gained' | 'page-views';
 export type PageLeaderboardCategory = 'new-supporters' | 'most-replies' | 'most-views' | 'most-links';
@@ -636,7 +680,20 @@ export async function GET(request: NextRequest) {
   const { startDate, endDate } = getMonthDateRange(month);
   const isDev = process.env.NODE_ENV === 'development';
 
-  console.log(`📊 Fetching ${type} leaderboard: ${category} for ${month} (${startDate.toISOString()} - ${endDate.toISOString()})`);
+  // Check cache first to avoid expensive full-collection scans
+  const cacheKey = getCacheKey(type, category, month, limit, isDev);
+  const cachedResult = getFromCache<any>(cacheKey);
+
+  if (cachedResult) {
+    console.log(`📊 [CACHE HIT] Returning cached leaderboard: ${type}/${category} for ${month}`);
+    return NextResponse.json({
+      ...cachedResult,
+      cached: true,
+      cacheAge: Date.now() - (leaderboardCache.get(cacheKey)?.timestamp || 0)
+    });
+  }
+
+  console.log(`📊 [CACHE MISS] Fetching ${type} leaderboard: ${category} for ${month} (${startDate.toISOString()} - ${endDate.toISOString()})`);
 
   try {
     const admin = initAdmin();
@@ -668,12 +725,18 @@ export async function GET(request: NextRequest) {
       // Enrich with user data
       const enrichedUsers = await enrichUserData(db, users, isDev);
 
-      return NextResponse.json({
+      const result = {
         type: 'user',
         category,
         month,
         data: enrichedUsers
-      });
+      };
+
+      // Cache the result
+      setInCache(cacheKey, result);
+      console.log(`📊 [CACHED] Stored leaderboard result: ${type}/${category} for ${month}`);
+
+      return NextResponse.json(result);
     } else if (type === 'page') {
       let pages: LeaderboardPage[] = [];
 
@@ -700,12 +763,18 @@ export async function GET(request: NextRequest) {
       // Enrich with user data
       const enrichedPages = await enrichPageUserData(db, pages, isDev);
 
-      return NextResponse.json({
+      const result = {
         type: 'page',
         category,
         month,
         data: enrichedPages
-      });
+      };
+
+      // Cache the result
+      setInCache(cacheKey, result);
+      console.log(`📊 [CACHED] Stored leaderboard result: ${type}/${category} for ${month}`);
+
+      return NextResponse.json(result);
     } else {
       return NextResponse.json(
         { error: `Invalid type: ${type}. Valid options: user, page` },
