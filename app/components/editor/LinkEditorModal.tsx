@@ -10,12 +10,25 @@ import { Link, ExternalLink, Users, FileText, X, Type, Globe, Search, Check } fr
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '../ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '../ui/drawer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose, DrawerFooter } from '../ui/drawer';
 import logger from '../../utils/logger';
 import { ANIMATION_DURATIONS, MODAL_CONFIG, UI_TEXT, TABS, LINK_TYPES } from './constants';
 import PillLink from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
+
+// Helper function to detect if a string is a URL
+const isUrl = (str: string): boolean => {
+  if (!str) return false;
+  const trimmed = str.trim();
+  // Check for common URL patterns
+  return (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('www.') ||
+    /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+/.test(trimmed)
+  );
+};
 
 interface LinkEditorModalProps {
   isOpen: boolean;
@@ -274,6 +287,33 @@ export default function LinkEditorModal({
   const handleExternalUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     setExternalUrl(e.target.value);
+  }, []);
+
+  // Handle URL detection in the pages search input - auto-switch to external tab
+  const handleSearchInputChange = useCallback((value: string) => {
+    // Check if the input looks like a URL
+    if (isUrl(value)) {
+      console.log('🔗 URL detected in search input, switching to external tab:', value);
+      // Switch to external tab
+      setActiveTab('external');
+      // Set the URL in the external URL field
+      let normalizedUrl = value.trim();
+      // Add https:// if it starts with www. or is a bare domain
+      if (normalizedUrl.startsWith('www.')) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      } else if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      }
+      setExternalUrl(normalizedUrl);
+      // Focus the external URL input after a short delay
+      setTimeout(() => {
+        if (externalUrlInputRef.current) {
+          externalUrlInputRef.current.focus();
+          // Move cursor to end
+          externalUrlInputRef.current.setSelectionRange(normalizedUrl.length, normalizedUrl.length);
+        }
+      }, 100);
+    }
   }, []);
 
   // DISABLED: Focus management that was causing focus stealing after typing
@@ -744,6 +784,7 @@ export default function LinkEditorModal({
                     linkedPageIds={linkedPageIds}
                     currentPageId={currentPageId}
                     hideCreateButton={isEditing}
+                    onInputChange={handleSearchInputChange}
                     onFilterToggle={(showFilters) => {
                       // Filter toggle is handled internally by FilteredSearchResults
                       // We just need to pass a callback to enable the filter button
@@ -848,29 +889,28 @@ export default function LinkEditorModal({
         </div>
       </div>
 
-      {/* Footer with Action Button */}
-      <div className="flex-shrink-0 px-4 pb-4">
-        {activeTab === 'pages' ? (
-          <Button
-            onClick={handleCreatePageLink}
-            disabled={!selectedPage && !(isEditing && editingLink?.data)}
-            className="w-full"
-          >
-            <Link className="h-4 w-4 mr-2" />
-            {isEditing ? 'Update Link' : 'Create Link'}
-          </Button>
-        ) : (
-          <Button
-            onClick={handleCreateExternalLink}
-            disabled={!externalUrl.trim()}
-            className="w-full"
-          >
-            <Link className="h-4 w-4 mr-2" />
-            {isEditing ? 'Update Link' : 'Create Link'}
-          </Button>
-        )}
-      </div>
     </>
+  );
+
+  // Footer button content - rendered inside DialogFooter/DrawerFooter
+  const footerButton = activeTab === 'pages' ? (
+    <Button
+      onClick={handleCreatePageLink}
+      disabled={!selectedPage && !(isEditing && editingLink?.data)}
+      className="w-full"
+    >
+      <Link className="h-4 w-4 mr-2" />
+      {isEditing ? 'Update Link' : 'Create Link'}
+    </Button>
+  ) : (
+    <Button
+      onClick={handleCreateExternalLink}
+      disabled={!externalUrl.trim()}
+      className="w-full"
+    >
+      <Link className="h-4 w-4 mr-2" />
+      {isEditing ? 'Update Link' : 'Create Link'}
+    </Button>
   );
 
   // Responsive modal: Drawer on mobile, Dialog on desktop
@@ -922,7 +962,7 @@ export default function LinkEditorModal({
           </DrawerHeader>
 
           <div
-            className="flex-1 min-h-0 flex flex-col px-4 pb-4"
+            className="flex-1 min-h-0 flex flex-col px-4"
             onMouseDown={(e) => {
               // CRITICAL FIX: Prevent drawer content wrapper from stealing focus from input fields
               const target = e.target as HTMLElement;
@@ -940,6 +980,10 @@ export default function LinkEditorModal({
           >
             {modalContent}
           </div>
+
+          <DrawerFooter className="px-4 pt-4 pb-6">
+            {footerButton}
+          </DrawerFooter>
         </DrawerContent>
       </Drawer>
     );
@@ -1012,6 +1056,10 @@ export default function LinkEditorModal({
         >
           {modalContent}
         </div>
+
+        <DialogFooter className="pt-4">
+          {footerButton}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
