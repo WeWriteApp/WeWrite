@@ -37,9 +37,11 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
   if (!isPWAMode) return '0';
   if (isIOSDevice()) {
     // Extra padding for iOS to avoid collision with home indicator
-    return 'calc(env(safe-area-inset-bottom) + 8px)';
+    // The home bar is ~34px, safe-area-inset-bottom is typically ~34px on notched iPhones
+    // Adding 16px extra ensures buttons don't collide with the gesture area
+    return 'calc(env(safe-area-inset-bottom) + 16px)';
   }
-  return 'max(env(safe-area-inset-bottom), 12px)';
+  return 'max(env(safe-area-inset-bottom), 16px)';
 };
 
 /**
@@ -475,7 +477,7 @@ export default function MobileBottomNavUnified() {
 
           {/* Bottom toolbar - always visible */}
           <div className={cn(
-            "grid grid-cols-5 gap-1 px-2 py-1",
+            "grid grid-cols-5 gap-1 px-2 py-2",
             isToolbarEditMode && "touch-none"
           )}>
             {/* More button (not draggable, always first) */}
