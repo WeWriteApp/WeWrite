@@ -121,6 +121,10 @@ export default function UserGraph3D({
         })),
       };
 
+      // Pre-create shared geometries for performance (avoid creating per node)
+      const normalSphereGeometry = new THREE.SphereGeometry(10, 12, 12); // Reduced segments
+      const orphanSphereGeometry = new THREE.SphereGeometry(6, 10, 10);
+
       // Initialize 3D force graph with CSS2D renderer for labels
       // Enable alpha for transparent background
       const Graph = ForceGraph3D({
@@ -134,11 +138,10 @@ export default function UserGraph3D({
         // Custom node with sphere only (labels are CSS2D)
         .nodeThreeObject((node: any) => {
           const isOrphan = node.isOrphan;
-          const sphereSize = isOrphan ? 6 : 10;
           const nodeOpacity = isOrphan ? 0.5 : 0.9;
 
-          // Create sphere
-          const sphereGeometry = new THREE.SphereGeometry(sphereSize, 16, 16);
+          // Use shared geometry for better performance
+          const sphereGeometry = isOrphan ? orphanSphereGeometry : normalSphereGeometry;
           const sphereMaterial = new THREE.MeshLambertMaterial({
             color: node.color,
             transparent: true,
@@ -166,6 +169,7 @@ export default function UserGraph3D({
           `;
 
           const label = new CSS2DObject(labelDiv);
+          const sphereSize = isOrphan ? 6 : 10;
           label.position.set(0, sphereSize + 5, 0);
           label.center.set(0.5, 1); // Center horizontally, anchor at bottom
 
@@ -185,11 +189,11 @@ export default function UserGraph3D({
         .linkDirectionalParticleSpeed(0.005)
         .linkDirectionalParticleWidth(2)
         .linkDirectionalParticleColor(() => accentHex)
-        // Forces
-        .d3AlphaDecay(0.02)
-        .d3VelocityDecay(0.3)
-        .warmupTicks(50)
-        .cooldownTicks(100)
+        // Forces - optimized for faster initial render
+        .d3AlphaDecay(0.05)   // Faster decay = quicker stabilization
+        .d3VelocityDecay(0.4) // Higher = less bouncing
+        .warmupTicks(30)      // Reduced from 50 - faster initial calculation
+        .cooldownTicks(50)    // Reduced from 100 - faster to interactive
         // Interactions
         .onNodeClick((node: any) => {
           router.push(`/${node.id}`);
