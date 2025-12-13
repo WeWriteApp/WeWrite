@@ -4,9 +4,13 @@ import { db } from '../../firebase/database';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker.js';
 import { recordProductionRead } from '../../utils/productionReadMonitor';
+import { searchAll, searchPages, searchUsers as algoliaSearchUsers } from '../../lib/algolia';
 
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
+
+// Feature flag for Algolia - set to true to use Algolia, false for Firestore fallback
+const USE_ALGOLIA = true;
 
 // OPTIMIZATION: Enhanced caching system to reduce database reads
 const searchCache = new Map();
@@ -724,6 +728,82 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
 }
 
 /**
+ * ALGOLIA SEARCH: Fast, typo-tolerant search using Algolia
+ * Falls back to Firestore if Algolia fails
+ */
+async function searchWithAlgolia(searchTerm, userId, options = {}) {
+  const {
+    maxResults = 100,
+    includeUsers = true,
+    filterByUserId = null,
+    currentPageId = null,
+    context = SEARCH_CONTEXTS.MAIN
+  } = options;
+
+  console.log(`🚀 [ALGOLIA] Searching for "${searchTerm}" (maxResults: ${maxResults}, includeUsers: ${includeUsers})`);
+
+  try {
+    // Build Algolia filters
+    let filters = '';
+    if (filterByUserId) {
+      filters = `authorId:${filterByUserId}`;
+    }
+
+    // Search pages and users in parallel using Algolia
+    const [pagesResponse, usersResponse] = await Promise.all([
+      searchPages(searchTerm, {
+        hitsPerPage: Math.min(maxResults, 100),
+        filters: filters || undefined
+      }),
+      includeUsers ? algoliaSearchUsers(searchTerm, { hitsPerPage: 10 }) : Promise.resolve({ hits: [] })
+    ]);
+
+    // Transform Algolia results to match existing format
+    const pages = pagesResponse.hits
+      .filter(hit => hit.objectID !== currentPageId)
+      .map(hit => ({
+        id: hit.objectID,
+        title: hit.title || 'Untitled',
+        type: 'page',
+        isOwned: hit.authorId === userId,
+        isEditable: hit.authorId === userId,
+        userId: hit.authorId,
+        username: hit.authorUsername || null,
+        lastModified: hit.lastModified,
+        isPublic: hit.isPublic,
+        alternativeTitles: hit.alternativeTitles,
+        matchScore: 100, // Algolia already ranks by relevance
+        isContentMatch: false,
+        context,
+        _highlightResult: hit._highlightResult
+      }));
+
+    const users = (usersResponse.hits || []).map(hit => ({
+      id: hit.objectID,
+      username: hit.username,
+      displayName: hit.displayName,
+      photoURL: hit.photoURL,
+      type: 'user',
+      matchScore: 100,
+      _highlightResult: hit._highlightResult
+    }));
+
+    console.log(`🚀 [ALGOLIA] Found ${pages.length} pages, ${users.length} users`);
+
+    return {
+      pages,
+      users,
+      source: 'algolia',
+      totalPages: pagesResponse.nbHits,
+      totalUsers: usersResponse.nbHits || 0
+    };
+  } catch (error) {
+    console.error('🚀 [ALGOLIA] Search failed, falling back to Firestore:', error);
+    throw error; // Let caller handle fallback
+  }
+}
+
+/**
  * Main API route handler
  */
 export async function GET(request) {
@@ -775,7 +855,8 @@ export async function GET(request) {
       maxResults,
       includeContent,
       includeUsers,
-      titleOnly
+      titleOnly,
+      useAlgolia: USE_ALGOLIA
     });
 
     // Handle empty search for authenticated users
@@ -835,20 +916,50 @@ export async function GET(request) {
       }
     }
 
-    // Perform comprehensive search
-    const [pages, users] = await Promise.all([
-      searchPagesComprehensive(userId, searchTerm, {
-        context,
-        maxResults,
-        includeContent,
-        titleOnly,
-        filterByUserId,
-        currentPageId
-      }),
-      includeUsers ? searchUsersComprehensive(searchTerm, 10) : Promise.resolve([])
-    ]);
+    // Try Algolia first if enabled, fall back to Firestore on error
+    let pages = [];
+    let users = [];
+    let searchSource = 'firestore';
+
+    if (USE_ALGOLIA) {
+      try {
+        const algoliaResults = await searchWithAlgolia(searchTerm, userId, {
+          maxResults: maxResults || 100,
+          includeUsers,
+          filterByUserId,
+          currentPageId,
+          context
+        });
+        pages = algoliaResults.pages;
+        users = algoliaResults.users;
+        searchSource = 'algolia';
+        console.log(`🚀 [ALGOLIA] Search successful: ${pages.length} pages, ${users.length} users`);
+      } catch (algoliaError) {
+        console.warn(`🚀 [ALGOLIA] Failed, falling back to Firestore:`, algoliaError.message);
+        // Fall through to Firestore search
+      }
+    }
+
+    // Firestore fallback if Algolia is disabled or failed
+    if (searchSource !== 'algolia') {
+      const [firestorePages, firestoreUsers] = await Promise.all([
+        searchPagesComprehensive(userId, searchTerm, {
+          context,
+          maxResults,
+          includeContent,
+          titleOnly,
+          filterByUserId,
+          currentPageId
+        }),
+        includeUsers ? searchUsersComprehensive(searchTerm, 10) : Promise.resolve([])
+      ]);
+      pages = firestorePages;
+      users = firestoreUsers;
+      searchSource = 'firestore';
+    }
 
     // OPTIMIZED: Batch fetch missing usernames to avoid N+1 queries
+    // (Only needed for Firestore results - Algolia already has authorUsername)
     console.log(`🔍 [USERNAME FETCH] Processing ${(pages || []).length} pages for username fetching`);
 
     // Helper to check if username needs fetching
@@ -923,14 +1034,15 @@ export async function GET(request) {
     const searchResult = {
       pages: pagesWithUsernames || [],
       users: users || [],
-      source: 'unified_search',
+      source: searchSource === 'algolia' ? 'algolia' : 'unified_search',
       searchTerm,
       context,
       performance: {
         searchTimeMs: searchTime,
         pagesFound: pagesWithUsernames?.length || 0,
         usersFound: users?.length || 0,
-        maxResults: maxResults || 'unlimited'
+        maxResults: maxResults || 'unlimited',
+        searchEngine: searchSource
       }
     };
 
