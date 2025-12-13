@@ -11,7 +11,6 @@ interface BannerContextType {
   showUsernameBanner: boolean;
   setEmailBannerDismissed: () => void;
   setUsernameBannerDismissed: () => void;
-  bannerOffset: number;
 }
 
 const BannerContext = createContext<BannerContextType>({
@@ -20,7 +19,6 @@ const BannerContext = createContext<BannerContextType>({
   showUsernameBanner: false,
   setEmailBannerDismissed: () => {},
   setUsernameBannerDismissed: () => {},
-  bannerOffset: 0
 });
 
 export const useBanner = () => useContext(BannerContext);
@@ -40,68 +38,6 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [showEmailBanner, setShowEmailBanner] = useState(false);
   const [showPWABanner, setShowPWABanner] = useState(false);
   const [showUsernameBanner, setShowUsernameBanner] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [bannerHeight, setBannerHeight] = useState(0);
-
-  // Track scroll position with throttling for performance
-  useEffect(() => {
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Detect banner height when banners are visible
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const detectBannerHeight = () => {
-      // Look for banner elements in the DOM
-      const emailBanner = document.querySelector('[data-banner="email-verification"]');
-      const pwaBanner = document.querySelector('[data-banner="pwa-installation"]');
-      const usernameBanner = document.querySelector('[data-banner="username-setup"]');
-
-      let totalHeight = 0;
-
-      if (emailBanner && showEmailBanner) {
-        totalHeight += emailBanner.getBoundingClientRect().height;
-      }
-
-      if (pwaBanner && showPWABanner) {
-        totalHeight += pwaBanner.getBoundingClientRect().height;
-      }
-
-      if (usernameBanner && showUsernameBanner) {
-        totalHeight += usernameBanner.getBoundingClientRect().height;
-      }
-
-      setBannerHeight(totalHeight);
-    };
-
-    // Initial detection
-    detectBannerHeight();
-
-    // Re-detect when banners change
-    const observer = new MutationObserver(detectBannerHeight);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'style']
-    });
-
-    return () => observer.disconnect();
-  }, [showEmailBanner, showPWABanner, showUsernameBanner]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user) {
@@ -218,33 +154,6 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setShowPWABanner(pwaBannerShouldShow);
   };
 
-  // Calculate dynamic banner offset for scroll-aware positioning
-  const bannerOffset = React.useMemo(() => {
-    // Only apply offset on mobile where banners are shown
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-      return 0; // No banners on desktop
-    }
-
-    // If no banners are showing, no offset needed
-    if (!showEmailBanner && !showPWABanner && !showUsernameBanner) {
-      return 0;
-    }
-
-    // Use detected banner height, fallback to estimated height based on visible banners
-    let estimatedHeight = 0;
-    if (showEmailBanner) estimatedHeight += 80; // ~76px content + 4px margins
-    if (showUsernameBanner) estimatedHeight += 80; // ~76px content + 4px margins
-    if (showPWABanner) estimatedHeight += 80; // ~76px content + 4px margins
-
-    const totalBannerHeight = bannerHeight || estimatedHeight;
-
-    // Calculate how much of the banner is still visible
-    // If user has scrolled past the banner, reduce the offset
-    const visibleBannerHeight = Math.max(0, totalBannerHeight - scrollY);
-
-    return visibleBannerHeight;
-  }, [showEmailBanner, showPWABanner, showUsernameBanner, bannerHeight, scrollY]);
-
   return (
     <BannerContext.Provider value={{
       showEmailBanner,
@@ -252,7 +161,6 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       showUsernameBanner,
       setEmailBannerDismissed,
       setUsernameBannerDismissed,
-      bannerOffset
     }}>
       {children}
     </BannerContext.Provider>

@@ -2,10 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '../../lib/utils';
-import PillLink from '../utils/PillLink';
 import { Loader2, MessageCircle, ThumbsUp, ThumbsDown, Minus, Reply } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { generateReplyTitle, createReplyContent, encodeReplyParams } from '../../utils/replyUtils';
+import { getCurrentUsername } from '../../utils/userUtils';
+import { getUserProfile } from '../../utils/apiClient';
 
 interface ReplyInfo {
   id: string;
@@ -26,18 +35,118 @@ interface RepliesCounts {
 interface RepliesSectionProps {
   pageId: string;
   pageTitle?: string;
+  pageUserId?: string;
+  pageUsername?: string;
   className?: string;
+  isOwnPage?: boolean;
 }
 
 type FilterType = 'all' | 'agree' | 'disagree' | 'neutral';
 
-export default function RepliesSection({ pageId, pageTitle, className }: RepliesSectionProps) {
+export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUsername, className, isOwnPage = false }: RepliesSectionProps) {
   const [replies, setReplies] = useState<ReplyInfo[]>([]);
   const [allReplies, setAllReplies] = useState<ReplyInfo[]>([]);
   const [counts, setCounts] = useState<RepliesCounts>({ agree: 0, disagree: 0, neutral: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [isReplyPickerOpen, setIsReplyPickerOpen] = useState(false);
+  const [resolvedPageOwnerUsername, setResolvedPageOwnerUsername] = useState(pageUsername || '');
+  const router = useRouter();
+
+  // Resolve page owner's display username to avoid showing userId/UUID
+  // This matches the logic in ContentPageActions for consistency
+  useEffect(() => {
+    const resolveUsername = async () => {
+      try {
+        // If pageUsername looks like a real username (not a UUID), use it directly
+        if (pageUsername && pageUsername !== pageUserId) {
+          setResolvedPageOwnerUsername(pageUsername);
+          return;
+        }
+        // Otherwise, fetch the user profile to get the actual username
+        if (pageUserId) {
+          const profile = await getUserProfile(pageUserId);
+          if (profile?.username) {
+            setResolvedPageOwnerUsername(profile.username);
+            return;
+          }
+        }
+        setResolvedPageOwnerUsername('');
+      } catch (error) {
+        console.error('Error resolving page owner username:', error);
+        setResolvedPageOwnerUsername('');
+      }
+    };
+
+    resolveUsername();
+  }, [pageUserId, pageUsername]);
+
+  const handleReply = async (replyType: 'agree' | 'disagree' | null) => {
+    setIsReplyPickerOpen(false);
+
+    try {
+      // Get current user's username
+      let username = '';
+      try {
+        username = await getCurrentUsername();
+      } catch (error) {
+        console.error('Error getting username:', error);
+      }
+
+      // Fallback: try to get username from wewrite_accounts (same as ContentPageActions)
+      if (!username) {
+        try {
+          const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+          if (wewriteAccounts) {
+            const accounts = JSON.parse(wewriteAccounts);
+            const currentAccount = accounts.find((acc: any) => acc.isCurrent);
+            if (currentAccount?.username) {
+              username = currentAccount.username;
+            }
+          }
+        } catch (err) {
+          console.error('Error getting username from wewrite_accounts:', err);
+        }
+      }
+
+      if (!username) {
+        username = 'Anonymous';
+      }
+
+      // Use the resolved username (same as ContentPageActions)
+      const ownerUsername = resolvedPageOwnerUsername || pageUsername || 'Anonymous';
+
+      // Generate reply title and content using the utility functions
+      const replyTitle = generateReplyTitle(pageTitle || "Untitled");
+      const initialContent = createReplyContent({
+        pageId,
+        pageTitle: pageTitle || "Untitled",
+        userId: pageUserId || "",
+        username: ownerUsername,
+        replyType: replyType || "standard"
+      });
+
+      // Encode parameters
+      const params = encodeReplyParams({
+        title: replyTitle,
+        content: initialContent,
+        username
+      });
+
+      // Build the full reply URL with all necessary parameters
+      const replyUrl = `/new?replyTo=${pageId}&page=${encodeURIComponent(pageTitle || "Untitled")}&pageUserId=${pageUserId || ''}&pageUsername=${encodeURIComponent(ownerUsername)}&title=${params.title}&initialContent=${params.content}&username=${params.username}&replyType=${replyType || 'standard'}`;
+      router.push(replyUrl);
+    } catch (error) {
+      console.error('Error creating reply:', error);
+      // Fallback to simple URL if something goes wrong
+      const fallbackParams = new URLSearchParams({ replyTo: pageId });
+      if (replyType) {
+        fallbackParams.set('replyType', replyType);
+      }
+      router.push(`/new?${fallbackParams.toString()}`);
+    }
+  };
 
   const fetchReplies = useCallback(async () => {
     if (!pageId) return;
@@ -237,13 +346,16 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
             <p className="text-sm text-muted-foreground mb-3">
               No {activeFilter !== 'all' ? activeFilter : ''} replies found
             </p>
-            {activeFilter !== 'all' && (
-              <Link href={`/new?replyTo=${pageId}&replyType=${activeFilter}`}>
-                <Button variant="secondary" size="sm" className="gap-2">
-                  <Reply className="w-4 h-4" />
-                  Be the first to {activeFilter}
-                </Button>
-              </Link>
+            {!isOwnPage && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                onClick={() => setIsReplyPickerOpen(true)}
+              >
+                <Reply className="w-4 h-4" />
+                {activeFilter !== 'all' ? `Be the first to ${activeFilter}` : 'Reply'}
+              </Button>
             )}
           </div>
         )}
@@ -251,15 +363,57 @@ export default function RepliesSection({ pageId, pageTitle, className }: Replies
         {/* Empty State - No Replies at All */}
         {!loading && !error && counts.total === 0 && (
           <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-3">No replies yet. Be the first to reply!</p>
-            <Link href={`/new?replyTo=${pageId}${activeFilter !== 'all' ? `&replyType=${activeFilter}` : ''}`}>
-              <Button variant="secondary" size="sm" className="gap-2">
+            <p className="text-sm text-muted-foreground mb-3">
+              {isOwnPage ? 'No replies yet.' : 'No replies yet. Be the first to reply!'}
+            </p>
+            {!isOwnPage && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                onClick={() => setIsReplyPickerOpen(true)}
+              >
                 <Reply className="w-4 h-4" />
-                Reply{activeFilter !== 'all' && activeFilter !== 'neutral' ? ` (${activeFilter})` : ''}
+                Reply
               </Button>
-            </Link>
+            )}
           </div>
         )}
+
+        {/* Reply Type Picker Dialog */}
+        <Dialog open={isReplyPickerOpen} onOpenChange={setIsReplyPickerOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Select reply type</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 pt-2">
+              <Button
+                variant="secondary"
+                className="w-full justify-start gap-2"
+                onClick={() => handleReply('agree')}
+              >
+                <ThumbsUp className="h-4 w-4" />
+                Agree
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full justify-start gap-2"
+                onClick={() => handleReply('disagree')}
+              >
+                <ThumbsDown className="h-4 w-4" />
+                Disagree
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full justify-start gap-2"
+                onClick={() => handleReply(null)}
+              >
+                <Reply className="h-4 w-4" />
+                Just reply
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

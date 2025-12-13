@@ -44,7 +44,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
   return (
     <>
       {/* Mobile Header - Normal static header */}
-      <header className="lg:hidden border-b bg-background px-4 py-3 flex items-center justify-between">
+      <header className="lg:hidden border-b-subtle bg-background px-4 py-3 flex items-center justify-between">
         {/* Left: Back button */}
         <div className="flex items-center">
           {isMainSettings ? (

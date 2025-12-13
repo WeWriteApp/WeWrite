@@ -345,11 +345,11 @@ export default function FloatingFinancialHeader({
 
   return (
     <FixedPortal>
-      {/* Mobile: Standard centered layout - respects email banner */}
+      {/* Mobile: Standard centered layout - respects email/pwa banners */}
       <div
         className="md:hidden fixed-layer z-fixed-header pointer-events-none transition-all duration-300 ease-out"
         style={{
-          top: 'calc(var(--fixed-safe-top) + var(--email-banner-height, 0px))',
+          top: 'calc(var(--fixed-safe-top) + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px))',
           left: 0,
           right: 0
         }}
@@ -382,11 +382,11 @@ export default function FloatingFinancialHeader({
         </div>
       </div>
 
-      {/* Desktop: Respect sidebar positioning and email banner */}
+      {/* Desktop: Respect sidebar positioning and email/pwa banners */}
       <div
         className="hidden md:block fixed-layer z-fixed-header pointer-events-none"
         style={{
-          top: 'calc(var(--fixed-safe-top) + var(--email-banner-height, 0px))',
+          top: 'calc(var(--fixed-safe-top) + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px))',
           left: 0,
           right: 0,
         }}

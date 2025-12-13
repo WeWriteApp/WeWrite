@@ -31,7 +31,7 @@ const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageConte
         .replace(/[^\w\s]/g, ' ')
         .split(/\s+/)
         .filter(word => word.length > 2 && !stopWords.has(word))
-        .slice(0, 20); // Limit to top 20 words
+        .slice(0, 40); // Limit to top 40 words for better matching
     };
 
     const titleWords = extractMeaningfulWords(pageTitle);
@@ -171,7 +171,10 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     return null;
   }
 
-  // Always render the section, even if empty
+  // Don't render the card if no related pages found (and not loading)
+  if (!loading && (!relatedPages || relatedPages.length === 0)) {
+    return null;
+  }
 
   return (
     <div>
@@ -200,9 +203,9 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
             <Loader2 className="h-3 w-3 animate-spin" />
             <span>Loading related pages by others...</span>
           </div>
-        ) : Array.isArray(relatedPages) && relatedPages.length > 0 ? (
+        ) : (
           <div className="flex flex-wrap gap-2">
-            {relatedPages.map((relatedPage, index) => (
+            {relatedPages.map((relatedPage) => (
               <div key={relatedPage.id} className="flex items-center">
                 <TooltipProvider>
                   <Tooltip>
@@ -228,10 +231,6 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
                 </TooltipProvider>
               </div>
             ))}
-          </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            No related pages by others found
           </div>
         )}
       </div>

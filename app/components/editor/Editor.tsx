@@ -430,9 +430,30 @@ const Editor: React.FC<EditorProps> = ({
 
   const [editorValue, setEditorValue] = useState<Descendant[]>(normalizedInitialContent);
 
+  // Track the previous content to detect external changes
+  const prevContentRef = useRef<string>(JSON.stringify(normalizedInitialContent));
+
   useEffect(() => {
-    setEditorValue(normalizedInitialContent);
-  }, [normalizedInitialContent]);
+    const currentContentStr = JSON.stringify(normalizedInitialContent);
+
+    // Only update if content actually changed (not just reference)
+    if (prevContentRef.current !== currentContentStr) {
+      console.log('🔧 [EDITOR] Detected content change, updating editor');
+      prevContentRef.current = currentContentStr;
+
+      // Update state
+      setEditorValue(normalizedInitialContent);
+
+      // CRITICAL: Slate.js only reads initialValue on mount.
+      // To update content externally, we must directly modify editor.children
+      // and reset selection to prevent stale path errors.
+      editor.children = normalizedInitialContent;
+      editor.selection = null;
+
+      // Trigger a re-render by changing the editor
+      editor.onChange();
+    }
+  }, [normalizedInitialContent, editor]);
 
   // Optimized change handler with requestAnimationFrame for better mobile performance
   const handleChange = useCallback((newValue: Descendant[]) => {

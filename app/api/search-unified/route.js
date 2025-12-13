@@ -486,12 +486,13 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       console.log(`⚡ [SEARCH DEBUG] Performing comprehensive client-side search to catch missed matches`);
 
       try {
-        // IMPROVED: Get a much larger set of pages for client-side filtering
-        // Increase limit significantly to ensure we catch all potential matches
-        // Users reported missing results like "masses" not finding "Who are the American masses?"
+        // IMPROVED: Get pages for client-side filtering, ordered by lastModified for relevance
+        // This ensures we catch pages like "WeWrite Merch" that may not start with the search term
+        // Using orderBy ensures consistent results across queries
         const broadQuery = query(
           collection(db, getCollectionName('pages')),
-          limit(2000) // Increased from 500 to 2000 to catch more matches
+          orderBy('lastModified', 'desc'),
+          limit(1500) // Reduced from 2000 for better performance while still catching most matches
         );
 
         const broadSnapshot = await getDocs(broadQuery);
@@ -562,12 +563,64 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         });
 
         console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches (total now: ${allResults.length})`);
+
+        // ADDITIONAL FALLBACK: If we haven't found many matches, also search by createdAt
+        // This catches older pages that might not have been recently modified
+        if (broadSearchMatches < 5 && allResults.length < finalMaxResults) {
+          console.log(`⚡ [SEARCH DEBUG] Running fallback search by createdAt for older pages`);
+
+          const fallbackQuery = query(
+            collection(db, getCollectionName('pages')),
+            orderBy('createdAt', 'desc'),
+            limit(500)
+          );
+
+          const fallbackSnapshot = await getDocs(fallbackQuery);
+          let fallbackMatches = 0;
+
+          fallbackSnapshot.forEach(doc => {
+            if (processedIds.has(doc.id) || doc.id === currentPageId) return;
+            if (allResults.length >= finalMaxResults * 2) return;
+
+            const data = doc.data();
+            if (data.deleted === true) return;
+
+            const pageTitle = data.title || '';
+            const titleLower = pageTitle.toLowerCase();
+
+            // Check for substring match
+            if (titleLower.includes(searchTermLower)) {
+              const matchScore = calculateSearchScore(pageTitle, searchTerm, true, false);
+              if (matchScore > 0) {
+                processedIds.add(doc.id);
+                fallbackMatches++;
+
+                allResults.push({
+                  id: doc.id,
+                  title: pageTitle || 'Untitled',
+                  type: 'page',
+                  isOwned: data.userId === userId,
+                  isEditable: data.userId === userId,
+                  userId: data.userId,
+                  username: data.username || null,
+                  lastModified: data.lastModified,
+                  createdAt: data.createdAt,
+                  matchScore,
+                  isContentMatch: false,
+                  context
+                });
+              }
+            }
+          });
+
+          console.log(`⚡ [SEARCH DEBUG] Fallback search added ${fallbackMatches} more matches`);
+        }
       } catch (error) {
         console.warn('Error in comprehensive client-side search:', error);
       }
     }
 
-    // OPTIMIZATION: Sort results by relevance score
+    // OPTIMIZATION: Sort results by relevance score with improved prioritization
     allResults.sort((a, b) => {
       // Prioritize owned pages
       if (a.isOwned && !b.isOwned) return -1;
@@ -575,6 +628,12 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
 
       // Then by match score
       if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+
+      // Prefer shorter titles (more relevant matches)
+      // e.g., "WeWrite Merch" (13 chars) beats "WeWrite Merchandise Store Online" (33 chars)
+      const aLen = (a.title || '').length;
+      const bLen = (b.title || '').length;
+      if (Math.abs(aLen - bLen) > 10) return aLen - bLen;
 
       // Finally by recency
       return new Date(b.lastModified) - new Date(a.lastModified);
@@ -789,39 +848,57 @@ export async function GET(request) {
       includeUsers ? searchUsersComprehensive(searchTerm, 10) : Promise.resolve([])
     ]);
 
-    // Fetch missing or invalid usernames for pages
+    // OPTIMIZED: Batch fetch missing usernames to avoid N+1 queries
     console.log(`🔍 [USERNAME FETCH] Processing ${(pages || []).length} pages for username fetching`);
-    const pagesWithUsernames = await Promise.all((pages || []).map(async (page) => {
-      // Check if username is missing, null, or looks like a userId (long alphanumeric string)
-      const needsUsernameFetch = !page.username ||
-                                page.username === 'Anonymous' ||
-                                page.username === 'NULL' ||
-                                page.username === 'Missing username' ||
-                                (page.username && page.username.length >= 20 && /^[a-zA-Z0-9]+$/.test(page.username));
 
-      console.log(`🔍 [USERNAME FETCH] Page ${page.id}: username="${page.username}", userId="${page.userId}", needsFetch=${needsUsernameFetch}`);
+    // Helper to check if username needs fetching
+    const needsUsernameFetch = (page) => !page.username ||
+                              page.username === 'Anonymous' ||
+                              page.username === 'NULL' ||
+                              page.username === 'Missing username' ||
+                              (page.username && page.username.length >= 20 && /^[a-zA-Z0-9]+$/.test(page.username));
 
-      if (needsUsernameFetch && page.userId) {
-        try {
-          console.log(`🔍 [USERNAME FETCH] Fetching user document for userId: ${page.userId}`);
-          const userDoc = await getDoc(doc(db, getCollectionName('users'), page.userId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const oldUsername = page.username;
-            page.username = userData.username || 'Missing Username';
-            console.log(`🔍 [USERNAME FETCH] Fixed username for page ${page.id}: "${page.username}" (was: "${oldUsername || 'null'}")`);
-            console.log(`🔍 [USERNAME FETCH] User document data:`, { username: userData.username, userId: page.userId });
-          } else {
-            console.log(`🔍 [USERNAME FETCH] User document not found for userId: ${page.userId}`);
-            page.username = 'Missing Username';
-          }
-        } catch (error) {
-          console.error(`🔍 [USERNAME FETCH] Error fetching username for user ${page.userId}:`, error);
-          page.username = 'Missing Username';
+    // Collect unique userIds that need fetching
+    const userIdsToFetch = [...new Set(
+      (pages || [])
+        .filter(page => needsUsernameFetch(page) && page.userId)
+        .map(page => page.userId)
+    )];
+
+    console.log(`🔍 [USERNAME FETCH] Need to fetch ${userIdsToFetch.length} unique usernames`);
+
+    // Batch fetch all needed user documents at once
+    const usernameMap = new Map();
+    if (userIdsToFetch.length > 0) {
+      try {
+        // Firestore 'in' queries support up to 30 items, so batch if needed
+        const batchSize = 30;
+        for (let i = 0; i < userIdsToFetch.length; i += batchSize) {
+          const batch = userIdsToFetch.slice(i, i + batchSize);
+          const userDocs = await Promise.all(
+            batch.map(uid => getDoc(doc(db, getCollectionName('users'), uid)))
+          );
+          userDocs.forEach((userDoc, index) => {
+            if (userDoc.exists()) {
+              usernameMap.set(batch[index], userDoc.data().username || 'Missing Username');
+            } else {
+              usernameMap.set(batch[index], 'Missing Username');
+            }
+          });
         }
+        console.log(`🔍 [USERNAME FETCH] Batch fetched ${usernameMap.size} usernames`);
+      } catch (error) {
+        console.error(`🔍 [USERNAME FETCH] Error in batch username fetch:`, error);
+      }
+    }
+
+    // Apply fetched usernames to pages
+    const pagesWithUsernames = (pages || []).map(page => {
+      if (needsUsernameFetch(page) && page.userId && usernameMap.has(page.userId)) {
+        page.username = usernameMap.get(page.userId);
       }
       return page;
-    }));
+    });
 
     const searchTime = Date.now() - startTime;
 

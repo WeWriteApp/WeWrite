@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { AdaptiveModal } from '../ui/adaptive-modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { X, Plus, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Plus, AlertCircle, Loader2, Tags } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { PillLink } from '../utils/PillLink';
+import EmptyState from '../ui/EmptyState';
 
 interface TitleSettingsModalProps {
   isOpen: boolean;
@@ -219,9 +220,12 @@ export function TitleSettingsModal({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground italic py-2">
-              No alternative titles yet
-            </p>
+            <EmptyState
+              icon={Tags}
+              title="No alternative titles"
+              description="Add alternative titles to help people find this page with different search terms."
+              size="sm"
+            />
           )}
 
           {/* Add new alternative title */}

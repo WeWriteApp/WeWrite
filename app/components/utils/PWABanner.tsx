@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Info, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Download } from 'lucide-react';
 import { Button } from "../ui/button";
 import { usePWA } from '../../providers/PWAProvider';
 import { useBanner } from '../../providers/BannerProvider';
@@ -16,44 +16,56 @@ import {
   DialogTitle,
   DialogFooter} from "../ui/dialog";
 
+const BANNER_HEIGHT = 48; // Height in pixels - slightly taller than email banner for prominence
+
+/**
+ * PWABanner
+ *
+ * A full-width top banner that matches the EmailVerificationTopBanner style.
+ * Fixed at the top of the viewport on mobile only.
+ * Uses the same CSS variable pattern for layout coordination.
+ */
 export default function PWABanner() {
   const { setShowBanner } = usePWA();
   const { showPWABanner } = useBanner();
   const [showInstructions, setShowInstructions] = useState(false);
-  const [isCollapsing, setIsCollapsing] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
-  // No longer need to adjust body padding since banner is not fixed
+  // Update CSS variable for banner height (used by floating header and main content)
+  useEffect(() => {
+    if (showPWABanner) {
+      document.documentElement.style.setProperty('--pwa-banner-height', `${BANNER_HEIGHT}px`);
+    } else {
+      document.documentElement.style.setProperty('--pwa-banner-height', '0px');
+    }
 
-  if (!showPWABanner && !isCollapsing) return null;
+    return () => {
+      document.documentElement.style.setProperty('--pwa-banner-height', '0px');
+    };
+  }, [showPWABanner]);
 
-  const handleDismissWithAnimation = (action: 'dont_remind' | 'maybe_later') => {
-    setIsCollapsing(true);
+  if (!showPWABanner) return null;
 
+  const handleDismiss = (action: 'dont_remind' | 'maybe_later') => {
     // Track in analytics
     try {
       const analyticsService = getAnalyticsService();
       analyticsService.trackEvent({
         category: EVENT_CATEGORIES.PWA,
         action: ANALYTICS_EVENTS.PWA_BANNER_ACTION,
-        label: action === 'dont_remind' ? 'Dont_Remind' : 'Maybe_Later'});
+        label: action === 'dont_remind' ? 'Dont_Remind' : 'Maybe_Later'
+      });
     } catch (error) {
       console.error('Error tracking PWA banner action:', error);
     }
 
-    // Start collapse animation, then dismiss after animation completes
-    setTimeout(() => {
-      if (action === 'dont_remind') {
-        permanentlyDismissPWABanner();
-      } else {
-        dismissPWABanner();
-      }
-      setShowBanner(false);
-      setIsCollapsing(false);
-    }, 300); // Match animation duration
+    if (action === 'dont_remind') {
+      permanentlyDismissPWABanner();
+    } else {
+      dismissPWABanner();
+    }
+    setShowBanner(false);
   };
-
-  const handleDontRemind = () => handleDismissWithAnimation('dont_remind');
-  const handleMaybeLater = () => handleDismissWithAnimation('maybe_later');
 
   const handleShowInstructions = () => {
     // Track in analytics
@@ -62,7 +74,8 @@ export default function PWABanner() {
       analyticsService.trackEvent({
         category: EVENT_CATEGORIES.PWA,
         action: ANALYTICS_EVENTS.PWA_BANNER_ACTION,
-        label: 'Show_Instructions'});
+        label: 'Show_Instructions'
+      });
     } catch (error) {
       console.error('Error tracking PWA banner action:', error);
     }
@@ -78,42 +91,42 @@ export default function PWABanner() {
 
   return (
     <>
-      {/* PWA Banner - Static position at top of content */}
-      <div className="relative mx-4 mt-2 mb-2 md:hidden" data-banner="pwa-installation">
-        <div
-          className={`wewrite-card px-4 py-3 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
-            isCollapsing ? 'max-h-0 py-0 opacity-0 transform -translate-y-4 scale-95' : 'max-h-32 opacity-100 transform translate-y-0 scale-100'
-          }`}
-        >
-          <div className="flex items-center space-x-2 mb-2">
-            <Info className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">Want to use WeWrite as an app?</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-9 text-xs text-foreground"
-              onClick={handleDontRemind}
-            >
-              Never
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-9 text-xs text-foreground"
-              onClick={handleMaybeLater}
-            >
-              Later
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className="h-9 text-xs"
-              onClick={handleShowInstructions}
-            >
-              Yes!
-            </Button>
+      {/* PWA Banner - Fixed position at top, matching email verification banner style */}
+      <div
+        ref={bannerRef}
+        className="fixed top-0 left-0 right-0 z-[100] md:hidden"
+        style={{ height: BANNER_HEIGHT }}
+        data-banner="pwa-installation"
+      >
+        <div className="h-full bg-primary text-primary-foreground flex items-center justify-center px-4">
+          <div className="flex items-center gap-3 max-w-4xl w-full justify-between">
+            {/* Left: Icon + Message */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Download className="h-4 w-4 flex-shrink-0" />
+              <span className="text-sm font-medium truncate">
+                Install WeWrite as an app
+              </span>
+            </div>
+
+            {/* Right: Action buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 px-3 text-sm bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground border-none"
+                onClick={() => handleDismiss('maybe_later')}
+              >
+                Later
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 px-3 text-sm bg-primary-foreground hover:bg-primary-foreground/90 text-primary border-none"
+                onClick={handleShowInstructions}
+              >
+                Install
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -13,6 +13,23 @@
   display: none !important;
 }
 
+/* Ensure 3D force graph has transparent background - the library injects inline styles */
+/* Target the container div that ForceGraph3D creates and any child elements */
+[class*="force-graph"],
+.force-graph-container,
+.scene-container {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Target any div or canvas inside the graph container that might have inline background styles */
+[class*="force-graph"] > *,
+.force-graph-container > *,
+.scene-container > * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 /* Fixed layer tokens and utilities */
 @import './styles/fixed-layer.css';
 

@@ -27,11 +27,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { X, Link2, FileText, ArrowUp, ArrowDown, Loader2, Network } from 'lucide-react';
+import { X, Link2, FileText, ArrowUp, ArrowDown, Loader2, Network, Share2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import SubscriptionGate from '../subscription/SubscriptionGate';
-import { useTheme } from '../../providers/ThemeProvider';
 import { PillLink } from './PillLink';
 import { Drawer, DrawerContent, DrawerClose } from '../ui/drawer';
 
@@ -75,8 +74,6 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('links');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const { resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === 'dark';
 
   // Sort nodes based on current sort field and direction
   const sortedNodes = useMemo(() => {
@@ -106,8 +103,24 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
     }
   }, [sortField]);
 
-  // Compute theme-aware colors for fullscreen
-  const fullscreenBgColor = isDarkMode ? '#000000' : '#ffffff';
+  // Share graph URL handler
+  const handleShare = useCallback(async () => {
+    const graphUrl = `${window.location.origin}/${username}#graph`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${username}'s Page Connections`,
+          url: graphUrl,
+        });
+      } catch {
+        // User cancelled or error - fallback to clipboard
+        await navigator.clipboard.writeText(graphUrl);
+      }
+    } else {
+      await navigator.clipboard.writeText(graphUrl);
+    }
+  }, [username]);
 
   // ESC key handler for fullscreen mode
   useEffect(() => {
@@ -207,22 +220,29 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
         <div className="px-4 pb-3 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">{username}&apos;s Page Connections</h3>
-            <DrawerClose asChild>
+            <div className="flex items-center gap-2">
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
+                onClick={handleShare}
+                title="Share graph view"
               >
-                <X className="h-4 w-4" />
+                <Share2 className="h-4 w-4" />
               </Button>
-            </DrawerClose>
+              <DrawerClose asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </div>
           </div>
         </div>
 
         {/* Graph container */}
-        <div
-          className="flex-1 min-h-0"
-          style={{ backgroundColor: fullscreenBgColor }}
-        >
+        <div className="flex-1 min-h-0">
           <SubscriptionGate
             featureName="graph"
             className="h-full"

@@ -12,6 +12,7 @@ interface Particle {
   life: number;
   maxLife: number;
   size: number;
+  distance: number; // Track distance from origin
 }
 
 interface ParticleAnimationProps {
@@ -21,6 +22,8 @@ interface ParticleAnimationProps {
   particleCount?: number;
   duration?: number;
   color?: string;
+  /** Distance threshold before particles become visible (in % units) */
+  fadeInDistance?: number;
 }
 
 export function ParticleAnimation({
@@ -29,7 +32,8 @@ export function ParticleAnimation({
   className = '',
   particleCount = 8,
   duration = 1000,
-  color = 'hsl(var(--primary))'
+  color = 'hsl(var(--primary))',
+  fadeInDistance = 30 // Particles fade in after traveling this far from center
 }: ParticleAnimationProps) {
   const [particles, setParticles] = useState<Particle[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -41,8 +45,8 @@ export function ParticleAnimation({
     const newParticles: Particle[] = [];
     for (let i = 0; i < particleCount; i++) {
       const angle = (i / particleCount) * Math.PI * 2;
-      const speed = 2 + Math.random() * 2;
-      
+      const speed = 3 + Math.random() * 3;
+
       newParticles.push({
         id: i,
         x: 50, // Start from center (%)
@@ -51,7 +55,8 @@ export function ParticleAnimation({
         vy: Math.sin(angle) * speed,
         life: duration,
         maxLife: duration,
-        size: 2 + Math.random() * 2
+        size: 2 + Math.random() * 2,
+        distance: 0
       });
     }
 
@@ -72,13 +77,23 @@ export function ParticleAnimation({
       }
 
       setParticles(prevParticles =>
-        prevParticles.map(particle => ({
-          ...particle,
-          x: particle.x + particle.vx,
-          y: particle.y + particle.vy,
-          life: particle.maxLife * (1 - progress),
-          vy: particle.vy + 0.1 // Add slight gravity
-        }))
+        prevParticles.map(particle => {
+          const newX = particle.x + particle.vx;
+          const newY = particle.y + particle.vy;
+          // Calculate distance from center (50, 50)
+          const dx = newX - 50;
+          const dy = newY - 50;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          return {
+            ...particle,
+            x: newX,
+            y: newY,
+            life: particle.maxLife * (1 - progress),
+            vy: particle.vy + 0.15, // Add slight gravity
+            distance
+          };
+        })
       );
 
       requestAnimationFrame(animate);
@@ -92,23 +107,30 @@ export function ParticleAnimation({
   }
 
   return (
-    <div className={cn("absolute inset-0 pointer-events-none overflow-hidden", className)}>
-      {particles.map(particle => (
-        <div
-          key={particle.id}
-          className="absolute rounded-full"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            width: `${particle.size}px`,
-            height: `${particle.size}px`,
-            backgroundColor: color,
-            opacity: particle.life / particle.maxLife,
-            transform: 'translate(-50%, -50%)',
-            boxShadow: `0 0 ${particle.size * 2}px ${color}`,
-          }}
-        />
-      ))}
+    <div className={cn("absolute inset-0 pointer-events-none", className)} style={{ overflow: 'visible' }}>
+      {particles.map(particle => {
+        // Calculate opacity: fade in based on distance, then fade out based on life
+        const fadeInProgress = Math.min(1, particle.distance / fadeInDistance);
+        const lifeOpacity = particle.life / particle.maxLife;
+        const opacity = fadeInProgress * lifeOpacity;
+
+        return (
+          <div
+            key={particle.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              backgroundColor: color,
+              opacity,
+              transform: 'translate(-50%, -50%)',
+              boxShadow: `0 0 ${particle.size * 2}px ${color}`,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

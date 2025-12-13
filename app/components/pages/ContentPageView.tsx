@@ -1734,6 +1734,9 @@ export default function ContentPageView({
                 <RepliesSection
                   pageId={page.id}
                   pageTitle={page.title}
+                  pageUserId={page.userId}
+                  pageUsername={page.username}
+                  isOwnPage={canEdit}
                 />
 
                 <RelatedPagesSection

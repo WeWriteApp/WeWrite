@@ -23,13 +23,13 @@ import { useToast } from '../ui/use-toast';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
-import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { AllocationIntervalModal } from './AllocationIntervalModal';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { AllocationControlsProps, CompositionBarData } from '../../types/allocation';
+import { CompositionBar } from './CompositionBar';
 import { getLoggedOutPageAllocation, getUserPageAllocation } from '../../utils/simulatedUsd';
 import { UsdAllocationModal } from './UsdAllocationModal';
 
@@ -52,6 +52,10 @@ export function AllocationControls({
 
   const [showIntervalModal, setShowIntervalModal] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
+
+  // Animation state for allocation changes
+  const [showParticles, setShowParticles] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
 
   // Long press handling
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -232,10 +236,6 @@ export function AllocationControls({
     }
   };
 
-  const otherWidth = compositionData.otherPagesPercentage > 0
-    ? `max(${compositionData.otherPagesPercentage}%, 4px)`
-    : '0%';
-
   const handleModalAllocationChange = async (newAllocationCents: number) => {
     const delta = newAllocationCents - allocationState.currentAllocationCents;
     setOptimisticAllocation(newAllocationCents);
@@ -252,6 +252,13 @@ export function AllocationControls({
       isLongPressing.current = false;
       return;
     }
+
+    // Trigger animations for increases
+    if (direction > 0) {
+      setShowPulse(true);
+      setShowParticles(true);
+    }
+
     // Use the user's configured increment amount
     const changeAmount = direction * allocationIntervalCents;
     handleAllocationChange(changeAmount, event);
@@ -317,51 +324,21 @@ export function AllocationControls({
           <Minus className="h-4 w-4" />
         </Button>
 
-      {/* Composition bar with centered dollar amount */}
-      <div
-        className="flex-1 h-8 relative"
+      {/* Composition bar with animations */}
+      <CompositionBar
+        data={compositionData}
+        showPulse={showPulse}
+        showParticles={showParticles}
+        onPulseComplete={() => setShowPulse(false)}
+        onParticlesComplete={() => setShowParticles(false)}
+        size="md"
+        clickable={true}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
           setShowAllocationModal(true);
         }}
-      >
-        {/* Background composition bar with smooth transitions */}
-        <div className="absolute inset-0 flex gap-1">
-          {/* Other pages (spent elsewhere) - left side */}
-          {compositionData.otherPagesPercentage > 0 && (
-            <div
-              className={ALLOCATION_BAR_STYLES.sections.other}
-              style={{ width: otherWidth }}
-            />
-          )}
-
-          {/* Current page - funded portion */}
-          {compositionData.currentPageFundedPercentage > 0 && (
-            <div
-              className="bg-primary rounded-md transition-all duration-300 ease-out"
-              style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-            />
-          )}
-
-          {/* Current page - overfunded portion */}
-          {compositionData.currentPageOverfundedPercentage > 0 && (
-            <div
-              className="bg-orange-500 rounded-md transition-all duration-300 ease-out"
-              style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
-            />
-          )}
-
-          {/* Available funds - right side (outline style) */}
-          {compositionData.availablePercentage > 0 && (
-            <div
-              className={ALLOCATION_BAR_STYLES.sections.available}
-              style={{ width: `${compositionData.availablePercentage}%` }}
-            />
-          )}
-        </div>
-
-      </div>
+      />
 
         {/* Plus button on right */}
         <Button

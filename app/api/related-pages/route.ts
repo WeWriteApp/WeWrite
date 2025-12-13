@@ -25,7 +25,7 @@ function extractMeaningfulWords(text: string): string[] {
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.has(word))
-    .slice(0, 20); // Limit to top 20 words
+    .slice(0, 40); // Limit to top 40 words for better matching
 }
 
 // Calculate similarity score between two sets of words
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     // Get candidate pages (simplified query to avoid index requirements)
     const pagesSnapshot = await db.collection(getCollectionName('pages'))
       .where('isPublic', '==', true)
-      .limit(200) // Limit to avoid timeout
+      .limit(500) // Increased limit for better coverage
       .get();
 
     const candidates = [];
@@ -130,8 +130,8 @@ export async function GET(request: NextRequest) {
 
       // Calculate similarity
       const similarity = calculateSimilarity(allWords, candidateWords);
-      
-      if (similarity > 0.1) { // Minimum similarity threshold
+
+      if (similarity > 0.05) { // Lowered threshold for more matches
         candidates.push({
           id: doc.id,
           title: pageData.title,

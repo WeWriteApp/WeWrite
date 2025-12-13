@@ -100,8 +100,8 @@ export default function PageGraph3D({
       const width = container.clientWidth;
       const graphHeight = isFullscreen ? window.innerHeight - 100 : height;
 
-      // Theme colors
-      const bgColor = isDarkMode ? '#000000' : '#ffffff';
+      // Theme colors - use transparent background so card styles show through
+      const bgColor = 'rgba(0,0,0,0)';
       const fgColor = isDarkMode ? '#f9fafb' : '#111827';
       const mutedColor = isDarkMode ? '#9ca3af' : '#6b7280';
 
@@ -119,8 +119,10 @@ export default function PageGraph3D({
       };
 
       // Initialize 3D force graph with CSS2D renderer for labels
+      // Enable alpha for transparent background
       const Graph = ForceGraph3D({
-        extraRenderers: [new CSS2DRenderer()]
+        extraRenderers: [new CSS2DRenderer()],
+        rendererConfig: { alpha: true, antialias: true }
       })(container)
         .width(width)
         .height(graphHeight)
@@ -234,6 +236,23 @@ export default function PageGraph3D({
       // Store reference
       graphRef.current = Graph;
 
+      // Force transparent backgrounds on all library-created elements
+      // The library may inject inline styles, so we override them directly
+      const forceTransparentBg = () => {
+        if (container) {
+          const children = container.querySelectorAll('*');
+          children.forEach(child => {
+            if (child instanceof HTMLElement && child.tagName !== 'CANVAS') {
+              child.style.background = 'transparent';
+              child.style.backgroundColor = 'transparent';
+            }
+          });
+        }
+      };
+      forceTransparentBg();
+      // Also run after a small delay to catch any async elements
+      setTimeout(forceTransparentBg, 100);
+
       // Focus on center node after a delay
       setTimeout(() => {
         const centerNode = nodes.find(n => n.isCenter);
@@ -308,7 +327,7 @@ export default function PageGraph3D({
   return (
     <div
       ref={containerRef}
-      className="w-full relative"
+      className="w-full relative [&>div]:!bg-transparent [&>canvas]:!bg-transparent"
       style={{ height: isFullscreen ? 'calc(100vh - 100px)' : height }}
     />
   );

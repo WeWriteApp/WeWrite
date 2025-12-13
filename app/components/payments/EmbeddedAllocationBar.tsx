@@ -23,7 +23,6 @@ import { Button } from '../ui/button';
 import { Plus, Minus } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
-import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
@@ -37,6 +36,7 @@ import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { EmbeddedAllocationBarProps, CompositionBarData } from '../../types/allocation';
 import { getLoggedOutPageAllocation, getUserPageAllocation } from '../../utils/simulatedUsd';
 import { UsdAllocationModal } from './UsdAllocationModal';
+import { CompositionBar } from './CompositionBar';
 
 export function EmbeddedAllocationBar({
   pageId,
@@ -65,6 +65,10 @@ export function EmbeddedAllocationBar({
   const [plusButtonPressed, setPlusButtonPressed] = useState(false);
   const [minusButtonHovered, setMinusButtonHovered] = useState(false);
   const [plusButtonHovered, setPlusButtonHovered] = useState(false);
+
+  // Game-like animation state for allocation increases
+  const [showParticles, setShowParticles] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
 
   // Long press handling
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -226,6 +230,15 @@ export function EmbeddedAllocationBar({
       return;
     }
 
+    // Trigger game-like animations for increases
+    if (direction > 0) {
+      setShowPulse(true);
+      setShowParticles(true);
+      // Reset animations after they complete
+      setTimeout(() => setShowPulse(false), 600);
+      setTimeout(() => setShowParticles(false), 1000);
+    }
+
     // Allow all users (including page owners) to allocate
     // Use our shared allocation change handler - it handles both logged-in and logged-out users
     // Use effective interval (override or user's configured amount)
@@ -339,11 +352,15 @@ export function EmbeddedAllocationBar({
         </Button>
 
         {/* Composition bar with centered dollar amount */}
-        <div
-          className={cn(
-            "flex-1 h-8 relative",
-            enableBarClickZones && "cursor-pointer"
-          )}
+        <CompositionBar
+          data={compositionData}
+          showPulse={showPulse}
+          showParticles={showParticles}
+          onPulseComplete={() => setShowPulse(false)}
+          onParticlesComplete={() => setShowParticles(false)}
+          size="sm"
+          className={enableBarClickZones ? "cursor-pointer" : undefined}
+          clickable={enableBarClickZones || !disableDetailModal}
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -379,61 +396,7 @@ export function EmbeddedAllocationBar({
               setShowAllocationModal(true);
             }
           }}
-          onMouseMove={(e) => {
-            if (!enableBarClickZones) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const halfWidth = rect.width / 2;
-
-            if (mouseX < halfWidth) {
-              setMinusButtonHovered(true);
-              setPlusButtonHovered(false);
-            } else {
-              setMinusButtonHovered(false);
-              setPlusButtonHovered(true);
-            }
-          }}
-          onMouseLeave={() => {
-            if (!enableBarClickZones) return;
-            setMinusButtonHovered(false);
-            setPlusButtonHovered(false);
-          }}
-        >
-          {/* Background composition bar with smooth transitions */}
-          <div className="absolute inset-0 flex gap-1 pointer-events-none">
-            {/* Other pages (spent elsewhere) - left side */}
-            {compositionData.otherPagesPercentage > 0 && (
-              <div
-                className={ALLOCATION_BAR_STYLES.sections.other}
-                style={{ width: otherWidth }}
-              />
-            )}
-
-            {/* Current page - funded portion */}
-            {compositionData.currentPageFundedPercentage > 0 && (
-              <div
-                className="bg-primary rounded-md transition-all duration-300 ease-out"
-                style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-              />
-            )}
-
-            {/* Current page - overfunded portion */}
-            {compositionData.currentPageOverfundedPercentage > 0 && (
-              <div
-                className="bg-orange-500 rounded-md transition-all duration-300 ease-out"
-                style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
-              />
-            )}
-
-            {/* Available funds - right side (outline style) */}
-            {compositionData.availablePercentage > 0 && (
-              <div
-                className={ALLOCATION_BAR_STYLES.sections.available}
-                style={{ width: `${compositionData.availablePercentage}%` }}
-              />
-            )}
-          </div>
-        </div>
+        />
 
         {/* Plus button on right */}
         <Button

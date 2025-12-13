@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocationModal } from './UsdAllocationModal';
-import { ParticleAnimation, PulseAnimation } from '../ui/ParticleAnimation';
+import { CompositionBar } from './CompositionBar';
 
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
@@ -27,7 +27,6 @@ import {
   Subscription,
   CompositionBarData
 } from '../../types/allocation';
-import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 interface AllocationBarProps extends Omit<FloatingAllocationBarProps, 'pageId' | 'authorId' | 'pageTitle'> {
   pageId?: string;
@@ -401,55 +400,14 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                   </Button>
 
                   {/* Composition Bar */}
-                  <div className="flex-1 h-12 flex gap-1 items-center bg-muted rounded-lg p-1 relative overflow-hidden">
-                    {/* Always show composition - even when out of funds */}
-                    <>
-                      {/* Other pages - use neutral color system */}
-                      <div
-                        className={`h-full ${ALLOCATION_BAR_STYLES.sections.other}`}
-                        style={{ width: otherWidth }}
-                      />
-
-                      {/* Current page - funded portion with game-like animations */}
-                      <div
-                        className={cn(
-                          "h-full bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
-                          showPulse && "animate-allocation-pulse"
-                        )}
-                        style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-                      >
-                        {/* Pulse animation overlay */}
-                        <PulseAnimation
-                          trigger={showPulse}
-                          onComplete={() => setShowPulse(false)}
-                          className="bg-primary rounded-md"
-                          intensity={1.05}
-                        />
-
-                        {/* Particle animation */}
-                        <ParticleAnimation
-                          trigger={showParticles}
-                          onComplete={() => setShowParticles(false)}
-                          particleCount={6}
-                          duration={800}
-                          color="hsl(var(--primary))"
-                        />
-                      </div>
-
-                      {/* Current page - overfunded portion */}
-                      <div
-                        className={`h-full ${ALLOCATION_BAR_STYLES.sections.overspent}`}
-                        style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
-                      />
-
-                      {/* Available/Remaining - outline style */}
-                      <div
-                        className={`h-full ${ALLOCATION_BAR_STYLES.sections.available}`}
-                        style={{ width: `${compositionData.availablePercentage}%` }}
-                      />
-                    </>
-
-                  </div>
+                  <CompositionBar
+                    data={compositionData}
+                    showPulse={showPulse}
+                    showParticles={showParticles}
+                    onPulseComplete={() => setShowPulse(false)}
+                    onParticlesComplete={() => setShowParticles(false)}
+                    size="lg"
+                  />
 
                   <Button
                     size="sm"

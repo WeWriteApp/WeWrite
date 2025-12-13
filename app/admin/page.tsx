@@ -252,7 +252,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-5xl">
-      <header className="border-b bg-background px-4 py-3 mb-6 flex items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
+      <header className="border-b-subtle bg-background px-4 py-3 mb-6 flex items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
         <div>
           <h1 className="text-3xl font-bold leading-tight">Admin Panel</h1>
           <p className="text-muted-foreground">

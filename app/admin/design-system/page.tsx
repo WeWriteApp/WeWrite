@@ -37,7 +37,13 @@ import {
   AtSign,
   RefreshCw,
   Home,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle,
+  Inbox,
+  FileText,
+  Tags,
+  Users,
+  FolderOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { isAdmin } from '../../utils/isAdmin';
@@ -56,7 +62,8 @@ import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, Segmen
 import FullPageError from '../../components/ui/FullPageError';
 import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
-import { CheckCircle } from 'lucide-react';
+import EmptyState from '../../components/ui/EmptyState';
+import { CompositionBar, CompositionBarData } from '../../components/payments/CompositionBar';
 
 interface ComponentShowcaseProps {
   title: string;
@@ -86,6 +93,221 @@ function StateDemo({ label, children }: { label: string; children: React.ReactNo
       <h4 className="text-sm font-medium text-muted-foreground">{label}</h4>
       <div className="flex flex-wrap gap-2 items-center">
         {children}
+      </div>
+    </div>
+  );
+}
+
+// Interactive Allocation Bar Demo Component
+function AllocationBarShowcase() {
+  const [demoAllocation, setDemoAllocation] = React.useState(30);
+  const [showPulse, setShowPulse] = React.useState(false);
+  const [showParticles, setShowParticles] = React.useState(false);
+  const otherPages = 20; // Fixed percentage for "other pages"
+  const total = 100;
+  const maxAllocation = 120; // Allow overspend up to 120% to demonstrate overfunded state
+
+  const handleIncrement = () => {
+    if (demoAllocation < maxAllocation) {
+      setDemoAllocation(prev => Math.min(prev + 10, maxAllocation));
+      setShowPulse(true);
+      setShowParticles(true);
+    }
+  };
+
+  const handleDecrement = () => {
+    if (demoAllocation > 0) {
+      setDemoAllocation(prev => Math.max(prev - 10, 0));
+    }
+  };
+
+  // Calculate the display percentages based on total + overfunded for proper scaling
+  const availableFunds = total - otherPages; // 80% available after other pages
+  const currentFunded = Math.min(demoAllocation, availableFunds);
+  const overfunded = Math.max(0, demoAllocation - availableFunds);
+  const available = Math.max(0, availableFunds - currentFunded);
+
+  // Scale all percentages to fit within display (total should be 100 or more if overfunded)
+  const displayTotal = Math.max(total, otherPages + currentFunded + overfunded);
+  const scaledOther = (otherPages / displayTotal) * 100;
+  const scaledFunded = (currentFunded / displayTotal) * 100;
+  const scaledOverfunded = (overfunded / displayTotal) * 100;
+  const scaledAvailable = (available / displayTotal) * 100;
+
+  return (
+    <div className="wewrite-card space-y-4">
+      <div className="border-b border-border pb-4">
+        <h3 className="text-lg font-semibold">Allocation Bar</h3>
+        <p className="text-sm text-muted-foreground">app/components/payments/AllocationControls.tsx</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Interactive allocation interface with plus/minus buttons and visual composition bar. Features particle animations on allocation increases.
+        </p>
+      </div>
+      <div className="space-y-6">
+        {/* Interactive Demo */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Interactive Demo</h4>
+          <p className="text-xs text-muted-foreground mb-3">
+            Click + to allocate. Keep clicking past 80% to see overfunded (amber) state.
+            Current: ${(demoAllocation / 10).toFixed(2)} / $8.00 available
+            {overfunded > 0 && <span className="text-amber-500 ml-1">(${(overfunded / 10).toFixed(2)} overfunded)</span>}
+          </p>
+          <div className="flex items-center gap-3 w-full max-w-md">
+            {/* Minus button */}
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20"
+              onClick={handleDecrement}
+              disabled={demoAllocation <= 0}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+
+            {/* Composition bar */}
+            <CompositionBar
+              data={{
+                otherPagesPercentage: scaledOther,
+                currentPageFundedPercentage: scaledFunded,
+                currentPageOverfundedPercentage: scaledOverfunded,
+                availablePercentage: scaledAvailable,
+                isOutOfFunds: available <= 0
+              }}
+              showPulse={showPulse}
+              showParticles={showParticles}
+              onPulseComplete={() => setShowPulse(false)}
+              onParticlesComplete={() => setShowParticles(false)}
+              size="md"
+            />
+
+            {/* Plus button */}
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20"
+              onClick={handleIncrement}
+              disabled={demoAllocation >= maxAllocation}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Static Examples */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Distribution States</h4>
+          <div className="space-y-4 w-full">
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Empty (No Allocation)</p>
+              <div className="flex items-center gap-3 max-w-md">
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20" disabled>
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <CompositionBar
+                  data={{ otherPagesPercentage: 0, currentPageFundedPercentage: 0, currentPageOverfundedPercentage: 0, availablePercentage: 100, isOutOfFunds: false }}
+                  size="md"
+                />
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Partial Allocation</p>
+              <div className="flex items-center gap-3 max-w-md">
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <CompositionBar
+                  data={{ otherPagesPercentage: 20, currentPageFundedPercentage: 35, currentPageOverfundedPercentage: 0, availablePercentage: 45, isOutOfFunds: false }}
+                  size="md"
+                />
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Fully Allocated (Out of Funds)</p>
+              <div className="flex items-center gap-3 max-w-md">
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <CompositionBar
+                  data={{ otherPagesPercentage: 50, currentPageFundedPercentage: 50, currentPageOverfundedPercentage: 0, availablePercentage: 0, isOutOfFunds: true }}
+                  size="md"
+                />
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20" disabled>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Overfunded (Amber Warning)</p>
+              <div className="flex items-center gap-3 max-w-md">
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <CompositionBar
+                  data={{ otherPagesPercentage: 40, currentPageFundedPercentage: 40, currentPageOverfundedPercentage: 20, availablePercentage: 0, isOutOfFunds: true }}
+                  size="md"
+                />
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20" disabled>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Segment Colors */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Segment Colors</h4>
+          <div className="space-y-3 w-full text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded bg-neutral-20" />
+              <span><code>Other Pages</code> - Neutral gray, previously allocated elsewhere</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded bg-primary" />
+              <span><code>Current Page (Funded)</code> - Primary brand color with particle animation</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded bg-amber-500" />
+              <span><code>Current Page (Overfunded)</code> - Amber warning when over budget</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded bg-transparent border border-neutral-alpha-10" />
+              <span><code>Available</code> - Solid outline, unfunded</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Component Usage */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Components</h4>
+          <div className="space-y-2 text-sm w-full">
+            <div className="flex gap-2 items-center flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">AllocationControls</code>
+              <span className="text-muted-foreground">- Used in ActivityCard, activity feeds</span>
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">EmbeddedAllocationBar</code>
+              <span className="text-muted-foreground">- Used in page cards, compact contexts</span>
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">AllocationBar</code>
+              <span className="text-muted-foreground">- Floating action bar on page view</span>
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">CompositionBar</code>
+              <span className="text-muted-foreground">- Shared visual component (bar only, no buttons)</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1579,11 +1801,17 @@ export default function DesignSystemPage() {
                   {/* Allocation Section */}
                   <div className="p-2 border border-dashed border-blue-500/50 rounded-lg relative">
                     <span className="absolute -top-2 left-2 text-[10px] bg-background px-1 text-blue-600 dark:text-blue-400 font-medium">Allocation Section</span>
-                    <div className="flex items-center gap-2 py-2">
-                      <div className="flex-1 h-2 bg-neutral-10 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary w-1/3 rounded-full"></div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">$0.50</span>
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <CompositionBar
+                        data={{ otherPagesPercentage: 15, currentPageFundedPercentage: 25, currentPageOverfundedPercentage: 0, availablePercentage: 60, isOutOfFunds: false }}
+                        size="md"
+                      />
+                      <Button size="sm" variant="secondary" className="h-8 w-8 p-0 flex-shrink-0 border border-neutral-20">
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -2430,6 +2658,90 @@ export default function ErrorPage({
               </div>
             </StateDemo>
           </ComponentShowcase>
+
+          {/* Empty State Component */}
+          <ComponentShowcase
+            title="Empty State"
+            path="app/components/ui/EmptyState.tsx"
+            description="Standardized empty state component for consistent messaging when content is unavailable"
+          >
+            <StateDemo label="Size Variants">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Small (sm)</p>
+                  <EmptyState
+                    icon={Tags}
+                    title="No alternative titles"
+                    description="Add alternative titles to help people find this page."
+                    size="sm"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Medium (md) - Default</p>
+                  <EmptyState
+                    icon={Inbox}
+                    title="No messages"
+                    description="When you receive messages, they'll appear here."
+                    size="md"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Large (lg)</p>
+                  <EmptyState
+                    icon={FolderOpen}
+                    title="No pages yet"
+                    description="Create your first page to get started with WeWrite."
+                    size="lg"
+                  />
+                </div>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Common Use Cases">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <EmptyState
+                  icon={FileText}
+                  title="No recent activity"
+                  description="Your recent edits and activity will show up here."
+                  size="sm"
+                />
+                <EmptyState
+                  icon={Users}
+                  title="No followers yet"
+                  description="When people follow you, they'll appear in this list."
+                  size="sm"
+                />
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Props">
+              <div className="space-y-2 text-sm w-full">
+                <div className="flex gap-2 items-center">
+                  <code className="px-2 py-1 bg-muted rounded text-xs">icon: LucideIcon</code>
+                  <span className="text-muted-foreground">- Required. Icon component from lucide-react</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <code className="px-2 py-1 bg-muted rounded text-xs">title: string</code>
+                  <span className="text-muted-foreground">- Required. Main heading text</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <code className="px-2 py-1 bg-muted rounded text-xs">description: string</code>
+                  <span className="text-muted-foreground">- Required. Supporting description text</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <code className="px-2 py-1 bg-muted rounded text-xs">size?: 'sm' | 'md' | 'lg'</code>
+                  <span className="text-muted-foreground">- Optional. Controls padding and text size (default: 'md')</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <code className="px-2 py-1 bg-muted rounded text-xs">className?: string</code>
+                  <span className="text-muted-foreground">- Optional. Additional CSS classes</span>
+                </div>
+              </div>
+            </StateDemo>
+          </ComponentShowcase>
+
+          {/* Allocation Bar */}
+          <AllocationBarShowcase />
 
           {/* Test Dialog - uses switch state */}
           <Dialog open={showDialog} onOpenChange={setShowDialog}>

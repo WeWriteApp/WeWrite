@@ -21,6 +21,22 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
   ({ hashId, analyticsId, open, onOpenChange, children, ...props }, ref) => {
     // Track previous hash to restore on close
     const previousHashRef = React.useRef<string>('')
+    // Track if we've already checked the initial hash
+    const hasCheckedInitialHash = React.useRef(false)
+
+    // Check if URL hash matches on mount and open drawer if so
+    React.useEffect(() => {
+      if (typeof window === 'undefined' || !hashId || hasCheckedInitialHash.current) return
+
+      hasCheckedInitialHash.current = true
+
+      // Check if current URL has the matching hash
+      const currentHash = window.location.hash.replace('#', '')
+      if (currentHash === hashId && !open) {
+        // URL has the hash but drawer is closed - open it
+        onOpenChange?.(true)
+      }
+    }, [hashId, open, onOpenChange])
 
     // Handle URL hash and body scroll lock
     React.useEffect(() => {
@@ -176,7 +192,7 @@ const drawerVariants = cva(
   {
     variants: {
       side: {
-        bottom: "inset-x-0 -bottom-8 pb-8 rounded-t-3xl data-[state=open]:animate-[drawer-slide-up_0.5s_cubic-bezier(0.32,0.72,0,1)] data-[state=closed]:animate-[drawer-slide-down_0.3s_ease-out]",
+        bottom: "inset-x-0 bottom-0 rounded-t-3xl data-[state=open]:animate-[drawer-slide-up_0.5s_cubic-bezier(0.32,0.72,0,1)] data-[state=closed]:animate-[drawer-slide-down_0.3s_ease-out]",
       },
     },
     defaultVariants: {
@@ -312,12 +328,19 @@ const DrawerContent = React.forwardRef<
         className={cn(
           drawerVariants({ side }),
           // Frosted glass effect: mostly opaque white with subtle blur
-          "flex flex-col p-0 shadow-2xl border border-border",
+          "flex flex-col p-0 shadow-2xl border-subtle",
           "bg-white/95 dark:bg-zinc-900/95",
           "backdrop-blur-xl",
+          // Safe area support for bottom drawer
+          "pb-safe",
           className
         )}
-        style={{ height, borderRadius: '1.5rem 1.5rem 0 0', borderBottom: 'none' }}
+        style={{
+          height,
+          borderRadius: '1.5rem 1.5rem 0 0',
+          borderBottom: 'none',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+        }}
         tabIndex={-1}
         {...props}
       >
@@ -370,8 +393,8 @@ const DrawerFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      // Safe area padding for bottom buttons - extra bottom margin for mobile safe area
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-2 pb-10 flex-shrink-0 border-t border-border/50",
+      // Footer with comfortable bottom padding for buttons
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-3 pb-6 flex-shrink-0 border-t-subtle",
       className
     )}
     {...props}

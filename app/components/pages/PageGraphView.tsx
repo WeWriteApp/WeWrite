@@ -10,7 +10,6 @@ import { useRelatedPages } from '../../hooks/useRelatedPages';
 import { useAuth } from '../../providers/AuthProvider';
 import SubscriptionGate from '../subscription/SubscriptionGate';
 import { PillLink } from '../utils/PillLink';
-import { useTheme } from '../../providers/ThemeProvider';
 import { Drawer, DrawerContent, DrawerClose } from '../ui/drawer';
 
 // Dynamically import 3D graph component (WebGL requires client-side only)
@@ -81,8 +80,6 @@ export default function PageGraphView({
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasActivatedGraph, setHasActivatedGraph] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === 'dark';
   const { user } = useAuth();
 
   // Determine if user is viewing their own content (allows viewing without subscription)
@@ -452,8 +449,6 @@ export default function PageGraphView({
     );
   }
 
-  // Compute theme-aware colors for fullscreen
-  const fullscreenBgColor = isDarkMode ? '#000000' : '#ffffff';
 
   // Fullscreen mode rendered as a drawer
   const fullscreenDrawer = (
@@ -496,10 +491,7 @@ export default function PageGraphView({
         </div>
 
         {/* Graph container */}
-        <div
-          className="flex-1 min-h-0"
-          style={{ backgroundColor: fullscreenBgColor }}
-        >
+        <div className="flex-1 min-h-0">
           <SubscriptionGate
             featureName="graph"
             className="h-full"

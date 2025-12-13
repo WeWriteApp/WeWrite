@@ -335,6 +335,30 @@ html[data-landing-page="true"].dark .wewrite-card.wewrite-floating {
   border-color: var(--card-border, oklch(0.80 0.12 230 / 0.15));
 }
 
+/* ===== SUBTLE BORDER UTILITIES ===== */
+
+/**
+ * Subtle border utilities for headers and dividers
+ *
+ * Use these instead of border-border for a more subtle, card-like border effect.
+ * These use the same --card-border color as cards for consistency.
+ */
+
+/* Bottom border - for headers */
+.border-b-subtle {
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* Top border - for footers */
+.border-t-subtle {
+  border-top: 1px solid var(--card-border);
+}
+
+/* Full border - for containers */
+.border-subtle {
+  border: 1px solid var(--card-border);
+}
+
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */
 
 html[data-high-contrast="true"] .wewrite-card {

@@ -132,6 +132,22 @@ export function FinancialDropdown({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Handle scroll to close dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleScroll = () => {
+      setIsOpen(false);
+      setIsAnimating(false);
+      setPosition(null);
+      onClose?.();
+    };
+
+    // Use capture phase to catch scroll events on any element
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [isOpen, onClose]);
+
   const openDropdown = () => {
     // Calculate position BEFORE opening
     const pos = calculatePosition();

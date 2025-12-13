@@ -18,8 +18,7 @@ import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { AllocationIntervalModal } from './AllocationIntervalModal';
-import { ParticleAnimation, PulseAnimation } from '../ui/ParticleAnimation';
-import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
+import { CompositionBar } from './CompositionBar';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 
 /**
@@ -165,9 +164,6 @@ export function AllocationBarBase({
     usdBalance,
     allocationState.isOptimistic ? allocationState.currentAllocationCents : null
   );
-  const otherWidth = compositionData.otherPagesPercentage > 0
-    ? `max(${compositionData.otherPagesPercentage}%, 4px)`
-    : '0%';
 
   // Game-like animation state for allocation increases
   const [showParticles, setShowParticles] = useState(false);
@@ -316,61 +312,17 @@ export function AllocationBarBase({
 
           {/* Composition bar */}
           {showCompositionBar && (
-            <div className="flex-1 h-8 relative bg-muted rounded-lg">
-              <div className="absolute inset-0 flex gap-1 p-1">
-                {/* Other pages (spent elsewhere) - use neutral color system */}
-                {compositionData.otherPagesPercentage > 0 && (
-                  <div
-                    className={ALLOCATION_BAR_STYLES.sections.other}
-                    style={{ width: otherWidth }}
-                  />
-                )}
-
-                {/* Current page - funded portion with game-like animations */}
-                {compositionData.currentPageFundedPercentage > 0 && (
-                  <div
-                    className={cn(
-                      "bg-primary rounded-md transition-all duration-300 ease-out relative overflow-hidden",
-                      showPulse && "animate-allocation-pulse",
-                      isShinyMode && "allocation-bar-shiny-style"
-                    )}
-                    style={{ width: `${compositionData.currentPageFundedPercentage}%` }}
-                  >
-                    {/* Pulse animation overlay */}
-                    <PulseAnimation
-                      trigger={showPulse}
-                      onComplete={() => setShowPulse(false)}
-                      className="bg-primary rounded-md"
-                      intensity={1.05}
-                    />
-
-                    {/* Particle animation */}
-                    <ParticleAnimation
-                      trigger={showParticles}
-                      onComplete={() => setShowParticles(false)}
-                      particleCount={6}
-                      duration={800}
-                      color="hsl(var(--primary))"
-                    />
-                  </div>
-                )}
-
-                {/* Current page - overfunded portion */}
-                {compositionData.currentPageOverfundedPercentage > 0 && (
-                  <div
-                    className={ALLOCATION_BAR_STYLES.sections.overspent}
-                    style={{ width: `${compositionData.currentPageOverfundedPercentage}%` }}
-                  />
-                )}
-
-                {/* Available funds - outline style */}
-                {compositionData.availablePercentage > 0 && (
-                  <div
-                    className={ALLOCATION_BAR_STYLES.sections.available}
-                    style={{ width: `${compositionData.availablePercentage}%` }}
-                  />
-                )}
-              </div>
+            <div className="flex-1 h-8 relative bg-muted rounded-lg p-1">
+              <CompositionBar
+                data={compositionData}
+                showPulse={showPulse}
+                showParticles={showParticles}
+                onPulseComplete={() => setShowPulse(false)}
+                onParticlesComplete={() => setShowParticles(false)}
+                size="md"
+                isShinyMode={isShinyMode}
+                className="h-full"
+              />
             </div>
           )}
 
