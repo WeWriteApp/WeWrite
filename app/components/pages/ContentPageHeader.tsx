@@ -299,18 +299,25 @@ export default function ContentPageHeader({
     }
   }, [isNewPage, isEditing, canEdit, titlePreFilled]);
 
+  // Helper to resize title field textarea
+  const resizeTitleField = React.useCallback((textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return;
+    const minHeight = 64; // match design height
+    // Reset height to 0 first to get accurate scrollHeight
+    textarea.style.height = '0px';
+    textarea.style.lineHeight = '1.3';
+    // Force reflow and get scrollHeight
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.max(scrollHeight, minHeight);
+    textarea.style.height = `${newHeight}px`;
+  }, []);
+
   // Auto-resize textarea when editing title starts or content changes
   React.useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
-      // Ensure multi-line titles expand naturally
-      const textarea = titleInputRef.current;
-      const minHeight = 64; // 64px to match CSS height
-      textarea.style.height = 'auto';
-      textarea.style.lineHeight = '1.3';
-      const newHeight = Math.max(textarea.scrollHeight, minHeight);
-      textarea.style.height = `${newHeight}px`;
+      resizeTitleField(titleInputRef.current);
     }
-  }, [isEditingTitle, editingTitle]); // Also trigger when editingTitle content changes
+  }, [isEditingTitle, editingTitle, resizeTitleField]); // Also trigger when editingTitle content changes
 
   // Listen for focus changes to coordinate focus rings
   React.useEffect(() => {
@@ -446,15 +453,6 @@ export default function ContentPageHeader({
   const handleTitleBlur = () => {
     setIsTitleFocused(false);
     handleTitleSubmit();
-  };
-
-  const resizeTitleField = (textarea: HTMLTextAreaElement | null) => {
-    if (!textarea) return;
-    const minHeight = 64; // match design height
-    textarea.style.height = 'auto';
-    textarea.style.lineHeight = '1.3';
-    const newHeight = Math.max(textarea.scrollHeight, minHeight);
-    textarea.style.height = `${newHeight}px`;
   };
 
   const handleTitleFocus = () => {
