@@ -156,6 +156,7 @@ export function UserUsdAllocationBar({
           availableBalanceCents={usdBalance?.availableUsdCents || 0}
           variant="user"
           className="py-1"
+          isOverBudget={usdBalance ? (usdBalance.allocatedUsdCents > usdBalance.totalUsdCents) : false}
         />
 
         {/* Allocation controls */}

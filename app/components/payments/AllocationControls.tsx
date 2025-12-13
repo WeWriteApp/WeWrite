@@ -307,6 +307,7 @@ export function AllocationControls({
         availableBalanceCents={(shouldUseDemoBalance ? demoBalance : usdBalance)?.availableUsdCents || 0}
         variant="page"
         hideWhenZero={hideAvailableText}
+        isOverBudget={compositionData.currentPageOverfundedPercentage > 0}
       />
 
       <div className="flex items-center gap-3">

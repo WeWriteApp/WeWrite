@@ -280,6 +280,7 @@ export function AllocationBarBase({
           allocationCents={allocationState.currentAllocationCents}
           availableBalanceCents={usdBalance?.availableUsdCents || 0}
           variant={variant === 'user' ? 'user' : 'page'}
+          isOverBudget={compositionData.currentPageOverfundedPercentage > 0}
         />
       )}
 

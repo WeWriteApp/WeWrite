@@ -322,6 +322,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                 flashType={flashType}
                 allocationIntervalCents={allocationIntervalCents}
                 isDemoBalance={showLoginNotice}
+                isOverBudget={compositionData.currentPageOverfundedPercentage > 0}
               />
 
               {/* Out of funds message */}

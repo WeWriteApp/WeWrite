@@ -299,7 +299,7 @@ export default function ContentPageHeader({
     }
   }, [isNewPage, isEditing, canEdit, titlePreFilled]);
 
-  // Auto-resize textarea when editing title starts
+  // Auto-resize textarea when editing title starts or content changes
   React.useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       // Ensure multi-line titles expand naturally
@@ -310,7 +310,7 @@ export default function ContentPageHeader({
       const newHeight = Math.max(textarea.scrollHeight, minHeight);
       textarea.style.height = `${newHeight}px`;
     }
-  }, [isEditingTitle]);
+  }, [isEditingTitle, editingTitle]); // Also trigger when editingTitle content changes
 
   // Listen for focus changes to coordinate focus rings
   React.useEffect(() => {
@@ -818,9 +818,9 @@ export default function ContentPageHeader({
 
               {/* Row 2: Title - slides up and fades out when collapsed */}
               <div className={`transition-all duration-300 ease-out overflow-hidden ${
-                isScrolled && !isEditing 
-                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2' 
-                  : 'opacity-100 max-h-[200px] mt-2 translate-y-0'
+                isScrolled && !isEditing
+                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2'
+                  : 'opacity-100 max-h-none mt-2 translate-y-0'
               }`}>
                 <div className="flex items-center justify-center">
                   {/* Left navigation chevron for daily notes */}
@@ -855,7 +855,6 @@ export default function ContentPageHeader({
                             className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
                             placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                             rows={1}
-                            style={{ height: 'auto' }}
                           />
                         ) : (
                           <div
@@ -868,7 +867,7 @@ export default function ContentPageHeader({
                             }
                           >
                             <span
-                              className={!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}
+                              className={`break-words ${!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}`}
                               suppressHydrationWarning={isExactDateFormat(title || "") && title !== "Daily note"}
                             >
                               {(isExactDateFormat(title || "") && title !== "Daily note") && title

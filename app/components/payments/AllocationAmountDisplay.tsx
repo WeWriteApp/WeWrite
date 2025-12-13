@@ -14,6 +14,8 @@ interface AllocationAmountDisplayProps {
   allocationIntervalCents?: number;
   hideWhenZero?: boolean;
   isDemoBalance?: boolean;
+  /** When true, shows allocation in orange with "- over budget" suffix */
+  isOverBudget?: boolean;
 }
 
 /**
@@ -32,7 +34,8 @@ export function AllocationAmountDisplay({
   flashType = null,
   allocationIntervalCents = 10, // Default to $0.10
   hideWhenZero = false,
-  isDemoBalance = false
+  isDemoBalance = false,
+  isOverBudget = false
 }: AllocationAmountDisplayProps) {
   // Show interval amount during flash animation
   const isFlashing = flashType !== null;
@@ -67,8 +70,15 @@ export function AllocationAmountDisplay({
     ? `${formatUsdCents(allocationCents)}/mo to ${variant}`
     : `Available: ${formatUsdCents(availableBalanceCents)}`;
 
-  // Color and font weight based on whether there's an allocation
-  const textColorClass = hasAllocation ? "text-primary" : "text-muted-foreground";
+  // Color and font weight based on whether there's an allocation and budget status
+  // Over budget: show in orange (warning color)
+  // Normal allocation: show in primary/accent color
+  // No allocation: show in muted color
+  const textColorClass = isOverBudget
+    ? "text-orange-500"
+    : hasAllocation
+      ? "text-primary"
+      : "text-muted-foreground";
   const fontWeightClass = hasAllocation ? "font-bold" : "font-normal";
 
   return (
@@ -87,6 +97,9 @@ export function AllocationAmountDisplay({
         )}
       >
         {displayText}
+        {isOverBudget && hasAllocation && (
+          <span className="text-orange-500"> - over budget</span>
+        )}
         {isDemoBalance && (
           <span className="text-muted-foreground font-normal">
             {" (Demo funds, "}

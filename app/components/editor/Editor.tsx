@@ -433,12 +433,24 @@ const Editor: React.FC<EditorProps> = ({
   // Track the previous content to detect external changes
   const prevContentRef = useRef<string>(JSON.stringify(normalizedInitialContent));
 
+  // Track if the change originated from the editor itself (to prevent resetting on own changes)
+  const isInternalChangeRef = useRef(false);
+
   useEffect(() => {
     const currentContentStr = JSON.stringify(normalizedInitialContent);
 
     // Only update if content actually changed (not just reference)
+    // AND if the change was NOT initiated by the editor itself
     if (prevContentRef.current !== currentContentStr) {
-      console.log('🔧 [EDITOR] Detected content change, updating editor');
+      // If this change was triggered by the editor's own onChange, skip the reset
+      if (isInternalChangeRef.current) {
+        console.log('🔧 [EDITOR] Skipping reset - internal change');
+        prevContentRef.current = currentContentStr;
+        isInternalChangeRef.current = false;
+        return;
+      }
+
+      console.log('🔧 [EDITOR] Detected external content change, updating editor');
       prevContentRef.current = currentContentStr;
 
       // Update state
@@ -459,6 +471,9 @@ const Editor: React.FC<EditorProps> = ({
   const handleChange = useCallback((newValue: Descendant[]) => {
     // Update local state immediately for instant UI feedback
     setEditorValue(newValue);
+
+    // Mark this as an internal change to prevent the useEffect from resetting the editor
+    isInternalChangeRef.current = true;
 
     // Defer parent onChange callback to next frame to avoid blocking input
     requestAnimationFrame(() => {

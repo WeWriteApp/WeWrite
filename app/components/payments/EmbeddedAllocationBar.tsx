@@ -330,6 +330,7 @@ export function EmbeddedAllocationBar({
         allocationCents={allocationState.currentAllocationCents}
         availableBalanceCents={(shouldUseDemoBalance ? demoBalance : usdBalance)?.availableUsdCents || 0}
         variant="page"
+        isOverBudget={compositionData.currentPageOverfundedPercentage > 0}
       />
 
       <div className="flex items-center gap-3">
