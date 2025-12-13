@@ -160,10 +160,19 @@ export async function GET(request: NextRequest) {
               }
             }
 
-            // Use stored page title if available, otherwise show "Page deleted" with author info
-            const pageTitle = storedPageTitle
-              ? `${storedPageTitle} (deleted)`
-              : 'Page not found';
+            // Use stored page title if available, otherwise show helpful message with author info
+            // The page was deleted but we may still have context about it
+            let pageTitle: string;
+            if (storedPageTitle) {
+              pageTitle = `${storedPageTitle} (deleted)`;
+            } else if (authorUsername && authorUsername !== 'Unknown') {
+              pageTitle = `Deleted page by ${authorUsername}`;
+            } else {
+              pageTitle = 'Page not found';
+            }
+
+            // Mark this allocation as needing cleanup - it's for a deleted page
+            // The user should remove this allocation from their breakdown
 
             return {
               id: allocation.id,
@@ -174,7 +183,8 @@ export async function GET(request: NextRequest) {
               usdCents: allocation.usdCents,
               month: allocation.month,
               resourceType: allocation.resourceType,
-              resourceId: allocation.resourceId
+              resourceId: allocation.resourceId,
+              isDeleted: true // Flag for UI to show this allocation needs cleanup
             };
           }
 

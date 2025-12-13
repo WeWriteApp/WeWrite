@@ -1343,6 +1343,43 @@ export async function DELETE(request: NextRequest) {
         // Don't fail the deletion if backlink cleanup fails
       }
 
+      // Clean up USD allocations when page is deleted - cancel active allocations
+      try {
+        console.log(`🗑️ Cleaning up USD allocations for deleted page ${pageId}`);
+
+        // Get current month for active allocations
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        // Query all active allocations for this page (current and future months)
+        const allocationsQuery = db.collection(getCollectionName('usd_allocations'))
+          .where('resourceId', '==', pageId)
+          .where('resourceType', '==', 'page')
+          .where('status', '==', 'active');
+
+        const allocationsSnapshot = await allocationsQuery.get();
+
+        if (allocationsSnapshot.size > 0) {
+          const allocationBatch = db.batch();
+          allocationsSnapshot.docs.forEach(doc => {
+            allocationBatch.update(doc.ref, {
+              status: 'cancelled',
+              cancelledAt: new Date().toISOString(),
+              cancelledReason: 'page_deleted',
+              updatedAt: new Date().toISOString()
+            });
+          });
+
+          await allocationBatch.commit();
+          console.log(`✅ Cancelled ${allocationsSnapshot.size} USD allocations for deleted page ${pageId}`);
+        } else {
+          console.log(`ℹ️ No active USD allocations to clean up for page ${pageId}`);
+        }
+      } catch (allocationError) {
+        console.error('Error cleaning up USD allocations for deleted page:', allocationError);
+        // Don't fail the deletion if allocation cleanup fails
+      }
+
       // Clear graph cache for this page to ensure deleted pages don't appear in graphs
       try {
         // Note: This is server-side, so we can't directly access the client-side cache
