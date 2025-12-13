@@ -35,9 +35,9 @@
   min-height: 200px;
 }
 
-/* Slate paragraph styling */
+/* Slate paragraph styling - match view mode spacing for consistency */
 .slate-editor div[data-slate-node="element"] {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 /* ============================================================================
@@ -129,17 +129,17 @@ a[data-user-id]::before {
    PARAGRAPH STYLING
    ============================================================================ */
 
-/* Unified paragraph styling */
+/* Unified paragraph styling - consistent 1rem spacing to match edit mode */
 .unified-paragraph {
   display: flex;
   align-items: baseline;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
   line-height: 1.5;
 }
 
-/* When line numbers are disabled, increase paragraph spacing 
-   to better distinguish between wrapped lines and new paragraphs */
+/* No-line-numbers class no longer needs different spacing since base is now 1rem */
 .unified-paragraph.no-line-numbers {
+  /* Same as base - keeping for backwards compatibility */
   margin-bottom: 1rem;
 }
 
