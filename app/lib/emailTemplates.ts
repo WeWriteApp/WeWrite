@@ -600,7 +600,7 @@ export const chooseUsernameTemplate: EmailTemplate = {
       <h2 style="margin-top: 0; color: #000;">Make Your Mark on WeWrite ✏️</h2>
       <p>Hey there!</p>
       <p>We noticed you haven't chosen a username yet. Right now you're showing up as <strong style="color: #666;">${currentUsername || 'user_...'}</strong> around the platform.</p>
-      
+
       <p>A great username helps you:</p>
       <ul style="padding-left: 20px; margin: 20px 0;">
         <li style="margin-bottom: 8px;">Build your identity as a writer</li>
@@ -608,13 +608,13 @@ export const chooseUsernameTemplate: EmailTemplate = {
         <li style="margin-bottom: 8px;">Stand out on the leaderboard</li>
         <li style="margin-bottom: 8px;">Get proper credit for your contributions</li>
       </ul>
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/settings/profile" style="${emailStyles.button}">
           Choose My Username
         </a>
       </div>
-      
+
       <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
         <p style="margin: 0; font-size: 14px; color: #666;">
           <strong>💡 Tips for a great username:</strong><br>
@@ -625,6 +625,51 @@ export const chooseUsernameTemplate: EmailTemplate = {
       </div>
     </div>
   `),
+};
+
+export const reactivationTemplate: EmailTemplate = {
+  id: 'reactivation',
+  name: 'Re-activation',
+  description: 'Sent to inactive users to encourage them to start writing and earning again',
+  category: 'engagement',
+  subject: 'We miss you on WeWrite! Come back and start earning',
+  sampleData: {
+    username: 'JohnDoe',
+    daysSinceActive: 30,
+    emailSettingsToken: 'sample-token-123',
+  },
+  generateHtml: ({ username, daysSinceActive, emailSettingsToken }) => wrapEmail('We Miss You!', `
+    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 style="margin-top: 0; color: #000;">Hey ${username || 'there'}, we've missed you!</h2>
+      <p>It's been a little quiet on your WeWrite profile lately, and we wanted to check in.</p>
+
+      <p>Here's the thing: <strong>every page you write on WeWrite can earn you real money</strong>. When subscribers allocate their monthly budget to pages they love, creators like you get paid.</p>
+
+      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 24px 0;">
+        <p style="margin: 0 0 12px 0; font-size: 15px; color: #333;">
+          <strong>Why come back?</strong>
+        </p>
+        <ul style="padding-left: 18px; margin: 0; color: #555;">
+          <li style="margin-bottom: 8px;">Write about anything you're passionate about</li>
+          <li style="margin-bottom: 8px;">Earn money when readers support your work</li>
+          <li style="margin-bottom: 8px;">Connect with other writers and build your audience</li>
+          <li style="margin-bottom: 8px;">No minimum—every allocation counts</li>
+        </ul>
+      </div>
+
+      <p style="color: #555;">Your next great idea could be the one that resonates with readers. Why not give it a shot?</p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://getwewrite.app/create" style="${emailStyles.button}">
+          Start Writing
+        </a>
+      </div>
+
+      <p style="${emailStyles.muted}; text-align: center;">
+        Got questions or feedback? Just reply to this email—we'd love to hear from you.
+      </p>
+    </div>
+  `, { emailSettingsToken, emailType: 'reactivation' }),
 };
 
 // ============================================================================
@@ -696,6 +741,7 @@ export const emailTemplates: EmailTemplate[] = [
   newFollowerTemplate,
   pageLinkedTemplate,
   chooseUsernameTemplate,
+  reactivationTemplate,
   broadcastEmailTemplate,
   // System
   genericNotificationTemplate,

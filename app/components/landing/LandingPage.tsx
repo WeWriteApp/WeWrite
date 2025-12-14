@@ -21,7 +21,6 @@ import FeaturesCarousel from './FeaturesCarousel';
 import { LandingColorProvider } from './LandingColorContext';
 // LandingBlobs is now rendered globally via GlobalLandingBlobs in root layout
 // This ensures blobs persist across page transitions between landing and auth pages
-import { LoggedOutFinancialHeader } from './LoggedOutFinancialHeader';
 import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
@@ -347,10 +346,7 @@ const LandingPage = () => {
 
       </div>
 
-      {/* Floating Financial Header */}
-      <LoggedOutFinancialHeader />
-
-      <main className={`${isMobileView ? 'pt-32' : 'pt-28'}`}>
+      <main className={`${isMobileView ? 'pt-16' : 'pt-16'}`}>
         {/* SEO Content - Hidden but accessible to search engines */}
         <div className="sr-only">
           <h1>WeWrite - The Social Wiki Where Every Page is a Fundraiser</h1>

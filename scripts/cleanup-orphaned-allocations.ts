@@ -9,18 +9,27 @@
  * 3. Cancels allocations for missing/deleted pages
  */
 
+// Load environment variables first
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
 // Import the existing admin initialization
 import { initAdmin } from '../app/firebase/admin';
-import { getCollectionName } from '../app/utils/environmentConfig';
+
+// Parse command line args
+const args = process.argv.slice(2);
+const useProduction = args.includes('--production') || args.includes('--prod');
 
 async function main() {
   console.log('🚀 Starting orphaned allocation cleanup...\n');
+  console.log(`Environment: ${useProduction ? 'PRODUCTION' : 'DEVELOPMENT'}\n`);
 
   const admin = initAdmin();
   const db = admin.firestore();
 
-  const allocationsCollection = getCollectionName('usd_allocations');
-  const pagesCollection = getCollectionName('pages');
+  // Production uses no prefix (camelCase names), dev uses DEV_ prefix
+  const allocationsCollection = useProduction ? 'usdAllocations' : 'DEV_usdAllocations';
+  const pagesCollection = useProduction ? 'pages' : 'DEV_pages';
 
   console.log(`📦 Allocations collection: ${allocationsCollection}`);
   console.log(`📦 Pages collection: ${pagesCollection}\n`);

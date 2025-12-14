@@ -81,6 +81,7 @@ const notificationModes: Record<string, { email: boolean; inApp: boolean; push: 
   'page-linked': { email: true, inApp: true, push: true },
   'account-security': { email: true, inApp: true, push: true },
   'choose-username': { email: true, inApp: true, push: true },
+  'reactivation': { email: true, inApp: true, push: true },
   'broadcast': { email: true, inApp: true, push: true },
   'product-update': { email: true, inApp: true, push: true },
 };
@@ -131,9 +132,13 @@ const triggerStatus: Record<string, { status: 'active' | 'partial' | 'not-implem
     status: 'disabled', 
     description: 'Disabled - was spammy and not working properly. Can be re-enabled later.'
   },
-  'choose-username': { 
-    status: 'active', 
+  'choose-username': {
+    status: 'active',
     description: 'Fully implemented. Daily cron job at 2pm UTC for users without usernames.'
+  },
+  'reactivation': {
+    status: 'not-implemented',
+    description: 'Template ready. Needs cron job to detect inactive users and send emails.'
   },
   'broadcast': {
     status: 'active',
@@ -279,6 +284,12 @@ function PushNotificationPreview({ templateId }: { templateId: string }) {
           title: 'Product Update',
           body: 'Check out the latest features and improvements',
           icon: '✨'
+        };
+      case 'reactivation':
+        return {
+          title: 'We miss you!',
+          body: 'Come back and start earning on WeWrite',
+          icon: '👋'
         };
       default:
         return {
@@ -451,6 +462,13 @@ function NotificationPreview({ templateId }: { templateId: string }) {
           type: 'product_update',
           title: 'New Features Available',
           message: 'We\'ve added exciting new features to WeWrite. Check out the latest improvements to your writing experience!'
+        };
+
+      case 'reactivation':
+        return {
+          type: 'reactivation',
+          title: 'We miss you!',
+          message: 'It\'s been a while since you\'ve been on WeWrite. Come back and start writing to earn real money from your content!'
         };
 
       default:
