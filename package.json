@@ -128,10 +128,19 @@
     "vercel:env": "vercel env",
     "firebase:audit": "bun run scripts/audit-firebase-collections.js",
     "firebase:cleanup": "bun run scripts/cleanup-firebase-collections.js",
-    "firebase:cleanup:execute": "bun run scripts/cleanup-firebase-collections.js -- --execute --force"
+    "firebase:cleanup:execute": "bun run scripts/cleanup-firebase-collections.js -- --execute --force",
+    "cap:sync": "npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "cap:run:ios": "npx cap run ios",
+    "cap:run:android": "npx cap run android"
   },
   "dependencies": {
     "3d-force-graph": "^1.79.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
     "@google-cloud/bigquery": "^8.1.0",
     "@google-cloud/logging": "^11.2.0",
     "@heroicons/react": "^2.2.0",
