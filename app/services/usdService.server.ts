@@ -109,10 +109,63 @@ export class ServerUsdService {
         return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
       }
 
+      // CRITICAL: Validate that pages still exist before rolling over allocations
+      // This prevents orphaned "Page not found" allocations from being re-created each month
+      const pagesCollectionName = await getCollectionNameAsync('pages');
+      const pageAllocations = sourceAllocations.filter(a => a.resourceType === 'page');
+      const userAllocations = sourceAllocations.filter(a => a.resourceType !== 'page');
+
+      // Get unique page IDs to check
+      const pageIds = Array.from(new Set(pageAllocations.map(a => a.resourceId)));
+      const validPageIds = new Set<string>();
+
+      // Check pages in batches of 10 for efficiency
+      const PAGE_BATCH_SIZE = 10;
+      for (let i = 0; i < pageIds.length; i += PAGE_BATCH_SIZE) {
+        const batchPageIds = pageIds.slice(i, i + PAGE_BATCH_SIZE);
+        const pageChecks = await Promise.all(
+          batchPageIds.map(async (pageId) => {
+            try {
+              const pageDoc = await db.collection(pagesCollectionName).doc(pageId).get();
+              if (pageDoc.exists) {
+                const pageData = pageDoc.data();
+                // Only valid if page exists AND is not deleted
+                if (!pageData?.deleted) {
+                  return pageId;
+                }
+              }
+              return null;
+            } catch (error) {
+              console.warn(`[USD ALLOCATION] Failed to check page ${pageId}:`, error);
+              return null;
+            }
+          })
+        );
+        pageChecks.filter(Boolean).forEach(id => validPageIds.add(id as string));
+      }
+
+      // Filter page allocations to only include those with valid pages
+      const validPageAllocations = pageAllocations.filter(a => validPageIds.has(a.resourceId));
+      const skippedCount = pageAllocations.length - validPageAllocations.length;
+
+      if (skippedCount > 0) {
+        console.log(
+          `[USD ALLOCATION] Skipping ${skippedCount} allocations for deleted/missing pages during rollover`
+        );
+      }
+
+      // Combine valid allocations
+      const validAllocations = [...validPageAllocations, ...userAllocations];
+
+      if (validAllocations.length === 0) {
+        console.log(`[USD ALLOCATION] No valid allocations to roll over for user ${userId}`);
+        return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
+      }
+
       const batch = db.batch();
       let totalUsdCents = 0;
 
-      for (const allocation of sourceAllocations) {
+      for (const allocation of validAllocations) {
         const usdCents = allocation.usdCents || 0;
         totalUsdCents += usdCents;
         const { createdAt, updatedAt, id: _id, month: _month, ...rest } = allocation;
@@ -134,13 +187,13 @@ export class ServerUsdService {
       // The allocated amount is always calculated from SUM(active allocations) to prevent drift.
 
       console.log(
-        `[USD ALLOCATION] Rolled forward ${sourceAllocations.length} allocations from ${sourceMonth} to ${currentMonth} for user ${userId}`
+        `[USD ALLOCATION] Rolled forward ${validAllocations.length} allocations from ${sourceMonth} to ${currentMonth} for user ${userId}`
       );
 
       return {
         copied: true,
         sourceMonth,
-        allocationsCopied: sourceAllocations.length,
+        allocationsCopied: validAllocations.length,
         totalUsdCents
       };
     } catch (error) {
