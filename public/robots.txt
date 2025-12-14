@@ -1,0 +1,15 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /settings/
+
+# Allow public API routes for SEO
+Allow: /api/public/
+
+# Sitemap location
+Sitemap: https://www.getwewrite.app/sitemap.xml

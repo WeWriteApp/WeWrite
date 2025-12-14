@@ -50,10 +50,10 @@ import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
   title: {
-    default: 'WeWrite - Collaborative Writing Platform for Writers & Readers',
+    default: 'WeWrite - Write, Share & Earn From Your Content',
     template: '%s | WeWrite'
   },
-  description: 'WeWrite is a collaborative writing platform where writers share ideas, earn from their content, and connect with readers. Create, discover, and support writing you love.',
+  description: 'Write and share your ideas on WeWrite. Earn money when readers support your work. Join our community of writers today.',
   keywords: [
     'writing platform',
     'collaborative writing',
@@ -85,8 +85,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://www.getwewrite.app',
     siteName: 'WeWrite',
-    title: 'WeWrite - Collaborative Writing Platform',
-    description: 'Create, discover, and support writing you love. Join our community of writers and readers.',
+    title: 'WeWrite - Write, Share & Earn',
+    description: 'Write and share your ideas on WeWrite. Earn money when readers support your work.',
     images: [
       {
         url: '/og-image.png',
@@ -98,8 +98,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'WeWrite - Collaborative Writing Platform',
-    description: 'Create, discover, and support writing you love.',
+    title: 'WeWrite - Write, Share & Earn',
+    description: 'Write and share your ideas. Earn money when readers support your work.',
     images: ['/og-image.png'],
   },
   alternates: {

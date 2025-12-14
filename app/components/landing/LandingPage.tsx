@@ -347,46 +347,6 @@ const LandingPage = () => {
       </div>
 
       <main className={`${isMobileView ? 'pt-16' : 'pt-16'}`}>
-        {/* SEO Content - Hidden but accessible to search engines */}
-        <div className="sr-only">
-          <h1>WeWrite - The Social Wiki Where Every Page is a Fundraiser</h1>
-          <p>
-            WeWrite is a revolutionary collaborative writing platform that combines the power of social wikis with innovative fundraising capabilities.
-            Create, edit, and share content with a global community while supporting your favorite writers through our unique page-based donation system.
-            Our platform enables real-time collaborative editing, allowing multiple users to work together seamlessly on documents, articles, stories, and any type of written content.
-          </p>
-          <p>
-            Join writers, readers, and content creators who are building the future of collaborative content creation.
-            Whether you're writing fiction, non-fiction, technical documentation, creative content, blog posts, research papers, or educational materials,
-            WeWrite provides the comprehensive tools and supportive community you need to succeed in your writing journey.
-          </p>
-          <p>
-            Our comprehensive feature set includes collaborative real-time editing with live cursors and instant synchronization,
-            innovative page-based fundraising system that allows readers to directly support their favorite content creators,
-            advanced trending content algorithms that surface the most engaging and popular writing,
-            detailed user reputation and leaderboard systems that recognize top contributors,
-            powerful group collaboration spaces for teams and communities, comprehensive activity tracking and social feeds,
-            multiple customizable reading modes for optimal user experience, fully responsive design optimized for all devices and screen sizes,
-            and a vibrant, supportive writing community that encourages creativity and collaboration.
-          </p>
-          <p>
-            The platform supports various content types including articles, stories, documentation, tutorials, research papers, creative writing,
-            technical guides, educational content, collaborative projects, and community-driven initiatives.
-            Writers can monetize their content through our unique fundraising system while readers can discover and support quality content.
-            Advanced features include version control, comment systems, real-time notifications, user profiles, content analytics,
-            search functionality, tagging systems, and integration with external tools and platforms.
-          </p>
-          <p>
-            WeWrite revolutionizes online content creation by combining Wikipedia-style collaborative editing with modern social features
-            and innovative monetization options. Users can create public or private pages, invite collaborators, track changes,
-            manage permissions, and build communities around shared interests and projects.
-            The platform emphasizes quality content, user engagement, and fair compensation for creators while maintaining
-            an ad-free environment focused on authentic content and meaningful connections.
-          </p>
-        </div>
-
-
-
         {/* Hero Card Section */}
         <section className="py-4 md:py-6 pt-6 md:pt-8">
           <div className="container mx-auto px-6 max-w-4xl space-y-8">
@@ -432,6 +392,80 @@ const LandingPage = () => {
           </div>
           <div className="w-full overflow-visible">
             <SimpleTrendingCarousel limit={20} />
+          </div>
+        </section>
+
+        {/* About WeWrite Section - SEO Content */}
+        <section className="py-12 md:py-16 bg-muted/30">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">About WeWrite</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                A new kind of writing platform where your words have value
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 mb-10">
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Write About Anything</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  WeWrite is a free speech writing platform where you can share your ideas, stories, and knowledge with the world.
+                  Whether you're writing fiction, non-fiction, tutorials, opinion pieces, or creative content,
+                  WeWrite gives you the tools and audience you need to succeed.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Earn From Your Content</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Every page on WeWrite is a fundraiser. Readers can allocate their monthly subscription to the pages they love most.
+                  At the end of each month, creators get paid based on how much support their pages received.
+                  No ads, no algorithms hiding your content—just direct support from your readers.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Build Your Audience</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Connect with readers who appreciate your work. Build a following, engage with your community,
+                  and grow your presence as a writer. Our trending pages and activity feeds help new writers get discovered
+                  while established creators can deepen their connection with supporters.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Join Our Community</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  WeWrite is more than a platform—it's a community of writers and readers who believe in the value of quality content.
+                  Join thousands of creators who are already sharing their work and earning from their writing.
+                  Start your journey today and see what your words are worth.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-lg text-muted-foreground mb-6">
+                Ready to start writing and earning? Create your free account and publish your first page in minutes.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <AuthButton
+                  type="register"
+                  size="lg"
+                  variant="default"
+                  device="about_section"
+                >
+                  Get Started Free
+                </AuthButton>
+                <AuthButton
+                  type="login"
+                  size="lg"
+                  variant="outline"
+                  device="about_section"
+                >
+                  Sign In
+                </AuthButton>
+              </div>
+            </div>
           </div>
         </section>
 
