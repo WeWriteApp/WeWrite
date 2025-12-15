@@ -214,7 +214,8 @@ export function useNavigationPreloader() {
     localStorage.setItem(`lastPreload_${route}`, now.toString());
 
     // Smart preloading based on route type
-    if (route.startsWith('/user/')) {
+    // Support both new /u/ route and legacy /user/ route
+    if (route.startsWith('/u/') || route.startsWith('/user/')) {
       const userId = route.split('/')[2];
       if (userId && userId !== user?.uid) {
         console.log(`🚀 OPTIMIZED: Preloading user profile for ${userId}`);

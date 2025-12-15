@@ -182,7 +182,7 @@ export function UsernameBadge({
   const isInactive = !subscriptionStatus || subscriptionStatus !== 'active';
 
   // Check if we're on a user page
-  const isOnUserPage = pathname?.startsWith('/user/');
+  const isOnUserPage = pathname?.startsWith('/u/');
 
   // Generate tooltip text for subscription status
   const getTooltipText = () => {
@@ -254,7 +254,7 @@ export function UsernameBadge({
     return (
       <>
         <PillLink
-          href={`/user/${userId}`}
+          href={`/u/${userId}`}
           variant={pillVariant}
           onClick={handleClick}
           className={className}
@@ -274,7 +274,7 @@ export function UsernameBadge({
   return (
     <>
       <Link
-        href={`/user/${userId}`}
+        href={`/u/${userId}`}
         onClick={handleClick}
         className={cn(
           "username-badge-link inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit no-underline",

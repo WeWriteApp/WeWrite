@@ -194,7 +194,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
             className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
           >
             <Link
-              href={`/user/${followedUser.id}`}
+              href={`/u/${followedUser.id}`}
               className="flex items-center gap-2 flex-grow min-w-0"
             >
               <div className={cn(

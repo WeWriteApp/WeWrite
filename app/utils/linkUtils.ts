@@ -96,7 +96,7 @@ export const createUserLink = ({
 
   return {
     type: "link",
-    url: url || `/user/${userId || "anonymous"}`,
+    url: url || `/u/${userId || "anonymous"}`,
     isUser: true,
     userId: userId || "anonymous",
     username: displayUsername,

@@ -250,7 +250,7 @@ export default function UsersPageClient() {
                 <TableRow
                   key={user.id}
                   className="cursor-pointer hover:bg-accent/5 transition-colors"
-                  onClick={() => window.location.href = `/user/${user.id}`}
+                  onClick={() => window.location.href = `/u/${user.id}`}
                 >
                   <TableCell>
                     <TooltipProvider>

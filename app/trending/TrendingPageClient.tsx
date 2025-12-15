@@ -237,7 +237,7 @@ export default function TrendingPageClient() {
                       {page.userId && page.username ? (
                         <>
                           <Link
-                            href={`/user/${page.userId}`}
+                            href={`/u/${page.userId}`}
                             className="text-primary hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >

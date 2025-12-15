@@ -388,7 +388,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
           </PillLink>
           <span className="text-muted-foreground mx-1">by</span>
           <PillLink
-            href={`/user/${validatedNode.authorUserId}`}
+            href={`/u/${validatedNode.authorUserId}`}
             isPublic={true}
             className="user-link"
             isEditing={isEditing}

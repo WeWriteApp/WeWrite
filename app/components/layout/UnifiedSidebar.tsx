@@ -298,7 +298,7 @@ function UnifiedSidebarContent({
     'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'recents': { icon: Clock, label: 'Recents', href: '/recents' },
-    'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
+    'profile': { icon: User, label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
     ...(isUserAdmin ? { 'admin': { icon: Shield, label: 'Admin', href: '/admin' } } : {}),
@@ -339,7 +339,7 @@ function UnifiedSidebarContent({
     if (pathname === item.href) return true;
 
     // Special case for profile - match account profile pages
-    if (item.label === 'Profile' && user && pathname.startsWith(`/user/${user.uid}`)) {
+    if (item.label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) {
       return true;
     }
 

@@ -772,7 +772,7 @@ export default function AdminUsersPage() {
     if (notificationType === 'link' && activity.sourceUsername && activity.targetPageTitle && activity.sourcePageTitle) {
       return (
         <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
-          <PillLink href={`/user/${activity.sourceUsername}`} type="user">
+          <PillLink href={`/u/${activity.sourceUsername}`} type="user">
             {activity.sourceUsername}
           </PillLink>
           <span>linked to</span>
@@ -799,7 +799,7 @@ export default function AdminUsersPage() {
     if (notificationType === 'user_mention' && activity.sourceUsername && activity.sourcePageTitle) {
       return (
         <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
-          <PillLink href={`/user/${activity.sourceUsername}`} type="user">
+          <PillLink href={`/u/${activity.sourceUsername}`} type="user">
             {activity.sourceUsername}
           </PillLink>
           <span>mentioned this user in</span>
@@ -823,7 +823,7 @@ export default function AdminUsersPage() {
       if (followerUsername) {
         return (
           <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
-            <PillLink href={`/user/${followerUsername}`} type="user">
+            <PillLink href={`/u/${followerUsername}`} type="user">
               {followerUsername}
             </PillLink>
             <span>started following this user</span>

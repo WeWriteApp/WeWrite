@@ -93,7 +93,7 @@ export const createReplyContent = ({
       { text: ` by ` },
       {
         type: "link",
-        url: `/user/${userId || "anonymous"}`,
+        url: `/u/${userId || "anonymous"}`,
         isUser: true,
         userId: userId || "anonymous",
         username: displayUsername,

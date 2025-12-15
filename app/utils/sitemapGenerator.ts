@@ -164,8 +164,9 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
       else if (daysSinceActive < 30) priority = 0.6
       else if (daysSinceActive < 90) priority = 0.5
 
+      // Use username-based URL for better SEO
       entries.push({
-        url: `${baseUrl}/user/${userId}`,
+        url: `${baseUrl}/u/${data.username}`,
         lastModified: lastActive,
         changeFrequency: 'weekly',
         priority

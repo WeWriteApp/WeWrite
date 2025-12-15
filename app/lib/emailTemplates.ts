@@ -517,7 +517,7 @@ export const newFollowerTemplate: EmailTemplate = {
       ` : ''}
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/user/${followerUsername}" style="${emailStyles.button}">
+        <a href="https://getwewrite.app/u/${followerUsername}" style="${emailStyles.button}">
           View Profile
         </a>
       </div>

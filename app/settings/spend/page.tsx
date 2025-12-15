@@ -197,7 +197,7 @@ export default function SpendPage() {
     if (allocation.resourceType === 'page') {
       window.open(`/${allocation.resourceId}`, '_blank');
     } else if (allocation.resourceType === 'user') {
-      window.open(`/user/${allocation.resourceId}`, '_blank');
+      window.open(`/u/${allocation.resourceId}`, '_blank');
     }
   };
 

@@ -27,7 +27,8 @@ export const formatUsername = (username: string): string => {
  */
 export const isUserLink = (url: string): boolean => {
   if (!url) return false;
-  return url.includes('/user/');
+  // Support both new /u/ route and legacy /user/ route
+  return url.includes('/u/') || url.includes('/user/');
 };
 
 /**

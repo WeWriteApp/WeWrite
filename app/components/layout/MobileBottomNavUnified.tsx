@@ -157,8 +157,8 @@ export default function MobileBottomNavUnified() {
     if (navPageRoutes.includes(pathname)) return false;
     
     // Hide on other user/group pages (show on own profile)
-    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
-      if (user?.uid && pathname === `/user/${user.uid}`) return false;
+    if (pathname.startsWith('/u/') || pathname.startsWith('/group/')) {
+      if (user?.uid && pathname === `/u/${user.uid}`) return false;
       return true;
     }
     
@@ -220,8 +220,8 @@ export default function MobileBottomNavUnified() {
     },
     profile: {
       icon: User,
-      onClick: () => { setIsExpanded(false); if (user?.uid) router.push(`/user/${user.uid}`); },
-      isActive: pathname === `/user/${user?.uid}` && !isExpanded,
+      onClick: () => { setIsExpanded(false); if (user?.uid) router.push(`/u/${user.uid}`); },
+      isActive: pathname === `/u/${user?.uid}` && !isExpanded,
       ariaLabel: 'Profile',
       label: 'Profile',
     },

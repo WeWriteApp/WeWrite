@@ -759,7 +759,7 @@ function LeaderboardContent() {
     return (
       <Link
         key={entry.userId}
-        href={`/user/${entry.userId}`}
+        href={`/u/${entry.userId}`}
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "flex items-center gap-3 hover:bg-muted/50 transition-colors",

@@ -116,9 +116,10 @@ export function useRoutePreloader() {
     
     // User-specific routes
     if (user?.uid) {
-      // Always preload user's profile
+      // Always preload user's profile (using new /u/ route with username)
+      const userProfileRoute = user.username ? `/u/${user.username}` : `/user/${user.uid}`;
       configs.push({
-        route: `/user/${user.uid}`,
+        route: userProfileRoute,
         options: { priority: 'high', delay: 200 }
       });
       
@@ -144,8 +145,9 @@ export function useRoutePreloader() {
       case '/notifications':
         // From notifications, likely to go back to home or profile
         if (user?.uid) {
+          const profileRoute = user.username ? `/u/${user.username}` : `/user/${user.uid}`;
           configs.push({
-            route: `/user/${user.uid}`,
+            route: profileRoute,
             options: { priority: 'medium', delay: 500 }
           });
         }
@@ -160,8 +162,8 @@ export function useRoutePreloader() {
         break;
         
       default:
-        // For user profiles, preload their pages
-        if (pathname.startsWith('/user/')) {
+        // For user profiles, preload their pages (support both /u/ and legacy /user/)
+        if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
           configs.push({
             route: '/',
             options: { priority: 'medium', delay: 1000 }
@@ -227,10 +229,12 @@ export function useMobileNavigationPreloader() {
   // Preload critical mobile navigation routes
   useEffect(() => {
     if (!user?.uid) return;
-    
+
+    // Use username-based route when available
+    const userProfileRoute = user.username ? `/u/${user.username}` : `/user/${user.uid}`;
     const criticalRoutes = [
       '/',
-      `/user/${user.uid}`,
+      userProfileRoute,
       '/notifications',
       '/new',
     ];

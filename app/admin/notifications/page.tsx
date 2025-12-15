@@ -1067,7 +1067,7 @@ export default function AdminEmailsPage() {
                                     <div className="flex items-center gap-2">
                                       {log.recipientUsername ? (
                                         <Link
-                                          href={`/user/${log.recipientUsername}`}
+                                          href={`/u/${log.recipientUsername}`}
                                           className="font-medium text-sm text-primary hover:underline truncate"
                                         >
                                           @{log.recipientUsername}

@@ -357,7 +357,7 @@ export default function EarningsSourceBreakdown() {
                             <div key={sponsor.userId} className="flex items-center justify-between py-2 px-3">
                               <div className="flex items-center gap-2">
                                 <PillLink
-                                  href={`/user/${sponsor.userId}`}
+                                  href={`/u/${sponsor.userId}`}
                                   isPublic={true}
                                 >
                                   {sponsor.username}
@@ -395,7 +395,7 @@ export default function EarningsSourceBreakdown() {
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
                             <PillLink
-                              href={`/user/${sponsor.userId}`}
+                              href={`/u/${sponsor.userId}`}
                               isPublic={true}
                               customOnClick={(e) => e.stopPropagation()}
                             >

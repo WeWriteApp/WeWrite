@@ -394,7 +394,7 @@ export default function LinkEditorModal({
       isEditing,
       element: editingLink?.element,
       isNew: page.isNew,
-      url: isUserLink && pageId ? `/user/${pageId}` : (pageId ? `/${pageId}` : undefined),
+      url: isUserLink && pageId ? `/u/${pageId}` : (pageId ? `/${pageId}` : undefined),
       isUser: isUserLink
     };
 

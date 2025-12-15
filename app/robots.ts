@@ -10,7 +10,8 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: [
           '/',
-          '/user/',
+          '/u/',
+          '/user/', // Legacy route - redirects to /u/
           '/group/',
           '/trending',
           '/leaderboard',

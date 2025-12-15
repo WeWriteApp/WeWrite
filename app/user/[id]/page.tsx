@@ -1,133 +1,75 @@
-"use client";
+import { redirect } from 'next/navigation';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
-import { useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import UnifiedLoader from '../../components/ui/unified-loader';
-import SingleProfileView from '../../components/pages/SingleProfileView';
-import { useAuth } from '../../providers/AuthProvider';
-import { PageProvider } from '../../contexts/PageContext';
-import { useOptimizedUserProfile } from '../../hooks/useOptimizedUserProfile';
-import NavPageLayout from '../../components/layout/NavPageLayout';
+/**
+ * Legacy /user/[id] route - redirects to new /u/[username] route
+ *
+ * This provides backwards compatibility for:
+ * - Old shared links using /user/userId
+ * - Old shared links using /user/username
+ * - Bookmarks and external links
+ *
+ * Uses 301 permanent redirect for SEO
+ */
 
 interface UserPageProps {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function UserPage({ params }: UserPageProps) {
-  // Handle both Promise and object params
-  // Note: use() hook cannot be called inside try/catch blocks
-  let unwrappedParams;
+async function getUsernameById(userId: string): Promise<string | null> {
+  try {
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
 
-  // If params is a Promise, use React.use() to unwrap it
-  if (params && typeof params.then === 'function') {
-    unwrappedParams = use(params);
-  } else {
-    // If params is already an object, use it directly
-    unwrappedParams = params || {};
-  }
-
-  const { id } = unwrappedParams;
-  const router = useRouter();
-  const { user } = useAuth();
-
-  // 🚀 OPTIMIZATION: Use cached user profile hook for instant navigation
-  const {
-    profile,
-    loading: isLoading,
-    error,
-    isFromCache
-  } = useOptimizedUserProfile(id, {
-    backgroundRefresh: true,
-    cacheTTL: 10 * 60 * 1000, // 10 minutes cache for smooth navigation
-    includeSubscription: true
-  });
-
-  // 🚀 OPTIMIZATION: Log cache performance for monitoring
-  useEffect(() => {
-    if (profile) {
-      console.log(`🚀 User profile loaded for ${id}:`, {
-        username: profile.username,
-        fromCache: isFromCache,
-        loadTime: isFromCache ? 'instant' : 'fresh'
-      });
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      return data?.username || null;
     }
-  }, [profile, isFromCache, id]);
+    return null;
+  } catch (error) {
+    console.error('Error looking up user by ID:', error);
+    return null;
+  }
+}
 
-  useEffect(() => {
-    if (profile && profile.username) {
-      // Send pageview/event to Google Analytics with username
-      if (typeof window !== 'undefined' && window.gtag) {
-        // Track the profile view event with username
-        window.gtag('event', 'view_user_profile', {
-          username: profile.username || 'Missing username',
-          user_id: profile.uid,
-          page_path: window.location.pathname,
-          page_title: `User: ${profile.username || 'Missing username'}`,
-          profile_owner: profile.uid
-        });
+async function getUsernameByUsername(username: string): Promise<string | null> {
+  try {
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+    const usersCollection = db.collection(getCollectionName('users'));
+    const usernameQuery = usersCollection.where('username', '==', username);
+    const usernameSnapshot = await usernameQuery.get();
 
-        // Update the page title in Google Analytics to include the username
-        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID, {
-          page_path: window.location.pathname,
-          page_title: `User: ${profile.username || 'Missing username'}`,
-          page_location: window.location.href,
-          username: profile.username || 'Missing username'
-        });
-      }
+    if (!usernameSnapshot.empty) {
+      const data = usernameSnapshot.docs[0].data();
+      return data?.username || null;
     }
-  }, [profile]);
+    return null;
+  } catch (error) {
+    console.error('Error looking up user by username:', error);
+    return null;
+  }
+}
 
-  if (isLoading) {
-    return (
-      <UnifiedLoader
-        isLoading={isLoading}
-        message="Loading user profile..."
-      />
-    );
+export default async function LegacyUserPage({ params }: UserPageProps) {
+  const { id } = await params;
+
+  // Try to find the username
+  // First, check if 'id' is a Firebase UID (look up by document ID)
+  let username = await getUsernameById(id);
+
+  // If not found by ID, check if 'id' is already a username
+  if (!username) {
+    username = await getUsernameByUsername(id);
   }
 
-  if (error) {
-    const isUserNotFound = error === 'User not found';
-    const isConnectionError = error === 'Error loading user profile';
-
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <h1 className="text-2xl font-bold mb-4">
-          {isUserNotFound ? 'User Not Found' : 'Connection Error'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isUserNotFound
-            ? "The user you're looking for doesn't exist."
-            : "Unable to load user profile. Please check your connection and try again."
-          }
-        </p>
-        {isConnectionError && (
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        )}
-      </div>
-    );
+  // If we found a username, redirect to the new route
+  if (username) {
+    redirect(`/u/${username}`);
   }
 
-  // Additional safety check - don't render if profile is null
-  if (!profile) {
-    return (
-      <UnifiedLoader
-        isLoading={true}
-        message="Loading user profile..."
-      />
-    );
-  }
-
-  return (
-    <NavPageLayout reducedPaddingForLoggedOut>
-      <PageProvider>
-        <SingleProfileView profile={profile} />
-      </PageProvider>
-    </NavPageLayout>
-  );
+  // If user not found, still redirect to new route (let the new route handle 404)
+  redirect(`/u/${id}`);
 }

@@ -21,8 +21,10 @@ function isContentPageRoute(pathname: string, user: any): boolean {
   }
 
   // For user pages, only show navigation on current user's own page
-  if (pathname.startsWith('/user/')) {
-    if (user?.uid && pathname === `/user/${user.uid}`) {
+  // Support both new /u/ route and legacy /user/ route
+  if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
+    // Check if this is the user's own profile by username
+    if (user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`)) {
       return false; // Own profile is not a content page
     }
     return true; // Other user profiles are content pages
@@ -90,8 +92,9 @@ function shouldShowMobileNavOnRoute(pathname: string, user: any): boolean {
   }
 
   // For user pages, show mobile nav only on current user's own page
-  if (pathname.startsWith('/user/')) {
-    if (user?.uid && pathname === `/user/${user.uid}`) {
+  // Support both new /u/ route and legacy /user/ route
+  if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
+    if (user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`)) {
       return true; // Show mobile nav on own profile
     }
     return false; // Hide on other user profiles
@@ -141,8 +144,9 @@ export function usePageVisibility() {
       isContentPage,
       shouldShowFAB,
       shouldShowMobileNav,
-      // Derived states
-      isUserOwnPage: user?.uid && pathname === `/user/${user.uid}`,
+      // Derived states - support both /u/ and legacy /user/ routes
+      isUserOwnPage: user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`),
+      isUserPage: pathname.startsWith('/u/') || pathname.startsWith('/user/'),
       isGroupPage: pathname.startsWith('/group/'),
       isAdminPage: pathname.startsWith('/admin/'),
       isAuthPage: pathname.startsWith('/auth/'),

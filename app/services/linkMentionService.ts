@@ -95,7 +95,7 @@ export async function createLinkMentionNotification(data: LinkMentionData): Prom
       metadata: {
         isUserMention: data.isUserMention,
         linkedFrom: data.sourcePageId,
-        linkedTo: data.isUserMention ? `/user/${data.targetUserId}` : `/${data.targetPageId}`
+        linkedTo: data.isUserMention ? `/u/${data.targetUserId}` : `/${data.targetPageId}`
       },
       read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -152,9 +152,9 @@ function extractLinksFromContent(content: any[], authorId: string, pageId: strin
   const extractLinks = (nodes: any[]) => {
     for (const node of nodes) {
       if (node.type === 'link') {
-        // Check if it's a user link
-        if (node.url && node.url.startsWith('/user/')) {
-          const userId = node.url.replace('/user/', '').split('?')[0];
+        // Check if it's a user link (support both /u/ and legacy /user/)
+        if (node.url && (node.url.startsWith('/u/') || node.url.startsWith('/user/'))) {
+          const userId = node.url.replace('/u/', '').replace('/user/', '').split('?')[0];
           if (userId && userId !== authorId) {
             linkedUserIds.add(userId);
           }

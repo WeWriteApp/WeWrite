@@ -234,7 +234,7 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
                 method: 'HEAD', // Use HEAD for faster response
               });
               if (userCheckResponse.ok) {
-                router.replace(`/user/${cleanId}`);
+                router.replace(`/u/${cleanId}`);
                 return;
               }
             } catch (userError) {
@@ -267,7 +267,7 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
               const userRef = ref(rtdb, `users/${cleanId}`);
               const userSnapshot = await get(userRef);
               if (userSnapshot.exists()) {
-                router.replace(`/user/${cleanId}`);
+                router.replace(`/u/${cleanId}`);
                 return;
               }
             } catch (error) {

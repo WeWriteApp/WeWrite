@@ -243,9 +243,9 @@ export default function MobileBottomNav() {
 
     // Hide on user and group pages (these are ContentPages)
     // EXCEPT when viewing your own profile page
-    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+    if (pathname.startsWith('/u/') || pathname.startsWith('/group/')) {
       // Show mobile toolbar on your own profile page (since no pledge bar)
-      if (user?.uid && pathname === `/user/${user.uid}`) {
+      if (user?.uid && pathname === `/u/${user.uid}`) {
         return false; // Show mobile nav on own profile
       }
       return true; // Hide on other user profiles
@@ -353,7 +353,7 @@ export default function MobileBottomNav() {
   const handleProfileClick = () => {
     setIsExpanded(false); // Close expanded state
     if (user?.uid) {
-      handleButtonPress('profile', `/user/${user.uid}`);
+      handleButtonPress('profile', `/u/${user.uid}`);
     }
   };
 
@@ -372,7 +372,7 @@ export default function MobileBottomNav() {
 
   // Determine active states for navigation buttons
   const isHomeActive = pathname === '/' && !isExpanded;
-  const isProfileActive = pathname === `/user/${user?.uid}` && !isExpanded;
+  const isProfileActive = pathname === `/u/${user?.uid}` && !isExpanded;
   const isNotificationsActive = pathname === '/notifications' && !isExpanded;
   const isMoreActive = isExpanded;
 
@@ -417,7 +417,7 @@ export default function MobileBottomNav() {
     'recents': { icon: Clock, label: 'Recents', href: '/recents' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
-    'profile': { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
+    'profile': { icon: User, label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     'admin': { icon: Shield, label: 'Admin', href: '/admin' }, // Only shows for admin users
   };
@@ -475,8 +475,8 @@ export default function MobileBottomNav() {
       onClick: handleProfileClick,
       onHover: () => {
         if (user?.uid) {
-          handleButtonHover(`/user/${user.uid}`);
-          handleNavigationFocus(`/user/${user.uid}`); // 🚀 Preload user profile
+          handleButtonHover(`/u/${user.uid}`);
+          handleNavigationFocus(`/u/${user.uid}`); // 🚀 Preload user profile
         }
       },
       isActive: isProfileActive,
