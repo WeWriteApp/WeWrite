@@ -38,8 +38,9 @@ const Home: React.FC = () => {
 
       setIsAdminTestingMode(adminOverride);
 
-      // Show modal for real unverified users (no dismiss option)
-      if (!user.emailVerified) {
+      // Show modal for unverified users if they haven't dismissed it
+      // They can dismiss and use the app with a verification banner instead
+      if (!user.emailVerified && !verificationDismissed) {
         setShowVerificationModal(true);
         return;
       }
@@ -113,10 +114,10 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Email verification modal - blocks access until verified */}
+      {/* Email verification modal - can be dismissed to continue with banner */}
       {showVerificationModal && (
         <EmailVerificationModal
-          showDismissButton={isAdminTestingMode && user?.emailVerified}
+          showDismissButton={true}
           onDismiss={() => setShowVerificationModal(false)}
         />
       )}
