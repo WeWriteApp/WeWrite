@@ -85,23 +85,16 @@ async function storeTokenServerSide(
   expiresAt: string
 ): Promise<boolean> {
   try {
-    // Dynamic import to avoid build-time issues
-    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-    const { getFirestore } = await import('firebase-admin/firestore');
+    // Use the shared Firebase Admin instance
+    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+    const admin = getFirebaseAdmin();
 
-    // Initialize admin if not already initialized
-    if (!getApps().length) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '{}');
-      if (!serviceAccount.project_id) {
-        console.error('[Send Verification] No service account configured');
-        return false;
-      }
-      initializeApp({
-        credential: cert(serviceAccount),
-      });
+    if (!admin) {
+      console.error('[Send Verification] Firebase Admin not initialized');
+      return false;
     }
 
-    const adminDb = getFirestore();
+    const adminDb = admin.firestore();
     const collectionName = getCollectionName('email_verification_tokens');
 
     await adminDb.collection(collectionName).doc(token).set({
@@ -112,6 +105,7 @@ async function storeTokenServerSide(
       used: false,
     });
 
+    console.log('[Send Verification] Token stored successfully via server-side');
     return true;
   } catch (error) {
     console.error('[Send Verification] Server-side storage error:', error);
