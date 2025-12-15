@@ -532,7 +532,13 @@ export default function ContentPageHeader({
       return; // No scroll listener needed
     }
 
-    const collapseThreshold = Math.max(48, (bannerOffset || 0) + 8);
+    // Calculate collapse threshold - use CSS variable value or fallback
+    const getBannerStackHeight = () => {
+      if (typeof window === 'undefined') return 0;
+      const value = getComputedStyle(document.documentElement).getPropertyValue('--banner-stack-height');
+      return parseInt(value) || 0;
+    };
+    const collapseThreshold = Math.max(48, getBannerStackHeight() + 8);
     const hysteresis = 12; // Prevent rapid flip/flop near threshold
     let ticking = false;
 
@@ -635,7 +641,7 @@ export default function ContentPageHeader({
       }
       clearInterval(intervalId);
     };
-  }, [isEditing, bannerOffset]);
+  }, [isEditing]);
 
   // Create page object for handlers
   const pageObject = React.useMemo(() => {
@@ -714,7 +720,11 @@ export default function ContentPageHeader({
         `}
         style={!isEditing ? {
           transform: 'translateZ(0)',
-          top: `${bannerOffset + (hasSaveBanner ? 56 : 0)}px`
+          // Use CSS calc to combine banner offset and save header offset
+          // --banner-stack-height is set by BannerProvider for unified banner positioning
+          top: hasSaveBanner
+            ? 'calc(var(--banner-stack-height, 0px) + 56px)'
+            : 'var(--banner-stack-height, 0px)'
         } : {}}
       >
         {/* Full width in edit mode, sidebar-aware in view mode */}

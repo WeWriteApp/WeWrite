@@ -879,11 +879,12 @@ export default function ContentPageView({
   }, []);
 
   // SIMPLIFIED: Remove complex padding logic - let body padding handle everything
+  // Include banner-stack-height to account for any active banners (email verification, PWA, etc.)
   useEffect(() => {
     if (isEditing) {
       setContentPaddingTop('0px'); // No padding needed - body handles save header
     } else {
-      setContentPaddingTop('160px'); // View mode: header is fixed, need padding
+      setContentPaddingTop('calc(160px + var(--banner-stack-height, 0px))'); // View mode: header is fixed, need padding + banner height
     }
   }, [isEditing]);
 

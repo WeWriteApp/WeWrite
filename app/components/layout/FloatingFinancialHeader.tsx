@@ -5,9 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { ChevronLeft, DollarSign, Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { WeWriteLogo } from "../ui/WeWriteLogo";
-import { FloatingHeader } from "../ui/FloatingCard";
 import { useAuth } from '../../providers/AuthProvider';
 import { RemainingFundsDisplay, OverspendWarningDisplay } from "../ui/RemainingUsdCounter";
 import { useUsdBalance } from "../../contexts/UsdBalanceContext";
@@ -17,6 +16,7 @@ import { useDemoBalance, useShouldUseDemoBalance } from "../../contexts/DemoBala
 import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
 import { useSidebarContext } from './UnifiedSidebar';
+import { cn } from "../../lib/utils";
 
 export interface FloatingFinancialHeaderProps {
   className?: string;
@@ -25,15 +25,14 @@ export interface FloatingFinancialHeaderProps {
 /**
  * FloatingFinancialHeader Component
  *
- * Floating sticky header for logged-in users with:
+ * Sticky header for logged-in users with:
  * - Left: Spend/balance display
  * - Center: WeWrite logo (clickable to home)
  * - Right: Earnings display
- * - Position: Floating at top with translucency and blur
+ * - Position: Full-width sticky at top, shadow appears on scroll
  * - Respects sidebar positioning on desktop
- * - Consistent styling with logged-out financial header
+ * - More spatially efficient than floating design
  */
-import FixedPortal from "../utils/FixedPortal";
 
 export default function FloatingFinancialHeader({
   className = ""
@@ -48,7 +47,17 @@ export default function FloatingFinancialHeader({
   const { demoBalance } = useDemoBalance();
   const { sidebarWidth, isExpanded } = useSidebarContext();
 
+  // Scroll detection for conditional shadow
+  const [isScrolled, setIsScrolled] = useState(false);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    handleScroll(); // Check initial position
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Calculate header positioning width - should match PageHeader.tsx and SidebarLayout.tsx
   const headerSidebarWidth = React.useMemo(() => {
@@ -344,26 +353,26 @@ export default function FloatingFinancialHeader({
 
 
   return (
-    <FixedPortal>
-      {/* Mobile: Standard centered layout - respects email/pwa banners */}
-      <div
-        className="md:hidden fixed-layer z-fixed-header pointer-events-none transition-all duration-300 ease-out"
+    <>
+      {/* Mobile: Full-width sticky header - simplified positioning */}
+      <header
+        className={cn(
+          "md:hidden fixed left-0 right-0 z-fixed-header bg-background transition-shadow duration-200",
+          isScrolled && "shadow-md"
+        )}
         style={{
-          top: 'calc(var(--fixed-safe-top) + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px))',
-          left: 0,
-          right: 0
+          top: 'var(--banner-stack-height, 0px)',
         }}
       >
-        <div className="mx-auto px-4 max-w-4xl transition-all duration-300 ease-in-out pointer-events-auto">
-          <FloatingHeader size="md" noShadowAtTop={true}>
-            <div className="relative flex items-center justify-between h-10">
+        <div className="mx-auto px-5 max-w-4xl">
+          <div className="relative flex items-center justify-between py-3">
             {/* Spend/Overspend Display (left side) */}
-            <div className="flex items-center min-w-0 flex-shrink-0 h-full">
+            <div className="flex items-center">
               {renderSpendDisplay()}
             </div>
 
             {/* Logo/Title (absolutely centered) - clickable to go home */}
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <WeWriteLogo
                 size="md"
                 styled={true}
@@ -374,44 +383,38 @@ export default function FloatingFinancialHeader({
             </div>
 
             {/* Earnings Display (right side) */}
-            <div className="flex items-center min-w-0 flex-shrink-0 h-full">
+            <div className="flex items-center">
               {renderEarningsDisplay()}
             </div>
-            </div>
-          </FloatingHeader>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Desktop: Respect sidebar positioning and email/pwa banners */}
-      <div
-        className="hidden md:block fixed-layer z-fixed-header pointer-events-none"
+      {/* Desktop: Full-width sticky header respecting sidebar - simplified */}
+      <header
+        className={cn(
+          "hidden md:block fixed left-0 right-0 z-fixed-header bg-background transition-shadow duration-200",
+          isScrolled && "shadow-md"
+        )}
         style={{
-          top: 'calc(var(--fixed-safe-top) + var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px))',
-          left: 0,
-          right: 0,
+          top: 'var(--banner-stack-height, 0px)',
         }}
       >
         <div
-          className="mx-auto px-6 transition-all duration-300 ease-in-out pointer-events-auto"
+          className="px-5 transition-all duration-300 ease-in-out"
           style={{
-            ...(headerSidebarWidth > 0 ? {
-              marginLeft: `${headerSidebarWidth + 16}px`, // Add padding offset
-              marginRight: '16px',
-              maxWidth: `calc(100vw - ${headerSidebarWidth + 32}px)` // Account for both sides
-            } : {
-              maxWidth: '1024px' // Standard page max-width when no sidebar
-            }),
+            marginLeft: headerSidebarWidth > 0 ? `${headerSidebarWidth}px` : '0',
           }}
         >
-          <FloatingHeader size="lg" noShadowAtTop={true}>
-            <div className="relative flex items-center justify-between h-12">
+          <div className="mx-auto max-w-4xl">
+            <div className="relative flex items-center justify-between py-3">
               {/* Spend/Overspend Display (left side) */}
-              <div className="flex items-center min-w-0 flex-shrink-0 h-full">
+              <div className="flex items-center">
                 {renderSpendDisplay()}
               </div>
 
               {/* Logo/Title (absolutely centered) - clickable to go home */}
-              <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center flex-shrink-0">
+              <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <WeWriteLogo
                   size="md"
                   styled={true}
@@ -422,13 +425,13 @@ export default function FloatingFinancialHeader({
               </div>
 
               {/* Earnings Display (right side) */}
-              <div className="flex items-center min-w-0 flex-shrink-0 h-full">
+              <div className="flex items-center">
                 {renderEarningsDisplay()}
               </div>
             </div>
-          </FloatingHeader>
+          </div>
         </div>
-      </div>
-      </FixedPortal>
+      </header>
+    </>
   );
 }

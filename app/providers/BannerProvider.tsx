@@ -5,8 +5,10 @@ import { useAuth } from './AuthProvider';
 import { usePWA } from './PWAProvider';
 import { isValidUsername } from '../hooks/useUsernameStatus';
 
-// Banner height constant - should match the actual rendered height
-const BANNER_HEIGHT = 40;
+// Banner height constants - should match the actual rendered heights
+const EMAIL_BANNER_HEIGHT = 40;
+const PWA_BANNER_HEIGHT = 48;
+const USERNAME_BANNER_HEIGHT = 40; // Same as email banner
 
 interface BannerContextType {
   showEmailBanner: boolean;
@@ -161,7 +163,22 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Calculate banner offset based on which banner is showing
   // Only one banner shows at a time due to priority system
-  const bannerOffset = (showEmailBanner || showUsernameBanner || showPWABanner) ? BANNER_HEIGHT : 0;
+  const bannerOffset = showEmailBanner ? EMAIL_BANNER_HEIGHT
+    : showUsernameBanner ? USERNAME_BANNER_HEIGHT
+    : showPWABanner ? PWA_BANNER_HEIGHT
+    : 0;
+
+  // Update the unified CSS variable for banner stack height
+  // This is used by StickySaveHeader and other components that need to position below banners
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    document.documentElement.style.setProperty('--banner-stack-height', `${bannerOffset}px`);
+
+    return () => {
+      document.documentElement.style.setProperty('--banner-stack-height', '0px');
+    };
+  }, [bannerOffset]);
 
   return (
     <BannerContext.Provider value={{

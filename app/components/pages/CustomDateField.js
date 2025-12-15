@@ -253,9 +253,9 @@ export default function CustomDateField({
 
       {/* Enhanced Date picker overlay */}
         {showDatePicker && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={() => setShowDatePicker(false)}>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={() => setShowDatePicker(false)}>
             <div
-              className="wewrite-card card-100 border border-border shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col relative z-[10000]"
+              className="bg-white dark:bg-zinc-900 border border-border shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col relative z-[10000] rounded-2xl p-6"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header - Fixed */}
@@ -272,8 +272,8 @@ export default function CustomDateField({
 
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto space-y-6">
-                {/* Calendar Interface with Card Container */}
-                <div className="wewrite-card card-100">
+                {/* Calendar Interface */}
+                <div>
                   <CalendarGrid
                     selectedDate={localDate}
                     onDateSelect={handleCalendarDateSelect}
@@ -304,12 +304,12 @@ export default function CustomDateField({
               </div>
 
               {/* Sticky Action Buttons */}
-              <div className="flex-shrink-0 border-t border-neutral-20 pt-4 mt-4">
+              <div className="flex-shrink-0 border-t border-border pt-4 mt-4">
                 <div className="flex gap-2 justify-end">
                   {customDate && (
                     <button
                       onClick={handleClearDate}
-                      className="px-4 py-2 text-sm border border-border rounded hover:bg-muted"
+                      className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
                     >
                       Clear
                     </button>
@@ -317,13 +317,13 @@ export default function CustomDateField({
                   <button
                     type="button"
                     onClick={() => setShowDatePicker(false)}
-                    className="px-4 py-2 text-sm border border-border rounded hover:bg-muted"
+                    className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => setShowDatePicker(false)}
-                    className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+                    className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
                     style={{
                       backgroundColor: accentColorValue,
                       color: 'white'

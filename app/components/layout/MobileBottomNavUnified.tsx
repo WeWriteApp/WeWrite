@@ -76,6 +76,7 @@ export default function MobileBottomNavUnified() {
 
   // State
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isClosing, setIsClosing] = useState(false); // Track closing animation state
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isToolbarEditMode, setIsToolbarEditMode] = useState(false);
   const [originalOrder, setOriginalOrder] = useState<string[] | null>(null);
@@ -100,6 +101,40 @@ export default function MobileBottomNavUnified() {
   useEffect(() => {
     setIsPWAMode(isPWA());
   }, []);
+
+  // Handle close with animation
+  const handleClose = useCallback(() => {
+    if (!isExpanded || isClosing) return;
+    setIsClosing(true);
+    // Wait for animation to complete before actually closing
+    setTimeout(() => {
+      setIsExpanded(false);
+      setIsClosing(false);
+    }, 300); // Match the transition duration
+  }, [isExpanded, isClosing]);
+
+  // Lock body scroll when expanded (like drawers do)
+  useEffect(() => {
+    if (isExpanded) {
+      // Save current scroll position and lock body
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        // Restore scroll position when closing
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isExpanded]);
 
   // Settings warning status
   const getMostCriticalSettingsStatus = () => {
@@ -198,21 +233,21 @@ export default function MobileBottomNavUnified() {
   }> = {
     home: {
       icon: Home,
-      onClick: () => { setIsExpanded(false); handleButtonPress('home', '/'); },
+      onClick: () => { handleClose(); handleButtonPress('home', '/'); },
       isActive: pathname === '/' && !isExpanded,
       ariaLabel: 'Home',
       label: 'Home',
     },
     search: {
       icon: Search,
-      onClick: () => { setIsExpanded(false); router.push('/search'); },
+      onClick: () => { handleClose(); router.push('/search'); },
       isActive: pathname === '/search' && !isExpanded,
       ariaLabel: 'Search',
       label: 'Search',
     },
     notifications: {
       icon: Bell,
-      onClick: () => { setIsExpanded(false); handleButtonPress('notifications', '/notifications'); },
+      onClick: () => { handleClose(); handleButtonPress('notifications', '/notifications'); },
       isActive: pathname === '/notifications' && !isExpanded,
       ariaLabel: 'Notifications',
       label: 'Alerts',
@@ -220,42 +255,42 @@ export default function MobileBottomNavUnified() {
     },
     profile: {
       icon: User,
-      onClick: () => { setIsExpanded(false); if (user?.uid) router.push(`/u/${user.uid}`); },
+      onClick: () => { handleClose(); if (user?.uid) router.push(`/u/${user.uid}`); },
       isActive: pathname === `/u/${user?.uid}` && !isExpanded,
       ariaLabel: 'Profile',
       label: 'Profile',
     },
     'random-pages': {
       icon: Shuffle,
-      onClick: () => { setIsExpanded(false); router.push('/random-pages'); },
+      onClick: () => { handleClose(); router.push('/random-pages'); },
       isActive: pathname === '/random-pages',
       ariaLabel: 'Random Pages',
       label: 'Random',
     },
     'trending-pages': {
       icon: TrendingUp,
-      onClick: () => { setIsExpanded(false); router.push('/trending-pages'); },
+      onClick: () => { handleClose(); router.push('/trending-pages'); },
       isActive: pathname === '/trending-pages',
       ariaLabel: 'Trending',
       label: 'Trending',
     },
     recents: {
       icon: Clock,
-      onClick: () => { setIsExpanded(false); router.push('/recents'); },
+      onClick: () => { handleClose(); router.push('/recents'); },
       isActive: pathname === '/recents',
       ariaLabel: 'Recently viewed',
       label: 'Recents',
     },
     following: {
       icon: Heart,
-      onClick: () => { setIsExpanded(false); router.push('/following'); },
+      onClick: () => { handleClose(); router.push('/following'); },
       isActive: pathname === '/following',
       ariaLabel: 'Following',
       label: 'Following',
     },
     settings: {
       icon: Settings,
-      onClick: () => { setIsExpanded(false); router.push('/settings'); },
+      onClick: () => { handleClose(); router.push('/settings'); },
       isActive: pathname === '/settings',
       ariaLabel: 'Settings',
       label: 'Settings',
@@ -265,21 +300,21 @@ export default function MobileBottomNavUnified() {
     },
     leaderboard: {
       icon: Trophy,
-      onClick: () => { setIsExpanded(false); router.push('/leaderboard'); },
+      onClick: () => { handleClose(); router.push('/leaderboard'); },
       isActive: pathname === '/leaderboard',
       ariaLabel: 'Leaderboards',
       label: 'Leaders',
     },
     map: {
       icon: Map,
-      onClick: () => { setIsExpanded(false); router.push('/map'); },
+      onClick: () => { handleClose(); router.push('/map'); },
       isActive: pathname === '/map',
       ariaLabel: 'Map',
       label: 'Map',
     },
     admin: {
       icon: Shield,
-      onClick: () => { setIsExpanded(false); router.push('/admin'); },
+      onClick: () => { handleClose(); router.push('/admin'); },
       isActive: pathname === '/admin',
       ariaLabel: 'Admin Dashboard',
       label: 'Admin',
@@ -310,27 +345,27 @@ export default function MobileBottomNavUnified() {
     <Button
       variant="ghost"
       size="lg"
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => isExpanded ? handleClose() : setIsExpanded(true)}
       className={cn(
         "flex flex-col items-center justify-center h-14 flex-1 rounded-lg py-1 px-1 relative gap-0.5 group",
         "transition-all duration-150 ease-out",
         "flex-shrink-0 min-w-0",
         "touch-manipulation select-none",
         "active:scale-95 active:duration-75",
-        // Expanded state uses accent color like active nav items
-        isExpanded
+        // Expanded state uses accent color like active nav items (keep showing during close animation)
+        (isExpanded || isClosing)
           ? "bg-accent/15 text-accent"
           : "text-muted-foreground hover:text-foreground hover:bg-muted/80 active:bg-muted"
       )}
       aria-label={isExpanded ? "Close More" : "Open More"}
     >
       <div className="relative">
-        {isExpanded ? <X className={cn("h-5 w-5", isExpanded && "text-accent")} /> : <Menu className="h-5 w-5" />}
-        {criticalSettingsStatus === 'warning' && !isExpanded && (
+        {(isExpanded || isClosing) ? <X className="h-5 w-5 text-accent" /> : <Menu className="h-5 w-5" />}
+        {criticalSettingsStatus === 'warning' && !isExpanded && !isClosing && (
           <WarningDot variant="warning" size="sm" position="top-right" offset={{ top: '-2px', right: '-2px' }} />
         )}
       </div>
-      <span className={cn("text-[10px] font-medium leading-tight", isExpanded && "text-accent")}>More</span>
+      <span className={cn("text-[10px] font-medium leading-tight", (isExpanded || isClosing) && "text-accent")}>More</span>
     </Button>
   );
 
@@ -340,12 +375,27 @@ export default function MobileBottomNavUnified() {
       {isToolbarEditMode && <NavDragLayer />}
       
       <FixedPortal>
-        {/* Backdrop */}
+        {/* Backdrop - closes on any touch/click outside the toolbar */}
         {isExpanded && (
           <div
-            className="md:hidden fixed inset-0 z-[75] bg-black/20 backdrop-blur-sm transition-opacity duration-300"
-            onClick={() => !isToolbarEditMode && setIsExpanded(false)}
-            style={{ pointerEvents: isToolbarEditMode ? 'none' : 'auto' }}
+            className={cn(
+              "md:hidden fixed inset-0 z-[75] bg-black/30 backdrop-blur-sm transition-opacity duration-300",
+              isClosing && "opacity-0"
+            )}
+            onClick={() => !isToolbarEditMode && handleClose()}
+            onTouchStart={(e) => {
+              if (!isToolbarEditMode) {
+                e.preventDefault();
+                handleClose();
+              }
+            }}
+            style={{
+              pointerEvents: isToolbarEditMode ? 'none' : 'auto',
+              touchAction: 'none' // Prevent any scroll/drag gestures on backdrop
+            }}
+            aria-label="Close menu"
+            role="button"
+            tabIndex={-1}
           />
         )}
 
@@ -374,7 +424,7 @@ export default function MobileBottomNavUnified() {
           {/* Expanded overflow content */}
           <div className={cn(
             "transition-all duration-300 ease-in-out",
-            isExpanded ? "max-h-[60vh] opacity-100" : "max-h-0 opacity-0 overflow-hidden"
+            isExpanded && !isClosing ? "max-h-[60vh] opacity-100" : "max-h-0 opacity-0 overflow-hidden"
           )}>
             {isExpanded && (
               <div className={cn(

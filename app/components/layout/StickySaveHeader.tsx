@@ -54,10 +54,12 @@ export default function StickySaveHeader({
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 w-full z-[80] transition-all duration-300 ease-out ${
+      className={`fixed left-0 right-0 w-full z-[80] transition-all duration-300 ease-out ${
         isAnimatingOut ? 'opacity-0 transform -translate-y-full' : 'opacity-100 transform translate-y-0'
       }`}
       style={{
+        // Position below any active banners using the unified CSS variable
+        top: 'var(--banner-stack-height, 0px)',
         height: '56px', // Fixed height for consistent spacing
         animation: hasUnsavedChanges && !isAnimatingOut ? 'slideDown 0.3s ease-out' : undefined
       }}
