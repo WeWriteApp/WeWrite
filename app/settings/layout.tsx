@@ -67,7 +67,13 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background"
+      style={{
+        // Account for any top banners (email verification, PWA, etc.)
+        paddingTop: 'var(--email-banner-height, 0px)',
+      }}
+    >
       {/* Settings Header - handles mobile/desktop logic */}
       <SettingsHeader />
 

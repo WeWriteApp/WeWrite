@@ -5,10 +5,14 @@ import { useAuth } from './AuthProvider';
 import { usePWA } from './PWAProvider';
 import { isValidUsername } from '../hooks/useUsernameStatus';
 
+// Banner height constant - should match the actual rendered height
+const BANNER_HEIGHT = 40;
+
 interface BannerContextType {
   showEmailBanner: boolean;
   showPWABanner: boolean;
   showUsernameBanner: boolean;
+  bannerOffset: number;
   setEmailBannerDismissed: () => void;
   setUsernameBannerDismissed: () => void;
 }
@@ -17,6 +21,7 @@ const BannerContext = createContext<BannerContextType>({
   showEmailBanner: false,
   showPWABanner: false,
   showUsernameBanner: false,
+  bannerOffset: 0,
   setEmailBannerDismissed: () => {},
   setUsernameBannerDismissed: () => {},
 });
@@ -154,11 +159,16 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setShowPWABanner(pwaBannerShouldShow);
   };
 
+  // Calculate banner offset based on which banner is showing
+  // Only one banner shows at a time due to priority system
+  const bannerOffset = (showEmailBanner || showUsernameBanner || showPWABanner) ? BANNER_HEIGHT : 0;
+
   return (
     <BannerContext.Provider value={{
       showEmailBanner,
       showPWABanner,
       showUsernameBanner,
+      bannerOffset,
       setEmailBannerDismissed,
       setUsernameBannerDismissed,
     }}>

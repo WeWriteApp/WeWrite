@@ -1962,17 +1962,107 @@ export default function DesignSystemPage() {
               </div>
             </StateDemo>
 
-            <StateDemo label="Banner Design Notes">
+            <StateDemo label="Banner Priority System">
               <div className="wewrite-card p-4 max-w-2xl">
-                <h4 className="font-medium mb-2">Design System Integration</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
+                <h4 className="font-medium mb-2">One Banner at a Time</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Only one banner shows at a time, following this priority order:
+                </p>
+                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside mb-4">
+                  <li><strong className="text-foreground">Email Verification</strong> - Highest priority, shows until verified or dismissed</li>
+                  <li><strong className="text-foreground">Username Setup</strong> - Shows if email verified but username invalid</li>
+                  <li><strong className="text-foreground">PWA Installation</strong> - Lowest priority, only shows when others are dismissed</li>
+                </ol>
+                <p className="text-sm text-muted-foreground">
+                  Managed by <code className="bg-muted px-1 rounded">BannerProvider</code> which cascades to the next banner when one is dismissed.
+                </p>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Banner Layout Architecture">
+              <div className="wewrite-card p-4 max-w-2xl">
+                <h4 className="font-medium mb-2">CSS Variable System</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Banners use CSS variables to communicate their height to the rest of the app:
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-2 mb-4">
+                  <li>• <code className="bg-muted px-1 rounded">--email-banner-height</code> - Set by EmailVerificationTopBanner (40px when visible)</li>
+                  <li>• <code className="bg-muted px-1 rounded">--pwa-banner-height</code> - Set by PWABanner (40px when visible)</li>
+                </ul>
+                <h4 className="font-medium mb-2 mt-4">Content Offset Implementation</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  All page layouts must account for banner height. Use one of these approaches:
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>
+                    <strong className="text-foreground">Option 1: CSS Variable (Recommended)</strong>
+                    <pre className="bg-muted p-2 rounded mt-1 text-xs overflow-x-auto">
+{`<div style={{ paddingTop: 'var(--email-banner-height, 0px)' }}>
+  {/* Page content */}
+</div>`}
+                    </pre>
+                  </li>
+                  <li>
+                    <strong className="text-foreground">Option 2: BannerProvider Hook</strong>
+                    <pre className="bg-muted p-2 rounded mt-1 text-xs overflow-x-auto">
+{`const { bannerOffset } = useBanner();
+// bannerOffset is the calculated height in pixels`}
+                    </pre>
+                  </li>
+                </ul>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Fixed Header Integration">
+              <div className="wewrite-card p-4 max-w-2xl">
+                <h4 className="font-medium mb-2">Z-Index Layering</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 mb-4">
+                  <li>• Banners: <code className="bg-muted px-1 rounded">z-100</code> - Above headers</li>
+                  <li>• Headers/Nav: <code className="bg-muted px-1 rounded">z-50</code> - Below banners</li>
+                  <li>• Modals/Drawers: <code className="bg-muted px-1 rounded">z-[999]</code> - Above everything</li>
+                </ul>
+                <h4 className="font-medium mb-2">Header Position Offset</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Fixed headers must offset their <code className="bg-muted px-1 rounded">top</code> position to account for banners:
+                </p>
+                <pre className="bg-muted p-2 rounded text-xs overflow-x-auto">
+{`// In fixed-layer.css
+.fixed-header-sidebar-aware {
+  top: calc(var(--email-banner-height, 0px) + var(--pwa-banner-height, 0px));
+}`}
+                </pre>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Banner Design Guidelines">
+              <div className="wewrite-card p-4 max-w-2xl">
+                <h4 className="font-medium mb-2">Visual Design</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 mb-4">
                   <li>• Uses <code className="bg-muted px-1 rounded">bg-muted/50</code> for glassmorphic background</li>
                   <li>• Consistent with card system styling and borders</li>
-                  <li>• Mobile-first design with <code className="bg-muted px-1 rounded">md:hidden</code></li>
-                  <li>• Priority system: Email verification → PWA installation</li>
+                  <li>• Mobile-first design with responsive breakpoints</li>
                   <li>• Smooth 300ms collapse/expand animations</li>
-                  <li>• Two-button layout: Later, How? (opens help modal)</li>
                 </ul>
+                <h4 className="font-medium mb-2">Dismissal Behavior</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong className="text-foreground">Later:</strong> Dismisses for 24 hours (email) or 3 days (username)</li>
+                  <li>• <strong className="text-foreground">Don't remind:</strong> Permanently dismisses until condition changes</li>
+                  <li>• Stored in localStorage with timestamp tracking</li>
+                </ul>
+              </div>
+            </StateDemo>
+
+            <StateDemo label="Adding New Banners">
+              <div className="wewrite-card p-4 max-w-2xl">
+                <h4 className="font-medium mb-2">Checklist for New Banners</h4>
+                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                  <li>Add state to <code className="bg-muted px-1 rounded">BannerProvider</code> with priority logic</li>
+                  <li>Create CSS variable: <code className="bg-muted px-1 rounded">--your-banner-height</code></li>
+                  <li>Update <code className="bg-muted px-1 rounded">fixed-layer.css</code> to include new variable in calculations</li>
+                  <li>Set the CSS variable when banner mounts/unmounts</li>
+                  <li>Add localStorage keys for dismissal tracking</li>
+                  <li>Update cascade logic in BannerProvider dismiss handlers</li>
+                </ol>
               </div>
             </StateDemo>
           </ComponentShowcase>
