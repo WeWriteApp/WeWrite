@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ReplyFeatureCard from './features/ReplyFeatureCard';
 import MapFeatureCard from './features/MapFeatureCard';
 import GraphFeatureCard from './features/GraphFeatureCard';
+import LeaderboardsFeatureCard from './features/LeaderboardsFeatureCard';
 
 interface FeatureConfig {
   id: string;
@@ -35,6 +36,12 @@ const features: FeatureConfig[] = [
     title: 'Reply',
     description: 'Agree, disagree, or stay neutral - every response earns the original author',
     component: ReplyFeatureCard
+  },
+  {
+    id: 'leaderboards',
+    title: 'Leaderboards',
+    description: 'See who\'s earning the most and compete for the top spots',
+    component: LeaderboardsFeatureCard
   }
 ];
 

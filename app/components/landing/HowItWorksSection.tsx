@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card';
-import { Users, Sparkles, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Calendar, Sparkles, ChevronDown, AlertTriangle } from 'lucide-react';
 import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
 import { useDemoBalance } from '../../contexts/DemoBalanceContext';
 import { getLoggedOutPageAllocation } from '../../utils/simulatedUsd';
@@ -77,9 +77,9 @@ export default function HowItWorksSection() {
         <div className="space-y-6">
           {/* Allocation bar in a card with tooltip outside */}
           <div className="relative max-w-md mx-auto">
-            {/* Click me tooltip - positioned outside the card, pointing at the right side */}
+            {/* Click me tooltip - positioned outside the card, pointing at the plus button */}
             <div
-              className={`absolute -top-8 right-2 z-20 transition-all duration-500 ${showTooltip ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+              className={`absolute -top-8 right-4 z-20 transition-all duration-500 ${showTooltip ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
             >
               <div className="flex flex-col items-center animate-bounce">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-sm font-medium shadow-lg">
@@ -179,13 +179,13 @@ export default function HowItWorksSection() {
           </div>
 
           {/* How it helps creators */}
-          <div className="flex items-start gap-4 p-4 bg-success-10 rounded-xl border border-success-20 max-w-md mx-auto">
-            <Users className="h-6 w-6 text-success flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-4 p-4 wewrite-card max-w-md mx-auto">
+            <Calendar className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-medium text-sm mb-1">Creators get paid monthly</h4>
+              <h4 className="font-medium text-sm mb-1">Get paid monthly for your writing</h4>
               <p className="text-sm text-muted-foreground">
-                At the end of each month, your allocated funds are distributed to the creators you've supported.
-                The more you allocate, the more they earn!
+                At the end of each month, you receive payouts based on how much support your pages received.
+                The more readers allocate to your content, the more you earn!
               </p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function HowItWorksSection() {
           <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 max-w-md mx-auto">
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              Payouts functionality is still in beta, and isn't yet working as of December 2025. If you'd like to support development, you can still set up your subscription!
+              Payouts are currently in beta. Subscribe now to support creators once payouts go live!
             </p>
           </div>
         </div>

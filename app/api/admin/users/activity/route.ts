@@ -21,6 +21,16 @@ export interface Activity {
   status?: string;
   createdAt: string;
   metadata?: Record<string, any>;
+  // Enhanced fields for verbose display
+  sourceUsername?: string;
+  sourceUserId?: string;
+  sourcePageId?: string;
+  sourcePageTitle?: string;
+  targetUsername?: string;
+  targetUserId?: string;
+  targetPageId?: string;
+  targetPageTitle?: string;
+  actionUrl?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -276,10 +286,10 @@ export async function GET(request: NextRequest) {
           
           snapshot.docs.forEach(doc => {
             const data = doc.data();
-            const createdAt = data.createdAt?._seconds 
+            const createdAt = data.createdAt?._seconds
               ? new Date(data.createdAt._seconds * 1000).toISOString()
               : data.createdAt || new Date().toISOString();
-            
+
             activities.push({
               id: `notif-${doc.id}`,
               type: 'notification',
@@ -287,8 +297,19 @@ export async function GET(request: NextRequest) {
               description: data.message || '',
               status: data.read ? 'read' : 'unread',
               createdAt,
+              // Pass through rich notification data for verbose display
+              sourceUsername: data.sourceUsername,
+              sourceUserId: data.sourceUserId,
+              sourcePageId: data.sourcePageId,
+              sourcePageTitle: data.sourcePageTitle,
+              targetUsername: data.targetUsername,
+              targetUserId: data.targetUserId,
+              targetPageId: data.targetPageId,
+              targetPageTitle: data.targetPageTitle,
+              actionUrl: data.actionUrl,
               metadata: {
                 criticality: data.criticality,
+                notificationType: data.type, // 'link', 'user_mention', 'follow', etc.
                 actionUrl: data.actionUrl,
                 ...data.metadata
               }

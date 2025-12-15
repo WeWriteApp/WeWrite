@@ -117,7 +117,7 @@ class PageViewBatcher {
       for (const [pageId, batchedView] of currentBatch) {
         // Update page view document with aggregated format matching /api/analytics/page-view
         const dateKey = this.getDateKey(batchedView.lastViewed);
-        const currentHour = batchedView.lastViewed.getHours().toString();
+        const currentHour = batchedView.lastViewed.getUTCHours().toString(); // Use UTC to match server-side API recording
         
         const pageViewRef = doc(
           db, 

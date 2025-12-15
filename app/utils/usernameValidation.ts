@@ -19,7 +19,7 @@ export interface UserData {
 export interface UsernameCheckResult {
   hasUsername: boolean;
   username: string | null;
-  source: 'username' | 'email' | 'none';
+  source: 'username' | 'displayName' | 'email' | 'none';
   needsUsername: boolean;
   reason?: string;
 }
@@ -48,12 +48,31 @@ export const validateUsernameFormat = (username: string): UsernameValidationResu
     };
   }
 
-  // Check if username contains only alphanumeric characters and underscores
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+  // Check if username contains only allowed characters: letters, numbers, underscores, dashes, and periods
+  if (!/^[a-zA-Z0-9_.\-]+$/.test(username)) {
     return {
       isValid: false,
       error: "INVALID_CHARACTERS",
-      message: "Username can only contain letters, numbers, and underscores"
+      message: "Username can only contain letters, numbers, underscores, dashes, and periods"
+    };
+  }
+
+  // Additional rules for special characters
+  // Cannot start or end with a period, dash, or underscore
+  if (/^[._\-]|[._\-]$/.test(username)) {
+    return {
+      isValid: false,
+      error: "INVALID_START_END",
+      message: "Username cannot start or end with a period, dash, or underscore"
+    };
+  }
+
+  // Cannot have consecutive special characters
+  if (/[._\-]{2,}/.test(username)) {
+    return {
+      isValid: false,
+      error: "CONSECUTIVE_SPECIAL",
+      message: "Username cannot have consecutive periods, dashes, or underscores"
     };
   }
 
@@ -141,14 +160,14 @@ export const suggestCleanUsername = (username: string): string => {
   // Replace all types of whitespace with underscores (spaces, tabs, newlines, etc.)
   let cleaned = username.replace(/\s+/g, '_');
 
-  // Remove any characters that aren't alphanumeric or underscores
-  cleaned = cleaned.replace(/[^a-zA-Z0-9_]/g, '');
+  // Remove any characters that aren't alphanumeric, underscores, dashes, or periods
+  cleaned = cleaned.replace(/[^a-zA-Z0-9_.\-]/g, '');
 
-  // Remove multiple consecutive underscores
-  cleaned = cleaned.replace(/_+/g, '_');
+  // Remove multiple consecutive special characters (replace with single underscore)
+  cleaned = cleaned.replace(/[._\-]{2,}/g, '_');
 
-  // Remove leading/trailing underscores
-  cleaned = cleaned.replace(/^_+|_+$/g, '');
+  // Remove leading/trailing special characters
+  cleaned = cleaned.replace(/^[._\-]+|[._\-]+$/g, '');
 
   // Ensure minimum length
   if (cleaned.length < 3) {
@@ -164,8 +183,8 @@ export const suggestCleanUsername = (username: string): string => {
   // Ensure maximum length
   if (cleaned.length > 30) {
     cleaned = cleaned.substring(0, 30);
-    // Remove trailing underscore if truncation created one
-    cleaned = cleaned.replace(/_+$/, '');
+    // Remove trailing special character if truncation created one
+    cleaned = cleaned.replace(/[._\-]+$/, '');
   }
 
   return cleaned;
@@ -305,7 +324,11 @@ export const getUsernameErrorMessage = (error: string | null): string => {
     case "CONTAINS_WHITESPACE":
       return "Usernames cannot contain spaces or whitespace characters. Try using underscores (_) instead.";
     case "INVALID_CHARACTERS":
-      return "Username can only contain letters, numbers, and underscores. Try removing special characters.";
+      return "Username can only contain letters, numbers, underscores, dashes, and periods.";
+    case "INVALID_START_END":
+      return "Username cannot start or end with a period, dash, or underscore.";
+    case "CONSECUTIVE_SPECIAL":
+      return "Username cannot have consecutive periods, dashes, or underscores.";
     case "TOO_LONG":
       return "Username cannot be longer than 30 characters";
     case "USERNAME_TAKEN":

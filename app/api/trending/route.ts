@@ -16,6 +16,7 @@ interface TrendingPage {
   title: string;
   views: number;
   views24h: number;
+  totalViews: number; // Lifetime total views from pages collection (for fallback sorting)
   userId: string;
   lastModified: string;
   hourlyViews: number[];
@@ -99,6 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         title: pageData.title,
         views: 0, // Will be replaced with views24h for trending display
         views24h: 0, // Will be populated with real data below
+        totalViews: views, // Store lifetime total views from pages collection for fallback sorting
         userId: pageData.userId,
         lastModified: pageData.lastModified,
         hourlyViews: [] // Will be populated with real data below
@@ -147,7 +149,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 
 
-    // Sort by 24h activity first, then by total views as fallback
+    // Sort by 24h activity first, then by total lifetime views as fallback
     trendingPages.sort((a, b) => {
       // Prioritize pages with actual 24h activity
       if (a.views24h > 0 && b.views24h === 0) return -1;
@@ -158,8 +160,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         return b.views24h - a.views24h;
       }
 
-      // If neither has 24h activity, sort by total views
-      return b.views - a.views;
+      // If neither has 24h activity, sort by total lifetime views from pages collection
+      return b.totalViews - a.totalViews;
     });
 
     // Limit to requested count
@@ -188,7 +190,7 @@ async function getBatchPageViewData(db: any, pageIds: string[]): Promise<Map<str
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const currentHour = now.getHours();
+    const currentHour = now.getUTCHours(); // Use UTC to match how views are recorded in /api/analytics/page-view
 
     // Build document IDs for batch retrieval
     const todayDocIds = pageIds.map(id => `${id}_${todayStr}`);
@@ -270,7 +272,7 @@ async function getRealPageViewData(db: any, pageId: string): Promise<PageViewDat
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const currentHour = now.getHours();
+    const currentHour = now.getUTCHours(); // Use UTC to match how views are recorded
 
     // Get today's and yesterday's pageViews documents
     const [todayDoc, yesterdayDoc] = await Promise.all([

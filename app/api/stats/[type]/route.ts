@@ -404,11 +404,65 @@ async function fetchPageStats(pageId: string) {
       console.warn('📊 [PAGE_STATS] Supporter stats fallback:', supporterError);
     }
 
+    // Page Views: query pageViews collection for last 24 hours
+    let totalViews = 0;
+    let viewsLast24h = 0;
+    const viewData = Array(24).fill(0);
+    try {
+      const todayStr = now.toISOString().split('T')[0];
+      const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const currentHour = now.getUTCHours(); // Use UTC to match how views are recorded
+
+      // Fetch today's and yesterday's pageViews documents
+      const [todayDoc, yesterdayDoc, pageDoc] = await Promise.all([
+        db.collection(getCollectionName('pageViews')).doc(`${pageId}_${todayStr}`).get(),
+        db.collection(getCollectionName('pageViews')).doc(`${pageId}_${yesterdayStr}`).get(),
+        db.collection(getCollectionName('pages')).doc(pageId).get()
+      ]);
+
+      // Get lifetime total views from pages collection
+      if (pageDoc.exists) {
+        const pageData = pageDoc.data();
+        totalViews = pageData?.views || pageData?.totalViews || 0;
+      }
+
+      // Build 24-hour rolling window view data
+      // Yesterday's hours after currentHour (these are within last 24 hours)
+      if (yesterdayDoc.exists) {
+        const yesterdayData = yesterdayDoc.data();
+        for (let hour = currentHour + 1; hour < 24; hour++) {
+          const views = yesterdayData?.hours?.[hour] || 0;
+          // Map to viewData array: yesterday's hours go at the beginning
+          viewData[hour - (currentHour + 1)] = views;
+          viewsLast24h += views;
+        }
+      }
+
+      // Today's hours up to and including currentHour
+      if (todayDoc.exists) {
+        const todayData = todayDoc.data();
+        for (let hour = 0; hour <= currentHour; hour++) {
+          const views = todayData?.hours?.[hour] || 0;
+          // Map to viewData array: today's hours go after yesterday's remaining hours
+          viewData[hour + (24 - (currentHour + 1))] = views;
+          viewsLast24h += views;
+        }
+      }
+
+      console.log(`📊 [PAGE_STATS] View data for page ${pageId}:`, {
+        totalViews,
+        viewsLast24h,
+        viewDataSum: viewData.reduce((a, b) => a + b, 0)
+      });
+    } catch (viewError) {
+      console.warn('📊 [PAGE_STATS] View stats fallback:', viewError);
+    }
+
     return {
       pageId,
-      totalViews: 0, // TODO: Implement view tracking
-      viewsLast24h: 0,
-      viewData: Array(24).fill(0), // TODO: Implement view data
+      totalViews,
+      viewsLast24h,
+      viewData,
       recentChanges: recentEdits.length,
       changeData,
       editorsCount: uniqueEditors.size,

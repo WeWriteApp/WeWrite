@@ -63,6 +63,16 @@ type Activity = {
   status?: string;
   createdAt: string;
   metadata?: Record<string, any>;
+  // Enhanced fields for verbose display
+  sourceUsername?: string;
+  sourceUserId?: string;
+  sourcePageId?: string;
+  sourcePageTitle?: string;
+  targetUsername?: string;
+  targetUserId?: string;
+  targetPageId?: string;
+  targetPageTitle?: string;
+  actionUrl?: string;
 };
 
 export default function AdminUsersPage() {
@@ -737,6 +747,116 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Pill link component for clickable usernames and pages
+  const PillLink = ({ href, children, type = 'user' }: { href: string; children: React.ReactNode; type?: 'user' | 'page' }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors hover:opacity-80 ${
+        type === 'user'
+          ? 'bg-primary/15 text-primary border border-primary/30'
+          : 'bg-secondary/30 text-secondary-foreground border border-secondary/50'
+      }`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {type === 'user' && '@'}{children}
+    </a>
+  );
+
+  // Render verbose activity description with clickable pill links
+  const renderActivityDescription = (activity: Activity) => {
+    const notificationType = activity.metadata?.notificationType;
+
+    // For link notifications: "@user linked to 'page' in their page 'page'"
+    if (notificationType === 'link' && activity.sourceUsername && activity.targetPageTitle && activity.sourcePageTitle) {
+      return (
+        <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+          <PillLink href={`/user/${activity.sourceUsername}`} type="user">
+            {activity.sourceUsername}
+          </PillLink>
+          <span>linked to</span>
+          {activity.targetPageId ? (
+            <PillLink href={`/${activity.targetPageId}`} type="page">
+              {activity.targetPageTitle}
+            </PillLink>
+          ) : (
+            <span className="font-medium">"{activity.targetPageTitle}"</span>
+          )}
+          <span>in their page</span>
+          {activity.sourcePageId ? (
+            <PillLink href={`/${activity.sourcePageId}`} type="page">
+              {activity.sourcePageTitle}
+            </PillLink>
+          ) : (
+            <span className="font-medium">"{activity.sourcePageTitle}"</span>
+          )}
+        </span>
+      );
+    }
+
+    // For user mention notifications: "@user mentioned you in 'page'"
+    if (notificationType === 'user_mention' && activity.sourceUsername && activity.sourcePageTitle) {
+      return (
+        <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+          <PillLink href={`/user/${activity.sourceUsername}`} type="user">
+            {activity.sourceUsername}
+          </PillLink>
+          <span>mentioned this user in</span>
+          {activity.sourcePageId ? (
+            <PillLink href={`/${activity.sourcePageId}`} type="page">
+              {activity.sourcePageTitle}
+            </PillLink>
+          ) : (
+            <span className="font-medium">"{activity.sourcePageTitle}"</span>
+          )}
+        </span>
+      );
+    }
+
+    // For follow notifications: look for follower username in metadata or message
+    if (notificationType === 'follow' || activity.title?.includes('follower') || activity.title?.includes('followed')) {
+      // Try to extract username from the message or metadata
+      const followerMatch = activity.description?.match(/@(\w+)/);
+      const followerUsername = followerMatch?.[1] || activity.sourceUsername || activity.metadata?.followerUsername;
+
+      if (followerUsername) {
+        return (
+          <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+            <PillLink href={`/user/${followerUsername}`} type="user">
+              {followerUsername}
+            </PillLink>
+            <span>started following this user</span>
+          </span>
+        );
+      }
+    }
+
+    // For earnings with page info
+    if (activity.type === 'payout' && activity.metadata?.pageId) {
+      return (
+        <span className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+          <span>{activity.description}</span>
+          {activity.metadata.pageId && (
+            <>
+              <span>from</span>
+              <PillLink href={`/${activity.metadata.pageId}`} type="page">
+                {activity.metadata.pageTitle || 'page'}
+              </PillLink>
+            </>
+          )}
+        </span>
+      );
+    }
+
+    // Default: return plain description
+    return (
+      <p className="text-xs text-muted-foreground mt-0.5">
+        {activity.description}
+      </p>
+    );
+  };
+
   return (
     <div className="p-4 pt-4 space-y-4">
       <AdminSubpageHeader
@@ -1201,11 +1321,27 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <div className="text-muted-foreground">Email verified</div>
-                  {selectedUser.emailVerified ? (
-                    <Badge variant="success-secondary">Verified</Badge>
-                  ) : (
-                    <Badge variant="destructive-secondary">Unverified</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {selectedUser.emailVerified ? (
+                      <Badge variant="success-secondary">Verified</Badge>
+                    ) : (
+                      <>
+                        <Badge variant="destructive-secondary">Unverified</Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleSendEmailVerification(selectedUser)}
+                          disabled={loadingAction === 'verify'}
+                        >
+                          {loadingAction === 'verify' ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : null}
+                          Send reminder
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-muted-foreground">Created</div>
@@ -1329,9 +1465,9 @@ export default function AdminUsersPage() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                  {activity.description}
-                                </p>
+                                <div className="mt-0.5">
+                                  {renderActivityDescription(activity)}
+                                </div>
                               </div>
                             </div>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">

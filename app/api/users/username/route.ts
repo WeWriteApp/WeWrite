@@ -15,7 +15,8 @@ interface UsernameCheckResult {
 }
 
 // Username validation regex (same as client-side)
-const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,20}$/;
+// Allowed: letters, numbers, underscores, dashes, and periods
+const USERNAME_REGEX = /^[a-zA-Z0-9_.\-]{3,30}$/;
 
 /**
  * Validate username format
@@ -29,12 +30,27 @@ function validateUsernameFormat(username: string): { valid: boolean; error?: str
     return { valid: false, error: 'Username must be at least 3 characters long' };
   }
 
-  if (username.length > 20) {
-    return { valid: false, error: 'Username must be no more than 20 characters long' };
+  if (username.length > 30) {
+    return { valid: false, error: 'Username must be no more than 30 characters long' };
+  }
+
+  // Check for whitespace
+  if (/\s/.test(username)) {
+    return { valid: false, error: 'Username cannot contain spaces or whitespace' };
   }
 
   if (!USERNAME_REGEX.test(username)) {
-    return { valid: false, error: 'Username can only contain letters, numbers, hyphens, and underscores' };
+    return { valid: false, error: 'Username can only contain letters, numbers, underscores, dashes, and periods' };
+  }
+
+  // Cannot start or end with a period, dash, or underscore
+  if (/^[._\-]|[._\-]$/.test(username)) {
+    return { valid: false, error: 'Username cannot start or end with a period, dash, or underscore' };
+  }
+
+  // Cannot have consecutive special characters
+  if (/[._\-]{2,}/.test(username)) {
+    return { valid: false, error: 'Username cannot have consecutive periods, dashes, or underscores' };
   }
 
   // Check for reserved usernames
@@ -51,8 +67,9 @@ function validateUsernameFormat(username: string): { valid: boolean; error?: str
  */
 function generateUsernameCandidates(baseUsername: string): string[] {
   const candidates: string[] = [];
-  const cleanBase = baseUsername.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
-  
+  // Allow letters, numbers, underscores, dashes, and periods
+  const cleanBase = baseUsername.replace(/[^a-zA-Z0-9_.\-]/g, '').toLowerCase();
+
   if (cleanBase.length >= 3) {
     // Add variations with numbers
     const currentYear = new Date().getFullYear();
@@ -64,9 +81,16 @@ function generateUsernameCandidates(baseUsername: string): string[] {
     candidates.push(`the_${cleanBase}`);
     candidates.push(`${cleanBase}_real`);
   }
-  
+
   // Filter out any that are too long or don't match the format
-  return candidates.filter(c => c.length >= 3 && c.length <= 20 && /^[a-zA-Z0-9_-]+$/.test(c));
+  // Also ensure they don't start/end with special chars or have consecutive special chars
+  return candidates.filter(c =>
+    c.length >= 3 &&
+    c.length <= 30 &&
+    /^[a-zA-Z0-9_.\-]+$/.test(c) &&
+    !/^[._\-]|[._\-]$/.test(c) &&
+    !/[._\-]{2,}/.test(c)
+  );
 }
 
 /**
@@ -306,16 +330,20 @@ export async function PUT(request: NextRequest) {
     
     for (let i = 0; i < maxAttempts && suggestions.length < count; i++) {
       let suggestion: string;
-      
+      // Allow letters, numbers, underscores, dashes, and periods in base username
+      const cleanBase = baseUsername.replace(/[^a-zA-Z0-9_.\-]/g, '').toLowerCase()
+        .replace(/^[._\-]+|[._\-]+$/g, '') // Remove leading/trailing special chars
+        .replace(/[._\-]{2,}/g, '_'); // Replace consecutive special chars with single underscore
+
       if (i === 0) {
         // First try the clean base username
-        suggestion = baseUsername.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        suggestion = cleanBase;
       } else if (i < 5) {
         // Try with numbers
-        suggestion = `${baseUsername.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}${Math.floor(Math.random() * 1000)}`;
+        suggestion = `${cleanBase}${Math.floor(Math.random() * 1000)}`;
       } else {
         // Try with underscores and numbers
-        suggestion = `${baseUsername.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}_${Math.floor(Math.random() * 1000)}`;
+        suggestion = `${cleanBase}_${Math.floor(Math.random() * 1000)}`;
       }
 
       // Validate format

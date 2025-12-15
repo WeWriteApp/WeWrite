@@ -65,11 +65,23 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
   const [inputValue, setInputValue] = useState(initialValue || '');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track whether the user is actively typing (to prevent external state from overwriting input)
+  const isUserTypingRef = useRef(false);
+  const lastUserInputRef = useRef(initialValue || '');
 
-  // Update input value when initialValue changes (for recent search selection)
+  // Update input value when initialValue changes ONLY if:
+  // 1. User is not actively typing
+  // 2. The change is significant (not just trimming whitespace from user's current input)
+  // This handles cases like selecting a recent search, but won't interfere with typing
   useEffect(() => {
-    if (initialValue !== undefined) {
-      setInputValue(initialValue);
+    if (initialValue !== undefined && !isUserTypingRef.current) {
+      // Only update if the trimmed values are different (meaning it's a new search selection, not a trim)
+      const currentTrimmed = lastUserInputRef.current.trim();
+      const newTrimmed = initialValue.trim();
+      if (currentTrimmed !== newTrimmed) {
+        setInputValue(initialValue);
+        lastUserInputRef.current = initialValue;
+      }
     }
   }, [initialValue]);
 
@@ -97,6 +109,10 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
     const newValue = e.target.value;
     setInputValue(newValue);
 
+    // Mark that user is actively typing - prevents external state from overwriting input
+    isUserTypingRef.current = true;
+    lastUserInputRef.current = newValue;
+
     // Clear existing debounce timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -107,6 +123,11 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
       if (onSearch) {
         onSearch(newValue);
       }
+      // After the debounced search fires, allow external updates again
+      // Use a small delay to let the search results propagate
+      setTimeout(() => {
+        isUserTypingRef.current = false;
+      }, 100);
     }, 200);
   }, [onSearch]);
 
@@ -131,6 +152,9 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
       clearTimeout(debounceTimeoutRef.current);
     }
     setInputValue("");
+    // Reset typing tracking
+    isUserTypingRef.current = false;
+    lastUserInputRef.current = "";
     if (onClear) {
       onClear();
     }

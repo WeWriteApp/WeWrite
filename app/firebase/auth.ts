@@ -407,6 +407,15 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
       };
     }
 
+    if (username.length > 30) {
+      return {
+        isAvailable: false,
+        message: "Username must be no more than 30 characters",
+        error: "TOO_LONG",
+        suggestions: []
+      };
+    }
+
     // Check for whitespace characters (comprehensive Unicode whitespace detection)
     if (/\s/.test(username)) {
       return {
@@ -417,12 +426,32 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
       };
     }
 
-    // Check if username contains only alphanumeric characters and underscores
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    // Check if username contains only allowed characters: letters, numbers, underscores, dashes, and periods
+    if (!/^[a-zA-Z0-9_.\-]+$/.test(username)) {
       return {
         isAvailable: false,
-        message: "Username can only contain letters, numbers, and underscores",
+        message: "Username can only contain letters, numbers, underscores, dashes, and periods",
         error: "INVALID_CHARACTERS",
+        suggestions: []
+      };
+    }
+
+    // Cannot start or end with a period, dash, or underscore
+    if (/^[._\-]|[._\-]$/.test(username)) {
+      return {
+        isAvailable: false,
+        message: "Username cannot start or end with a period, dash, or underscore",
+        error: "INVALID_START_END",
+        suggestions: []
+      };
+    }
+
+    // Cannot have consecutive special characters
+    if (/[._\-]{2,}/.test(username)) {
+      return {
+        isAvailable: false,
+        message: "Username cannot have consecutive periods, dashes, or underscores",
+        error: "CONSECUTIVE_SPECIAL",
         suggestions: []
       };
     }

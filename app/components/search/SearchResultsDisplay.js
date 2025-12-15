@@ -242,16 +242,22 @@ const SearchResultsDisplay = React.memo(({
 
         {/* Groups functionality removed */}
 
-        {/* No Results - Only show after search has completed and we have a query */}
+        {/* No Results Message - Only show after search has completed and we have a query with no results */}
         {!isLoading && query && query.trim() && results &&
          (!results?.pages || results.pages.length === 0) &&
          (!results?.users || results.users.length === 0) &&
          (!groupsEnabled || !results?.groups || results.groups.length === 0) && (
           <div className={wewriteCard('default', 'text-center py-4')}>
-            <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
-            <Button asChild>
+            <p className="text-muted-foreground">No results found for "{query}"</p>
+          </div>
+        )}
+
+        {/* Create Page Button - Always show when there's a valid query, regardless of results */}
+        {!isLoading && query && query.trim().length >= 2 && (
+          <div className="mt-6">
+            <Button asChild variant="secondary" className="w-full justify-center">
               <Link href={`/new?title=${encodeURIComponent(query.trim())}`}>
-                Create "{query.trim()}" page
+                Create new page: "{query.trim()}"
               </Link>
             </Button>
           </div>

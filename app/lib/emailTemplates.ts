@@ -16,13 +16,14 @@ export const emailStyles = {
     color: #333;
   `,
   button: `
-    background: #000;
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
     color: #fff;
     padding: 12px 30px;
     text-decoration: none;
     border-radius: 6px;
     display: inline-block;
     font-weight: 500;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.2);
   `,
   secondaryButton: `
     background: #f5f5f5;
@@ -159,6 +160,47 @@ export const verificationEmailTemplate: EmailTemplate = {
       </p>
     </div>
     
+    <div style="${emailStyles.footer}">
+      <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
+    </div>
+  `),
+};
+
+export const verificationReminderTemplate: EmailTemplate = {
+  id: 'verification-reminder',
+  name: 'Email Verification Reminder',
+  description: 'Sent as a reminder to users who haven\'t verified their email',
+  category: 'authentication',
+  subject: 'Reminder: Verify your WeWrite email',
+  sampleData: {
+    username: 'JohnDoe',
+    verificationLink: 'https://getwewrite.app/verify?token=sample-token',
+  },
+  generateHtml: ({ username, verificationLink }) => wrapEmail('Verify Your Email', `
+    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 style="margin-top: 0; color: #000;">Don't Forget to Verify Your Email!</h2>
+      <p>Hi ${username},</p>
+      <p>We noticed you haven't verified your email address yet. Verifying your email helps secure your account and ensures you don't miss any important updates.</p>
+
+      <p><strong>Why verify?</strong></p>
+      <ul style="padding-left: 20px; margin: 15px 0;">
+        <li style="margin-bottom: 8px;">Secure your account and protect your earnings</li>
+        <li style="margin-bottom: 8px;">Receive notifications about new followers and page links</li>
+        <li style="margin-bottom: 8px;">Get important updates about your content</li>
+      </ul>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${verificationLink}" style="${emailStyles.button}">
+          Verify Email Now
+        </a>
+      </div>
+
+      <p style="${emailStyles.muted}">
+        Or copy and paste this link into your browser:<br>
+        <a href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
+      </p>
+    </div>
+
     <div style="${emailStyles.footer}">
       <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
     </div>
@@ -730,6 +772,7 @@ export const broadcastEmailTemplate: EmailTemplate = {
 export const emailTemplates: EmailTemplate[] = [
   // Authentication
   verificationEmailTemplate,
+  verificationReminderTemplate,
   welcomeEmailTemplate,
   passwordResetEmailTemplate,
   // Payments

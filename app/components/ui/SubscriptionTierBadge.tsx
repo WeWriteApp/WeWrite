@@ -56,14 +56,10 @@ export function SubscriptionTierBadge({
 
   const config = sizeConfig[size];
 
-  // Determine cancel icon color based on pill variant
+  // Use currentColor so the icon inherits text color from parent
+  // This ensures the icon matches the text color regardless of pill variant or theme
   const getCancelIconColor = () => {
-    // For filled/primary variant: white text, so white icon
-    if (pillVariant === 'primary') {
-      return 'text-white dark:text-white';
-    }
-    // For outline, secondary, and other variants: accent/primary color
-    return 'text-primary';
+    return ''; // No color class - uses currentColor by default
   };
 
   // Get badge content based on tier
@@ -153,9 +149,9 @@ export function SubscriptionTierBadge({
         };
       default:
         return {
-          icon: <Ban size={config.icon} className="text-muted-foreground dark:text-white" />,
+          icon: <Ban size={config.icon} className={getCancelIconColor()} />,
           tooltip: 'No subscription',
-          color: 'text-muted-foreground dark:text-white'
+          color: getCancelIconColor()
         };
     }
   };

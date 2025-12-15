@@ -207,21 +207,19 @@ export default function VerifyEmailPendingPage() {
             )}
           </Button>
 
-          {/* Do this later - only shown in admin testing mode */}
-          {isAdminTestingMode && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                // Set dismissal flag and navigate home
-                localStorage.setItem('wewrite_email_verification_dismissed', 'true');
-                router.push('/');
-              }}
-              className="w-full text-muted-foreground"
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Do this later
-            </Button>
-          )}
+          {/* Do this later - allows users to skip for now and verify via banner */}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Set dismissal flag and navigate home
+              localStorage.setItem('wewrite_email_verification_dismissed', 'true');
+              router.push('/');
+            }}
+            className="w-full text-muted-foreground"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Do this later
+          </Button>
         </div>
 
         {/* Help text */}

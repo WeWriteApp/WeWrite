@@ -106,7 +106,7 @@ class PageViewBatcher {
   addView(pageId: string, userId: string | null): void {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
-    const hour = now.getHours();
+    const hour = now.getUTCHours(); // Use UTC to match server-side API recording
     const key = `${pageId}_${dateStr}_${hour}`;
 
     // Only add if not already pending for this hour

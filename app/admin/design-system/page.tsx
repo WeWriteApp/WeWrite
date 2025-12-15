@@ -64,6 +64,8 @@ import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import EmptyState from '../../components/ui/EmptyState';
 import { CompositionBar, CompositionBarData } from '../../components/payments/CompositionBar';
+import { RollingCounter } from '../../components/ui/rolling-counter';
+import { CounterBadge } from '../../components/ui/counter-badge';
 
 interface ComponentShowcaseProps {
   title: string;
@@ -106,6 +108,7 @@ function AllocationBarShowcase() {
   const otherPages = 20; // Fixed percentage for "other pages"
   const total = 100;
   const maxAllocation = 120; // Allow overspend up to 120% to demonstrate overfunded state
+  const totalBudget = 10; // $10.00 total budget for demo
 
   const handleIncrement = () => {
     if (demoAllocation < maxAllocation) {
@@ -126,6 +129,10 @@ function AllocationBarShowcase() {
   const currentFunded = Math.min(demoAllocation, availableFunds);
   const overfunded = Math.max(0, demoAllocation - availableFunds);
   const available = Math.max(0, availableFunds - currentFunded);
+
+  // Calculate dollar amounts
+  const allocatedDollars = (demoAllocation / 100) * totalBudget;
+  const availableDollars = (availableFunds / 100) * totalBudget;
 
   // Scale all percentages to fit within display (total should be 100 or more if overfunded)
   const displayTotal = Math.max(total, otherPages + currentFunded + overfunded);
@@ -149,9 +156,23 @@ function AllocationBarShowcase() {
           <h4 className="text-sm font-medium text-muted-foreground">Interactive Demo</h4>
           <p className="text-xs text-muted-foreground mb-3">
             Click + to allocate. Keep clicking past 80% to see overfunded (amber) state.
-            Current: ${(demoAllocation / 10).toFixed(2)} / $8.00 available
-            {overfunded > 0 && <span className="text-amber-500 ml-1">(${(overfunded / 10).toFixed(2)} overfunded)</span>}
           </p>
+
+          {/* Dollar amount display with RollingCounter */}
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="text-2xl font-bold">
+              <RollingCounter value={allocatedDollars} prefix="$" decimals={2} duration={300} />
+            </span>
+            <span className="text-sm text-muted-foreground">
+              / ${availableDollars.toFixed(2)} available
+            </span>
+            {overfunded > 0 && (
+              <span className="text-sm text-amber-500 ml-1">
+                (<RollingCounter value={(overfunded / 100) * totalBudget} prefix="$" decimals={2} duration={300} /> overfunded)
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center gap-3 w-full max-w-md">
             {/* Minus button */}
             <Button
@@ -333,6 +354,10 @@ export default function DesignSystemPage() {
   // Tabs and Segmented Control state
   const [activeTab, setActiveTab] = useState('tab1');
   const [activeSegment, setActiveSegment] = useState('segment1');
+  // Rolling Counter demo state
+  const [counterValue, setCounterValue] = useState(1234);
+  const [dollarValue, setDollarValue] = useState(99.99);
+  const [animationSpeed, setAnimationSpeed] = useState(400);
 
   if (!user) {
     return (
@@ -399,6 +424,162 @@ export default function DesignSystemPage() {
             </div>
           </div>
 
+          {/* Rolling Counter / Odometer */}
+          <div className="wewrite-card space-y-4">
+            <div className="border-b border-border pb-4">
+              <h3 className="text-lg font-semibold">Rolling Counter <span className="text-sm font-normal text-muted-foreground">(Odometer)</span></h3>
+              <p className="text-sm text-muted-foreground">app/components/ui/rolling-counter.tsx</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Animated counter with slot machine style rolling digits. Also known as "odometer" in other design systems.
+                Features direction-aware animation (rolls up when increasing, down when decreasing) and adaptive speed for rapid changes.
+                Perfect for view counts, stats, and financial displays.
+              </p>
+            </div>
+            <div className="space-y-6">
+              {/* Interactive Demo */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Interactive Demo</h4>
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Views Counter</p>
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" variant="outline" onClick={() => setCounterValue(prev => Math.max(0, prev - 1))}>
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="text-3xl font-bold min-w-[180px]">
+                        <RollingCounter value={counterValue} suffix=" views" duration={animationSpeed} />
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => setCounterValue(prev => prev + 1)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Dollar Amount</p>
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" variant="outline" onClick={() => setDollarValue(prev => Math.max(0, prev - 1))}>
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="text-3xl font-bold min-w-[120px]">
+                        <RollingCounter value={dollarValue} prefix="$" decimals={2} duration={animationSpeed} />
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => setDollarValue(prev => prev + 1)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Speed:</span>
+                    <Button size="sm" variant="outline" onClick={() => setAnimationSpeed(prev => Math.max(100, prev - 100))}>
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="text-sm font-mono w-16 text-center">{animationSpeed}ms</span>
+                    <Button size="sm" variant="outline" onClick={() => setAnimationSpeed(prev => Math.min(1000, prev + 100))}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => { setCounterValue(1234); setDollarValue(99.99); setAnimationSpeed(400); }}>Reset</Button>
+                </div>
+              </div>
+
+              {/* Size Examples */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Size Variants</h4>
+                <div className="flex flex-col gap-3">
+                  <div className="text-sm"><RollingCounter value={counterValue} /> <span className="text-muted-foreground ml-2">text-sm</span></div>
+                  <div className="text-base"><RollingCounter value={counterValue} /> <span className="text-muted-foreground ml-2">text-base</span></div>
+                  <div className="text-xl"><RollingCounter value={counterValue} /> <span className="text-muted-foreground ml-2">text-xl</span></div>
+                  <div className="text-3xl font-bold"><RollingCounter value={counterValue} /> <span className="text-muted-foreground text-base ml-2">text-3xl font-bold</span></div>
+                </div>
+              </div>
+
+              {/* Format Examples */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Format Examples</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">With commas (default)</p>
+                    <RollingCounter value={1234567} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Without commas</p>
+                    <RollingCounter value={1234567} formatWithCommas={false} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">With prefix</p>
+                    <RollingCounter value={1234.56} prefix="$" decimals={2} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">With suffix</p>
+                    <RollingCounter value={42} suffix=" items" />
+                  </div>
+                </div>
+              </div>
+
+              {/* CounterBadge - Composed Badge + RollingCounter */}
+              <div className="space-y-3 pt-4 border-t border-border">
+                <h4 className="text-sm font-medium text-muted-foreground">CounterBadge (Badge + RollingCounter)</h4>
+                <p className="text-xs text-muted-foreground">
+                  Composes Badge with RollingCounter for animated pill counters. Inherits all Badge variants and shiny mode support.
+                </p>
+
+                {/* Variant Examples */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Variants (click to increment)</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setCounterValue(prev => prev + 1)}>
+                      <CounterBadge value={counterValue} variant="default" />
+                    </button>
+                    <button onClick={() => setCounterValue(prev => prev + 1)}>
+                      <CounterBadge value={counterValue} variant="secondary" />
+                    </button>
+                    <button onClick={() => setCounterValue(prev => prev + 1)}>
+                      <CounterBadge value={counterValue} variant="outline" />
+                    </button>
+                    <button onClick={() => setCounterValue(prev => prev + 1)}>
+                      <CounterBadge value={counterValue} variant="destructive" />
+                    </button>
+                    <button onClick={() => setCounterValue(prev => prev + 1)}>
+                      <CounterBadge value={counterValue} variant="success" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Size Examples */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Sizes</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CounterBadge value={counterValue} size="sm" />
+                    <CounterBadge value={counterValue} size="default" />
+                    <CounterBadge value={counterValue} size="lg" />
+                  </div>
+                </div>
+
+                {/* With Prefix/Suffix */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">With Prefix/Suffix</p>
+                  <div className="flex flex-wrap gap-2">
+                    <CounterBadge value={dollarValue} prefix="$" decimals={2} variant="success" />
+                    <CounterBadge value={counterValue} suffix=" views" variant="secondary" />
+                    <CounterBadge value={counterValue} suffix=" new" variant="destructive" />
+                  </div>
+                </div>
+
+                {/* Static (non-animated) */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Static (no animation)</p>
+                  <div className="flex flex-wrap gap-2">
+                    <CounterBadge value={42} animated={false} />
+                    <CounterBadge value={99} animated={false} variant="secondary" />
+                    <CounterBadge value={5} animated={false} variant="outline" suffix=" items" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Color Token Documentation */}
           <div className="wewrite-card space-y-4">
             <div className="border-b border-border pb-4">
@@ -436,40 +617,75 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
-              {/* Neutral Colors */}
+              {/* Neutral Solid Colors */}
               <div className="space-y-3">
-                <h4 className="font-medium text-sm">Neutral Colors</h4>
+                <h4 className="font-medium text-sm">Neutral Solid Colors</h4>
                 <p className="text-sm text-muted-foreground">
-                  Neutral colors are derived from the primary hue with low chroma. Use for backgrounds, borders, and secondary UI elements.
-                  <strong className="text-foreground"> The number represents opacity percentage.</strong>
+                  <strong className="text-foreground">Solid colors</strong> are opaque fills derived from the primary hue with low chroma (oklch).
+                  Use <code className="bg-muted px-1 rounded">neutral-solid-{'{N}'}</code> when you need a consistent, opaque background
+                  that doesn't allow content behind it to show through.
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
                   <div className="space-y-1">
-                    <div className="h-8 bg-neutral-30 rounded flex items-center justify-center">30%</div>
-                    <code className="text-muted-foreground">bg-neutral-30</code>
+                    <div className="h-8 bg-neutral-solid-30 rounded flex items-center justify-center">30%</div>
+                    <code className="text-muted-foreground">bg-neutral-solid-30</code>
                   </div>
                   <div className="space-y-1">
-                    <div className="h-8 bg-neutral-20 rounded flex items-center justify-center">20%</div>
-                    <code className="text-muted-foreground">bg-neutral-20</code>
+                    <div className="h-8 bg-neutral-solid-20 rounded flex items-center justify-center">20%</div>
+                    <code className="text-muted-foreground">bg-neutral-solid-20</code>
                   </div>
                   <div className="space-y-1">
-                    <div className="h-8 bg-neutral-15 rounded flex items-center justify-center">15%</div>
-                    <code className="text-muted-foreground">bg-neutral-15</code>
+                    <div className="h-8 bg-neutral-solid-15 rounded flex items-center justify-center">15%</div>
+                    <code className="text-muted-foreground">bg-neutral-solid-15</code>
                   </div>
                   <div className="space-y-1">
-                    <div className="h-8 bg-neutral-10 rounded flex items-center justify-center">10%</div>
-                    <code className="text-muted-foreground">bg-neutral-10</code>
+                    <div className="h-8 bg-neutral-solid-10 rounded flex items-center justify-center">10%</div>
+                    <code className="text-muted-foreground">bg-neutral-solid-10</code>
                   </div>
                   <div className="space-y-1">
-                    <div className="h-8 bg-neutral-5 rounded flex items-center justify-center">5%</div>
-                    <code className="text-muted-foreground">bg-neutral-5</code>
+                    <div className="h-8 bg-neutral-solid-5 rounded flex items-center justify-center">5%</div>
+                    <code className="text-muted-foreground">bg-neutral-solid-5</code>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  <strong>Usage:</strong> <code className="bg-muted px-1 rounded">bg-neutral-5</code> for very subtle fills, 
-                  <code className="bg-muted px-1 rounded ml-1">bg-neutral-10</code> for hover states, 
-                  <code className="bg-muted px-1 rounded ml-1">border-neutral-20</code> for borders.
+              </div>
+
+              {/* Neutral Alpha Colors */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Neutral Alpha Colors</h4>
+                <p className="text-sm text-muted-foreground">
+                  <strong className="text-foreground">Alpha colors</strong> are transparent overlays (rgba) that adapt to light/dark mode.
+                  In light mode they use black, in dark mode they use white. Use <code className="bg-muted px-1 rounded">neutral-alpha-{'{N}'}</code>
+                  when you want content behind to show through or for hover/overlay effects.
                 </p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-30 rounded flex items-center justify-center">30%</div>
+                    <code className="text-muted-foreground">bg-neutral-alpha-30</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-20 rounded flex items-center justify-center">20%</div>
+                    <code className="text-muted-foreground">bg-neutral-alpha-20</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-15 rounded flex items-center justify-center">15%</div>
+                    <code className="text-muted-foreground">bg-neutral-alpha-15</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-10 rounded flex items-center justify-center">10%</div>
+                    <code className="text-muted-foreground">bg-neutral-alpha-10</code>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-8 bg-neutral-alpha-5 rounded flex items-center justify-center">5%</div>
+                    <code className="text-muted-foreground">bg-neutral-alpha-5</code>
+                  </div>
+                </div>
+                <div className="wewrite-card p-4 bg-muted/30 mt-3">
+                  <p className="text-sm font-medium mb-2">Solid vs Alpha - When to use which:</p>
+                  <div className="text-sm space-y-1">
+                    <p><strong className="text-success">Solid:</strong> Card backgrounds, buttons, chips - opaque fills that cover content</p>
+                    <p><strong className="text-primary">Alpha:</strong> Hover states, overlays, glassmorphism - transparent effects</p>
+                  </div>
+                </div>
               </div>
 
               {/* Semantic Colors */}
@@ -500,11 +716,11 @@ export default function DesignSystemPage() {
 
               {/* Alpha Overlay Colors */}
               <div className="space-y-3">
-                <h4 className="font-medium text-sm">Alpha Overlay Colors ✨</h4>
+                <h4 className="font-medium text-sm">Hover/Active Alpha Overlays</h4>
                 <p className="text-sm text-muted-foreground">
-                  Alpha colors are <strong className="text-foreground">theme-aware overlays</strong> that automatically adapt to light/dark mode.
-                  In light mode they use black (to darken), in dark mode they use white (to brighten).
-                  <strong className="text-foreground"> Use these for hover/active states on any background color.</strong>
+                  Shorthand <code className="bg-muted px-1 rounded">alpha-{'{N}'}</code> classes are aliases for <code className="bg-muted px-1 rounded">neutral-alpha-{'{N}'}</code>.
+                  Use for hover/active state overlays on buttons and interactive elements.
+                  <strong className="text-foreground"> These darken in light mode and brighten in dark mode.</strong>
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   <div className="space-y-1">
@@ -584,14 +800,22 @@ export default function DesignSystemPage() {
                 <div className="wewrite-card p-4 space-y-3 bg-muted/30">
                   <div className="text-sm space-y-2">
                     <p><strong>Solid buttons (primary/success/error):</strong> <code className="bg-muted px-1 rounded">bg-primary hover:alpha-10 active:alpha-15</code></p>
-                    <p><strong>Secondary buttons:</strong> <code className="bg-muted px-1 rounded">bg-neutral-5 hover:alpha-10 active:alpha-15</code></p>
-                    <p><strong>Outline buttons:</strong> <code className="bg-muted px-1 rounded">border border-neutral-20 hover:bg-alpha-5</code></p>
-                    <p><strong>Ghost buttons:</strong> <code className="bg-muted px-1 rounded">hover:bg-alpha-5 active:bg-alpha-10</code></p>
-                    <p><strong>Cards:</strong> <code className="bg-muted px-1 rounded">bg-muted/50 border border-border</code></p>
+                    <p><strong>Secondary buttons:</strong> <code className="bg-muted px-1 rounded">bg-neutral-solid-10 hover:alpha-10 active:alpha-15</code></p>
+                    <p><strong>Outline buttons:</strong> <code className="bg-muted px-1 rounded">border border-neutral-alpha-20 hover:bg-neutral-alpha-5</code></p>
+                    <p><strong>Ghost buttons:</strong> <code className="bg-muted px-1 rounded">hover:bg-neutral-alpha-5 active:bg-neutral-alpha-10</code></p>
+                    <p><strong>Cards:</strong> <code className="bg-muted px-1 rounded">bg-card border border-border</code></p>
                     <p><strong>Active chips:</strong> <code className="bg-muted px-1 rounded">bg-primary-10 text-primary</code></p>
-                    <p><strong>Inactive chips:</strong> <code className="bg-muted px-1 rounded">bg-neutral-5 text-foreground</code></p>
+                    <p><strong>Inactive chips:</strong> <code className="bg-muted px-1 rounded">bg-neutral-solid-10 text-foreground</code></p>
                     <p><strong>Success-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-success-10 hover:success-alpha-10</code></p>
                     <p><strong>Destructive-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-error-10 hover:error-alpha-10</code></p>
+                  </div>
+                </div>
+                <div className="wewrite-card p-4 space-y-2 bg-warning/10 border-warning/30">
+                  <p className="text-sm font-medium text-warning">Naming Conventions</p>
+                  <div className="text-sm space-y-1">
+                    <p><code className="bg-muted px-1 rounded">neutral-solid-{'{N}'}</code> = Opaque fill (oklch color with lightness)</p>
+                    <p><code className="bg-muted px-1 rounded">neutral-alpha-{'{N}'}</code> = Transparent overlay (rgba black/white)</p>
+                    <p className="text-muted-foreground text-xs mt-2">Note: <code>neutral-{'{N}'}</code> without suffix is an alias for <code>neutral-solid-{'{N}'}</code> - prefer explicit naming.</p>
                   </div>
                 </div>
               </div>

@@ -25,7 +25,8 @@ import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
 import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
-import { Plus } from 'lucide-react';
+import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2 } from 'lucide-react';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -405,9 +406,12 @@ const LandingPage = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 mb-10">
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Write About Anything</h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="wewrite-card p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <PenLine className="h-6 w-6 text-primary flex-shrink-0" />
+                  <h3 className="text-xl font-semibold">Write About Anything</h3>
+                </div>
                 <p className="text-muted-foreground leading-relaxed">
                   WeWrite is a free speech writing platform where you can share your ideas, stories, and knowledge with the world.
                   Whether you're writing fiction, non-fiction, tutorials, opinion pieces, or creative content,
@@ -415,8 +419,11 @@ const LandingPage = () => {
                 </p>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Earn From Your Content</h3>
+              <div className="wewrite-card p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <DollarSign className="h-6 w-6 text-primary flex-shrink-0" />
+                  <h3 className="text-xl font-semibold">Earn From Your Content</h3>
+                </div>
                 <p className="text-muted-foreground leading-relaxed">
                   Every page on WeWrite is a fundraiser. Readers can allocate their monthly subscription to the pages they love most.
                   At the end of each month, creators get paid based on how much support their pages received.
@@ -424,8 +431,11 @@ const LandingPage = () => {
                 </p>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Build Your Audience</h3>
+              <div className="wewrite-card p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <Users className="h-6 w-6 text-primary flex-shrink-0" />
+                  <h3 className="text-xl font-semibold">Build Your Audience</h3>
+                </div>
                 <p className="text-muted-foreground leading-relaxed">
                   Connect with readers who appreciate your work. Build a following, engage with your community,
                   and grow your presence as a writer. Our trending pages and activity feeds help new writers get discovered
@@ -433,8 +443,11 @@ const LandingPage = () => {
                 </p>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Join Our Community</h3>
+              <div className="wewrite-card p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <Heart className="h-6 w-6 text-primary flex-shrink-0" />
+                  <h3 className="text-xl font-semibold">Join Our Community</h3>
+                </div>
                 <p className="text-muted-foreground leading-relaxed">
                   WeWrite is more than a platform—it's a community of writers and readers who believe in the value of quality content.
                   Join thousands of creators who are already sharing their work and earning from their writing.
@@ -442,17 +455,78 @@ const LandingPage = () => {
                 </p>
               </div>
             </div>
+          </div>
+        </section>
 
-            <div className="text-center">
-              <p className="text-lg text-muted-foreground mb-6">
-                Ready to start writing and earning? Create your free account and publish your first page in minutes.
+        {/* FAQ Section */}
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">FAQ</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Frequently asked questions
+              </p>
+            </div>
+
+            <div className="max-w-2xl mx-auto">
+              <Accordion type="single" collapsible className="space-y-4">
+                {/* FAQ Item: App Installation */}
+                <AccordionItem value="app-install" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-5 w-5 text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">How do I install WeWrite as an app?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      WeWrite isn't on the App Store yet, but you can still use it like a native app! On your phone or tablet,
+                      open WeWrite in your browser and tap <strong>"Add to Home Screen"</strong> (iOS) or <strong>"Install App"</strong> (Android).
+                      This creates an icon on your home screen that opens WeWrite in full-screen mode—just like a regular app.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: Bootstrapped / No Investors */}
+                <AccordionItem value="bootstrapped" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-5 w-5 text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">Is WeWrite backed by investors?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      No—and that's intentional. WeWrite is 100% founder-bootstrapped with zero outside investors.
+                      This means we're not beholden to shareholders demanding aggressive growth at all costs.
+                      Instead, we're focused on building a sustainable platform that prioritizes revenue stability
+                      and long-term value for our community of writers and readers. Our success is measured by
+                      the success of our creators, not by quarterly earnings reports.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* Ready to Start CTA Card */}
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="wewrite-card p-8 md:p-10 text-center">
+              <div className="flex justify-center mb-4">
+                <Rocket className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">Ready to Start Writing & Earning?</h2>
+              <p className="text-lg text-muted-foreground mb-6 max-w-xl mx-auto">
+                Create your free account and publish your first page in minutes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <AuthButton
                   type="register"
                   size="lg"
                   variant="default"
-                  device="about_section"
+                  device="bottom_cta"
                 >
                   Get Started Free
                 </AuthButton>
@@ -460,7 +534,7 @@ const LandingPage = () => {
                   type="login"
                   size="lg"
                   variant="outline"
-                  device="about_section"
+                  device="bottom_cta"
                 >
                   Sign In
                 </AuthButton>
