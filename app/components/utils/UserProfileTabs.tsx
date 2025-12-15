@@ -52,7 +52,7 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
               href={`/${page.id}`}
               variant="primary"
               isPublic={page.isPublic}
-              className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+              className="max-w-full"
               // Always show the actual title for private pages when viewing your own list
               isOwned={isCurrentUserList}
             >

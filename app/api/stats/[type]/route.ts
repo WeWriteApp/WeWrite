@@ -404,7 +404,9 @@ async function fetchPageStats(pageId: string) {
       console.warn('📊 [PAGE_STATS] Supporter stats fallback:', supporterError);
     }
 
-    // Page Views: query pageViews collection for last 24 hours
+    // Page Views: query pageViews collection for accurate total views
+    // Note: The page document's `views` field is only updated 10% of the time for cost optimization,
+    // so we need to calculate total views from the pageViews collection for accuracy
     let totalViews = 0;
     let viewsLast24h = 0;
     const viewData = Array(24).fill(0);
@@ -413,18 +415,21 @@ async function fetchPageStats(pageId: string) {
       const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const currentHour = now.getUTCHours(); // Use UTC to match how views are recorded
 
-      // Fetch today's and yesterday's pageViews documents
-      const [todayDoc, yesterdayDoc, pageDoc] = await Promise.all([
+      // Query ALL pageViews documents for this page to get accurate total views
+      const pageViewsQuery = db.collection(getCollectionName('pageViews'))
+        .where('pageId', '==', pageId);
+
+      const [pageViewsSnapshot, todayDoc, yesterdayDoc] = await Promise.all([
+        pageViewsQuery.get(),
         db.collection(getCollectionName('pageViews')).doc(`${pageId}_${todayStr}`).get(),
-        db.collection(getCollectionName('pageViews')).doc(`${pageId}_${yesterdayStr}`).get(),
-        db.collection(getCollectionName('pages')).doc(pageId).get()
+        db.collection(getCollectionName('pageViews')).doc(`${pageId}_${yesterdayStr}`).get()
       ]);
 
-      // Get lifetime total views from pages collection
-      if (pageDoc.exists) {
-        const pageData = pageDoc.data();
-        totalViews = pageData?.views || pageData?.totalViews || 0;
-      }
+      // Calculate accurate total views from ALL pageViews documents
+      pageViewsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        totalViews += data?.totalViews || 0;
+      });
 
       // Build 24-hour rolling window view data
       // Yesterday's hours after currentHour (these are within last 24 hours)
@@ -452,7 +457,8 @@ async function fetchPageStats(pageId: string) {
       console.log(`📊 [PAGE_STATS] View data for page ${pageId}:`, {
         totalViews,
         viewsLast24h,
-        viewDataSum: viewData.reduce((a, b) => a + b, 0)
+        viewDataSum: viewData.reduce((a, b) => a + b, 0),
+        pageViewsDocs: pageViewsSnapshot.size
       });
     } catch (viewError) {
       console.warn('📊 [PAGE_STATS] View stats fallback:', viewError);

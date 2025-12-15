@@ -364,8 +364,9 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const isContainerStyle = pillStyle === PILL_STYLES.FILLED || pillStyle === PILL_STYLES.OUTLINE;
 
   // Classes for the pill-text span based on style type
+  // Using max-w-full allows pills to expand to their container's width and truncate there
   const pillTextClasses = isContainerStyle
-    ? 'pill-text truncate max-w-[300px]' // Container styles: single-line with ellipsis
+    ? 'pill-text truncate max-w-full' // Container styles: single-line with ellipsis at container boundary
     : 'pill-text'; // Text styles: allow natural wrapping
 
   // Use different styling for suggestions vs normal pill links
