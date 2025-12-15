@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, use } from 'react';
+import { useEffect, use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UnifiedLoader from '../../components/ui/unified-loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
@@ -30,8 +30,12 @@ export default function UserPage({ params }: UserPageProps) {
   const router = useRouter();
   const { user } = useAuth();
 
+  // Track if we've redirected to prevent redirect loops
+  const [hasRedirected, setHasRedirected] = useState(false);
+
   // 🚀 OPTIMIZATION: Use cached user profile hook for instant navigation
   // The hook accepts both username and userId, so we pass the username param
+  // This handles both usernames AND userIds since the API can look up by either
   const {
     profile,
     loading: isLoading,
@@ -42,6 +46,16 @@ export default function UserPage({ params }: UserPageProps) {
     cacheTTL: 10 * 60 * 1000, // 10 minutes cache for smooth navigation
     includeSubscription: true
   });
+
+  // If the URL param doesn't match the actual username, redirect to canonical URL
+  // This handles the case when someone navigates with userId instead of username
+  useEffect(() => {
+    if (profile && profile.username && profile.username !== username && !hasRedirected) {
+      console.log(`[UserPage] Redirecting from /u/${username} to /u/${profile.username}`);
+      setHasRedirected(true);
+      router.replace(`/u/${profile.username}`);
+    }
+  }, [profile, username, router, hasRedirected]);
 
   // 🚀 OPTIMIZATION: Log cache performance for monitoring
   useEffect(() => {

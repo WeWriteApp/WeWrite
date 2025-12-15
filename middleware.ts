@@ -205,12 +205,9 @@ function handleUrlRedirects(path: string, url: URL): NextResponse | null {
     return NextResponse.redirect(url);
   }
 
-  // Redirect /u/[slug] to /user/[id]
-  if (path.startsWith('/u/')) {
-    const id = path.replace('/u/', '');
-    url.pathname = `/user/${id}`;
-    return NextResponse.redirect(url);
-  }
+  // NOTE: /u/[username] is now the primary user profile route
+  // The /user/[id] route redirects TO /u/[username] for backwards compatibility
+  // Do NOT redirect /u/ to /user/ anymore
 
   // Redirect /g/[id] to /group/[id]
   if (path.startsWith('/g/')) {
