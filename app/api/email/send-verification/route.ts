@@ -12,10 +12,6 @@ import { randomUUID } from 'crypto';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { sendVerificationEmail } from '../../../services/emailService';
 
-// Firebase REST API for Firestore operations
-const FIRESTORE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-
 interface VerificationRequest {
   email: string;
   userId: string;
@@ -24,7 +20,8 @@ interface VerificationRequest {
 }
 
 /**
- * Store verification token in Firestore via REST API
+ * Store verification token in Firestore
+ * Uses server-side Firebase Admin for reliability
  */
 async function storeVerificationToken(
   userId: string,
@@ -32,47 +29,10 @@ async function storeVerificationToken(
   token: string,
   idToken: string
 ): Promise<boolean> {
-  try {
-    const collectionName = getCollectionName('email_verification_tokens');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
-
-    // Use Firestore REST API to avoid firebase-admin issues
-    const url = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT_ID}/databases/(default)/documents/${collectionName}?documentId=${token}`;
-    
-    const response = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fields: {
-          userId: { stringValue: userId },
-          email: { stringValue: email },
-          createdAt: { timestampValue: new Date().toISOString() },
-          expiresAt: { timestampValue: expiresAt },
-          used: { booleanValue: false },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[Send Verification] Failed to store token:', errorData);
-      
-      // If permission denied, try using server-side approach
-      if (response.status === 403 || response.status === 401) {
-        // Use internal API to store token (bypasses client auth)
-        return await storeTokenServerSide(userId, email, token, expiresAt);
-      }
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('[Send Verification] Error storing token:', error);
-    return false;
-  }
+  // Always use server-side storage for reliability
+  // The client idToken is used for authentication but we store via Admin SDK
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  return await storeTokenServerSide(userId, email, token, expiresAt);
 }
 
 /**
