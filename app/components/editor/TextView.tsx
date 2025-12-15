@@ -102,7 +102,43 @@ const ANIMATION_CONSTANTS = {
   SPRING_MASS: 1
 } as const;
 
+/**
+ * AutoLinkedUrl - Renders auto-detected URLs with external link confirmation modal
+ * This ensures pasted/typed plain text URLs get the same security treatment as proper links
+ */
+const AutoLinkedUrl: React.FC<{
+  href: string;
+  displayText: string;
+  className?: string;
+}> = ({ href, displayText, className = '' }) => {
+  const [showModal, setShowModal] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowModal(true);
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        className={`${className} text-primary underline underline-offset-2 break-words cursor-pointer bg-transparent border-none p-0 m-0 font-inherit text-inherit text-left inline`.trim()}
+      >
+        {displayText}
+      </button>
+      <ExternalLinkPreviewModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        url={href}
+        displayText={displayText}
+      />
+    </>
+  );
+};
+
 // Helper: linkify plain text segments (for legacy bios/raw text)
+// Now uses ExternalLinkPreviewModal for security
 const renderLinkifiedText = (text: string, className = ''): React.ReactNode[] | null => {
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
   const segments: React.ReactNode[] = [];
@@ -123,15 +159,12 @@ const renderLinkifiedText = (text: string, className = ''): React.ReactNode[] | 
 
     const href = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
     segments.push(
-      <a
+      <AutoLinkedUrl
         key={`link-${start}`}
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`${className} text-primary underline underline-offset-2 break-words`.trim()}
-      >
-        {rawUrl}
-      </a>
+        displayText={rawUrl}
+        className={className}
+      />
     );
 
     lastIndex = start + rawUrl.length;
