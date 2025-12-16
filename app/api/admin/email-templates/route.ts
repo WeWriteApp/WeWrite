@@ -1,22 +1,26 @@
 /**
  * Email Templates API Route
- * 
+ *
  * GET /api/admin/email-templates - Get all email templates
  * GET /api/admin/email-templates?id=xxx - Get a specific template preview
+ * GET /api/admin/email-templates?id=xxx&userId=yyy - Get personalized preview for specific user
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { emailTemplates, getTemplateById } from '../../../lib/emailTemplates';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const templateId = searchParams.get('id');
   const withHtml = searchParams.get('html') === 'true';
+  const userId = searchParams.get('userId');
 
   // Get a specific template
   if (templateId) {
     const template = getTemplateById(templateId);
-    
+
     if (!template) {
       return NextResponse.json(
         { error: 'Template not found' },
@@ -24,8 +28,76 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Generate preview HTML with sample data
-    const previewHtml = template.generateHtml(template.sampleData);
+    // If userId is provided, fetch real user data for personalized preview
+    let templateData = template.sampleData;
+    let isPersonalized = false;
+
+    if (userId && withHtml) {
+      try {
+        const admin = getFirebaseAdmin();
+        if (admin) {
+          const db = admin.firestore();
+          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data()!;
+            isPersonalized = true;
+
+            // Build personalized data based on template type
+            const personalizedData: Record<string, any> = {
+              username: userData.username || userData.displayName || 'there',
+              email: userData.email,
+              currentUsername: userData.username,
+            };
+
+            // Fetch additional data based on template type
+            if (templateId === 'payout-setup-reminder') {
+              // Get pending earnings for payout reminder
+              const balanceDoc = await db.collection(getCollectionName('writerUsdBalances')).doc(userId).get();
+              if (balanceDoc.exists) {
+                const balanceData = balanceDoc.data()!;
+                const pendingCents = balanceData.pendingUsdCents || 0;
+                personalizedData.pendingEarnings = `$${(pendingCents / 100).toFixed(2)}`;
+              } else {
+                personalizedData.pendingEarnings = '$0.00';
+              }
+            }
+
+            if (templateId === 'username-reminder') {
+              personalizedData.currentUsername = userData.username || 'user_...';
+            }
+
+            if (templateId === 'reactivation') {
+              const lastActiveAt = userData.lastActiveAt?.toDate?.() || userData.lastActiveAt;
+              if (lastActiveAt) {
+                const daysSinceActive = Math.floor((Date.now() - new Date(lastActiveAt).getTime()) / (24 * 60 * 60 * 1000));
+                personalizedData.daysSinceActive = daysSinceActive;
+              } else {
+                personalizedData.daysSinceActive = 30;
+              }
+            }
+
+            if (templateId === 'weekly-digest') {
+              // For weekly digest, we'd need to fetch actual stats
+              // For now, use placeholder values that indicate it's personalized
+              personalizedData.pageViews = '(calculated at send time)';
+              personalizedData.newFollowers = '(calculated at send time)';
+              personalizedData.earningsThisWeek = '(calculated at send time)';
+              personalizedData.trendingPages = template.sampleData.trendingPages;
+            }
+
+            // Merge personalized data with sample data (sample data as fallback)
+            templateData = { ...template.sampleData, ...personalizedData };
+          }
+        }
+      } catch (error) {
+        console.error('[EMAIL TEMPLATES] Error fetching user data for preview:', error);
+        // Fall back to sample data
+      }
+    }
+
+    // Generate preview HTML with appropriate data
+    const previewHtml = template.generateHtml(templateData);
 
     return NextResponse.json({
       success: true,
@@ -37,6 +109,7 @@ export async function GET(request: NextRequest) {
         subject: template.subject,
         sampleData: template.sampleData,
         ...(withHtml && { html: previewHtml }),
+        ...(isPersonalized && { isPersonalized, personalizedData: templateData }),
       },
     });
   }

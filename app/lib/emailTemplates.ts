@@ -41,6 +41,91 @@ export const emailStyles = {
 };
 
 // ============================================================================
+// Dark Mode Styles
+// Dark mode CSS for email clients that support @media (prefers-color-scheme)
+// Supported: Apple Mail (iOS/macOS), Outlook on macOS
+// Partial/No support: Gmail, Yahoo, Outlook on Windows
+// ============================================================================
+
+const darkModeStyles = `
+  /* Dark mode meta declaration */
+  :root {
+    color-scheme: light dark;
+    supported-color-schemes: light dark;
+  }
+
+  /* Dark mode styles for clients that support prefers-color-scheme */
+  @media (prefers-color-scheme: dark) {
+    /* Body and main wrapper */
+    .email-body {
+      background-color: #1a1a1a !important;
+    }
+
+    /* Text colors */
+    .dark-text {
+      color: #e5e5e5 !important;
+    }
+    .dark-text-muted {
+      color: #a3a3a3 !important;
+    }
+    .dark-text-heading {
+      color: #ffffff !important;
+    }
+
+    /* Card backgrounds */
+    .dark-card {
+      background-color: #262626 !important;
+    }
+    .dark-card-inner {
+      background-color: #333333 !important;
+      border-color: #404040 !important;
+    }
+
+    /* Footer */
+    .dark-footer {
+      color: #737373 !important;
+    }
+    .dark-footer a {
+      color: #737373 !important;
+    }
+
+    /* Links */
+    .dark-link {
+      color: #60a5fa !important;
+    }
+
+    /* Stats boxes */
+    .dark-stat-box {
+      background-color: #333333 !important;
+      border-color: #404040 !important;
+    }
+
+    /* Security alert (keep red tones) */
+    .dark-alert-security {
+      background-color: #2a1a1a !important;
+      border-color: #4a2020 !important;
+    }
+  }
+
+  /* Outlook app dark mode (uses [data-ogsc] selector) */
+  [data-ogsc] .dark-text {
+    color: #e5e5e5 !important;
+  }
+  [data-ogsc] .dark-text-muted {
+    color: #a3a3a3 !important;
+  }
+  [data-ogsc] .dark-text-heading {
+    color: #ffffff !important;
+  }
+  [data-ogsc] .dark-card {
+    background-color: #262626 !important;
+  }
+  [data-ogsc] .dark-card-inner {
+    background-color: #333333 !important;
+  }
+`;
+
+// ============================================================================
 // Template Definitions
 // ============================================================================
 
@@ -97,16 +182,30 @@ const generateFooterLinks = (options?: EmailFooterOptions): string => {
   `;
 };
 
-// Base wrapper for all emails
+// Base wrapper for all emails with dark mode support
 const wrapEmail = (title: string, content: string, footerOptions?: EmailFooterOptions): string => `
 <!DOCTYPE html>
-<html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${title} - WeWrite</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    ${darkModeStyles}
+  </style>
 </head>
-<body style="${emailStyles.base} max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+<body class="email-body" style="${emailStyles.base} max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
   <div style="text-align: center; margin-bottom: 30px;">
     <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
       <tr>
@@ -114,13 +213,13 @@ const wrapEmail = (title: string, content: string, footerOptions?: EmailFooterOp
           <img src="https://getwewrite.app/icons/icon-192x192.png" alt="WeWrite" width="44" height="44" style="display: block; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
         </td>
         <td style="vertical-align: middle;">
-          <h1 style="color: #000; margin: 0; font-size: 28px; font-weight: 600;">WeWrite</h1>
+          <h1 class="dark-text-heading" style="color: #000; margin: 0; font-size: 28px; font-weight: 600;">WeWrite</h1>
         </td>
       </tr>
     </table>
   </div>
   ${content}
-  <div style="${emailStyles.footer}">
+  <div class="dark-footer" style="${emailStyles.footer}">
     <p>© ${new Date().getFullYear()} WeWrite. All rights reserved.</p>
     ${generateFooterLinks(footerOptions)}
   </div>
@@ -143,24 +242,24 @@ export const verificationEmailTemplate: EmailTemplate = {
     verificationLink: 'https://getwewrite.app/verify?token=abc123',
   },
   generateHtml: ({ username, verificationLink }) => wrapEmail('Verify Your Email', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Verify Your Email</h2>
-      <p>Hi ${username || 'there'},</p>
-      <p>Thanks for signing up for WeWrite! Please verify your email address by clicking the button below:</p>
-      
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Verify Your Email</h2>
+      <p class="dark-text">Hi ${username || 'there'},</p>
+      <p class="dark-text">Thanks for signing up for WeWrite! Please verify your email address by clicking the button below:</p>
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="${verificationLink}" style="${emailStyles.button}">
           Verify Email
         </a>
       </div>
-      
-      <p style="${emailStyles.muted}">
+
+      <p class="dark-text-muted" style="${emailStyles.muted}">
         Or copy and paste this link into your browser:<br>
-        <a href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
+        <a class="dark-link" href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
       </p>
     </div>
-    
-    <div style="${emailStyles.footer}">
+
+    <div class="dark-footer" style="${emailStyles.footer}">
       <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
     </div>
   `),
@@ -177,13 +276,13 @@ export const verificationReminderTemplate: EmailTemplate = {
     verificationLink: 'https://getwewrite.app/verify?token=sample-token',
   },
   generateHtml: ({ username, verificationLink }) => wrapEmail('Verify Your Email', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Don't Forget to Verify Your Email!</h2>
-      <p>Hi ${username},</p>
-      <p>We noticed you haven't verified your email address yet. Verifying your email helps secure your account and ensures you don't miss any important updates.</p>
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Don't Forget to Verify Your Email!</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">We noticed you haven't verified your email address yet. Verifying your email helps secure your account and ensures you don't miss any important updates.</p>
 
-      <p><strong>Why verify?</strong></p>
-      <ul style="padding-left: 20px; margin: 15px 0;">
+      <p class="dark-text"><strong>Why verify?</strong></p>
+      <ul class="dark-text" style="padding-left: 20px; margin: 15px 0;">
         <li style="margin-bottom: 8px;">Secure your account and protect your earnings</li>
         <li style="margin-bottom: 8px;">Receive notifications about new followers and page links</li>
         <li style="margin-bottom: 8px;">Get important updates about your content</li>
@@ -195,13 +294,13 @@ export const verificationReminderTemplate: EmailTemplate = {
         </a>
       </div>
 
-      <p style="${emailStyles.muted}">
+      <p class="dark-text-muted" style="${emailStyles.muted}">
         Or copy and paste this link into your browser:<br>
-        <a href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
+        <a class="dark-link" href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
       </p>
     </div>
 
-    <div style="${emailStyles.footer}">
+    <div class="dark-footer" style="${emailStyles.footer}">
       <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
     </div>
   `),
@@ -217,27 +316,27 @@ export const welcomeEmailTemplate: EmailTemplate = {
     username: 'JohnDoe',
   },
   generateHtml: ({ username }) => wrapEmail('Welcome to WeWrite!', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Welcome to WeWrite! 🎉</h2>
-      <p>Hi ${username},</p>
-      <p>We're thrilled to have you join our community of writers and collaborators!</p>
-      
-      <p><strong>Here's how to get started:</strong></p>
-      <ul style="padding-left: 20px; margin: 20px 0;">
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Welcome to WeWrite! 🎉</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">We're thrilled to have you join our community of writers and collaborators!</p>
+
+      <p class="dark-text"><strong>Here's how to get started:</strong></p>
+      <ul class="dark-text" style="padding-left: 20px; margin: 20px 0;">
         <li style="margin-bottom: 8px;">Create your first page and share your thoughts</li>
         <li style="margin-bottom: 8px;">Discover and follow other writers</li>
         <li style="margin-bottom: 8px;">Link your pages to build connections</li>
         <li style="margin-bottom: 8px;">Earn from your contributions</li>
       </ul>
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/create" style="${emailStyles.button}">
           Create Your First Page
         </a>
       </div>
     </div>
-    
-    <div style="${emailStyles.footer}">
+
+    <div class="dark-footer" style="${emailStyles.footer}">
       <p>Happy writing!</p>
     </div>
   `),
@@ -255,12 +354,12 @@ export const passwordResetEmailTemplate: EmailTemplate = {
     resetLink: 'https://getwewrite.app/auth/reset-password?token=xyz789',
   },
   generateHtml: ({ username, email, resetLink }) => wrapEmail('Reset Your Password', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Reset Your Password</h2>
-      <p>Hi ${username || 'there'},</p>
-      <p>You requested to reset the password for <strong>${email}</strong>.</p>
-      <p>Click the button below to set a new password:</p>
-      
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Reset Your Password</h2>
+      <p class="dark-text">Hi ${username || 'there'},</p>
+      <p class="dark-text">You requested to reset the password for <strong>${email}</strong>.</p>
+      <p class="dark-text">Click the button below to set a new password:</p>
+
       <div style="text-align: center; margin: 30px 0;">
         <!--[if mso]>
         <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${resetLink}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="14%" strokecolor="#000000" fillcolor="#000000">
@@ -280,15 +379,15 @@ export const passwordResetEmailTemplate: EmailTemplate = {
         </table>
         <!--<![endif]-->
       </div>
-      
-      <p style="${emailStyles.muted}">
+
+      <p class="dark-text-muted" style="${emailStyles.muted}">
         This link will expire in 1 hour.<br><br>
         If the button above doesn't work, copy and paste this link into your browser:<br>
-        <span style="color: #0066cc; word-break: break-all;">${resetLink}</span>
+        <a class="dark-link" href="${resetLink}" style="${emailStyles.link}; word-break: break-all;">${resetLink}</a>
       </p>
     </div>
-    
-    <div style="${emailStyles.footer}">
+
+    <div class="dark-footer" style="${emailStyles.footer}">
       <p>If you didn't request a password reset for ${email}, you can safely ignore this email.</p>
     </div>
   `),
@@ -310,21 +409,21 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, pendingEarnings, emailSettingsToken }) => wrapEmail('Set Up Your Payouts', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">You Have Earnings Waiting! 💰</h2>
-      <p>Hi ${username},</p>
-      <p>Great news! You've earned <strong>${pendingEarnings}</strong> on WeWrite from readers supporting your pages.</p>
-      <p>To receive your earnings, you'll need to set up your payout method. It only takes a few minutes!</p>
-      
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">You Have Earnings Waiting! 💰</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">Great news! You've earned <strong>${pendingEarnings}</strong> on WeWrite from readers supporting your pages.</p>
+      <p class="dark-text">To receive your earnings, you'll need to set up your payout method. It only takes a few minutes!</p>
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/settings/payouts" style="${emailStyles.button}">
           Set Up Payouts
         </a>
       </div>
-      
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0; font-size: 14px; color: #666;">
-          <strong>Why set up payouts?</strong><br>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p class="dark-text-muted" style="margin: 0; font-size: 14px; color: #666;">
+          <strong class="dark-text">Why set up payouts?</strong><br>
           Once configured, you'll automatically receive your earnings at the end of each month. We use Stripe for secure, fast transfers.
         </p>
       </div>
@@ -346,32 +445,32 @@ export const payoutProcessedTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, amount, processingDate, arrivalDate, emailSettingsToken }) => wrapEmail('Payout Processed', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Payout Processed! 🎉</h2>
-      <p>Hi ${username},</p>
-      <p>We've processed your payout of <strong>${amount}</strong>.</p>
-      
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 20px 0;">
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Payout Processed! 🎉</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">We've processed your payout of <strong>${amount}</strong>.</p>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 20px 0;">
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 8px 0; color: #666;">Amount</td>
-            <td style="padding: 8px 0; text-align: right; font-weight: 600;">${amount}</td>
+            <td class="dark-text-muted" style="padding: 8px 0; color: #666;">Amount</td>
+            <td class="dark-text" style="padding: 8px 0; text-align: right; font-weight: 600;">${amount}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #666;">Processed on</td>
-            <td style="padding: 8px 0; text-align: right;">${processingDate}</td>
+            <td class="dark-text-muted" style="padding: 8px 0; color: #666;">Processed on</td>
+            <td class="dark-text" style="padding: 8px 0; text-align: right;">${processingDate}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #666;">Expected arrival</td>
-            <td style="padding: 8px 0; text-align: right;">${arrivalDate}</td>
+            <td class="dark-text-muted" style="padding: 8px 0; color: #666;">Expected arrival</td>
+            <td class="dark-text" style="padding: 8px 0; text-align: right;">${arrivalDate}</td>
           </tr>
         </table>
       </div>
-      
-      <p style="${emailStyles.muted}">
+
+      <p class="dark-text-muted" style="${emailStyles.muted}">
         Funds typically arrive in your bank account within 2-5 business days.
       </p>
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/settings/payouts" style="${emailStyles.button}">
           View Payout History
@@ -394,35 +493,35 @@ export const subscriptionConfirmationTemplate: EmailTemplate = {
     nextBillingDate: 'January 4, 2026',
   },
   generateHtml: ({ username, planName, amount, nextBillingDate }) => wrapEmail('Subscription Confirmed', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Welcome to WeWrite Premium! ✨</h2>
-      <p>Hi ${username},</p>
-      <p>Thank you for subscribing! Your support helps keep WeWrite running and enables us to pay writers like you.</p>
-      
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 20px 0;">
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Welcome to WeWrite Premium! ✨</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">Thank you for subscribing! Your support helps keep WeWrite running and enables us to pay writers like you.</p>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 20px 0;">
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 8px 0; color: #666;">Plan</td>
-            <td style="padding: 8px 0; text-align: right; font-weight: 600;">${planName}</td>
+            <td class="dark-text-muted" style="padding: 8px 0; color: #666;">Plan</td>
+            <td class="dark-text" style="padding: 8px 0; text-align: right; font-weight: 600;">${planName}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #666;">Amount</td>
-            <td style="padding: 8px 0; text-align: right;">${amount}</td>
+            <td class="dark-text-muted" style="padding: 8px 0; color: #666;">Amount</td>
+            <td class="dark-text" style="padding: 8px 0; text-align: right;">${amount}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #666;">Next billing</td>
-            <td style="padding: 8px 0; text-align: right;">${nextBillingDate}</td>
+            <td class="dark-text-muted" style="padding: 8px 0; color: #666;">Next billing</td>
+            <td class="dark-text" style="padding: 8px 0; text-align: right;">${nextBillingDate}</td>
           </tr>
         </table>
       </div>
-      
-      <p><strong>What you can do now:</strong></p>
-      <ul style="padding-left: 20px; margin: 20px 0;">
+
+      <p class="dark-text"><strong>What you can do now:</strong></p>
+      <ul class="dark-text" style="padding-left: 20px; margin: 20px 0;">
         <li style="margin-bottom: 8px;">Allocate your monthly budget to pages you love</li>
         <li style="margin-bottom: 8px;">Support writers directly</li>
         <li style="margin-bottom: 8px;">Access premium features</li>
       </ul>
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app" style="${emailStyles.button}">
           Start Supporting Writers
@@ -455,34 +554,34 @@ export const weeklyDigestTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, pageViews, newFollowers, earningsThisWeek, trendingPages, emailSettingsToken }) => wrapEmail('Weekly Digest', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Your Week on WeWrite 📚</h2>
-      <p>Hi ${username},</p>
-      <p>Here's what happened this week:</p>
-      
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Your Week on WeWrite 📚</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">Here's what happened this week:</p>
+
       <div style="display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 120px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #000;">${pageViews}</div>
-          <div style="font-size: 12px; color: #666;">Page Views</div>
+        <div class="dark-stat-box" style="flex: 1; min-width: 120px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; text-align: center;">
+          <div class="dark-text-heading" style="font-size: 24px; font-weight: 700; color: #000;">${pageViews}</div>
+          <div class="dark-text-muted" style="font-size: 12px; color: #666;">Page Views</div>
         </div>
-        <div style="flex: 1; min-width: 120px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #000;">${newFollowers}</div>
-          <div style="font-size: 12px; color: #666;">New Followers</div>
+        <div class="dark-stat-box" style="flex: 1; min-width: 120px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; text-align: center;">
+          <div class="dark-text-heading" style="font-size: 24px; font-weight: 700; color: #000;">${newFollowers}</div>
+          <div class="dark-text-muted" style="font-size: 12px; color: #666;">New Followers</div>
         </div>
-        <div style="flex: 1; min-width: 120px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #000;">${earningsThisWeek}</div>
-          <div style="font-size: 12px; color: #666;">Earned</div>
+        <div class="dark-stat-box" style="flex: 1; min-width: 120px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; text-align: center;">
+          <div class="dark-text-heading" style="font-size: 24px; font-weight: 700; color: #000;">${earningsThisWeek}</div>
+          <div class="dark-text-muted" style="font-size: 12px; color: #666;">Earned</div>
         </div>
       </div>
-      
-      <h3 style="color: #000; margin-top: 30px;">Trending This Week 🔥</h3>
+
+      <h3 class="dark-text-heading" style="color: #000; margin-top: 30px;">Trending This Week 🔥</h3>
       ${trendingPages.map((page: any) => `
-        <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 12px 16px; margin: 8px 0;">
-          <strong>${page.title}</strong>
-          <span style="color: #666;"> by ${page.author}</span>
+        <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 12px 16px; margin: 8px 0;">
+          <strong class="dark-text">${page.title}</strong>
+          <span class="dark-text-muted" style="color: #666;"> by ${page.author}</span>
         </div>
       `).join('')}
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/trending" style="${emailStyles.button}">
           Explore Trending
@@ -505,14 +604,14 @@ export const newFollowerTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, followerUsername, followerBio, emailSettingsToken }) => wrapEmail('New Follower', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">New Follower! 🎉</h2>
-      <p>Hi ${username},</p>
-      <p><strong>@${followerUsername}</strong> is now following you on WeWrite.</p>
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">New Follower! 🎉</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text"><strong>@${followerUsername}</strong> is now following you on WeWrite.</p>
 
       ${followerBio ? `
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0; font-style: italic; color: #666;">"${followerBio}"</p>
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p class="dark-text-muted" style="margin: 0; font-style: italic; color: #666;">"${followerBio}"</p>
       </div>
       ` : ''}
 
@@ -539,12 +638,12 @@ export const pageLinkedTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle, emailSettingsToken }) => wrapEmail('Page Linked', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Your Page Was Linked! 🔗</h2>
-      <p>Hi ${username},</p>
-      <p><strong>@${linkerUsername}</strong> linked to your page "<strong>${linkedPageTitle}</strong>" in their page "<strong>${linkerPageTitle}</strong>".</p>
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Your Page Was Linked! 🔗</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text"><strong>@${linkerUsername}</strong> linked to your page "<strong>${linkedPageTitle}</strong>" in their page "<strong>${linkerPageTitle}</strong>".</p>
 
-      <p style="${emailStyles.muted}">
+      <p class="dark-text-muted" style="${emailStyles.muted}">
         When others link to your pages, it helps more people discover your writing and can increase your earnings!
       </p>
 
@@ -575,11 +674,11 @@ export const genericNotificationTemplate: EmailTemplate = {
     ctaUrl: 'https://getwewrite.app/updates',
   },
   generateHtml: ({ username, heading, body, ctaText, ctaUrl }) => wrapEmail(heading, `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">${heading}</h2>
-      ${username ? `<p>Hi ${username},</p>` : ''}
-      <p>${body}</p>
-      
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">${heading}</h2>
+      ${username ? `<p class="dark-text">Hi ${username},</p>` : ''}
+      <p class="dark-text">${body}</p>
+
       ${ctaUrl ? `
       <div style="text-align: center; margin: 30px 0;">
         <a href="${ctaUrl}" style="${emailStyles.button}">
@@ -604,21 +703,21 @@ export const accountSecurityTemplate: EmailTemplate = {
     eventTime: 'December 4, 2025 at 3:45 PM',
   },
   generateHtml: ({ username, eventType, eventDetails, eventTime }) => wrapEmail('Security Alert', `
-    <div style="background: #fff4f4; border: 1px solid #ffcccc; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+    <div class="dark-alert-security" style="background: #fff4f4; border: 1px solid #ffcccc; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #cc0000;">🔒 ${eventType}</h2>
-      <p>Hi ${username},</p>
-      <p>We detected the following activity on your account:</p>
-      
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0 0 8px 0;"><strong>${eventType}</strong></p>
-        <p style="margin: 0 0 8px 0; color: #666;">${eventDetails}</p>
-        <p style="margin: 0; color: #999; font-size: 12px;">${eventTime}</p>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">We detected the following activity on your account:</p>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p class="dark-text" style="margin: 0 0 8px 0;"><strong>${eventType}</strong></p>
+        <p class="dark-text-muted" style="margin: 0 0 8px 0; color: #666;">${eventDetails}</p>
+        <p class="dark-text-muted" style="margin: 0; color: #999; font-size: 12px;">${eventTime}</p>
       </div>
-      
-      <p style="${emailStyles.muted}">
+
+      <p class="dark-text-muted" style="${emailStyles.muted}">
         If this was you, you can ignore this email. If you don't recognize this activity, please secure your account immediately.
       </p>
-      
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/settings/security" style="background: #cc0000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
           Secure My Account
@@ -638,13 +737,13 @@ export const chooseUsernameTemplate: EmailTemplate = {
     currentUsername: 'user_abc123',
   },
   generateHtml: ({ currentUsername }) => wrapEmail('Choose Your Username', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Make Your Mark on WeWrite ✏️</h2>
-      <p>Hey there!</p>
-      <p>We noticed you haven't chosen a username yet. Right now you're showing up as <strong style="color: #666;">${currentUsername || 'user_...'}</strong> around the platform.</p>
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Make Your Mark on WeWrite ✏️</h2>
+      <p class="dark-text">Hey there!</p>
+      <p class="dark-text">We noticed you haven't chosen a username yet. Right now you're showing up as <strong style="color: #666;">${currentUsername || 'user_...'}</strong> around the platform.</p>
 
-      <p>A great username helps you:</p>
-      <ul style="padding-left: 20px; margin: 20px 0;">
+      <p class="dark-text">A great username helps you:</p>
+      <ul class="dark-text" style="padding-left: 20px; margin: 20px 0;">
         <li style="margin-bottom: 8px;">Build your identity as a writer</li>
         <li style="margin-bottom: 8px;">Make it easy for others to find and follow you</li>
         <li style="margin-bottom: 8px;">Stand out on the leaderboard</li>
@@ -657,9 +756,9 @@ export const chooseUsernameTemplate: EmailTemplate = {
         </a>
       </div>
 
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0; font-size: 14px; color: #666;">
-          <strong>💡 Tips for a great username:</strong><br>
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p class="dark-text-muted" style="margin: 0; font-size: 14px; color: #666;">
+          <strong class="dark-text">💡 Tips for a great username:</strong><br>
           • Keep it memorable and easy to spell<br>
           • Use something that represents you as a writer<br>
           • Avoid numbers and special characters if possible
@@ -681,17 +780,17 @@ export const reactivationTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, daysSinceActive, emailSettingsToken }) => wrapEmail('We Miss You!', `
-    <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 style="margin-top: 0; color: #000;">Hey ${username || 'there'}, we've missed you!</h2>
-      <p>It's been a little quiet on your WeWrite profile lately, and we wanted to check in.</p>
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Hey ${username || 'there'}, we've missed you!</h2>
+      <p class="dark-text">It's been a little quiet on your WeWrite profile lately, and we wanted to check in.</p>
 
-      <p>Here's the thing: <strong>every page you write on WeWrite can earn you real money</strong>. When subscribers allocate their monthly budget to pages they love, creators like you get paid.</p>
+      <p class="dark-text">Here's the thing: <strong>every page you write on WeWrite can earn you real money</strong>. When subscribers allocate their monthly budget to pages they love, creators like you get paid.</p>
 
-      <div style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 24px 0;">
-        <p style="margin: 0 0 12px 0; font-size: 15px; color: #333;">
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 24px 0;">
+        <p class="dark-text" style="margin: 0 0 12px 0; font-size: 15px; color: #333;">
           <strong>Why come back?</strong>
         </p>
-        <ul style="padding-left: 18px; margin: 0; color: #555;">
+        <ul class="dark-text-muted" style="padding-left: 18px; margin: 0; color: #555;">
           <li style="margin-bottom: 8px;">Write about anything you're passionate about</li>
           <li style="margin-bottom: 8px;">Earn money when readers support your work</li>
           <li style="margin-bottom: 8px;">Connect with other writers and build your audience</li>
@@ -699,7 +798,7 @@ export const reactivationTemplate: EmailTemplate = {
         </ul>
       </div>
 
-      <p style="color: #555;">Your next great idea could be the one that resonates with readers. Why not give it a shot?</p>
+      <p class="dark-text-muted" style="color: #555;">Your next great idea could be the one that resonates with readers. Why not give it a shot?</p>
 
       <div style="text-align: center; margin: 30px 0;">
         <a href="https://getwewrite.app/create" style="${emailStyles.button}">
@@ -707,7 +806,7 @@ export const reactivationTemplate: EmailTemplate = {
         </a>
       </div>
 
-      <p style="${emailStyles.muted}; text-align: center;">
+      <p class="dark-text-muted" style="${emailStyles.muted}; text-align: center;">
         Got questions or feedback? Just reply to this email—we'd love to hear from you.
       </p>
     </div>
@@ -740,7 +839,7 @@ export const broadcastEmailTemplate: EmailTemplate = {
   generateHtml: ({ subject, heading, body, ctaText, ctaUrl, recipientEmail }) => {
     const baseUrl = 'https://getwewrite.app';
     const unsubscribeUrl = `${baseUrl}/settings?tab=notifications&email=${encodeURIComponent(recipientEmail || '')}`;
-    
+
     const ctaSection = ctaText && ctaUrl ? `
       <div style="text-align: center; margin: 30px 0;">
         <a href="${ctaUrl}" style="${emailStyles.button}">
@@ -748,16 +847,16 @@ export const broadcastEmailTemplate: EmailTemplate = {
         </a>
       </div>
     ` : '';
-    
+
     return wrapEmail(subject || 'Update from WeWrite', `
-      <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0; color: #000;">${heading}</h2>
-        <div style="color: #333; line-height: 1.7;">
+      <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+        <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">${heading}</h2>
+        <div class="dark-text" style="color: #333; line-height: 1.7;">
           ${body}
         </div>
         ${ctaSection}
       </div>
-      <div style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
+      <div class="dark-footer" style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
         <p>You're receiving this because you have an account at WeWrite.</p>
         <p><a href="${unsubscribeUrl}" style="color: #999;">Manage email preferences</a></p>
       </div>

@@ -116,10 +116,15 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
     }
   }, [showReferralSection, isAuthenticated, user?.uid]);
 
-  // Generate and copy invite link
+  // Get current pathname for vertical-aware referral links
+  const pathname = usePathname();
+
+  // Generate and copy invite link (vertical-aware)
   const copyInviteLink = async () => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const inviteLink = `${baseUrl}/welcome?ref=${user?.uid || ''}`;
+    // Use the current pathname to generate the referral link
+    // This ensures that /welcome/writers copies /welcome/writers?ref=xxx
+    const inviteLink = `${baseUrl}${pathname}?ref=${user?.uid || ''}`;
 
     try {
       await navigator.clipboard.writeText(inviteLink);
@@ -482,7 +487,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                 {/* Copy Invite Link */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-sm truncate">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/welcome?ref=${user?.uid || ''}` : 'Loading...'}
+                    {typeof window !== 'undefined' ? `${window.location.origin}${pathname}?ref=${user?.uid || ''}` : 'Loading...'}
                   </div>
                   <Button
                     onClick={copyInviteLink}

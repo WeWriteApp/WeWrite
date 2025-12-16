@@ -235,6 +235,42 @@ export async function GET(request: NextRequest) {
         break;
       }
 
+      case 'reactivation': {
+        // Users who have been inactive for 30-90 days
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const usersSnapshot = await db.collection(getCollectionName('users'))
+          .where('lastActiveAt', '>=', ninetyDaysAgo)
+          .where('lastActiveAt', '<=', thirtyDaysAgo)
+          .limit(50)
+          .get();
+
+        for (const doc of usersSnapshot.docs) {
+          const data = doc.data();
+          if (!data.email) continue;
+          if (data.emailPreferences?.engagement === false) continue;
+
+          // Skip if already sent a reactivation email recently
+          const lastReactivationEmail = data.reactivationEmailSentAt?.toDate?.() || data.reactivationEmailSentAt;
+          if (lastReactivationEmail && new Date(lastReactivationEmail) > oneWeekAgo) continue;
+
+          const lastActiveAt = data.lastActiveAt?.toDate?.() || data.lastActiveAt;
+          const daysInactive = lastActiveAt ? Math.floor((now.getTime() - new Date(lastActiveAt).getTime()) / (24 * 60 * 60 * 1000)) : 0;
+
+          recipients.push({
+            userId: doc.id,
+            email: data.email,
+            username: data.username,
+            type: 'inactive-user',
+            reason: `Inactive for ${daysInactive} days`
+          });
+        }
+        break;
+      }
+
       default:
         return NextResponse.json({
           success: true,

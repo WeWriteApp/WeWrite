@@ -357,7 +357,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // ALWAYS force refresh to ensure clean state, regardless of errors
       console.log('[Auth] 🔴 LOGOUT: Force refreshing page to complete logout');
       setTimeout(() => {
-        window.location.href = '/';
+        // Redirect to /welcome instead of / to avoid race condition where
+        // the root page might detect stale cookies and redirect to /home
+        window.location.href = '/welcome';
       }, 100); // Small delay to ensure state updates are processed
     }
   }, [setLoading, clearError, setUser]);

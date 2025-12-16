@@ -4391,6 +4391,43 @@ button.bg-transparent[type] {
   }
 }
 
+/* Side drawer animations */
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 /* LEGACY: Save header body class removed - now handled by BannerProvider
  * The save banner is integrated into the unified banner stack system.
  * All components should use var(--banner-stack-height) for positioning.
