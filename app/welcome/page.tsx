@@ -20,5 +20,6 @@ export default function WelcomePage() {
 
   // Show landing page for both logged in and logged out users
   // LandingPage component handles the different states internally
-  return <LandingPage showReferralSection={true} />;
+  // isPreviewMode=true enables the preview banner and shows Sign In/Sign Up buttons for authenticated users
+  return <LandingPage showReferralSection={true} isPreviewMode={true} />;
 }

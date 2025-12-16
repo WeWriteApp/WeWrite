@@ -659,6 +659,8 @@ export class ServerUsdService {
       // Unfunded allocations will be indicated in the UI
 
       // Get page owner (recipient) and page details for the allocation
+      // CRITICAL: Validate that the page exists before creating allocations
+      // This prevents "Page not found" orphaned allocations
       let recipientUserId = '';
       let pageTitle = '';
       let authorUsername = '';
@@ -669,6 +671,12 @@ export class ServerUsdService {
 
           if (pageDoc.exists) {
             const pageData = pageDoc.data();
+
+            // Check if page is marked as deleted
+            if (pageData?.deleted === true) {
+              throw new Error(`Cannot allocate to deleted page ${pageId}`);
+            }
+
             recipientUserId = pageData?.userId || '';
             pageTitle = pageData?.title || 'Untitled';
             authorUsername = pageData?.username || '';
@@ -677,11 +685,18 @@ export class ServerUsdService {
               console.warn(`Page ${pageId} exists but has no userId field`);
             }
           } else {
-            console.warn(`Page ${pageId} not found when allocating USD`);
+            // CRITICAL FIX: Do not allow allocations to non-existent pages
+            // This was previously just a warning, causing orphaned "Page not found" allocations
+            throw new Error(`Cannot allocate USD to non-existent page: ${pageId}`);
           }
         } catch (error) {
+          // Re-throw validation errors (page not found, page deleted)
+          if (error instanceof Error && (error.message.includes('non-existent page') || error.message.includes('deleted page'))) {
+            throw error;
+          }
           console.error(`Error fetching page ${pageId} for USD allocation:`, error);
-          // Continue with empty recipientUserId rather than failing the allocation
+          // For other errors, throw to prevent orphaned allocations
+          throw new Error(`Failed to validate page ${pageId} for USD allocation: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 

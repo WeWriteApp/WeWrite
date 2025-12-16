@@ -76,7 +76,7 @@ export default function FinancialHeader({
 
   // Check if we should hide the header using centralized route config
   const shouldHideHeader = React.useMemo(() => {
-    if (!pathname) return false;
+    if (!pathname) return true; // Hide if no pathname yet
 
     // Hide when save banner is visible (content page editing mode)
     // This ensures FinancialHeader doesn't overlap with StickySaveHeader

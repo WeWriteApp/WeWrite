@@ -5,7 +5,7 @@ import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { Button } from '../components/ui/button';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Copy, Check, ExternalLink, Users, DollarSign, Lock, TrendingUp, PenLine, Newspaper, GraduationCap, Megaphone, FlaskConical, Globe, ChevronDown } from 'lucide-react';
+import { UserPlus, Copy, Check, ExternalLink, Users, DollarSign, Lock, TrendingUp, PenLine, Newspaper, GraduationCap, Megaphone, FlaskConical, Globe, ChevronDown, Film, UtensilsCrossed } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { LANDING_VERTICALS, getVerticalSlugs } from '../constants/landing-verticals';
 
@@ -114,10 +114,12 @@ export default function InviteFriendsPage() {
     const icons: Record<string, React.ReactNode> = {
       general: <Globe className="h-5 w-5" />,
       writers: <PenLine className="h-5 w-5" />,
-      journalism: <Newspaper className="h-5 w-5" />,
-      homeschool: <GraduationCap className="h-5 w-5" />,
-      politics: <Megaphone className="h-5 w-5" />,
-      research: <FlaskConical className="h-5 w-5" />,
+      journalists: <Newspaper className="h-5 w-5" />,
+      homeschoolers: <GraduationCap className="h-5 w-5" />,
+      debaters: <Megaphone className="h-5 w-5" />,
+      researchers: <FlaskConical className="h-5 w-5" />,
+      'film-critics': <Film className="h-5 w-5" />,
+      'food-critics': <UtensilsCrossed className="h-5 w-5" />,
     };
     return icons[slug] || <Globe className="h-5 w-5" />;
   };
@@ -193,55 +195,34 @@ export default function InviteFriendsPage() {
         </p>
       </div>
 
-      {/* Stats Cards - horizontally scrollable on mobile */}
-      <div className="mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-3 overflow-x-auto pb-2 sm:pb-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible">
-          <div className="flex-shrink-0 w-[160px] sm:w-auto p-4 sm:p-6 border border-border rounded-2xl bg-card">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <Users className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-muted-foreground">Invited</p>
-                <p className="text-xl sm:text-2xl font-bold">
-                  {loading ? (
-                    <span className="inline-block w-8 h-6 bg-muted rounded animate-pulse" />
-                  ) : (
-                    totalReferrals
-                  )}
-                </p>
-              </div>
-            </div>
+      {/* Stats Cards - fit to page width */}
+      <div className="mb-8">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="p-3 sm:p-6 border border-border rounded-2xl bg-card">
+            <p className="text-xs sm:text-sm text-muted-foreground">Invited</p>
+            <p className="text-lg sm:text-2xl font-bold">
+              {loading ? (
+                <span className="inline-block w-8 h-6 bg-muted rounded animate-pulse" />
+              ) : (
+                totalReferrals
+              )}
+            </p>
           </div>
 
-          <div className="flex-shrink-0 w-[160px] sm:w-auto p-4 sm:p-6 border border-border rounded-2xl bg-card">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <DollarSign className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-muted-foreground">Earnings</p>
-                <p className="text-xl sm:text-2xl font-bold">
-                  {loading ? (
-                    <span className="inline-block w-16 h-6 bg-muted rounded animate-pulse" />
-                  ) : (
-                    formatCurrency(totalEarned)
-                  )}
-                </p>
-              </div>
-            </div>
+          <div className="p-3 sm:p-6 border border-border rounded-2xl bg-card">
+            <p className="text-xs sm:text-sm text-muted-foreground">Earnings</p>
+            <p className="text-lg sm:text-2xl font-bold">
+              {loading ? (
+                <span className="inline-block w-16 h-6 bg-muted rounded animate-pulse" />
+              ) : (
+                formatCurrency(totalEarned)
+              )}
+            </p>
           </div>
 
-          <div className="flex-shrink-0 w-[160px] sm:w-auto p-4 sm:p-6 border border-border rounded-2xl bg-card">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="h-5 w-5 text-purple-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-muted-foreground">Your Share</p>
-                <p className="text-xl sm:text-2xl font-bold">30%</p>
-              </div>
-            </div>
+          <div className="p-3 sm:p-6 border border-border rounded-2xl bg-card">
+            <p className="text-xs sm:text-sm text-muted-foreground">Your Share</p>
+            <p className="text-lg sm:text-2xl font-bold">30%</p>
           </div>
         </div>
       </div>
@@ -331,8 +312,7 @@ export default function InviteFriendsPage() {
 
       {/* Targeted Landing Pages Section */}
       <div className="mt-8 mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <ExternalLink className="h-5 w-5 text-primary" />
+        <h2 className="text-xl font-semibold mb-4">
           Targeted Landing Pages
         </h2>
         <p className="text-muted-foreground mb-6">
@@ -370,7 +350,7 @@ export default function InviteFriendsPage() {
               )}
             >
               <div className="overflow-hidden">
-                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                <div className="flex gap-2 mt-4 pt-0">
                   <Button
                     variant="outline"
                     size="sm"
@@ -444,7 +424,7 @@ export default function InviteFriendsPage() {
                 )}
               >
                 <div className="overflow-hidden">
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                  <div className="flex gap-2 mt-4 pt-0">
                     <Button
                       variant="outline"
                       size="sm"

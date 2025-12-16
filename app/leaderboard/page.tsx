@@ -751,6 +751,27 @@ function LeaderboardContent() {
     fetchPageLeaderboards();
   }, [fetchUserLeaderboards, fetchPageLeaderboards]);
 
+  // Sort categories to put populated ones first
+  const sortedUserCategories = useMemo(() => {
+    return [...userCategories].sort((a, b) => {
+      const aHasData = (userLeaderboardData[a.id]?.length || 0) > 0;
+      const bHasData = (userLeaderboardData[b.id]?.length || 0) > 0;
+      if (aHasData && !bHasData) return -1;
+      if (!aHasData && bHasData) return 1;
+      return 0;
+    });
+  }, [userLeaderboardData]);
+
+  const sortedPageCategories = useMemo(() => {
+    return [...pageCategories].sort((a, b) => {
+      const aHasData = (pageLeaderboardData[a.id]?.length || 0) > 0;
+      const bHasData = (pageLeaderboardData[b.id]?.length || 0) > 0;
+      if (aHasData && !bHasData) return -1;
+      if (!aHasData && bHasData) return 1;
+      return 0;
+    });
+  }, [pageLeaderboardData]);
+
   // Render user entry
   const renderUserEntry = (entry: LeaderboardUser, category: UserCategoryConfig, isFirst: boolean = false) => {
     const medalColor = getMedalColor(entry.rank);
@@ -944,7 +965,7 @@ function LeaderboardContent() {
         <LeaderboardCarousel
           title="By User"
           titleIcon={Users}
-          categories={userCategories}
+          categories={sortedUserCategories}
           selectedIndex={userCategoryIndex}
           onSelectIndex={setUserCategoryIndex}
           data={userLeaderboardData}
@@ -963,7 +984,7 @@ function LeaderboardContent() {
         <LeaderboardCarousel
           title="By Page"
           titleIcon={FileStack}
-          categories={pageCategories}
+          categories={sortedPageCategories}
           selectedIndex={pageCategoryIndex}
           onSelectIndex={setPageCategoryIndex}
           data={pageLeaderboardData}

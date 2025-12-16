@@ -75,6 +75,11 @@ export default function MobileBottomNavUnified() {
   const { earnings } = useEarnings();
   const { hasActiveSubscription } = useSubscription();
 
+  // VISIBILITY CHECK: Determine if we should show nav on this route
+  // Uses centralized config from constants/layout.ts
+  // Computed directly (not useCallback) to ensure fresh value on every render
+  const isContentPage = !shouldShowNavigation(pathname || '');
+
   // State
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false); // Track closing animation state
@@ -181,13 +186,6 @@ export default function MobileBottomNavUnified() {
     setOriginalOrder(null);
     trackNavigationEvent(NAVIGATION_EVENTS.TOOLBAR_RESET_TO_DEFAULT, {});
   }, [resetOrder, trackNavigationEvent]);
-
-  // Route checks - determines if we should hide mobile nav on this route
-  // Uses centralized config from constants/layout.ts
-  const isContentPageRoute = useCallback(() => {
-    // Use centralized navigation config
-    return !shouldShowNavigation(pathname);
-  }, [pathname]);
 
   const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
   const shouldHideNav = isEditorPage;
@@ -298,9 +296,9 @@ export default function MobileBottomNavUnified() {
     },
   };
 
-  // Don't render conditions
+  // Don't render for: unauthenticated users, content pages, or edit mode
   if (!user) return null;
-  if (isContentPageRoute()) return null;
+  if (isContentPage) return null;
   if (isEditMode) return null;
 
   // Filter function for admin visibility

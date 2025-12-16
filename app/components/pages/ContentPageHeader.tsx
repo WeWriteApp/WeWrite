@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share2, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock, X } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 // REMOVED: Direct Firebase RTDB imports - now using API endpoints
 import { rtdbApi } from "../../utils/apiClient";
@@ -797,7 +797,7 @@ export default function ContentPageHeader({
                     tabIndex={isNewPage ? 3 : undefined}
                     onClick={handleShareClick}
                   >
-                    <Share2 className="h-5 w-5" />
+                    <Share className="h-5 w-5" />
                   </Button>
                 </div>
               </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Button } from "../ui/button";
-import { ChevronLeft, Share2 } from "lucide-react";
+import { ChevronLeft, Share } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Logo } from "../ui/Logo";
 import { useSidebarContext } from "../layout/UnifiedSidebar";
@@ -118,7 +118,7 @@ export default function UserProfileHeader({ username }: UserProfileHeaderProps) 
                   title="Share profile"
                   onClick={handleShareClick}
                 >
-                  <Share2 className="h-5 w-5" />
+                  <Share className="h-5 w-5" />
                 </Button>
               </div>
             </div>
