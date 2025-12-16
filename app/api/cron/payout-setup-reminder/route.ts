@@ -17,11 +17,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { sendPayoutSetupReminder } from '../../../services/emailService';
+import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
 
 export const maxDuration = 120; // 2 minute timeout
 
-// Minimum pending earnings in USD to trigger reminder ($1.00)
-const MIN_EARNINGS_THRESHOLD = 100; // in cents
+// Use the actual payout threshold from centralized config ($25.00)
+// Don't remind users to set up payouts if they can't actually cash out yet
+const MIN_EARNINGS_THRESHOLD = WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold * 100; // $25 in cents
 
 /**
  * GET handler for Vercel cron jobs
