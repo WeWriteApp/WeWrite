@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { getUserIdFromRequest } from '../../../api/auth-helper';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -77,13 +77,14 @@ export async function POST(request: NextRequest) {
     };
 
     // Build query for active page allocations
-    let allocationsQuery = adminDb.collection(getCollectionName('usd_allocations'))
+    // IMPORTANT: Use COLLECTIONS.USD_ALLOCATIONS constant ('usdAllocations') not 'usd_allocations'
+    let allocationsQuery = adminDb.collection(getCollectionName(COLLECTIONS.USD_ALLOCATIONS))
       .where('resourceType', '==', 'page')
       .where('status', '==', 'active')
       .limit(maxAllocations);
 
     if (userId) {
-      allocationsQuery = adminDb.collection(getCollectionName('usd_allocations'))
+      allocationsQuery = adminDb.collection(getCollectionName(COLLECTIONS.USD_ALLOCATIONS))
         .where('resourceType', '==', 'page')
         .where('status', '==', 'active')
         .where('userId', '==', userId)
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
 
       // Fetch pages directly by ID
       const pagePromises = batch.map(async (pageId) => {
-        const pageDoc = await adminDb.collection(getCollectionName('pages')).doc(pageId).get();
+        const pageDoc = await adminDb.collection(getCollectionName(COLLECTIONS.PAGES)).doc(pageId).get();
         if (!pageDoc.exists) {
           pageStatusMap.set(pageId, { exists: false, deleted: false });
         } else {
@@ -259,7 +260,8 @@ export async function GET(request: NextRequest) {
     }
 
     // GET request just returns stats without making changes
-    const allocationsQuery = adminDb.collection(getCollectionName('usd_allocations'))
+    // IMPORTANT: Use COLLECTIONS.USD_ALLOCATIONS constant ('usdAllocations') not 'usd_allocations'
+    const allocationsQuery = adminDb.collection(getCollectionName(COLLECTIONS.USD_ALLOCATIONS))
       .where('resourceType', '==', 'page')
       .where('status', '==', 'active')
       .limit(1000);
@@ -281,7 +283,7 @@ export async function GET(request: NextRequest) {
       const batch = pageIdArray.slice(i, i + BATCH_SIZE);
 
       const pagePromises = batch.map(async (pageId) => {
-        const pageDoc = await adminDb.collection(getCollectionName('pages')).doc(pageId).get();
+        const pageDoc = await adminDb.collection(getCollectionName(COLLECTIONS.PAGES)).doc(pageId).get();
         if (!pageDoc.exists) {
           orphanedCount++;
         } else if (pageDoc.data()?.deleted === true) {

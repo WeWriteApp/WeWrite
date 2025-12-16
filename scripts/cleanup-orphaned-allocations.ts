@@ -77,12 +77,13 @@ async function cleanupOrphanedAllocations() {
   const db = getFirestore(app);
 
   // Determine collection prefix based on --prod flag
-  const collectionPrefix = isProd ? '' : 'dev_';
+  // IMPORTANT: Collection name is 'usdAllocations' (camelCase), not 'usd_allocations' (snake_case)
+  const collectionPrefix = isProd ? '' : 'DEV_';
 
   console.log(`Collection prefix: "${collectionPrefix}"\n`);
 
   // Query all active allocations (not just page type, to find all orphaned ones)
-  const allocationsRef = db.collection(`${collectionPrefix}usd_allocations`);
+  const allocationsRef = db.collection(`${collectionPrefix}usdAllocations`);
   const allocationsQuery = allocationsRef
     .where('status', '==', 'active');
 
@@ -131,6 +132,7 @@ async function cleanupOrphanedAllocations() {
     const batch = pageIdArray.slice(i, i + BATCH_SIZE);
 
     const pagePromises = batch.map(async (pageId) => {
+      // IMPORTANT: Collection name is 'pages' (same in both envs, just prefixed)
       const pageDoc = await db.collection(`${collectionPrefix}pages`).doc(pageId).get();
       if (!pageDoc.exists) {
         pageStatusMap.set(pageId, { exists: false, deleted: false });
