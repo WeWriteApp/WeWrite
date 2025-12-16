@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '../../providers/AuthProvider';
+import { usePathname } from 'next/navigation';
 import { SidebarProvider } from './UnifiedSidebar';
 
 // Using the new unified mobile nav with single drag zone
@@ -17,18 +18,20 @@ import EmailVerificationTopBanner from './EmailVerificationTopBanner';
 
 /**
  * GlobalNavigation Component
- * 
+ *
  * Provides global navigation elements (mobile toolbar and desktop sidebar)
  * for all authenticated users across the application. The individual components
  * handle their own visibility logic based on the current route.
  */
 export default function GlobalNavigation({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const pathname = usePathname();
 
+  // Skip navigation on /welcome pages - show only the landing page content
+  const isWelcomePage = pathname?.startsWith('/welcome');
 
-
-  // Only render navigation for authenticated users
-  if (!isAuthenticated || !user) {
+  // Only render navigation for authenticated users (and not on /welcome)
+  if (!isAuthenticated || !user || isWelcomePage) {
     return <>{children}</>;
   }
 

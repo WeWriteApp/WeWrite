@@ -17,6 +17,7 @@ import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
 import { useSidebarContext } from './UnifiedSidebar';
 import { cn } from "../../lib/utils";
+import { shouldShowNavigation } from "../../constants/layout";
 
 export interface FloatingFinancialHeaderProps {
   className?: string;
@@ -73,83 +74,21 @@ export default function FloatingFinancialHeader({
     }
   }, [isExpanded, sidebarWidth]);
 
-  // Check if we should hide the header
+  // Check if we should hide the header using centralized route config
   const shouldHideHeader = React.useMemo(() => {
     if (!pathname) return false;
 
-    console.log('🔍 FloatingFinancialHeader: Checking pathname:', pathname);
-    const pathSegments = pathname.split('/').filter(Boolean);
-    console.log('🔍 FloatingFinancialHeader: Path segments:', pathSegments);
+    // Use centralized navigation config - returns true if nav should show
+    const showNav = shouldShowNavigation(pathname);
 
-    // Hide on all settings pages and subpages
-    if (pathname.startsWith('/settings')) {
-      console.log('🚫 FloatingFinancialHeader: Hiding on settings page');
-      return true;
-    }
-
-    // Hide on all admin pages and subpages
-    if (pathname.startsWith('/admin')) {
-      console.log('🚫 FloatingFinancialHeader: Hiding on admin page');
-      return true;
-    }
-
-    // Hide on user profile pages (/u/) - they have their own header
-    if (pathname.startsWith('/u/')) {
-      console.log('🚫 FloatingFinancialHeader: Hiding on user profile page');
-      return true;
-    }
-
-    // Hide on ContentPages that have ContentPageHeader (single segment routes that aren't NavPages)
-    const navPageRoutes = [
-      '/', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
-      '/search', '/notifications', '/random-pages', '/trending-pages', '/following',
-      '/user', '/u', '/group', '/admin', '/timeline', '/leaderboard', '/map'
-    ];
-
-    // Hide on content creation pages
+    // Additional check: hide on /new (content creation) even though it's in NAV_PAGE_ROUTES
+    // because editors have their own UI
     if (pathname === '/new') {
-      console.log('🚫 FloatingFinancialHeader: Hiding on /new page (content creation)');
       return true;
     }
 
-    // CRITICAL FIX: Hide on ALL ContentPages (/[id]/ routes)
-    // Content pages have paths like /M7CAYL7SrApqV57mYKnK which results in pathSegments = ['M7CAYL7SrApqV57mYKnK']
-    // This includes both user's own pages and other people's pages
-    if (pathSegments.length === 1 && pathSegments[0]) {
-      // Check if this is NOT a known NavPage route
-      const isNavPage = navPageRoutes.some(route => {
-        // Handle exact matches and prefix matches
-        if (route === '/') {
-          return pathname === '/';
-        }
-        return pathname === route || pathname.startsWith(route + '/');
-      });
-
-      if (!isNavPage) {
-        console.log('🚫 FloatingFinancialHeader: Hiding on ContentPage (single segment):', pathname, 'segments:', pathSegments);
-        return true;
-      }
-    }
-
-    // Hide on ContentPage sub-routes (like /[id]/edit, /[id]/versions, etc.)
-    if (pathSegments.length >= 2 && pathSegments[0]) {
-      // Check if the first segment is NOT a known NavPage route
-      const firstSegmentPath = `/${pathSegments[0]}`;
-      const isNavPageRoute = navPageRoutes.some(route => {
-        if (route === '/') return false; // Root is handled separately
-        return firstSegmentPath === route || firstSegmentPath.startsWith(route + '/');
-      });
-
-      if (!isNavPageRoute) {
-        console.log('🚫 FloatingFinancialHeader: Hiding on ContentPage sub-route:', pathname, 'segments:', pathSegments);
-        return true;
-      }
-    }
-
-    console.log('✅ FloatingFinancialHeader: Showing on page:', pathname);
-    return false;
-  }, [user?.uid, pathname]);
+    return !showNav;
+  }, [pathname]);
 
   // Don't render the header if it should be hidden
   if (shouldHideHeader) {

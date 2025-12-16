@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
@@ -26,8 +26,13 @@ export function RegisterForm({
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { trackAuthEvent } = useWeWriteAnalytics()
   const { refreshUser } = useAuth()
+
+  // Get referral code and source from URL query params (?ref=userId&source=writers)
+  const referredBy = searchParams.get('ref') || undefined
+  const referralSource = searchParams.get('source') || undefined
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
@@ -208,7 +213,9 @@ export function RegisterForm({
           uid: user.uid,
           email,
           username,
-          idToken
+          idToken,
+          ...(referredBy ? { referredBy } : {}),
+          ...(referralSource ? { referralSource } : {}),
         })
       })
 

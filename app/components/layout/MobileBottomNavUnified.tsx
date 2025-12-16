@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield, Pencil, RotateCcw, Check, Trophy, Map } from 'lucide-react';
+import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield, Pencil, RotateCcw, Check, Trophy, Map, UserPlus } from 'lucide-react';
 import { DndProvider } from 'react-dnd';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -25,6 +25,7 @@ import { DockedToolbar } from '../ui/FloatingCard';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 import NavDragLayer from './NavDragLayer';
+import { shouldShowNavigation } from '../../constants/layout';
 
 // Helper function to detect iOS devices
 const isIOSDevice = (): boolean => {
@@ -182,43 +183,11 @@ export default function MobileBottomNavUnified() {
   }, [resetOrder, trackNavigationEvent]);
 
   // Route checks - determines if we should hide mobile nav on this route
+  // Uses centralized config from constants/layout.ts
   const isContentPageRoute = useCallback(() => {
-    const navPageRoutes = ['/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
-      '/search', '/notifications', '/random-pages', '/trending-pages', '/following', '/leaderboard',
-      '/settings', '/timeline', '/map'];
-    
-    // Always show on NavPage routes
-    if (navPageRoutes.includes(pathname)) return false;
-    
-    // Show mobile nav on user profile pages (/u/) - they are public pages
-    // The financial header handles showing spend/earnings for these pages
-    if (pathname.startsWith('/u/')) return false;
-
-    // Hide on group pages
-    if (pathname.startsWith('/group/')) return true;
-    
-    // Hide on admin routes
-    if (pathname.startsWith('/admin/')) return true;
-    
-    // Hide on settings subpages
-    if (pathname.startsWith('/settings/')) return true;
-    
-    // Hide on location pages
-    if (pathname.includes('/location')) return true;
-    
-    // Hide on checkout/payment pages
-    if (pathname.includes('/checkout') || pathname.includes('/payment') || pathname.includes('/subscription')) return true;
-    
-    // Hide on ContentPages (single segment routes that have the floating allocation bar)
-    // These are page IDs like /abc123
-    const segments = pathname.split('/').filter(Boolean);
-    if (segments.length === 1 && !navPageRoutes.includes(`/${segments[0]}`)) {
-      return true;
-    }
-    
-    return false;
-  }, [pathname, user?.uid]);
+    // Use centralized navigation config
+    return !shouldShowNavigation(pathname);
+  }, [pathname]);
 
   const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
   const shouldHideNav = isEditorPage;
@@ -319,6 +288,13 @@ export default function MobileBottomNavUnified() {
       isActive: pathname === '/admin',
       ariaLabel: 'Admin Dashboard',
       label: 'Admin',
+    },
+    invite: {
+      icon: UserPlus,
+      onClick: () => { handleClose(); router.push('/invite'); },
+      isActive: pathname === '/invite',
+      ariaLabel: 'Invite Friends',
+      label: 'Invite',
     },
   };
 

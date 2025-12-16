@@ -160,3 +160,145 @@ export const BREAKOUT_FULL_CLASSES = '-mx-4 sm:-mx-6 lg:-mx-8';
 
 export type MaxWidthOption = keyof typeof MAX_WIDTH_CLASSES;
 export type ScreenSize = 'mobile' | 'small' | 'large';
+
+// ============================================================================
+// NAVIGATION VISIBILITY CONFIGURATION
+// ============================================================================
+
+/**
+ * Routes where the FloatingFinancialHeader and MobileBottomNav should be SHOWN.
+ * These are "NavPage" routes - standard navigation pages with full app chrome.
+ *
+ * Routes NOT in this list (like content pages /[pageId]) will hide nav elements.
+ *
+ * IMPORTANT: When adding a new page to the app, add it here if it should show
+ * the standard navigation elements (header, sidebar, mobile toolbar).
+ */
+export const NAV_PAGE_ROUTES = [
+  // Core pages
+  '/',
+  '/home',
+  // '/welcome', // Landing pages have their own header, no need for nav
+  '/new',
+
+  // Discovery pages
+  '/trending',
+  '/trending-pages',
+  '/random-pages',
+  '/following',
+  '/recents',
+  '/leaderboard',
+  '/map',
+  '/timeline',
+
+  // Search & notifications
+  '/search',
+  '/notifications',
+
+  // User & social
+  '/activity',
+  '/groups',
+  '/invite',
+
+  // Auth pages
+  '/login',
+  '/signup',
+
+  // Info pages
+  '/about',
+  '/support',
+  '/roadmap',
+  '/privacy',
+  '/terms',
+
+  // Settings (top level only - subpages hide nav)
+  '/settings',
+
+  // Admin (top level only - subpages hide nav)
+  '/admin',
+
+  // Dynamic route prefixes (these match startsWith)
+  '/u/',      // User profile pages
+  '/user',    // Legacy user routes
+  '/group',   // Group routes
+] as const;
+
+/**
+ * Route prefixes that should ALWAYS hide navigation elements.
+ * These take precedence over NAV_PAGE_ROUTES.
+ */
+export const NAV_HIDDEN_PREFIXES = [
+  '/welcome',    // Landing pages - standalone without nav
+  '/settings/',  // Settings subpages (earnings, spend, etc.)
+  '/admin/',     // Admin subpages
+  '/checkout',   // Payment flows
+  '/payment',
+  '/subscription',
+] as const;
+
+/**
+ * Check if a pathname should show standard navigation elements.
+ *
+ * @param pathname - The current route pathname
+ * @returns true if nav should be shown, false if it should be hidden
+ */
+export function shouldShowNavigation(pathname: string): boolean {
+  if (!pathname) return false;
+
+  // First check if we're on a hidden prefix route (takes precedence)
+  for (const prefix of NAV_HIDDEN_PREFIXES) {
+    if (pathname.startsWith(prefix)) {
+      return false;
+    }
+  }
+
+  // Check exact matches first
+  if (NAV_PAGE_ROUTES.includes(pathname as any)) {
+    return true;
+  }
+
+  // Check prefix matches (for /u/, /user, /group, etc.)
+  for (const route of NAV_PAGE_ROUTES) {
+    if (route.endsWith('/') && pathname.startsWith(route)) {
+      return true;
+    }
+  }
+
+  // For single-segment paths, check if it's a known NavPage
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 1) {
+    // It's a single segment - check if it matches any NavPage route
+    const possibleRoute = `/${segments[0]}`;
+    if (NAV_PAGE_ROUTES.includes(possibleRoute as any)) {
+      return true;
+    }
+    // Single segment that's not a NavPage = ContentPage (hide nav)
+    return false;
+  }
+
+  // Multi-segment paths: check if the first segment matches a prefix route
+  if (segments.length >= 2) {
+    const firstSegmentPath = `/${segments[0]}`;
+    // Check for prefix matches like /u/
+    for (const route of NAV_PAGE_ROUTES) {
+      if (route.endsWith('/') && firstSegmentPath + '/' === route) {
+        return true;
+      }
+    }
+    // Check for routes that allow sub-paths
+    if (firstSegmentPath === '/u' || firstSegmentPath === '/user' || firstSegmentPath === '/group') {
+      return true;
+    }
+  }
+
+  // Default: hide nav (probably a content page or unknown route)
+  return false;
+}
+
+/**
+ * Check if a pathname is a ContentPage (individual page view like /abc123).
+ * ContentPages have their own header and don't need the standard nav.
+ */
+export function isContentPageRoute(pathname: string): boolean {
+  return !shouldShowNavigation(pathname);
+}

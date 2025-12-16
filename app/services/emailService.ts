@@ -569,11 +569,16 @@ export const sendPageLinkedEmail = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
+    // Interpolate subject with actual values
+    const subject = pageLinkedTemplate.subject
+      .replace('{{linkerUsername}}', options.linkerUsername)
+      .replace('{{linkedPageTitle}}', options.linkedPageTitle);
+
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
-      subject: pageLinkedTemplate.subject,
+      subject,
       html: pageLinkedTemplate.generateHtml(options),
     });
 
@@ -585,7 +590,7 @@ export const sendPageLinkedEmail = async (options: {
         recipientEmail: options.to,
         recipientUserId: options.userId,
         recipientUsername: options.username,
-        subject: pageLinkedTemplate.subject,
+        subject,
         status: 'failed',
         errorMessage: error.message,
         metadata: { linkedPageTitle: options.linkedPageTitle, linkerUsername: options.linkerUsername },
@@ -601,7 +606,7 @@ export const sendPageLinkedEmail = async (options: {
       recipientEmail: options.to,
       recipientUserId: options.userId,
       recipientUsername: options.username,
-      subject: pageLinkedTemplate.subject,
+      subject,
       status: 'sent',
       resendId: data?.id,
       metadata: { linkedPageTitle: options.linkedPageTitle, linkerUsername: options.linkerUsername },

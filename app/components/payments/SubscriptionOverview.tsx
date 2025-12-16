@@ -175,7 +175,7 @@ export function SubscriptionOverview() {
             <p className="text-muted-foreground mb-4">
               {USD_UI_TEXT.NO_BALANCE_MESSAGE}
             </p>
-            <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+            <Button asChild variant="success">
               <Link href="/settings/fund-account">
                 {USD_UI_TEXT.FUND_ACCOUNT}
               </Link>
@@ -311,7 +311,7 @@ export function SubscriptionOverview() {
         {/* Show reactivate button if subscription is cancelled but still active */}
         {subscription && subscription.cancelAtPeriodEnd && subscription.status === 'active' ? (
           <>
-            <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" asChild>
+            <Button variant="success" className="flex-1" asChild>
               <Link href="/settings/fund-account/manage">
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Reactivate Funding

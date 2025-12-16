@@ -530,7 +530,7 @@ export const pageLinkedTemplate: EmailTemplate = {
   name: 'Page Linked',
   description: 'Notification when someone links to the user\'s page',
   category: 'engagement',
-  subject: 'Someone linked to your page on WeWrite! 🔗',
+  subject: '{{linkerUsername}} linked to your page "{{linkedPageTitle}}" on WeWrite!',
   sampleData: {
     username: 'JohnDoe',
     linkedPageTitle: 'My Awesome Article',

@@ -16,6 +16,8 @@ interface RegisterUserRequest {
   email: string;
   username: string;
   idToken: string; // Firebase ID token for verification
+  referredBy?: string; // User ID of the referrer
+  referralSource?: string; // Landing page vertical (e.g., 'general', 'writers', 'journalism')
 }
 
 // Firebase project configuration
@@ -140,7 +142,7 @@ async function isUsernameTaken(username: string, idToken: string): Promise<boole
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { uid, email, username, idToken } = body as RegisterUserRequest;
+    const { uid, email, username, idToken, referredBy, referralSource } = body as RegisterUserRequest;
 
     // Validate required fields
     if (!uid || !email || !username || !idToken) {
@@ -189,6 +191,8 @@ export async function POST(request: NextRequest) {
           pageCount: { integerValue: '0' },
           followerCount: { integerValue: '0' },
           viewCount: { integerValue: '0' },
+          ...(referredBy ? { referredBy: { stringValue: referredBy } } : {}),
+          ...(referralSource ? { referralSource: { stringValue: referralSource } } : {}),
         }
       }),
     });

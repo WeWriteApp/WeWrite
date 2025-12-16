@@ -31,6 +31,10 @@
     {
       "path": "/api/cron/payout-setup-reminder",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/email-verification-reminder",
+      "schedule": "0 16 * * *"
     }
   ],
   "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == \"dependabot\"* ]]; then exit 0; else exit 1; fi"

@@ -15,6 +15,11 @@ const NAV_PAGE_ROUTES = [
  * Check if a route is a content page (shows pledge bar, hides navigation)
  */
 function isContentPageRoute(pathname: string, user: any): boolean {
+  // Landing pages are standalone - treat as content pages to hide nav
+  if (pathname.startsWith('/welcome')) {
+    return true;
+  }
+
   // NavPages are not content pages
   if (NAV_PAGE_ROUTES.includes(pathname)) {
     return false;
@@ -86,6 +91,11 @@ function shouldShowFABOnRoute(pathname: string, user: any): boolean {
 function shouldShowMobileNavOnRoute(pathname: string, user: any): boolean {
   if (!user) return false;
 
+  // Hide on landing pages - they're standalone
+  if (pathname.startsWith('/welcome')) {
+    return false;
+  }
+
   // Always show on NavPage routes
   if (NAV_PAGE_ROUTES.includes(pathname)) {
     return true;
@@ -152,6 +162,7 @@ export function usePageVisibility() {
       isAuthPage: pathname.startsWith('/auth/'),
       isCheckoutPage: pathname.includes('/checkout'),
       isLocationPage: pathname.includes('/location'),
+      isWelcomePage: pathname.startsWith('/welcome'),
       // Route segments for additional logic
       pathSegments: pathname.split('/').filter(Boolean)
     };

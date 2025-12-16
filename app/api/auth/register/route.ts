@@ -23,6 +23,7 @@ interface RegisterRequest {
   email: string;
   password: string;
   username: string;
+  referredBy?: string; // User ID of the referrer
 }
 
 // Firebase project configuration
@@ -43,7 +44,7 @@ function generateDevUid(): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, username } = body as RegisterRequest;
+    const { email, password, username, referredBy } = body as RegisterRequest;
 
     // Validate required fields
     if (!email || !password || !username) {
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
             pageCount: { integerValue: '0' },
             followerCount: { integerValue: '0' },
             viewCount: { integerValue: '0' },
+            ...(referredBy ? { referredBy: { stringValue: referredBy } } : {}),
           }
         }),
       });
@@ -251,6 +253,7 @@ export async function POST(request: NextRequest) {
           pageCount: { integerValue: '0' },
           followerCount: { integerValue: '0' },
           viewCount: { integerValue: '0' },
+          ...(referredBy ? { referredBy: { stringValue: referredBy } } : {}),
         }
       }),
     });

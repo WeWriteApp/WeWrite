@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+export const dynamic = 'force-dynamic';
+
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
@@ -28,12 +30,14 @@ import {
   History,
   ChevronDown,
   ChevronUp,
-  Smartphone
+  Smartphone,
+  Calendar,
+  X,
+  Users,
+  User
 } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
-import { FloatingHeader } from '../../components/ui/FloatingCard';
 import { useToast } from '../../components/ui/use-toast';
-import { Logo } from '../../components/ui/Logo';
 
 interface EmailTemplate {
   id: string;
@@ -70,6 +74,7 @@ interface GroupedTemplates {
 // Notification modes for each template - which delivery methods are supported
 const notificationModes: Record<string, { email: boolean; inApp: boolean; push: boolean }> = {
   'verification': { email: true, inApp: true, push: true },
+  'verification-reminder': { email: true, inApp: false, push: false },
   'welcome': { email: true, inApp: true, push: true },
   'password-reset': { email: true, inApp: true, push: true },
   'generic-notification': { email: true, inApp: true, push: true },
@@ -88,9 +93,13 @@ const notificationModes: Record<string, { email: boolean; inApp: boolean; push: 
 
 // Trigger status for each template - which ones are actually wired up
 const triggerStatus: Record<string, { status: 'active' | 'partial' | 'not-implemented' | 'disabled'; description: string }> = {
-  'verification': { 
-    status: 'active', 
+  'verification': {
+    status: 'active',
     description: 'Handled by Firebase Auth. Custom template available via API.'
+  },
+  'verification-reminder': {
+    status: 'active',
+    description: 'Fully implemented. Daily cron job at 4pm UTC for users who signed up 3-7 days ago and haven\'t verified.'
   },
   'welcome': { 
     status: 'active', 
@@ -582,11 +591,131 @@ function NotificationPreview({ templateId }: { templateId: string }) {
   );
 }
 
-export default function AdminEmailsPage() {
+// Cron job schedule info for the Events tab
+const cronSchedules = [
+  {
+    id: 'process-writer-earnings',
+    name: 'Process Writer Earnings',
+    path: '/api/usd/process-writer-earnings',
+    schedule: '0 8 1 * *',
+    description: 'Processes writer earnings on the 1st of each month at 8am UTC',
+    nextRun: getNextCronRun('0 8 1 * *'),
+  },
+  {
+    id: 'automated-payouts',
+    name: 'Automated Payouts',
+    path: '/api/cron/automated-payouts',
+    schedule: '0 9 1 * *',
+    description: 'Processes automated payouts on the 1st of each month at 9am UTC',
+    nextRun: getNextCronRun('0 9 1 * *'),
+  },
+  {
+    id: 'weekly-digest',
+    name: 'Weekly Digest',
+    path: '/api/cron/weekly-digest',
+    schedule: '0 10 * * 1',
+    description: 'Sends weekly digest emails every Monday at 10am UTC',
+    nextRun: getNextCronRun('0 10 * * 1'),
+  },
+  {
+    id: 'username-reminder',
+    name: 'Username Reminder',
+    path: '/api/cron/username-reminder',
+    schedule: '0 14 * * *',
+    description: 'Reminds users to set usernames daily at 2pm UTC',
+    nextRun: getNextCronRun('0 14 * * *'),
+  },
+  {
+    id: 'payout-setup-reminder',
+    name: 'Payout Setup Reminder',
+    path: '/api/cron/payout-setup-reminder',
+    schedule: '0 15 * * *',
+    description: 'Reminds users to set up payouts daily at 3pm UTC',
+    nextRun: getNextCronRun('0 15 * * *'),
+  },
+  {
+    id: 'email-verification-reminder',
+    name: 'Email Verification Reminder',
+    path: '/api/cron/email-verification-reminder',
+    schedule: '0 16 * * *',
+    description: 'Reminds unverified users to verify email daily at 4pm UTC',
+    nextRun: getNextCronRun('0 16 * * *'),
+  },
+];
+
+// Helper to calculate next cron run time (simplified version)
+function getNextCronRun(schedule: string): Date {
+  const now = new Date();
+  const parts = schedule.split(' ');
+  const minute = parseInt(parts[0]);
+  const hour = parseInt(parts[1]);
+  const dayOfMonth = parts[2];
+  const dayOfWeek = parts[4];
+
+  const next = new Date(now);
+  next.setMinutes(minute);
+  next.setSeconds(0);
+  next.setMilliseconds(0);
+
+  if (dayOfMonth !== '*') {
+    // Monthly cron
+    next.setDate(parseInt(dayOfMonth));
+    next.setHours(hour);
+    if (next <= now) {
+      next.setMonth(next.getMonth() + 1);
+    }
+  } else if (dayOfWeek !== '*') {
+    // Weekly cron
+    const targetDay = parseInt(dayOfWeek);
+    const currentDay = now.getDay();
+    let daysUntil = targetDay - currentDay;
+    if (daysUntil < 0) daysUntil += 7;
+    if (daysUntil === 0 && (now.getHours() > hour || (now.getHours() === hour && now.getMinutes() >= minute))) {
+      daysUntil = 7;
+    }
+    next.setDate(now.getDate() + daysUntil);
+    next.setHours(hour);
+  } else {
+    // Daily cron
+    next.setHours(hour);
+    if (next <= now) {
+      next.setDate(next.getDate() + 1);
+    }
+  }
+
+  return next;
+}
+
+function formatTimeUntil(date: Date): string {
+  const now = new Date();
+  const diff = date.getTime() - now.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    return `in ${days}d ${hours % 24}h`;
+  }
+  return `in ${hours}h`;
+}
+
+function AdminEmailsPageContent() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  
+
+  // Tab state from URL
+  const tabParam = searchParams.get('tab');
+  const activeTab = (tabParam === 'events' ? 'events' : 'templates') as 'templates' | 'events';
+
+  // Function to change tab with URL update
+  const setActiveTab = (tab: 'templates' | 'events') => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`/admin/notifications?${params.toString()}`, { scroll: false });
+  };
+
+  // Templates state
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [grouped, setGrouped] = useState<GroupedTemplates | null>(null);
   const [loading, setLoading] = useState(true);
@@ -599,6 +728,15 @@ export default function AdminEmailsPage() {
   const [emailLogs, setEmailLogs] = useState<EmailLogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [showLogs, setShowLogs] = useState(true);
+
+  // Events state
+  const [allEmailLogs, setAllEmailLogs] = useState<EmailLogEntry[]>([]);
+  const [allLogsLoading, setAllLogsLoading] = useState(false);
+
+  // Expandable scheduled notifications state
+  const [expandedCrons, setExpandedCrons] = useState<Set<string>>(new Set());
+  const [cronRecipients, setCronRecipients] = useState<Record<string, { loading: boolean; recipients: any[] }>>({});
+  const [recipientGrouping, setRecipientGrouping] = useState<'type' | 'user'>('type');
 
   // Check admin access
   useEffect(() => {
@@ -638,6 +776,63 @@ export default function AdminEmailsPage() {
       loadTemplates();
     }
   }, [user, authLoading, toast]);
+
+  // Load events data when Events tab is active
+  useEffect(() => {
+    const loadEventsData = async () => {
+      if (activeTab !== 'events' || !user || authLoading) return;
+
+      setAllLogsLoading(true);
+      try {
+        const logsRes = await fetch('/api/admin/email-logs?limit=100');
+        const logsData = await logsRes.json();
+
+        if (logsData.success) {
+          setAllEmailLogs(logsData.logs || []);
+        }
+      } catch (error) {
+        console.error('Failed to load events data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load notification events',
+          variant: 'destructive',
+        });
+      } finally {
+        setAllLogsLoading(false);
+      }
+    };
+
+    loadEventsData();
+  }, [activeTab, user, authLoading, toast]);
+
+  // Toggle expanded cron and fetch recipients
+  const toggleCronExpand = async (cronId: string) => {
+    const newExpanded = new Set(expandedCrons);
+    if (newExpanded.has(cronId)) {
+      newExpanded.delete(cronId);
+    } else {
+      newExpanded.add(cronId);
+      // Fetch recipients if not already loaded
+      if (!cronRecipients[cronId]) {
+        setCronRecipients(prev => ({ ...prev, [cronId]: { loading: true, recipients: [] } }));
+        try {
+          const res = await fetch(`/api/admin/cron-recipients?cronId=${cronId}`);
+          const data = await res.json();
+          setCronRecipients(prev => ({
+            ...prev,
+            [cronId]: { loading: false, recipients: data.recipients || [] }
+          }));
+        } catch (error) {
+          console.error('Failed to fetch recipients:', error);
+          setCronRecipients(prev => ({
+            ...prev,
+            [cronId]: { loading: false, recipients: [] }
+          }));
+        }
+      }
+    }
+    setExpandedCrons(newExpanded);
+  };
 
   // Load template preview and logs
   const loadPreview = async (templateId: string) => {
@@ -717,45 +912,356 @@ export default function AdminEmailsPage() {
     );
   }
 
+  // Helper to render recipients grouped by type or user
+  const renderRecipients = (cronId: string) => {
+    const data = cronRecipients[cronId];
+    if (!data) return null;
+
+    if (data.loading) {
+      return (
+        <div className="flex items-center justify-center py-4">
+          <Loader className="h-5 w-5 animate-spin text-primary" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading recipients...</span>
+        </div>
+      );
+    }
+
+    if (data.recipients.length === 0) {
+      return (
+        <div className="text-center py-4 text-muted-foreground">
+          <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No recipients found for this notification</p>
+        </div>
+      );
+    }
+
+    if (recipientGrouping === 'type') {
+      // Group by notification type/reason
+      const grouped = data.recipients.reduce((acc: Record<string, any[]>, recipient) => {
+        const type = recipient.type || 'default';
+        if (!acc[type]) acc[type] = [];
+        acc[type].push(recipient);
+        return acc;
+      }, {});
+
+      return (
+        <div className="space-y-3">
+          {Object.entries(grouped).map(([type, recipients]) => (
+            <div key={type} className="border border-border rounded-lg overflow-hidden">
+              <div className="bg-muted/50 px-3 py-2 flex items-center justify-between">
+                <span className="text-sm font-medium capitalize">{type.replace(/-/g, ' ')}</span>
+                <Badge variant="secondary" className="text-xs">{recipients.length}</Badge>
+              </div>
+              <div className="divide-y divide-border">
+                {recipients.slice(0, 10).map((recipient: any, idx: number) => (
+                  <div key={idx} className="px-3 py-2 flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    {recipient.username ? (
+                      <Link href={`/u/${recipient.username}`} className="text-primary hover:underline">
+                        @{recipient.username}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">{recipient.email}</span>
+                    )}
+                    {recipient.reason && (
+                      <span className="text-xs text-muted-foreground ml-auto">{recipient.reason}</span>
+                    )}
+                  </div>
+                ))}
+                {recipients.length > 10 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground text-center">
+                    +{recipients.length - 10} more recipients
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    } else {
+      // Group by user - show all recipients with their notification types
+      return (
+        <div className="space-y-2">
+          {data.recipients.slice(0, 20).map((recipient: any, idx: number) => (
+            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                {recipient.username ? (
+                  <Link href={`/u/${recipient.username}`} className="text-sm text-primary hover:underline">
+                    @{recipient.username}
+                  </Link>
+                ) : (
+                  <span className="text-sm">{recipient.email}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {recipient.type && (
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {recipient.type.replace(/-/g, ' ')}
+                  </Badge>
+                )}
+                {recipient.reason && (
+                  <span className="text-xs text-muted-foreground">{recipient.reason}</span>
+                )}
+              </div>
+            </div>
+          ))}
+          {data.recipients.length > 20 && (
+            <div className="text-xs text-muted-foreground text-center py-2">
+              +{data.recipients.length - 20} more recipients
+            </div>
+          )}
+        </div>
+      );
+    }
+  };
+
+  // Render Events tab content
+  const renderEventsTab = () => {
+    if (allLogsLoading) {
+      return (
+        <div className="flex justify-center items-center py-16">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    // Sort crons by next run time
+    const sortedCrons = [...cronSchedules].sort((a, b) => a.nextRun.getTime() - b.nextRun.getTime());
+
+    return (
+      <div className="space-y-8">
+        {/* Upcoming Scheduled Notifications */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Upcoming Scheduled Notifications</h3>
+            </div>
+            {/* Grouping toggle */}
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+              <button
+                onClick={() => setRecipientGrouping('type')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                  recipientGrouping === 'type'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Users className="h-3.5 w-3.5 inline-block mr-1" />
+                By Type
+              </button>
+              <button
+                onClick={() => setRecipientGrouping('user')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                  recipientGrouping === 'user'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <User className="h-3.5 w-3.5 inline-block mr-1" />
+                By User
+              </button>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {sortedCrons.map((cron) => {
+              const isExpanded = expandedCrons.has(cron.id);
+              return (
+                <div key={cron.id} className="wewrite-card overflow-hidden">
+                  <button
+                    onClick={() => toggleCronExpand(cron.id)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{cron.name}</p>
+                          <Badge variant="outline" className="text-xs">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{cron.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <Badge variant="secondary" className="text-xs">
+                          {formatTimeUntil(cron.nextRun)}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {cron.nextRun.toLocaleDateString()} at {cron.nextRun.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="p-4 border-t border-border bg-muted/20">
+                      {renderRecipients(cron.id)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recent Notification Events */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <History className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Recent Notification Events</h3>
+            <Badge variant="secondary" className="ml-2">
+              {allEmailLogs.length} emails
+            </Badge>
+          </div>
+
+          {allEmailLogs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No notification events found</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {allEmailLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="wewrite-card p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      {log.status === 'sent' || log.status === 'delivered' ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <Badge variant="outline" className="text-xs">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {log.templateName || log.templateId}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {log.recipientUsername ? (
+                            <Link
+                              href={`/u/${log.recipientUsername}`}
+                              className="font-medium text-sm text-primary hover:underline"
+                            >
+                              @{log.recipientUsername}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-sm">
+                              {log.recipientEmail}
+                            </span>
+                          )}
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatRelativeTime(log.sentAt)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-1">
+                          {log.subject}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={log.status === 'sent' || log.status === 'delivered' ? 'default' : 'destructive'}
+                      className="text-xs flex-shrink-0"
+                    >
+                      {log.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-7xl">
-        <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
+        {/* Regular Header (not floating) */}
+        <header className="border-b bg-background px-4 py-3 mb-6 flex items-start justify-between gap-3 lg:px-0 lg:py-4 lg:border-b-0">
+          <div>
+            <button
+              className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => router.push('/admin')}
-              className="h-10 w-10"
-              aria-label="Back to admin"
             >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold leading-tight flex items-center gap-2">
-                <Bell className="h-6 w-6" />
-                Notifications
-              </h1>
-              <p className="text-muted-foreground text-sm flex items-center gap-2">
-                Email, in-app, and push notifications
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                  Powered by Resend
-                </span>
-              </p>
-            </div>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Admin
+            </button>
+            <h1 className="text-2xl font-semibold leading-tight flex items-center gap-2">
+              <Bell className="h-6 w-6" />
+              Notifications
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2">
+              Email, in-app, and push notifications
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                Powered by Resend
+              </span>
+            </p>
           </div>
-          <a
-            href="https://resend.com/emails"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Resend Dashboard
-          </a>
-        </FloatingHeader>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://resend.com/emails"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Resend Dashboard
+            </a>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.push('/')}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </header>
 
-        <div className="pt-24 lg:pt-0">
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b border-border">
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === 'templates'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Mail className="h-4 w-4 inline-block mr-2" />
+            Templates
+          </button>
+          <button
+            onClick={() => setActiveTab('events')}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === 'events'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <History className="h-4 w-4 inline-block mr-2" />
+            Events
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'events' ? (
+          renderEventsTab()
+        ) : (
+          <>
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Template List */}
             <div className="w-full lg:w-1/3 space-y-4">
@@ -1254,8 +1760,17 @@ export default function AdminEmailsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function AdminEmailsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+      <AdminEmailsPageContent />
+    </Suspense>
   );
 }

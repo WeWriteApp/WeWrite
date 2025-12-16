@@ -66,7 +66,7 @@ function VerifyEmailContent() {
 
         // Redirect to home after a short delay
         setTimeout(() => {
-          router.push('/');
+          router.push('/home');
         }, 3000);
       } catch (error) {
         console.error('[Verify Email] Error:', error);

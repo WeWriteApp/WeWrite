@@ -126,7 +126,7 @@ export function LoginForm() {
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       console.log('[LoginForm] User already authenticated, redirecting to home');
-      router.push('/');
+      router.push('/home');
     }
   }, [isAuthenticated, authLoading, router]);
 
@@ -180,9 +180,9 @@ export function LoginForm() {
         }
       }
 
-      // Use cache-busting redirect to ensure fresh page load
+      // Redirect directly to /home after successful login
       // The timestamp ensures service worker doesn't serve stale cache
-      window.location.href = '/?_auth=' + Date.now();
+      window.location.href = '/home?_auth=' + Date.now();
     } catch (err: any) {
       console.error('[LoginForm] Login error:', err);
       

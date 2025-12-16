@@ -14,6 +14,7 @@ const DEFAULT_UNIFIED_ORDER = [
   'trending-pages', // overflow
   'following',     // overflow
   'recents',       // overflow
+  'invite',        // overflow - invite friends
   'map',           // overflow - before settings
   'settings',      // overflow
   'admin',         // overflow (only shown if user is admin)

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
@@ -19,16 +20,44 @@ interface AuthButtonProps {
  * Reusable authentication button component
  * Handles analytics tracking and navigation consistently
  */
-export function AuthButton({ 
-  type, 
-  variant = 'secondary', 
-  size = 'default', 
+export function AuthButton({
+  type,
+  variant = 'secondary',
+  size = 'default',
   className = '',
   device = 'unknown',
-  children 
+  children
 }: AuthButtonProps) {
   const analytics = useWeWriteAnalytics();
-  
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // Preserve referral code when navigating to register page
+  const refParam = searchParams.get('ref');
+
+  // Detect referral source from landing page URL (e.g., /welcome/writers -> writers)
+  const getReferralSource = () => {
+    if (pathname?.startsWith('/welcome/')) {
+      const source = pathname.replace('/welcome/', '');
+      return source || 'general';
+    }
+    if (pathname === '/welcome') {
+      return 'general';
+    }
+    return undefined;
+  };
+
+  const source = getReferralSource();
+
+  // Build register URL with query params
+  const buildRegisterUrl = () => {
+    const params = new URLSearchParams();
+    if (refParam) params.set('ref', refParam);
+    if (source) params.set('source', source);
+    const queryString = params.toString();
+    return queryString ? `/auth/register?${queryString}` : '/auth/register';
+  };
+
   const config = {
     login: {
       href: '/auth/login',
@@ -36,12 +65,12 @@ export function AuthButton({
       label: `${device} sign-in button`
     },
     register: {
-      href: '/auth/register', 
+      href: buildRegisterUrl(),
       text: 'Sign Up',
       label: `${device} sign-up button`
     }
   };
-  
+
   const { href, text, label } = config[type];
   const displayText = children || text;
   

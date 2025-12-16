@@ -39,8 +39,8 @@ Subscription → Monthly allocation ledger (ServerUsdService) → Month-end stor
 - Earnings start as "pending" and become "available" after month-end processing.
 
 ### 4) Payouts
-- Payouts are sourced **from Storage Balance** to the creator’s connected account.
-- Platform fee: **7%** retained in Payments Balance; Stripe payout fee: $0.25/transfer.
+- Payouts are sourced **from Storage Balance** to the creator's connected account.
+- Platform fee: **10%** retained in Payments Balance; Stripe payout fee: $0.25/transfer.
 - Minimum payout: $25.00.
 - Status tracked: pending → processing → completed.
 
@@ -142,15 +142,15 @@ interface WriterUsdEarnings {
 
 1. Creator requests payout via UI
 2. System validates eligibility and amount
-3. Platform fee (7%) calculated and retained in Payments Balance
+3. Platform fee (10%) calculated and retained in Payments Balance
 4. Stripe transfer initiated from Storage Balance to creator's bank
 5. Status tracked: pending → processing → completed
 
 ### Fee Structure
 
-- **Platform Fee**: 7% of gross earnings (retained in Payments Balance)
+- **Platform Fee**: 10% of gross earnings (retained in Payments Balance)
 - **Stripe Fee**: $0.25 per transfer
-- **Example**: $100 earnings → $93 after platform fee → $92.75 after Stripe fee
+- **Example**: $100 earnings → $90 after platform fee → $89.75 after Stripe fee
 
 ## 🔧 API Endpoints
 

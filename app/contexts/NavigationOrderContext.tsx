@@ -12,6 +12,7 @@ const ALL_NAVIGATION_ITEMS = [
   'trending-pages',
   'following',
   'recents',
+  'invite',
   'settings',
   'admin',
   'profile'
@@ -31,6 +32,7 @@ const DEFAULT_SIDEBAR_ORDER = [
   'leaderboard',
   'following',
   'recents',
+  'invite',
   'notifications',
   'profile',
   'settings',

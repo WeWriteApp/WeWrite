@@ -425,7 +425,7 @@ export default function SpendPage() {
                 Set up monthly funding to start supporting creators
               </p>
             </div>
-            <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+            <Button asChild variant="success">
               <Link href="/settings/fund-account">
                 <Wallet className="h-4 w-4 mr-2" />
                 Fund Account

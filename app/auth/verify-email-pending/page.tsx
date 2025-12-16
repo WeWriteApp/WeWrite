@@ -34,7 +34,7 @@ export default function VerifyEmailPendingPage() {
       }
       // In admin testing mode, allow verified users to see this page
       if (user.emailVerified && !isAdminTestingMode) {
-        router.push("/");
+        router.push("/home");
         return;
       }
     }
@@ -213,7 +213,7 @@ export default function VerifyEmailPendingPage() {
             onClick={() => {
               // Set dismissal flag and navigate home
               localStorage.setItem('wewrite_email_verification_dismissed', 'true');
-              router.push('/');
+              router.push('/home');
             }}
             className="w-full text-muted-foreground"
           >

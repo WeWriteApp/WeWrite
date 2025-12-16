@@ -171,7 +171,7 @@ function SetupUsernameContent() {
         localStorage.removeItem('pendingUsername');
 
         // Redirect to home page - user will see email verification banner
-        router.push('/');
+        router.push('/home');
       } else {
         setError("Failed to set username. Please try again.");
       }

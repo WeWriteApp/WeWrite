@@ -9,7 +9,7 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Link as LinkIcon, X, Check, Trash2, MapPin, Shield, Map,
-  Clock, Shuffle, LogOut, TrendingUp, Heart, Trophy
+  Clock, Shuffle, LogOut, TrendingUp, Heart, Trophy, UserPlus
 } from "lucide-react";
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
@@ -298,6 +298,7 @@ function UnifiedSidebarContent({
     'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
     'following': { icon: Heart, label: 'Following', href: '/following' },
     'recents': { icon: Clock, label: 'Recents', href: '/recents' },
+    'invite': { icon: UserPlus, label: 'Invite Friends', href: '/invite' },
     'profile': { icon: User, label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
     'settings': { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users

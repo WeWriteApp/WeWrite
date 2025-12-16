@@ -59,6 +59,9 @@ interface HeroCardProps {
   platformIndex: number;
   handlePlatformClick: () => void;
   platformRef: React.RefObject<HTMLSpanElement>;
+  // Optional vertical-specific hero text overrides
+  heroTitle?: string;
+  heroSubtitle?: string;
 }
 
 export default function HeroCard({
@@ -66,7 +69,9 @@ export default function HeroCard({
   platformOptions,
   platformIndex,
   handlePlatformClick,
-  platformRef
+  platformRef,
+  heroTitle = 'Write, share, earn.',
+  heroSubtitle = 'WeWrite is a free speech social writing app where every page is a fundraiser.',
 }: HeroCardProps) {
   console.log('🎯🎯🎯 HeroCard: COMPONENT FUNCTION CALLED!');
   console.log('🎯 HeroCard: Component is rendering!');
@@ -169,10 +174,10 @@ export default function HeroCard({
           {/* Hero Text */}
           <div className={`mb-4 ${fadeInClass}`}>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-              Write, share, earn.
+              {heroTitle}
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-4 max-w-3xl mx-auto">
-              WeWrite is a free speech social writing app where every page is a fundraiser.
+              {heroSubtitle}
             </p>
 
             {/* Platform Statistics */}

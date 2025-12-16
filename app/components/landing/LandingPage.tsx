@@ -25,15 +25,30 @@ import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
 import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
-import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2 } from 'lucide-react';
+import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2, Copy, Check, UserPlus, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
 
-const LandingPage = () => {
+interface LandingPageProps {
+  showReferralSection?: boolean;
+  // Optional vertical-specific hero text overrides
+  heroTitle?: string;
+  heroSubtitle?: string;
+}
+
+interface ReferralStats {
+  totalReferrals: number;
+  recentReferrals: { username: string; joinedAt: string }[];
+}
+
+const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: LandingPageProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
   const [isStackedHeader, setIsStackedHeader] = useState(false);
   const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+  const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
+  const [referralStatsLoading, setReferralStatsLoading] = useState(false);
 
   const { setTheme, theme } = useTheme();
   const [session, setUser] = useState<any>(null);
@@ -75,6 +90,36 @@ const LandingPage = () => {
     // The user state is already managed by the SessionAuthInitializer and Zustand store
     // No need for direct Firebase auth listener here
   }, []);
+
+  // Load referral stats when showing referral section for authenticated users
+  useEffect(() => {
+    if (showReferralSection && isAuthenticated && user?.uid) {
+      setReferralStatsLoading(true);
+      fetch(`/api/user/referral-stats?userId=${user.uid}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setReferralStats(data);
+          }
+        })
+        .catch(err => console.error('Failed to load referral stats:', err))
+        .finally(() => setReferralStatsLoading(false));
+    }
+  }, [showReferralSection, isAuthenticated, user?.uid]);
+
+  // Generate and copy invite link
+  const copyInviteLink = async () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const inviteLink = `${baseUrl}/welcome?ref=${user?.uid || ''}`;
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteLinkCopied(true);
+      setTimeout(() => setInviteLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
 
 
@@ -275,6 +320,16 @@ const LandingPage = () => {
                   Create Account
                 </AuthButton>
               </>
+            ) : isAuthenticated ? (
+              <Button
+                variant="default"
+                asChild
+              >
+                <Link href="/home">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Link>
+              </Button>
             ) : (
               <Button
                 variant="success"
@@ -337,6 +392,17 @@ const LandingPage = () => {
                     Sign Up
                   </AuthButton>
                 </>
+              ) : isAuthenticated ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  asChild
+                >
+                  <Link href="/home">
+                    <ArrowLeft className="h-4 w-4 mr-1" />
+                    Back to Home
+                  </Link>
+                </Button>
               ) : (
                 <Button
                   variant="default"
@@ -365,7 +431,84 @@ const LandingPage = () => {
               platformIndex={0}
               handlePlatformClick={() => {}} // No-op
               platformRef={React.createRef()}
+              heroTitle={heroTitle}
+              heroSubtitle={heroSubtitle}
             />
+
+            {/* Referral Section for Authenticated Users */}
+            {showReferralSection && isAuthenticated && (
+              <div className="wewrite-card p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <UserPlus className="h-6 w-6 text-primary" />
+                  <h3 className="text-xl font-semibold">Invite Friends to WeWrite</h3>
+                </div>
+                <p className="text-muted-foreground mb-6">
+                  Share your invite link and track who joins using your referral.
+                </p>
+
+                {/* Copy Invite Link */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                  <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-sm truncate">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/welcome?ref=${user?.uid || ''}` : 'Loading...'}
+                  </div>
+                  <Button
+                    onClick={copyInviteLink}
+                    variant={inviteLinkCopied ? 'default' : 'outline'}
+                    className="flex items-center gap-2 min-w-[140px]"
+                  >
+                    {inviteLinkCopied ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Referral Stats */}
+                <div className="border-t border-border pt-6">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-4">Your Referrals</h4>
+                  {referralStatsLoading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Loading...
+                    </div>
+                  ) : referralStats && referralStats.totalReferrals > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-primary/10 rounded-lg px-4 py-2">
+                          <span className="text-2xl font-bold text-primary">{referralStats.totalReferrals}</span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {referralStats.totalReferrals === 1 ? 'person joined' : 'people joined'}
+                          </span>
+                        </div>
+                      </div>
+                      {referralStats.recentReferrals.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Recent signups:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {referralStats.recentReferrals.map((r, i) => (
+                              <Badge key={i} variant="secondary">
+                                @{r.username}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">
+                      No referrals yet. Share your link to start inviting friends!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
           </div>
         </section>
@@ -516,38 +659,40 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Ready to Start CTA Card */}
-        <section className="py-8 md:py-12">
-          <div className="container mx-auto px-6 max-w-4xl">
-            <div className="wewrite-card p-8 md:p-10 text-center">
-              <div className="flex justify-center mb-4">
-                <Rocket className="h-10 w-10 text-primary" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-3">Ready to Start Writing & Earning?</h2>
-              <p className="text-lg text-muted-foreground mb-6 max-w-xl mx-auto">
-                Create your free account and publish your first page in minutes.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <AuthButton
-                  type="register"
-                  size="lg"
-                  variant="default"
-                  device="bottom_cta"
-                >
-                  Get Started Free
-                </AuthButton>
-                <AuthButton
-                  type="login"
-                  size="lg"
-                  variant="outline"
-                  device="bottom_cta"
-                >
-                  Sign In
-                </AuthButton>
+        {/* Ready to Start CTA Card - only show for logged out users */}
+        {!isAuthenticated && (
+          <section className="py-8 md:py-12">
+            <div className="container mx-auto px-6 max-w-4xl">
+              <div className="wewrite-card p-8 md:p-10 text-center">
+                <div className="flex justify-center mb-4">
+                  <Rocket className="h-10 w-10 text-primary" />
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3">Ready to Start Writing & Earning?</h2>
+                <p className="text-lg text-muted-foreground mb-6 max-w-xl mx-auto">
+                  Create your free account and publish your first page in minutes.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <AuthButton
+                    type="register"
+                    size="lg"
+                    variant="default"
+                    device="bottom_cta"
+                  >
+                    Get Started Free
+                  </AuthButton>
+                  <AuthButton
+                    type="login"
+                    size="lg"
+                    variant="outline"
+                    device="bottom_cta"
+                  >
+                    Sign In
+                  </AuthButton>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Bottom spacing for footer visibility */}
         <div className="pb-8 md:pb-6"></div>
