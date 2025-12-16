@@ -73,7 +73,7 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
  * - Fixed bottom toolbar with core navigation buttons
  * - Expandable "More" section for additional options
  * - Clean, maintainable code without complex drag-and-drop
- * - Consistent shadow styling with FloatingFinancialHeader
+ * - Consistent shadow styling with FinancialHeader
  */
 export default function MobileBottomNav() {
   const pathname = usePathname();

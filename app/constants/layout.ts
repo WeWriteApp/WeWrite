@@ -166,7 +166,7 @@ export type ScreenSize = 'mobile' | 'small' | 'large';
 // ============================================================================
 
 /**
- * Routes where the FloatingFinancialHeader and MobileBottomNav should be SHOWN.
+ * Routes where the FinancialHeader and MobileBottomNav should be SHOWN.
  * These are "NavPage" routes - standard navigation pages with full app chrome.
  *
  * Routes NOT in this list (like content pages /[pageId]) will hide nav elements.

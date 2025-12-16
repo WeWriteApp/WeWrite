@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { ChevronLeft, DollarSign, Loader2 } from "lucide-react";
+import { DollarSign, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { WeWriteLogo } from "../ui/WeWriteLogo";
 import { useAuth } from '../../providers/AuthProvider';
@@ -20,12 +19,12 @@ import { cn } from "../../lib/utils";
 import { shouldShowNavigation } from "../../constants/layout";
 import { useBanner } from "../../providers/BannerProvider";
 
-export interface FloatingFinancialHeaderProps {
+export interface FinancialHeaderProps {
   className?: string;
 }
 
 /**
- * FloatingFinancialHeader Component
+ * FinancialHeader Component
  *
  * Sticky header for logged-in users with:
  * - Left: Spend/balance display
@@ -33,12 +32,11 @@ export interface FloatingFinancialHeaderProps {
  * - Right: Earnings display
  * - Position: Full-width sticky at top, shadow appears on scroll
  * - Respects sidebar positioning on desktop
- * - More spatially efficient than floating design
  */
 
-export default function FloatingFinancialHeader({
+export default function FinancialHeader({
   className = ""
-}: FloatingFinancialHeaderProps) {
+}: FinancialHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -81,7 +79,7 @@ export default function FloatingFinancialHeader({
     if (!pathname) return false;
 
     // Hide when save banner is visible (content page editing mode)
-    // This ensures FloatingFinancialHeader doesn't overlap with StickySaveHeader
+    // This ensures FinancialHeader doesn't overlap with StickySaveHeader
     if (showSaveBanner) {
       return true;
     }
@@ -103,7 +101,7 @@ export default function FloatingFinancialHeader({
     return null;
   }
 
-  // Helper function to render earnings display (same as homepage)
+  // Helper function to render earnings display
   const renderEarningsDisplay = () => {
     // Don't show anything for unauthenticated users
     if (!user?.uid) return null;
@@ -146,7 +144,7 @@ export default function FloatingFinancialHeader({
           }
           content={<EarningsBreakdown
             totalEarnings={earnings.totalEarnings || 0}
-            pendingEarnings={displayAmount} // Show the same amount as the badge
+            pendingEarnings={displayAmount}
             lastMonthEarnings={earnings.lastMonthEarnings || 0}
             monthlyChange={earnings.monthlyChange || 0}
           />}
@@ -178,23 +176,12 @@ export default function FloatingFinancialHeader({
     );
   };
 
-  // Helper function to render spend/overspend display (same as homepage)
+  // Helper function to render spend/overspend display
   const renderSpendDisplay = () => {
     // Don't show anything for unauthenticated users
     if (!user) {
       return null;
     }
-
-    // Debug logging to help diagnose the "Add Funds" issue
-    console.log('🔍 FloatingFinancialHeader Debug:', {
-      userId: user?.uid,
-      hasActiveSubscription,
-      shouldUseDemoBalance,
-      usdBalance,
-      demoBalance,
-      usdLoading,
-      subscription: hasActiveSubscription ? 'active' : 'inactive'
-    });
 
     // Determine which balance to use
     const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
@@ -219,18 +206,6 @@ export default function FloatingFinancialHeader({
     const shouldShowAddFunds = !hasActiveSubscription ||
       (currentBalance && currentBalance.totalUsdCents === 0) ||
       (!currentBalance && !isLoading);
-
-    console.log('🔍 FloatingFinancialHeader Add Funds Logic:', {
-      shouldShowAddFunds,
-      hasActiveSubscription,
-      currentBalance,
-      isLoading,
-      reasons: {
-        noActiveSubscription: !hasActiveSubscription,
-        zeroBalance: currentBalance && currentBalance.totalUsdCents === 0,
-        noBalanceAndNotLoading: !currentBalance && !isLoading
-      }
-    });
 
     if (shouldShowAddFunds) {
       return (
@@ -303,55 +278,58 @@ export default function FloatingFinancialHeader({
     return null;
   };
 
+  // Shared header content - DRY principle
+  const HeaderContent = () => (
+    <div className="relative flex items-center justify-between py-3">
+      {/* Spend/Overspend Display (left side) */}
+      <div className="flex items-center">
+        {renderSpendDisplay()}
+      </div>
 
+      {/* Logo/Title (absolutely centered) - clickable to go home */}
+      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <WeWriteLogo
+          size="md"
+          styled={true}
+          clickable={true}
+          showText={false}
+          priority={true}
+        />
+      </div>
+
+      {/* Earnings Display (right side) */}
+      <div className="flex items-center">
+        {renderEarningsDisplay()}
+      </div>
+    </div>
+  );
+
+  // Shared header classes
+  const headerClasses = cn(
+    "fixed left-0 right-0 z-fixed-header wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding transition-shadow duration-200",
+    isScrolled && "shadow-sm"
+  );
+
+  const headerStyle = {
+    top: 'var(--banner-stack-height, 0px)',
+  };
 
   return (
     <>
       {/* Mobile: Full-width sticky header - card style with bottom border */}
       <header
-        className={cn(
-          "md:hidden fixed left-0 right-0 z-fixed-header wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding transition-shadow duration-200",
-          isScrolled && "shadow-sm"
-        )}
-        style={{
-          top: 'var(--banner-stack-height, 0px)',
-        }}
+        className={cn(headerClasses, "md:hidden")}
+        style={headerStyle}
       >
         <div className="mx-auto px-5 max-w-4xl">
-          <div className="relative flex items-center justify-between py-3">
-            {/* Spend/Overspend Display (left side) */}
-            <div className="flex items-center">
-              {renderSpendDisplay()}
-            </div>
-
-            {/* Logo/Title (absolutely centered) - clickable to go home */}
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <WeWriteLogo
-                size="md"
-                styled={true}
-                clickable={true}
-                showText={false}
-                priority={true}
-              />
-            </div>
-
-            {/* Earnings Display (right side) */}
-            <div className="flex items-center">
-              {renderEarningsDisplay()}
-            </div>
-          </div>
+          <HeaderContent />
         </div>
       </header>
 
       {/* Desktop: Full-width sticky header respecting sidebar - card style with bottom border */}
       <header
-        className={cn(
-          "hidden md:block fixed left-0 right-0 z-fixed-header wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding transition-shadow duration-200",
-          isScrolled && "shadow-sm"
-        )}
-        style={{
-          top: 'var(--banner-stack-height, 0px)',
-        }}
+        className={cn(headerClasses, "hidden md:block")}
+        style={headerStyle}
       >
         <div
           className="px-5 transition-all duration-300 ease-in-out"
@@ -360,28 +338,7 @@ export default function FloatingFinancialHeader({
           }}
         >
           <div className="mx-auto max-w-4xl">
-            <div className="relative flex items-center justify-between py-3">
-              {/* Spend/Overspend Display (left side) */}
-              <div className="flex items-center">
-                {renderSpendDisplay()}
-              </div>
-
-              {/* Logo/Title (absolutely centered) - clickable to go home */}
-              <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <WeWriteLogo
-                  size="md"
-                  styled={true}
-                  clickable={true}
-                  showText={false}
-                  priority={true}
-                />
-              </div>
-
-              {/* Earnings Display (right side) */}
-              <div className="flex items-center">
-                {renderEarningsDisplay()}
-              </div>
-            </div>
+            <HeaderContent />
           </div>
         </div>
       </header>

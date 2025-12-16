@@ -2,7 +2,7 @@
 
 :root {
   /* Z-index scale - Proper stacking order */
-  --z-fixed-header: 70;      /* FloatingFinancialHeader - body content layer */
+  --z-fixed-header: 70;      /* FinancialHeader - body content layer */
   --z-fixed-toolbar: 80;     /* Navigation (sidebar, mobile nav) - above body content */
   --z-fixed-fab: 90;         /* FloatingActionButton - above navigation */
   --z-overlay: 100;          /* Overlays and backdrops */

@@ -14,7 +14,7 @@ const BANNER_HEIGHT = 40; // Height in pixels
  * EmailVerificationTopBanner
  *
  * A full-width top banner that pushes all content down,
- * including the FloatingFinancialHeader. This banner is sticky at the
+ * including the FinancialHeader. This banner is sticky at the
  * very top of the viewport on both mobile and desktop.
  *
  * The banner is always present until the user verifies their email.
