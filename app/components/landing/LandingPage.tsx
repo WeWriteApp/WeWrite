@@ -25,11 +25,16 @@ import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
 import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
-import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2, Copy, Check, UserPlus, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2, Copy, Check, UserPlus, LayoutDashboard, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
+import { useRouter, usePathname } from 'next/navigation';
+import { LANDING_VERTICALS, getVerticalSlugs } from '../../constants/landing-verticals';
 
 interface LandingPageProps {
   showReferralSection?: boolean;
+  // When true, shows the landing page as a preview for authenticated users
+  // This shows Sign In/Sign Up buttons and adds a preview banner
+  isPreviewMode?: boolean;
   // Optional vertical-specific hero text overrides
   heroTitle?: string;
   heroSubtitle?: string;
@@ -40,7 +45,7 @@ interface ReferralStats {
   recentReferrals: { username: string; joinedAt: string }[];
 }
 
-const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: LandingPageProps) => {
+const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroTitle, heroSubtitle }: LandingPageProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
@@ -52,9 +57,13 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
 
   const { setTheme, theme } = useTheme();
   const [session, setUser] = useState<any>(null);
+  const router = useRouter();
 
   // Authentication state
   const { user, isAuthenticated } = useAuth();
+
+  // Determine if we're showing as a preview (authenticated user viewing landing page)
+  const showAsPreview = isPreviewMode && isAuthenticated;
 
   // Analytics hook for tracking
   const analytics = useWeWriteAnalytics();
@@ -270,10 +279,52 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
     <div className="landing-page-root min-h-screen bg-background dark:bg-background">
       {/* Background blobs are now rendered globally via GlobalLandingBlobs for persistence */}
 
+      {/* Preview Mode Banner - shown for authenticated users viewing the landing page as a preview */}
+      {/* This is a fixed banner that integrates with the landing page's own header system */}
+      {showAsPreview && (
+        <div
+          className="fixed left-0 right-0 z-[60] bg-primary text-primary-foreground"
+          style={{
+            top: 0,
+            height: '48px',
+          }}
+        >
+          <div className="container mx-auto max-w-4xl px-4 py-3 h-full flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/invite')}
+              className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyInviteLink}
+              className="flex items-center gap-2 bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+            >
+              {inviteLinkCopied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy referral link
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Desktop Navigation */}
       <header
         className={`fixed left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'}`}
-        style={{ top: 'var(--banner-stack-height, 0px)' }}
+        style={{ top: showAsPreview ? '48px' : 'var(--banner-stack-height, 0px)' }}
       >
         {/* Glassmorphic background with bottom border - uses card theme CSS variables for consistent styling */}
         <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
@@ -305,7 +356,8 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
 
           <div className="flex items-center space-x-4">
             <ModeToggle />
-            {!isAuthenticated ? (
+            {/* In preview mode OR when not authenticated, always show Sign In/Sign Up buttons */}
+            {(!isAuthenticated || showAsPreview) ? (
               <>
                 <AuthButton
                   type="login"
@@ -320,16 +372,6 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
                   Create Account
                 </AuthButton>
               </>
-            ) : isAuthenticated ? (
-              <Button
-                variant="default"
-                asChild
-              >
-                <Link href="/home">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
-                </Link>
-              </Button>
             ) : (
               <Button
                 variant="success"
@@ -347,7 +389,7 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
       {/* Mobile Navigation */}
       <div
         className={`${isMobileView ? 'block' : 'hidden'} fixed left-0 right-0 z-50 flex flex-col w-full`}
-        style={{ top: 'var(--banner-stack-height, 0px)' }}
+        style={{ top: showAsPreview ? '48px' : 'var(--banner-stack-height, 0px)' }}
       >
         {/* Glassmorphic background with bottom border - uses card theme CSS variables for consistent styling */}
         <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
@@ -375,7 +417,8 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
 
             <div className="flex items-center space-x-2">
               <ModeToggle />
-              {!isAuthenticated ? (
+              {/* In preview mode OR when not authenticated, always show Sign In/Sign Up buttons */}
+              {(!isAuthenticated || showAsPreview) ? (
                 <>
                   <AuthButton
                     type="login"
@@ -392,17 +435,6 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
                     Sign Up
                   </AuthButton>
                 </>
-              ) : isAuthenticated ? (
-                <Button
-                  variant="default"
-                  size="sm"
-                  asChild
-                >
-                  <Link href="/home">
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    Back to Home
-                  </Link>
-                </Button>
               ) : (
                 <Button
                   variant="default"
@@ -419,7 +451,7 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
 
       </div>
 
-      <main className={`${isMobileView ? 'pt-16' : 'pt-16'}`}>
+      <main className="pt-16" style={{ paddingTop: showAsPreview ? 'calc(64px + 48px)' : undefined }}>
         {/* Hero Card Section */}
         <section className="py-4 md:py-6 pt-6 md:pt-8">
           <div className="container mx-auto px-6 max-w-4xl space-y-8">
@@ -436,7 +468,8 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
             />
 
             {/* Referral Section for Authenticated Users */}
-            {showReferralSection && isAuthenticated && (
+            {/* Hide referral section in preview mode - the preview banner handles copy link functionality */}
+            {showReferralSection && isAuthenticated && !showAsPreview && (
               <div className="wewrite-card p-6 md:p-8">
                 <div className="flex items-center gap-3 mb-4">
                   <UserPlus className="h-6 w-6 text-primary" />
@@ -655,6 +688,41 @@ const LandingPage = ({ showReferralSection = false, heroTitle, heroSubtitle }: L
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* Browse by Community Section - shows all vertical landing pages */}
+        <section className="py-12 md:py-16 bg-muted/30">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">WeWrite for Your Community</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                See how WeWrite works for different types of creators
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {getVerticalSlugs().map((slug) => {
+                const vertical = LANDING_VERTICALS[slug];
+                return (
+                  <Link
+                    key={slug}
+                    href={`/welcome/${slug}`}
+                    className="wewrite-card p-5 hover:bg-muted/50 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                        {vertical.name}
+                      </h3>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {vertical.heroTitle}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>

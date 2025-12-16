@@ -1,25 +1,65 @@
-"use client";
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getVertical, getVerticalSlugs, isValidVertical, LANDING_VERTICALS } from '../../constants/landing-verticals';
+import VerticalLandingClient from './VerticalLandingClient';
 
-import React from 'react';
-import { useParams, notFound } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
-import LandingPage from '../../components/landing/LandingPage';
-import { getVertical, isValidVertical } from '../../constants/landing-verticals';
+interface Props {
+  params: Promise<{ vertical: string }>;
+}
+
+/**
+ * Generate static paths for all verticals
+ */
+export async function generateStaticParams() {
+  return getVerticalSlugs().map((slug) => ({
+    vertical: slug,
+  }));
+}
+
+/**
+ * Generate SEO metadata for each vertical landing page
+ */
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { vertical: verticalSlug } = await params;
+
+  if (!isValidVertical(verticalSlug)) {
+    return {
+      title: 'Page Not Found | WeWrite',
+    };
+  }
+
+  const vertical = getVertical(verticalSlug);
+
+  return {
+    title: vertical.metaTitle,
+    description: vertical.metaDescription,
+    keywords: vertical.keywords,
+    openGraph: {
+      title: vertical.metaTitle,
+      description: vertical.metaDescription,
+      type: 'website',
+      siteName: 'WeWrite',
+      url: `https://wewrite.app/welcome/${verticalSlug}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: vertical.metaTitle,
+      description: vertical.metaDescription,
+    },
+    alternates: {
+      canonical: `https://wewrite.app/welcome/${verticalSlug}`,
+    },
+  };
+}
 
 /**
  * Vertical-specific landing page
  *
- * Displays the landing page with customized hero text for specific verticals:
- * - /welcome/writers
- * - /welcome/journalism
- * - /welcome/homeschool
- * - /welcome/politics
- * - /welcome/research
+ * Displays the landing page with customized hero text for specific verticals.
+ * All verticals use the same LandingPage component - only the hero text changes.
  */
-export default function VerticalWelcomePage() {
-  const { isLoading } = useAuth();
-  const params = useParams();
-  const verticalSlug = params.vertical as string;
+export default async function VerticalWelcomePage({ params }: Props) {
+  const { vertical: verticalSlug } = await params;
 
   // Validate the vertical slug
   if (!isValidVertical(verticalSlug)) {
@@ -28,21 +68,8 @@ export default function VerticalWelcomePage() {
 
   const vertical = getVertical(verticalSlug);
 
-  // Show loading state while checking auth
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="h-8 w-32 bg-muted rounded-md" />
-        </div>
-      </div>
-    );
-  }
-
-  // Show landing page with vertical-specific hero text
   return (
-    <LandingPage
-      showReferralSection={true}
+    <VerticalLandingClient
       heroTitle={vertical.heroTitle}
       heroSubtitle={vertical.heroSubtitle}
     />
