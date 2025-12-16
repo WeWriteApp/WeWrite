@@ -18,6 +18,7 @@ import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/Fina
 import { useSidebarContext } from './UnifiedSidebar';
 import { cn } from "../../lib/utils";
 import { shouldShowNavigation } from "../../constants/layout";
+import { useBanner } from "../../providers/BannerProvider";
 
 export interface FloatingFinancialHeaderProps {
   className?: string;
@@ -47,6 +48,7 @@ export default function FloatingFinancialHeader({
   const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
   const { demoBalance } = useDemoBalance();
   const { sidebarWidth, isExpanded } = useSidebarContext();
+  const { showSaveBanner } = useBanner();
 
   // Scroll detection for conditional shadow
   const [isScrolled, setIsScrolled] = useState(false);
@@ -78,6 +80,12 @@ export default function FloatingFinancialHeader({
   const shouldHideHeader = React.useMemo(() => {
     if (!pathname) return false;
 
+    // Hide when save banner is visible (content page editing mode)
+    // This ensures FloatingFinancialHeader doesn't overlap with StickySaveHeader
+    if (showSaveBanner) {
+      return true;
+    }
+
     // Use centralized navigation config - returns true if nav should show
     const showNav = shouldShowNavigation(pathname);
 
@@ -88,7 +96,7 @@ export default function FloatingFinancialHeader({
     }
 
     return !showNav;
-  }, [pathname]);
+  }, [pathname, showSaveBanner]);
 
   // Don't render the header if it should be hidden
   if (shouldHideHeader) {
