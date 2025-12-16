@@ -5,7 +5,7 @@ import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { Button } from '../components/ui/button';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Copy, Check, ExternalLink, Users, DollarSign, Lock, TrendingUp, PenLine, Newspaper, GraduationCap, Megaphone, FlaskConical, Globe } from 'lucide-react';
+import { UserPlus, Copy, Check, ExternalLink, Users, DollarSign, Lock, TrendingUp, PenLine, Newspaper, GraduationCap, Megaphone, FlaskConical, Globe, ChevronDown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { LANDING_VERTICALS, getVerticalSlugs } from '../constants/landing-verticals';
 
@@ -42,8 +42,8 @@ export default function InviteFriendsPage() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [copiedVertical, setCopiedVertical] = useState<string | null>(null);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [revenue, setRevenue] = useState<ReferralRevenue | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,22 +90,6 @@ export default function InviteFriendsPage() {
       fetchData();
     }
   }, [user?.uid]);
-
-  const referralLink = typeof window !== 'undefined' && user?.uid
-    ? `${window.location.origin}/welcome?ref=${user.uid}`
-    : '';
-
-  const copyToClipboard = async () => {
-    if (!referralLink) return;
-
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-    }
-  };
 
   // Copy vertical-specific referral link
   const copyVerticalLink = async (verticalSlug: string) => {
@@ -201,105 +185,64 @@ export default function InviteFriendsPage() {
     <NavPageLayout>
       {/* Page Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">Invite Friends</h1>
-          </div>
-          <Button
-            variant="secondary"
-            onClick={() => router.push('/welcome')}
-            className="flex items-center gap-2 rounded-2xl h-8 px-3"
-          >
-            <ExternalLink className="h-4 w-4" />
-            <span className="hidden sm:inline">View Landing</span>
-          </Button>
+        <div className="flex items-center gap-3 mb-4">
+          <h1 className="text-3xl font-bold">Invite Friends</h1>
         </div>
         <p className="text-muted-foreground text-lg">
           Share WeWrite with friends and earn 30% of the payout fee when they cash out their earnings.
         </p>
       </div>
 
-      {/* Invite Link Section */}
-      <div className="mb-8 p-6 bg-muted/30 rounded-2xl border border-border">
-        <div className="flex items-center gap-2 mb-4">
-          <UserPlus className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Your Invite Link</h2>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 bg-background border border-border rounded-xl px-4 py-3 font-mono text-sm break-all">
-            {referralLink || 'Loading...'}
+      {/* Stats Cards - horizontally scrollable on mobile */}
+      <div className="mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-3 overflow-x-auto pb-2 sm:pb-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible">
+          <div className="flex-shrink-0 w-[160px] sm:w-auto p-4 sm:p-6 border border-border rounded-2xl bg-card">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Invited</p>
+                <p className="text-xl sm:text-2xl font-bold">
+                  {loading ? (
+                    <span className="inline-block w-8 h-6 bg-muted rounded animate-pulse" />
+                  ) : (
+                    totalReferrals
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
-          <Button
-            onClick={copyToClipboard}
-            variant={copied ? "success" : "default"}
-            className="flex items-center gap-2 rounded-xl"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy Link
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
-        <div className="p-6 border border-border rounded-2xl bg-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Users Invited</p>
-              <p className="text-2xl font-bold">
-                {loading ? (
-                  <span className="inline-block w-8 h-6 bg-muted rounded animate-pulse" />
-                ) : (
-                  totalReferrals
-                )}
-              </p>
+          <div className="flex-shrink-0 w-[160px] sm:w-auto p-4 sm:p-6 border border-border rounded-2xl bg-card">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Earnings</p>
+                <p className="text-xl sm:text-2xl font-bold">
+                  {loading ? (
+                    <span className="inline-block w-16 h-6 bg-muted rounded animate-pulse" />
+                  ) : (
+                    formatCurrency(totalEarned)
+                  )}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="p-6 border border-border rounded-2xl bg-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Referral Earnings</p>
-              <p className="text-2xl font-bold">
-                {loading ? (
-                  <span className="inline-block w-16 h-6 bg-muted rounded animate-pulse" />
-                ) : (
-                  formatCurrency(totalEarned)
-                )}
-              </p>
+          <div className="flex-shrink-0 w-[160px] sm:w-auto p-4 sm:p-6 border border-border rounded-2xl bg-card">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-purple-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Your Share</p>
+                <p className="text-xl sm:text-2xl font-bold">30%</p>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="p-6 border border-border rounded-2xl bg-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Your Share</p>
-              <p className="text-2xl font-bold">30%</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            of the 10% payout fee
-          </p>
         </div>
       </div>
 
@@ -379,27 +322,10 @@ export default function InviteFriendsPage() {
             <UserPlus className="h-8 w-8 text-primary" />
           </div>
           <h3 className="text-lg font-semibold mb-2">No Referrals Yet</h3>
-          <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Share your invite link with friends to start earning. When they sign up and
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Share your invite links with friends to start earning. When they sign up and
             cash out their earnings, you'll receive 30% of the payout fee.
           </p>
-          <Button
-            onClick={copyToClipboard}
-            variant={copied ? "success" : "default"}
-            className="rounded-xl"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Invite Link
-              </>
-            )}
-          </Button>
         </div>
       )}
 
@@ -410,39 +336,76 @@ export default function InviteFriendsPage() {
           Targeted Landing Pages
         </h2>
         <p className="text-muted-foreground mb-6">
-          Share links customized for specific audiences. Each landing page has messaging tailored to that community.
+          Share links customized for specific audiences. Click on a card to see options.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {/* General Landing Page */}
           <div
-            className="p-4 border border-border rounded-xl bg-card hover:bg-muted/50 transition-colors cursor-pointer"
-            onClick={() => router.push('/welcome')}
+            className={cn(
+              "p-4 border border-border rounded-xl bg-card transition-all cursor-pointer",
+              expandedCard === 'general' ? "ring-2 ring-primary" : "hover:bg-muted/50"
+            )}
+            onClick={() => setExpandedCard(expandedCard === 'general' ? null : 'general')}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                  {getVerticalIcon('general')}
-                </div>
-                <div>
-                  <p className="font-medium">General</p>
-                  <p className="text-xs text-muted-foreground">/welcome</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                {getVerticalIcon('general')}
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">General</p>
+                <p className="text-xs text-muted-foreground">/welcome</p>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                  expandedCard === 'general' && "rotate-180"
+                )}
+              />
+            </div>
+            {/* Expanded actions */}
+            <div
+              className={cn(
+                "grid transition-all duration-200 ease-out",
+                expandedCard === 'general' ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push('/welcome');
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
+                  <Button
+                    variant={copiedVertical === 'general' ? 'success' : 'default'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyVerticalLink('general');
+                    }}
+                  >
+                    {copiedVertical === 'general' ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant={copiedVertical === 'general' ? 'success' : 'ghost'}
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyVerticalLink('general');
-                }}
-              >
-                {copiedVertical === 'general' ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
             </div>
           </div>
 
@@ -452,34 +415,71 @@ export default function InviteFriendsPage() {
             .map(([slug, vertical]) => (
             <div
               key={slug}
-              className="p-4 border border-border rounded-xl bg-card hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => router.push(`/welcome/${slug}`)}
+              className={cn(
+                "p-4 border border-border rounded-xl bg-card transition-all cursor-pointer",
+                expandedCard === slug ? "ring-2 ring-primary" : "hover:bg-muted/50"
+              )}
+              onClick={() => setExpandedCard(expandedCard === slug ? null : slug)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                    {getVerticalIcon(slug)}
-                  </div>
-                  <div>
-                    <p className="font-medium">{vertical.name}</p>
-                    <p className="text-xs text-muted-foreground">/welcome/{slug}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                  {getVerticalIcon(slug)}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{vertical.name}</p>
+                  <p className="text-xs text-muted-foreground">/welcome/{slug}</p>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                    expandedCard === slug && "rotate-180"
+                  )}
+                />
+              </div>
+              {/* Expanded actions */}
+              <div
+                className={cn(
+                  "grid transition-all duration-200 ease-out",
+                  expandedCard === slug ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/welcome/${slug}`);
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                    <Button
+                      variant={copiedVertical === slug ? 'success' : 'default'}
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyVerticalLink(slug);
+                      }}
+                    >
+                      {copiedVertical === slug ? (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy Link
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
-                <Button
-                  variant={copiedVertical === slug ? 'success' : 'ghost'}
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyVerticalLink(slug);
-                  }}
-                >
-                  {copiedVertical === slug ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
               </div>
             </div>
           ))}

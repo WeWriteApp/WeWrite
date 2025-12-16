@@ -219,6 +219,43 @@ export function LandingColorProvider({ children }: LandingColorProviderProps) {
   // Compute colors whenever hue or theme changes
   const colors = useMemo(() => computeColors(hue, isDark), [hue, isDark]);
 
+  // Store original CSS variables on mount to restore when leaving landing pages
+  const [originalCssVars, setOriginalCssVars] = useState<Record<string, string | null> | null>(null);
+
+  // Capture original CSS variables on mount
+  useEffect(() => {
+    const root = document.documentElement;
+    const computedStyle = getComputedStyle(root);
+
+    // Save all the CSS variables we're going to modify
+    const varsToSave = [
+      '--accent-h', '--accent-l', '--accent-c',
+      '--accent-base', '--primary',
+      '--card-bg', '--card-bg-hover', '--card-border', '--card-border-hover',
+      '--neutral-base', '--primary-foreground'
+    ];
+
+    const saved: Record<string, string | null> = {};
+    varsToSave.forEach(varName => {
+      // Get the inline style value (what we set) or null
+      saved[varName] = root.style.getPropertyValue(varName) || null;
+    });
+
+    setOriginalCssVars(saved);
+
+    // Cleanup: restore original values when unmounting
+    return () => {
+      varsToSave.forEach(varName => {
+        if (saved[varName]) {
+          root.style.setProperty(varName, saved[varName]);
+        } else {
+          // Remove the inline style to let CSS cascade take over
+          root.style.removeProperty(varName);
+        }
+      });
+    };
+  }, []); // Only run on mount/unmount
+
   // Also update CSS variables so that all page elements using CSS classes get the animated colors
   // This allows buttons, badges, and other elements to reflect the scroll-based color
   useEffect(() => {
