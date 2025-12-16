@@ -225,7 +225,7 @@ export default function LocationField({
         {/* Map below header - only show if location exists */}
         {normalizedLocation && (
           <div
-            className={`h-40 md:h-48 border-t border-theme-light -mx-4 -mb-4 mt-4 ${canEdit ? 'cursor-pointer' : ''}`}
+            className={`h-40 md:h-48 border-t border-theme-light -mx-3 md:-mx-4 -mb-3 md:-mb-4 mt-4 ${canEdit ? 'cursor-pointer' : ''}`}
             onClick={canEdit ? handleLocationClick : undefined}
           >
             <MapPicker

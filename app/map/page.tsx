@@ -117,13 +117,13 @@ function MapPageContent() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const minSwipeDistance = 50;
 
+  // Track if selection change came from scroll (to avoid scroll loop)
+  const isScrollingRef = useRef(false);
+
   // New pin placement state
   const [newPinLocation, setNewPinLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showNewPinDrawer, setShowNewPinDrawer] = useState(false);
   const newPinMarkerRef = useRef<any>(null);
-
-  // Track if map should pan to marker (only when user interacts with card/buttons)
-  const [shouldPanToMarker, setShouldPanToMarker] = useState(false);
 
   // Share button state
   const [shareSuccess, setShareSuccess] = useState(false);
@@ -412,18 +412,15 @@ function MapPageContent() {
         }
       }
 
-      // Only pan to marker if user interacted with card/buttons
-      if (shouldPanToMarker) {
-        map.panTo([selectedPage.location.lat, selectedPage.location.lng], {
-          animate: true,
-          duration: 0.3
-        });
-        setShouldPanToMarker(false);
-      }
+      // Always pan to marker when selection changes
+      map.panTo([selectedPage.location.lat, selectedPage.location.lng], {
+        animate: true,
+        duration: 0.3
+      });
     }
 
-    // Scroll carousel to the selected card
-    if (carouselRef.current && selectedIndex >= 0) {
+    // Scroll carousel to the selected card (only if not triggered by scroll)
+    if (carouselRef.current && selectedIndex >= 0 && !isScrollingRef.current) {
       const cards = carouselRef.current.querySelectorAll('[data-card-index]');
       const targetCard = cards[selectedIndex] as HTMLElement;
       if (targetCard) {
@@ -434,7 +431,55 @@ function MapPageContent() {
         });
       }
     }
-  }, [selectedIndex, selectedPage, mapReady, shouldPanToMarker]);
+    isScrollingRef.current = false;
+  }, [selectedIndex, selectedPage, mapReady]);
+
+  // Handle carousel scroll to detect which card is centered
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel || pages.length === 0) return;
+
+    let scrollTimeout: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      // Debounce scroll detection
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const cards = carousel.querySelectorAll('[data-card-index]');
+        if (cards.length === 0) return;
+
+        const carouselRect = carousel.getBoundingClientRect();
+        const carouselCenter = carouselRect.left + carouselRect.width / 2;
+
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+
+        cards.forEach((card, index) => {
+          const cardRect = card.getBoundingClientRect();
+          const cardCenter = cardRect.left + cardRect.width / 2;
+          const distance = Math.abs(cardCenter - carouselCenter);
+
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = index;
+          }
+        });
+
+        // Only update if the index changed
+        if (closestIndex !== selectedIndex) {
+          isScrollingRef.current = true;
+          setSelectedIndex(closestIndex);
+        }
+      }, 100);
+    };
+
+    carousel.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      clearTimeout(scrollTimeout);
+      carousel.removeEventListener('scroll', handleScroll);
+    };
+  }, [pages.length, selectedIndex]);
 
   // Refetch when bounds change significantly
   useEffect(() => {
@@ -452,16 +497,14 @@ function MapPageContent() {
     }
   }, [currentBounds, fetchMapPages, loading]);
 
-  // Navigation functions - set shouldPanToMarker when user clicks buttons
+  // Navigation functions
   const navigateToPrevious = useCallback(() => {
     if (pages.length === 0) return;
-    setShouldPanToMarker(true);
     setSelectedIndex(prev => (prev <= 0 ? pages.length - 1 : prev - 1));
   }, [pages.length]);
 
   const navigateToNext = useCallback(() => {
     if (pages.length === 0) return;
-    setShouldPanToMarker(true);
     setSelectedIndex(prev => (prev >= pages.length - 1 ? 0 : prev + 1));
   }, [pages.length]);
 
@@ -482,10 +525,8 @@ function MapPageContent() {
     const isRightSwipe = distance < -minSwipeDistance;
 
     if (isLeftSwipe) {
-      setShouldPanToMarker(true);
       navigateToNext();
     } else if (isRightSwipe) {
-      setShouldPanToMarker(true);
       navigateToPrevious();
     }
   };
@@ -557,7 +598,7 @@ function MapPageContent() {
       <div
         className="fixed inset-0 overflow-hidden"
         style={{
-          top: '72px', // Account for floating header
+          top: 0, // Map goes to top, behind the floating header
           touchAction: 'none' // Prevent browser handling of touch gestures
         }}
       >
@@ -610,7 +651,7 @@ function MapPageContent() {
 
         {/* Bottom Page Cards - Carousel with peeking cards */}
         {pages.length > 0 && !showNewPinDrawer && (
-          <div className="absolute bottom-20 left-0 right-0 z-10" style={{ touchAction: 'pan-x' }}>
+          <div className="absolute bottom-24 left-0 right-0 z-10" style={{ touchAction: 'pan-x' }}>
             {/* Floating Navigation Buttons - positioned relative to carousel */}
             {pages.length > 1 && (
               <>
@@ -671,7 +712,6 @@ function MapPageContent() {
                           if (isActive) {
                             router.push(`/${page.id}`);
                           } else {
-                            setShouldPanToMarker(true);
                             setSelectedIndex(index);
                           }
                         }}
@@ -788,7 +828,7 @@ export default function MapPage() {
   return (
     <Suspense fallback={
       <NavPageLayout maxWidth="full" className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
-        <div className="fixed inset-0 flex items-center justify-center" style={{ top: '72px' }}>
+        <div className="fixed inset-0 flex items-center justify-center" style={{ top: 0 }}>
           <div className="text-center space-y-2">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
             <p className="text-sm text-muted-foreground">Loading map...</p>
