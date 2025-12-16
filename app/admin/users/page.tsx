@@ -16,6 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import {
+  SideDrawer,
+  SideDrawerContent,
+  SideDrawerHeader,
+  SideDrawerBody,
+  SideDrawerFooter,
+  SideDrawerTitle,
+  SideDrawerDescription,
+} from "../../components/ui/side-drawer";
 import { Button } from "../../components/ui/button";
 
 type FinancialInfo = {
@@ -74,6 +83,154 @@ type Activity = {
   targetPageTitle?: string;
   actionUrl?: string;
 };
+
+// Upcoming notifications component - shows what automated emails will be sent to this user
+function UpcomingNotifications({ user }: { user: User }) {
+  const [loading, setLoading] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<Array<{
+    id: string;
+    name: string;
+    reason: string;
+    eligible: boolean;
+    nextSendDate?: string;
+  }>>([]);
+
+  React.useEffect(() => {
+    const calculateUpcoming = () => {
+      setLoading(true);
+      const upcoming: typeof notifications = [];
+
+      // 1. Email verification reminder - for unverified users
+      if (!user.emailVerified) {
+        upcoming.push({
+          id: 'verification-reminder',
+          name: 'Email Verification Reminder',
+          reason: 'User has not verified their email',
+          eligible: true,
+          nextSendDate: 'Next cron run (daily)'
+        });
+      }
+
+      // 2. Username reminder - for users with auto-generated usernames
+      const hasAutoUsername = user.username?.startsWith('user_') || !user.username;
+      if (hasAutoUsername) {
+        upcoming.push({
+          id: 'username-reminder',
+          name: 'Choose Username Reminder',
+          reason: 'User has auto-generated or no username',
+          eligible: true,
+          nextSendDate: 'Next cron run (daily)'
+        });
+      }
+
+      // 3. Payout setup reminder - for users with earnings but no Stripe connected
+      const hasEarnings = (user.financial?.availableEarningsUsd ?? 0) >= 25;
+      const hasStripe = !!user.stripeConnectedAccountId || user.financial?.payoutsSetup;
+      if (hasEarnings && !hasStripe) {
+        upcoming.push({
+          id: 'payout-setup-reminder',
+          name: 'Payout Setup Reminder',
+          reason: `Has $${(user.financial?.availableEarningsUsd ?? 0).toFixed(2)} available but no payout method`,
+          eligible: true,
+          nextSendDate: 'Next cron run (daily)'
+        });
+      }
+
+      // 4. Reactivation email - for dormant users (not active in 30+ days)
+      const lastActive = user.lastLogin;
+      if (lastActive) {
+        const lastActiveDate = lastActive?.toDate?.() ||
+          (lastActive?._seconds ? new Date(lastActive._seconds * 1000) : new Date(lastActive));
+        const daysSinceActive = Math.floor((Date.now() - lastActiveDate.getTime()) / (24 * 60 * 60 * 1000));
+        if (daysSinceActive >= 30) {
+          upcoming.push({
+            id: 'reactivation',
+            name: 'Reactivation Email',
+            reason: `User inactive for ${daysSinceActive} days`,
+            eligible: true,
+            nextSendDate: 'Next cron run (weekly)'
+          });
+        }
+      }
+
+      // Add non-eligible items for context
+      if (user.emailVerified) {
+        upcoming.push({
+          id: 'verification-reminder',
+          name: 'Email Verification Reminder',
+          reason: 'Email already verified',
+          eligible: false
+        });
+      }
+
+      if (!hasAutoUsername && user.username) {
+        upcoming.push({
+          id: 'username-reminder',
+          name: 'Choose Username Reminder',
+          reason: 'User has custom username',
+          eligible: false
+        });
+      }
+
+      if (hasStripe) {
+        upcoming.push({
+          id: 'payout-setup-reminder',
+          name: 'Payout Setup Reminder',
+          reason: 'Stripe already connected',
+          eligible: false
+        });
+      }
+
+      setNotifications(upcoming);
+      setLoading(false);
+    };
+
+    calculateUpcoming();
+  }, [user]);
+
+  if (loading) {
+    return <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Checking...</div>;
+  }
+
+  const eligibleNotifications = notifications.filter(n => n.eligible);
+  const ineligibleNotifications = notifications.filter(n => !n.eligible);
+
+  return (
+    <div className="space-y-3">
+      {eligibleNotifications.length === 0 ? (
+        <div className="text-center py-2">No upcoming automated emails for this user.</div>
+      ) : (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-foreground mb-2">Will receive:</div>
+          {eligibleNotifications.map(n => (
+            <div key={n.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20">
+              <div className="flex-1">
+                <div className="font-medium text-amber-600 dark:text-amber-400">{n.name}</div>
+                <div className="text-xs text-muted-foreground">{n.reason}</div>
+              </div>
+              <Badge variant="outline" className="text-xs shrink-0">{n.nextSendDate}</Badge>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {ineligibleNotifications.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground mt-4 mb-2">Won&apos;t receive (conditions not met):</div>
+          {ineligibleNotifications.map(n => (
+            <div key={n.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/30">
+              <div className="flex-1">
+                <div className="font-medium text-muted-foreground">{n.name}</div>
+                <div className="text-xs text-muted-foreground/70">{n.reason}</div>
+              </div>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -493,7 +650,16 @@ export default function AdminUsersPage() {
 
   const formatDateTime = (value: any) => {
     if (!value) return "—";
-    const dateObj = value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value);
+    // Handle Firestore Timestamp with toDate method
+    if (value?.toDate) return value.toDate().toLocaleString();
+    // Handle serialized Firestore timestamp {_seconds, _nanoseconds}
+    if (value?._seconds !== undefined) {
+      return new Date(value._seconds * 1000).toLocaleString();
+    }
+    // Handle Date object
+    if (value instanceof Date) return value.toLocaleString();
+    // Handle ISO string or other formats
+    const dateObj = new Date(value);
     if (isNaN(dateObj.getTime())) return "—";
     return dateObj.toLocaleString();
   };
@@ -1075,9 +1241,7 @@ export default function AdminUsersPage() {
                           <div className="text-xs text-muted-foreground">{u.username || "—"}</div>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {u.createdAt?.toDate
-                            ? u.createdAt.toDate().toLocaleDateString()
-                            : u.createdAt || "—"}
+                          {formatDateTime(u.createdAt).split(',')[0]}
                         </div>
                       </div>
 
@@ -1291,208 +1455,223 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* User detail modal */}
-      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>User details</DialogTitle>
-            <DialogDescription>
+      {/* User detail side drawer */}
+      <SideDrawer open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <SideDrawerContent side="right" size="xl">
+          <SideDrawerHeader>
+            <SideDrawerTitle>User details</SideDrawerTitle>
+            <SideDrawerDescription>
               View subscription, payout, and account metadata for {selectedUser?.email || 'user'}.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="space-y-4 text-sm">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <div className="text-muted-foreground">Email</div>
-                  <div className="font-medium">{selectedUser.email}</div>
+            </SideDrawerDescription>
+          </SideDrawerHeader>
+          <SideDrawerBody>
+            {selectedUser && (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-3 grid-cols-2">
+                  <div>
+                    <div className="text-muted-foreground">Email</div>
+                    <div className="font-medium break-all">{selectedUser.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Username</div>
+                    <div className="font-medium">{selectedUser.username || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Admin</div>
+                    {selectedUser.isAdmin ? (
+                      <Badge variant="success-secondary">Admin</Badge>
+                    ) : (
+                      <Badge variant="outline-static">Not admin</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Email verified</div>
+                    <div className="flex items-center gap-2">
+                      {selectedUser.emailVerified ? (
+                        <Badge variant="success-secondary">Verified</Badge>
+                      ) : (
+                        <>
+                          <Badge variant="destructive-secondary">Unverified</Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleSendEmailVerification(selectedUser)}
+                            disabled={loadingAction === 'verify'}
+                          >
+                            {loadingAction === 'verify' ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : null}
+                            Send reminder
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Created</div>
+                    <div className="font-medium">{formatDateTime(selectedUser.createdAt)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Last login</div>
+                    <div className="font-medium">{formatDateTime(selectedUser.lastLogin)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Total pages</div>
+                    <div className="font-medium">{selectedUser.totalPages ?? '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Stripe account</div>
+                    <div className="font-medium break-all text-xs">{selectedUser.stripeConnectedAccountId || '—'}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Username</div>
-                  <div className="font-medium">{selectedUser.username || '—'}</div>
+
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-blue-400" />
+                    <span className="font-medium">Subscription</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {renderSubscription(selectedUser.financial)}
+                    {selectedUser.financial?.subscriptionAmount ? (
+                      <span className="text-muted-foreground text-xs">
+                        ${selectedUser.financial.subscriptionAmount.toFixed(2)} / mo
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Admin</div>
-                  {selectedUser.isAdmin ? (
-                    <Badge variant="success-secondary">Admin</Badge>
-                  ) : (
-                    <Badge variant="outline-static">Not admin</Badge>
+
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Banknote className="h-4 w-4 text-emerald-400" />
+                    <span className="font-medium">Payouts</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {renderPayout(selectedUser.financial, selectedUser.stripeConnectedAccountId)}
+                    <span className="text-muted-foreground text-xs">
+                      Available: {selectedUser.financial?.availableEarningsUsd !== undefined
+                        ? `$${selectedUser.financial.availableEarningsUsd.toFixed(2)}`
+                        : '—'}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Total: {selectedUser.financial?.earningsTotalUsd !== undefined
+                        ? `$${selectedUser.financial.earningsTotalUsd.toFixed(2)}`
+                        : '—'}
+                    </span>
+                  </div>
+                  {(selectedUser.financial?.availableEarningsUsd ?? 0) > 0 && !(selectedUser.financial?.payoutsSetup || selectedUser.stripeConnectedAccountId) && (
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={loadingAction !== null}
+                        onClick={() => handleSendPayoutReminder(selectedUser)}
+                      >
+                        {loadingAction === "notify" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send payout reminder"}
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Sends a notification reminding them to add a bank for payouts.
+                      </span>
+                    </div>
                   )}
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Email verified</div>
-                  <div className="flex items-center gap-2">
-                    {selectedUser.emailVerified ? (
-                      <Badge variant="success-secondary">Verified</Badge>
-                    ) : (
-                      <>
-                        <Badge variant="destructive-secondary">Unverified</Badge>
+
+                {/* Upcoming Notifications Section */}
+                <div className="rounded-lg border border-border bg-card">
+                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-4 w-4 text-amber-400" />
+                      <span className="font-medium">Upcoming Notifications</span>
+                    </div>
+                  </div>
+                  <div className="p-4 text-sm text-muted-foreground">
+                    <UpcomingNotifications user={selectedUser} />
+                  </div>
+                </div>
+
+                {/* Unified Activity Feed */}
+                <div className="rounded-lg border border-border bg-card">
+                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Activity Feed</span>
+                      {loadingActivities && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    </div>
+                    <div className="flex gap-1">
+                      {(['all', 'subscription', 'payout', 'notification'] as const).map((filter) => (
                         <Button
-                          variant="outline"
+                          key={filter}
                           size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleSendEmailVerification(selectedUser)}
-                          disabled={loadingAction === 'verify'}
+                          variant={activityFilter === filter ? 'secondary' : 'ghost'}
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setActivityFilter(filter)}
                         >
-                          {loadingAction === 'verify' ? (
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          ) : null}
-                          Send reminder
+                          {filter === 'all' && 'All'}
+                          {filter === 'subscription' && <><CreditCard className="h-3 w-3 mr-1" />Subs</>}
+                          {filter === 'payout' && <><Banknote className="h-3 w-3 mr-1" />Payouts</>}
+                          {filter === 'notification' && <><Bell className="h-3 w-3 mr-1" />Notifs</>}
                         </Button>
-                      </>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 overflow-auto">
+                    {filteredActivities.length === 0 && !loadingActivities ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        No activity found{activityFilter !== 'all' ? ` for ${activityFilter}` : ''}.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {filteredActivities.map((activity) => (
+                          <div key={activity.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
+                                <div className={`mt-0.5 p-1.5 rounded-md border ${getActivityBadgeStyle(activity.type)}`}>
+                                  {getActivityIcon(activity.type)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm">{activity.title}</span>
+                                    {activity.status && (
+                                      <Badge className={`text-[10px] px-1.5 py-0 h-4 ${getStatusBadgeStyle(activity.status)}`}>
+                                        {activity.status}
+                                      </Badge>
+                                    )}
+                                    {activity.amount !== undefined && (
+                                      <span className="text-sm font-medium text-emerald-400">
+                                        ${activity.amount.toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-0.5">
+                                    {renderActivityDescription(activity)}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {new Date(activity.createdAt).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: new Date(activity.createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Created</div>
-                  <div className="font-medium">{formatDateTime(selectedUser.createdAt)}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Last login</div>
-                  <div className="font-medium">{formatDateTime(selectedUser.lastLogin)}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Total pages</div>
-                  <div className="font-medium">{selectedUser.totalPages ?? '—'}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Stripe account</div>
-                  <div className="font-medium break-all">{selectedUser.stripeConnectedAccountId || '—'}</div>
-                </div>
               </div>
-
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <CreditCard className="h-4 w-4 text-blue-400" />
-                  <span className="font-medium">Subscription</span>
-                </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                  {renderSubscription(selectedUser.financial)}
-                  {selectedUser.financial?.subscriptionAmount ? (
-                    <span className="text-muted-foreground text-xs">
-                      ${selectedUser.financial.subscriptionAmount.toFixed(2)} / mo
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Banknote className="h-4 w-4 text-emerald-400" />
-                  <span className="font-medium">Payouts</span>
-                </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                  {renderPayout(selectedUser.financial, selectedUser.stripeConnectedAccountId)}
-                  <span className="text-muted-foreground text-xs">
-                    Available: {selectedUser.financial?.availableEarningsUsd !== undefined
-                      ? `$${selectedUser.financial.availableEarningsUsd.toFixed(2)}`
-                      : '—'}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    Total: {selectedUser.financial?.earningsTotalUsd !== undefined
-                      ? `$${selectedUser.financial.earningsTotalUsd.toFixed(2)}`
-                      : '—'}
-                  </span>
-                </div>
-                {(selectedUser.financial?.availableEarningsUsd ?? 0) > 0 && !(selectedUser.financial?.payoutsSetup || selectedUser.stripeConnectedAccountId) && (
-                  <div className="flex flex-wrap items-center gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={loadingAction !== null}
-                      onClick={() => handleSendPayoutReminder(selectedUser)}
-                    >
-                      {loadingAction === "notify" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send payout reminder"}
-                    </Button>
-                    <span className="text-xs text-muted-foreground">
-                      Sends a notification reminding them to add a bank for payouts.
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Unified Activity Feed */}
-              <div className="rounded-lg border border-border bg-card">
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Activity Feed</span>
-                    {loadingActivities && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  </div>
-                  <div className="flex gap-1">
-                    {(['all', 'subscription', 'payout', 'notification'] as const).map((filter) => (
-                      <Button
-                        key={filter}
-                        size="sm"
-                        variant={activityFilter === filter ? 'secondary' : 'ghost'}
-                        className="h-7 px-2 text-xs"
-                        onClick={() => setActivityFilter(filter)}
-                      >
-                        {filter === 'all' && 'All'}
-                        {filter === 'subscription' && <><CreditCard className="h-3 w-3 mr-1" />Subs</>}
-                        {filter === 'payout' && <><Banknote className="h-3 w-3 mr-1" />Payouts</>}
-                        {filter === 'notification' && <><Bell className="h-3 w-3 mr-1" />Notifs</>}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="max-h-80 overflow-auto">
-                  {filteredActivities.length === 0 && !loadingActivities ? (
-                    <div className="p-4 text-sm text-muted-foreground text-center">
-                      No activity found{activityFilter !== 'all' ? ` for ${activityFilter}` : ''}.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {filteredActivities.map((activity) => (
-                        <div key={activity.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-start gap-3 min-w-0 flex-1">
-                              <div className={`mt-0.5 p-1.5 rounded-md border ${getActivityBadgeStyle(activity.type)}`}>
-                                {getActivityIcon(activity.type)}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium text-sm">{activity.title}</span>
-                                  {activity.status && (
-                                    <Badge className={`text-[10px] px-1.5 py-0 h-4 ${getStatusBadgeStyle(activity.status)}`}>
-                                      {activity.status}
-                                    </Badge>
-                                  )}
-                                  {activity.amount !== undefined && (
-                                    <span className="text-sm font-medium text-emerald-400">
-                                      ${activity.amount.toFixed(2)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="mt-0.5">
-                                  {renderActivityDescription(activity)}
-                                </div>
-                              </div>
-                            </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {new Date(activity.createdAt).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                year: new Date(activity.createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex justify-end gap-2">
+            )}
+          </SideDrawerBody>
+          <SideDrawerFooter>
             <Button variant="outline" onClick={() => setSelectedUser(null)}>
               Close
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SideDrawerFooter>
+        </SideDrawerContent>
+      </SideDrawer>
     </div>
   );
 }
