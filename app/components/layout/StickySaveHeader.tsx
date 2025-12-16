@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Check, RotateCcw } from 'lucide-react';
+import { useBanner } from '../../providers/BannerProvider';
 
 interface StickySaveHeaderProps {
   hasUnsavedChanges: boolean;
@@ -15,11 +16,12 @@ interface StickySaveHeaderProps {
 /**
  * StickySaveHeader Component
  *
- * A sticky green header that appears above the main header when there are unsaved changes.
- * Provides quick access to save/revert actions while scrolling.
+ * A sticky green header that appears below system banners when there are unsaved changes.
+ * Integrates with BannerProvider for unified banner stack management.
  *
  * Features:
- * - Smart positioning: pushes content when at top, overlay when scrolled
+ * - Integrated with BannerProvider for proper banner stacking
+ * - Positioned at bottom of banner stack (below email/PWA/username banners)
  * - Responsive layout: full-width on mobile, right-aligned on desktop
  * - Smooth animations with no layout shifts
  * - Clean styling without shadows
@@ -31,26 +33,27 @@ export default function StickySaveHeader({
   isSaving,
   isAnimatingOut = false
 }: StickySaveHeaderProps) {
-  // SIMPLIFIED: Remove all complex scroll tracking and body class manipulation
-  // Just use a simple fixed header that pushes content down consistently
+  const { setSaveBannerVisible, bannerOffset, showSaveBanner } = useBanner();
+
+  // Calculate the position for this banner (below system banners, above save banner height)
+  // The save banner height is already included in bannerOffset when showSaveBanner is true
+  // So we position at (bannerOffset - 56px) to get the top of our banner
+  const systemBannerOffset = showSaveBanner ? bannerOffset - 56 : bannerOffset;
+
+  // Register visibility with BannerProvider
+  useEffect(() => {
+    const isVisible = hasUnsavedChanges && !isAnimatingOut;
+    setSaveBannerVisible(isVisible);
+
+    return () => {
+      setSaveBannerVisible(false);
+    };
+  }, [hasUnsavedChanges, isAnimatingOut, setSaveBannerVisible]);
 
   // Don't render if no unsaved changes and not animating out
   if (!hasUnsavedChanges && !isAnimatingOut) {
     return null;
   }
-
-  // Add body class to push content down when save header is visible
-  useEffect(() => {
-    if (hasUnsavedChanges && !isAnimatingOut) {
-      document.body.classList.add('has-sticky-save-header');
-    } else {
-      document.body.classList.remove('has-sticky-save-header');
-    }
-
-    return () => {
-      document.body.classList.remove('has-sticky-save-header');
-    };
-  }, [hasUnsavedChanges, isAnimatingOut]);
 
   return (
     <div
@@ -58,8 +61,8 @@ export default function StickySaveHeader({
         isAnimatingOut ? 'opacity-0 transform -translate-y-full' : 'opacity-100 transform translate-y-0'
       }`}
       style={{
-        // Position below any active banners using the unified CSS variable
-        top: 'var(--banner-stack-height, 0px)',
+        // Position below system banners using calculated offset
+        top: `${systemBannerOffset}px`,
         height: '56px', // Fixed height for consistent spacing
         animation: hasUnsavedChanges && !isAnimatingOut ? 'slideDown 0.3s ease-out' : undefined
       }}

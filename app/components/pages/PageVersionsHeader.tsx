@@ -27,7 +27,10 @@ export default function PageVersionsHeader({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full z-50 bg-background/80 backdrop-blur-sm border-b">
+    <header
+      className="fixed left-0 right-0 w-full z-50 bg-background/80 backdrop-blur-sm border-b"
+      style={{ top: 'var(--banner-stack-height, 0px)' }}
+    >
       <div className="flex flex-col max-w-4xl mx-auto">
         {/* Top row: Back button and WeWrite logo */}
         <div className="flex items-center justify-between p-4">

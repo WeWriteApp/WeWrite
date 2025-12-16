@@ -93,12 +93,18 @@ export default function FloatingFinancialHeader({
       return true;
     }
 
+    // Hide on user profile pages (/u/) - they have their own header
+    if (pathname.startsWith('/u/')) {
+      console.log('🚫 FloatingFinancialHeader: Hiding on user profile page');
+      return true;
+    }
+
     // Hide on ContentPages that have ContentPageHeader (single segment routes that aren't NavPages)
     const navPageRoutes = [
       '/', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
       '/search', '/notifications', '/random-pages', '/trending-pages', '/following',
-      '/user', '/group', '/admin', '/timeline', '/leaderboard', '/map'
+      '/user', '/u', '/group', '/admin', '/timeline', '/leaderboard', '/map'
     ];
 
     // Hide on content creation pages
@@ -354,11 +360,11 @@ export default function FloatingFinancialHeader({
 
   return (
     <>
-      {/* Mobile: Full-width sticky header - simplified positioning */}
+      {/* Mobile: Full-width sticky header - card style with bottom border */}
       <header
         className={cn(
-          "md:hidden fixed left-0 right-0 z-fixed-header bg-background transition-shadow duration-200",
-          isScrolled && "shadow-md"
+          "md:hidden fixed left-0 right-0 z-fixed-header wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding transition-shadow duration-200",
+          isScrolled && "shadow-sm"
         )}
         style={{
           top: 'var(--banner-stack-height, 0px)',
@@ -390,11 +396,11 @@ export default function FloatingFinancialHeader({
         </div>
       </header>
 
-      {/* Desktop: Full-width sticky header respecting sidebar - simplified */}
+      {/* Desktop: Full-width sticky header respecting sidebar - card style with bottom border */}
       <header
         className={cn(
-          "hidden md:block fixed left-0 right-0 z-fixed-header bg-background transition-shadow duration-200",
-          isScrolled && "shadow-md"
+          "hidden md:block fixed left-0 right-0 z-fixed-header wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding transition-shadow duration-200",
+          isScrolled && "shadow-sm"
         )}
         style={{
           top: 'var(--banner-stack-height, 0px)',

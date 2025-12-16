@@ -226,7 +226,10 @@ const LandingPage = () => {
       {/* Background blobs are now rendered globally via GlobalLandingBlobs for persistence */}
 
       {/* Desktop Navigation */}
-      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'}`}>
+      <header
+        className={`fixed left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'}`}
+        style={{ top: 'var(--banner-stack-height, 0px)' }}
+      >
         {/* Glassmorphic background with bottom border - uses card theme CSS variables for consistent styling */}
         <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
         {/* Row 1: Logo + Navigation + Auth */}
@@ -287,7 +290,10 @@ const LandingPage = () => {
       </header>
 
       {/* Mobile Navigation */}
-      <div className={`${isMobileView ? 'block' : 'hidden'} fixed top-0 left-0 right-0 z-50 flex flex-col w-full`}>
+      <div
+        className={`${isMobileView ? 'block' : 'hidden'} fixed left-0 right-0 z-50 flex flex-col w-full`}
+        style={{ top: 'var(--banner-stack-height, 0px)' }}
+      >
         {/* Glassmorphic background with bottom border - uses card theme CSS variables for consistent styling */}
         <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
         {/* Title and buttons - hide logo text on very thin screens */}

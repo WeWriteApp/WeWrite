@@ -4,37 +4,39 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { usePWA } from './PWAProvider';
 import { isValidUsername } from '../hooks/useUsernameStatus';
+import { useEmailVerificationStatus } from '../hooks/useEmailVerificationStatus';
 
 // Banner height constants - should match the actual rendered heights
 const EMAIL_BANNER_HEIGHT = 40;
 const PWA_BANNER_HEIGHT = 48;
 const USERNAME_BANNER_HEIGHT = 40; // Same as email banner
+const SAVE_BANNER_HEIGHT = 56; // Save/revert banner height
 
 interface BannerContextType {
   showEmailBanner: boolean;
   showPWABanner: boolean;
   showUsernameBanner: boolean;
+  showSaveBanner: boolean;
   bannerOffset: number;
   setEmailBannerDismissed: () => void;
   setUsernameBannerDismissed: () => void;
+  setSaveBannerVisible: (visible: boolean) => void;
 }
 
 const BannerContext = createContext<BannerContextType>({
   showEmailBanner: false,
   showPWABanner: false,
   showUsernameBanner: false,
+  showSaveBanner: false,
   bannerOffset: 0,
   setEmailBannerDismissed: () => {},
   setUsernameBannerDismissed: () => {},
+  setSaveBannerVisible: () => {},
 });
 
 export const useBanner = () => useContext(BannerContext);
 
 const STORAGE_KEYS = {
-  EMAIL_BANNER_DISMISSED: 'wewrite_email_banner_dismissed',
-  EMAIL_BANNER_DISMISSED_TIMESTAMP: 'wewrite_email_banner_dismissed_timestamp',
-  EMAIL_DONT_REMIND: 'wewrite_email_dont_remind',
-  ADMIN_EMAIL_BANNER_OVERRIDE: 'wewrite_admin_email_banner_override',
   USERNAME_BANNER_DISMISSED_TIMESTAMP: 'wewrite_username_banner_dismissed_timestamp',
   USERNAME_DONT_REMIND: 'wewrite_username_dont_remind',
 };
@@ -42,42 +44,24 @@ const STORAGE_KEYS = {
 export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { showBanner: pwaBannerShouldShow } = usePWA();
-  const [showEmailBanner, setShowEmailBanner] = useState(false);
+
+  // Use the same hook as EmailVerificationTopBanner for synchronized state
+  const emailVerificationStatus = useEmailVerificationStatus();
+
   const [showPWABanner, setShowPWABanner] = useState(false);
   const [showUsernameBanner, setShowUsernameBanner] = useState(false);
+  // Save banner state - controlled by StickySaveHeader via setSaveBannerVisible
+  const [showSaveBanner, setShowSaveBanner] = useState(false);
+
+  // Email banner state is now directly from the hook (single source of truth)
+  const showEmailBanner = emailVerificationStatus.shouldShowBanner && !emailVerificationStatus.isLoading;
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user) {
-      setShowEmailBanner(false);
       setShowPWABanner(false);
       setShowUsernameBanner(false);
       return;
     }
-
-    // Check if email verification banner should show
-    const shouldShowEmailBanner = () => {
-      // Check for admin override first
-      const adminOverride = localStorage.getItem(STORAGE_KEYS.ADMIN_EMAIL_BANNER_OVERRIDE);
-      if (adminOverride === 'true') return true;
-
-      // Only show if email is not verified
-      if (user.emailVerified) return false;
-
-      // Check if user has chosen "Don't remind me"
-      if (localStorage.getItem(STORAGE_KEYS.EMAIL_DONT_REMIND) === 'true') return false;
-
-      // Check if banner was recently dismissed with "Later"
-      const dismissedTimestamp = localStorage.getItem(STORAGE_KEYS.EMAIL_BANNER_DISMISSED_TIMESTAMP);
-      if (dismissedTimestamp) {
-        const dismissedTime = parseInt(dismissedTimestamp, 10);
-        const currentTime = Date.now();
-
-        // If dismissed less than 1 day ago, don't show
-        if (currentTime - dismissedTime < 1 * 24 * 60 * 60 * 1000) return false;
-      }
-
-      return true;
-    };
 
     // Check if username banner should show
     const shouldShowUsernameBanner = () => {
@@ -102,24 +86,22 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const updateBannerStates = () => {
-      const emailBannerShouldShow = shouldShowEmailBanner();
-      setShowEmailBanner(emailBannerShouldShow);
-
       // Username banner shows if email banner is NOT showing
-      const usernameBannerShouldShow = !emailBannerShouldShow && shouldShowUsernameBanner();
+      const usernameBannerShouldShow = !showEmailBanner && shouldShowUsernameBanner();
       setShowUsernameBanner(usernameBannerShouldShow);
 
       // PWA banner only shows if other banners are NOT showing
       // This implements the "one thing at a time" priority system
-      setShowPWABanner(!emailBannerShouldShow && !usernameBannerShouldShow && pwaBannerShouldShow);
+      setShowPWABanner(!showEmailBanner && !usernameBannerShouldShow && pwaBannerShouldShow);
     };
 
     // Initial update
     updateBannerStates();
 
-    // Listen for localStorage changes (for admin override)
+    // Listen for localStorage changes
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEYS.ADMIN_EMAIL_BANNER_OVERRIDE) {
+      if (e.key === STORAGE_KEYS.USERNAME_DONT_REMIND ||
+          e.key === STORAGE_KEYS.USERNAME_BANNER_DISMISSED_TIMESTAMP) {
         updateBannerStates();
       }
     };
@@ -137,16 +119,18 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('bannerOverrideChange', handleCustomStorageChange);
     };
-  }, [user, pwaBannerShouldShow]);
+  }, [user, pwaBannerShouldShow, showEmailBanner]);
 
   const setEmailBannerDismissed = () => {
-    setShowEmailBanner(false);
-    // After email banner is dismissed, check if username or PWA banner should show
+    // Email banner dismissal is now handled by the hook/modal system
+    // The useEmailVerificationStatus hook responds to localStorage changes
+    // This callback is kept for API compatibility but the state is managed by the hook
+    // After email banner is dismissed, the useEffect will automatically show the next banner
     if (typeof window !== 'undefined') {
       const currentUsername = user?.username || '';
-      const shouldShowUsername = !isValidUsername(currentUsername) && 
+      const shouldShowUsername = !isValidUsername(currentUsername) &&
         localStorage.getItem(STORAGE_KEYS.USERNAME_DONT_REMIND) !== 'true';
-      
+
       if (shouldShowUsername) {
         setShowUsernameBanner(true);
       } else {
@@ -161,12 +145,16 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setShowPWABanner(pwaBannerShouldShow);
   };
 
-  // Calculate banner offset based on which banner is showing
-  // Only one banner shows at a time due to priority system
-  const bannerOffset = showEmailBanner ? EMAIL_BANNER_HEIGHT
+  // Calculate banner offset based on which banners are showing
+  // System banners (email/username/PWA) are mutually exclusive (priority system)
+  // Save banner ALWAYS adds to the offset when visible (stacks at bottom of banner area)
+  const systemBannerOffset = showEmailBanner ? EMAIL_BANNER_HEIGHT
     : showUsernameBanner ? USERNAME_BANNER_HEIGHT
     : showPWABanner ? PWA_BANNER_HEIGHT
     : 0;
+
+  // Save banner stacks below system banners
+  const bannerOffset = systemBannerOffset + (showSaveBanner ? SAVE_BANNER_HEIGHT : 0);
 
   // Update the unified CSS variable for banner stack height
   // This is used by StickySaveHeader and other components that need to position below banners
@@ -180,14 +168,21 @@ export const BannerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [bannerOffset]);
 
+  // Callback for StickySaveHeader to register its visibility
+  const setSaveBannerVisible = (visible: boolean) => {
+    setShowSaveBanner(visible);
+  };
+
   return (
     <BannerContext.Provider value={{
       showEmailBanner,
       showPWABanner,
       showUsernameBanner,
+      showSaveBanner,
       bannerOffset,
       setEmailBannerDismissed,
       setUsernameBannerDismissed,
+      setSaveBannerVisible,
     }}>
       {children}
     </BannerContext.Provider>

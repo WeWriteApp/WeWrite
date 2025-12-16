@@ -92,7 +92,10 @@ export function NewPageSkeleton() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header skeleton with fixed height to prevent shifts */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16">
+      <div
+        className="fixed left-0 right-0 z-50 bg-background border-b border-border h-16"
+        style={{ top: 'var(--banner-stack-height, 0px)' }}
+      >
         <div className="flex items-center justify-between h-full px-4">
           <div className="flex items-center gap-2">
             <Skeleton className="h-8 w-8 rounded" />

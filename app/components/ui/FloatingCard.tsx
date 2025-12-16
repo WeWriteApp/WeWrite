@@ -97,9 +97,12 @@ export function FloatingCard({
       // Docked to bottom - no rounded corners, only top border, no side shadows
       "!rounded-none !shadow-none",
       "!border-l-0 !border-r-0 !border-b-0 !border-t !border-border",
-      "!bg-background",
-      // When expanded, becomes a drawer with rounded top corners
-      isExpanded && "!rounded-t-2xl"
+      // GPU-accelerated transitions for smooth animations
+      "will-change-[background-color,border-radius,backdrop-filter]",
+      // Semi-transparent card style when collapsed, solid (same brightness) when expanded
+      isExpanded
+        ? "!bg-[var(--card-bg)] dark:!bg-[var(--card-bg)] !backdrop-filter-none !rounded-t-2xl"
+        : "" // Let wewrite-card handle the semi-transparent background with blur
     )
   };
 

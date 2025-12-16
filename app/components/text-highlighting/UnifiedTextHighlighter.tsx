@@ -159,7 +159,8 @@ const UnifiedTextHighlighter: React.FC<UnifiedTextHighlighterProps> = ({
     <div
       ref={notificationRef}
       id="highlight-notification"
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 bg-background border-b border-border shadow-sm"
+      className="fixed left-0 right-0 z-50 flex items-center justify-between p-2 bg-background border-b border-border shadow-sm"
+      style={{ top: 'var(--banner-stack-height, 0px)' }}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className="flex-1 min-w-0">

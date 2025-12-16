@@ -13,7 +13,7 @@ if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
 
 // Cache version - increment this on major changes to force cache clear
 // The service worker will also check for updates on each page load
-const CACHE_VERSION = '2.2';
+const CACHE_VERSION = '2.3';
 
 const CACHE_NAME = `wewrite-v${CACHE_VERSION}`;
 const STATIC_CACHE = `wewrite-static-v${CACHE_VERSION}`;
@@ -86,6 +86,9 @@ const NETWORK_FIRST_PATTERNS = [
   '/api/user-',
   '/bio',  // User bios should always be fresh
 ];
+
+// Auth-related URL parameters that should bypass cache entirely
+const AUTH_BYPASS_PARAMS = ['_auth'];
 
 // Payment-related patterns that should never be cached
 const PAYMENT_NEVER_CACHE_PATTERNS = [
@@ -187,6 +190,23 @@ async function handleRequest(request) {
   const pathname = url.pathname;
 
   try {
+    // Strategy 0: Auth bypass - always go to network for auth-related navigations
+    // This ensures fresh content after login/logout
+    if (hasAuthBypassParam(url)) {
+      console.log('Service Worker: Auth bypass detected, fetching from network');
+      const response = await fetch(request);
+      // Update cache with fresh authenticated version (without the param)
+      if (response.ok && pathname === '/') {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        // Create a clean request without auth param for caching
+        const cleanUrl = new URL(url);
+        cleanUrl.searchParams.delete('_auth');
+        const cleanRequest = new Request(cleanUrl.toString(), request);
+        cache.put(cleanRequest, response.clone());
+      }
+      return response;
+    }
+
     // Strategy 1: Cache-first for static resources
     if (isStaticResource(url)) {
       return await cacheFirstStrategy(request, STATIC_CACHE);
@@ -466,6 +486,10 @@ function isPaymentNeverCache(url) {
 
 function isMapTileResource(url) {
   return MAP_TILE_PATTERNS.some(pattern => url.includes(pattern));
+}
+
+function hasAuthBypassParam(url) {
+  return AUTH_BYPASS_PARAMS.some(param => url.searchParams.has(param));
 }
 
 // Background sync for failed requests (if supported)

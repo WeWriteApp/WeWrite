@@ -159,8 +159,30 @@ export function LoginForm() {
       await signIn(trimmedEmailOrUsername, trimmedPassword);
       // Clear attempts on successful login
       clearAttempts();
-      // Use window.location.href for reliable redirect after login
-      window.location.href = '/';
+
+      // CRITICAL: Clear service worker cache for homepage before redirect
+      // This prevents PWA from serving cached logged-out version
+      if ('caches' in window) {
+        try {
+          // Get all cache names and clear homepage from each
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map(async (cacheName) => {
+              const cache = await caches.open(cacheName);
+              // Delete cached homepage entries
+              await cache.delete('/');
+              await cache.delete(window.location.origin + '/');
+            })
+          );
+          console.log('[LoginForm] Cleared homepage from service worker cache');
+        } catch (cacheError) {
+          console.warn('[LoginForm] Failed to clear SW cache:', cacheError);
+        }
+      }
+
+      // Use cache-busting redirect to ensure fresh page load
+      // The timestamp ensures service worker doesn't serve stale cache
+      window.location.href = '/?_auth=' + Date.now();
     } catch (err: any) {
       console.error('[LoginForm] Login error:', err);
       

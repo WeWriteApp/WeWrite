@@ -4391,14 +4391,10 @@ button.bg-transparent[type] {
   }
 }
 
-/* SIMPLIFIED: Save header body class for consistent content pushing */
-/* Use padding instead of transform to avoid conflicts with Framer Motion */
-/* Total padding = banner stack height + save header height (56px) */
-
-body.has-sticky-save-header .page-content-wrapper {
-  padding-top: calc(var(--banner-stack-height, 0px) + 56px);
-  transition: padding-top 300ms ease-out;
-}
+/* LEGACY: Save header body class removed - now handled by BannerProvider
+ * The save banner is integrated into the unified banner stack system.
+ * All components should use var(--banner-stack-height) for positioning.
+ */
 
 /* ============================================
    Landing Page Animated Gradient Blobs

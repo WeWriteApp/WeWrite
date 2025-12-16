@@ -173,7 +173,6 @@ export default function ContentPageHeader({
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerPadding, setHeaderPadding] = React.useState(8);
-  const [hasSaveBanner, setHasSaveBanner] = React.useState(false);
 
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
@@ -504,24 +503,6 @@ export default function ContentPageHeader({
 
   // No dynamic padding needed - always static
 
-  // Monitor save banner state
-  React.useEffect(() => {
-    const checkSaveBanner = () => {
-      setHasSaveBanner(document.body.classList.contains('has-sticky-save-header'));
-    };
-
-    // Check initially
-    checkSaveBanner();
-
-    // Set up observer for class changes
-    const observer = new MutationObserver(checkSaveBanner);
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-
-    return () => observer.disconnect();
-  }, []);
 
   React.useEffect(() => {
     // In edit mode, disable scroll handling completely
@@ -720,11 +701,8 @@ export default function ContentPageHeader({
         `}
         style={!isEditing ? {
           transform: 'translateZ(0)',
-          // Use CSS calc to combine banner offset and save header offset
-          // --banner-stack-height is set by BannerProvider for unified banner positioning
-          top: hasSaveBanner
-            ? 'calc(var(--banner-stack-height, 0px) + 56px)'
-            : 'var(--banner-stack-height, 0px)'
+          // Use unified CSS variable - BannerProvider manages all banner heights including save banner
+          top: 'var(--banner-stack-height, 0px)'
         } : {}}
       >
         {/* Full width in edit mode, sidebar-aware in view mode */}

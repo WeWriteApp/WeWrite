@@ -191,11 +191,12 @@ export default function MobileBottomNavUnified() {
     // Always show on NavPage routes
     if (navPageRoutes.includes(pathname)) return false;
     
-    // Hide on other user/group pages (show on own profile)
-    if (pathname.startsWith('/u/') || pathname.startsWith('/group/')) {
-      if (user?.uid && pathname === `/u/${user.uid}`) return false;
-      return true;
-    }
+    // Show mobile nav on user profile pages (/u/) - they are public pages
+    // The financial header handles showing spend/earnings for these pages
+    if (pathname.startsWith('/u/')) return false;
+
+    // Hide on group pages
+    if (pathname.startsWith('/group/')) return true;
     
     // Hide on admin routes
     if (pathname.startsWith('/admin/')) return true;

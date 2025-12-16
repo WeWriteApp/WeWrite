@@ -10,14 +10,13 @@ import {
   ProfilePagesProvider,
   ProfilePagesContext} from "../../providers/ProfilePageProvider";
 import { useAuth } from '../../providers/AuthProvider';
-import { Share2 } from "lucide-react";
 import { UsernameBadge } from "../ui/UsernameBadge";
-import { Button } from "../ui/button";
 import { UserFollowButton } from "../utils/UserFollowButton";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import UserProfileHeader from './UserProfileHeader';
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -31,37 +30,15 @@ const SingleProfileView = ({ profile }) => {
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
 
-  // Share profile function - shares URL only for easy pasting
-  const handleShareProfile = () => {
-    const profileUrl = window.location.href;
-
-    // Check if the Web Share API is available
-    if (navigator.share) {
-      // Share URL only - no extra text, so it can be easily pasted into a URL bar
-      navigator.share({
-        url: profileUrl
-      }).catch((error) => {
-        // User cancelled or error - silently ignore
-        if (error.name !== 'AbortError') {
-          console.error('Error sharing:', error);
-        }
-      });
-    } else {
-      // Fallback: copy the URL to clipboard
-      navigator.clipboard.writeText(profileUrl).then(() => {
-        toast.success('Profile link copied to clipboard!');
-      }).catch((clipboardError) => {
-        console.error('Error copying link:', clipboardError);
-      });
-    }
-  };
-
   // UsernameBadge handles all data fetching automatically
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
-      {/* Content area - header spacing handled by NavPageLayout */}
-      <div className="space-y-6">
+      {/* Fixed header with back/logo/share */}
+      <UserProfileHeader username={profile.username} />
+
+      {/* Content area - add top padding for fixed header */}
+      <div className="space-y-6 pt-14">
         {/* Profile header - separate card */}
         <div className="wewrite-card">
           {/* Username row */}
@@ -73,8 +50,8 @@ const SingleProfileView = ({ profile }) => {
               tier={profile.tier}
               subscriptionStatus={profile.subscriptionStatus}
               subscriptionAmount={profile.subscriptionAmount}
-              size="lg"
-              className="text-3xl font-semibold"
+              size="md"
+              className="text-lg font-semibold"
             />
           </div>
 
@@ -90,23 +67,6 @@ const SingleProfileView = ({ profile }) => {
                   className="w-full sm:w-auto min-w-[140px] h-10"
                 />
               )}
-
-              {/* Share button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="default"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleShareProfile();
-                }}
-                className="flex items-center gap-2 w-full sm:w-auto min-w-[140px] h-10"
-                title="Share profile"
-              >
-                <Share2 className="h-4 w-4" />
-                <span>Share Profile</span>
-              </Button>
             </div>
           </div>
 

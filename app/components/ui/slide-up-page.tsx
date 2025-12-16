@@ -111,8 +111,8 @@ export function SlideUpPage({
             key="slide-up-page"
             className={cn(
               "min-h-screen new-page-container",
-              // Use fixed positioning to overlay the entire viewport
-              "fixed inset-0 z-[100] bg-background",
+              // Use fixed positioning to overlay viewport, respecting banner stack height
+              "fixed left-0 right-0 bottom-0 z-[100] bg-background",
               // Ensure smooth rendering
               "will-change-transform",
               // Add slide-up-page class and animation-complete when done
@@ -126,6 +126,8 @@ export function SlideUpPage({
             exit="exit"
             onAnimationComplete={handleAnimationComplete}
             style={{
+              // Position below any active banners using the unified CSS variable
+              top: 'var(--banner-stack-height, 0px)',
               // Prevent any layout shifts
               overflow: 'auto'
             }}
