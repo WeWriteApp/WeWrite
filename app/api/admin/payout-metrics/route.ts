@@ -8,6 +8,7 @@ import { initAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Get payout metrics
-    const payoutsSnapshot = await adminDb.collection('payouts')
+    const payoutsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.PAYOUTS))
       .where('createdAt', '>=', thisMonth)
       .get();
 
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get last month's payouts for growth calculation
-    const lastMonthPayoutsSnapshot = await adminDb.collection('payouts')
+    const lastMonthPayoutsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.PAYOUTS))
       .where('createdAt', '>=', lastMonth)
       .where('createdAt', '<', thisMonth)
       .get();

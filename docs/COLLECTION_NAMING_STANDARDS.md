@@ -272,6 +272,66 @@ All collection naming inconsistencies have been fixed. The codebase now uses:
 3. **Documentation** - This comprehensive guide prevents future confusion
 4. **Constants Usage** - Always use COLLECTIONS constants instead of string literals
 
+## 🔧 December 2025 Refactoring
+
+### Firestore Index Fixes
+
+**Problem**: Firestore indexes in `config/firestore.indexes.json` were using incorrect snake_case collection names that didn't match actual Firestore collections:
+- `usd_allocations` (wrong) vs `usdAllocations` (correct)
+- Orphaned allocation cleanup script found 0 results when querying wrong collection name
+
+**Solution**:
+1. ✅ **Fixed Firestore indexes** - Updated `config/firestore.indexes.json` to use correct camelCase collection names
+2. ✅ **Removed obsolete indexes** - Removed PROD_ prefixed indexes that were no longer needed
+3. ✅ **Deploy command**: `firebase deploy --only firestore:indexes`
+
+### Added Missing Collections to COLLECTIONS Constant
+
+The following collections were added to `app/utils/environmentConfig.ts`:
+
+```typescript
+// Analytics (snake_case for historical reasons)
+ANALYTICS_EVENTS: 'analytics_events',
+ANALYTICS_AGGREGATIONS: 'analytics_aggregations',
+
+// Admin collections
+ADMIN_STATS: 'admin_stats',
+BROADCAST_HISTORY: 'broadcast_history',
+WEBHOOK_ERRORS: 'webhookErrors',
+
+// Financial
+FINANCIAL_TRANSACTIONS: 'financialTransactions',
+TOKEN_PAYOUTS: 'tokenPayouts',
+GROUPS: 'groups',
+
+// Test
+TEST: 'test'
+```
+
+### Hardcoded Collection Names Fixed
+
+**Files updated to use `getCollectionName(COLLECTIONS.*)` pattern:**
+- `app/api/writing-ideas/route.ts` - `'admin_settings'` → `COLLECTIONS.ADMIN_SETTINGS`
+- `app/api/admin/broadcast/route.ts` - `'broadcast_history'` → `COLLECTIONS.BROADCAST_HISTORY`
+- `app/api/admin/database-stats/route.ts` - `'admin_stats'` → `COLLECTIONS.ADMIN_STATS`
+- `app/api/admin/payout-metrics/route.ts` - `'payouts'` → `COLLECTIONS.PAYOUTS`
+- `app/api/admin/transaction-volume/route.ts` - `'financialTransactions'` → `COLLECTIONS.FINANCIAL_TRANSACTIONS`
+- `app/api/admin/payment-alerts/route.ts` - Multiple fixes for `financialTransactions`, `webhookErrors`
+
+### Collections with Historical snake_case Names
+
+These collections use snake_case in Firestore for historical reasons and should NOT be renamed:
+- `analytics_counters` (via `COLLECTIONS.ANALYTICS_COUNTERS`)
+- `analytics_daily` (via `COLLECTIONS.ANALYTICS_DAILY`)
+- `analytics_hourly` (via `COLLECTIONS.ANALYTICS_HOURLY`)
+- `analytics_events` (via `COLLECTIONS.ANALYTICS_EVENTS`)
+- `analytics_aggregations` (via `COLLECTIONS.ANALYTICS_AGGREGATIONS`)
+- `admin_settings` (via `COLLECTIONS.ADMIN_SETTINGS`)
+- `admin_stats` (via `COLLECTIONS.ADMIN_STATS`)
+- `broadcast_history` (via `COLLECTIONS.BROADCAST_HISTORY`)
+
+**Note**: Always use the COLLECTIONS constant even for snake_case collections - it ensures the environment prefix (DEV_) is applied correctly.
+
 ## Related Documentation
 
 - [Firebase Migration Architecture](./FIREBASE_MIGRATION_ARCHITECTURE.md) - Environment-aware architecture

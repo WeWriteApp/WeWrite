@@ -352,9 +352,12 @@ export const COLLECTIONS = {
   PAYMENT_RECOVERY: 'paymentRecovery',
 
   // Analytics collections
+  // Note: analytics collections use snake_case in Firestore for historical reasons
   ANALYTICS_COUNTERS: 'analytics_counters',
   ANALYTICS_DAILY: 'analytics_daily',
   ANALYTICS_HOURLY: 'analytics_hourly',
+  ANALYTICS_EVENTS: 'analytics_events',
+  ANALYTICS_AGGREGATIONS: 'analytics_aggregations',
   PAGE_VIEWS: 'pageViews',
 
   // User feature collections
@@ -386,7 +389,19 @@ export const COLLECTIONS = {
   DEFAULT_BACKGROUND_IMAGES: 'defaultBackgroundImages',
 
   // Admin collections
-  ADMIN_SETTINGS: 'admin_settings'
+  // Note: admin_settings uses snake_case in Firestore for historical reasons
+  ADMIN_SETTINGS: 'admin_settings',
+  ADMIN_STATS: 'admin_stats',
+  BROADCAST_HISTORY: 'broadcast_history',
+  WEBHOOK_ERRORS: 'webhookErrors',
+
+  // Financial transaction collections
+  FINANCIAL_TRANSACTIONS: 'financialTransactions',
+  TOKEN_PAYOUTS: 'tokenPayouts',
+  GROUPS: 'groups',
+
+  // Test collection (for connection testing)
+  TEST: 'test'
 } as const;
 
 /**

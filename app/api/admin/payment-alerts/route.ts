@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Check for high error rates
-    const recentTransactionsSnapshot = await adminDb.collection('financialTransactions')
+    const recentTransactionsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.FINANCIAL_TRANSACTIONS))
       .where('createdAt', '>=', last24Hours)
       .where('type', '==', 'SUBSCRIPTION_PAYMENT')
       .get();
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check for webhook processing issues
-    const recentWebhookErrorsSnapshot = await adminDb.collection('webhookErrors')
+    const recentWebhookErrorsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.WEBHOOK_ERRORS))
       .where('timestamp', '>=', last24Hours)
       .get();
 
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check for Stripe API issues (simplified check)
-    const recentStripeErrorsSnapshot = await adminDb.collection('financialTransactions')
+    const recentStripeErrorsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.FINANCIAL_TRANSACTIONS))
       .where('createdAt', '>=', last24Hours)
       .where('status', '==', 'FAILED')
       .where('metadata.errorType', '==', 'stripe_error')
@@ -198,7 +199,7 @@ async function calculateDailyRevenue(date: Date): Promise<number> {
   const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-  const transactionsSnapshot = await adminDb.collection('financialTransactions')
+  const transactionsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.FINANCIAL_TRANSACTIONS))
     .where('type', '==', 'SUBSCRIPTION_PAYMENT')
     .where('status', '==', 'COMPLETED')
     .where('createdAt', '>=', startOfDay)

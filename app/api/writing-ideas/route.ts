@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/admin';
 import { writingIdeas as defaultWritingIdeas, type WritingIdea } from '../../data/writingIdeas';
+import { getCollectionName, COLLECTIONS } from '../../utils/environmentConfig';
 
-const COLLECTION_NAME = 'admin_settings';
 const DOCUMENT_ID = 'writing_ideas';
 
 interface StoredWritingIdea extends WritingIdea {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       throw new Error('Firebase Admin not initialized');
     }
     const db = admin.firestore();
-    const docRef = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID);
+    const docRef = db.collection(getCollectionName(COLLECTIONS.ADMIN_SETTINGS)).doc(DOCUMENT_ID);
     const doc = await docRef.get();
 
     if (!doc.exists) {

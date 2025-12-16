@@ -36,25 +36,7 @@
         { "fieldPath": "title", "order": "ASCENDING" }
       ]
     },
-    {
-      "collectionGroup": "PROD_pages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "deleted", "order": "ASCENDING" },
-        { "fieldPath": "title", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "PROD_pages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isPublic", "order": "ASCENDING" },
-        { "fieldPath": "deleted", "order": "ASCENDING" },
-        { "fieldPath": "title", "order": "ASCENDING" }
-      ]
-    },
-    {
+        {
       "collectionGroup": "DEV_auditTrail",
       "queryScope": "COLLECTION",
       "fields": [
@@ -72,25 +54,7 @@
         }
       ]
     },
-    {
-      "collectionGroup": "PROD_auditTrail",
-      "queryScope": "COLLECTION",
-      "fields": [
         {
-          "fieldPath": "entityType",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "activities",
       "queryScope": "COLLECTION",
       "fields": [
@@ -1219,7 +1183,7 @@
       ]
     },
     {
-      "collectionGroup": "usd_allocations",
+      "collectionGroup": "usdAllocations",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -1237,7 +1201,7 @@
       ]
     },
     {
-      "collectionGroup": "PROD_usd_allocations",
+      "collectionGroup": "DEV_usdAllocations",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -1255,25 +1219,7 @@
       ]
     },
     {
-      "collectionGroup": "DEV_usd_allocations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "resourceId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "resourceType",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "usd_allocations",
+      "collectionGroup": "usdAllocations",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -1287,7 +1233,7 @@
       ]
     },
     {
-      "collectionGroup": "PROD_usd_allocations",
+      "collectionGroup": "DEV_usdAllocations",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -1301,21 +1247,7 @@
       ]
     },
     {
-      "collectionGroup": "DEV_usd_allocations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "usd_allocations",
+      "collectionGroup": "usdAllocations",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -1333,25 +1265,7 @@
       ]
     },
     {
-      "collectionGroup": "PROD_usd_allocations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "month",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "DEV_usd_allocations",
+      "collectionGroup": "DEV_usdAllocations",
       "queryScope": "COLLECTION",
       "fields": [
         {

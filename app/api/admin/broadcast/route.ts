@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '../../../firebase/admin';
 import { broadcastEmailTemplate } from '../../../lib/emailTemplates';
 import { Resend } from 'resend';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 const GENERAL_AUDIENCE_ID = '493da2d9-7034-4bb0-99de-1dcfac3b424d';
 
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
     // Get broadcast history from Firestore
     const db = getAdminFirestore();
     const historySnapshot = await db
-      .collection('broadcast_history')
+      .collection(getCollectionName(COLLECTIONS.BROADCAST_HISTORY))
       .orderBy('sentAt', 'desc')
       .limit(10)
       .get();
@@ -233,7 +234,7 @@ export async function POST(request: NextRequest) {
     
     // Log broadcast to Firestore
     const db = getAdminFirestore();
-    await db.collection('broadcast_history').add({
+    await db.collection(getCollectionName(COLLECTIONS.BROADCAST_HISTORY)).add({
       subject,
       heading,
       body: emailBody.substring(0, 500), // Truncate for storage

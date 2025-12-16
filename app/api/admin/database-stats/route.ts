@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 interface DatabaseStats {
   totalUsers: number;
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Store the statistics for future reference
-    await db.collection('admin_stats').doc('database').set({
+    await db.collection(getCollectionName(COLLECTIONS.ADMIN_STATS)).doc('database').set({
       ...getResult.data.stats,
       calculatedBy: adminCheck.userEmail,
       calculatedAt: admin!.firestore.FieldValue.serverTimestamp()

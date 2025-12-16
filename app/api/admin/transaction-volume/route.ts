@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Get transactions from the last 24 hours
-    const transactionsSnapshot = await adminDb.collection('financialTransactions')
+    const transactionsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.FINANCIAL_TRANSACTIONS))
       .where('createdAt', '>=', last24Hours)
       .orderBy('createdAt', 'asc')
       .get();
