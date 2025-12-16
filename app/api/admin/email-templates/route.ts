@@ -11,15 +11,28 @@ import { emailTemplates, getTemplateById } from '../../../lib/emailTemplates';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
+// Map cronId to actual email template ID
+// This is needed because cron job IDs don't always match template IDs
+const CRON_TO_TEMPLATE_MAP: Record<string, string> = {
+  'username-reminder': 'choose-username',
+  'email-verification-reminder': 'verification-reminder',
+  // Add other mappings as needed
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const templateId = searchParams.get('id');
+  let templateId = searchParams.get('id');
   const withHtml = searchParams.get('html') === 'true';
   const userId = searchParams.get('userId');
 
   // Get a specific template
   if (templateId) {
-    const template = getTemplateById(templateId);
+    // Try to get template directly, or map from cronId to templateId
+    let template = getTemplateById(templateId);
+    if (!template && CRON_TO_TEMPLATE_MAP[templateId]) {
+      templateId = CRON_TO_TEMPLATE_MAP[templateId];
+      template = getTemplateById(templateId);
+    }
 
     if (!template) {
       return NextResponse.json(

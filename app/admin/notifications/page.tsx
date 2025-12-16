@@ -787,6 +787,7 @@ function AdminEmailsPageContent() {
   const [emailPreviewUserId, setEmailPreviewUserId] = useState<string | null>(null);
   const [emailPreviewUsername, setEmailPreviewUsername] = useState<string | null>(null);
   const [emailPreviewIsPersonalized, setEmailPreviewIsPersonalized] = useState(false);
+  const [emailPreviewError, setEmailPreviewError] = useState<string | null>(null);
 
   // Check admin access
   useEffect(() => {
@@ -949,6 +950,7 @@ function AdminEmailsPageContent() {
     setEmailPreviewLoading(true);
     setEmailPreviewHtml(null);
     setEmailPreviewIsPersonalized(false);
+    setEmailPreviewError(null);
 
     try {
       // Build URL with optional userId for personalized preview
@@ -963,15 +965,32 @@ function AdminEmailsPageContent() {
       if (data.success) {
         setEmailPreviewHtml(data.template.html);
         setEmailPreviewIsPersonalized(data.template.isPersonalized || false);
+        setEmailPreviewError(null);
       } else {
+        const errorDetails = JSON.stringify({
+          templateId,
+          userId,
+          url,
+          status: response.status,
+          error: data.error || 'Unknown error',
+          data
+        }, null, 2);
+        setEmailPreviewError(errorDetails);
         toast({
           title: 'Error',
-          description: 'Failed to load email preview',
+          description: data.error || 'Failed to load email preview',
           variant: 'destructive',
         });
       }
     } catch (error) {
       console.error('Failed to load email preview:', error);
+      const errorDetails = JSON.stringify({
+        templateId,
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }, null, 2);
+      setEmailPreviewError(errorDetails);
       toast({
         title: 'Error',
         description: 'Failed to load email preview',
@@ -1820,10 +1839,40 @@ function AdminEmailsPageContent() {
                   />
                 </div>
               </div>
+            ) : emailPreviewError ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="font-medium">Failed to load email preview</span>
+                </div>
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-destructive">Error Details</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(emailPreviewError);
+                        toast({
+                          title: 'Copied!',
+                          description: 'Error details copied to clipboard',
+                        });
+                      }}
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy Error
+                    </Button>
+                  </div>
+                  <pre className="text-xs text-muted-foreground overflow-auto max-h-[400px] whitespace-pre-wrap bg-muted/50 p-3 rounded">
+                    {emailPreviewError}
+                  </pre>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Failed to load email preview</p>
+                <p>No preview available</p>
               </div>
             )}
           </SideDrawerBody>
