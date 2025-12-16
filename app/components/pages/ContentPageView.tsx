@@ -878,11 +878,13 @@ export default function ContentPageView({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // SIMPLIFIED: Remove complex padding logic - let body padding handle everything
-  // Include banner-stack-height to account for any active banners (email verification, PWA, etc.)
+  // SIMPLIFIED: Remove complex padding logic - use CSS variable for banner stack height
+  // Include banner-stack-height to account for any active banners (email verification, PWA, save banner, etc.)
   useEffect(() => {
     if (isEditing) {
-      setContentPaddingTop('0px'); // No padding needed - body handles save header
+      // Edit mode: header is in document flow (not fixed), but save banner is fixed
+      // Need padding for the banner stack (which includes save banner when visible)
+      setContentPaddingTop('var(--banner-stack-height, 0px)');
     } else {
       setContentPaddingTop('calc(160px + var(--banner-stack-height, 0px))'); // View mode: header is fixed, need padding + banner height
     }

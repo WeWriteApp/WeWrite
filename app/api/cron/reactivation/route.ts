@@ -1,8 +1,8 @@
 /**
  * Re-activation Email Cron Job
  *
- * Sends re-activation emails to users who haven't been active for 30+ days.
- * Encourages inactive users to come back and start writing/earning again.
+ * Schedules re-activation emails (2 days out) for users who haven't been active for 30+ days.
+ * Emails are scheduled via Resend's scheduling feature to avoid immediate spam.
  * Run weekly via Vercel cron.
  *
  * Add to vercel.json:
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[REACTIVATION] Starting re-activation email processing');
+    console.log('[REACTIVATION] Starting re-activation email scheduling');
 
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -51,6 +51,11 @@ export async function GET(request: NextRequest) {
     }
 
     const db = admin.firestore();
+
+    // Schedule emails for 2 days from now
+    const scheduledSendDate = new Date();
+    scheduledSendDate.setDate(scheduledSendDate.getDate() + 2);
+    const scheduledAt = scheduledSendDate.toISOString();
 
     // Calculate date range - users who were last active 30-90 days ago
     // We target users after 30 days but before 90 days (to avoid spamming very old accounts)
@@ -137,8 +142,8 @@ export async function GET(request: NextRequest) {
           });
         }
 
-        // Send the re-activation email
-        const success = await sendTemplatedEmail({
+        // Schedule the re-activation email for 2 days from now
+        const result = await sendTemplatedEmail({
           templateId: 'reactivation',
           to: userData.email,
           data: {
@@ -146,14 +151,17 @@ export async function GET(request: NextRequest) {
             daysSinceActive,
             emailSettingsToken
           },
-          userId
+          userId,
+          scheduledAt
         });
 
-        if (success) {
-          // Mark that we sent the reactivation email
+        if (result.success) {
+          // Mark that we scheduled the reactivation email and store Resend ID for potential cancellation
           await userDoc.ref.update({
             reactivationEmailSentAt: admin.firestore.FieldValue.serverTimestamp(),
-            reactivationEmailCount: admin.firestore.FieldValue.increment(1)
+            reactivationEmailCount: admin.firestore.FieldValue.increment(1),
+            scheduledReactivationEmailId: result.resendId || null,
+            scheduledReactivationEmailAt: scheduledAt
           });
           sent++;
         } else {
@@ -172,13 +180,14 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[REACTIVATION] Completed in ${duration}ms - Sent: ${sent}, Skipped: ${skipped}, Already sent: ${alreadySent}, Opted out: ${optedOut}, Failed: ${failed}`);
+    console.log(`[REACTIVATION] Completed in ${duration}ms - Scheduled: ${sent} for ${scheduledAt}, Skipped: ${skipped}, Already sent: ${alreadySent}, Opted out: ${optedOut}, Failed: ${failed}`);
 
     return NextResponse.json({
       success: true,
       summary: {
         totalChecked: usersSnapshot.size,
-        sent,
+        scheduled: sent,
+        scheduledFor: scheduledAt,
         skipped,
         alreadySent,
         optedOut,

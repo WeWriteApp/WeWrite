@@ -337,6 +337,7 @@ export const sendPayoutSetupReminder = async (options: {
   username: string;
   pendingEarnings: string;
   userId?: string;
+  emailSettingsToken?: string;
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
@@ -345,7 +346,11 @@ export const sendPayoutSetupReminder = async (options: {
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
       subject: payoutSetupReminderTemplate.subject,
-      html: payoutSetupReminderTemplate.generateHtml(options),
+      html: payoutSetupReminderTemplate.generateHtml({
+        username: options.username,
+        pendingEarnings: options.pendingEarnings,
+        emailSettingsToken: options.emailSettingsToken,
+      }),
     });
 
     if (error) {
@@ -683,21 +688,25 @@ export { getResend };
 /**
  * Send an email using a template ID
  * This is the recommended way to send emails using pre-defined templates
+ *
+ * @param options.scheduledAt - Optional ISO 8601 date string or natural language (e.g., "in 2 days")
+ *                              to schedule the email for future delivery (up to 30 days)
  */
 export const sendTemplatedEmail = async (options: {
   templateId: string;
   to: string;
   data: Record<string, any>;
   userId?: string;
-}): Promise<boolean> => {
+  scheduledAt?: string;
+}): Promise<{ success: boolean; resendId?: string }> => {
   const sentAt = new Date().toISOString();
   try {
-    const { templateId, to, data, userId } = options;
-    
+    const { templateId, to, data, userId, scheduledAt } = options;
+
     const template = getTemplateById(templateId);
     if (!template) {
       console.error('[EmailService] Template not found:', templateId);
-      return false;
+      return { success: false };
     }
 
     const { data: resendData, error } = await getResend().emails.send({
@@ -706,6 +715,7 @@ export const sendTemplatedEmail = async (options: {
       to,
       subject: template.subject,
       html: template.generateHtml(data),
+      ...(scheduledAt && { scheduledAt }),
     });
 
     if (error) {
@@ -719,13 +729,16 @@ export const sendTemplatedEmail = async (options: {
         subject: template.subject,
         status: 'failed',
         errorMessage: error.message,
-        metadata: data,
+        metadata: { ...data, scheduledAt },
         sentAt,
       });
-      return false;
+      return { success: false };
     }
 
-    console.log(`[EmailService] ${template.name} email sent to:`, to, 'ID:', resendData?.id);
+    const logMessage = scheduledAt
+      ? `[EmailService] ${template.name} email scheduled for ${scheduledAt} to:`
+      : `[EmailService] ${template.name} email sent to:`;
+    console.log(logMessage, to, 'ID:', resendData?.id);
     await logEmailSend({
       templateId,
       templateName: template.name,
@@ -733,15 +746,15 @@ export const sendTemplatedEmail = async (options: {
       recipientUserId: userId,
       recipientUsername: data.username,
       subject: template.subject,
-      status: 'sent',
+      status: scheduledAt ? 'scheduled' : 'sent',
       resendId: resendData?.id,
-      metadata: data,
+      metadata: { ...data, scheduledAt },
       sentAt,
     });
-    return true;
+    return { success: true, resendId: resendData?.id };
   } catch (error) {
     console.error('[EmailService] Failed to send templated email:', error);
-    return false;
+    return { success: false };
   }
 };
 

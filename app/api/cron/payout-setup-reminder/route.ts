@@ -18,6 +18,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { sendPayoutSetupReminder } from '../../../services/emailService';
 import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
+import { getOrCreateEmailSettingsToken } from '../../../services/emailSettingsTokenService';
 
 export const maxDuration = 120; // 2 minute timeout
 
@@ -117,13 +118,17 @@ export async function GET(request: NextRequest) {
         
         // Calculate pending earnings in dollars
         const pendingEarnings = (balanceData.pendingUsdCents || 0) / 100;
-        
+
+        // Get or create the user's email settings token for no-login preferences management
+        const emailSettingsToken = await getOrCreateEmailSettingsToken(userId);
+
         // Send the reminder email
         const success = await sendPayoutSetupReminder({
           to: userData.email,
           username: userData.username || 'there',
           pendingEarnings: `$${pendingEarnings.toFixed(2)}`,
-          userId
+          userId,
+          emailSettingsToken
         });
         
         if (success) {
