@@ -262,7 +262,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error instanceof AuthError) {
         setError(error.message);
       } else {
-        setError('An unexpected error occurred during sign in');
+        // Provide more helpful generic error message
+        setError('Unable to sign in. Please check your username/email and password, then try again.');
       }
       throw error;
     }

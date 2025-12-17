@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return createErrorResponse('Invalid credentials');
+      return createErrorResponse('Incorrect username/email or password. Please try again.');
     }
 
     // Production mode: use Firebase Admin Firestore for username lookup
@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Auth] Login error:', error);
-    return createErrorResponse('An error occurred during login', 500);
+    return createErrorResponse('Unable to sign in. Please check your credentials and try again.', 500);
   }
 }
 

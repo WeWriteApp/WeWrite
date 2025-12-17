@@ -7,9 +7,11 @@
       "dependencies": {
         "3d-force-graph": "^1.79.0",
         "@capacitor/android": "^7.0.0",
+        "@capacitor/app": "^8.0.0",
         "@capacitor/cli": "^7.0.0",
         "@capacitor/core": "^7.0.0",
         "@capacitor/ios": "^7.0.0",
+        "@capacitor/push-notifications": "^8.0.0",
         "@google-cloud/bigquery": "^8.1.0",
         "@google-cloud/logging": "^11.2.0",
         "@heroicons/react": "^2.2.0",
@@ -244,11 +246,15 @@
 
     "@capacitor/android": ["@capacitor/android@7.4.4", "", { "peerDependencies": { "@capacitor/core": "^7.4.0" } }, "sha512-y8knfV1JXNrd6XZZLZireGT+EBCN0lvOo+HZ/s7L8LkrPBu4nY5UZn0Wxz4yOezItEII9rqYJSHsS5fMJG9gdw=="],
 
+    "@capacitor/app": ["@capacitor/app@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-OwzIkUs4w433Bu9WWAEbEYngXEfJXZ9Wmdb8eoaqzYBgB0W9/3Ed/mh6sAYPNBAZlpyarmewgP7Nb+d3Vrh+xA=="],
+
     "@capacitor/cli": ["@capacitor/cli@7.4.4", "", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.1", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^6.1.11", "tslib": "^2.8.1", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-J7ciBE7GlJ70sr2s8oz1+H4ZdNk4MGG41fsakUlDHWva5UWgFIZYMiEdDvGbYazAYTaxN3lVZpH9zil9FfZj+Q=="],
 
     "@capacitor/core": ["@capacitor/core@7.4.4", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-xzjxpr+d2zwTpCaN0k+C6wKSZzWFAb9OVEUtmO72ihjr/NEDoLvsGl4WLfjWPcCO2zOy0b2X52tfRWjECFUjtw=="],
 
     "@capacitor/ios": ["@capacitor/ios@7.4.4", "", { "peerDependencies": { "@capacitor/core": "^7.4.0" } }, "sha512-Xp3bGWlSQAwsZGngRMWTdoD2agdMV12Whnm+/xsYPxfQSj+Tksbr7r/8Mso7VWkpnTKO4iMlx762g3PjW+wi4w=="],
+
+    "@capacitor/push-notifications": ["@capacitor/push-notifications@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-xJWQLqAfC8b2ETqAPmwDnkKB4t/lVrbYc2D8VpA2fSu10JFSL/R722Vk0Lfl9Lo9WusmyIiQbVfILNQ3iFNGKw=="],
 
     "@colors/colors": ["@colors/colors@1.5.0", "", {}, "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ=="],
 

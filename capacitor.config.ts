@@ -5,15 +5,15 @@ const config: CapacitorConfig = {
   appName: 'WeWrite',
   webDir: 'out',
   server: {
-    // Use the live server URL for development
-    // Comment this out for production builds that use local assets
-    url: 'https://getwewrite.app',
+    // For local development via USB, use localhost with ADB reverse port forwarding
+    // Run: adb reverse tcp:3000 tcp:3000
+    url: 'http://localhost:3000',
     cleartext: true,
     // Keep all navigation within the WebView
-    hostname: 'getwewrite.app',
-    androidScheme: 'https',
+    hostname: 'localhost',
+    androidScheme: 'http',
     // Allow navigation to these URLs within the WebView (don't open external browser)
-    allowNavigation: ['getwewrite.app', '*.getwewrite.app', 'getwewrite.app/*'],
+    allowNavigation: ['localhost:3000'],
   },
   ios: {
     contentInset: 'automatic',

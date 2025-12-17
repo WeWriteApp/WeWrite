@@ -1432,12 +1432,17 @@ export default function ContentPageView({
       // NEW PAGE MODE: After first save, update URL to remove draft param
       if (isNewPageMode && page?.isNewPage) {
         // Update local page state to reflect saved status (no longer new)
-        setPage({ ...page, isNewPage: false });
-        // Update URL using Next.js router (not history.replaceState) so useSearchParams updates
+        // Also update the content in the page object to ensure it persists
+        setPage({
+          ...page,
+          isNewPage: false,
+          content: editorState // Preserve the current editor content
+        });
+        // Update URL using history.replaceState to avoid triggering React re-renders
+        // This is safer than router.replace which can cause the page loading effect to re-run
         const newUrl = `/${pageId}`;
-        console.log('📝 New page saved, updating URL via router to:', newUrl);
-        // Use router.replace with scroll: false to prevent scroll reset and update searchParams
-        router.replace(newUrl, { scroll: false });
+        console.log('📝 New page saved, updating URL via history.replaceState to:', newUrl);
+        window.history.replaceState(null, '', newUrl);
       }
 
       // Trigger save success animation

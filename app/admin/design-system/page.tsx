@@ -66,6 +66,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import { CompositionBar, CompositionBarData } from '../../components/payments/CompositionBar';
 import { RollingCounter } from '../../components/ui/rolling-counter';
 import { CounterBadge } from '../../components/ui/counter-badge';
+import IconsShowcase from '../../components/design-system/IconsShowcase';
 
 interface ComponentShowcaseProps {
   title: string;
@@ -422,6 +423,18 @@ export default function DesignSystemPage() {
             <div className="space-y-4">
               <ColorSystemManager />
             </div>
+          </div>
+
+          {/* Icons & Animated Icons */}
+          <div className="wewrite-card space-y-4">
+            <div className="border-b border-border pb-4">
+              <h3 className="text-lg font-semibold">Icons & Animated Icons</h3>
+              <p className="text-sm text-muted-foreground">app/components/ui/animated-icons.tsx</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Animated icon components using framer-motion. Hover, tap, and state-triggered animations for interactive UI elements.
+              </p>
+            </div>
+            <IconsShowcase />
           </div>
 
           {/* Rolling Counter / Odometer */}

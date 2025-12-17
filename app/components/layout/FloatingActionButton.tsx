@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
@@ -114,25 +115,37 @@ export default function FloatingActionButton() {
 
   return (
     <FixedPortal>
-      <Button
-        onClick={handleNewPageClick}
-        size="icon"
-        className={cn(
-          "fixed z-fixed-fab h-14 w-14 rounded-full shadow-lg pointer-events-auto",
-          "bg-primary hover:bg-primary/90 text-primary-foreground",
-          "transition-all duration-300 ease-in-out",
-          "hover:scale-110 active:scale-95"
-        )}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed pointer-events-auto"
         style={{
-          position: 'fixed',
           right: '1rem',
           bottom: bottomPosition,
+          zIndex: 90,
           transition: 'bottom 300ms ease-in-out'
         }}
-        aria-label="Create new page"
       >
-        <Plus className="h-6 w-6" />
-      </Button>
+        <Button
+          onClick={handleNewPageClick}
+          size="icon"
+          className={cn(
+            "h-14 w-14 rounded-full shadow-lg pointer-events-auto",
+            "bg-primary hover:bg-primary/90 text-primary-foreground"
+          )}
+          aria-label="Create new page"
+        >
+          <motion.div
+            whileHover={{ rotate: 90 }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          >
+            <Plus className="h-6 w-6" />
+          </motion.div>
+        </Button>
+      </motion.div>
     </FixedPortal>
   );
 }

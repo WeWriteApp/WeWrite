@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
+import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { LucideIcon, GripVertical } from 'lucide-react';
 
@@ -129,11 +130,18 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         title={!showContent ? label : undefined}
         aria-label={label}
       >
-        {/* Icon - always 20x20, centered in its space */}
-        <Icon className={cn(
-          "w-5 h-5 flex-shrink-0",
-          isActive && "text-accent"
-        )} />
+        {/* Icon - always 20x20, centered in its space, with hover animation */}
+        <motion.div
+          whileHover={{ scale: 1.15, y: -1 }}
+          whileTap={{ scale: 0.9 }}
+          animate={isActive ? { scale: 1.05 } : { scale: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        >
+          <Icon className={cn(
+            "w-5 h-5 flex-shrink-0",
+            isActive && "text-accent"
+          )} />
+        </motion.div>
         
         {/* Label - animated width and opacity */}
         <span 

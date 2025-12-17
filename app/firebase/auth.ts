@@ -144,7 +144,7 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
     });
 
     // Convert Firebase error codes to user-friendly messages
-    let message = "An error occurred during login. Please try again.";
+    let message = "Unable to sign in. Please check your credentials and try again.";
 
     if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
       message = "Incorrect username/email or password. Please try again.";

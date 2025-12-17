@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
+import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
 // Single drag type for all items
@@ -106,9 +107,7 @@ export default function UnifiedNavButton({
         isDragging && "opacity-40",
         // Wiggle animation when in edit mode (but not while dragging)
         editMode && !isDragging && "animate-wiggle",
-        // Press feedback (only outside edit mode)
-        !editMode && isPressed && "scale-110 duration-75",
-        !editMode && "active:scale-95 active:duration-75",
+        // Press feedback handled by framer-motion
         // Active state - use accent/primary color for clear indication
         isActive
           ? "bg-accent/15 text-accent"
@@ -127,16 +126,21 @@ export default function UnifiedNavButton({
         cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
       }}
     >
-      <div className="relative">
+      <motion.div
+        className="relative"
+        whileHover={!editMode ? { scale: 1.15, y: -2 } : undefined}
+        whileTap={!editMode ? { scale: 0.9 } : undefined}
+        animate={isActive ? { scale: 1.05 } : { scale: 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      >
         <Icon className={cn(
           // Original icon size from the old NavButton
-          "h-5 w-5 flex-shrink-0 transition-transform duration-75",
-          isPressed && !editMode && "scale-110",
+          "h-5 w-5 flex-shrink-0",
           // Active icon gets accent color
           isActive && "text-accent"
         )} />
         {children}
-      </div>
+      </motion.div>
 
       <span className={cn(
         "text-[10px] font-medium leading-tight transition-colors duration-75",

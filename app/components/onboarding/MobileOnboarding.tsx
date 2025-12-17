@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Platform } from '@/app/utils/capacitor';
-import { Check, Smartphone, Bell, Lock, ArrowRight, Sparkles } from 'lucide-react';
-import Image from 'next/image';
+import { Check, Lightbulb, Bell, ArrowRight, ArrowLeft, Sparkles, Users } from 'lucide-react';
+import { App } from '@capacitor/app';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 interface MobileOnboardingProps {
   platform: Platform;
@@ -18,42 +19,83 @@ interface OnboardingStep {
   title: string;
   description: string;
   icon: React.ReactNode;
-  iosContent?: React.ReactNode;
-  androidContent?: React.ReactNode;
 }
 
 const onboardingSteps: OnboardingStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to WeWrite',
-    description: 'Your creative writing companion. Write, share, and connect with other writers.',
+    description: 'A platform for thought. Capture ideas, share perspectives, and discover what others are thinking.',
     icon: <Sparkles className="h-12 w-12 text-primary" />,
   },
   {
     id: 'features',
-    title: 'Write Beautifully',
-    description: 'Create stunning pages with our distraction-free editor. Add backgrounds, customize fonts, and express yourself.',
-    icon: <Smartphone className="h-12 w-12 text-primary" />,
+    title: 'Your Ideas, Connected',
+    description: 'Create notes that link to other notes. Build a web of interconnected thoughts and explore how ideas relate.',
+    icon: <Lightbulb className="h-12 w-12 text-primary" />,
+  },
+  {
+    id: 'social',
+    title: 'Think Together',
+    description: 'Follow people whose ideas inspire you. See what they\'re thinking and join the conversation.',
+    icon: <Users className="h-12 w-12 text-primary" />,
   },
   {
     id: 'notifications',
-    title: 'Stay Connected',
-    description: 'Get notified when someone comments on your work or follows you. Enable notifications to never miss a moment.',
+    title: 'Stay in the Loop',
+    description: 'Get notified when someone links to your notes or follows you.',
     icon: <Bell className="h-12 w-12 text-primary" />,
-  },
-  {
-    id: 'privacy',
-    title: 'Your Privacy Matters',
-    description: 'Control who sees your work. Keep pages private, share with followers, or publish to the world.',
-    icon: <Lock className="h-12 w-12 text-primary" />,
   },
 ];
 
 export default function MobileOnboarding({ platform, onComplete, isPreview = false }: MobileOnboardingProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
+  const [notificationPermission, setNotificationPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
 
-  const handleNext = () => {
+  // Handle Android hardware back button
+  useEffect(() => {
+    if (isPreview) return;
+
+    const handleBackButton = () => {
+      if (currentStep > 0) {
+        setCurrentStep(currentStep - 1);
+      }
+      // Don't exit the app on back press during onboarding - just ignore if on first step
+    };
+
+    // Listen for Capacitor back button event
+    let backButtonListener: any = null;
+
+    const setupBackButton = async () => {
+      try {
+        backButtonListener = await App.addListener('backButton', handleBackButton);
+      } catch (e) {
+        // Not running in Capacitor
+      }
+    };
+
+    setupBackButton();
+
+    return () => {
+      if (backButtonListener) {
+        backButtonListener.remove();
+      }
+    };
+  }, [currentStep, isPreview]);
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleNext = async () => {
+    // If on notification step, handle permission request
+    if (currentStepData.id === 'notifications') {
+      await requestNotificationPermission();
+    }
+
     if (currentStep < onboardingSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -62,7 +104,28 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
   };
 
   const handleSkip = () => {
-    handleComplete();
+    // If skipping notification step, just move on without requesting
+    if (currentStep < onboardingSteps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if (isPreview) return;
+
+    try {
+      const result = await PushNotifications.requestPermissions();
+      setNotificationPermission(result.receive);
+
+      if (result.receive === 'granted') {
+        // Register for push notifications
+        await PushNotifications.register();
+      }
+    } catch (e) {
+      console.log('Push notifications not available:', e);
+    }
   };
 
   const handleComplete = () => {
@@ -78,6 +141,7 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
 
   const currentStepData = onboardingSteps[currentStep];
   const isLastStep = currentStep === onboardingSteps.length - 1;
+  const isFirstStep = currentStep === 0;
   const isIOS = platform === 'ios';
   const isAndroid = platform === 'android';
 
@@ -143,32 +207,56 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
 
       {/* Bottom actions */}
       <div className={`px-6 pb-8 space-y-3 ${isIOS ? 'pb-10' : ''}`}>
-        <Button
-          onClick={handleNext}
-          size="lg"
-          className="w-full gap-2"
-        >
-          {isLastStep ? (
-            <>
-              Get Started
-              <Check className="h-4 w-4" />
-            </>
-          ) : (
-            <>
-              Continue
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </Button>
-
-        {!isLastStep && (
+        {/* Back button - show on all steps except first */}
+        {!isFirstStep && (
           <Button
-            variant="ghost"
-            onClick={handleSkip}
+            variant="outline"
+            onClick={handleBack}
             size="lg"
-            className="w-full text-muted-foreground"
+            className="w-full gap-2"
           >
-            Skip
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        )}
+
+        {/* Notification step has special buttons */}
+        {currentStepData.id === 'notifications' ? (
+          <>
+            <Button
+              onClick={handleNext}
+              size="lg"
+              className="w-full gap-2"
+            >
+              Enable Notifications
+              <Bell className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleSkip}
+              size="lg"
+              className="w-full text-muted-foreground"
+            >
+              Maybe Later
+            </Button>
+          </>
+        ) : (
+          <Button
+            onClick={handleNext}
+            size="lg"
+            className="w-full gap-2"
+          >
+            {isLastStep ? (
+              <>
+                Get Started
+                <Check className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </Button>
         )}
       </div>
