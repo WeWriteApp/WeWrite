@@ -6,7 +6,7 @@ import { useAuth } from '../providers/AuthProvider';
  * Navigation page routes that always show navigation elements
  */
 const NAV_PAGE_ROUTES = [
-  '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
+  '/', '/home', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
   '/login', '/signup', '/privacy', '/terms', '/recents', '/groups',
   '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
 ];
@@ -79,6 +79,13 @@ function shouldShowFABOnRoute(pathname: string, user: any): boolean {
   // Hide on /new page (user is already creating a page)
   if (pathname === '/new') {
     return false;
+  }
+
+  // Always show FAB on user's own profile page
+  if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
+    if (user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`)) {
+      return true; // Show FAB on own profile
+    }
   }
 
   // Show FAB everywhere except content pages
