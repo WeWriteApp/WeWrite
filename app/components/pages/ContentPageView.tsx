@@ -159,6 +159,7 @@ export default function ContentPageView({
   const [titleError, setTitleError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [justSaved, setJustSaved] = useState(false); // Flag to prevent data reload after save
+  const justSavedRef = useRef(false); // Ref-based flag for immediate sync access
   // 🎯 ELEGANT: No longer needed - using event system for updates
 
   // Debug logging for hasUnsavedChanges state
@@ -674,7 +675,9 @@ export default function ContentPageView({
     }
 
     // CRITICAL FIX: Don't reload data immediately after save to prevent showing stale content
-    if (justSaved) {
+    // Check both state and ref - ref is immediately available, state ensures re-render triggers work
+    if (justSaved || justSavedRef.current) {
+      console.log('📝 Skipping page load - justSaved flag is active');
       return;
     }
 
@@ -1410,14 +1413,25 @@ export default function ContentPageView({
 
       setHasUnsavedChanges(false);
 
+      // Set justSaved flag FIRST to prevent data reloading when URL changes
+      // This must be set BEFORE router.replace() to prevent race conditions
+      // Set BOTH ref (immediate) and state (for React re-renders)
+      justSavedRef.current = true;
+      setJustSaved(true);
+      setTimeout(() => {
+        justSavedRef.current = false;
+        setJustSaved(false);
+      }, 2000); // Prevent reloading for 2 seconds after save
+
       // NEW PAGE MODE: After first save, update URL to remove draft param
       if (isNewPageMode && page?.isNewPage) {
         // Update local page state to reflect saved status (no longer new)
         setPage({ ...page, isNewPage: false });
-        // Update URL to remove draft param (don't add to history)
+        // Update URL using Next.js router (not history.replaceState) so useSearchParams updates
         const newUrl = `/${pageId}`;
-        window.history.replaceState({}, '', newUrl);
-        console.log('📝 New page saved, URL updated to:', newUrl);
+        console.log('📝 New page saved, updating URL via router to:', newUrl);
+        // Use router.replace with scroll: false to prevent scroll reset and update searchParams
+        router.replace(newUrl, { scroll: false });
       }
 
       // Trigger save success animation
@@ -1442,12 +1456,6 @@ export default function ContentPageView({
       pageLogger.info('Page saved successfully', { pageId, title });
       setHasUnsavedChanges(false);
       setError(null);
-
-      // Set justSaved flag to prevent data reloading that could show stale content
-      setJustSaved(true);
-      setTimeout(() => {
-        setJustSaved(false);
-      }, 2000); // Prevent reloading for 2 seconds after save
 
 
 
