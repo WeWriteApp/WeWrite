@@ -1184,17 +1184,23 @@ export default function ContentPageView({
         isNewPage: page?.isNewPage
       });
 
-      // NEW PAGE MODE: Use POST to create, PUT to update
-      const isCreatingNewPage = page?.isNewPage === true;
-      const apiEndpoint = isCreatingNewPage ? '/api/pages/draft' : '/api/pages';
-      const httpMethod = isCreatingNewPage ? 'POST' : 'PUT';
+      // NEW PAGE MODE: Always use PUT to /api/pages for saving content
+      // The draft endpoint only creates the skeleton page document on initial navigation
+      // When the user actually saves content, we use PUT which creates versions properly
+      // If this is a new page (isNewPage: true), we add markAsSaved to clear the flag
+      const isFirstSaveOfNewPage = page?.isNewPage === true;
+      if (isFirstSaveOfNewPage) {
+        updateData.markAsSaved = true;
+      }
+      const apiEndpoint = '/api/pages';
+      const httpMethod = 'PUT';
 
       pageLogger.debug(`API request: ${httpMethod} ${apiEndpoint}`, {
         pageId: pageId,
         title,
         hasContent: !!contentToSave,
         contentLength: contentToSave ? JSON.stringify(contentToSave).length : 0,
-        isCreatingNewPage
+        isFirstSaveOfNewPage
       });
 
       const response = await fetch(apiEndpoint, {
