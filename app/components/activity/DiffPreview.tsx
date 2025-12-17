@@ -114,12 +114,47 @@ export default function DiffPreview({
     }
   }
 
-  // If no diff data, show fallback message (but avoid redundancy for new pages)
+  // If no diff data, try to generate a preview from currentContent for new pages
   if (!preview) {
+    // For new pages, try to extract text from currentContent to show something meaningful
+    if (isNewPage && currentContent) {
+      let extractedText = '';
+      try {
+        // Try to parse and extract text from Slate/JSON content
+        const content = typeof currentContent === 'string' ? JSON.parse(currentContent) : currentContent;
+        if (Array.isArray(content)) {
+          extractedText = content.map(node => {
+            if (node.children) {
+              return node.children.map((child: any) => child.text || '').join('');
+            }
+            return node.text || '';
+          }).join(' ').trim();
+        }
+      } catch {
+        // If parsing fails and it's not JSON-like, use as-is
+        if (typeof currentContent === 'string' && !currentContent.startsWith('[') && !currentContent.startsWith('{')) {
+          extractedText = currentContent;
+        }
+      }
+
+      if (extractedText) {
+        const truncatedText = extractedText.length > 150 ? extractedText.substring(0, 150) + '...' : extractedText;
+        return (
+          <div className={`text-xs overflow-hidden h-full ${className}`}>
+            <div className="overflow-x-hidden text-ellipsis line-clamp-3">
+              <span className="bg-green-500/20 dark:bg-green-500/30 text-green-600 dark:text-green-400 px-0.5 rounded">
+                {truncatedText}
+              </span>
+            </div>
+          </div>
+        );
+      }
+    }
+
     return (
       <div className={`text-xs text-muted-foreground h-full flex items-center justify-center ${className}`}>
         {isNewPage ? (
-          <span className="italic">Content preview unavailable</span>
+          <span className="italic">New page created</span>
         ) : (
           "Page edited"
         )}

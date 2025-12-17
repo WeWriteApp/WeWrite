@@ -254,7 +254,7 @@ export default function ContentPageStats({
             </div>
 
             {/* Diff preview */}
-            {stats.diffPreview && (
+            {stats.diffPreview && typeof stats.diffPreview === 'object' && (
               <div className="text-xs overflow-hidden line-clamp-2">
                 {/* Before context */}
                 {stats.diffPreview.beforeContext && (
@@ -268,10 +268,26 @@ export default function ContentPageStats({
                   </span>
                 )}
 
-                {/* Added text */}
+                {/* Added text - extract from JSON if needed */}
                 {stats.diffPreview.hasAdditions && stats.diffPreview.addedText && (
                   <span className="bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-0.5 rounded">
-                    {stats.diffPreview.addedText}
+                    {(() => {
+                      const text = stats.diffPreview.addedText;
+                      // Check if it looks like raw JSON content
+                      if (text && (text.startsWith('[{') || text.startsWith('{"'))) {
+                        try {
+                          const parsed = JSON.parse(text);
+                          if (Array.isArray(parsed)) {
+                            return parsed.map(node =>
+                              node.children?.map((c: any) => c.text || '').join('') || node.text || ''
+                            ).join(' ').trim().substring(0, 150) || text;
+                          }
+                        } catch {
+                          // Not valid JSON, use as-is
+                        }
+                      }
+                      return text;
+                    })()}
                   </span>
                 )}
 

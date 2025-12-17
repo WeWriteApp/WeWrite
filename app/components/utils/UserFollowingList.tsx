@@ -9,6 +9,7 @@ import { followsApi } from "../../utils/apiClient";
 import { useAuth } from '../../providers/AuthProvider';
 import Link from 'next/link';
 import { UsernameBadge } from '../ui/UsernameBadge';
+import { cn } from '../../lib/utils';
 
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from './AlertModal';

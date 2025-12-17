@@ -289,8 +289,8 @@ export async function GET(
         const collectionName = await getCollectionNameAsync('pages');
         const pageRef = db.collection(collectionName).doc(pageId);
 
-        // Only fetch lastModified field for validation (minimal read)
-        const pageSnapshot = await pageRef.select('lastModified', 'updatedAt').get();
+        // Only fetch essential fields for validation (minimal read)
+        const pageSnapshot = await pageRef.select('lastModified', 'updatedAt', 'userId').get();
 
         if (pageSnapshot.exists) {
           const data = pageSnapshot.data();
@@ -302,13 +302,21 @@ export async function GET(
             console.log(`⚡ [Page API] 304 Not Modified for ${pageId}`);
             trackFirebaseRead('pages', 'getPageById-validation', 1, 'api-etag-check');
 
+            // Check if user is page owner for cache headers
+            const pageOwnerId = data?.userId;
+            const isOwner = effectiveUserId && pageOwnerId === effectiveUserId;
+
             return new NextResponse(null, {
               status: 304,
               headers: {
                 'ETag': currentEtag,
-                'Cache-Control': 'private, max-age=60, must-revalidate',
+                // Page owners get no-cache to ensure they always see fresh edits
+                'Cache-Control': isOwner
+                  ? 'private, no-cache, no-store, must-revalidate'
+                  : 'private, max-age=30, must-revalidate',
                 'X-Cache-Status': 'VALIDATED',
                 'X-Response-Time': `${Date.now() - startTime}ms`,
+                'X-Is-Owner': isOwner ? 'true' : 'false',
               }
             });
           }
@@ -400,15 +408,23 @@ export async function GET(
     });
 
     // Smart caching strategy:
-    // - private: Only browser can cache (not CDN) to respect auth
-    // - max-age=60: Browser can use cached version for 60 seconds
-    // - must-revalidate: After 60s, must check with server (ETag validation)
-    // This ensures fresh data while reducing redundant fetches during rapid navigation
-    response.headers.set('Cache-Control', 'private, max-age=60, must-revalidate');
+    // - For page owners: no-cache to ensure they always see their latest edits immediately
+    // - For readers: short cache (30s) to reduce load while keeping data fresh
+    const isPageOwner = effectiveUserId && result.pageData?.userId === effectiveUserId;
+
+    if (isPageOwner) {
+      // Page owner should always get fresh data for editing
+      response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    } else {
+      // Readers can use a short cache
+      response.headers.set('Cache-Control', 'private, max-age=30, must-revalidate');
+    }
+
     response.headers.set('ETag', etag);
     response.headers.set('X-Cache-Status', 'MISS');
     response.headers.set('X-Response-Time', `${responseTime}ms`);
     response.headers.set('X-Database-Reads', '1');
+    response.headers.set('X-Is-Owner', isPageOwner ? 'true' : 'false');
 
     return response;
 

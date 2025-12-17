@@ -645,14 +645,41 @@ export async function POST(request: NextRequest) {
           removed: diffResult.removed,
           hasChanges: true // Always true for new pages
         },
-        diffPreview: diffResult.preview || {
-          beforeContext: '',
-          addedText: (contentString || '').substring(0, 200),
-          removedText: '',
-          afterContext: '',
-          hasAdditions: true,
-          hasRemovals: false
-        },
+        diffPreview: diffResult.preview || (() => {
+          // Extract text content for preview (avoid showing raw JSON)
+          let textContent = '';
+          if (contentString) {
+            try {
+              const parsed = JSON.parse(contentString);
+              if (Array.isArray(parsed)) {
+                textContent = parsed.map(node => {
+                  if (node.children) {
+                    return node.children.map(child => child.text || '').join('');
+                  }
+                  return node.text || '';
+                }).join(' ').trim();
+              }
+            } catch {
+              // If not valid JSON, use as-is only if it doesn't look like JSON
+              if (!contentString.startsWith('[') && !contentString.startsWith('{')) {
+                textContent = contentString;
+              }
+            }
+          }
+          // Fallback to title if no text content extracted
+          if (!textContent || textContent.length === 0) {
+            textContent = pageData.title || 'New page created';
+          }
+          const truncatedText = textContent.length > 200 ? textContent.substring(0, 200) + '...' : textContent;
+          return {
+            beforeContext: '',
+            addedText: truncatedText,
+            removedText: '',
+            afterContext: '',
+            hasAdditions: true,
+            hasRemovals: false
+          };
+        })(),
         isNewPage: true,
         isNoOp: false
       };
@@ -1266,13 +1293,21 @@ export async function PUT(request: NextRequest) {
       updateFields: Object.keys(updateData)
     }, 'PAGE_SAVE');
 
-    // SIMPLIFIED CACHE INVALIDATION: Fire and forget (non-blocking)
-    import('../../utils/unifiedCache')
-      .then(({ invalidatePageData }) => {
-        invalidatePageData(id, currentUserId);
-        console.log('✅ Cache invalidated for:', id);
-      })
-      .catch(err => console.warn('⚠️ Cache invalidation failed:', err));
+    // CRITICAL: Invalidate ALL cache layers immediately (not fire-and-forget for core caches)
+    // This ensures the editor sees fresh data immediately after saving
+    try {
+      // 1. Invalidate unified cache
+      const { invalidatePageData } = await import('../../utils/unifiedCache');
+      invalidatePageData(id, currentUserId);
+
+      // 2. Invalidate in-memory page cache (used by GET /api/pages/[id])
+      const { pageCache } = await import('../../utils/pageCache');
+      pageCache.invalidate(id);
+
+      console.log('✅ All caches invalidated for:', id);
+    } catch (err) {
+      console.warn('⚠️ Cache invalidation failed:', err);
+    }
 
     const responseData = {
       id,

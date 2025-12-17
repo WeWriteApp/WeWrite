@@ -23,7 +23,13 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-// Helper function to extract text from rich content
+// Content segment type for preserving link structure
+type ContentSegment = {
+  type: 'text' | 'link';
+  text: string;
+};
+
+// Helper function to extract text from rich content (plain text only)
 function extractTextFromContent(content: string | any[]): string {
   if (!content) return '';
 
@@ -67,6 +73,64 @@ function extractTextFromContent(content: string | any[]): string {
   }
 
   return '';
+}
+
+// Helper function to extract content with link structure preserved
+function extractContentWithLinks(content: string | any[]): ContentSegment[] {
+  if (!content) return [];
+
+  let parsed: any[] | null = null;
+
+  if (Array.isArray(content)) {
+    parsed = content;
+  } else if (typeof content === 'string') {
+    try {
+      const result = JSON.parse(content);
+      if (Array.isArray(result)) {
+        parsed = result;
+      }
+    } catch {
+      // If not JSON, treat as plain text
+      return [{ type: 'text', text: stripHtml(content) }];
+    }
+  }
+
+  if (!parsed || !Array.isArray(parsed)) return [];
+
+  const segments: ContentSegment[] = [];
+
+  for (const node of parsed) {
+    if (node.children) {
+      for (const child of node.children) {
+        if (child.type === 'link' && child.children) {
+          // Extract link text
+          const linkText = child.children.map((linkChild: any) => linkChild.text || '').join('');
+          if (linkText) {
+            segments.push({ type: 'link', text: linkText });
+          }
+        } else if (child.text) {
+          // Regular text - merge with previous text segment if possible
+          const lastSegment = segments[segments.length - 1];
+          if (lastSegment && lastSegment.type === 'text') {
+            lastSegment.text += child.text;
+          } else {
+            segments.push({ type: 'text', text: child.text });
+          }
+        }
+      }
+      // Add space between paragraphs
+      if (segments.length > 0) {
+        const lastSegment = segments[segments.length - 1];
+        if (lastSegment.type === 'text') {
+          lastSegment.text += ' ';
+        } else {
+          segments.push({ type: 'text', text: ' ' });
+        }
+      }
+    }
+  }
+
+  return segments;
 }
 
 interface PageData {
@@ -187,14 +251,39 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const displayContent = pageData.content || '';
   const displaySponsorCount = sponsorCount;
 
-  // Process content to get a clean preview
-  let contentPreview = extractTextFromContent(displayContent);
-  if (!contentPreview) {
-    contentPreview = 'Discover this page on WeWrite';
-  }
+  // Process content to get segments with links preserved
+  const contentSegments = extractContentWithLinks(displayContent);
 
-  // Truncate content for display
-  const longContent = contentPreview.substring(0, 500);
+  // If no content, use fallback
+  const hasMeaningfulContent = contentSegments.length > 0 &&
+    contentSegments.some(s => s.text.trim().length > 0);
+
+  // Truncate content segments to ~500 chars total while preserving link structure
+  let charCount = 0;
+  const maxChars = 500;
+  const truncatedSegments: ContentSegment[] = [];
+
+  if (hasMeaningfulContent) {
+    for (const segment of contentSegments) {
+      if (charCount >= maxChars) break;
+
+      const remainingChars = maxChars - charCount;
+      if (segment.text.length <= remainingChars) {
+        truncatedSegments.push(segment);
+        charCount += segment.text.length;
+      } else {
+        // Truncate this segment
+        truncatedSegments.push({
+          type: segment.type,
+          text: segment.text.substring(0, remainingChars)
+        });
+        charCount = maxChars;
+        break;
+      }
+    }
+  } else {
+    truncatedSegments.push({ type: 'text', text: 'Discover this page on WeWrite' });
+  }
 
   // Truncate title
   let displayTitleFormatted = displayTitle.substring(0, 70);
@@ -231,7 +320,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           {displayTitleFormatted}
         </div>
 
-        {/* Body content */}
+        {/* Body content with styled links */}
         <div style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -243,7 +332,26 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           position: 'relative',
           alignContent: 'flex-start'
         }}>
-          {longContent}
+          {truncatedSegments.map((segment, index) => (
+            segment.type === 'link' ? (
+              <span
+                key={index}
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                  color: '#93C5FD',
+                  padding: '2px 10px',
+                  borderRadius: '6px',
+                  marginLeft: '2px',
+                  marginRight: '2px',
+                  display: 'inline',
+                }}
+              >
+                {segment.text}
+              </span>
+            ) : (
+              <span key={index}>{segment.text}</span>
+            )
+          ))}
         </div>
 
         {/* Gradient fade above footer */}

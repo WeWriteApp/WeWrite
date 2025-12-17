@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
   Bell,
   Heart,
@@ -88,9 +89,27 @@ interface IconGridItemProps {
   name: string;
   icon: LucideIcon;
   animatedVersion?: React.ReactNode;
+  forceHover?: boolean;
+  forcePress?: boolean;
 }
 
-function IconGridItem({ name, icon: Icon, animatedVersion }: IconGridItemProps) {
+function IconGridItem({ name, icon: Icon, animatedVersion, forceHover, forcePress }: IconGridItemProps) {
+  // Wrap animated version with forced states
+  const wrappedAnimatedVersion = animatedVersion ? (
+    <motion.div
+      animate={
+        forcePress
+          ? { scale: 0.9 }
+          : forceHover
+          ? { scale: 1.15 }
+          : { scale: 1 }
+      }
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    >
+      {animatedVersion}
+    </motion.div>
+  ) : null;
+
   return (
     <div className="flex flex-col items-center gap-2 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-colors">
       <div className="flex items-center gap-4">
@@ -103,10 +122,14 @@ function IconGridItem({ name, icon: Icon, animatedVersion }: IconGridItemProps) 
         </div>
 
         {/* Animated version */}
-        {animatedVersion && (
+        {wrappedAnimatedVersion && (
           <div className="flex flex-col items-center gap-1">
-            <div className="h-10 w-10 flex items-center justify-center rounded-md bg-primary/10">
-              {animatedVersion}
+            <div className={cn(
+              "h-10 w-10 flex items-center justify-center rounded-md bg-primary/10",
+              forceHover && "ring-2 ring-primary/50",
+              forcePress && "ring-2 ring-accent bg-accent/20"
+            )}>
+              {wrappedAnimatedVersion}
             </div>
             <span className="text-[10px] text-primary">Animated</span>
           </div>
@@ -131,7 +154,11 @@ export default function IconsShowcase() {
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Icons with animated variants
+  // Force hover/press states for testing all animations at once
+  const [forceHoverAll, setForceHoverAll] = useState(false);
+  const [forcePressAll, setForcePressAll] = useState(false);
+
+  // Icons with animated variants - pass forcePressAll to trigger actual animations
   const animatedIcons: IconGridItemProps[] = [
     {
       name: 'Bell',
@@ -139,7 +166,7 @@ export default function IconsShowcase() {
       animatedVersion: (
         <AnimatedBell
           className="h-5 w-5"
-          isRinging={bellRinging}
+          isRinging={bellRinging || forcePressAll}
           hasNotification={true}
         />
       ),
@@ -150,7 +177,7 @@ export default function IconsShowcase() {
       animatedVersion: (
         <AnimatedHeart
           className="h-5 w-5 text-red-500"
-          isLiked={heartLiked}
+          isLiked={heartLiked || forcePressAll}
           onLike={() => setHeartLiked(!heartLiked)}
         />
       ),
@@ -158,22 +185,22 @@ export default function IconsShowcase() {
     {
       name: 'Plus',
       icon: Plus,
-      animatedVersion: <AnimatedPlus className="h-5 w-5" isActive={plusActive} />,
+      animatedVersion: <AnimatedPlus className="h-5 w-5" isActive={plusActive || forcePressAll} />,
     },
     {
       name: 'Check',
       icon: Check,
-      animatedVersion: <AnimatedCheck className="h-5 w-5 text-green-500" isVisible={checkVisible} bounce />,
+      animatedVersion: <AnimatedCheck className="h-5 w-5 text-green-500" isVisible={checkVisible || forcePressAll} bounce />,
     },
     {
       name: 'Settings',
       icon: Settings,
-      animatedVersion: <AnimatedSettings className="h-5 w-5" isSpinning={settingsSpinning} />,
+      animatedVersion: <AnimatedSettings className="h-5 w-5" isSpinning={settingsSpinning || forcePressAll} />,
     },
     {
       name: 'Home',
       icon: Home,
-      animatedVersion: <AnimatedHome className="h-5 w-5" isActive={homeActive} />,
+      animatedVersion: <AnimatedHome className="h-5 w-5" isActive={homeActive || forcePressAll} />,
     },
     {
       name: 'ThumbsUp',
@@ -182,7 +209,7 @@ export default function IconsShowcase() {
         <AnimatedThumbs
           className="h-5 w-5 text-green-500"
           direction="up"
-          isVoted={thumbsUpVoted}
+          isVoted={thumbsUpVoted || forcePressAll}
         />
       ),
     },
@@ -193,7 +220,7 @@ export default function IconsShowcase() {
         <AnimatedThumbs
           className="h-5 w-5 text-red-500"
           direction="down"
-          isVoted={thumbsDownVoted}
+          isVoted={thumbsDownVoted || forcePressAll}
         />
       ),
     },
@@ -203,7 +230,7 @@ export default function IconsShowcase() {
       animatedVersion: (
         <AnimatedStar
           className="h-5 w-5 text-yellow-500"
-          isStarred={starred}
+          isStarred={starred || forcePressAll}
         />
       ),
     },
@@ -213,19 +240,19 @@ export default function IconsShowcase() {
       animatedVersion: (
         <AnimatedBookmark
           className="h-5 w-5 text-blue-500"
-          isSaved={bookmarked}
+          isSaved={bookmarked || forcePressAll}
         />
       ),
     },
     {
       name: 'Send',
       icon: Send,
-      animatedVersion: <AnimatedSend className="h-5 w-5" isSending={sending} />,
+      animatedVersion: <AnimatedSend className="h-5 w-5" isSending={sending || forcePressAll} />,
     },
     {
       name: 'RefreshCw',
       icon: RefreshCw,
-      animatedVersion: <AnimatedRefresh className="h-5 w-5" isRefreshing={refreshing} />,
+      animatedVersion: <AnimatedRefresh className="h-5 w-5" isRefreshing={refreshing || forcePressAll} />,
     },
   ];
 
@@ -293,7 +320,30 @@ export default function IconsShowcase() {
           Icons with framer-motion animations. Hover over them to see animations, or use the controls below to trigger states.
         </p>
 
-        {/* Animation Controls */}
+        {/* Global Animation Controls */}
+        <div className="flex flex-wrap gap-2 mb-4 p-4 rounded-lg bg-accent/10 border border-accent/30">
+          <Button
+            size="sm"
+            variant={forceHoverAll ? "default" : "outline"}
+            onClick={() => { setForceHoverAll(!forceHoverAll); setForcePressAll(false); }}
+            className={forceHoverAll ? "bg-primary" : ""}
+          >
+            {forceHoverAll ? "Stop Hover All" : "Hover All"}
+          </Button>
+          <Button
+            size="sm"
+            variant={forcePressAll ? "default" : "outline"}
+            onClick={() => { setForcePressAll(!forcePressAll); setForceHoverAll(false); }}
+            className={forcePressAll ? "bg-accent" : ""}
+          >
+            {forcePressAll ? "Stop Press All" : "Press All"}
+          </Button>
+          <span className="text-xs text-muted-foreground self-center ml-2">
+            Test all animations at once to identify issues
+          </span>
+        </div>
+
+        {/* Individual Animation Controls */}
         <div className="flex flex-wrap gap-2 mb-4 p-4 rounded-lg bg-muted/50">
           <Button
             size="sm"
@@ -362,7 +412,12 @@ export default function IconsShowcase() {
 
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
           {animatedIcons.map((item) => (
-            <IconGridItem key={item.name} {...item} />
+            <IconGridItem
+              key={item.name}
+              {...item}
+              forceHover={forceHoverAll}
+              forcePress={forcePressAll}
+            />
           ))}
         </div>
       </div>
