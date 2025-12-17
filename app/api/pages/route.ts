@@ -755,7 +755,7 @@ export async function PUT(request: NextRequest) {
     }
 
     body = await request.json();
-    const { id, title, content, location, groupId, customDate, replyType, markAsSaved } = body;
+    const { id, title, content, location, groupId, customDate, replyType, markAsSaved, replyTo, replyToTitle, replyToUsername } = body;
 
 
     logger.info('Page save request', {
@@ -766,7 +766,8 @@ export async function PUT(request: NextRequest) {
       hasLocation: !!location,
       groupId,
       customDate,
-      userId: currentUserId
+      userId: currentUserId,
+      markAsSaved
     }, 'PAGE_SAVE');
 
     if (!id) {
@@ -787,14 +788,57 @@ export async function PUT(request: NextRequest) {
     const pageRef = db.collection(getCollectionName('pages')).doc(id);
     const pageDoc = await pageRef.get();
 
-    logger.debug('Page document loaded', { exists: pageDoc.exists }, 'PAGE_SAVE');
+    logger.debug('Page document loaded', { exists: pageDoc.exists, markAsSaved }, 'PAGE_SAVE');
 
+    // Handle new page creation when markAsSaved is true but page doesn't exist
+    // This happens when a user creates a new page via /{pageId}?new=true flow
+    let pageData: any;
     if (!pageDoc.exists) {
-      logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
-      return createErrorResponse('NOT_FOUND', 'Page not found');
-    }
+      if (markAsSaved) {
+        // This is a first-time save of a new page - create the page document
+        logger.info('Creating new page on first save', { pageId: id, userId: currentUserId }, 'PAGE_SAVE');
 
-    const pageData = pageDoc.data();
+        // Get user profile for username
+        const { getUserProfile } = await import('../../firebase/database/users');
+        const userProfile = await getUserProfile(currentUserId);
+        const username = userProfile?.username || 'Anonymous';
+
+        // Create the initial page document
+        const now = new Date().toISOString();
+        const newPageData: any = {
+          id,
+          userId: currentUserId,
+          username,
+          title: title?.trim() || 'Untitled',
+          content: content || [{ type: 'paragraph', children: [{ text: '' }] }],
+          createdAt: now,
+          lastModified: now,
+          isPublic: true,
+          deleted: false,
+          isNewPage: false, // Mark as saved immediately
+          location: location || null,
+          customDate: customDate || null
+        };
+
+        // Add reply metadata if this is a reply page
+        if (replyTo) {
+          newPageData.replyTo = replyTo;
+          newPageData.replyToTitle = replyToTitle || null;
+          newPageData.replyToUsername = replyToUsername || null;
+          newPageData.replyType = replyType || null;
+        }
+
+        await pageRef.set(newPageData);
+        pageData = newPageData;
+
+        logger.info('New page document created', { pageId: id }, 'PAGE_SAVE');
+      } else {
+        logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
+        return createErrorResponse('NOT_FOUND', 'Page not found');
+      }
+    } else {
+      pageData = pageDoc.data();
+    }
     logger.debug('Page data loaded', {
       userId: pageData.userId,
       title: pageData.title,
