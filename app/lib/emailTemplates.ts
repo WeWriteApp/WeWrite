@@ -431,6 +431,58 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
   `, { emailSettingsToken, emailType: 'payout-reminder' }),
 };
 
+export const halfwayToPayoutTemplate: EmailTemplate = {
+  id: 'halfway-to-payout',
+  name: 'Halfway to Payout',
+  description: 'Celebrates users who have earned 50% of the minimum payout threshold',
+  category: 'payments',
+  subject: 'You\'re halfway to your first payout! 🎯',
+  sampleData: {
+    username: 'JohnDoe',
+    currentEarnings: '$12.50',
+    payoutThreshold: '$25.00',
+    percentComplete: '50',
+    emailSettingsToken: 'sample-token-123',
+  },
+  generateHtml: ({ username, currentEarnings, payoutThreshold, percentComplete, emailSettingsToken }) => wrapEmail('Halfway to Payout', `
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">You're ${percentComplete}% to Your First Payout! 🎯</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">Great progress! You've earned <strong>${currentEarnings}</strong> on WeWrite so far.</p>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 20px 0;">
+        <div style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span class="dark-text" style="font-size: 14px;">Progress to payout</span>
+            <span class="dark-text" style="font-size: 14px; font-weight: 600;">${currentEarnings} / ${payoutThreshold}</span>
+          </div>
+          <div style="background: #e5e7eb; border-radius: 9999px; height: 8px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); height: 100%; width: ${percentComplete}%; border-radius: 9999px;"></div>
+          </div>
+        </div>
+        <p class="dark-text-muted" style="margin: 0; font-size: 13px; color: #666;">
+          Once you reach ${payoutThreshold}, you'll be able to receive automatic monthly payouts!
+        </p>
+      </div>
+
+      <p class="dark-text">Keep creating great content and engaging with the community to reach your payout goal!</p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://getwewrite.app/new" style="${emailStyles.button}">
+          Create New Page
+        </a>
+      </div>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p class="dark-text-muted" style="margin: 0; font-size: 14px; color: #666;">
+          <strong class="dark-text">How earnings work:</strong><br>
+          You earn when readers pledge to pages you've contributed to. The more valuable content you create, the more you can earn!
+        </p>
+      </div>
+    </div>
+  `, { emailSettingsToken, emailType: 'earnings-milestone' }),
+};
+
 export const payoutProcessedTemplate: EmailTemplate = {
   id: 'payout-processed',
   name: 'Payout Processed',
@@ -876,6 +928,7 @@ export const emailTemplates: EmailTemplate[] = [
   passwordResetEmailTemplate,
   // Payments
   payoutSetupReminderTemplate,
+  halfwayToPayoutTemplate,
   payoutProcessedTemplate,
   subscriptionConfirmationTemplate,
   // Engagement
