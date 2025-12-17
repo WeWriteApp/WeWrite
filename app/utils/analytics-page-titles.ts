@@ -46,34 +46,77 @@ export function extractPageIdFromPath(path: string): string | null {
 export const PAGE_TITLE_MAP: Record<string, string> = {
   // Main navigation
   // Note: Home page ('/') is handled dynamically based on auth state
-  '/new': 'New Page',
-  '/activity': 'Activity Feed',
-  '/search': 'Search Page',
-  '/leaderboard': 'Leaderboard',
-  '/settings/fund-account': 'Fund Account Page',
+  '/home': 'Home Feed',
+  '/new': 'Create New Page',
+  '/create': 'Create New Page',
+  '/search': 'Search',
+  '/trending': 'Trending Pages',
+  '/trending-pages': 'Trending Pages',
+  '/leaderboard': 'Leaderboards',
+  '/following': 'Following Feed',
+  '/recents': 'Recent Pages',
+  '/random-pages': 'Random Pages',
+  '/notifications': 'Notifications',
+  '/users': 'Users Directory',
+  '/map': 'Content Map',
+  '/timeline': 'Timeline View',
+  '/invite': 'Invite Friends',
+  '/support': 'Support',
+  '/onboarding': 'Onboarding',
+  '/welcome': 'Welcome',
 
   // Auth pages
-  '/auth/login': 'Login Page',
-  '/auth/register': 'Registration Page',
-  '/auth/forgot-password': 'Password Reset Page',
-  '/auth/switch-account': 'Account Switcher',
-  '/auth/logout': 'Logout Page',
+  '/auth/login': 'Login',
+  '/auth/register': 'Register',
+  '/auth/forgot-password': 'Forgot Password',
+  '/auth/reset-password': 'Reset Password',
+  '/auth/logout': 'Logout',
+  '/auth/setup-username': 'Setup Username',
+  '/auth/verify-email': 'Verify Email',
+  '/auth/verify-email-pending': 'Email Verification Pending',
+  '/auth/switch-account': 'Switch Account',
 
   // Settings pages
   '/settings': 'Settings',
-  '/settings/buy-tokens': 'Token Purchase Settings',
-  '/settings/payment': 'Payment Settings',
+  '/settings/profile': 'Profile Settings',
+  '/settings/appearance': 'Appearance Settings',
   '/settings/notifications': 'Notification Settings',
-  '/settings/security': 'Security Settings',
+  '/settings/advanced': 'Advanced Settings',
+  '/settings/deleted': 'Deleted Pages',
+  '/settings/earnings': 'Earnings Dashboard',
+  '/settings/spend': 'Spending Dashboard',
+  '/settings/reset-password': 'Change Password',
+  '/settings/email-preferences': 'Email Preferences',
+  '/settings/subscription': 'Subscription Settings',
+  '/settings/subscription/checkout': 'Subscription Checkout',
+  '/settings/subscription/success': 'Subscription Success',
+  '/settings/fund-account': 'Fund Account',
+  '/settings/fund-account/checkout': 'Fund Account Checkout',
+  '/settings/fund-account/success': 'Fund Account Success',
+  '/settings/fund-account/cancel': 'Fund Account Cancelled',
+  '/settings/fund-account/cancelled': 'Fund Account Cancelled',
 
-  // Other static pages
-  '/sandbox': 'Sandbox Page',
-  '/terms': 'Terms of Service',
-  '/privacy': 'Privacy Policy',
-  '/about': 'About Page',
-  '/contact': 'Contact Page',
-  '/help': 'Help Center',
-  '/faq': "FAQ Page"
+  // Admin pages
+  '/admin': 'Admin Dashboard',
+  '/admin/dashboard': 'Admin Dashboard',
+  '/admin/users': 'Admin: Users',
+  '/admin/emails': 'Admin: Emails',
+  '/admin/notifications': 'Admin: Notifications',
+  '/admin/feature-flags': 'Admin: Feature Flags',
+  '/admin/payout-validation': 'Admin: Payout Validation',
+  '/admin/financial-tests': 'Admin: Financial Tests',
+  '/admin/writing-ideas': 'Admin: Writing Ideas',
+  '/admin/monthly-financials': 'Admin: Monthly Financials',
+  '/admin/mobile-onboarding': 'Admin: Mobile Onboarding',
+  '/admin/background-images': 'Admin: Background Images',
+  '/admin/opengraph-images': 'Admin: OpenGraph Images',
+  '/admin/design-system': 'Admin: Design System',
+  '/admin/broadcast': 'Admin: Broadcast',
+
+  // Monitoring/Testing pages
+  '/monitoring/database-reads': 'Monitoring: Database Reads',
+  '/test-colors': 'Test: Colors',
+  '/auth-test': 'Test: Auth'
 };
 
 /**
@@ -91,18 +134,15 @@ export function getAnalyticsPageTitle(
 ): string {
   // Special case for home page - differentiate between logged-in and logged-out states
   if (pathname === '/') {
-    // Check Firebase auth
-    const currentUser = auth.currentUser;
-
-    // Also check localStorage as a fallback in case Firebase auth isn't fully initialized
+    // Check localStorage/cookies for auth state (Firebase auth may not be initialized)
     const hasLocalStorageAuth = typeof window !== 'undefined' &&
       (localStorage.getItem('authState') === 'authenticated' ||
        document.cookie.includes('authenticated=true'));
 
-    if (!currentUser && !hasLocalStorageAuth) {
-      return "Landing page - Logged out";
+    if (!hasLocalStorageAuth) {
+      return "Landing Page";
     } else {
-      return "Home - Logged in";
+      return "Home Feed";
     }
   }
 
@@ -165,9 +205,60 @@ export function getAnalyticsPageTitle(
     return `Group: ${groupId}`;
   }
 
+  // Handle /u/[username] profile pages
+  if (pathname.startsWith('/u/')) {
+    const username = pathname.split('/')[2];
+    if (username) {
+      return `User: @${username}`;
+    }
+    return 'User Profile';
+  }
+
+  // Handle email preferences with token
+  if (pathname.startsWith('/email-preferences/')) {
+    return 'Email Preferences';
+  }
+
+  // Handle welcome vertical pages
+  if (pathname.startsWith('/welcome/')) {
+    const vertical = pathname.split('/')[2];
+    if (vertical) {
+      // Capitalize and format the vertical name
+      const formattedVertical = vertical
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      return `Welcome: ${formattedVertical}`;
+    }
+    return 'Welcome';
+  }
+
   // ContentPages (using UUID pattern or /pages/ path)
   const pageId = extractPageIdFromPath(pathname);
   if (pageId) {
+    // Check for version history page
+    if (pathname.includes('/versions')) {
+      return 'Page Version History';
+    }
+
+    // Check for specific version view
+    if (pathname.includes('/version/')) {
+      return 'Page Version View';
+    }
+
+    // Check for diff view
+    if (pathname.includes('/diff/')) {
+      return 'Page Diff View';
+    }
+
+    // Check for location pages
+    if (pathname.includes('/location/view')) {
+      return 'Page Location View';
+    }
+    if (pathname.includes('/location')) {
+      return 'Page Location';
+    }
+
     // Check if we're in edit mode
     if (searchParams?.has('edit')) {
       return 'Page Editor';
@@ -872,9 +963,6 @@ export function trackPageViewWhenReady(
   currentTitle?: string,
   maxRetries: number = 10
 ): void {
-  // Generate a unique key for this page view
-  const trackingKey = `${pageId}_${Date.now()}`;
-
   // Clear any existing pending updates for this page
   if (pendingAnalyticsUpdates.has(pageId)) {
     clearTimeout(pendingAnalyticsUpdates.get(pageId));
