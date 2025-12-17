@@ -66,56 +66,76 @@ export async function GET(request: NextRequest) {
       .where('pendingUsdCents', '>=', MIN_EARNINGS_THRESHOLD)
       .limit(200)
       .get();
-    
+
     console.log(`[PAYOUT REMINDER] Found ${writerBalancesSnapshot.size} users with pending earnings`);
-    
+
     let sent = 0;
     let skipped = 0;
     let failed = 0;
-    
+
     // Calculate "don't spam" window - only send once per week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
+
+    // OPTIMIZATION: Batch fetch all user documents instead of N+1 queries
+    // This reduces database reads from O(n) to O(1) per batch
+    const userIds = writerBalancesSnapshot.docs.map(doc => doc.id);
+    const userRefs = userIds.map(userId => db.collection(getCollectionName('users')).doc(userId));
+
+    // Fetch all user docs in a single batch call (max 10 at a time for getAll)
+    const userDocsMap = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+    const chunkSize = 10;
+    for (let i = 0; i < userRefs.length; i += chunkSize) {
+      const chunk = userRefs.slice(i, i + chunkSize);
+      const userDocs = await db.getAll(...chunk);
+      userDocs.forEach(doc => {
+        if (doc.exists) {
+          userDocsMap.set(doc.id, doc);
+        }
+      });
+    }
+
+    console.log(`[PAYOUT REMINDER] Batch fetched ${userDocsMap.size} user documents`);
+
     for (const balanceDoc of writerBalancesSnapshot.docs) {
       try {
         const balanceData = balanceDoc.data();
         const userId = balanceDoc.id;
-        
-        // Get user data
-        const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-        if (!userDoc.exists) {
+
+        // Get user data from batch-fetched map
+        const userDoc = userDocsMap.get(userId);
+        if (!userDoc || !userDoc.exists) {
           skipped++;
           continue;
         }
-        
+
         const userData = userDoc.data()!;
-        
+
         // Skip users without email
         if (!userData.email) {
           skipped++;
           continue;
         }
-        
+
         // Skip users who have Stripe connected (they have payouts set up)
         if (userData.stripeConnectedAccountId) {
           skipped++;
           continue;
         }
-        
+
         // Skip users who already received a reminder recently
         const lastReminderSent = userData.payoutReminderSentAt?.toDate?.() || userData.payoutReminderSentAt;
         if (lastReminderSent && new Date(lastReminderSent) > oneWeekAgo) {
           skipped++;
           continue;
         }
-        
+
         // Skip users who opted out of payment emails
         if (userData.emailPreferences?.payments === false) {
           skipped++;
           continue;
         }
-        
+
         // Calculate pending earnings in dollars
         const pendingEarnings = (balanceData.pendingUsdCents || 0) / 100;
 
@@ -130,7 +150,7 @@ export async function GET(request: NextRequest) {
           userId,
           emailSettingsToken
         });
-        
+
         if (success) {
           // Mark that we sent the reminder
           await db.collection(getCollectionName('users')).doc(userId).update({
@@ -140,12 +160,12 @@ export async function GET(request: NextRequest) {
         } else {
           failed++;
         }
-        
+
         // Rate limit - don't overwhelm Resend
         if (sent % 5 === 0) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        
+
       } catch (userError) {
         console.error(`[PAYOUT REMINDER] Error processing user ${balanceDoc.id}:`, userError);
         failed++;

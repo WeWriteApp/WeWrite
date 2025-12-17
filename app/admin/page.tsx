@@ -11,7 +11,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 // Swipeable tabs removed - simplified admin interface
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Mail, Calendar } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Mail, Calendar, TabletSmartphone } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -607,6 +607,28 @@ export default function AdminPage() {
                 >
                   <Mail className="h-4 w-4" />
                   Manage Notifications
+                </Button>
+              </div>
+            </div>
+
+            {/* Capacitor App Onboarding Preview */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Capacitor App Onboarding</h3>
+                <TabletSmartphone className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Preview and test the iOS and Android mobile app onboarding flows without needing simulators.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/mobile-onboarding')}
+                >
+                  <TabletSmartphone className="h-4 w-4" />
+                  Preview Onboarding
                 </Button>
               </div>
             </div>

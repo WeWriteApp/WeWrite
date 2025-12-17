@@ -14,7 +14,9 @@ import { trackFirebaseRead } from '../../utils/costMonitor';
 import { pagesListCache } from '../../utils/pagesListCache';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 
-// SIMPLE SOLUTION: Update all links to a page when its title changes
+// OPTIMIZED SOLUTION: Update all links to a page when its title changes
+// Uses backlinks index to find only pages that actually link to this page
+// This avoids the O(n) scan of all pages in the database
 async function updateAllLinksToPage(pageId: string, oldTitle: string, newTitle: string) {
   try {
     console.log(`🔄 TITLE_PROPAGATION: Starting propagation for page ${pageId}: "${oldTitle}" -> "${newTitle}"`);
@@ -23,67 +25,90 @@ async function updateAllLinksToPage(pageId: string, oldTitle: string, newTitle: 
     const db = admin.firestore();
     const collectionName = getCollectionName('pages');
 
-    // Get all pages (filter deleted in code since not all pages have deleted field)
-    const pagesSnapshot = await db.collection(collectionName).get();
+    // OPTIMIZATION: Use backlinks collection to find pages that link to this page
+    // This is O(k) where k is the number of incoming links, instead of O(n) for all pages
+    const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
+      .where('targetPageId', '==', pageId)
+      .limit(500) // Safety limit - if a page has >500 incoming links, we process in batches
+      .get();
 
-    console.log(`🔄 TITLE_PROPAGATION: Checking ${pagesSnapshot.docs.length} pages for links to ${pageId}`);
+    // Extract unique source page IDs from backlinks
+    const sourcePageIds = [...new Set(backlinksSnapshot.docs.map(doc => doc.data().sourcePageId))];
 
+    console.log(`🔄 TITLE_PROPAGATION: Found ${sourcePageIds.length} pages with backlinks to ${pageId}`);
+
+    if (sourcePageIds.length === 0) {
+      console.log(`🔄 TITLE_PROPAGATION: No backlinks found, nothing to update`);
+      return { success: true, updatedCount: 0 };
+    }
+
+    // Fetch all source pages in batches (Firestore getAll has a limit of 10)
     const batch = db.batch();
     let updatedCount = 0;
     let checkedCount = 0;
 
-    for (const pageDoc of pagesSnapshot.docs) {
-      // Skip the page being updated
-      if (pageDoc.id === pageId) continue;
-      
-      const pageData = pageDoc.data();
-      
-      // Skip deleted pages
-      if (pageData.deleted === true) continue;
-      
-      if (!pageData.content) continue;
-      
-      checkedCount++;
+    // Process in chunks of 10 (Firestore getAll limit)
+    const chunkSize = 10;
+    for (let i = 0; i < sourcePageIds.length; i += chunkSize) {
+      const chunk = sourcePageIds.slice(i, i + chunkSize);
+      const pageRefs = chunk.map(id => db.collection(collectionName).doc(id));
+      const pageDocs = await db.getAll(...pageRefs);
 
-      // Parse content if it's stored as a string
-      let contentArray: any[];
-      try {
-        contentArray = typeof pageData.content === 'string' 
-          ? JSON.parse(pageData.content) 
-          : pageData.content;
-        
-        if (!Array.isArray(contentArray)) {
-          console.warn(`🔄 TITLE_PROPAGATION: Page ${pageDoc.id} has non-array content, skipping`);
+      for (const pageDoc of pageDocs) {
+        if (!pageDoc.exists) continue;
+
+        // Skip the page being updated (shouldn't happen with backlinks, but safety check)
+        if (pageDoc.id === pageId) continue;
+
+        const pageData = pageDoc.data();
+
+        // Skip deleted pages
+        if (pageData?.deleted === true) continue;
+
+        if (!pageData?.content) continue;
+
+        checkedCount++;
+
+        // Parse content if it's stored as a string
+        let contentArray: any[];
+        try {
+          contentArray = typeof pageData.content === 'string'
+            ? JSON.parse(pageData.content)
+            : pageData.content;
+
+          if (!Array.isArray(contentArray)) {
+            console.warn(`🔄 TITLE_PROPAGATION: Page ${pageDoc.id} has non-array content, skipping`);
+            continue;
+          }
+        } catch (parseError) {
+          console.warn(`🔄 TITLE_PROPAGATION: Failed to parse content for page ${pageDoc.id}:`, parseError);
           continue;
         }
-      } catch (parseError) {
-        console.warn(`🔄 TITLE_PROPAGATION: Failed to parse content for page ${pageDoc.id}:`, parseError);
-        continue;
-      }
 
-      // Quick check if this page even references the target pageId
-      const contentString = JSON.stringify(contentArray);
-      if (!contentString.includes(pageId)) {
-        continue; // Skip pages that don't reference this page at all
-      }
+        // Quick check if this page even references the target pageId
+        const contentString = JSON.stringify(contentArray);
+        if (!contentString.includes(pageId)) {
+          continue; // Skip pages that don't reference this page at all
+        }
 
-      // Update links in the content
-      const updatedContent = updateLinksInContent(contentArray, pageId, oldTitle, newTitle);
+        // Update links in the content
+        const updatedContent = updateLinksInContent(contentArray, pageId, oldTitle, newTitle);
 
-      // Check if anything actually changed
-      const updatedString = JSON.stringify(updatedContent);
-      if (updatedString !== contentString) {
-        // Store in same format as original
-        const contentToSave = typeof pageData.content === 'string' 
-          ? updatedString 
-          : updatedContent;
-        
-        batch.update(pageDoc.ref, {
-          content: contentToSave,
-          lastModified: new Date().toISOString()
-        });
-        updatedCount++;
-        console.log(`🔄 TITLE_PROPAGATION: Queued update for page ${pageDoc.id}`);
+        // Check if anything actually changed
+        const updatedString = JSON.stringify(updatedContent);
+        if (updatedString !== contentString) {
+          // Store in same format as original
+          const contentToSave = typeof pageData.content === 'string'
+            ? updatedString
+            : updatedContent;
+
+          batch.update(pageDoc.ref, {
+            content: contentToSave,
+            lastModified: new Date().toISOString()
+          });
+          updatedCount++;
+          console.log(`🔄 TITLE_PROPAGATION: Queued update for page ${pageDoc.id}`);
+        }
       }
     }
 

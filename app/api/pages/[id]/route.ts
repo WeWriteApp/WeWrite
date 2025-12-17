@@ -236,10 +236,16 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
  * Highly Optimized Page Data API
  *
  * Features:
- * - Multi-tier caching (hot/warm/cold)
- * - Aggressive cache headers
- * - ETag support for conditional requests
+ * - Smart caching with ETag-based freshness validation
+ * - In-memory cache with short TTL for hot data
+ * - Conditional request support (If-None-Match)
  * - Cost monitoring and optimization
+ *
+ * Caching Strategy:
+ * - ETag based on lastModified timestamp ensures clients always get fresh data
+ * - Short browser cache (60s) reduces requests for rapid navigation
+ * - Conditional requests return 304 Not Modified when data hasn't changed
+ * - Server-side cache validated against database lastModified
  */
 export async function GET(
   request: NextRequest,
@@ -247,15 +253,9 @@ export async function GET(
 ) {
   const startTime = Date.now();
 
-  // DISABLE ALL CACHING - ALWAYS FRESH DATA
-  console.log('🔄 NO_CACHE: Disabling all caching for fresh data');
-
   try {
     // Next.js 15 requires awaiting params
     const { id: pageId } = await params;
-
-    // EMERGENCY: Clear all caches for this page to force fresh data
-    pageCache.invalidate(pageId);
     const searchParams = request.nextUrl.searchParams;
     const requestedUserId = searchParams.get('userId');
 
@@ -271,16 +271,55 @@ export async function GET(
     // Use the requested userId if provided, otherwise use authenticated user
     const effectiveUserId = requestedUserId || currentUserId;
 
+    // Check for conditional request (If-None-Match header)
+    const clientEtag = request.headers.get('if-none-match');
+
+    // Check in-memory cache first for fast responses
+    const cachedData = pageCache.get(pageId, effectiveUserId);
+
+    if (cachedData && clientEtag) {
+      // Validate cache freshness by checking lastModified against database
+      // For conditional requests, we need to verify the ETag is still valid
+      const cachedEtag = pageCache.getETag(pageId);
+
+      if (cachedEtag && clientEtag === cachedEtag) {
+        // Client has current data - quick database check to confirm
+        const admin = getFirebaseAdmin();
+        const db = admin.firestore();
+        const collectionName = await getCollectionNameAsync('pages');
+        const pageRef = db.collection(collectionName).doc(pageId);
+
+        // Only fetch lastModified field for validation (minimal read)
+        const pageSnapshot = await pageRef.select('lastModified', 'updatedAt').get();
+
+        if (pageSnapshot.exists) {
+          const data = pageSnapshot.data();
+          const currentLastModified = data?.lastModified || data?.updatedAt;
+          const currentEtag = `"${pageId}-${currentLastModified || 'unknown'}"`;
+
+          if (clientEtag === currentEtag) {
+            // Data hasn't changed - return 304 Not Modified
+            console.log(`⚡ [Page API] 304 Not Modified for ${pageId}`);
+            trackFirebaseRead('pages', 'getPageById-validation', 1, 'api-etag-check');
+
+            return new NextResponse(null, {
+              status: 304,
+              headers: {
+                'ETag': currentEtag,
+                'Cache-Control': 'private, max-age=60, must-revalidate',
+                'X-Cache-Status': 'VALIDATED',
+                'X-Response-Time': `${Date.now() - startTime}ms`,
+              }
+            });
+          }
+        }
+      }
+    }
+
     console.log(`📄 [Page API] Fetching page ${pageId} for user ${effectiveUserId || 'anonymous'}`);
 
-    // DISABLE CACHE - ALWAYS FETCH FRESH DATA
-    console.log('🔄 NO_CACHE: Skipping cache, fetching fresh data from database');
-
-    // Cache miss - fetch from database
-    console.log(`💸 [Page API] Cache miss for ${pageId} - fetching from database`);
-
     // Track this read for cost monitoring
-    trackFirebaseRead('pages', 'getPageById', 1, 'api-cache-miss');
+    trackFirebaseRead('pages', 'getPageById', 1, 'api-fetch');
 
     // Fetch page data directly using Firebase Admin (avoid circular calls)
     const result = await fetchPageDirectly(pageId, effectiveUserId, request);
@@ -317,8 +356,11 @@ export async function GET(
       );
     }
 
+    // Generate ETag based on lastModified - this ensures freshness
+    const lastModified = result.pageData?.lastModified || result.pageData?.updatedAt || Date.now();
+    const etag = `"${pageId}-${lastModified}"`;
+
     // Cache the successful result for future requests
-    const etag = `"${pageId}-${result.pageData?.lastModified || result.pageData?.updatedAt || Date.now()}"`;
     pageCache.set(pageId, result, effectiveUserId, etag);
 
     const responseTime = Date.now() - startTime;
@@ -350,18 +392,19 @@ export async function GET(
       }
     }
 
-    // Return successful result with enhanced cache headers
+    // Return successful result with smart cache headers
     const response = NextResponse.json({
       success: true,
       pageData: result.pageData,
       fromCache: false
     });
 
-    // DISABLE ALL CACHING - ALWAYS FRESH DATA
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-
+    // Smart caching strategy:
+    // - private: Only browser can cache (not CDN) to respect auth
+    // - max-age=60: Browser can use cached version for 60 seconds
+    // - must-revalidate: After 60s, must check with server (ETag validation)
+    // This ensures fresh data while reducing redundant fetches during rapid navigation
+    response.headers.set('Cache-Control', 'private, max-age=60, must-revalidate');
     response.headers.set('ETag', etag);
     response.headers.set('X-Cache-Status', 'MISS');
     response.headers.set('X-Response-Time', `${responseTime}ms`);

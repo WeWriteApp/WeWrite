@@ -89,9 +89,12 @@ export async function GET(request: NextRequest) {
     console.log(`📄 [RELATED_PAGES_API] Extracted ${allWords.length} meaningful words:`, allWords.slice(0, 10));
 
     // Get candidate pages (simplified query to avoid index requirements)
+    // OPTIMIZATION: Use select() to only fetch needed fields and reduce data transfer
+    // Also reduced limit from 500 to 200 for faster queries while still getting good results
     const pagesSnapshot = await db.collection(getCollectionName('pages'))
       .where('isPublic', '==', true)
-      .limit(500) // Increased limit for better coverage
+      .select('title', 'content', 'username', 'userId', 'lastModified', 'isPublic', 'deleted')
+      .limit(200)
       .get();
 
     const candidates = [];
