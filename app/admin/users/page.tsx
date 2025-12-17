@@ -49,6 +49,9 @@ type User = {
   isAdmin?: boolean;
   financial?: FinancialInfo;
   emailVerified?: boolean;
+  referredBy?: string;
+  referredByUsername?: string; // Resolved username of referrer
+  referralSource?: string;
 };
 
 type Column = {
@@ -386,6 +389,34 @@ export default function AdminUsersPage() {
         )
     },
     {
+      id: "referredBy",
+      label: "Referred by",
+      sortable: true,
+      minWidth: 140,
+      render: (u) => {
+        if (!u.referredBy) return <span className="text-muted-foreground">—</span>;
+        const displayName = u.referredByUsername || u.referredBy.substring(0, 8) + '...';
+        return (
+          <div className="flex items-center gap-1">
+            <a
+              href={`/u/${u.referredByUsername || u.referredBy}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline text-sm font-medium"
+              onClick={(e) => e.stopPropagation()}
+            >
+              @{displayName}
+            </a>
+            {u.referralSource && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                {u.referralSource}
+              </Badge>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       id: "payouts",
       label: "Payouts",
       sortable: true,
@@ -561,6 +592,8 @@ export default function AdminUsersPage() {
         return u.emailVerified ? 1 : 0;
       case "admin":
         return u.isAdmin ? 1 : 0;
+      case "referredBy":
+        return u.referredBy ? 1 : 0;
       case "payouts":
         return u.financial?.payoutsSetup ? 1 : 0;
       case "earningsMonth":

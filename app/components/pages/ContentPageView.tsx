@@ -17,6 +17,7 @@ import { useRecentPages } from "../../contexts/RecentPagesContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import logger, { createLogger } from '../../utils/logger';
 import { extractNewPageReferences, createNewPagesFromLinks } from '../../utils/pageContentHelpers';
+import { createReplyContent } from '../../utils/replyUtils';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
@@ -42,6 +43,7 @@ import { ErrorDisplay } from "../ui/error-display";
 import FullPageError from "../ui/FullPageError";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 import StickySaveHeader from "../layout/StickySaveHeader";
+import { motion } from "framer-motion";
 
 
 
@@ -219,6 +221,21 @@ export default function ContentPageView({
 
   // Constants - simplified loading approach
   const isPreviewingDeleted = searchParams?.get('preview') === 'deleted';
+  // New page mode: when navigating to /{pageId}?new=true, create the page first
+  // Also support legacy 'draft=true' param for backwards compatibility
+  const isNewPageMode = searchParams?.get('new') === 'true' || searchParams?.get('draft') === 'true';
+  const [isClosingNewPage, setIsClosingNewPage] = useState(false);
+  const [newPageCreated, setNewPageCreated] = useState(false);
+  // Track if we've scrolled to top - prevents rendering full page at wrong scroll position
+  const [isScrollReady, setIsScrollReady] = useState(!isNewPageMode);
+
+  // For new page mode, scroll to top and mark ready before rendering content
+  React.useLayoutEffect(() => {
+    if (isNewPageMode && !isScrollReady) {
+      window.scrollTo(0, 0);
+      setIsScrollReady(true);
+    }
+  }, [isNewPageMode, isScrollReady]);
 
   // Listen for focus changes to coordinate with title focus
   useEffect(() => {
@@ -540,10 +557,119 @@ export default function ContentPageView({
     }
   };
 
+  // NEW PAGE MODE SETUP EFFECT
+  // When navigating to /{pageId}?new=true, set up the editor for a new page
+  // The page is NOT created in the database until the user saves
+  useEffect(() => {
+    if (!isNewPageMode || !pageId || !user || newPageCreated) {
+      return;
+    }
+
+    console.log('🔵 Setting up new page editor for ID:', pageId);
+
+    // Extract URL parameters for the new page
+    const replyTo = searchParams?.get('replyTo');
+    const replyToTitle = searchParams?.get('page');
+    const replyToUsername = searchParams?.get('username') || searchParams?.get('pageUsername');
+    const replyType = searchParams?.get('replyType');
+    const pageUserId = searchParams?.get('pageUserId');
+    const groupId = searchParams?.get('groupId');
+    const customDate = searchParams?.get('customDate');
+    const urlTitle = searchParams?.get('title');
+    const urlContent = searchParams?.get('content');
+    const initialContentParam = searchParams?.get('initialContent');
+    const pageType = searchParams?.get('type');
+
+    // Build initial title
+    let initialTitle = '';
+    if (urlTitle && urlTitle.trim()) {
+      const trimmed = urlTitle.trim();
+      // For daily notes with date format, don't use as title
+      if (!(pageType === 'daily-note' && /^\d{4}-\d{2}-\d{2}$/.test(trimmed))) {
+        initialTitle = trimmed;
+      }
+    }
+
+    // Build initial content for replies
+    let initialContent = [{ type: "paragraph", children: [{ text: "" }] }];
+    if (replyTo) {
+      const decodedTitle = (() => {
+        try { return replyToTitle ? decodeURIComponent(replyToTitle) : ''; }
+        catch { return replyToTitle || ''; }
+      })();
+      const decodedUsername = (() => {
+        try { return replyToUsername ? decodeURIComponent(replyToUsername) : ''; }
+        catch { return replyToUsername || ''; }
+      })();
+
+      const sentiment = replyType === 'agree' || replyType === 'disagree' ? replyType : 'standard';
+
+      initialContent = [
+        ...createReplyContent({
+          pageId: replyTo,
+          pageTitle: decodedTitle || "Untitled",
+          userId: pageUserId || user?.uid || '',
+          username: decodedUsername || "Anonymous",
+          replyType: sentiment
+        }),
+        { type: "paragraph", children: [{ text: "" }] }
+      ];
+    } else if (urlContent && urlContent.trim()) {
+      initialContent = [{ type: "paragraph", children: [{ text: urlContent.trim() }] }];
+    } else if (initialContentParam) {
+      try {
+        initialContent = JSON.parse(decodeURIComponent(initialContentParam));
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    // Handle custom date from daily notes
+    let initialCustomDate: string | null = null;
+    if (pageType === 'daily-note' && customDate && /^\d{4}-\d{2}-\d{2}$/.test(customDate.trim())) {
+      initialCustomDate = customDate.trim();
+    } else if (pageType === 'daily-note' && urlTitle && /^\d{4}-\d{2}-\d{2}$/.test(urlTitle.trim())) {
+      initialCustomDate = urlTitle.trim();
+    }
+
+    // Set up local state for the new page (NOT saved to database yet)
+    const newPageData: Page = {
+      id: pageId,
+      title: initialTitle,
+      content: initialContent,
+      userId: user.uid,
+      username: user.username || 'Anonymous',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isNewPage: true, // Flag to indicate this is a new unsaved page
+      replyTo: replyTo || null,
+      replyToTitle: replyToTitle ? decodeURIComponent(replyToTitle) : null,
+      replyToUsername: replyToUsername ? decodeURIComponent(replyToUsername) : null,
+      groupId: groupId || null,
+      customDate: initialCustomDate
+    } as any;
+
+    setPage(newPageData);
+    setTitle(initialTitle);
+    setEditorState(initialContent);
+    setCustomDate(initialCustomDate);
+    setIsLoading(false);
+    setNewPageCreated(true);
+
+    console.log('🔵 New page editor ready (not saved to database yet)');
+  }, [isNewPageMode, pageId, user, newPageCreated, searchParams]);
+
   // Page loading effect - OPTIMIZED for faster loading
   useEffect(() => {
     if (!pageId) {
       pageLogger.debug('No pageId provided');
+      return;
+    }
+
+    // For new page mode: don't try to load from database - page doesn't exist yet
+    // The new page mode setup effect handles creating the local page state
+    if (isNewPageMode) {
+      pageLogger.debug('Skipping page load for new page mode', { pageId, newPageCreated });
       return;
     }
 
@@ -655,9 +781,16 @@ export default function ContentPageView({
           }
 
           // If we still have missing data, show a helpful error
+          // BUT: For new pages, we WANT an empty title so user can fill it in
           if (!pageData.title || pageData.title === 'Untitled') {
-            console.warn('⚠️ [PageView] Page still has missing title after fix attempts');
-            pageData = { ...pageData, title: `Page ${pageId.substring(0, 8)}...` };
+            if (pageData.isNewPage) {
+              // New page mode: keep empty title, don't create fallback
+              console.log('📝 [PageView] New page with empty title - this is expected');
+              pageData = { ...pageData, title: '' };
+            } else {
+              console.warn('⚠️ [PageView] Page still has missing title after fix attempts');
+              pageData = { ...pageData, title: `Page ${pageId.substring(0, 8)}...` };
+            }
           }
 
           if (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username') {
@@ -767,7 +900,7 @@ export default function ContentPageView({
       }
       clearTimeout(fallbackTimeout);
     };
-  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId]);
+  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId, isNewPageMode]);
 
   // Record page view and add to recent pages
   useEffect(() => {
@@ -1029,6 +1162,13 @@ export default function ContentPageView({
         updateData.replyType = page.replyType;
       }
 
+      // Include reply metadata for new pages
+      if (page?.isNewPage && page?.replyTo) {
+        updateData.replyTo = page.replyTo;
+        updateData.replyToTitle = page.replyToTitle;
+        updateData.replyToUsername = page.replyToUsername;
+      }
+
       console.log('💾 PAGE SAVE: Update data to send:', {
         id: updateData.id,
         title: updateData.title,
@@ -1037,20 +1177,25 @@ export default function ContentPageView({
         contentLength: updateData.content ? JSON.stringify(updateData.content).length : 0,
         hasLocation: !!updateData.location,
         customDate: updateData.customDate,
-        replyType: updateData.replyType
+        replyType: updateData.replyType,
+        isNewPage: page?.isNewPage
       });
 
-      pageLogger.debug('API request: PUT /api/pages', {
+      // NEW PAGE MODE: Use POST to create, PUT to update
+      const isCreatingNewPage = page?.isNewPage === true;
+      const apiEndpoint = isCreatingNewPage ? '/api/pages/draft' : '/api/pages';
+      const httpMethod = isCreatingNewPage ? 'POST' : 'PUT';
+
+      pageLogger.debug(`API request: ${httpMethod} ${apiEndpoint}`, {
         pageId: pageId,
         title,
         hasContent: !!contentToSave,
-        contentLength: contentToSave ? JSON.stringify(contentToSave).length : 0
+        contentLength: contentToSave ? JSON.stringify(contentToSave).length : 0,
+        isCreatingNewPage
       });
 
-
-
-      const response = await fetch('/api/pages', {
-        method: 'PUT',
+      const response = await fetch(apiEndpoint, {
+        method: httpMethod,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1265,6 +1410,16 @@ export default function ContentPageView({
 
       setHasUnsavedChanges(false);
 
+      // NEW PAGE MODE: After first save, update URL to remove draft param
+      if (isNewPageMode && page?.isNewPage) {
+        // Update local page state to reflect saved status (no longer new)
+        setPage({ ...page, isNewPage: false });
+        // Update URL to remove draft param (don't add to history)
+        const newUrl = `/${pageId}`;
+        window.history.replaceState({}, '', newUrl);
+        console.log('📝 New page saved, URL updated to:', newUrl);
+      }
+
       // Trigger save success animation
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 500); // Reset after animation
@@ -1349,10 +1504,26 @@ export default function ContentPageView({
     }
   }, [editorState, isSaving]);
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(async () => {
     if (hasUnsavedChanges) {
       const confirmCancel = window.confirm("You have unsaved changes. Are you sure you want to cancel?");
       if (!confirmCancel) return;
+    }
+
+    // NEW PAGE MODE: Simply navigate away - page doesn't exist in database yet
+    if (isNewPageMode && page?.isNewPage) {
+      setIsClosingNewPage(true);
+      console.log('📝 Canceling new page creation (no database entry to delete)');
+
+      // Navigate back after animation
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+          router.back();
+        } else {
+          router.push('/');
+        }
+      }, 320);
+      return;
     }
 
     // Revert to last saved content without a full page reload
@@ -1361,7 +1532,7 @@ export default function ContentPageView({
     }
     setHasUnsavedChanges(false);
     setError(null);
-  }, [hasUnsavedChanges, setEditorState]);
+  }, [hasUnsavedChanges, setEditorState, isNewPageMode, page?.isNewPage, router]);
 
   // BULLETPROOF: Simplified keyboard shortcuts with extensive debugging
   useEffect(() => {
@@ -1421,7 +1592,12 @@ export default function ContentPageView({
 
       if (response.ok) {
         console.log(`Successfully soft deleted page ${pageId}`);
-        router.push('/');
+        // Navigate back to previous page (e.g., user's pages list) instead of home
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+          router.back();
+        } else {
+          router.push('/');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to delete page. Please try again.");
@@ -1434,8 +1610,17 @@ export default function ContentPageView({
 
   // ARCHITECTURAL SIMPLIFICATION: Remove complex content processing
   // Let ContentDisplay components handle their own content conversion
+  // CRITICAL FIX: Only update editor state if user doesn't have unsaved changes
+  // This prevents losing user's work when switching apps or when page data re-renders
   useEffect(() => {
     if (!page?.content) return;
+
+    // Don't overwrite user's unsaved changes with stale data from the server
+    // This fixes the bug where switching apps would reset the editor content
+    if (hasUnsavedChanges) {
+      console.log('🔄 SKIPPING content reset - user has unsaved changes');
+      return;
+    }
 
     console.log('🔄 SIMPLIFIED: Setting raw content from database - let components handle conversion');
     console.log('🔄 SIMPLIFIED: Raw content:', {
@@ -1446,7 +1631,58 @@ export default function ContentPageView({
 
     // SIMPLIFIED: Pass raw content directly - no preprocessing
     setEditorState(page.content);
-  }, [page?.content]); // Update whenever page content changes
+  }, [page?.content, hasUnsavedChanges]); // Update whenever page content changes, but respect unsaved changes
+
+  // NEW PAGE MODE: Show skeleton with slide-up animation while setting up
+  if (isNewPageMode && !newPageCreated) {
+    const skeletonContent = (
+      <PublicLayout>
+        <div className="min-h-screen">
+          {/* Show page structure skeleton immediately */}
+          <div className="p-5 md:p-4">
+            {/* Header skeleton */}
+            <div className="flex items-center mb-6">
+              <div className="flex-1">
+                <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+              </div>
+              <div className="flex-1 flex justify-end">
+                <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+              </div>
+            </div>
+
+            {/* Page content skeleton */}
+            <div className="space-y-6">
+              <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+              <div className="space-y-4">
+                {Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
+                    <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
+                    <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </PublicLayout>
+    );
+
+    // Wrap with slide-up animation for new page mode
+    return (
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="min-h-screen bg-background"
+      >
+        {skeletonContent}
+      </motion.div>
+    );
+  }
 
   // Progressive loading state - show page structure immediately
   if (isLoading && !page) {
@@ -1501,8 +1737,47 @@ export default function ContentPageView({
     );
   }
 
-  // No page found
+  // For new page mode, wait until scroll is ready before rendering anything
+  // This prevents the flash of content at wrong scroll position
+  if (isNewPageMode && !isScrollReady) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="p-5 md:p-4">
+          <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  // No page found - but not for new page mode (still being set up)
+  // In new page mode, page will be set by the setup effect; wait for it
   if (!page) {
+    // For new page mode, show skeleton while waiting for setup effect
+    if (isNewPageMode) {
+      return (
+        <PublicLayout>
+          <div className="min-h-screen">
+            <div className="p-5 md:p-4">
+              <div className="flex items-center mb-6">
+                <div className="flex-1">
+                  <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+                </div>
+                <div className="flex-1 flex justify-end">
+                  <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </PublicLayout>
+      );
+    }
+    // For regular pages, show page not found
     return (
       <PublicLayout>
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
@@ -1518,7 +1793,8 @@ export default function ContentPageView({
     );
   }
 
-  return (
+  // Wrapper component for draft mode slide-up animation
+  const PageContent = (
     <>
       {/* Sticky Save Header - fixed at top, outside content wrapper */}
       <StickySaveHeader
@@ -1531,7 +1807,13 @@ export default function ContentPageView({
 
       <PublicLayout>
         <PageProvider>
-          <div className="w-full max-w-none box-border">
+          <div
+            className="w-full max-w-none box-border"
+            style={{
+              paddingTop: contentPaddingTop,
+              transition: 'padding-top 300ms ease-in-out'
+            }}
+          >
             {/* Sentinel element used by ContentPageHeader to detect scroll position reliably */}
             <div data-header-sentinel aria-hidden className="h-px w-full" />
             <ContentPageHeader
@@ -1550,11 +1832,13 @@ export default function ContentPageView({
               canEdit={canEdit}
               titleError={!!titleError}
               pageId={pageId}
+              isNewPage={isNewPageMode && page?.isNewPage}
+              onBack={isNewPageMode && page?.isNewPage ? handleCancel : undefined}
           />
 
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}
 
-          {isPreviewingDeleted && (
+          {isPreviewingDeleted && page && (
             <DeletedPageBanner
               pageId={pageId}
               deletedAt={page.deletedAt}
@@ -1562,13 +1846,7 @@ export default function ContentPageView({
           )}
 
           {/* Full-width header area */}
-          <div
-            className="w-full"
-            style={{
-              paddingTop: contentPaddingTop,
-              transition: 'padding-top 300ms ease-in-out'
-            }}
-          >
+          <div className="w-full">
             {/* Content container - Clean without unnecessary card wrapper */}
             <div className="px-4">
               <TextSelectionProvider
@@ -1586,7 +1864,7 @@ export default function ContentPageView({
                     <UnifiedErrorBoundary fallback={({ error, resetError }) => (
                       <div className="p-4 text-muted-foreground">
                         <p>Unable to display page content. The page may have formatting issues.</p>
-                        <p className="text-sm mt-2">Page ID: {page.id}</p>
+                        <p className="text-sm mt-2">Page ID: {page?.id || pageId}</p>
                         <button onClick={resetError} className="mt-2 text-sm underline">
                           Try again
                         </button>
@@ -1789,4 +2067,21 @@ export default function ContentPageView({
     </PublicLayout>
     </>
   );
+
+  // For new page mode, wrap with slide-up animation
+  if (isNewPageMode) {
+    return (
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: isClosingNewPage ? '100%' : 0 }}
+        transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="min-h-screen bg-background"
+      >
+        {PageContent}
+      </motion.div>
+    );
+  }
+
+  // Regular page view (no animation)
+  return PageContent;
 }

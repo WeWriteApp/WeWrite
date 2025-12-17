@@ -91,14 +91,16 @@ export default function InviteFriendsPage() {
     }
   }, [user?.uid]);
 
-  // Copy vertical-specific referral link
+  // Copy vertical-specific referral link (uses username for nicer URLs)
   const copyVerticalLink = async (verticalSlug: string) => {
     if (!user?.uid) return;
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    // Use username if available, fallback to UID for backwards compatibility
+    const refCode = user.username || user.uid;
     const link = verticalSlug === 'general'
-      ? `${baseUrl}/welcome?ref=${user.uid}`
-      : `${baseUrl}/welcome/${verticalSlug}?ref=${user.uid}`;
+      ? `${baseUrl}/welcome?ref=${refCode}`
+      : `${baseUrl}/welcome/${verticalSlug}?ref=${refCode}`;
 
     try {
       await navigator.clipboard.writeText(link);

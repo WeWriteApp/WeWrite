@@ -43,12 +43,15 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
       }
     }, [fullHashId, open, onOpenChange])
 
+    // Track if we set the hash (to know if we need to clear it on close)
+    const hasSetHashRef = React.useRef(false)
+
     // Handle URL hash and analytics
     React.useEffect(() => {
       if (typeof window === 'undefined') return
 
       if (open) {
-        // Store current hash before changing
+        // Store current hash before changing (without the # symbol for cleaner comparison)
         previousHashRef.current = window.location.hash
 
         // Set hash if provided
@@ -56,6 +59,7 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
           const newHash = `#${fullHashId}`
           // Use replaceState to avoid adding to history
           window.history.replaceState(null, '', newHash)
+          hasSetHashRef.current = true
         }
 
         // Track analytics
@@ -72,12 +76,14 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
             // Analytics not available
           }
         }
-      } else if (previousHashRef.current !== '' || fullHashId) {
-        // Restore hash when closing
-        if (fullHashId) {
-          const newUrl = previousHashRef.current || window.location.pathname + window.location.search
-          window.history.replaceState(null, '', newUrl)
-        }
+      } else if (hasSetHashRef.current && fullHashId) {
+        // Only restore/clear hash if we actually set it when opening
+        // If previous hash was empty or just '#', restore to clean URL
+        const cleanUrl = previousHashRef.current && previousHashRef.current !== '#'
+          ? previousHashRef.current
+          : window.location.pathname + window.location.search
+        window.history.replaceState(null, '', cleanUrl)
+        hasSetHashRef.current = false
 
         // Track analytics
         if (analyticsId) {

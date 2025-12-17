@@ -84,6 +84,11 @@ export default function FinancialHeader({
       return true;
     }
 
+    // Hide on user profile pages - they have their own header
+    if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
+      return true;
+    }
+
     // Use centralized navigation config - returns true if nav should show
     const showNav = shouldShowNavigation(pathname);
 

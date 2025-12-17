@@ -30,9 +30,17 @@ export function RegisterForm({
   const { trackAuthEvent } = useWeWriteAnalytics()
   const { refreshUser } = useAuth()
 
-  // Get referral code and source from URL query params (?ref=userId&source=writers)
-  const referredBy = searchParams.get('ref') || undefined
+  // Get referral code and source from URL query params (?ref=usernameOrUid&source=writers)
+  const referralCode = searchParams.get('ref') || undefined
   const referralSource = searchParams.get('source') || undefined
+
+  // Resolved referrer info (UID and username)
+  const [referrerInfo, setReferrerInfo] = useState<{
+    uid: string;
+    username: string | null;
+    displayName: string | null;
+  } | null>(null)
+  const [referralLoading, setReferralLoading] = useState(!!referralCode)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
@@ -52,6 +60,35 @@ export function RegisterForm({
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+
+  // Resolve referral code (username or UID) to referrer info
+  useEffect(() => {
+    const resolveReferralCode = async () => {
+      if (!referralCode) {
+        setReferralLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/referral/resolve?ref=${encodeURIComponent(referralCode)}`)
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            setReferrerInfo(result.data)
+            console.log('[Register] Resolved referral code:', referralCode, '→', result.data)
+          }
+        } else {
+          console.warn('[Register] Invalid referral code:', referralCode)
+        }
+      } catch (error) {
+        console.error('[Register] Error resolving referral code:', error)
+      } finally {
+        setReferralLoading(false)
+      }
+    }
+
+    resolveReferralCode()
+  }, [referralCode])
 
   // Validate form inputs
   useEffect(() => {
@@ -214,7 +251,8 @@ export function RegisterForm({
           email,
           username,
           idToken,
-          ...(referredBy ? { referredBy } : {}),
+          // Use resolved UID from referrer info (supports both username and UID referral codes)
+          ...(referrerInfo?.uid ? { referredBy: referrerInfo.uid } : {}),
           ...(referralSource ? { referralSource } : {}),
         })
       })

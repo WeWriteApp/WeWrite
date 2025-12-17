@@ -28,6 +28,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
+import { buildNewPageUrl } from '../../utils/pageId';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 
 // Context for sidebar state management
@@ -290,7 +291,7 @@ function UnifiedSidebarContent({
   const navigationItemsConfig = {
     'home': { icon: Home, label: 'Home', href: '/' },
     'search': { icon: Search, label: 'Search', href: '/search' },
-    'new': { icon: Plus, label: 'New Page', href: '/new' },
+    'new': { icon: Plus, label: 'New Page', href: '/new', action: () => router.push(buildNewPageUrl()) },
     'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
     'map': { icon: Map, label: 'Map', href: '/map' },
     'leaderboard': { icon: Trophy, label: 'Leaderboards', href: '/leaderboard' },

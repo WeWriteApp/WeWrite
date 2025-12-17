@@ -18,7 +18,7 @@ interface SparklineProps {
 export function Sparkline({
   data = [],
   height = 40,
-  color = "hsl(var(--accent))",
+  color = "oklch(var(--primary))",
   strokeWidth = 1.5,
   fillOpacity = 0.1,
   className = ""
@@ -60,7 +60,7 @@ export function Sparkline({
               height={barHeight}
               rx={1}
               ry={1}
-              fill={isZero ? "var(--neutral-alpha-15)" : "hsl(var(--accent))"}
+              fill={isZero ? "var(--neutral-alpha-15)" : "oklch(var(--primary))"}
             />
           );
         })}

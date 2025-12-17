@@ -25,9 +25,9 @@ import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
 import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
-import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2, Copy, Check, UserPlus, LayoutDashboard, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2, Copy, Check, UserPlus, LayoutDashboard, ArrowLeft, ExternalLink, Gift } from 'lucide-react';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { LANDING_VERTICALS, getVerticalSlugs } from '../../constants/landing-verticals';
 
 interface LandingPageProps {
@@ -55,9 +55,18 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
   const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
   const [referralStatsLoading, setReferralStatsLoading] = useState(false);
 
+  // Referrer info from URL ?ref= parameter
+  const [referrerInfo, setReferrerInfo] = useState<{
+    uid: string;
+    username: string | null;
+    displayName: string | null;
+  } | null>(null);
+  const [referrerLoading, setReferrerLoading] = useState(false);
+
   const { setTheme, theme } = useTheme();
   const [session, setUser] = useState<any>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Authentication state
   const { user, isAuthenticated } = useAuth();
@@ -70,6 +79,35 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
 
   // Animation classes
   const fadeInClass = "animate-fadeIn";
+
+  // Resolve referrer info when ?ref= parameter is present
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (!refCode || isAuthenticated) {
+      // Don't show "invited by" for already authenticated users
+      setReferrerLoading(false);
+      return;
+    }
+
+    const resolveReferrer = async () => {
+      setReferrerLoading(true);
+      try {
+        const response = await fetch(`/api/referral/resolve?ref=${encodeURIComponent(refCode)}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setReferrerInfo(result.data);
+          }
+        }
+      } catch (error) {
+        console.error('[Landing] Error resolving referrer:', error);
+      } finally {
+        setReferrerLoading(false);
+      }
+    };
+
+    resolveReferrer();
+  }, [searchParams, isAuthenticated]);
 
   // Simple scroll handler for header shadow effect only
   // Color animation is now handled by LandingColorContext
@@ -471,6 +509,28 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
               heroTitle={heroTitle}
               heroSubtitle={heroSubtitle}
             />
+
+            {/* "Invited by" banner for users arriving via referral link */}
+            {!isAuthenticated && searchParams.get('ref') && (
+              <div className="wewrite-card p-4 md:p-5 bg-primary/5 border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Heart className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      You've been invited by{' '}
+                      <Link
+                        href={`/u/${referrerInfo?.username || searchParams.get('ref')}`}
+                        className="text-primary hover:underline font-semibold"
+                      >
+                        @{referrerInfo?.username || referrerInfo?.displayName || searchParams.get('ref')}
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Referral Section for Authenticated Users */}
             {/* Hide referral section in preview mode - the preview banner handles copy link functionality */}

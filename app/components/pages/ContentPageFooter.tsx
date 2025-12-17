@@ -24,6 +24,7 @@ interface PageData {
   id: string;
   title: string;
   userId: string;
+  isNewPage?: boolean;
   [key: string]: any;
 }
 
@@ -215,12 +216,14 @@ export default function ContentPageFooter({
             </div>
           )}
 
-          {/* Page stats section */}
-          <ContentPageStats
-            pageId={page.id}
-            realTime={true}
-            showSparklines={true}
-          />
+          {/* Page stats section - hide for new unsaved pages */}
+          {!page.isNewPage && (
+            <ContentPageStats
+              pageId={page.id}
+              realTime={true}
+              showSparklines={true}
+            />
+          )}
         </>
       )}
 

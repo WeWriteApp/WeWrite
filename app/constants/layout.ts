@@ -246,7 +246,8 @@ export const NAV_HIDDEN_PREFIXES = [
  *
  * SIMPLIFIED LOGIC:
  * - Returns TRUE for exact matches in NAV_PAGE_ROUTES (like /, /home, /search, etc.)
- * - Returns FALSE for everything else (content pages like /abc123, user pages, etc.)
+ * - Returns TRUE for user profile pages (/u/username, /user/uid)
+ * - Returns FALSE for everything else (content pages like /abc123, etc.)
  *
  * @param pathname - The current route pathname
  * @returns true if nav should be shown, false if it should be hidden
@@ -255,6 +256,11 @@ export function shouldShowNavigation(pathname: string): boolean {
   // No pathname = hide nav
   if (!pathname) {
     return false;
+  }
+
+  // Show nav on user profile pages (both /u/ and legacy /user/ routes)
+  if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
+    return true;
   }
 
   // Simple exact match check - if it's in the whitelist, show nav

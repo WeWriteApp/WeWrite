@@ -23,6 +23,8 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
     const previousHashRef = React.useRef<string>('')
     // Track if we've already checked the initial hash
     const hasCheckedInitialHash = React.useRef(false)
+    // Track if we set the hash (to know if we need to clear it on close)
+    const hasSetHashRef = React.useRef(false)
 
     // Check if URL hash matches on mount and open drawer if so
     React.useEffect(() => {
@@ -51,6 +53,7 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
           const newHash = `#${hashId}`
           // Use replaceState to avoid adding to history
           window.history.replaceState(null, '', newHash)
+          hasSetHashRef.current = true
         }
 
         // Lock body scroll - lock BOTH html and body for robust scroll prevention
@@ -84,10 +87,14 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
         const wasLocked = document.body.getAttribute('data-drawer-open') === 'true'
         if (!wasLocked) return // Don't do anything if drawer wasn't open
 
-        // Restore hash
-        if (hashId) {
-          const newUrl = previousHashRef.current || window.location.pathname + window.location.search
-          window.history.replaceState(null, '', newUrl)
+        // Restore/clear hash if we set it when opening
+        if (hasSetHashRef.current && hashId) {
+          // If previous hash was empty or just '#', restore to clean URL
+          const cleanUrl = previousHashRef.current && previousHashRef.current !== '#'
+            ? previousHashRef.current
+            : window.location.pathname + window.location.search
+          window.history.replaceState(null, '', cleanUrl)
+          hasSetHashRef.current = false
         }
 
         // Get the stored scroll position from data attribute (more reliable)

@@ -25,14 +25,10 @@ function isContentPageRoute(pathname: string, user: any): boolean {
     return false;
   }
 
-  // For user pages, only show navigation on current user's own page
+  // User profile pages are NOT content pages - they should show navigation
   // Support both new /u/ route and legacy /user/ route
   if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
-    // Check if this is the user's own profile by username
-    if (user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`)) {
-      return false; // Own profile is not a content page
-    }
-    return true; // Other user profiles are content pages
+    return false;
   }
 
   // Group pages are always content pages
@@ -81,14 +77,8 @@ function shouldShowFABOnRoute(pathname: string, user: any): boolean {
     return false;
   }
 
-  // Always show FAB on user's own profile page
-  if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
-    if (user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`)) {
-      return true; // Show FAB on own profile
-    }
-  }
-
   // Show FAB everywhere except content pages
+  // (User profile pages are not content pages, so FAB shows there)
   return !isContentPageRoute(pathname, user);
 }
 
@@ -108,13 +98,10 @@ function shouldShowMobileNavOnRoute(pathname: string, user: any): boolean {
     return true;
   }
 
-  // For user pages, show mobile nav only on current user's own page
+  // Show mobile nav on ALL user profile pages (not just own profile)
   // Support both new /u/ route and legacy /user/ route
   if (pathname.startsWith('/u/') || pathname.startsWith('/user/')) {
-    if (user?.uid && (pathname === `/u/${user.username}` || pathname === `/user/${user.uid}`)) {
-      return true; // Show mobile nav on own profile
-    }
-    return false; // Hide on other user profiles
+    return true;
   }
 
   // Hide on group pages (these are ContentPages)

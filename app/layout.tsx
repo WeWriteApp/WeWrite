@@ -46,6 +46,7 @@ import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
 import { FeatureFlagProvider } from "./contexts/FeatureFlagContext"
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
+import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
@@ -260,6 +261,7 @@ export default function RootLayout({
                                               <SessionAuthInitializer>
                                                 <SessionMonitor />
                                                 <AutomaticUpdateManager />
+                                                <ScrollRestorationDisabler />
                                                 <GlobalLandingBlobs />
                                                 <GlobalNavigation>
                                                   {children}

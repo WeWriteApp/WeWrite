@@ -21,6 +21,9 @@ interface UserData {
   // Feature flags removed - all features are now always enabled
   stripeConnectedAccountId?: string | null;
   isAdmin?: boolean;
+  referredBy?: string;
+  referredByUsername?: string;
+  referralSource?: string;
   financial?: {
     hasSubscription: boolean;
     subscriptionAmount?: number | null;
@@ -170,7 +173,9 @@ export async function GET(request: NextRequest) {
           createdAt: data.createdAt,
           lastLogin: lastLoginValue,
           stripeConnectedAccountId: data.stripeConnectedAccountId || null,
-          isAdmin: isDev || data.isAdmin === true || isAdminServer(data.email || '')
+          isAdmin: isDev || data.isAdmin === true || isAdminServer(data.email || ''),
+          referredBy: data.referredBy || undefined,
+          referralSource: data.referralSource || undefined
         };
 
         // Total pages (non-deleted) for this user
@@ -283,6 +288,42 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`Processed ${userData.length} users successfully`);
+
+    // Resolve referrer usernames for users that have referredBy
+    const referrerUids = [...new Set(userData.filter(u => u.referredBy).map(u => u.referredBy!))];
+    if (referrerUids.length > 0) {
+      console.log(`[Admin Users] Resolving ${referrerUids.length} unique referrer usernames`);
+      const referrerUsernameMap = new Map<string, string>();
+
+      // Batch fetch referrer documents (Firestore 'in' query supports up to 30 items)
+      const batchSize = 30;
+      for (let i = 0; i < referrerUids.length; i += batchSize) {
+        const batch = referrerUids.slice(i, i + batchSize);
+        try {
+          const referrerDocs = await Promise.all(
+            batch.map(uid => db.collection(getCollectionName('users')).doc(uid).get())
+          );
+          for (const doc of referrerDocs) {
+            if (doc.exists) {
+              const refData = doc.data();
+              if (refData?.username) {
+                referrerUsernameMap.set(doc.id, refData.username);
+              }
+            }
+          }
+        } catch (refErr) {
+          console.warn('[Admin Users] Error fetching referrer usernames:', refErr);
+        }
+      }
+
+      // Apply referrer usernames to user data
+      for (const user of userData) {
+        if (user.referredBy && referrerUsernameMap.has(user.referredBy)) {
+          user.referredByUsername = referrerUsernameMap.get(user.referredBy);
+        }
+      }
+      console.log(`[Admin Users] Resolved ${referrerUsernameMap.size} referrer usernames`);
+    }
 
     return NextResponse.json({
       success: true,

@@ -134,6 +134,16 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
         console.log('🔍 ContentPage: Extracted ID:', extractedId);
         setId(extractedId);
 
+        // FAST PATH: For new page mode, immediately render ContentPageView
+        // This eliminates the delay from the second useEffect
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('new') === 'true' || urlParams.get('draft') === 'true') {
+          console.log('🔵 ContentPage: New page mode - fast path to ContentPageView');
+          setContentType('page');
+          setIsLoading(false);
+          return; // Skip performance tracking for new pages
+        }
+
         // OPTIMIZATION: Start performance tracking
         if (extractedId) {
           startPageLoadTracking(extractedId);
@@ -185,6 +195,15 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
         // Check if this is a deleted page preview
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('preview') === 'deleted') {
+          setContentType('page');
+          setIsLoading(false);
+          return;
+        }
+
+        // NEW PAGE MODE: Skip API check and go directly to ContentPageView
+        // The page will be created by ContentPageView when it mounts
+        if (urlParams.get('new') === 'true' || urlParams.get('draft') === 'true') {
+          console.log('🔵 ContentPage: New page mode detected, skipping API check');
           setContentType('page');
           setIsLoading(false);
           return;

@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils';
 import { useAuth } from '../../providers/AuthProvider';
 import { isPWA } from '../../utils/pwa-detection';
 import { usePageVisibility } from '../../hooks/usePageVisibility';
+import { buildNewPageUrl } from '../../utils/pageId';
 
 // Helper function to check if device is iOS
 const isIOSDevice = (): boolean => {
@@ -70,7 +71,9 @@ export default function FloatingActionButton() {
   }, []);
 
   const handleNewPageClick = () => {
-    router.push('/new?source=fab');
+    // Scroll to top before navigation to prevent flash of previous page's scroll position
+    window.scrollTo(0, 0);
+    router.push(buildNewPageUrl());
   };
 
 // Track window width for responsive positioning

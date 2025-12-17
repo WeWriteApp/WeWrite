@@ -688,6 +688,20 @@ export default function ContentPageHeader({
     }
   };
 
+  // Logo/home click handler - for new pages, use onBack for slide-down dismiss
+  const handleLogoClick = () => {
+    if (isScrolled && !isEditing) {
+      // When scrolled in view mode, scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (isNewPage && onBack) {
+      // For new pages, use onBack to trigger slide-down dismiss
+      onBack();
+    } else {
+      // Default: go to home
+      router.push('/');
+    }
+  };
+
   return (
     <>
       <header
@@ -748,11 +762,11 @@ export default function ContentPageHeader({
                 </div>
 
                 {/* Center: Logo + Title (when collapsed) - Logo slides and shrinks */}
-                <div 
+                <div
                   className={`flex items-center cursor-pointer transition-all duration-300 ease-out ${
                     isScrolled && !isEditing ? 'gap-2' : 'gap-0'
                   }`}
-                  onClick={() => isScrolled && !isEditing ? window.scrollTo({ top: 0, behavior: 'smooth' }) : router.push('/')}
+                  onClick={handleLogoClick}
                 >
                   {/* Logo - transitions between lg and sm size */}
                   <div className="transition-all duration-300 ease-out">
@@ -783,19 +797,20 @@ export default function ContentPageHeader({
                   </div>
                 </div>
 
-                {/* Right: Share button - fades out when collapsed */}
+                {/* Right: Share button - fades out when collapsed, disabled for new unsaved pages */}
                 <div className={`flex items-center gap-2 transition-all duration-300 ease-out ${
-                  isScrolled && !isEditing 
-                    ? 'opacity-0 w-0 overflow-hidden pointer-events-none' 
+                  isScrolled && !isEditing
+                    ? 'opacity-0 w-0 overflow-hidden pointer-events-none'
                     : 'opacity-100 w-10'
                 }`}>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-foreground"
-                    title="Share page"
+                    className={`text-foreground ${isNewPage ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    title={isNewPage ? "Save page first to share" : "Share page"}
                     tabIndex={isNewPage ? 3 : undefined}
-                    onClick={handleShareClick}
+                    onClick={isNewPage ? undefined : handleShareClick}
+                    disabled={isNewPage}
                   >
                     <Share className="h-5 w-5" />
                   </Button>

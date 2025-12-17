@@ -755,7 +755,7 @@ export async function PUT(request: NextRequest) {
     }
 
     body = await request.json();
-    const { id, title, content, location, groupId, customDate, replyType } = body;
+    const { id, title, content, location, groupId, customDate, replyType, markAsSaved } = body;
 
 
     logger.info('Page save request', {
@@ -869,6 +869,12 @@ export async function PUT(request: NextRequest) {
 
     if (location !== undefined) {
       updateData.location = location;
+    }
+
+    // NEW PAGE SAVE: Remove isNewPage flag when saving for first time
+    if (markAsSaved === true && pageData.isNewPage === true) {
+      updateData.isNewPage = false;
+      console.log('📝 NEW PAGE SAVE: Marking page as saved', { pageId: id });
     }
 
     if (customDate !== undefined) {
