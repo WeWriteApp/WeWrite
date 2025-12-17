@@ -431,6 +431,55 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
   `, { emailSettingsToken, emailType: 'payout-reminder' }),
 };
 
+export const firstEarningsTemplate: EmailTemplate = {
+  id: 'first-earnings',
+  name: 'First Earnings',
+  description: 'Congratulates users on earning their first money on WeWrite',
+  category: 'payments',
+  subject: 'You earned your first money on WeWrite! 🎉',
+  sampleData: {
+    username: 'JohnDoe',
+    firstEarnings: '$2.50',
+    amountToGo: '$22.50',
+    payoutThreshold: '$25.00',
+    emailSettingsToken: 'sample-token-123',
+  },
+  generateHtml: ({ username, firstEarnings, amountToGo, payoutThreshold, emailSettingsToken }) => wrapEmail('First Earnings', `
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Congratulations on Your First Earnings! 🎉</h2>
+      <p class="dark-text">Hi ${username},</p>
+      <p class="dark-text">This is a big moment - you just earned your first money on WeWrite!</p>
+
+      <div class="dark-card-inner" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 8px; padding: 24px; margin: 24px 0; text-align: center;">
+        <p style="color: rgba(255,255,255,0.9); margin: 0 0 8px 0; font-size: 14px;">Your first earnings</p>
+        <p style="color: #fff; margin: 0; font-size: 36px; font-weight: 700;">${firstEarnings}</p>
+      </div>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 20px 0;">
+        <p class="dark-text" style="margin: 0 0 12px 0; font-weight: 600;">Your path to payout:</p>
+        <p class="dark-text-muted" style="margin: 0; font-size: 14px; color: #666;">
+          You're only <strong class="dark-text">${amountToGo}</strong> away from reaching the ${payoutThreshold} payout threshold. Once you hit ${payoutThreshold}, you'll be able to set up automatic monthly payouts!
+        </p>
+      </div>
+
+      <p class="dark-text">Keep creating great content and engaging with the WeWrite community. Every contribution brings you closer to your first payout!</p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://getwewrite.app/new" style="${emailStyles.button}">
+          Create Another Page
+        </a>
+      </div>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <p class="dark-text-muted" style="margin: 0; font-size: 14px; color: #666;">
+          <strong class="dark-text">How did you earn this?</strong><br>
+          When readers pledge to pages you've contributed to, you earn a share of the revenue based on your contributions. The more valuable content you create, the more you can earn!
+        </p>
+      </div>
+    </div>
+  `, { emailSettingsToken, emailType: 'first-earnings' }),
+};
+
 export const halfwayToPayoutTemplate: EmailTemplate = {
   id: 'halfway-to-payout',
   name: 'Halfway to Payout',
@@ -928,6 +977,7 @@ export const emailTemplates: EmailTemplate[] = [
   passwordResetEmailTemplate,
   // Payments
   payoutSetupReminderTemplate,
+  firstEarningsTemplate,
   halfwayToPayoutTemplate,
   payoutProcessedTemplate,
   subscriptionConfirmationTemplate,
