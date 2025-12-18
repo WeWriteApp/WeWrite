@@ -556,13 +556,13 @@ export function DesktopOptimizedDashboard({
   );
 }
 
-// Individual dashboard row component
-function DashboardRow({ 
-  row, 
-  dateRange, 
-  granularity, 
-  globalFilters, 
-  height 
+// Individual dashboard row component - horizontal layout with info on left, chart on right
+function DashboardRow({
+  row,
+  dateRange,
+  granularity,
+  globalFilters,
+  height
 }: {
   row: DashboardRow;
   dateRange: DateRange;
@@ -579,56 +579,54 @@ function DashboardRow({
 
   // Calculate current value
   const currentValue = normalizedData.length > 0 ? row.valueFormatter(normalizedData, stats, metadata) : '0';
-  
+
   // Calculate trend
   const trend = calculateTrend(normalizedData);
-  
+
   return (
     <div
       data-row-id={row.id}
-      className="py-6"
-      style={{ minHeight: height + 60 }} // Add padding for header
+      className="py-4 flex items-center gap-4"
+      style={{ minHeight: height }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg" style={{ backgroundColor: `${row.color}20`, color: row.color }}>
-            {row.icon}
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg">{row.title}</h3>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Total: {currentValue}</span>
-              {trend && (
-                <div className={`flex items-center gap-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  <span>{trend.percentage}%</span>
-                </div>
-              )}
-            </div>
+      {/* Left side: Icon, Title, Stats - fixed width */}
+      <div className="flex items-center gap-3 w-64 flex-shrink-0">
+        <div className="p-2 rounded-lg" style={{ backgroundColor: `${row.color}20`, color: row.color }}>
+          {row.icon}
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-semibold text-base truncate">{row.title}</h3>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium">Total: {currentValue}</span>
+            {trend && (
+              <div className={`flex items-center gap-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span className="text-xs">{trend.percentage}%</span>
+              </div>
+            )}
           </div>
         </div>
-        
+
         {/* Status indicator */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center ml-auto">
           {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
           {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
           {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
         </div>
       </div>
-      
-      {/* Chart */}
-      <div style={{ height: height }}>
+
+      {/* Right side: Chart - flexible width */}
+      <div className="flex-1" style={{ height: height }}>
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <div className="loader"></div>
           </div>
         ) : error ? (
-          <div className="h-full flex items-center justify-center text-red-500">
+          <div className="h-full flex items-center justify-center text-red-500 text-sm">
             Error loading data
           </div>
         ) : normalizedData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No data available
           </div>
         ) : (
