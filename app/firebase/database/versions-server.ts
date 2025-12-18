@@ -207,8 +207,9 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       // Invalidate cache
       (async () => {
         try {
-          const { invalidatePageData } = await import('../../utils/unifiedCache');
-          invalidatePageData(pageId, data.userId);
+          const { invalidateCache } = await import('../../utils/serverCache');
+          invalidateCache.page(pageId);
+          if (data.userId) invalidateCache.user(data.userId);
           console.log('✅ [BG] Cache invalidated');
         } catch (err) {
           console.error('⚠️ [BG] Cache invalidation failed:', err);

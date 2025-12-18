@@ -292,11 +292,11 @@ const readOptimizer = new ReadOptimizer();
  * Optimized wrapper for page data fetching
  */
 export async function getOptimizedPageData(pageId: string, userId?: string) {
-  const { cachedFetch } = await import('./unifiedCache');
-  const cacheKey = `page:${pageId}:${userId || 'anonymous'}`;
+  const { cachedQuery } = await import('./serverCache');
+  const key = `page:${pageId}:${userId || 'anonymous'}`;
 
-  return cachedFetch(
-    cacheKey,
+  return cachedQuery(
+    key,
     async () => {
       // Use API instead of direct Firebase calls
       const url = userId

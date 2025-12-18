@@ -335,11 +335,12 @@ export async function POST(
       console.log('🗑️ [VERSION API] Invalidating cache for page:', pageId);
 
       // Import cache invalidation utilities
-      const { invalidatePageData } = await import('../../../../utils/unifiedCache');
+      const { invalidateCache } = await import('../../../../utils/serverCache');
       const { pageCache } = await import('../../../../utils/pageCache');
 
-      // Invalidate unified cache
-      invalidatePageData(pageId, currentUserId);
+      // Invalidate server cache
+      invalidateCache.page(pageId);
+      if (currentUserId) invalidateCache.user(currentUserId);
 
       // Invalidate page cache specifically
       pageCache.invalidate(pageId);

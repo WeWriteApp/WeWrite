@@ -8,8 +8,7 @@ import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '..
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 import logger from '../../utils/unifiedLogger';
-import { cachedQuery } from '../../utils/globalCache';
-import { cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
+import { cachedQuery, cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
 import { trackFirebaseRead } from '../../utils/costMonitor';
 import { pagesListCache } from '../../utils/pagesListCache';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
@@ -1296,9 +1295,9 @@ export async function PUT(request: NextRequest) {
     // CRITICAL: Invalidate ALL cache layers immediately (not fire-and-forget for core caches)
     // This ensures the editor sees fresh data immediately after saving
     try {
-      // 1. Invalidate unified cache
-      const { invalidatePageData } = await import('../../utils/unifiedCache');
-      invalidatePageData(id, currentUserId);
+      // 1. Invalidate server cache
+      invalidateCache.page(id);
+      if (currentUserId) invalidateCache.user(currentUserId);
 
       // 2. Invalidate in-memory page cache (used by GET /api/pages/[id])
       const { pageCache } = await import('../../utils/pageCache');

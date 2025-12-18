@@ -15,7 +15,7 @@
  * - Simple, maintainable interface
  */
 
-import { circuitBreaker } from './circuitBreaker';
+import { circuitBreaker } from './firebaseCircuitBreaker';
 
 interface ApiOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;

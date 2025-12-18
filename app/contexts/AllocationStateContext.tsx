@@ -16,7 +16,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { cache, cacheKey } from '../utils/simpleCache';
+import { cache, cacheKey } from '../utils/serverCache';
 
 interface AllocationData {
   pageId: string;

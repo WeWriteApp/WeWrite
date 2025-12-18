@@ -256,3 +256,84 @@ export const emergencyStopFirebase = (reason: string) => {
 export const resetCircuitBreaker = () => {
   firebaseCircuitBreaker.reset();
 };
+
+/**
+ * Generic Circuit Breaker Pattern
+ * (Consolidated from circuitBreaker.ts)
+ *
+ * Prevents cascading failures by temporarily blocking requests
+ * when error rates exceed thresholds
+ */
+interface GenericCircuitBreakerState {
+  failures: number;
+  lastFailureTime: number;
+  state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+}
+
+class CircuitBreaker {
+  private circuits = new Map<string, GenericCircuitBreakerState>();
+  private readonly FAILURE_THRESHOLD = 5;
+  private readonly TIMEOUT = 30000;
+  private readonly RESET_TIMEOUT = 60000;
+
+  async execute<T>(
+    key: string,
+    operation: () => Promise<T>,
+    fallback?: () => Promise<T>
+  ): Promise<T> {
+    const circuit = this.getCircuit(key);
+
+    if (circuit.state === 'OPEN') {
+      const timeSinceFailure = Date.now() - circuit.lastFailureTime;
+      if (timeSinceFailure < this.TIMEOUT) {
+        if (fallback) return await fallback();
+        throw new Error(`Circuit breaker is OPEN for ${key}. Try again later.`);
+      } else {
+        circuit.state = 'HALF_OPEN';
+      }
+    }
+
+    try {
+      const result = await operation();
+      if (circuit.state === 'HALF_OPEN') {
+        circuit.state = 'CLOSED';
+        circuit.failures = 0;
+      } else if (circuit.failures > 0 && Date.now() - circuit.lastFailureTime > this.RESET_TIMEOUT) {
+        circuit.failures = 0;
+      }
+      return result;
+    } catch (error) {
+      circuit.failures++;
+      circuit.lastFailureTime = Date.now();
+      if (circuit.failures >= this.FAILURE_THRESHOLD) {
+        circuit.state = 'OPEN';
+      }
+      if (fallback && circuit.state === 'OPEN') {
+        return await fallback();
+      }
+      throw error;
+    }
+  }
+
+  private getCircuit(key: string): GenericCircuitBreakerState {
+    if (!this.circuits.has(key)) {
+      this.circuits.set(key, { failures: 0, lastFailureTime: 0, state: 'CLOSED' });
+    }
+    return this.circuits.get(key)!;
+  }
+
+  getStatus(key: string): GenericCircuitBreakerState | null {
+    return this.circuits.get(key) || null;
+  }
+
+  reset(key: string): void {
+    const circuit = this.circuits.get(key);
+    if (circuit) {
+      circuit.failures = 0;
+      circuit.state = 'CLOSED';
+      circuit.lastFailureTime = 0;
+    }
+  }
+}
+
+export const circuitBreaker = new CircuitBreaker();

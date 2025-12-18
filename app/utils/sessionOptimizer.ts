@@ -6,7 +6,7 @@
  */
 
 import { getCacheItem, setCacheItem } from './cacheUtils';
-import { UNIFIED_CACHE_TTL } from './unifiedCache';
+import { UNIFIED_CACHE_TTL } from './serverCache';
 import Cookies from 'js-cookie';
 
 interface SessionData {

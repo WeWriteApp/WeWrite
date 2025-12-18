@@ -130,17 +130,6 @@ function setCachedResult(cacheKey: string, data: SearchResult, ttl: number): voi
   });
 }
 
-/**
- * Clear the search cache - called when pages are created/updated/deleted
- * to ensure fresh search results
- */
-function clearSearchCache(): number {
-  const size = searchCache.size;
-  searchCache.clear();
-  console.log(`🧹 [SEARCH CACHE] Cleared ${size} cached search results`);
-  return size;
-}
-
 // Search context types
 const SEARCH_CONTEXTS = {
   MAIN: 'main',
@@ -945,37 +934,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       users: [],
       error: 'Search temporarily unavailable',
       source: 'unified_search_error'
-    }, { status: 500 });
-  }
-}
-
-/**
- * POST handler to invalidate search cache
- */
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await request.json() as { action?: string };
-
-    if (body.action === 'invalidate') {
-      const clearedCount = clearSearchCache();
-      console.log(`🧹 [SEARCH CACHE] Cache invalidated via API - cleared ${clearedCount} entries`);
-
-      return NextResponse.json({
-        success: true,
-        message: 'Search cache invalidated',
-        clearedEntries: clearedCount
-      });
-    }
-
-    return NextResponse.json({
-      error: 'Invalid action. Use { action: "invalidate" }'
-    }, { status: 400 });
-
-  } catch (error) {
-    console.error('❌ Error in search cache invalidation:', error);
-    return NextResponse.json({
-      error: 'Failed to invalidate cache',
-      details: (error as Error).message
     }, { status: 500 });
   }
 }

@@ -6,7 +6,7 @@ import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 import { getCollectionName } from "../utils/environmentConfig";
-import { UNIFIED_CACHE_TTL } from "../utils/unifiedCache";
+import { UNIFIED_CACHE_TTL } from "../utils/serverCache";
 
 // Use unified cache TTLs for consistency
 const STATS_CACHE_TTL = UNIFIED_CACHE_TTL.LIVE_STATS; // 2 minutes

@@ -6,7 +6,7 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
-import { getReactQueryConfig, UNIFIED_CACHE_TTL } from './unifiedCache';
+import { getReactQueryConfig, UNIFIED_CACHE_TTL } from './serverCache';
 
 // Legacy cache config - now using unified configuration
 const CACHE_CONFIG = {

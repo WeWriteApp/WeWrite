@@ -58,10 +58,6 @@ export const useWeWriteAnalytics = () => {
     analytics.trackInteractionEvent(action, params);
   };
 
-  const trackGroupEvent = (action: string, params: Partial<AnalyticsEventParams> = {}) => {
-    analytics.trackGroupEvent(action, params);
-  };
-
   const trackFeatureEvent = (action: string, params: Partial<AnalyticsEventParams> = {}) => {
     analytics.trackFeatureEvent(action, params);
   };
@@ -152,7 +148,6 @@ export const useWeWriteAnalytics = () => {
     trackContentEvent,
     trackInteractionEvent,
     trackNavigationEvent,
-    trackGroupEvent,
     trackFeatureEvent,
     trackSessionEvent,
     // Specialized tracking functions

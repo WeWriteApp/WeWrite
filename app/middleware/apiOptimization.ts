@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCacheStats } from '../utils/serverCache';
-import { UNIFIED_CACHE_TTL } from '../utils/unifiedCache';
+import { getCacheStats, UNIFIED_CACHE_TTL } from '../utils/serverCache';
 
 interface OptimizationConfig {
   enableCaching: boolean;

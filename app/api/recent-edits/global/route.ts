@@ -80,13 +80,11 @@ export async function GET(request: NextRequest) {
       subscriptions: await getCollectionNameAsync('subscriptions')
     });
 
-    // SIMPLIFIED CACHING: Use unified cache system
-    const { cachedFetch } = await import('../../../utils/unifiedCache');
+    // SIMPLIFIED CACHING: Use server cache system
+    const { cacheHelpers } = await import('../../../utils/serverCache');
     const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${cursor || 'first'}`;
 
-    return NextResponse.json(await cachedFetch(
-      cacheKey,
-      async () => {
+    return NextResponse.json(await cacheHelpers.getApiData(cacheKey, async () => {
 
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;

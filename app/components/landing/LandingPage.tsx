@@ -162,7 +162,9 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     // Use the current pathname to generate the referral link
     // This ensures that /welcome/writers copies /welcome/writers?ref=xxx
-    const inviteLink = `${baseUrl}${pathname}?ref=${user?.uid || ''}`;
+    // Use username if available, fallback to UID for backwards compatibility
+    const refCode = user?.username || user?.uid || '';
+    const inviteLink = `${baseUrl}${pathname}?ref=${refCode}`;
 
     try {
       await navigator.clipboard.writeText(inviteLink);
@@ -510,8 +512,8 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
               heroSubtitle={heroSubtitle}
             />
 
-            {/* "Invited by" banner for users arriving via referral link */}
-            {!isAuthenticated && searchParams.get('ref') && (
+            {/* "Invited by" banner for users arriving via referral link, or in preview mode to show what recipients will see */}
+            {((!isAuthenticated && searchParams.get('ref')) || showAsPreview) && (
               <div className="wewrite-card p-4 md:p-5 bg-primary/5 border-primary/20">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -521,10 +523,10 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                     <p className="text-sm font-medium text-foreground">
                       You've been invited by{' '}
                       <Link
-                        href={`/u/${referrerInfo?.username || searchParams.get('ref')}`}
+                        href={`/u/${showAsPreview ? (user?.username || user?.uid || '') : (referrerInfo?.username || searchParams.get('ref'))}`}
                         className="text-primary hover:underline font-semibold"
                       >
-                        @{referrerInfo?.username || referrerInfo?.displayName || searchParams.get('ref')}
+                        @{showAsPreview ? (user?.username || user?.displayName || 'you') : (referrerInfo?.username || referrerInfo?.displayName || searchParams.get('ref'))}
                       </Link>
                     </p>
                   </div>
@@ -547,7 +549,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                 {/* Copy Invite Link */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-sm truncate">
-                    {typeof window !== 'undefined' ? `${window.location.origin}${pathname}?ref=${user?.uid || ''}` : 'Loading...'}
+                    {typeof window !== 'undefined' ? `${window.location.origin}${pathname}?ref=${user?.username || user?.uid || ''}` : 'Loading...'}
                   </div>
                   <Button
                     onClick={copyInviteLink}

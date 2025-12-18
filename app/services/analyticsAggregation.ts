@@ -18,7 +18,7 @@ import {
   type GlobalCounters,
   type DailyAggregation,
   type HourlyAggregation
-} from '../firebase/database/analytics';
+} from '../firebase/database/analyticsDataLayer';
 
 // Daily aggregation document structure
 export interface DailyAggregation {

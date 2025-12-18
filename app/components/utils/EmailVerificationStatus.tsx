@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { CheckCircle, XCircle, Clock, Mail } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, XCircle, Clock, Mail, RefreshCw } from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
@@ -12,8 +12,10 @@ interface EmailVerificationStatusProps {
 }
 
 export function EmailVerificationStatus({ className = "" }: EmailVerificationStatusProps) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const emailVerificationStatus = useEmailVerificationStatus();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   // Show verified only when actually verified AND not in admin testing mode
   const showAsVerified = user?.emailVerified && !emailVerificationStatus.isAdminTestingMode;
@@ -44,9 +46,41 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
 
   const config = getStatusConfig();
 
-  const handleResendEmail = async () => {
-    if (!user) return;
+  const handleRefresh = async () => {
+    if (!user || isRefreshing) return;
 
+    setIsRefreshing(true);
+    try {
+      // Force refresh the Firebase auth token to get the latest emailVerified status
+      const { auth } = await import('../../firebase/config');
+      await auth.currentUser?.reload();
+
+      // Also call refreshUser if available from AuthProvider
+      if (refreshUser) {
+        await refreshUser();
+      }
+
+      // Force a re-render by triggering the hook update
+      window.dispatchEvent(new CustomEvent('bannerOverrideChange'));
+
+      // Check if now verified
+      const nowVerified = auth.currentUser?.emailVerified;
+      if (nowVerified) {
+        // Clear the modal dismissed flag since user is now verified
+        localStorage.removeItem('wewrite_email_verification_dismissed');
+        window.dispatchEvent(new CustomEvent('bannerOverrideChange'));
+      }
+    } catch (error) {
+      console.error("Error refreshing verification status:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!user || isResending) return;
+
+    setIsResending(true);
     try {
       const { auth } = await import('../../firebase/config');
       const idToken = await auth.currentUser?.getIdToken();
@@ -70,29 +104,46 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
     } catch (error) {
       console.error("Error resending verification email:", error);
       alert('Failed to send verification email. Please try again.');
+    } finally {
+      setIsResending(false);
     }
   };
 
   return (
-    <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-md border ${config.bgColor} ${config.borderColor} ${className}`}>
-      <div className="flex items-center gap-2">
-        <span className={config.iconColor}>
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 py-2 rounded-md border ${config.bgColor} ${config.borderColor} ${className}`}>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`${config.iconColor} shrink-0`}>
           {config.icon}
         </span>
-        <span className={`text-sm font-medium ${config.textColor}`}>
+        <span className={`text-sm font-medium ${config.textColor} whitespace-nowrap`}>
           {config.text}
         </span>
       </div>
       {config.showAction && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleResendEmail}
-          className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
-        >
-          <Mail className="h-3 w-3 mr-1" />
-          Resend
-        </Button>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
+            title="Check if your email has been verified"
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleResendEmail}
+            disabled={isResending}
+            className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
+            title="Send a new verification email"
+          >
+            <Mail className={`h-3 w-3 mr-1 ${isResending ? 'opacity-50' : ''}`} />
+            Resend
+          </Button>
+        </div>
       )}
     </div>
   );

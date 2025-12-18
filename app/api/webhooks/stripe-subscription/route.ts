@@ -381,8 +381,8 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       console.log(`[SUBSCRIPTION WEBHOOK] Invalidating subscription cache for user ${userId}`);
 
       // Import and use the cache invalidation function
-      const { invalidateSubscriptionCaches } = await import('../../../utils/cacheInvalidation');
-      await invalidateSubscriptionCaches(userId);
+      const { invalidateCache } = await import('../../../utils/serverCache');
+      invalidateCache.user(userId);
 
       console.log(`[SUBSCRIPTION WEBHOOK] ✅ Successfully invalidated subscription caches for user ${userId}`);
     } catch (cacheError) {

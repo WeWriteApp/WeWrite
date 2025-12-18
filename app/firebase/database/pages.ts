@@ -295,6 +295,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         }
 
         // Sync to Algolia for real-time search updates
+        // This ensures new pages are immediately searchable since Algolia is the primary search engine
         try {
           const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
           const contentString = typeof versionData.content === 'string'
@@ -316,19 +317,6 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         } catch (algoliaError) {
           // Don't fail page creation if Algolia sync fails
           console.error('⚠️ Algolia sync failed (non-fatal):', algoliaError);
-        }
-
-        // Invalidate search cache to ensure new page appears in search immediately
-        try {
-          await fetch('/api/search-unified', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'invalidate' }),
-          });
-          console.log('✅ Search cache invalidated for new page');
-        } catch (cacheError) {
-          // Don't fail page creation if cache invalidation fails
-          console.error('⚠️ Search cache invalidation failed (non-fatal):', cacheError);
         }
 
         return pageRef.id;

@@ -155,8 +155,8 @@ export async function PATCH(
     }
 
     try {
-      const { invalidateUserPagesCache } = await import('../../../../utils/cacheInvalidation');
-      invalidateUserPagesCache(userId);
+      const { invalidateCache } = await import('../../../../utils/serverCache');
+      invalidateCache.user(userId);
     } catch (cacheError) {
       console.error('Error triggering cache invalidation (non-fatal):', cacheError);
     }

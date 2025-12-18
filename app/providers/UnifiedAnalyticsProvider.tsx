@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
-import { getAnalyticsInstance } from "../utils/analytics";
+import { getAnalyticsInstance } from "../utils/analytics-service";
 import { useRouter } from "next/navigation";
 import {
   getAnalyticsPageTitle,

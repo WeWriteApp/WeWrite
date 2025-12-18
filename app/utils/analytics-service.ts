@@ -257,17 +257,6 @@ class AnalyticsService {
   }
 
   /**
-   * Helper method to track group events
-   */
-  public trackGroupEvent(action: string, params: Partial<AnalyticsEventParams> = {}): void {
-    this.trackEvent({
-      category: EVENT_CATEGORIES.GROUP,
-      action,
-      ...params
-    });
-  }
-
-  /**
    * Helper method to track feature usage events
    */
   public trackFeatureEvent(action: string, params: Partial<AnalyticsEventParams> = {}): void {
@@ -335,6 +324,33 @@ class AnalyticsService {
       value: amount
     });
   }
+
+  /**
+   * Alias for trackPageView to maintain compatibility with analytics.ts
+   */
+  public pageView(url: string, title?: string, pageId?: string): void {
+    this.trackPageView(url, title);
+  }
+
+  /**
+   * Alias for trackEvent to maintain compatibility with analytics.ts
+   */
+  public event(params: AnalyticsEventParams): void {
+    this.trackEvent(params);
+  }
+
+  /**
+   * Get debug status for analytics providers
+   * Used by UnifiedAnalyticsProvider for debugging
+   */
+  public debugStatus(): { gaAvailable: boolean; fbAvailable: boolean; gaId?: string; fbMeasurementId?: string } {
+    return {
+      gaAvailable: this.gaInitialized,
+      fbAvailable: this.fbInitialized,
+      gaId: this.gaId || undefined,
+      fbMeasurementId: this.fbMeasurementId || undefined
+    };
+  }
 }
 
 /**
@@ -354,3 +370,18 @@ export const getAnalyticsService = (): AnalyticsService => {
 export const useAnalytics = () => {
   return getAnalyticsService();
 };
+
+/**
+ * Backward-compatible alias for getAnalyticsService
+ * @deprecated Use getAnalyticsService instead
+ */
+export const getAnalyticsInstance = getAnalyticsService;
+
+/**
+ * Backward-compatible singleton instance
+ * @deprecated Use getAnalyticsService() or useAnalytics() instead
+ */
+export const analytics = getAnalyticsService();
+
+// Re-export event constants for backward compatibility
+export { ANALYTICS_EVENTS, EVENT_CATEGORIES };

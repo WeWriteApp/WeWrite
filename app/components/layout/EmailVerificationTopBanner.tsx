@@ -3,7 +3,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Mail } from 'lucide-react';
 import { Button } from "../ui/button";
-import { useRouter } from 'next/navigation';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
@@ -18,11 +17,9 @@ const BANNER_HEIGHT = 40; // Height in pixels
  * very top of the viewport on both mobile and desktop.
  *
  * The banner is always present until the user verifies their email.
- * Clicking "View details" navigates to the profile settings page
- * where users can resend the verification email.
+ * Clicking "View details" re-opens the fullscreen email verification modal.
  */
 export default function EmailVerificationTopBanner() {
-  const router = useRouter();
   const emailVerificationStatus = useEmailVerificationStatus();
   const bannerRef = useRef<HTMLDivElement>(null);
 
@@ -57,8 +54,9 @@ export default function EmailVerificationTopBanner() {
       console.error('Error tracking email banner action:', error);
     }
 
-    // Navigate to profile settings where user can resend verification email
-    router.push('/settings/profile');
+    // Clear the dismissed flag to re-show the fullscreen email verification modal
+    localStorage.removeItem('wewrite_email_verification_dismissed');
+    window.dispatchEvent(new CustomEvent('bannerOverrideChange'));
   };
 
   return (

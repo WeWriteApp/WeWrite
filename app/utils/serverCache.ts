@@ -251,11 +251,26 @@ export const userCache = new ServerCache();
 export const pageCache = new ServerCache();
 export const analyticsCache = new ServerCache();
 
-import { UNIFIED_CACHE_TTL } from './unifiedCache';
+// Base TTL values
+const FAST_TTL = process.env.NODE_ENV === 'development' ? 5 * 1000 : 10 * 1000; // 5s dev, 10s prod
+const SLOW_TTL = process.env.NODE_ENV === 'development' ? 30 * 1000 : 60 * 1000; // 30s dev, 1min prod
 
-// Cache TTL constants - now using unified configuration
+// Unified cache TTL constants (consolidated from unifiedCache.ts)
+export const UNIFIED_CACHE_TTL = {
+  STATIC_DATA: SLOW_TTL,
+  USER_DATA: SLOW_TTL,
+  PAGE_DATA: FAST_TTL,
+  ANALYTICS_DATA: FAST_TTL,
+  SEARCH_DATA: FAST_TTL,
+  SESSION_DATA: SLOW_TTL,
+  REALTIME_DATA: FAST_TTL,
+  LIVE_STATS: FAST_TTL,
+  ACTIVITY_DATA: FAST_TTL,
+  DEFAULT: FAST_TTL
+};
+
+// Cache TTL constants for convenience
 export const CACHE_TTL = {
-  // Use unified TTLs for consistency across all caching systems
   STATIC_DATA: UNIFIED_CACHE_TTL.STATIC_DATA,
   USER_DATA: UNIFIED_CACHE_TTL.USER_DATA,
   PAGE_DATA: UNIFIED_CACHE_TTL.PAGE_DATA,
@@ -263,6 +278,57 @@ export const CACHE_TTL = {
   SEARCH_RESULTS: UNIFIED_CACHE_TTL.SEARCH_DATA,
   LIVE_DATA: UNIFIED_CACHE_TTL.REALTIME_DATA,
   DEFAULT: UNIFIED_CACHE_TTL.DEFAULT,
+};
+
+/**
+ * React Query configuration helper
+ */
+export function getReactQueryConfig(queryType: string) {
+  return {
+    staleTime: FAST_TTL,
+    gcTime: FAST_TTL * 2,
+    retry: false, // Disable retries to prevent Firebase quota abuse
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000)
+  };
+}
+
+/**
+ * Generate a cache key from multiple parts
+ */
+export function cacheKey(...parts: (string | number | boolean | undefined | null)[]): string {
+  return parts.filter(p => p !== undefined && p !== null).join(':');
+}
+
+/**
+ * Cached query wrapper - for Firebase/database queries (moved from globalCache.ts)
+ */
+export async function cachedQuery<T>(
+  key: string,
+  queryFn: () => Promise<T>,
+  customTtl?: number
+): Promise<T> {
+  const cached = apiCache.get<T>(key);
+  if (cached !== null) {
+    console.log(`🚀 CACHE HIT: ${key}`);
+    return cached;
+  }
+
+  console.log(`💸 CACHE MISS: ${key} - executing query`);
+  const result = await queryFn();
+  apiCache.set(key, result, customTtl || CACHE_TTL.DEFAULT);
+
+  return result;
+}
+
+/**
+ * Simple cache instance for general use (replaces simpleCache.ts)
+ */
+export const cache = {
+  get: <T>(key: string): T | null => apiCache.get<T>(key),
+  set: <T>(key: string, data: T, ttl?: number): void => apiCache.set(key, data, ttl),
+  delete: (key: string): boolean => apiCache.delete(key),
+  has: (key: string): boolean => apiCache.has(key),
+  clear: (): void => apiCache.clear(),
 };
 
 /**

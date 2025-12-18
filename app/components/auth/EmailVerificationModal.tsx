@@ -3,10 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../providers/AuthProvider";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { auth } from "../../firebase/config";
-import { Mail, Loader2, RefreshCw, CheckCircle, LogOut, Clock } from "lucide-react";
-import { LandingColorProvider } from "../landing/LandingColorContext";
+import { Mail, Loader2, RefreshCw, CheckCircle, LogOut, Clock, X, Pencil } from "lucide-react";
 import { LandingBlobs } from "../landing/LandingBlobs";
+
+// Cooldown durations in seconds: 60s, 2min, 5min, 10min
+const COOLDOWN_DURATIONS = [60, 120, 300, 600];
 
 interface EmailVerificationModalProps {
   onDismiss?: () => void;
@@ -15,14 +18,19 @@ interface EmailVerificationModalProps {
 
 /**
  * Full-screen modal that blocks access until email is verified.
- * Shows the same colorful blobs as auth pages for visual consistency.
+ * Shows colorful blobs as background for visual consistency.
  */
 export function EmailVerificationModal({ onDismiss, showDismissButton = false }: EmailVerificationModalProps) {
   const { user, refreshUser, signOut } = useAuth();
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendAttempts, setResendAttempts] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
 
   // Check for verification status periodically and on visibility change
   const checkVerificationStatus = useCallback(async () => {
@@ -58,6 +66,16 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
     }
   }, [resendCooldown]);
 
+  // Format cooldown time as readable string
+  const formatCooldown = (seconds: number) => {
+    if (seconds >= 60) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+    }
+    return `${seconds}s`;
+  };
+
   const handleResendEmail = async () => {
     if (!user || resendCooldown > 0 || isResending) return;
 
@@ -80,7 +98,10 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
 
       if (response.ok) {
         setResendSuccess(true);
-        setResendCooldown(60); // 60 second cooldown
+        // Progressive cooldown: 60s, 2min, 5min, 10min
+        const cooldownIndex = Math.min(resendAttempts, COOLDOWN_DURATIONS.length - 1);
+        setResendCooldown(COOLDOWN_DURATIONS[cooldownIndex]);
+        setResendAttempts(prev => prev + 1);
         setTimeout(() => setResendSuccess(false), 5000);
       } else {
         console.error("Failed to resend verification email");
@@ -89,6 +110,71 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
       console.error("Error resending verification email:", error);
     } finally {
       setIsResending(false);
+    }
+  };
+
+  const handleEditEmail = () => {
+    setNewEmail(user?.email || "");
+    setEmailError("");
+    setIsEditingEmail(true);
+  };
+
+  const handleCancelEditEmail = () => {
+    setIsEditingEmail(false);
+    setNewEmail("");
+    setEmailError("");
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!user || !newEmail || isUpdatingEmail) return;
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    if (newEmail === user.email) {
+      setEmailError("This is already your current email");
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+    setEmailError("");
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+
+      const response = await fetch("/api/users/update-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newEmail,
+          userId: user.uid,
+          idToken,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh user to get new email
+        await refreshUser();
+        setIsEditingEmail(false);
+        setNewEmail("");
+        // Reset cooldown and attempts since email changed
+        setResendCooldown(0);
+        setResendAttempts(0);
+        setResendSuccess(true);
+        setTimeout(() => setResendSuccess(false), 5000);
+      } else {
+        const data = await response.json();
+        setEmailError(data.error || "Failed to update email");
+      }
+    } catch (error) {
+      console.error("Error updating email:", error);
+      setEmailError("Failed to update email. Please try again.");
+    } finally {
+      setIsUpdatingEmail(false);
     }
   };
 
@@ -109,14 +195,28 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
   if (!user) return null;
 
   return (
-    <LandingColorProvider>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
-        {/* Animated blobs background */}
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-background">
+      {/* Animated blobs background - fixed position */}
+      <div className="fixed inset-0 pointer-events-none">
         <LandingBlobs />
+      </div>
 
+      {/* Scrollable content container */}
+      <div className="min-h-full flex items-center justify-center py-8 px-4">
         {/* Content card */}
-        <div className="relative z-10 w-full max-w-md mx-4">
-          <div className="wewrite-card rounded-xl p-6 md:p-8">
+        <div className="relative z-10 w-full max-w-md">
+          <div className="wewrite-card rounded-xl p-6 md:p-8 relative">
+            {/* X close button - top right */}
+            {showDismissButton && (
+              <button
+                onClick={handleDismiss}
+                className="absolute top-4 right-4 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+
             <div className="flex flex-col items-center gap-6 py-2">
               {/* Email icon */}
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -129,9 +229,61 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 <p className="text-foreground">
                   We've sent a verification link to:
                 </p>
-                <p className="font-medium text-foreground text-lg">
-                  {user.email}
-                </p>
+
+                {/* Email display or edit form */}
+                {isEditingEmail ? (
+                  <div className="w-full space-y-3 mt-2">
+                    <Input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="Enter new email address"
+                      className="text-center"
+                      autoFocus
+                    />
+                    {emailError && (
+                      <p className="text-sm text-destructive">{emailError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={handleCancelEditEmail}
+                        className="flex-1"
+                        disabled={isUpdatingEmail}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleUpdateEmail}
+                        className="flex-1"
+                        disabled={isUpdatingEmail || !newEmail}
+                      >
+                        {isUpdatingEmail ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          "Save & Send"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="font-medium text-foreground text-lg">
+                      {user.email}
+                    </p>
+                    <button
+                      onClick={handleEditEmail}
+                      className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      aria-label="Edit email"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
                 <p className="text-sm text-muted-foreground mt-4">
                   Click the link in your email to verify your account and start using WeWrite.
                 </p>
@@ -161,14 +313,14 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                   ) : (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      I've verified my email
+                      Refresh
                     </>
                   )}
                 </Button>
 
                 {/* Resend email */}
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleResendEmail}
                   disabled={resendCooldown > 0 || isResending}
                   className="w-full"
@@ -178,8 +330,6 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Sending...
                     </>
-                  ) : resendCooldown > 0 ? (
-                    <>Resend email in {resendCooldown}s</>
                   ) : (
                     <>
                       <Mail className="h-4 w-4 mr-2" />
@@ -188,12 +338,19 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                   )}
                 </Button>
 
+                {/* Cooldown countdown - shown below the button when active */}
+                {resendCooldown > 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    You can resend in {formatCooldown(resendCooldown)}
+                  </p>
+                )}
+
                 {/* Do this later - only shown when dismissable */}
                 {showDismissButton && (
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     onClick={handleDismiss}
-                    className="w-full text-muted-foreground"
+                    className="w-full"
                   >
                     <Clock className="h-4 w-4 mr-2" />
                     Do this later
@@ -208,19 +365,20 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 </p>
               </div>
 
-              {/* Sign out option */}
-              <button
+              {/* Sign out option - at the very bottom */}
+              <Button
+                variant="secondary"
                 onClick={handleSignOut}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
+                className="w-full text-destructive hover:text-destructive mt-4"
               >
-                <LogOut className="h-4 w-4" />
-                Sign out and use a different email
-              </button>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </Button>
             </div>
           </div>
         </div>
       </div>
-    </LandingColorProvider>
+    </div>
   );
 }
 

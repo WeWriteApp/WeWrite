@@ -158,11 +158,11 @@ export function SubscriptionUpgradeFlow({
 
       // CRITICAL: Force refresh all subscription-related data
       try {
-        const { forceRefreshSubscriptionData } = await import('../../utils/cacheInvalidation');
-        await forceRefreshSubscriptionData();
-        console.log('✅ Forced refresh of subscription data after upgrade');
+        const { invalidateCache } = await import('../../utils/serverCache');
+        invalidateCache.user(currentUser?.uid || '');
+        console.log('✅ Invalidated user cache after subscription upgrade');
       } catch (refreshError) {
-        console.error('❌ Error forcing refresh of subscription data:', refreshError);
+        console.error('❌ Error invalidating cache:', refreshError);
       }
 
       onSuccess();

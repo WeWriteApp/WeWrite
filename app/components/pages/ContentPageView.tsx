@@ -44,6 +44,7 @@ import FullPageError from "../ui/FullPageError";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 import StickySaveHeader from "../layout/StickySaveHeader";
 import { motion } from "framer-motion";
+import { ContentPageSkeleton, ContentPageMinimalSkeleton } from "./ContentPageSkeleton";
 
 
 
@@ -68,7 +69,6 @@ import ContentPageActions from "./ContentPageActions";
 // Types
 interface PageViewProps {
   params: Promise<{ id: string }> | { id: string };
-  initialEditMode?: boolean;
   showVersion?: boolean;
   versionId?: string;
   showDiff?: boolean;
@@ -131,7 +131,6 @@ const extractReplyType = (content: any): 'agree' | 'disagree' | 'neutral' => {
  */
 export default function ContentPageView({
   params,
-  initialEditMode = false,
   showVersion = false,
   versionId,
   showDiff = false,
@@ -160,11 +159,7 @@ export default function ContentPageView({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [justSaved, setJustSaved] = useState(false); // Flag to prevent data reload after save
   const justSavedRef = useRef(false); // Ref-based flag for immediate sync access
-  // 🎯 ELEGANT: No longer needed - using event system for updates
 
-  // Debug logging for hasUnsavedChanges state
-  useEffect(() => {
-  }, [hasUnsavedChanges]);
   const [title, setTitle] = useState('');
   const authorUsername = page?.username || (page as any)?.authorUsername || (page as any)?.user?.username || '';
   const authorUserId = page?.userId || (page as any)?.authorUserId || (page as any)?.user?.id || '';
@@ -177,10 +172,7 @@ export default function ContentPageView({
     return extractReplyType(page.content);
   }, [page]);
   // Removed complex loading timeout logic - using UnifiedLoader now
-  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [versionData, setVersionData] = useState<any>(null);
-  const [compareVersionData, setCompareVersionData] = useState<any>(null);
-  const [diffContent, setDiffContent] = useState<any>(null);
   const [contentPaddingTop, setContentPaddingTop] = useState<string>('2rem');
 
   // Empty lines tracking for alert banner
@@ -193,8 +185,6 @@ export default function ContentPageView({
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
-  // Title validation state
-  const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -509,10 +499,6 @@ export default function ContentPageView({
 
         if (currentVersion) {
           setVersionData(currentVersion);
-          if (compareVersion) {
-            setCompareVersionData(compareVersion);
-          }
-
           // Generate diff content using centralized diff service
           const { calculateDiff } = await import('../../utils/diffService');
           const { processDiffForDisplay } = await import('../../utils/diffContentProcessor');
@@ -529,7 +515,6 @@ export default function ContentPageView({
             diffResult
           );
 
-          setDiffContent(diffResult);
           setEditorState(processedDiff.content); // Use processed content for display
 
           setPage({
@@ -565,8 +550,6 @@ export default function ContentPageView({
     if (!isNewPageMode || !pageId || !user || newPageCreated) {
       return;
     }
-
-    console.log('🔵 Setting up new page editor for ID:', pageId);
 
     // Extract URL parameters for the new page
     const replyTo = searchParams?.get('replyTo');
@@ -656,8 +639,6 @@ export default function ContentPageView({
     setCustomDate(initialCustomDate);
     setIsLoading(false);
     setNewPageCreated(true);
-
-    console.log('🔵 New page editor ready (not saved to database yet)');
   }, [isNewPageMode, pageId, user, newPageCreated, searchParams]);
 
   // Page loading effect - OPTIMIZED for faster loading
@@ -677,7 +658,6 @@ export default function ContentPageView({
     // CRITICAL FIX: Don't reload data immediately after save to prevent showing stale content
     // Check both state and ref - ref is immediately available, state ensures re-render triggers work
     if (justSaved || justSavedRef.current) {
-      console.log('📝 Skipping page load - justSaved flag is active');
       return;
     }
 
@@ -963,17 +943,6 @@ export default function ContentPageView({
 
   // Computed values
   const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
-
-  // Debug canEdit logic
-  console.log('🔍 canEdit calculation:', {
-    userUid: user?.uid,
-    pageUserId: page?.userId,
-    isPreviewingDeleted,
-    showVersion,
-    showDiff,
-    userOwnsPage: user?.uid === page?.userId,
-    finalCanEdit: canEdit
-  });
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
@@ -981,13 +950,6 @@ export default function ContentPageView({
   // MY page = ALWAYS edit mode
   // NOT my page = ALWAYS view mode
   useEffect(() => {
-    console.log('🔍 Edit mode logic:', {
-      canEdit,
-      showVersion,
-      showDiff,
-      willBeEditing: canEdit && !showVersion && !showDiff
-    });
-
     if (canEdit && !showVersion && !showDiff) {
       // This is MY page - ALWAYS edit mode
       setIsEditing(true);
@@ -1097,40 +1059,20 @@ export default function ContentPageView({
   // No need for handleSetIsEditing - always in edit mode
 
   const handleSave = useCallback(async (passedContent?: any) => {
-    console.log('💾 PAGE SAVE: Save initiated with details:', {
-      pageId,
-      hasPage: !!page,
-      title,
-      editorStateLength: editorState ? editorState.length : 0,
-      passedContent: !!passedContent,
-      timestamp: new Date().toISOString()
-    });
-
-
     pageLogger.info('Page save initiated', { pageId, hasPage: !!page, title });
 
     if (!page || !pageId) {
-      console.error('🔴 PAGE SAVE: Save aborted - no page or pageId', { pageId, hasPage: !!page });
       pageLogger.warn('Save aborted - no page or pageId', { pageId, hasPage: !!page });
       return;
     }
 
     // Validate title is not empty
     if (!title || title.trim() === '') {
-      console.error('🔴 PAGE SAVE: Save aborted - no title provided', { pageId });
       pageLogger.warn('Save aborted - no title provided', { pageId });
       setTitleError("Title is required");
       setError("Please add a title before saving");
       return;
     }
-
-    console.log('💾 PAGE SAVE: Validated page details:', {
-      pageId,
-      title,
-      contentType: typeof editorState,
-      contentLength: editorState ? editorState.length : 0
-    });
-
 
     pageLogger.info('Starting page save process', { pageId, title });
     setIsSaving(true);
@@ -1140,11 +1082,6 @@ export default function ContentPageView({
     try {
       // Use API route instead of direct Firebase calls
       const contentToSave = editorState;
-      console.log('💾 PAGE SAVE: Content to save details:', {
-        contentToSaveType: typeof contentToSave,
-        contentToSaveLength: contentToSave ? contentToSave.length : 0,
-        contentToSaveSample: contentToSave ? JSON.stringify(contentToSave).substring(0, 200) : 'null'
-      });
 
       // Extract and create new pages referenced in links before saving the main page
       const newPageRefs = extractNewPageReferences(contentToSave);
@@ -1171,18 +1108,6 @@ export default function ContentPageView({
         updateData.replyToTitle = page.replyToTitle;
         updateData.replyToUsername = page.replyToUsername;
       }
-
-      console.log('💾 PAGE SAVE: Update data to send:', {
-        id: updateData.id,
-        title: updateData.title,
-        hasContent: !!updateData.content,
-        contentType: typeof updateData.content,
-        contentLength: updateData.content ? JSON.stringify(updateData.content).length : 0,
-        hasLocation: !!updateData.location,
-        customDate: updateData.customDate,
-        replyType: updateData.replyType,
-        isNewPage: page?.isNewPage
-      });
 
       // NEW PAGE MODE: Always use PUT to /api/pages for saving content
       // The draft endpoint only creates the skeleton page document on initial navigation
@@ -1212,27 +1137,11 @@ export default function ContentPageView({
         credentials: 'include'
       });
 
-      console.log('💾 PAGE SAVE: API response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        url: response.url,
-        type: response.type,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
       if (!response.ok) {
-        console.error('🔴 PAGE SAVE: API response not ok', {
-          status: response.status,
-          statusText: response.statusText
-        });
-
         let errorData: Record<string, any> = {};
         try {
           errorData = await response.json();
-          console.error('🔴 PAGE SAVE: Error response data', errorData);
         } catch (parseError) {
-          console.error('🔴 PAGE SAVE: Failed to parse error response', parseError);
           try {
             const text = await response.text();
             if (text) {
@@ -1257,11 +1166,8 @@ export default function ContentPageView({
 
         // Handle authentication errors specifically
         if (response.status === 401) {
-          console.error('🔴 PAGE SAVE: Authentication error - attempting to refresh user');
-
           // Try to refresh the user using the API-based approach
           try {
-            console.log('🔄 PAGE SAVE: Attempting user refresh via API');
 
             // First, try to refresh the user using the user API
             const sessionRefreshResponse = await fetch('/api/auth/user', {
@@ -1285,19 +1191,14 @@ export default function ContentPageView({
                 setHasUnsavedChanges(false);
                 setError(null);
                 return;
-              } else {
-                console.error('🔴 PAGE SAVE: Retry failed after user refresh:', retryResponse.status);
               }
             } else {
-              console.log('🔄 PAGE SAVE: Session API refresh failed, trying Firebase token refresh');
-
               // Fallback to Firebase token refresh
               const { getAuth } = await import('firebase/auth');
               const auth = getAuth();
               const user = auth.currentUser;
 
               if (user) {
-                console.log('🔄 PAGE SAVE: Refreshing Firebase auth token');
                 const newToken = await user.getIdToken(true); // Force refresh
 
                 // Create new user cookie
@@ -1325,12 +1226,10 @@ export default function ContentPageView({
                     return;
                   }
                 }
-              } else {
-                console.error('🔴 PAGE SAVE: No Firebase user available for token refresh');
               }
             }
           } catch (refreshError) {
-            console.error('🔴 PAGE SAVE: Session/auth refresh failed:', refreshError);
+            pageLogger.error('Session/auth refresh failed:', { error: refreshError });
           }
 
           setError("Your user has expired. Please refresh the page and log in again.");
@@ -1341,7 +1240,6 @@ export default function ContentPageView({
         const rawMessage = errorData.error || errorData.message;
         const errorMessage = rawMessage || `API request failed: ${response.status} ${response.statusText}`;
         const detailedMessage = `${errorMessage}${errorData.code ? ` [code: ${errorData.code}]` : ''}`;
-        console.error('🔴 PAGE SAVE: Throwing error', detailedMessage);
         throw new Error(detailedMessage);
       }
 
@@ -1349,28 +1247,16 @@ export default function ContentPageView({
       try {
         result = await response.json();
       } catch (jsonError) {
-        console.warn('⚠️ PAGE SAVE: Response had no/invalid JSON, treating as success', jsonError);
+        // Response had no/invalid JSON, treating as success
       }
-      console.log('💾 PAGE SAVE: Parsed response data:', {
-        success: result.success,
-        hasData: !!result.data,
-        message: result.message,
-        titleChanged: result.titleChanged,
-        resultKeys: result ? Object.keys(result) : []
-      });
 
       pageLogger.debug('API response success: PUT /api/pages', { status: response.status, result });
 
       if (result.success === false) {
-        console.error('🔴 PAGE SAVE: Result indicates failure', result);
         throw new Error(result.message || 'Failed to update page');
       }
 
       pageLogger.info('Page saved successfully via API', { pageId });
-
-      // SIMPLE: Title updates are now handled automatically by the backend
-      if (result.titleChanged) {
-      }
 
       // CRITICAL FIX: Properly update both page state and editor state after save
       if (page) {
@@ -1384,18 +1270,15 @@ export default function ContentPageView({
         };
         setPage(updatedPage);
 
-        // CRITICAL FIX: Update editor state directly without reset to prevent stale content
-        console.log('🔄 EDITOR FIX: Updating editor state with saved content (no reset)');
+        // Update editor state directly without reset to prevent stale content
         setEditorState(contentToSave);
       }
 
-      // SIMPLIFIED CLIENT-SIDE CACHE INVALIDATION
+      // Client-side cache invalidation
       try {
-        console.log('🗑️ UNIFIED CACHE: Client-side cache invalidation for saved page:', pageId);
-
-        // Single unified cache invalidation
-        const { invalidatePageData } = await import('../../utils/unifiedCache');
-        invalidatePageData(pageId, user?.uid);
+        const { invalidateCache } = await import('../../utils/serverCache');
+        invalidateCache.page(pageId);
+        if (user?.uid) invalidateCache.user(user.uid);
 
         // Dispatch refresh event for components
         if (typeof window !== 'undefined') {
@@ -1403,9 +1286,8 @@ export default function ContentPageView({
             detail: { pageId, userId: user?.uid }
           }));
         }
-
       } catch (cacheError) {
-        console.warn('⚠️ UNIFIED CACHE: Error clearing caches (non-fatal):', cacheError);
+        // Cache error is non-fatal
       }
 
       // Emit page save event for real-time updates
@@ -1635,111 +1517,22 @@ export default function ContentPageView({
     if (!page?.content) return;
 
     // Don't overwrite user's unsaved changes with stale data from the server
-    // This fixes the bug where switching apps would reset the editor content
     if (hasUnsavedChanges) {
-      console.log('🔄 SKIPPING content reset - user has unsaved changes');
       return;
     }
 
-    console.log('🔄 SIMPLIFIED: Setting raw content from database - let components handle conversion');
-    console.log('🔄 SIMPLIFIED: Raw content:', {
-      content: page.content,
-      type: typeof page.content,
-      isArray: Array.isArray(page.content)
-    });
-
-    // SIMPLIFIED: Pass raw content directly - no preprocessing
+    // Pass raw content directly - no preprocessing
     setEditorState(page.content);
   }, [page?.content, hasUnsavedChanges]); // Update whenever page content changes, but respect unsaved changes
 
   // NEW PAGE MODE: Show skeleton with slide-up animation while setting up
   if (isNewPageMode && !newPageCreated) {
-    const skeletonContent = (
-      <PublicLayout>
-        <div className="min-h-screen">
-          {/* Show page structure skeleton immediately */}
-          <div className="p-5 md:p-4">
-            {/* Header skeleton */}
-            <div className="flex items-center mb-6">
-              <div className="flex-1">
-                <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
-              </div>
-              <div className="flex-1 flex justify-end">
-                <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
-              </div>
-            </div>
-
-            {/* Page content skeleton */}
-            <div className="space-y-6">
-              <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
-              <div className="space-y-4">
-                {Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
-                    <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
-                    <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </PublicLayout>
-    );
-
-    // Wrap with slide-up animation for new page mode
-    return (
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="min-h-screen bg-background"
-      >
-        {skeletonContent}
-      </motion.div>
-    );
+    return <ContentPageSkeleton withSlideUpAnimation />;
   }
 
   // Progressive loading state - show page structure immediately
   if (isLoading && !page) {
-    return (
-      <PublicLayout>
-        <div className="min-h-screen">
-          {/* Show page structure skeleton immediately */}
-          <div className="p-5 md:p-4">
-            {/* Header skeleton */}
-            <div className="flex items-center mb-6">
-              <div className="flex-1">
-                <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
-              </div>
-              <div className="flex-1 flex justify-end">
-                <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
-              </div>
-            </div>
-
-            {/* Page content skeleton */}
-            <div className="space-y-6">
-              <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
-              <div className="space-y-4">
-                {Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 bg-muted rounded-md w-full animate-pulse" />
-                    <div className="h-4 bg-muted rounded-md w-5/6 animate-pulse" />
-                    <div className="h-4 bg-muted rounded-md w-4/6 animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </PublicLayout>
-    );
+    return <ContentPageSkeleton />;
   }
 
   // Error state
@@ -1759,13 +1552,7 @@ export default function ContentPageView({
   // For new page mode, wait until scroll is ready before rendering anything
   // This prevents the flash of content at wrong scroll position
   if (isNewPageMode && !isScrollReady) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="p-5 md:p-4">
-          <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
-        </div>
-      </div>
-    );
+    return <ContentPageMinimalSkeleton />;
   }
 
   // No page found - but not for new page mode (still being set up)
@@ -1773,28 +1560,7 @@ export default function ContentPageView({
   if (!page) {
     // For new page mode, show skeleton while waiting for setup effect
     if (isNewPageMode) {
-      return (
-        <PublicLayout>
-          <div className="min-h-screen">
-            <div className="p-5 md:p-4">
-              <div className="flex items-center mb-6">
-                <div className="flex-1">
-                  <div className="h-9 w-20 bg-muted rounded-md animate-pulse" />
-                </div>
-                <div className="flex-1 flex justify-center">
-                  <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
-                </div>
-                <div className="flex-1 flex justify-end">
-                  <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div className="h-10 w-3/4 bg-muted rounded-md animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </PublicLayout>
-      );
+      return <ContentPageSkeleton />;
     }
     // For regular pages, show page not found
     return (

@@ -27,7 +27,7 @@ export * from './database/search';
 export * from './database/links';
 export * from './database/backlinks';
 export * from './database/users';
-export * from './database/analytics';
+export * from './database/analyticsDataLayer';
 
 // Import required functions for additional exports
 import { db, updateDoc, getDoc, doc } from './database/core';
@@ -94,8 +94,8 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
     // Trigger cache invalidation for page updates
     if (result && pageData?.pageData?.userId) {
       try {
-        const { invalidateUserPagesCache } = await import('../utils/cacheInvalidation');
-        invalidateUserPagesCache(pageData.pageData.userId);
+        const { invalidateCache } = await import('../utils/serverCache');
+        invalidateCache.user(pageData.pageData.userId);
         console.log('✅ Cache invalidation triggered after page update for user:', pageData.pageData.userId);
       } catch (cacheError) {
         console.error('Error triggering cache invalidation (non-fatal):', cacheError);

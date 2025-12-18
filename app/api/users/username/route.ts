@@ -276,17 +276,13 @@ export async function POST(request: NextRequest) {
     // Trigger cache invalidation for all components that might display this username
     try {
       // Import cache invalidation utilities
-      const { invalidateUserPages, invalidateRecentActivity } = await import('../../../utils/globalCacheInvalidation');
-      const { invalidatePageCreationCaches } = await import('../../../utils/cacheInvalidation');
+      const { invalidateCache } = await import('../../../utils/serverCache');
 
       // Invalidate user-specific caches
-      invalidateUserPages(currentUserId);
+      invalidateCache.user(currentUserId);
 
-      // Invalidate activity caches (since activities show usernames)
-      invalidateRecentActivity();
-
-      // Invalidate all page-related caches for this user
-      invalidatePageCreationCaches(currentUserId);
+      // Invalidate all related caches
+      invalidateCache.search();
 
       console.log('✅ Cache invalidation completed for username update');
     } catch (cacheError) {

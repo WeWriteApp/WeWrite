@@ -19,8 +19,8 @@ import { getAnalyticsService } from '../utils/analytics-service';
 import { SHARE_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
 // Import the new separated components
-import SearchResultsDisplay from '../components/search/SearchResultsDisplay.js';
-import PerformanceMonitor from '../components/utils/PerformanceMonitor.js';
+import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
+import PerformanceMonitor from '../components/utils/PerformanceMonitor';
 
 // TypeScript interfaces
 interface IsolatedSearchInputProps {

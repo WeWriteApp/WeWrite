@@ -195,12 +195,11 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
 
       // CRITICAL: Force refresh all subscription-related data
       try {
-        // Import and call the force refresh function
-        const { forceRefreshSubscriptionData } = await import('../../utils/cacheInvalidation');
-        await forceRefreshSubscriptionData();
-        console.log('✅ Forced refresh of subscription data after update');
+        const { invalidateCache } = await import('../../utils/serverCache');
+        invalidateCache.user(currentUser?.uid || '');
+        console.log('✅ Invalidated user cache after subscription update');
       } catch (refreshError) {
-        console.error('❌ Error forcing refresh of subscription data:', refreshError);
+        console.error('❌ Error invalidating cache:', refreshError);
       }
 
       // Refresh USD balance to reflect new subscription amount

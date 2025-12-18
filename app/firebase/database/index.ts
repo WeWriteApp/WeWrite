@@ -34,8 +34,8 @@ export * from './search';
 // User operations
 export * from './users';
 
-// Analytics operations
-export * from './analytics';
+// Analytics data layer (Firestore operations for analytics aggregations)
+export * from './analyticsDataLayer';
 
 // Additional functions that need to be added to complete the migration
 // These would be extracted from the remaining parts of the original database.ts file
@@ -69,23 +69,8 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
  */
 export const deletePage = async (pageId: string): Promise<boolean> => {
   try {
-    // This would need to be implemented to delete the page and all its versions
-    // For now, just delete the main page document
+    // Soft delete the page - Algolia sync handles search index updates
     const result = await updateDoc('pages', pageId, { deleted: true, deletedAt: new Date().toISOString() });
-
-    // Invalidate search cache to ensure deleted page is removed from search immediately
-    try {
-      await fetch('/api/search-unified', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'invalidate' }),
-      });
-      console.log('✅ Search cache invalidated after page deletion');
-    } catch (cacheError) {
-      // Don't fail page deletion if cache invalidation fails
-      console.error('⚠️ Search cache invalidation failed (non-fatal):', cacheError);
-    }
-
     return result;
   } catch (error) {
     console.error('Error deleting page:', error);
