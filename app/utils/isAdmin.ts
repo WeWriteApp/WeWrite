@@ -1,27 +1,24 @@
-import { getEnvironmentType } from './environmentConfig';
+/**
+ * Admin Check Utilities
+ *
+ * Uses centralized admin configuration from adminConfig.ts
+ * All admin emails/UIDs are loaded from environment variables.
+ */
 
-// Define admin user IDs - ONLY these emails have admin access in production
-// SECURITY: This must match the ADMIN_EMAILS list in adminSecurity.ts
-const PRODUCTION_ADMIN_EMAILS: string[] = [
-  'jamiegray2234@gmail.com',
-  'jamie@wewrite.app',
-  'admin.test@wewrite.app', // Secure admin test account for production data access
-];
+import { getEnvironmentType } from './environmentConfig';
+import { isAdminEmail, isProductionAdmin as isProductionAdminConfig } from './adminConfig';
 
 /**
  * Check if a user is an admin
- * 
+ *
  * In development: ALL users are admins (but only for dev collections)
- * In production: Only production admin emails have admin access
- * 
- * This allows easy testing of admin features during development
- * without needing to manually configure each test account.
+ * In production: Only admin emails from ADMIN_EMAILS env var have access
  */
 export const isAdmin = (userEmail: string | null | undefined): boolean => {
   if (!userEmail) return false;
 
   // Production admins always have access
-  if (PRODUCTION_ADMIN_EMAILS.includes(userEmail)) {
+  if (isAdminEmail(userEmail)) {
     return true;
   }
 
@@ -39,6 +36,5 @@ export const isAdmin = (userEmail: string | null | undefined): boolean => {
  * Use this for any admin operation that touches production collections
  */
 export const isProductionAdmin = (userEmail: string | null | undefined): boolean => {
-  if (!userEmail) return false;
-  return PRODUCTION_ADMIN_EMAILS.includes(userEmail);
+  return isProductionAdminConfig(userEmail);
 };

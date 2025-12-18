@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * Debug Auth Status API Endpoint
- * 
+ *
  * Returns detailed authentication status information
  * to help debug authentication issues.
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const cookieStore = await cookies();
     const allCookies = cookieStore.getAll();

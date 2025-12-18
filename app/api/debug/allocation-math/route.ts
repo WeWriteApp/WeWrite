@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * Debug API for allocation math issues
  * GET /api/debug/allocation-math - Analyze allocation calculations and identify math errors
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const userId = await getUserIdFromRequest(request);
     if (!userId) {

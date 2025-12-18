@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 
 /**
  * Admin API to fix a specific page with malformed content
@@ -9,24 +9,13 @@ import { getCollectionName } from '../../../utils/environmentConfig';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Only allow admin users
-    const currentUserId = await getUserIdFromRequest(request);
-    if (!currentUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // SECURITY: Use centralized admin verification with audit logging
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
 
-    // Check if user is admin
-    const isAdmin = currentUserId && (
-      currentUserId === 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L' || // Your user ID
-      currentUserId === 'jamie' ||
-      currentUserId === 'jamiegray2234@gmail.com'
-    );
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
-    console.log(`🔧 [FIX SPECIFIC PAGE] Starting page fix for admin: ${currentUserId}`);
+    console.log(`🔧 [FIX SPECIFIC PAGE] Starting page fix for admin: ${adminAuth.userId}`);
 
     const admin = getFirebaseAdmin();
     if (!admin) {

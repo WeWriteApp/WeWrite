@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 interface DebugRequest {
   email: string;
@@ -13,6 +14,10 @@ interface DebugRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     console.log('🔍 [Password Reset Debug] Debug request received');
     

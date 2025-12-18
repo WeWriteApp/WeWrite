@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../../auth-helper';
 import { initAdmin } from '../../../../../firebase/admin';
 import { getCollectionName } from '../../../../../utils/environmentConfig';
+import { isUserAdmin } from '../../../../../utils/adminSecurity';
 
 // GET /api/pages/[id]/versions/[versionId]
 export async function GET(
@@ -46,13 +47,8 @@ export async function GET(
     // Enhanced permission check with admin support
     const isOwner = pageData?.userId === currentUserId;
 
-    // Check if user is admin (for debugging and admin access)
-    const isAdmin = currentUserId && (
-      currentUserId === 'jamie' ||
-      currentUserId === 'jamiegray2234@gmail.com' ||
-      // Add any other admin identifiers
-      false
-    );
+    // Check if user is admin using centralized config (for debugging and admin access)
+    const isAdmin = currentUserId ? await isUserAdmin(currentUserId) : false;
 
     // All pages are now public - simplified access model
     const isDevelopment = process.env.NODE_ENV === 'development' ||

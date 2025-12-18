@@ -1,37 +1,21 @@
 /**
  * Centralized Admin Security Module
- * 
+ *
  * This module provides secure, audited admin authorization for WeWrite.
  * All admin checks should go through this module to ensure consistency
  * and proper security logging.
+ *
+ * Admin lists are loaded from environment variables via adminConfig.ts
  */
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from '../api/auth-helper';
 import { getFirebaseAdmin } from '../firebase/admin';
 import { getCollectionName, getEnvironmentType } from './environmentConfig';
-import { DEV_TEST_USER_UIDS, DEV_TEST_USER_EMAILS } from './testUsers';
-
-// SECURITY: Single source of truth for admin users
-const ADMIN_USER_IDS = [
-  'mP9yRa3nO6gS8wD4xE2hF5jK7m9N', // Jamie's admin user ID (dev_admin_user)
-  'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L', // Current dev session user ID
-  'jamie-admin-uid', // Legacy admin user ID
-  // Add other admin user IDs here as needed
-];
-
-// SECURITY: Admin email addresses for verification
-const ADMIN_EMAILS = [
-  'jamiegray2234@gmail.com',
-  'contact@jamiegray.net', // Jamie's primary email from GitHub
-  'jamie@wewrite.app',
-  'test1@wewrite.dev', // Current dev session email
-  'test2@wewrite.dev', // Dev admin: testuser2
-  // Add other admin emails here as needed
-];
+import { getAdminEmails, getAdminUserIds } from './adminConfig';
 
 /**
- * Check if we're in development environment and the user is a dev test user
+ * Check if we're in development environment
  * DEV USERS ARE AUTOMATICALLY ADMINS IN DEVELOPMENT MODE
  * This allows testing admin features without modifying production admin lists
  */
@@ -40,16 +24,38 @@ function isDevUserAdmin(userId: string | null, userEmail: string | null): boolea
   if (env !== 'development') {
     return false; // Dev user admin access is ONLY for development environment
   }
-  
-  // Check by UID or email
-  if (userId && DEV_TEST_USER_UIDS.includes(userId)) {
-    return true;
+
+  // In development, any authenticated user is an admin
+  return !!(userId || userEmail);
+}
+
+/**
+ * Check if a user has the admin custom claim set in Firebase Auth
+ * This is the MOST SECURE method as custom claims are cryptographically signed
+ * and cannot be tampered with client-side.
+ *
+ * @param userId - The Firebase Auth UID to check
+ * @returns true if user has admin: true custom claim
+ */
+async function hasAdminCustomClaim(userId: string): Promise<boolean> {
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('[SECURITY] Firebase Admin not available for custom claim check');
+      return false;
+    }
+
+    const user = await admin.auth().getUser(userId);
+    const customClaims = user.customClaims || {};
+
+    return customClaims.admin === true;
+  } catch (error: any) {
+    // Don't log error for user-not-found (expected for dev-only users)
+    if (error.code !== 'auth/user-not-found') {
+      console.error('[SECURITY] Error checking admin custom claim:', error);
+    }
+    return false;
   }
-  if (userEmail && DEV_TEST_USER_EMAILS.includes(userEmail)) {
-    return true;
-  }
-  
-  return false;
 }
 
 export interface AdminAuthResult {
@@ -209,24 +215,47 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
 
     console.log('🔐 [ADMIN AUTH] User email (resolved):', userEmail);
 
-    // Check admin status using both user ID and email for security
-    const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
-    const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+    // Check admin status using multiple methods in priority order:
+    // 1. Firebase Custom Claims (MOST SECURE - cryptographically signed)
+    // 2. Environment variable lists (email/userId)
+    // 3. Dev user status (development only)
+
+    const adminUserIds = getAdminUserIds();
+    const adminEmails = getAdminEmails();
+
+    // Priority 1: Check Firebase Custom Claims (most secure)
+    const isAdminByCustomClaim = await hasAdminCustomClaim(userId);
+
+    // Priority 2: Check environment variable lists
+    const isAdminByUserId = adminUserIds.includes(userId);
+    const isAdminByEmail = userEmail ? adminEmails.includes(userEmail) : false;
+
+    // Priority 3: Dev user status (development only)
     const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
     console.log('🔐 [ADMIN AUTH] Admin checks:', {
       userId,
       userEmail,
+      isAdminByCustomClaim,
       isAdminByUserId,
       isAdminByEmail,
       isDevAdmin,
       environment: getEnvironmentType(),
-      adminUserIds: ADMIN_USER_IDS,
-      adminEmails: ADMIN_EMAILS
+      adminUserIdCount: adminUserIds.length,
+      adminEmailCount: adminEmails.length
     });
 
-    // SECURITY: Allow admin access by email, user ID, or dev user status (in development)
-    isAdmin = isAdminByEmail || isAdminByUserId || isDevAdmin;
+    // SECURITY: Allow admin access by custom claim, email, user ID, or dev user status (in development)
+    isAdmin = isAdminByCustomClaim || isAdminByEmail || isAdminByUserId || isDevAdmin;
+
+    // Log which method granted admin access (useful for auditing)
+    if (isAdmin) {
+      const grantMethod = isAdminByCustomClaim ? 'custom_claim' :
+                          isAdminByEmail ? 'email_list' :
+                          isAdminByUserId ? 'userid_list' :
+                          'dev_mode';
+      console.log('🔐 [ADMIN AUTH] Admin access granted via:', grantMethod);
+    }
 
     // Log if user ID doesn't match but email does (for debugging)
     if (isAdminByEmail && !isAdminByUserId) {
@@ -292,13 +321,24 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
     if (!userId) {
       return false;
     }
-    
+
+    // Priority 1: Check Firebase Custom Claims (most secure)
+    const isAdminByCustomClaim = await hasAdminCustomClaim(userId);
+    if (isAdminByCustomClaim) {
+      return true;
+    }
+
+    // Priority 2: Check environment variable lists
     const userEmail = await getUserEmail(userId);
-    const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
-    const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+    const adminUserIds = getAdminUserIds();
+    const adminEmails = getAdminEmails();
+    const isAdminByUserId = adminUserIds.includes(userId);
+    const isAdminByEmail = userEmail ? adminEmails.includes(userEmail) : false;
+
+    // Priority 3: Dev user status (development only)
     const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
-    // Allow admin by verified email, userId, or dev user status (in development)
+    // Allow admin by custom claim, verified email, userId, or dev user status (in development)
     return isAdminByUserId || isAdminByEmail || isDevAdmin;
   } catch (error) {
     console.error('[SECURITY] Error in simple admin check:', error);

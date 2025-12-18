@@ -13,11 +13,13 @@
  * - Creates local test accounts that work with dev auth
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { syncUserToResend } from '../../../services/resendContactsService';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { hashDevPassword } from '../../../utils/testUsers';
+import { authRateLimiter } from '../../../utils/rateLimiter';
 
 interface RegisterRequest {
   email: string;
@@ -40,8 +42,42 @@ function generateDevUid(): string {
   return `dev_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+// Helper to get client IP from request
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp;
+  }
+  return 'unknown';
+}
+
 // POST endpoint - Register new user using REST API (no firebase-admin)
 export async function POST(request: NextRequest) {
+  // SECURITY: Rate limiting to prevent abuse
+  const clientIp = getClientIp(request);
+  const rateLimitResult = await authRateLimiter.checkLimit(clientIp);
+
+  if (!rateLimitResult.allowed) {
+    console.warn('[Register] Rate limit exceeded for IP:', clientIp);
+    return NextResponse.json({
+      success: false,
+      error: 'Too many registration attempts. Please try again later.',
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    }, {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)),
+        'X-RateLimit-Limit': '10',
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+      }
+    });
+  }
+
   try {
     const body = await request.json();
     const { email, password, username, referredBy } = body as RegisterRequest;
@@ -89,7 +125,10 @@ export async function POST(request: NextRequest) {
       
       // Create user document in DEV_users collection (no auth needed for public writes in dev)
       const userDocUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usersCollection}?documentId=${uid}`;
-      
+
+      // Hash the password using SHA-256 (not base64 encoding)
+      const passwordHash = await hashDevPassword(password);
+
       const userDocResponse = await fetch(userDocUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,7 +136,7 @@ export async function POST(request: NextRequest) {
           fields: {
             email: { stringValue: email },
             username: { stringValue: username },
-            passwordHash: { stringValue: `dev_hash_${Buffer.from(password).toString('base64')}` },
+            passwordHash: { stringValue: passwordHash },
             emailVerified: { booleanValue: true }, // Auto-verify in dev
             isAnonymous: { booleanValue: false },
             createdAt: { stringValue: timestamp },

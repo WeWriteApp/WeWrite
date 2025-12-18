@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserDonorAnalyticsService } from '../../../../services/userDonorAnalytics';
+import { getUserIdFromRequest } from '../../../auth-helper';
+import { isAdminUserId } from '../../../../utils/adminConfig';
 
 export async function GET(
   request: NextRequest,
@@ -12,6 +14,26 @@ export async function GET(
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Verify the requesting user is authenticated
+    const currentUserId = await getUserIdFromRequest(request);
+    if (!currentUserId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // SECURITY: Only allow users to view their own donor analytics, or admins to view any
+    const isOwner = currentUserId === userId;
+    const isAdmin = isAdminUserId(currentUserId);
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: 'You can only view your own donor analytics' },
+        { status: 403 }
       );
     }
 

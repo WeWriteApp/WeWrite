@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { requireDevelopmentEnvironment } from '../../debugHelper';
 
 /**
  * Debug API for page loading issues
@@ -11,6 +12,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const { id: pageId } = await params;
     

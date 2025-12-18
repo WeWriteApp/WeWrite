@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FinancialUtils } from '../../../types/financial';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { internalApiFetch } from '../../../utils/internalApi';
 
 // POST endpoint for security report generation
 export async function POST(request: NextRequest) {
@@ -128,14 +129,14 @@ async function gatherSecurityReportData(config: any, correlationId: string) {
 
   try {
     // Get security metrics if requested
+    // SECURITY: Uses validated internal API URL to prevent SSRF
     if (config.includeMetrics) {
-      const metricsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/security-metrics`, {
+      const metricsResponse = await internalApiFetch('/api/admin/security-metrics', {
         headers: {
           'Authorization': `Bearer ${process.env.ADMIN_API_KEY}`,
-          'Content-Type': 'application/json'
         }
       });
-      
+
       if (metricsResponse.ok) {
         const metricsData = await metricsResponse.json();
         reportData.securityMetrics = metricsData.data;
@@ -143,14 +144,14 @@ async function gatherSecurityReportData(config: any, correlationId: string) {
     }
 
     // Get security alerts if requested
+    // SECURITY: Uses validated internal API URL to prevent SSRF
     if (config.includeAlerts) {
-      const alertsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/security-alerts?limit=100`, {
+      const alertsResponse = await internalApiFetch('/api/admin/security-alerts?limit=100', {
         headers: {
           'Authorization': `Bearer ${process.env.ADMIN_API_KEY}`,
-          'Content-Type': 'application/json'
         }
       });
-      
+
       if (alertsResponse.ok) {
         const alertsData = await alertsResponse.json();
         reportData.securityAlerts = alertsData.data;

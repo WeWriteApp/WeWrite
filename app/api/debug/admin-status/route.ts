@@ -2,16 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { getAdminEmails, getAdminUserIds } from '../../../utils/adminConfig';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * DEBUG ENDPOINT: Check admin status and user info
- * This endpoint helps debug admin authentication issues
+ *
+ * SECURITY: This endpoint is restricted to development environment only.
+ * It does NOT expose the actual admin email/UID lists.
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     // Get user ID from request
     const userId = await getUserIdFromRequest(request);
-    console.log('🔍 [DEBUG] User ID from request:', userId);
+    console.log('[DEBUG] User ID from request:', userId);
 
     if (!userId) {
       return NextResponse.json({
@@ -32,27 +40,18 @@ export async function GET(request: NextRequest) {
     // Get user document from Firestore
     const db = admin.firestore();
     const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-    
+
     const userData = userDoc.exists ? userDoc.data() : null;
     const userEmail = userData?.email || null;
 
-    // Admin lists for comparison
-    const ADMIN_USER_IDS = [
-      'mP9yRa3nO6gS8wD4xE2hF5jK7m9N', // Jamie's admin user ID (dev_admin_user)
-      'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L', // Current dev session user ID
-      'jamie-admin-uid', // Legacy admin user ID
-    ];
-
-    const ADMIN_EMAILS = [
-      'jamiegray2234@gmail.com',
-      'jamie@wewrite.app',
-      'test1@wewrite.dev', // Current dev session email
-    ];
+    // Get admin lists from centralized config
+    const adminUserIds = getAdminUserIds();
+    const adminEmails = getAdminEmails();
 
     // Check admin status
-    const isAdminByUserId = ADMIN_USER_IDS.includes(userId);
-    const isAdminByEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
-    const isAdmin = isAdminByUserId && isAdminByEmail;
+    const isAdminByUserId = adminUserIds.includes(userId);
+    const isAdminByEmail = userEmail ? adminEmails.includes(userEmail) : false;
+    const isAdmin = isAdminByUserId || isAdminByEmail;
 
     return NextResponse.json({
       userId,
@@ -67,18 +66,20 @@ export async function GET(request: NextRequest) {
         isAdminByUserId,
         isAdminByEmail,
         isAdmin,
-        adminUserIds: ADMIN_USER_IDS,
-        adminEmails: ADMIN_EMAILS
+        // SECURITY: Don't expose actual admin lists, only counts
+        adminUserIdCount: adminUserIds.length,
+        adminEmailCount: adminEmails.length
       },
       environment: {
         nodeEnv: process.env.NODE_ENV,
         vercelEnv: process.env.VERCEL_ENV,
+        environmentType: env,
         collectionName: getCollectionName('users')
       }
     });
 
-  } catch (error) {
-    console.error('🔍 [DEBUG] Error in admin status check:', error);
+  } catch (error: any) {
+    console.error('[DEBUG] Error in admin status check:', error);
     return NextResponse.json({
       error: 'Internal error',
       message: error.message

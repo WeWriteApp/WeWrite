@@ -14,8 +14,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { secureLogger, maskEmail } from '../../../utils/secureLogging';
-import { DEV_TEST_USERS } from '../../../utils/testUsers';
+import { DEV_TEST_USERS, validateDevTestPassword, verifyDevPassword } from '../../../utils/testUsers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { authRateLimiter } from '../../../utils/rateLimiter';
 
 interface LoginRequest {
   emailOrUsername: string;
@@ -43,8 +44,42 @@ function createSuccessResponse(user: LoginResponse['user']): NextResponse {
   return NextResponse.json({ success: true, user });
 }
 
+// Helper to get client IP from request
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp;
+  }
+  return 'unknown';
+}
+
 // POST endpoint - User login
 export async function POST(request: NextRequest) {
+  // SECURITY: Rate limiting to prevent brute force attacks
+  const clientIp = getClientIp(request);
+  const rateLimitResult = await authRateLimiter.checkLimit(clientIp);
+
+  if (!rateLimitResult.allowed) {
+    secureLogger.warn('[Auth] Rate limit exceeded', { ip: clientIp });
+    return NextResponse.json({
+      success: false,
+      error: 'Too many login attempts. Please try again later.',
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    }, {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)),
+        'X-RateLimit-Limit': '10',
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+      }
+    });
+  }
+
   try {
     const body = await request.json() as LoginRequest;
     const { emailOrUsername, password } = body;
@@ -71,11 +106,15 @@ export async function POST(request: NextRequest) {
       // In development mode, first check against known test accounts
       const testAccountsArray = Object.values(DEV_TEST_USERS);
 
+      // Find account by email or username, then validate password from env var
       const account = testAccountsArray.find(acc =>
-        (acc.email === emailOrUsername || acc.username === emailOrUsername) && acc.password === password
+        (acc.email === emailOrUsername || acc.username === emailOrUsername)
       );
 
-      if (account) {
+      // Validate password if account found
+      const passwordValid = account && validateDevTestPassword(password);
+
+      if (account && passwordValid) {
         // Create session cookie for predefined test account
         const cookieStore = await cookies();
         const sessionData = {
@@ -164,9 +203,11 @@ export async function POST(request: NextRequest) {
       if (userDoc) {
         const fields = userDoc.fields || {};
         const storedPasswordHash = fields.passwordHash?.stringValue;
-        const expectedHash = `dev_hash_${Buffer.from(password).toString('base64')}`;
-        
-        if (storedPasswordHash === expectedHash) {
+
+        // Use verifyDevPassword which supports both SHA-256 (new) and base64 (legacy) formats
+        const passwordValid = storedPasswordHash && await verifyDevPassword(password, storedPasswordHash);
+
+        if (passwordValid) {
           // Extract uid from document path
           const docPath = userDoc.name || '';
           const uid = docPath.split('/').pop() || '';

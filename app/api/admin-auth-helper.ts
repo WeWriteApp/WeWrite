@@ -1,32 +1,35 @@
 /**
  * Admin Authentication Helper
  * Provides authentication and authorization utilities for admin API endpoints
- * 
- * NOTE: This helper avoids using firebase-admin Auth operations to prevent jose dependency
- * issues in Vercel serverless. Instead, we read email from session cookies which were
- * verified when the session was created.
+ *
+ * Uses centralized admin configuration from adminConfig.ts
+ * Admin lists are loaded from environment variables.
  */
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from './auth-helper';
-
-// Define admin user IDs - ONLY these emails have admin access
-// Keep this list in sync with app/utils/isAdmin.ts to avoid mismatched UX/API behavior.
-const ADMIN_USER_IDS = [
-  'jamiegray2234@gmail.com',
-  'admin.test@wewrite.app', // Secure admin test account for production data access
-  'jamie@wewrite.app', // Development admin user
-  'admin@local.dev', // Local development admin user
-  'test1@wewrite.dev', // Dev admin (UX already shows admin for this account)
-  'test2@wewrite.dev' // Dev admin: testuser2
-];
+import { getAdminEmails, getAdminUserIds } from '../utils/adminConfig';
+import { getEnvironmentType } from '../utils/environmentConfig';
 
 /**
  * Check if a user is an admin (server-side version)
  */
 export const isAdminServer = (userEmail?: string | null): boolean => {
   if (!userEmail) return false;
-  return ADMIN_USER_IDS.includes(userEmail);
+
+  // Check against centralized admin emails from environment
+  const adminEmails = getAdminEmails();
+  if (adminEmails.includes(userEmail)) {
+    return true;
+  }
+
+  // In development, all authenticated users are admins
+  const env = getEnvironmentType();
+  if (env === 'development') {
+    return true;
+  }
+
+  return false;
 };
 
 /**
@@ -36,7 +39,7 @@ export const isAdminServer = (userEmail?: string | null): boolean => {
 function getEmailFromSessionCookie(request: NextRequest): string | null {
   const simpleSessionCookie = request.cookies.get('simpleUserSession')?.value;
   if (!simpleSessionCookie) return null;
-  
+
   try {
     const sessionData = JSON.parse(simpleSessionCookie);
     return sessionData?.email || null;
@@ -57,16 +60,25 @@ export async function checkAdminPermissions(request: NextRequest): Promise<{succ
       return { success: false, error: 'Unauthorized - no user ID' };
     }
 
-    // For development, allow dev_admin_user to bypass
-    if (userId === 'dev_admin_user' || userId === 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N') {
-      console.log('🔧 DEV MODE: Allowing dev_admin_user admin access');
-      return { success: true, userEmail: 'jamie@wewrite.app' };
+    // Check if userId is in the admin user IDs list
+    const adminUserIds = getAdminUserIds();
+    if (adminUserIds.includes(userId)) {
+      console.log('🔐 [ADMIN AUTH] Admin access granted by user ID');
+      // Get email from session if available
+      const userEmail = getEmailFromSessionCookie(request);
+      return { success: true, userEmail: userEmail || undefined };
     }
 
     // Get user email from session cookie (already verified when session was created)
     const userEmail = getEmailFromSessionCookie(request);
 
     if (!userEmail) {
+      // In development, allow access even without email
+      const env = getEnvironmentType();
+      if (env === 'development') {
+        console.log('🔧 [DEV MODE] Allowing admin access without email in development');
+        return { success: true, userEmail: undefined };
+      }
       return { success: false, error: 'Unauthorized - no email in session' };
     }
 

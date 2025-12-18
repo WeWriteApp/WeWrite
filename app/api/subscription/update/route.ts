@@ -10,6 +10,7 @@ import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '..
 import { determineTierFromAmount } from '../../../utils/subscriptionTiers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { ServerUsdService } from '../../../services/usdService.server';
+import { invalidateCache } from '../../../utils/internalApi';
 
 // Initialize Firebase Admin lazily
 let admin: any;
@@ -235,24 +236,10 @@ export async function POST(request: NextRequest) {
     });
 
     // CRITICAL: Invalidate all subscription-related caches immediately after update
-    try {
-      console.log(`[SUBSCRIPTION UPDATE] Invalidating caches for user ${userId}`);
-
-      // Invalidate server-side subscription cache
-      const cacheInvalidationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/account-subscription`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'invalidate-cache', userId })
-      });
-
-      if (cacheInvalidationResponse.ok) {
-        console.log(`[SUBSCRIPTION UPDATE] ✅ Successfully invalidated subscription cache for user ${userId}`);
-      } else {
-        console.warn(`[SUBSCRIPTION UPDATE] ⚠️ Failed to invalidate subscription cache for user ${userId}`);
-      }
-    } catch (cacheError) {
-      console.error(`[SUBSCRIPTION UPDATE] ❌ Error invalidating cache for user ${userId}:`, cacheError);
-    }
+    // SECURITY: Uses validated internal API URL to prevent SSRF
+    console.log(`[SUBSCRIPTION UPDATE] Invalidating caches for user ${userId}`);
+    await invalidateCache('/api/account-subscription', { action: 'invalidate-cache', userId });
+    console.log(`[SUBSCRIPTION UPDATE] ✅ Cache invalidation request sent for user ${userId}`);
 
     console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription for user ${userId}`);
 

@@ -4,6 +4,7 @@ import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { pageCache } from '../../../utils/pageCache';
 import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/admin';
+import { isAdminUserId, hasAdminAccess } from '../../../utils/adminConfig';
 
 /**
  * Clean link elements by removing the 'text' property
@@ -134,12 +135,8 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
 
-    // Check if user is admin (for debugging and admin access)
-    const isAdmin = userId && (
-      userId === 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L' || // Your user ID
-      userId === 'jamie' ||
-      userId === 'jamiegray2234@gmail.com'
-    );
+    // Check if user is admin using centralized config (no hardcoded IDs)
+    const isAdmin = userId ? isAdminUserId(userId) : false;
 
     console.log(`📄 [Page API] Permission check for ${pageId}:`, {
       userId,

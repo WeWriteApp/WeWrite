@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
- * Debug API to check username lookup in production
+ * Debug API to check username lookup
  * This helps debug login issues with usernames
- * 
+ *
  * NOTE: Uses Firestore instead of admin.auth() to avoid jose dependency issues in Vercel
  */
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const { username } = await request.json();
 

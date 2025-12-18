@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * Debug API for testing allocation system
  * POST /api/debug/test-allocation - Test allocation with known values
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -77,6 +82,10 @@ export async function POST(request: NextRequest) {
  * GET /api/debug/test-allocation - Get current allocation state for testing
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const userId = await getUserIdFromRequest(request);
     if (!userId) {

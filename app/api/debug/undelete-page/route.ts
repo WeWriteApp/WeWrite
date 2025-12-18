@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const admin = getFirebaseAdmin();
     if (!admin) {

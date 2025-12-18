@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { detectEnvironmentType } from '../../../utils/environmentDetection';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const envType = detectEnvironmentType();
     const host = request.headers.get('host') || '';

@@ -1,3 +1,5 @@
+import { internalApiFetch } from '../../utils/internalApi';
+
 /**
  * Server component that fetches recent activity data
  * This eliminates client-side loading states by pre-fetching the data
@@ -9,12 +11,9 @@ export async function getServerActivityData(limitCount = 30) {
     console.log('Starting getServerActivityData with limit:', limitCount);
 
     // Use environment-aware API endpoint instead of direct Firebase calls
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/recent-edits/global?limit=${limitCount * 2}`, {
+    // SECURITY: Uses validated internal API URL to prevent SSRF
+    const response = await internalApiFetch(`/api/recent-edits/global?limit=${limitCount * 2}`, {
       cache: 'no-store', // Ensure fresh data for server components
-      headers: {
-        'Content-Type': 'application/json',
-      }
     });
 
     if (!response.ok) {

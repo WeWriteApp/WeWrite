@@ -142,6 +142,37 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // SECURITY: Strict-Transport-Security (HSTS)
+          // Forces HTTPS for 1 year, including subdomains
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload'
+          },
+          // SECURITY: Prevent clickjacking attacks
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          // SECURITY: Prevent MIME type sniffing
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          // SECURITY: Control referrer information
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          },
+          // SECURITY: Permissions Policy (formerly Feature-Policy)
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()'
+          },
+          // SECURITY: XSS Protection (legacy browsers)
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
           {
             key: 'Content-Security-Policy',
             value: [

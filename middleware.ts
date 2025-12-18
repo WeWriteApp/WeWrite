@@ -314,17 +314,15 @@ function getUserEmailForAdmin(request: NextRequest, auth: AuthenticationState): 
     }
   }
 
-  // If still not found, try to get from Firebase session cookie
+  // If still not found, try to get from simpleUserSession cookie
   if (!userEmail) {
-    const sessionCookie = request.cookies.get("session")?.value;
-    if (sessionCookie) {
+    const simpleSessionCookie = request.cookies.get("simpleUserSession")?.value;
+    if (simpleSessionCookie) {
       try {
-        // For now, we'll just skip the admin check since we have a session
-        // In a real implementation, you'd decode the Firebase session token
-        console.log('[Middleware] Found Firebase session cookie, allowing admin access for development');
-        userEmail = 'jamiegray2234@gmail.com'; // Hardcode for development
+        const sessionData: UserSession = JSON.parse(simpleSessionCookie);
+        userEmail = sessionData.email;
       } catch (error) {
-        console.log('[Middleware] Error parsing session cookie:', error);
+        console.log('[Middleware] Error parsing simpleUserSession cookie:', error);
       }
     }
   }

@@ -1,6 +1,6 @@
 /**
  * Production-Safe Earnings Debug Endpoint
- * 
+ *
  * Provides safe debugging information about earnings system status
  * without exposing sensitive user data
  */
@@ -10,8 +10,13 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getCurrentMonth } from '../../../utils/usdConstants';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);

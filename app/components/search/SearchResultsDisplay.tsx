@@ -83,9 +83,6 @@ const SearchResultsDisplay = React.memo(({
   // State for user subscription data
   const [userSubscriptionData, setUserSubscriptionData] = useState<Map<string, UserSubscriptionData>>(new Map());
 
-  // Check if user is admin for debug features
-  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
-
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
     if (!results) {

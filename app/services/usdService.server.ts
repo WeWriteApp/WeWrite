@@ -13,6 +13,7 @@ import { dollarsToCents, centsToDollars } from '../utils/formatCurrency';
 import type { UsdBalance, UsdAllocation } from '../types/database';
 import { getCollectionNameAsync, USD_COLLECTIONS } from '../utils/environmentConfig';
 import { AllocationError, ALLOCATION_ERROR_CODES } from '../types/allocation';
+import { internalApiFetch } from '../utils/internalApi';
 
 
 // Robust Firebase Admin initialization function - uses the same pattern as working endpoints
@@ -276,12 +277,12 @@ export class ServerUsdService {
         if (!subscriptionData) {
           try {
             // Make internal API call to get subscription
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            // SECURITY: Uses validated internal API URL to prevent SSRF
             console.log(`[USD BALANCE] Attempting to fetch subscription from account API for user ${userId}`);
-            const response = await fetch(`${baseUrl}/api/account-subscription`, {
+            const response = await internalApiFetch('/api/account-subscription', {
+              method: 'GET',
               headers: {
                 'x-user-id': userId,
-                'x-internal-request': 'true'
               }
             });
             if (response.ok) {

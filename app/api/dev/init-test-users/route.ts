@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { DEV_TEST_USERS } from "../../../utils/testUsers";
+import { DEV_TEST_USERS, getDevTestUserPassword } from "../../../utils/testUsers";
 // Check if development environment
 const isDevelopmentEnvironment = () => {
   return process.env.NODE_ENV === 'development';
@@ -36,14 +36,19 @@ export async function POST(request: NextRequest) {
         console.log(`Creating test user: ${testUser.username} in Firebase Auth and DEV_ collections`);
 
         // First, create the user in Firebase Auth
+        // Get password from environment variable (not hardcoded)
+        const devPassword = getDevTestUserPassword();
+        if (!devPassword) {
+          throw new Error('DEV_TEST_USER_PASSWORD not set in environment');
+        }
+
         let authUser;
         try {
           authUser = await admin.auth().createUser({
             uid: testUser.uid,
             email: testUser.email,
-            password: testUser.password,
+            password: devPassword,
             emailVerified: true
-            // displayName removed - WeWrite only uses username field stored in Firestore
           });
           console.log(`✅ Created Firebase Auth user: ${testUser.username}`);
         } catch (authError: any) {

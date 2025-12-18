@@ -5,6 +5,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
+import { invalidateCache } from '../../../utils/internalApi';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -120,16 +121,8 @@ export async function POST(request: NextRequest) {
     await subscriptionRef.set(subscriptionData);
 
     // Invalidate subscription cache to ensure fresh data is returned
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/account-subscription`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'invalidate-cache', userId })
-      });
-    } catch (cacheError) {
-      console.warn('Failed to invalidate subscription cache:', cacheError);
-      // Don't fail the subscription creation if cache invalidation fails
-    }
+    // SECURITY: Uses validated internal API URL to prevent SSRF
+    await invalidateCache('/api/account-subscription', { action: 'invalidate-cache', userId });
 
     console.log(`[CREATE AFTER SETUP] Successfully created subscription ${subscription.id} for user ${userId} with status: ${subscription.status}`);
 

@@ -8,16 +8,19 @@ import {
   PAYMENT_COLLECTIONS,
   getPaymentCollectionNames
 } from '../../../utils/environmentConfig';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * Debug Environment API Endpoint
- * 
+ *
  * Returns current environment configuration and collection names
  * to help debug environment separation issues.
- * 
- * SECURITY NOTE: This endpoint should be removed or secured in production
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     const envType = getEnvironmentType();
     const prefix = getEnvironmentPrefix();

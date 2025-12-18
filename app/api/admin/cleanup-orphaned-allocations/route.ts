@@ -18,8 +18,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
-import { getUserIdFromRequest } from '../../../api/auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -45,18 +45,10 @@ interface CleanupSummary {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user and verify admin access
-    const currentUserId = await getUserIdFromRequest(request);
-    if (!currentUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const userRecord = await adminApp.auth().getUser(currentUserId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || userEmail !== 'jamiegray2234@gmail.com') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // SECURITY: Use centralized admin verification with audit logging
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
 
     const body = await request.json();
@@ -245,18 +237,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user and verify admin access
-    const currentUserId = await getUserIdFromRequest(request);
-    if (!currentUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const userRecord = await adminApp.auth().getUser(currentUserId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || userEmail !== 'jamiegray2234@gmail.com') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // SECURITY: Use centralized admin verification with audit logging
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
 
     // GET request just returns stats without making changes

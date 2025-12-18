@@ -142,6 +142,29 @@ export class RateLimiter {
 }
 
 // Pre-configured rate limiters for different use cases
+
+/**
+ * Auth rate limiter - prevents brute force attacks on login/register
+ * - 10 login attempts per IP per 15 minutes
+ * - After limit reached, must wait for window to reset
+ */
+export const authRateLimiter = new RateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 10, // 10 attempts per window
+  keyGenerator: (ip) => `auth:${ip}`,
+  skipSuccessfulRequests: true // Don't count successful logins
+});
+
+/**
+ * Password reset rate limiter - prevents abuse of password reset feature
+ * - 5 password reset requests per email per hour
+ */
+export const passwordResetRateLimiter = new RateLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxRequests: 5, // 5 reset requests per hour per email
+  keyGenerator: (email) => `password-reset:${email.toLowerCase()}`
+});
+
 export const payoutRateLimiter = new RateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 5, // 5 payout requests per hour per user

@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { initAdmin } from '../../../firebase/admin';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
-import { getUserIdFromRequest } from '../../../api/auth-helper';
+import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 
 // Initialize Firebase Admin and Stripe
 const adminApp = initAdmin();
@@ -38,18 +38,10 @@ interface CleanupSummary {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user and verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin - only jamiegray2234@gmail.com has admin access
-    const userRecord = await adminApp.auth().getUser(userId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || userEmail !== 'jamiegray2234@gmail.com') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // SECURITY: Use centralized admin verification with audit logging
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
 
     const body = await request.json();

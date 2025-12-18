@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../../utils/auth';
+import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * Debug Earnings Sources API Endpoint
- * 
+ *
  * Returns detailed information about earnings sources data pipeline
  * to help debug why earnings sources might be empty.
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in local development
+  const devCheck = requireDevelopmentEnvironment();
+  if (devCheck) return devCheck;
+
   try {
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
