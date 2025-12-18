@@ -54,6 +54,15 @@ export const DEV_TEST_USER_UIDS: string[] = [
 ];
 
 /**
+ * Development test user emails from DEV_TEST_USERS
+ */
+export const DEV_TEST_USER_EMAILS: string[] = [
+  'jamie@wewrite.app',
+  'test@wewrite.app',
+  'getwewrite@gmail.com'
+];
+
+/**
  * Check if a user is a test user (development environment)
  * Test users should have all feature flags enabled by default
  */

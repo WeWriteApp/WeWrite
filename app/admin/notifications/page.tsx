@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { useToast } from '../../components/ui/use-toast';
+import { adminFetch } from '../../utils/adminFetch';
 
 interface EmailTemplate {
   id: string;
@@ -804,7 +805,7 @@ function AdminEmailsPageContent() {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const response = await fetch('/api/admin/email-templates');
+        const response = await adminFetch('/api/admin/email-templates');
         const data = await response.json();
         
         if (data.success) {
@@ -841,7 +842,7 @@ function AdminEmailsPageContent() {
 
       setAllLogsLoading(true);
       try {
-        const logsRes = await fetch('/api/admin/email-logs?limit=100');
+        const logsRes = await adminFetch('/api/admin/email-logs?limit=100');
         const logsData = await logsRes.json();
 
         if (logsData.success) {
@@ -869,7 +870,7 @@ function AdminEmailsPageContent() {
         if (!cronRecipients[cron.id]) {
           setCronRecipients(prev => ({ ...prev, [cron.id]: { loading: true, recipients: [] } }));
           try {
-            const res = await fetch(`/api/admin/cron-recipients?cronId=${cron.id}`);
+            const res = await adminFetch(`/api/admin/cron-recipients?cronId=${cron.id}`);
             const data = await res.json();
             setCronRecipients(prev => ({
               ...prev,
@@ -959,7 +960,7 @@ function AdminEmailsPageContent() {
         url += `&userId=${userId}`;
       }
 
-      const response = await fetch(url);
+      const response = await adminFetch(url);
       const data = await response.json();
 
       if (data.success) {

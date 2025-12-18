@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from './useDebounce';
+import { adminFetch } from '../utils/adminFetch';
 
 // Types for analytics data
 export interface DateRange {
@@ -75,7 +76,7 @@ export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyti
       setError(null);
 
       // Fetch all metrics via API endpoint
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         type: 'all'
@@ -179,7 +180,7 @@ export function useAccountsMetrics(dateRange: DateRange, granularity?: number) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -247,7 +248,7 @@ export function usePagesMetrics(dateRange: DateRange, granularity?: number) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -315,7 +316,7 @@ export function useSharesMetrics(dateRange: DateRange, granularity?: number) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -389,7 +390,7 @@ export function useEditsMetrics(dateRange: DateRange, granularity?: number) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -462,7 +463,7 @@ export function useContentChangesMetrics(dateRange: DateRange, granularity?: num
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -540,7 +541,7 @@ export function usePWAInstallsMetrics(dateRange: DateRange, granularity?: number
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -609,7 +610,7 @@ export function usePWANotificationsMetrics(dateRange: DateRange, granularity?: n
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -685,7 +686,7 @@ export function useVisitorMetrics(dateRange: DateRange, granularity?: number) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -747,7 +748,7 @@ export function useCompositePagesMetrics(dateRange: DateRange, granularity?: num
       setLoading(true);
       setError(null);
       // Use API endpoint instead of direct service call
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         type: 'pages',
@@ -821,7 +822,7 @@ export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: nu
       setLoading(true);
       setError(null);
       // Use API endpoint instead of direct service call
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         type: 'pages',
@@ -868,7 +869,7 @@ export function useTotalPagesEverCreated() {
       setLoading(true);
       setError(null);
       // Use API endpoint instead of direct service call
-      const response = await fetch('/api/admin/dashboard-analytics?' + new URLSearchParams({
+      const response = await adminFetch('/api/admin/dashboard-analytics?' + new URLSearchParams({
         type: 'pages',
         startDate: new Date('2020-01-01').toISOString(), // Get all pages ever
         endDate: new Date().toISOString()
@@ -928,7 +929,7 @@ export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/platform-fee-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/platform-fee-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',
@@ -1003,7 +1004,7 @@ export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: numb
         granularity: (granularity || 24).toString()
       });
 
-      const response = await fetch(`/api/admin/analytics/followed-users?${params}`);
+      const response = await adminFetch(`/api/admin/analytics/followed-users?${params}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch followed users analytics: ${response.status}`);
@@ -1046,7 +1047,7 @@ export function usePageViewsMetrics(dateRange: DateRange, granularity?: number) 
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
         granularity: granularity?.toString() || '50',

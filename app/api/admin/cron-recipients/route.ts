@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { isAdmin } from '../../../utils/isAdmin';
 import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
 
@@ -47,6 +47,10 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
     const recipients: Recipient[] = [];
 
+    // Pre-compute collection names (async to support X-Force-Production-Data header)
+    const usersCollectionName = await getCollectionNameAsync('users');
+    const writerBalancesCollectionName = await getCollectionNameAsync('writerUsdBalances');
+
     switch (cronId) {
       case 'username-reminder': {
         // Users who signed up 1-7 days ago without proper username
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-        const usersSnapshot = await db.collection(getCollectionName('users'))
+        const usersSnapshot = await db.collection(usersCollectionName)
           .where('createdAt', '>=', oneWeekAgo)
           .where('createdAt', '<=', oneDayAgo)
           .limit(50)
@@ -89,7 +93,7 @@ export async function GET(request: NextRequest) {
       case 'payout-setup-reminder': {
         // Users with pending earnings ABOVE PAYOUT THRESHOLD ($25) but no Stripe connected
         // Only users who can actually set up payouts should receive reminders
-        const writerBalancesSnapshot = await db.collection(getCollectionName('writerUsdBalances'))
+        const writerBalancesSnapshot = await db.collection(writerBalancesCollectionName)
           .where('pendingUsdCents', '>=', PAYOUT_THRESHOLD_CENTS) // $25 minimum - must meet threshold
           .limit(50)
           .get();
@@ -101,7 +105,7 @@ export async function GET(request: NextRequest) {
           const balanceData = balanceDoc.data();
           const userId = balanceDoc.id;
 
-          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+          const userDoc = await db.collection(usersCollectionName).doc(userId).get();
           if (!userDoc.exists) continue;
 
           const userData = userDoc.data()!;
@@ -132,7 +136,7 @@ export async function GET(request: NextRequest) {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-        const usersSnapshot = await db.collection(getCollectionName('users'))
+        const usersSnapshot = await db.collection(usersCollectionName)
           .where('createdAt', '>=', sevenDaysAgo)
           .where('createdAt', '<=', threeDaysAgo)
           .limit(50)
@@ -159,7 +163,7 @@ export async function GET(request: NextRequest) {
       case 'weekly-digest': {
         // All verified users with email, except those who explicitly opted out
         // Default is opt-in - users without emailPreferences.weeklyDigest set ARE subscribed
-        const usersSnapshot = await db.collection(getCollectionName('users'))
+        const usersSnapshot = await db.collection(usersCollectionName)
           .where('emailVerified', '==', true)
           .limit(50)
           .get();
@@ -186,7 +190,7 @@ export async function GET(request: NextRequest) {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-        const writerBalancesSnapshot = await db.collection(getCollectionName('writerUsdBalances'))
+        const writerBalancesSnapshot = await db.collection(writerBalancesCollectionName)
           .limit(50)
           .get();
 
@@ -198,7 +202,7 @@ export async function GET(request: NextRequest) {
           const lastUpdated = balanceData.updatedAt?.toDate?.() || balanceData.lastActivityAt?.toDate?.();
           if (lastUpdated && lastUpdated < oneMonthAgo) continue;
 
-          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+          const userDoc = await db.collection(usersCollectionName).doc(userId).get();
           if (!userDoc.exists) continue;
 
           const userData = userDoc.data()!;
@@ -216,7 +220,7 @@ export async function GET(request: NextRequest) {
 
       case 'automated-payouts': {
         // Writers with available balance and Stripe connected
-        const writerBalancesSnapshot = await db.collection(getCollectionName('writerUsdBalances'))
+        const writerBalancesSnapshot = await db.collection(writerBalancesCollectionName)
           .where('availableUsdCents', '>=', 100)
           .limit(50)
           .get();
@@ -225,7 +229,7 @@ export async function GET(request: NextRequest) {
           const balanceData = balanceDoc.data();
           const userId = balanceDoc.id;
 
-          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+          const userDoc = await db.collection(usersCollectionName).doc(userId).get();
           if (!userDoc.exists) continue;
 
           const userData = userDoc.data()!;
@@ -249,7 +253,7 @@ export async function GET(request: NextRequest) {
         const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        const usersSnapshot = await db.collection(getCollectionName('users'))
+        const usersSnapshot = await db.collection(usersCollectionName)
           .where('lastActiveAt', '>=', ninetyDaysAgo)
           .where('lastActiveAt', '<=', thirtyDaysAgo)
           .limit(50)

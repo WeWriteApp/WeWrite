@@ -8,6 +8,7 @@ import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
 import { CreditCard, Banknote, Bell, Filter } from "lucide-react";
 import { Loader2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
+import { adminFetch } from "../../utils/adminFetch";
 import {
   Dialog,
   DialogContent,
@@ -266,7 +267,7 @@ export default function AdminUsersPage() {
       setError(null);
       setErrorDetails(null);
       try {
-        const res = await fetch("/api/admin/users?includeFinancial=true&limit=300");
+        const res = await adminFetch("/api/admin/users?includeFinancial=true&limit=300");
         const data = await res.json();
         if (!res.ok || data.error) {
           const errorMsg = data.error || `HTTP ${res.status}: ${res.statusText}`;
@@ -737,7 +738,7 @@ export default function AdminUsersPage() {
     setStatus(null);
     setLoadingAction('delete');
     try {
-      const res = await fetch('/api/admin/users/delete', {
+      const res = await adminFetch('/api/admin/users/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid })
@@ -780,7 +781,7 @@ export default function AdminUsersPage() {
     setStatus(null);
     setLoadingAction('reset');
     try {
-      const res = await fetch('/api/admin/users/reset-password', {
+      const res = await adminFetch('/api/admin/users/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: user.uid, email: user.email })
@@ -802,7 +803,7 @@ export default function AdminUsersPage() {
     setLoadingAction('verify');
     try {
       // Use our custom Resend verification email API
-      const res = await fetch('/api/email/send-verification', {
+      const res = await adminFetch('/api/email/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -829,7 +830,7 @@ export default function AdminUsersPage() {
     setStatus(null);
     setLoadingAction('username');
     try {
-      const res = await fetch('/api/admin/users/update-username', {
+      const res = await adminFetch('/api/admin/users/update-username', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: editUsernameUser.uid, username: newUsername.trim() })
@@ -855,7 +856,7 @@ export default function AdminUsersPage() {
   const refreshUserNotifications = async (uid: string, filter: ActivityFilter = 'all') => {
     setLoadingActivities(true);
     try {
-      const res = await fetch(`/api/admin/users/activity?uid=${uid}&filter=${filter}&limit=30`);
+      const res = await adminFetch(`/api/admin/users/activity?uid=${uid}&filter=${filter}&limit=30`);
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed to load activity");
       setUserActivities(data.activities || []);
@@ -871,7 +872,7 @@ export default function AdminUsersPage() {
     setStatus(null);
     setLoadingAction("notify");
     try {
-      const res = await fetch("/api/admin/users/send-payout-reminder", {
+      const res = await adminFetch("/api/admin/users/send-payout-reminder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

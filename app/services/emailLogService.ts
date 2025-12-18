@@ -1,10 +1,12 @@
 import { getFirebaseAdmin } from '../firebase/admin';
+import { getCollectionNameAsync } from '../utils/environmentConfig';
 
 /**
  * Email Audit Log Service
- * 
+ *
  * Logs all email sends to Firestore for auditing and debugging.
  * Uses DEV_ prefix in development, no prefix in production.
+ * Respects X-Force-Production-Data header for admin panel production mode.
  */
 
 export interface EmailLogEntry {
@@ -23,9 +25,9 @@ export interface EmailLogEntry {
   createdAt: string;
 }
 
-const getCollectionName = () => {
-  const isDev = process.env.NODE_ENV === 'development';
-  return isDev ? 'DEV_emailLogs' : 'emailLogs';
+// Use the async version to support X-Force-Production-Data header
+const getEmailLogsCollectionName = async () => {
+  return getCollectionNameAsync('emailLogs');
 };
 
 /**
@@ -35,13 +37,14 @@ export async function logEmailSend(entry: Omit<EmailLogEntry, 'id' | 'createdAt'
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    
+
     const logEntry: Omit<EmailLogEntry, 'id'> = {
       ...entry,
       createdAt: new Date().toISOString(),
     };
-    
-    const docRef = await db.collection(getCollectionName()).add(logEntry);
+
+    const collectionName = await getEmailLogsCollectionName();
+    const docRef = await db.collection(collectionName).add(logEntry);
     console.log('[EmailLog] Logged email:', entry.templateId, 'to:', entry.recipientEmail, 'ID:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -60,9 +63,10 @@ export async function getEmailLogsByTemplate(
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    
+
+    const collectionName = await getEmailLogsCollectionName();
     const snapshot = await db
-      .collection(getCollectionName())
+      .collection(collectionName)
       .where('templateId', '==', templateId)
       .orderBy('sentAt', 'desc')
       .limit(limit)
@@ -88,9 +92,10 @@ export async function getEmailLogsByUser(
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    
+
+    const collectionName = await getEmailLogsCollectionName();
     const snapshot = await db
-      .collection(getCollectionName())
+      .collection(collectionName)
       .where('recipientUserId', '==', userId)
       .orderBy('sentAt', 'desc')
       .limit(limit)
@@ -113,9 +118,10 @@ export async function getRecentEmailLogs(limit: number = 100): Promise<EmailLogE
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    
+
+    const collectionName = await getEmailLogsCollectionName();
     const snapshot = await db
-      .collection(getCollectionName())
+      .collection(collectionName)
       .orderBy('sentAt', 'desc')
       .limit(limit)
       .get();
@@ -143,14 +149,15 @@ export async function getEmailStats(): Promise<{
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    
+
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    
+
     // Get all logs from last 7 days for stats
+    const collectionName = await getEmailLogsCollectionName();
     const snapshot = await db
-      .collection(getCollectionName())
+      .collection(collectionName)
       .where('sentAt', '>=', sevenDaysAgo)
       .get();
     

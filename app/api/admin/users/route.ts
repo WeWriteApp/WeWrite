@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions, isAdminServer } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { getCollectionName, getEnvironmentType, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync, getEnvironmentType, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 
@@ -75,6 +75,12 @@ export async function GET(request: NextRequest) {
 
     console.log('Loading users from Firestore via API...');
 
+    // Pre-compute collection names (async to support X-Force-Production-Data header)
+    const usersCollectionName = await getCollectionNameAsync('users');
+    const pagesCollectionName = await getCollectionNameAsync('pages');
+    const usdBalancesCollectionName = await getCollectionNameAsync('usdBalances');
+    const writerEarningsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+
     // Pre-fetch active Stripe subscriptions if financial data is requested
     // This ensures we show accurate subscription status from Stripe (source of truth)
     const activeStripeSubscriptions = new Map<string, { amountCents: number; status: string }>();
@@ -107,7 +113,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Query Firestore for user documents
-    let usersQuery = db.collection(getCollectionName('users'))
+    let usersQuery = db.collection(usersCollectionName)
       .orderBy('createdAt', 'desc')
       .limit(limit);
 
@@ -116,7 +122,7 @@ export async function GET(request: NextRequest) {
       snapshot = await usersQuery.get();
     } catch (orderingError) {
       console.warn('Order by createdAt failed; falling back to unordered fetch:', orderingError);
-      snapshot = await db.collection(getCollectionName('users')).limit(limit).get();
+      snapshot = await db.collection(usersCollectionName).limit(limit).get();
     }
 
     if (snapshot.empty) {
@@ -134,7 +140,7 @@ export async function GET(request: NextRequest) {
     // If only the count is needed, try using Firestore count() for accuracy
     if (countOnly) {
       try {
-        const usersCollection = db.collection(getCollectionName('users'));
+        const usersCollection = db.collection(usersCollectionName);
         // Use count() if available (Firestore v11+), otherwise fallback to snapshot size
         if (typeof (usersCollection as any).count === 'function') {
           const countSnap = await (usersCollection as any).count().get();
@@ -148,7 +154,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Reuse pages collection reference for counts
-    const pagesCollection = db.collection(getCollectionName('pages'));
+    const pagesCollection = db.collection(pagesCollectionName);
 
     for (const userDoc of snapshot.docs) {
       try {
@@ -194,7 +200,7 @@ export async function GET(request: NextRequest) {
 
         if (includeFinancial) {
           try {
-            const balanceDoc = await db.collection(getCollectionName('usdBalances')).doc(userDoc.id).get();
+            const balanceDoc = await db.collection(usdBalancesCollectionName).doc(userDoc.id).get();
             const balanceData = balanceDoc.data() || {};
 
             // Phase 2: Calculate writer balance from earnings records (single source of truth)
@@ -202,7 +208,7 @@ export async function GET(request: NextRequest) {
             let earningsTotalUsd: number | undefined;
             let earningsThisMonthUsd: number | undefined;
 
-            const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+            const earningsQuery = db.collection(writerEarningsCollectionName)
               .where('userId', '==', userDoc.id);
             const earningsSnapshot = await earningsQuery.get();
 
@@ -301,7 +307,7 @@ export async function GET(request: NextRequest) {
         const batch = referrerUids.slice(i, i + batchSize);
         try {
           const referrerDocs = await Promise.all(
-            batch.map(uid => db.collection(getCollectionName('users')).doc(uid).get())
+            batch.map(uid => db.collection(usersCollectionName).doc(uid).get())
           );
           for (const doc of referrerDocs) {
             if (doc.exists) {

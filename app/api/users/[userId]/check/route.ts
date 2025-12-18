@@ -1,40 +1,48 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function HEAD(request, { params }) {
+interface RouteContext {
+  params: Promise<{ userId: string }>;
+}
+
+interface UserResponse {
+  id: string;
+  username: string;
+}
+
+export async function HEAD(
+  request: NextRequest,
+  { params }: RouteContext
+): Promise<NextResponse> {
   try {
-    // Await params for Next.js 15 compatibility
     const { userId } = await params;
 
     if (!userId) {
       return new NextResponse(null, { status: 400 });
     }
 
-    // Import Firebase Admin modules (server-side)
     const { getFirebaseAdmin } = await import('../../../../firebase/firebaseAdmin');
 
-    // Get Firebase Admin instance
     const admin = getFirebaseAdmin();
     if (!admin) {
       return new NextResponse(null, { status: 500 });
     }
 
-    // Check if user exists in Realtime Database
     const rtdb = admin.database();
     const userRef = rtdb.ref(`users/${userId}`);
     const userSnapshot = await userRef.once('value');
 
     if (userSnapshot.exists()) {
-      return new NextResponse(null, { 
+      return new NextResponse(null, {
         status: 200,
         headers: {
-          'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+          'Cache-Control': 'public, max-age=300',
         }
       });
     } else {
-      return new NextResponse(null, { 
+      return new NextResponse(null, {
         status: 404,
         headers: {
-          'Cache-Control': 'public, max-age=60', // Cache 404s for 1 minute
+          'Cache-Control': 'public, max-age=60',
         }
       });
     }
@@ -45,9 +53,11 @@ export async function HEAD(request, { params }) {
   }
 }
 
-export async function GET(request, { params }) {
+export async function GET(
+  request: NextRequest,
+  { params }: RouteContext
+): Promise<NextResponse> {
   try {
-    // Await params for Next.js 15 compatibility
     const { userId } = await params;
 
     if (!userId) {
@@ -57,10 +67,8 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Import Firebase Admin modules (server-side)
     const { getFirebaseAdmin } = await import('../../../../firebase/firebaseAdmin');
 
-    // Get Firebase Admin instance
     const admin = getFirebaseAdmin();
     if (!admin) {
       return NextResponse.json(
@@ -69,7 +77,6 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Get user data from Realtime Database
     const rtdb = admin.database();
     const userRef = rtdb.ref(`users/${userId}`);
     const userSnapshot = await userRef.once('value');
@@ -83,16 +90,14 @@ export async function GET(request, { params }) {
 
     const userData = userSnapshot.val();
 
-    // Return basic user information
-    const response = {
+    const response: UserResponse = {
       id: userId,
       username: userData.username || 'Anonymous',
-      // Don't expose sensitive information
     };
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=300',
       }
     });
 

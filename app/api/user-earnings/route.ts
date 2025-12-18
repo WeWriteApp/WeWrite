@@ -1,33 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 
-// Initialize Firebase Admin lazily
-let admin;
-
-function initializeFirebase() {
-  if (admin) return { admin }; // Already initialized
-
-  try {
-    admin = getFirebaseAdmin();
-    if (!admin) {
-      console.warn('Firebase Admin initialization skipped during build time');
-      return { admin: null };
-    }
-    console.log('Firebase Admin initialized successfully in user-earnings');
-  } catch (error) {
-    console.error('Error initializing Firebase Admin in user-earnings:', error);
-    return { admin: null };
-  }
-
-  return { admin };
+interface EarningData {
+  amount?: number;
+  source?: string;
+  sourcePageId?: string;
+  type?: string;
+  status?: string;
+  createdAt?: { toDate?: () => Date };
 }
 
-export async function POST(request) {
+interface Earning {
+  id: string;
+  amount: number;
+  source: string;
+  sourcePageId?: string;
+  sourcePageTitle: string;
+  date: string;
+  type: string;
+  status: string;
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { admin } = initializeFirebase();
+    const admin = getFirebaseAdmin();
     if (!admin) {
-      console.warn('Firebase Admin not available for user-earnings');
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
@@ -37,37 +35,31 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Verify the user exists in Firestore (avoids admin.auth() jose issues in Vercel)
     const db = admin.firestore();
     const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     if (!userDoc.exists) {
-      console.error('User not found in Firestore:', userId);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get the user's earnings from Firestore
-    
     try {
-      // Fetch earnings transactions for the user
       const earningsRef = db.collection(getCollectionName('earnings'))
         .where('userId', '==', userId)
         .orderBy('createdAt', 'desc')
         .limit(50);
-      
+
       const earningsSnapshot = await earningsRef.get();
-      
-      const earnings = [];
-      
+      const earnings: Earning[] = [];
+
       for (const doc of earningsSnapshot.docs) {
-        const earningData = doc.data();
-        
-        // Fetch page details if available
+        const earningData = doc.data() as EarningData;
+
         let pageTitle = 'Unknown Page';
         if (earningData.sourcePageId) {
           try {
             const pageDoc = await db.collection(getCollectionName('pages')).doc(earningData.sourcePageId).get();
             if (pageDoc.exists) {
-              pageTitle = pageDoc.data().title || 'Untitled Page';
+              const pageData = pageDoc.data();
+              pageTitle = pageData?.title || 'Untitled Page';
             }
           } catch (pageError) {
             console.error('Error fetching page details:', pageError);
@@ -93,7 +85,8 @@ export async function POST(request) {
     }
 
   } catch (error) {
-    console.error('Error fetching user earnings:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    const err = error as Error;
+    console.error('Error fetching user earnings:', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }

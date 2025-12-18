@@ -71,7 +71,22 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
   try {
     // This would need to be implemented to delete the page and all its versions
     // For now, just delete the main page document
-    return await updateDoc('pages', pageId, { deleted: true, deletedAt: new Date().toISOString() });
+    const result = await updateDoc('pages', pageId, { deleted: true, deletedAt: new Date().toISOString() });
+
+    // Invalidate search cache to ensure deleted page is removed from search immediately
+    try {
+      await fetch('/api/search-unified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalidate' }),
+      });
+      console.log('✅ Search cache invalidated after page deletion');
+    } catch (cacheError) {
+      // Don't fail page deletion if cache invalidation fails
+      console.error('⚠️ Search cache invalidation failed (non-fatal):', cacheError);
+    }
+
+    return result;
   } catch (error) {
     console.error('Error deleting page:', error);
     return false;

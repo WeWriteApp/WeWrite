@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { emailTemplates, getTemplateById } from '../../../lib/emailTemplates';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 
 // Map cronId to actual email template ID
 // This is needed because cron job IDs don't always match template IDs
@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
         const admin = getFirebaseAdmin();
         if (admin) {
           const db = admin.firestore();
-          const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+          const usersCollectionName = await getCollectionNameAsync('users');
+          const userDoc = await db.collection(usersCollectionName).doc(userId).get();
 
           if (userDoc.exists) {
             const userData = userDoc.data()!;
@@ -69,7 +70,8 @@ export async function GET(request: NextRequest) {
             // Fetch additional data based on template type
             if (templateId === 'payout-setup-reminder') {
               // Get pending earnings for payout reminder
-              const balanceDoc = await db.collection(getCollectionName('writerUsdBalances')).doc(userId).get();
+              const writerBalancesCollectionName = await getCollectionNameAsync('writerUsdBalances');
+              const balanceDoc = await db.collection(writerBalancesCollectionName).doc(userId).get();
               if (balanceDoc.exists) {
                 const balanceData = balanceDoc.data()!;
                 const pendingCents = balanceData.pendingUsdCents || 0;

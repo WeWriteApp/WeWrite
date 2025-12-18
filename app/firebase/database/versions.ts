@@ -541,6 +541,19 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       console.error('⚠️ VERSION: Algolia sync failed (non-fatal):', algoliaError);
     }
 
+    // Invalidate search cache to ensure updated page appears in search immediately
+    try {
+      await fetch('/api/search-unified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalidate' }),
+      });
+      console.log('✅ VERSION: Search cache invalidated');
+    } catch (cacheError) {
+      // Don't fail the save if cache invalidation fails
+      console.error('⚠️ VERSION: Search cache invalidation failed (non-fatal):', cacheError);
+    }
+
     console.log("✅ VERSION: Successfully saved new version and updated page");
     return {
       success: true,

@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
 
-// This is a special route to check environment variables
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   try {
-    // Check if any credential environment variables exist
     const hasGoogleCloudKeyJson = !!process.env.GOOGLE_CLOUD_KEY_JSON;
     const hasGoogleCloudCredentials = !!process.env.GOOGLE_CLOUD_CREDENTIALS;
     const hasBase64Flag = process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
-    
-    // Get first 20 chars of the credentials to check format (for debugging)
+
     let googleCloudKeyJsonPreview = '';
     let googleCloudCredentialsPreview = '';
-    
-    if (hasGoogleCloudKeyJson) {
+
+    if (hasGoogleCloudKeyJson && process.env.GOOGLE_CLOUD_KEY_JSON) {
       googleCloudKeyJsonPreview = process.env.GOOGLE_CLOUD_KEY_JSON.substring(0, 20) + '...';
     }
-    
-    if (hasGoogleCloudCredentials) {
+
+    if (hasGoogleCloudCredentials && process.env.GOOGLE_CLOUD_CREDENTIALS) {
       googleCloudCredentialsPreview = process.env.GOOGLE_CLOUD_CREDENTIALS.substring(0, 20) + '...';
     }
-    
-    // Return the status of environment variables
+
     return NextResponse.json({
       hasGoogleCloudKeyJson,
       hasGoogleCloudCredentials,
@@ -28,10 +24,10 @@ export async function GET() {
       googleCloudKeyJsonPreview,
       googleCloudCredentialsPreview,
       nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV});
+      vercelEnv: process.env.VERCEL_ENV
+    });
   } catch (error) {
-    return NextResponse.json({
-      error: error.message
-    }, { status: 500 });
+    const err = error as Error;
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, startAfter } from 'firebase/firestore';
+import { NextRequest, NextResponse } from "next/server";
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../../firebase/database';
 import { getCollectionName } from '../../utils/environmentConfig';
-import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker.js';
+import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker';
 import { recordProductionRead } from '../../utils/productionReadMonitor';
-import { searchAll, searchPages, searchUsers as algoliaSearchUsers } from '../../lib/algolia';
+import { searchPages, searchUsers as algoliaSearchUsers } from '../../lib/algolia';
 
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
@@ -12,19 +12,98 @@ export const dynamic = 'force-dynamic';
 // Feature flag for Algolia - set to true to use Algolia, false for Firestore fallback
 const USE_ALGOLIA = true;
 
+// Type definitions
+interface SearchCacheEntry {
+  data: SearchResult;
+  timestamp: number;
+  ttl: number;
+}
+
+interface SearchResult {
+  pages: PageSearchResult[];
+  users: UserSearchResult[];
+  source: string;
+  searchTerm?: string;
+  context?: string;
+  performance?: SearchPerformance;
+  cached?: boolean;
+  cacheAge?: number;
+  timestamp?: number;
+}
+
+interface SearchPerformance {
+  searchTimeMs: number;
+  pagesFound: number;
+  usersFound: number;
+  maxResults?: number | string;
+  searchEngine?: string;
+}
+
+interface PageSearchResult {
+  id: string;
+  title: string;
+  type: 'page';
+  isOwned: boolean;
+  isEditable: boolean;
+  userId: string;
+  username: string | null;
+  lastModified: string;
+  createdAt?: string;
+  matchScore: number;
+  isContentMatch: boolean;
+  context: string;
+  contentPreview?: string;
+  isPublic?: boolean;
+  alternativeTitles?: string[];
+  _highlightResult?: unknown;
+}
+
+interface UserSearchResult {
+  id: string;
+  username: string;
+  displayName?: string;
+  photoURL: string | null;
+  type: 'user';
+  matchScore: number;
+  _highlightResult?: unknown;
+}
+
+interface SearchOptions {
+  context?: string;
+  maxResults?: number | null;
+  includeContent?: boolean;
+  titleOnly?: boolean;
+  filterByUserId?: string | null;
+  currentPageId?: string | null;
+}
+
+interface AlgoliaSearchOptions {
+  maxResults?: number;
+  includeUsers?: boolean;
+  filterByUserId?: string | null;
+  currentPageId?: string | null;
+  context?: string;
+}
+
 // OPTIMIZATION: Enhanced caching system to reduce database reads
-const searchCache = new Map();
+const searchCache = new Map<string, SearchCacheEntry>();
 const SEARCH_CACHE_TTL = {
   EMPTY_SEARCH: 10 * 60 * 1000,    // 10 minutes for empty searches (user's own pages)
   TERM_SEARCH: 5 * 60 * 1000,      // 5 minutes for search terms
   USER_SEARCH: 15 * 60 * 1000,     // 15 minutes for user-specific searches
 };
 
-function getCacheKey(searchTerm, userId, context, maxResults, filterByUserId) {
+function getCacheKey(
+  searchTerm: string | null,
+  userId: string | null,
+  context: string,
+  maxResults: number | null,
+  filterByUserId: string | null
+): string {
   return `search:${searchTerm || 'empty'}:${userId || 'anon'}:${context}:${maxResults}:${filterByUserId || 'none'}`;
 }
 
-function getCachedResult(cacheKey) {
+function getCachedResult(cacheKey: string): SearchResult | null {
   const cached = searchCache.get(cacheKey);
   if (!cached) return null;
 
@@ -37,11 +116,11 @@ function getCachedResult(cacheKey) {
   return cached.data;
 }
 
-function setCachedResult(cacheKey, data, ttl) {
+function setCachedResult(cacheKey: string, data: SearchResult, ttl: number): void {
   // Limit cache size to prevent memory issues
   if (searchCache.size > 1000) {
     const oldestKey = searchCache.keys().next().value;
-    searchCache.delete(oldestKey);
+    if (oldestKey) searchCache.delete(oldestKey);
   }
 
   searchCache.set(cacheKey, {
@@ -52,68 +131,34 @@ function setCachedResult(cacheKey, data, ttl) {
 }
 
 /**
- * UNIFIED SEARCH API - Single Source of Truth
- *
- * This API replaces all 7 previous search implementations with a single,
- * comprehensive, and efficient search system that ensures complete record retrieval
- * without artificial limits while maintaining optimal performance.
- *
- * Key Features:
- * - No artificial result limits (finds ALL relevant records)
- * - Smart pagination for performance
- * - Unified interface for all search use cases
- * - Efficient database queries with proper indexing
- * - Comprehensive caching strategy
- * - Support for multiple search contexts (main search, link editor, add to page)
- *
- * === SEARCH ALGORITHM OVERVIEW ===
- *
- * The search uses a two-phase approach:
- *
- * 1. FAST PHASE: Firestore Range Queries (PREFIX matching only)
- *    - Uses Firestore's where() clause with >= and <= operators
- *    - Example: where('title', '>=', 'masses') only finds titles STARTING with "masses"
- *    - LIMITATION: Cannot find "masses" in "Who are the American masses?"
- *    - Purpose: Quick results for prefix matches with minimal database reads
- *
- * 2. COMPREHENSIVE PHASE: Client-Side Filtering (SUBSTRING matching)
- *    - Fetches up to 2000 pages and filters client-side using .includes()
- *    - Example: "masses".includes("masses") finds "Who are the American masses?"
- *    - Purpose: Catch all substring matches that Firestore queries miss
- *    - This phase is CRITICAL for user expectations ("masses" SHOULD find the page)
- *
- * === SEARCH MATCHING LOGIC ===
- *
- * The algorithm prioritizes matches in this order:
- * 1. Exact match (100 pts) - "american masses" === "American Masses"
- * 2. Starts with (95 pts) - "american" matches "American Masses"
- * 3. Contains substring (80 pts) - "masses" matches "Who are the American masses?" ✅ KEY FIX
- * 4. All words found (70 pts) - "who masses" matches "Who are the American masses?"
- * 5. Partial matches (50 pts) - "mass" matches "masses"
- *
- * === WHY TWO PHASES? ===
- *
- * Firestore limitations:
- * - No native full-text search
- * - Range queries (>=, <=) only support prefix matching
- * - No LIKE or CONTAINS operators
- *
- * Solution:
- * - Phase 1 gives fast results for common prefix searches
- * - Phase 2 ensures we don't miss substring matches
- * - Together they provide a complete, intuitive search experience
+ * Clear the search cache - called when pages are created/updated/deleted
+ * to ensure fresh search results
  */
+function clearSearchCache(): number {
+  const size = searchCache.size;
+  searchCache.clear();
+  console.log(`🧹 [SEARCH CACHE] Cleared ${size} cached search results`);
+  return size;
+}
 
 // Search context types
 const SEARCH_CONTEXTS = {
-  MAIN: 'main',           // Main search page
-  LINK_EDITOR: 'link_editor',  // Link editor search
-  ADD_TO_PAGE: 'add_to_page',  // Add to page flow
-  AUTOCOMPLETE: 'autocomplete' // Autocomplete suggestions
-};
+  MAIN: 'main',
+  LINK_EDITOR: 'link_editor',
+  ADD_TO_PAGE: 'add_to_page',
+  AUTOCOMPLETE: 'autocomplete'
+} as const;
+
+type SearchContext = typeof SEARCH_CONTEXTS[keyof typeof SEARCH_CONTEXTS];
 
 // Default configuration per context
-const CONTEXT_DEFAULTS = {
+const CONTEXT_DEFAULTS: Record<SearchContext, {
+  maxResults: number;
+  includeContent: boolean;
+  includeUsers: boolean;
+  includeGroups: boolean;
+  titleOnly: boolean;
+}> = {
   [SEARCH_CONTEXTS.MAIN]: {
     maxResults: 200,
     includeContent: true,
@@ -145,18 +190,13 @@ const CONTEXT_DEFAULTS = {
 };
 
 /**
- * SIMPLIFIED and IMPROVED search scoring
- *
- * Prioritizes intuitive matching:
- * 1. Exact matches (100 points)
- * 2. Starts with search term (95 points)
- * 3. Contains search term as substring (80 points) - CRITICAL for "masses" in "Who are the American masses?"
- * 4. All words found (70 points)
- * 5. Partial word matches (50 points)
- *
- * This ensures users get expected results when searching for words anywhere in titles.
+ * Calculate search score for ranking results
  */
-function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch = false) {
+function calculateSearchScore(
+  text: string | null | undefined,
+  searchTerm: string,
+  isTitle: boolean = false,
+): number {
   if (!text || !searchTerm) return 0;
 
   const normalizedText = text.toLowerCase();
@@ -172,8 +212,7 @@ function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch 
     return isTitle ? 95 : 75;
   }
 
-  // IMPROVED: Contains search term as substring (high score)
-  // This is CRITICAL for finding "masses" in "Who are the American masses?"
+  // Contains search term as substring (high score)
   if (normalizedText.includes(normalizedSearch)) {
     return isTitle ? 80 : 60;
   }
@@ -224,14 +263,17 @@ function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch 
     return isTitle ? 50 : 35;
   }
 
-  // No match found - return 0 to exclude irrelevant results
   return 0;
 }
 
 /**
- * OPTIMIZED: Comprehensive search function with performance improvements
+ * Comprehensive search function for pages
  */
-async function searchPagesComprehensive(userId, searchTerm, options = {}) {
+async function searchPagesComprehensive(
+  userId: string | null,
+  searchTerm: string,
+  options: SearchOptions = {}
+): Promise<PageSearchResult[]> {
   const searchStartTime = Date.now();
 
   try {
@@ -244,8 +286,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       currentPageId = null
     } = options;
 
-    // Get context defaults and merge with options
-    const contextDefaults = CONTEXT_DEFAULTS[context] || CONTEXT_DEFAULTS[SEARCH_CONTEXTS.MAIN];
+    const contextDefaults = CONTEXT_DEFAULTS[context as SearchContext] || CONTEXT_DEFAULTS[SEARCH_CONTEXTS.MAIN];
     const finalMaxResults = maxResults || contextDefaults.maxResults;
     const finalIncludeContent = includeContent !== undefined ? includeContent : contextDefaults.includeContent;
     const finalTitleOnly = titleOnly !== undefined ? titleOnly : contextDefaults.titleOnly;
@@ -255,24 +296,15 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
     const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
     const searchTermLower = searchTerm?.toLowerCase().trim() || '';
 
-    // OPTIMIZATION: Use parallel queries and result streaming
-    const allResults = [];
-    const processedIds = new Set();
-    const usernameCache = new Map(); // Cache usernames to avoid duplicate fetches
+    const allResults: PageSearchResult[] = [];
+    const processedIds = new Set<string>();
+    const queryPromises: Promise<QuerySnapshot<DocumentData>>[] = [];
 
-    // OPTIMIZATION: Define field selection to reduce data transfer
-    const titleOnlyFields = ['title', 'userId', 'username', 'isPublic', 'lastModified', 'createdAt', 'deleted'];
-    const fullFields = titleOnlyFields.concat(['content']);
-    
-    // OPTIMIZATION: Create parallel query promises for better performance
-    const queryPromises = [];
-
-    // STEP 1: OPTIMIZED user pages search with better indexing
+    // Build queries based on search parameters
     if (userId) {
       const targetUserId = filterByUserId || userId;
 
       if (isEmptySearch) {
-        // DEV SIMPLE: For empty search, just get all user pages (no index needed)
         const recentPagesQuery = query(
           collection(db, getCollectionName('pages')),
           where('userId', '==', targetUserId),
@@ -280,7 +312,6 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         );
         queryPromises.push(getDocs(recentPagesQuery));
       } else {
-        // DEV SIMPLE: Use title-only search (no composite index needed)
         const titlePrefixQuery = query(
           collection(db, getCollectionName('pages')),
           where('title', '>=', searchTerm),
@@ -289,26 +320,18 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         );
         queryPromises.push(getDocs(titlePrefixQuery));
 
-        // COMPREHENSIVE CASE VARIATIONS: Handle all common case patterns
-        const searchTermCapitalized = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
-        const searchTermUpper = searchTerm.toUpperCase();
-        const searchTermTitle = searchTerm.split(' ').map(word =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-        ).join(' ');
-
-        // Create all possible case variations to search
+        // Case variations
         const caseVariations = new Set([
-          searchTerm,
           searchTermLower,
-          searchTermCapitalized,
-          searchTermUpper,
-          searchTermTitle
+          searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase(),
+          searchTerm.toUpperCase(),
+          searchTerm.split(' ').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ')
         ]);
 
-        // Remove the original search term since we already queried it
         caseVariations.delete(searchTerm);
 
-        // Search for each case variation
         for (const variation of caseVariations) {
           const caseVariationQuery = query(
             collection(db, getCollectionName('pages')),
@@ -320,92 +343,24 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         }
       }
     }
-        
-    // STEP 2: SIMPLIFIED all pages search (if not filtering by specific user)
-    // Since all pages are now public, no need to filter by isPublic
-    if (!filterByUserId && !isEmptySearch) {
-      if (searchTerm && searchTerm.length >= 2) {
-        // SIMPLIFIED: Use simple title search for all pages (no isPublic filter needed)
-        const allPagesTitleQuery = query(
-          collection(db, getCollectionName('pages')),
-          where('title', '>=', searchTerm),
-          where('title', '<=', searchTerm + '\uf8ff'),
-          limit(Math.min(finalMaxResults, 100))
-        );
-        queryPromises.push(getDocs(allPagesTitleQuery));
 
-        // COMPREHENSIVE CASE VARIATIONS: Handle all common case patterns for all pages
-        const searchTermCapitalized = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
-        const searchTermUpper = searchTerm.toUpperCase();
-        const searchTermTitle = searchTerm.split(' ').map(word =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-        ).join(' ');
-
-        // Create all possible case variations to search
-        const allPagesCaseVariations = new Set([
-          searchTerm,
-          searchTermLower,
-          searchTermCapitalized,
-          searchTermUpper,
-          searchTermTitle
-        ]);
-
-        // Remove the original search term since we already queried it
-        allPagesCaseVariations.delete(searchTerm);
-
-        // Search for each case variation
-        for (const variation of allPagesCaseVariations) {
-          const allPagesCaseVariationQuery = query(
-            collection(db, getCollectionName('pages')),
-            where('title', '>=', variation),
-            where('title', '<=', variation + '\uf8ff'),
-            limit(Math.min(finalMaxResults, 30))
-          );
-          queryPromises.push(getDocs(allPagesCaseVariationQuery));
-        }
-
-        // ENHANCED: Search for individual words to support out-of-order matching
-        // Include shorter words (2+ chars) to catch more matches like "to", "in", etc.
-        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(word => word.length >= 2);
-        if (searchWords.length > 1) {
-          console.log(`🔍 [SEARCH DEBUG] Adding individual word searches for: ${searchWords.join(', ')}`);
-
-          for (const word of searchWords) {
-            // Skip very common words that would return too many results
-            if (['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'].includes(word)) {
-              continue;
-            }
-
-            // Search for each word individually with case variations
-            const wordVariations = new Set([
-              word,
-              word.charAt(0).toUpperCase() + word.slice(1),
-              word.toUpperCase()
-            ]);
-
-            for (const wordVariation of wordVariations) {
-              const wordQuery = query(
-                collection(db, getCollectionName('pages')),
-                where('title', '>=', wordVariation),
-                where('title', '<=', wordVariation + '\uf8ff'),
-                limit(Math.min(finalMaxResults, 20))
-              );
-              queryPromises.push(getDocs(wordQuery));
-            }
-          }
-        }
-      }
+    // All pages search (if not filtering by specific user)
+    if (!filterByUserId && !isEmptySearch && searchTerm && searchTerm.length >= 2) {
+      const allPagesTitleQuery = query(
+        collection(db, getCollectionName('pages')),
+        where('title', '>=', searchTerm),
+        where('title', '<=', searchTerm + '\uf8ff'),
+        limit(Math.min(finalMaxResults, 100))
+      );
+      queryPromises.push(getDocs(allPagesTitleQuery));
     }
 
-    // OPTIMIZATION: Execute all queries in parallel with better error handling
-    console.log(`⚡ [SEARCH DEBUG] Executing ${queryPromises.length} parallel queries for searchTerm: "${searchTerm}", userId: ${userId}`);
+    // Execute all queries in parallel
+    console.log(`⚡ [SEARCH DEBUG] Executing ${queryPromises.length} parallel queries`);
 
     try {
       const queryResults = await Promise.allSettled(queryPromises);
 
-      console.log(`⚡ [SEARCH DEBUG] Query results: ${queryResults.length} queries completed`);
-
-      // OPTIMIZATION: Process results efficiently with error handling
       for (const result of queryResults) {
         if (result.status === 'rejected') {
           console.warn('⚡ [SEARCH DEBUG] Query failed:', result.reason);
@@ -413,15 +368,12 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         }
 
         const snapshot = result.value;
-        snapshot.forEach(doc => {
-          if (processedIds.has(doc.id) || doc.id === currentPageId) return;
+        snapshot.forEach(docSnap => {
+          if (processedIds.has(docSnap.id) || docSnap.id === currentPageId) return;
 
-          const data = doc.data();
+          const data = docSnap.data();
 
-          // OPTIMIZATION: Early filtering to reduce processing
           if (!data.title && !data.content) return;
-
-          // CRITICAL: Filter out deleted pages from search results
           if (data.deleted === true) return;
 
           const pageTitle = data.title || 'Untitled';
@@ -432,15 +384,13 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
 
           if (isEmptySearch) {
             isMatch = true;
-            matchScore = 50; // Base score for empty search
+            matchScore = 50;
           } else {
-            // OPTIMIZATION: Fast title matching first
-            const titleScore = calculateSearchScore(pageTitle, searchTerm, true, false);
+            const titleScore = calculateSearchScore(pageTitle, searchTerm, true);
 
-            // Content matching only if title doesn't match well and content search is enabled
             let contentScore = 0;
             if (!finalTitleOnly && finalIncludeContent && titleScore < 80 && data.content) {
-              contentScore = calculateSearchScore(data.content, searchTerm, false, true);
+              contentScore = calculateSearchScore(data.content, searchTerm, false);
               isContentMatch = contentScore > titleScore;
             }
 
@@ -449,11 +399,10 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           }
 
           if (isMatch && allResults.length < finalMaxResults) {
-            processedIds.add(doc.id);
+            processedIds.add(docSnap.id);
 
-            // OPTIMIZATION: Only include necessary fields for better serialization
-            const resultItem = {
-              id: doc.id,
+            const resultItem: PageSearchResult = {
+              id: docSnap.id,
               title: pageTitle,
               type: 'page',
               isOwned: data.userId === userId,
@@ -464,10 +413,9 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
               createdAt: data.createdAt,
               matchScore,
               isContentMatch,
-              context
+              context: context as string
             };
 
-            // OPTIMIZATION: Add content preview only if needed
             if (finalIncludeContent && isContentMatch && data.content) {
               resultItem.contentPreview = data.content.substring(0, 200) + '...';
             }
@@ -478,63 +426,46 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       }
     } catch (error) {
       console.error('Error in parallel query execution:', error);
-      // Continue with empty results rather than failing completely
     }
 
-    // ENHANCED FALLBACK: Always perform broader client-side search for better word matching
-    // This ensures we find pages where search terms appear anywhere in the title, not just at the start
-    // CRITICAL FIX: Firestore range queries only support PREFIX matching (e.g., title >= "masses")
-    // which won't find "Who are the American masses?" because it doesn't start with "masses"
-    // Solution: Always perform a comprehensive client-side search to catch substring matches
+    // Comprehensive client-side search for substring matches
     if (!isEmptySearch) {
-      console.log(`⚡ [SEARCH DEBUG] Performing comprehensive client-side search to catch missed matches`);
+      console.log(`⚡ [SEARCH DEBUG] Performing comprehensive client-side search`);
 
       try {
-        // IMPROVED: Get pages for client-side filtering, ordered by lastModified for relevance
-        // This ensures we catch pages like "WeWrite Merch" that may not start with the search term
-        // Using orderBy ensures consistent results across queries
         const broadQuery = query(
           collection(db, getCollectionName('pages')),
           orderBy('lastModified', 'desc'),
-          limit(1500) // Reduced from 2000 for better performance while still catching most matches
+          limit(1500)
         );
 
         const broadSnapshot = await getDocs(broadQuery);
         let broadSearchMatches = 0;
 
-        broadSnapshot.forEach(doc => {
-          if (processedIds.has(doc.id) || doc.id === currentPageId) return;
-          if (allResults.length >= finalMaxResults * 2) return; // Allow more results for better matching
+        broadSnapshot.forEach(docSnap => {
+          if (processedIds.has(docSnap.id) || docSnap.id === currentPageId) return;
+          if (allResults.length >= finalMaxResults * 2) return;
 
-          const data = doc.data();
-
-          // CRITICAL: Filter out deleted pages from search results
+          const data = docSnap.data();
           if (data.deleted === true) return;
 
           const pageTitle = data.title || '';
-
-          // SIMPLIFIED: Use simple substring matching for reliability
-          // This is more intuitive and matches user expectations
           const titleLower = pageTitle.toLowerCase();
-          const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 1);
+          const searchWords = searchTermLower.split(/\s+/).filter((word: string) => word.length > 1);
 
           let hasMatch = false;
 
-          // Check if title contains the full search term (highest priority)
           if (titleLower.includes(searchTermLower)) {
             hasMatch = true;
           }
 
-          // Check if title contains all individual search words (out-of-order matching)
           if (!hasMatch && searchWords.length > 1) {
-            const allWordsFound = searchWords.every(word => titleLower.includes(word));
+            const allWordsFound = searchWords.every((word: string) => titleLower.includes(word));
             if (allWordsFound) {
               hasMatch = true;
             }
           }
 
-          // Check if title contains any individual search word (for single word searches)
-          // IMPORTANT: This catches cases like "masses" in "Who are the American masses?"
           if (!hasMatch && searchWords.length === 1) {
             if (titleLower.includes(searchWords[0])) {
               hasMatch = true;
@@ -542,14 +473,14 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           }
 
           if (hasMatch) {
-            const matchScore = calculateSearchScore(pageTitle, searchTerm, true, false);
+            const matchScore = calculateSearchScore(pageTitle, searchTerm, true);
 
             if (matchScore > 0) {
-              processedIds.add(doc.id);
+              processedIds.add(docSnap.id);
               broadSearchMatches++;
 
               allResults.push({
-                id: doc.id,
+                id: docSnap.id,
                 title: pageTitle || 'Untitled',
                 type: 'page',
                 isOwned: data.userId === userId,
@@ -560,90 +491,29 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
                 createdAt: data.createdAt,
                 matchScore,
                 isContentMatch: false,
-                context
+                context: context as string
               });
             }
           }
         });
 
-        console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches (total now: ${allResults.length})`);
-
-        // ADDITIONAL FALLBACK: If we haven't found many matches, also search by createdAt
-        // This catches older pages that might not have been recently modified
-        if (broadSearchMatches < 5 && allResults.length < finalMaxResults) {
-          console.log(`⚡ [SEARCH DEBUG] Running fallback search by createdAt for older pages`);
-
-          const fallbackQuery = query(
-            collection(db, getCollectionName('pages')),
-            orderBy('createdAt', 'desc'),
-            limit(500)
-          );
-
-          const fallbackSnapshot = await getDocs(fallbackQuery);
-          let fallbackMatches = 0;
-
-          fallbackSnapshot.forEach(doc => {
-            if (processedIds.has(doc.id) || doc.id === currentPageId) return;
-            if (allResults.length >= finalMaxResults * 2) return;
-
-            const data = doc.data();
-            if (data.deleted === true) return;
-
-            const pageTitle = data.title || '';
-            const titleLower = pageTitle.toLowerCase();
-
-            // Check for substring match
-            if (titleLower.includes(searchTermLower)) {
-              const matchScore = calculateSearchScore(pageTitle, searchTerm, true, false);
-              if (matchScore > 0) {
-                processedIds.add(doc.id);
-                fallbackMatches++;
-
-                allResults.push({
-                  id: doc.id,
-                  title: pageTitle || 'Untitled',
-                  type: 'page',
-                  isOwned: data.userId === userId,
-                  isEditable: data.userId === userId,
-                  userId: data.userId,
-                  username: data.username || null,
-                  lastModified: data.lastModified,
-                  createdAt: data.createdAt,
-                  matchScore,
-                  isContentMatch: false,
-                  context
-                });
-              }
-            }
-          });
-
-          console.log(`⚡ [SEARCH DEBUG] Fallback search added ${fallbackMatches} more matches`);
-        }
+        console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches`);
       } catch (error) {
         console.warn('Error in comprehensive client-side search:', error);
       }
     }
 
-    // OPTIMIZATION: Sort results by relevance score with improved prioritization
+    // Sort results by relevance
     allResults.sort((a, b) => {
-      // Prioritize owned pages
       if (a.isOwned && !b.isOwned) return -1;
       if (!a.isOwned && b.isOwned) return 1;
-
-      // Then by match score
       if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-
-      // Prefer shorter titles (more relevant matches)
-      // e.g., "WeWrite Merch" (13 chars) beats "WeWrite Merchandise Store Online" (33 chars)
       const aLen = (a.title || '').length;
       const bLen = (b.title || '').length;
       if (Math.abs(aLen - bLen) > 10) return aLen - bLen;
-
-      // Finally by recency
-      return new Date(b.lastModified) - new Date(a.lastModified);
+      return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
     });
 
-    // OPTIMIZATION: Limit results and add performance metrics
     const finalResults = allResults.slice(0, finalMaxResults);
     const searchTime = Date.now() - searchStartTime;
 
@@ -657,48 +527,40 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
 }
 
 /**
- * OPTIMIZED: Search users with better performance
+ * Search users with comprehensive matching
  */
-async function searchUsersComprehensive(searchTerm, maxResults = 20) {
+async function searchUsersComprehensive(searchTerm: string, maxResults: number = 20): Promise<UserSearchResult[]> {
   if (!searchTerm || searchTerm.trim().length < 2) {
     return [];
   }
 
-  const searchStartTime = Date.now();
-
   try {
     const searchLower = searchTerm.toLowerCase().trim();
-    const results = new Map();
+    const results = new Map<string, UserSearchResult>();
 
-    // ALWAYS do a comprehensive search since we don't have many users
-    // This is more reliable than trying to use the usernameLower field which may not be populated
     try {
       const broadQuery = query(
         collection(db, getCollectionName('users')),
-        limit(500) // Increased limit to ensure we find all matching users
+        limit(500)
       );
       const broadResults = await getDocs(broadQuery);
 
-      broadResults.forEach(doc => {
-        const userData = doc.data();
+      broadResults.forEach(docSnap => {
+        const userData = docSnap.data();
         const username = userData.username || '';
         const usernameLower = (userData.usernameLower || username).toLowerCase();
 
-        // SECURITY: Only include users with valid usernames, never search by email
         if (!username || username.includes('@') || username === 'Anonymous' || username.toLowerCase().includes('missing')) {
-          return; // Skip users without proper usernames
+          return;
         }
 
-        // Search by username using case-insensitive substring matching
-        // This catches "Jumbo" in "JumboJubilee"
         const usernameMatch = usernameLower.includes(searchLower);
 
         if (usernameMatch) {
-          const matchScore = calculateSearchScore(username, searchTerm, true, false);
-          results.set(doc.id, {
-            id: doc.id,
+          const matchScore = calculateSearchScore(username, searchTerm, true);
+          results.set(docSnap.id, {
+            id: docSnap.id,
             username,
-            // SECURITY: Never include email in search results
             photoURL: userData.photoURL || null,
             type: 'user',
             matchScore
@@ -709,14 +571,11 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
       console.error('Error in comprehensive user search:', error);
     }
 
-    // Sort by match score and username
     const sortedResults = Array.from(results.values()).sort((a, b) => {
       if (a.matchScore !== b.matchScore) {
         return b.matchScore - a.matchScore;
       }
-      const aUsername = a.username || '';
-      const bUsername = b.username || '';
-      return aUsername.localeCompare(bUsername);
+      return (a.username || '').localeCompare(b.username || '');
     });
 
     return sortedResults.slice(0, maxResults);
@@ -728,10 +587,13 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
 }
 
 /**
- * ALGOLIA SEARCH: Fast, typo-tolerant search using Algolia
- * Falls back to Firestore if Algolia fails
+ * Search using Algolia
  */
-async function searchWithAlgolia(searchTerm, userId, options = {}) {
+async function searchWithAlgolia(
+  searchTerm: string,
+  userId: string | null,
+  options: AlgoliaSearchOptions = {}
+): Promise<{ pages: PageSearchResult[]; users: UserSearchResult[]; source: string; totalPages: number; totalUsers: number }> {
   const {
     maxResults = 100,
     includeUsers = true,
@@ -743,47 +605,59 @@ async function searchWithAlgolia(searchTerm, userId, options = {}) {
   console.log(`🚀 [ALGOLIA] Searching for "${searchTerm}" (maxResults: ${maxResults}, includeUsers: ${includeUsers})`);
 
   try {
-    // Build Algolia filters
     let filters = '';
     if (filterByUserId) {
       filters = `authorId:${filterByUserId}`;
     }
 
-    // Search pages and users in parallel using Algolia
     const [pagesResponse, usersResponse] = await Promise.all([
       searchPages(searchTerm, {
         hitsPerPage: Math.min(maxResults, 100),
         filters: filters || undefined
       }),
-      includeUsers ? algoliaSearchUsers(searchTerm, { hitsPerPage: 10 }) : Promise.resolve({ hits: [] })
+      includeUsers ? algoliaSearchUsers(searchTerm, { hitsPerPage: 10 }) : Promise.resolve({ hits: [], nbHits: 0 })
     ]);
 
-    // Transform Algolia results to match existing format
-    const pages = pagesResponse.hits
+    const pages: PageSearchResult[] = (pagesResponse.hits as Array<{
+      objectID: string;
+      title?: string;
+      authorId?: string;
+      authorUsername?: string;
+      lastModified?: string;
+      isPublic?: boolean;
+      alternativeTitles?: string[];
+      _highlightResult?: unknown;
+    }>)
       .filter(hit => hit.objectID !== currentPageId)
       .map(hit => ({
         id: hit.objectID,
         title: hit.title || 'Untitled',
-        type: 'page',
+        type: 'page' as const,
         isOwned: hit.authorId === userId,
         isEditable: hit.authorId === userId,
-        userId: hit.authorId,
+        userId: hit.authorId || '',
         username: hit.authorUsername || null,
-        lastModified: hit.lastModified,
+        lastModified: hit.lastModified || '',
         isPublic: hit.isPublic,
         alternativeTitles: hit.alternativeTitles,
-        matchScore: 100, // Algolia already ranks by relevance
+        matchScore: 100,
         isContentMatch: false,
         context,
         _highlightResult: hit._highlightResult
       }));
 
-    const users = (usersResponse.hits || []).map(hit => ({
+    const users: UserSearchResult[] = ((usersResponse.hits || []) as Array<{
+      objectID: string;
+      username?: string;
+      displayName?: string;
+      photoURL?: string;
+      _highlightResult?: unknown;
+    }>).map(hit => ({
       id: hit.objectID,
-      username: hit.username,
+      username: hit.username || '',
       displayName: hit.displayName,
-      photoURL: hit.photoURL,
-      type: 'user',
+      photoURL: hit.photoURL || null,
+      type: 'user' as const,
       matchScore: 100,
       _highlightResult: hit._highlightResult
     }));
@@ -794,49 +668,47 @@ async function searchWithAlgolia(searchTerm, userId, options = {}) {
       pages,
       users,
       source: 'algolia',
-      totalPages: pagesResponse.nbHits,
-      totalUsers: usersResponse.nbHits || 0
+      totalPages: pagesResponse.nbHits || 0,
+      totalUsers: (usersResponse as { nbHits?: number }).nbHits || 0
     };
   } catch (error) {
     console.error('🚀 [ALGOLIA] Search failed, falling back to Firestore:', error);
-    throw error; // Let caller handle fallback
+    throw error;
   }
 }
 
 /**
- * Main API route handler
+ * Main API route handler - GET
  */
-export async function GET(request) {
-  const startTime = Date.now(); // Move this BEFORE everything
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const startTime = Date.now();
   let searchTerm = '';
-  let userId = null;
+  let userId: string | null = null;
 
   try {
     const { searchParams } = new URL(request.url);
 
-    // Extract parameters
     searchTerm = searchParams.get('searchTerm') || searchParams.get('q') || '';
     userId = searchParams.get('userId') || null;
     const context = searchParams.get('context') || SEARCH_CONTEXTS.MAIN;
-    const maxResults = parseInt(searchParams.get('maxResults')) || null;
+    const maxResults = parseInt(searchParams.get('maxResults') || '') || null;
     const includeContent = searchParams.get('includeContent') !== 'false';
     const includeUsers = searchParams.get('includeUsers') !== 'false';
     const titleOnly = searchParams.get('titleOnly') === 'true';
     const filterByUserId = searchParams.get('filterByUserId') || null;
     const currentPageId = searchParams.get('currentPageId') || null;
 
-    // OPTIMIZATION: Check cache first
+    // Check cache first
     const cacheKey = getCacheKey(searchTerm, userId, context, maxResults, filterByUserId);
     const cachedResult = getCachedResult(cacheKey);
 
     if (cachedResult) {
       console.log(`🚀 CACHE HIT: Search served from cache`);
 
-      // Record cache hit for monitoring
       recordProductionRead('/api/search-unified', 'search-cached', 0, {
         userId,
         cacheStatus: 'HIT',
-        responseTime: 0, // Cache hit, no response time
+        responseTime: 0,
         userAgent: request.headers.get('user-agent'),
         referer: request.headers.get('referer')
       });
@@ -844,7 +716,7 @@ export async function GET(request) {
       return NextResponse.json({
         ...cachedResult,
         cached: true,
-        cacheAge: Date.now() - cachedResult.timestamp
+        cacheAge: Date.now() - (cachedResult.timestamp || 0)
       });
     }
 
@@ -859,7 +731,7 @@ export async function GET(request) {
       useAlgolia: USE_ALGOLIA
     });
 
-    // Handle empty search for authenticated users
+    // Handle empty search
     if (!searchTerm || searchTerm.trim().length === 0) {
       if (userId) {
         try {
@@ -872,7 +744,7 @@ export async function GET(request) {
             currentPageId
           });
 
-          const emptySearchResult = {
+          const emptySearchResult: SearchResult = {
             pages: pages || [],
             users: [],
             source: 'unified_empty_search',
@@ -884,10 +756,8 @@ export async function GET(request) {
             }
           };
 
-          // OPTIMIZATION: Cache empty search results
           setCachedResult(cacheKey, emptySearchResult, SEARCH_CACHE_TTL.EMPTY_SEARCH);
 
-          // Record production read
           recordProductionRead('/api/search-unified', 'empty-search', pages?.length || 0, {
             userId,
             cacheStatus: 'MISS',
@@ -907,7 +777,6 @@ export async function GET(request) {
           }, { status: 200 });
         }
       } else {
-        // For unauthenticated users with empty search, return empty results
         return NextResponse.json({
           pages: [],
           users: [],
@@ -916,9 +785,9 @@ export async function GET(request) {
       }
     }
 
-    // Try Algolia first if enabled, fall back to Firestore on error
-    let pages = [];
-    let users = [];
+    // Try Algolia first if enabled
+    let pages: PageSearchResult[] = [];
+    let users: UserSearchResult[] = [];
     let searchSource = 'firestore';
 
     if (USE_ALGOLIA) {
@@ -935,12 +804,11 @@ export async function GET(request) {
         searchSource = 'algolia';
         console.log(`🚀 [ALGOLIA] Search successful: ${pages.length} pages, ${users.length} users`);
       } catch (algoliaError) {
-        console.warn(`🚀 [ALGOLIA] Failed, falling back to Firestore:`, algoliaError.message);
-        // Fall through to Firestore search
+        console.warn(`🚀 [ALGOLIA] Failed, falling back to Firestore:`, (algoliaError as Error).message);
       }
     }
 
-    // Firestore fallback if Algolia is disabled or failed
+    // Firestore fallback
     if (searchSource !== 'algolia') {
       const [firestorePages, firestoreUsers] = await Promise.all([
         searchPagesComprehensive(userId, searchTerm, {
@@ -958,18 +826,16 @@ export async function GET(request) {
       searchSource = 'firestore';
     }
 
-    // OPTIMIZED: Batch fetch missing usernames to avoid N+1 queries
-    // (Only needed for Firestore results - Algolia already has authorUsername)
+    // Batch fetch missing usernames
     console.log(`🔍 [USERNAME FETCH] Processing ${(pages || []).length} pages for username fetching`);
 
-    // Helper to check if username needs fetching
-    const needsUsernameFetch = (page) => !page.username ||
-                              page.username === 'Anonymous' ||
-                              page.username === 'NULL' ||
-                              page.username === 'Missing username' ||
-                              (page.username && page.username.length >= 20 && /^[a-zA-Z0-9]+$/.test(page.username));
+    const needsUsernameFetch = (page: PageSearchResult): boolean =>
+      !page.username ||
+      page.username === 'Anonymous' ||
+      page.username === 'NULL' ||
+      page.username === 'Missing username' ||
+      (page.username && page.username.length >= 20 && /^[a-zA-Z0-9]+$/.test(page.username));
 
-    // Collect unique userIds that need fetching
     const userIdsToFetch = [...new Set(
       (pages || [])
         .filter(page => needsUsernameFetch(page) && page.userId)
@@ -978,11 +844,9 @@ export async function GET(request) {
 
     console.log(`🔍 [USERNAME FETCH] Need to fetch ${userIdsToFetch.length} unique usernames`);
 
-    // Batch fetch all needed user documents at once
-    const usernameMap = new Map();
+    const usernameMap = new Map<string, string>();
     if (userIdsToFetch.length > 0) {
       try {
-        // Firestore 'in' queries support up to 30 items, so batch if needed
         const batchSize = 30;
         for (let i = 0; i < userIdsToFetch.length; i += batchSize) {
           const batch = userIdsToFetch.slice(i, i + batchSize);
@@ -1003,10 +867,9 @@ export async function GET(request) {
       }
     }
 
-    // Apply fetched usernames to pages
     const pagesWithUsernames = (pages || []).map(page => {
       if (needsUsernameFetch(page) && page.userId && usernameMap.has(page.userId)) {
-        page.username = usernameMap.get(page.userId);
+        page.username = usernameMap.get(page.userId) || null;
       }
       return page;
     });
@@ -1020,18 +883,17 @@ export async function GET(request) {
       context
     });
 
-    // OPTIMIZATION: Track search performance
     const totalResults = (pagesWithUsernames?.length || 0) + (users?.length || 0);
     searchPerformanceTracker.recordSearch(
       searchTerm,
       startTime,
       Date.now(),
       totalResults,
-      false, // Not from cache at API level
+      false,
       'unified_search_api'
     );
 
-    const searchResult = {
+    const searchResult: SearchResult = {
       pages: pagesWithUsernames || [],
       users: users || [],
       source: searchSource === 'algolia' ? 'algolia' : 'unified_search',
@@ -1046,14 +908,12 @@ export async function GET(request) {
       }
     };
 
-    // OPTIMIZATION: Cache the result for future requests
     const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
     const cacheTTL = isEmptySearch ? SEARCH_CACHE_TTL.EMPTY_SEARCH :
                      userId ? SEARCH_CACHE_TTL.USER_SEARCH : SEARCH_CACHE_TTL.TERM_SEARCH;
 
     setCachedResult(cacheKey, searchResult, cacheTTL);
 
-    // Record production read for monitoring
     recordProductionRead('/api/search-unified', 'search-fresh',
       (pagesWithUsernames?.length || 0) + (users?.length || 0), {
         userId,
@@ -1070,7 +930,6 @@ export async function GET(request) {
   } catch (error) {
     console.error('❌ Error in unified search API:', error);
 
-    // OPTIMIZATION: Track search errors
     searchPerformanceTracker.recordSearch(
       searchTerm || '',
       startTime,
@@ -1078,7 +937,7 @@ export async function GET(request) {
       0,
       false,
       'unified_search_api',
-      error
+      error as Error
     );
 
     return NextResponse.json({
@@ -1086,6 +945,37 @@ export async function GET(request) {
       users: [],
       error: 'Search temporarily unavailable',
       source: 'unified_search_error'
+    }, { status: 500 });
+  }
+}
+
+/**
+ * POST handler to invalidate search cache
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    const body = await request.json() as { action?: string };
+
+    if (body.action === 'invalidate') {
+      const clearedCount = clearSearchCache();
+      console.log(`🧹 [SEARCH CACHE] Cache invalidated via API - cleared ${clearedCount} entries`);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Search cache invalidated',
+        clearedEntries: clearedCount
+      });
+    }
+
+    return NextResponse.json({
+      error: 'Invalid action. Use { action: "invalidate" }'
+    }, { status: 400 });
+
+  } catch (error) {
+    console.error('❌ Error in search cache invalidation:', error);
+    return NextResponse.json({
+      error: 'Failed to invalidate cache',
+      details: (error as Error).message
     }, { status: 500 });
   }
 }

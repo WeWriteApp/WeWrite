@@ -8,7 +8,7 @@
  */
 
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
-import { getCollectionName } from '../utils/environmentConfig';
+import { getCollectionNameAsync } from '../utils/environmentConfig';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../utils/stripeConfig';
 
@@ -64,8 +64,9 @@ export class AdminAnalyticsService {
     
     try {
       const db = getAdminFirestore();
-      const usersRef = db.collection(getCollectionName('users'));
-      
+      const usersCollectionName = await getCollectionNameAsync('users');
+      const usersRef = db.collection(usersCollectionName);
+
       // Fetch all users and filter in memory (simple and reliable)
       const snapshot = await usersRef.limit(1000).get();
       console.log(`✅ [Admin Analytics] Found ${snapshot.size} users`);
@@ -126,11 +127,12 @@ export class AdminAnalyticsService {
    */
   static async getNewPagesCreated(dateRange: DateRange): Promise<PagesDataPoint[]> {
     console.log('🔍 [Admin Analytics] Getting new pages created...');
-    
+
     try {
       const db = getAdminFirestore();
-      const pagesRef = db.collection(getCollectionName('pages'));
-      
+      const pagesCollectionName = await getCollectionNameAsync('pages');
+      const pagesRef = db.collection(pagesCollectionName);
+
       // Fetch all pages and filter in memory (simple and reliable)
       const snapshot = await pagesRef.limit(1000).get();
       console.log(`✅ [Admin Analytics] Found ${snapshot.size} pages`);
@@ -228,11 +230,12 @@ export class AdminAnalyticsService {
    */
   static async getAnalyticsEvents(dateRange: DateRange, eventType?: string): Promise<ChartDataPoint[]> {
     console.log('🔍 [Admin Analytics] Getting analytics events...', { eventType });
-    
+
     try {
       const db = getAdminFirestore();
-      const eventsRef = db.collection(getCollectionName('analytics_events'));
-      
+      const eventsCollectionName = await getCollectionNameAsync('analytics_events');
+      const eventsRef = db.collection(eventsCollectionName);
+
       // Fetch all events and filter in memory (simple and reliable)
       const snapshot = await eventsRef.limit(1000).get();
       console.log(`✅ [Admin Analytics] Found ${snapshot.size} analytics events`);
@@ -563,7 +566,8 @@ export class AdminAnalyticsService {
 
     try {
       const db = getAdminFirestore();
-      const pageViewsRef = db.collection(getCollectionName('pageViews'));
+      const pageViewsCollectionName = await getCollectionNameAsync('pageViews');
+      const pageViewsRef = db.collection(pageViewsCollectionName);
 
       // Get all page view documents within the date range
       const snapshot = await pageViewsRef.limit(5000).get();
