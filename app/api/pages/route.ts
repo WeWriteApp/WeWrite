@@ -745,6 +745,27 @@ export async function POST(request: NextRequest) {
         // Don't fail the page creation if notification processing fails
       }
 
+      // Sync to Algolia for search indexing
+      try {
+        console.log('🔍 Syncing new page to Algolia:', pageId);
+        const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
+        const algoliaResult = await syncPageToAlgoliaServer({
+          pageId,
+          title: pageData.title || '',
+          content: contentString || '',
+          authorId: currentUserId,
+          authorUsername: username || '',
+          isPublic: pageData.isPublic ?? true,
+          alternativeTitles: [],
+          lastModified: now,
+          createdAt: now,
+        });
+        console.log('✅ Algolia sync result:', algoliaResult);
+      } catch (algoliaError) {
+        console.error('⚠️ Error syncing to Algolia (non-fatal):', algoliaError);
+        // Don't fail the page creation if Algolia sync fails
+      }
+
     } catch (error: any) {
       console.error('❌ PAGE CREATION: Error creating new page or version:', error);
       console.error('❌ PAGE CREATION: Error details:', {
@@ -1409,6 +1430,16 @@ export async function DELETE(request: NextRequest) {
 
       await pageRef.delete();
 
+      // Remove from Algolia search index
+      try {
+        console.log('🔍 Removing permanently deleted page from Algolia:', pageId);
+        const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
+        await removePageFromAlgoliaServer(pageId);
+        console.log('✅ Page removed from Algolia');
+      } catch (algoliaError) {
+        console.error('⚠️ Error removing from Algolia (non-fatal):', algoliaError);
+      }
+
       return createApiResponse({
         id: pageId,
         message: 'Page permanently deleted'
@@ -1496,6 +1527,16 @@ export async function DELETE(request: NextRequest) {
         console.log(`🗑️ Page ${pageId} deleted - graph cache will be refreshed on next request`);
       } catch (cacheError) {
         console.error('Error clearing cache for deleted page:', cacheError);
+      }
+
+      // Remove from Algolia search index (soft-deleted pages shouldn't appear in search)
+      try {
+        console.log('🔍 Removing soft-deleted page from Algolia:', pageId);
+        const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
+        await removePageFromAlgoliaServer(pageId);
+        console.log('✅ Page removed from Algolia');
+      } catch (algoliaError) {
+        console.error('⚠️ Error removing from Algolia (non-fatal):', algoliaError);
       }
 
       return createApiResponse({

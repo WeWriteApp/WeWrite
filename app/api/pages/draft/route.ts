@@ -133,6 +133,29 @@ export async function POST(request: NextRequest) {
       console.log('🔵 NEW PAGE: Created page with auto-generated ID:', pageId);
     }
 
+    // Sync to Algolia for search indexing (only if page has a title)
+    if (pageData.title) {
+      try {
+        console.log('🔍 Syncing new page to Algolia:', pageId);
+        const { syncPageToAlgoliaServer } = await import('../../../lib/algoliaSync');
+        const algoliaResult = await syncPageToAlgoliaServer({
+          pageId,
+          title: pageData.title,
+          content: JSON.stringify(pageData.content),
+          authorId: currentUserId,
+          authorUsername: username,
+          isPublic: true,
+          alternativeTitles: [],
+          lastModified: pageData.lastModified,
+          createdAt: pageData.createdAt,
+        });
+        console.log('✅ Algolia sync result:', algoliaResult);
+      } catch (algoliaError) {
+        console.error('⚠️ Error syncing to Algolia (non-fatal):', algoliaError);
+        // Don't fail the page creation if Algolia sync fails
+      }
+    }
+
     return createApiResponse({
       id: pageId,
       message: 'Page created successfully'
