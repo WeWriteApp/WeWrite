@@ -16,7 +16,10 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 const CRON_TO_TEMPLATE_MAP: Record<string, string> = {
   'username-reminder': 'choose-username',
   'email-verification-reminder': 'verification-reminder',
-  // Add other mappings as needed
+  // Cron jobs that process data but don't send user-facing emails
+  // Map to generic/system templates for preview purposes
+  'process-writer-earnings': 'generic-notification', // System job - no direct email to users
+  'automated-payouts': 'payout-processed', // Maps to the payout confirmation email
 };
 
 export async function GET(request: NextRequest) {

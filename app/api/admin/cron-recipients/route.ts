@@ -9,6 +9,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { isAdmin } from '../../../utils/isAdmin';
+import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
+
+// Threshold in cents for payout setup reminder ($25 minimum)
+const PAYOUT_THRESHOLD_CENTS = WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold * 100;
 
 export const maxDuration = 30;
 
@@ -83,9 +87,10 @@ export async function GET(request: NextRequest) {
       }
 
       case 'payout-setup-reminder': {
-        // Users with pending earnings but no Stripe connected
+        // Users with pending earnings ABOVE PAYOUT THRESHOLD ($25) but no Stripe connected
+        // Only users who can actually set up payouts should receive reminders
         const writerBalancesSnapshot = await db.collection(getCollectionName('writerUsdBalances'))
-          .where('pendingUsdCents', '>=', 100) // $1 minimum
+          .where('pendingUsdCents', '>=', PAYOUT_THRESHOLD_CENTS) // $25 minimum - must meet threshold
           .limit(50)
           .get();
 
@@ -152,7 +157,8 @@ export async function GET(request: NextRequest) {
       }
 
       case 'weekly-digest': {
-        // All verified users with engagement emails enabled
+        // All verified users with email, except those who explicitly opted out
+        // Default is opt-in - users without emailPreferences.weeklyDigest set ARE subscribed
         const usersSnapshot = await db.collection(getCollectionName('users'))
           .where('emailVerified', '==', true)
           .limit(50)
@@ -161,14 +167,15 @@ export async function GET(request: NextRequest) {
         for (const doc of usersSnapshot.docs) {
           const data = doc.data();
           if (!data.email) continue;
-          if (data.emailPreferences?.engagement === false) continue;
+          // Only skip users who EXPLICITLY opted out (set to false)
+          if (data.emailPreferences?.weeklyDigest === false) continue;
 
           recipients.push({
             userId: doc.id,
             email: data.email,
             username: data.username,
             type: 'verified-user',
-            reason: 'Subscribed to weekly digest'
+            reason: 'Subscribed to weekly digest (default opt-in)'
           });
         }
         break;

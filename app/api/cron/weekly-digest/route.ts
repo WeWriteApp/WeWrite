@@ -58,14 +58,17 @@ export async function GET(request: NextRequest) {
     }
     
     const db = admin.firestore();
-    
-    // Get users who opted in to weekly digest emails
+
+    // Get all verified users with email addresses
+    // Note: We can't use != query because Firestore only returns docs where the field EXISTS
+    // Users without emailPreferences.weeklyDigest set should receive digest (default opt-in)
+    // We filter out explicit opt-outs in the processing loop below
     const usersSnapshot = await db.collection(getCollectionName('users'))
-      .where('emailPreferences.weeklyDigest', '!=', false)
+      .where('emailVerified', '==', true)
       .limit(1000) // Process in batches if needed
       .get();
-    
-    console.log(`[WEEKLY DIGEST] Found ${usersSnapshot.size} users to process`);
+
+    console.log(`[WEEKLY DIGEST] Found ${usersSnapshot.size} verified users to process`);
 
     let sent = 0;
     let skipped = 0;
@@ -101,8 +104,15 @@ export async function GET(request: NextRequest) {
         const userData = userDoc.data();
         const userId = userDoc.id;
 
-        // Skip users without email or who opted out
+        // Skip users without email
         if (!userData.email) {
+          skipped++;
+          continue;
+        }
+
+        // Skip users who explicitly opted out of weekly digest
+        // Note: Default is opt-in (undefined or true means subscribed)
+        if (userData.emailPreferences?.weeklyDigest === false) {
           skipped++;
           continue;
         }
