@@ -7,6 +7,10 @@ import { useAuth } from '../providers/AuthProvider';
 const STORAGE_KEYS = {
   ADMIN_OVERRIDE: 'wewrite_admin_email_banner_override',
   MODAL_DISMISSED: 'wewrite_email_verification_dismissed', // Modal "do this later" was clicked
+  // Legacy banner keys that also need to be cleaned up on verification
+  EMAIL_BANNER_DISMISSED: 'wewrite_email_banner_dismissed',
+  EMAIL_BANNER_DISMISSED_TIMESTAMP: 'wewrite_email_banner_dismissed_timestamp',
+  EMAIL_DONT_REMIND: 'wewrite_email_dont_remind',
 };
 
 interface EmailVerificationStatus {
@@ -65,6 +69,29 @@ export function useEmailVerificationStatus(): EmailVerificationStatus {
     const adminOverride = localStorage.getItem(STORAGE_KEYS.ADMIN_OVERRIDE) === 'true';
     const modalDismissed = localStorage.getItem(STORAGE_KEYS.MODAL_DISMISSED) === 'true';
     const isActuallyVerified = user.emailVerified === true;
+
+    // If user is now verified but localStorage still has any email verification flags,
+    // clean them all up so they don't interfere in the future
+    if (isActuallyVerified && !adminOverride) {
+      const keysToRemove = [
+        STORAGE_KEYS.MODAL_DISMISSED,
+        STORAGE_KEYS.EMAIL_BANNER_DISMISSED,
+        STORAGE_KEYS.EMAIL_BANNER_DISMISSED_TIMESTAMP,
+        STORAGE_KEYS.EMAIL_DONT_REMIND,
+      ];
+
+      let cleaned = false;
+      keysToRemove.forEach(key => {
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+          cleaned = true;
+        }
+      });
+
+      if (cleaned) {
+        console.log('[EmailVerification] Email verified - cleared all verification-related localStorage flags');
+      }
+    }
 
     // Needs verification if:
     // 1. Real user with unverified email

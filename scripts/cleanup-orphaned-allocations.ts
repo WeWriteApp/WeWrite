@@ -98,16 +98,23 @@ async function cleanupOrphanedAllocations() {
   // Collect all page IDs (only from page-type allocations)
   const pageIds = new Set<string>();
   const pageAllocations: { id: string; ref: FirebaseFirestore.DocumentReference; data: any }[] = [];
+  const malformedAllocations: { id: string; ref: FirebaseFirestore.DocumentReference; data: any }[] = [];
   let userAllocationsCount = 0;
   let otherAllocationsCount = 0;
 
   allocationsSnapshot.docs.forEach(doc => {
     const data = doc.data();
+    // Collect allocations with malformed resourceId (like "user/xyz" format) for cleanup
+    if (data.resourceId?.includes('/')) {
+      console.log(`   ⚠️  Found malformed allocation ${doc.id}: resourceId="${data.resourceId}"`);
+      malformedAllocations.push({ id: doc.id, ref: doc.ref, data });
+      return;
+    }
     // Only process page-type allocations for orphan detection
     if (data.resourceType === 'page') {
       pageAllocations.push({ id: doc.id, ref: doc.ref, data });
       pageIds.add(data.resourceId);
-    } else if (data.resourceType === 'user' || data.resourceId?.startsWith('user/')) {
+    } else if (data.resourceType === 'user') {
       userAllocationsCount++;
     } else {
       otherAllocationsCount++;
@@ -117,6 +124,7 @@ async function cleanupOrphanedAllocations() {
   console.log(`📊 Breakdown:`);
   console.log(`   - Page allocations: ${pageAllocations.length}`);
   console.log(`   - User allocations: ${userAllocationsCount}`);
+  console.log(`   - Malformed allocations: ${malformedAllocations.length}`);
   console.log(`   - Other allocations: ${otherAllocationsCount}\n`);
 
   const allocations = pageAllocations;
@@ -154,7 +162,7 @@ async function cleanupOrphanedAllocations() {
     id: string;
     ref: FirebaseFirestore.DocumentReference;
     data: any;
-    reason: 'page_not_found' | 'page_deleted';
+    reason: 'page_not_found' | 'page_deleted' | 'malformed_resource_id';
   }
 
   const orphanedAllocations: OrphanedAllocation[] = [];
@@ -175,11 +183,20 @@ async function cleanupOrphanedAllocations() {
     }
   }
 
+  // Add malformed allocations to the orphaned list
+  for (const allocation of malformedAllocations) {
+    orphanedAllocations.push({
+      ...allocation,
+      reason: 'malformed_resource_id'
+    });
+  }
+
   console.log(`🔍 Analysis Complete:`);
   console.log(`   Total allocations checked: ${allocations.length}`);
   console.log(`   Orphaned allocations found: ${orphanedAllocations.length}`);
   console.log(`   - Page not found: ${orphanedAllocations.filter(a => a.reason === 'page_not_found').length}`);
   console.log(`   - Page deleted: ${orphanedAllocations.filter(a => a.reason === 'page_deleted').length}`);
+  console.log(`   - Malformed resourceId: ${orphanedAllocations.filter(a => a.reason === 'malformed_resource_id').length}`);
   console.log('');
 
   if (orphanedAllocations.length === 0) {

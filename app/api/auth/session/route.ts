@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
       };
 
       // Try to enrich from Firestore using firebase-admin (non-blocking)
+      // IMPORTANT: This is critical for emailVerified status to be updated after verification
       try {
         const admin = getFirebaseAdmin();
         if (admin) {
@@ -79,6 +80,11 @@ export async function GET(request: NextRequest) {
             }
             if (userData?.isAdmin === true || userData?.role === 'admin') {
               user.isAdmin = true;
+            }
+            // Always use Firestore's emailVerified as source of truth
+            // This ensures the banner hides after verification even if cookie is stale
+            if (userData?.emailVerified === true) {
+              user.emailVerified = true;
             }
           }
         }

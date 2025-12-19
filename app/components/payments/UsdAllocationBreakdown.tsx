@@ -10,8 +10,7 @@ import {
   ChevronUp,
   Plus,
   Minus,
-  FileText,
-  Building2
+  FileText
 } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
@@ -131,7 +130,6 @@ export function UsdAllocationBreakdown({
   
   // Calculate totals
   const totalAllocatedCents = allocations.reduce((sum, allocation) => sum + allocation.usdCents, 0);
-  const unallocatedCents = Math.max(0, totalUsdCents - totalAllocatedCents);
   
   // Determine which allocations to show
   const visibleAllocations = showAll ? sortedAllocations : sortedAllocations.slice(0, maxVisible);
@@ -363,41 +361,6 @@ export function UsdAllocationBreakdown({
           )}
         </Button>
       )}
-
-      {/* Unallocated funds */}
-      {unallocatedCents > 0 && (
-        <div className="border-t pt-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-3 sm:p-4 bg-muted/20 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0 text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-medium text-sm sm:text-base">Unallocated Funds</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Available for allocation
-                </p>
-              </div>
-            </div>
-            <div className="text-left sm:text-right">
-              <p className="font-semibold text-green-600 text-base sm:text-base">
-                {formatUsdCents(unallocatedCents)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {((unallocatedCents / totalUsdCents) * 100).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      </div>
-
-      {/* Summary */}
-      <div className="border-t pt-4 text-xs sm:text-sm text-muted-foreground">
-        <p className="leading-relaxed">
-          Funds are distributed to creators at the end of each month.
-          You can modify allocations anytime before the monthly processing date.
-        </p>
       </div>
     </div>
   );

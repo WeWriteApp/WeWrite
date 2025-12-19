@@ -17,9 +17,11 @@ interface OGImageType {
   params?: Record<string, string>;
   usedIn: string[];
   customParams: Record<string, string>;
+  section: 'branding' | 'content' | 'user' | 'static' | 'missing';
 }
 
 const OG_IMAGE_TYPES: OGImageType[] = [
+  // === BRANDING IMAGES ===
   {
     id: 'default',
     name: 'Default WeWrite',
@@ -27,6 +29,7 @@ const OG_IMAGE_TYPES: OGImageType[] = [
     route: '/opengraph-image',
     usedIn: ['Homepage', 'Fallback'],
     customParams: {},
+    section: 'branding',
   },
   {
     id: 'api-default',
@@ -35,7 +38,10 @@ const OG_IMAGE_TYPES: OGImageType[] = [
     route: '/api/og',
     usedIn: ['API fallback'],
     customParams: {},
+    section: 'branding',
   },
+
+  // === CONTENT PAGE VARIANTS ===
   {
     id: 'content-page-sample',
     name: 'Content Page (Sample)',
@@ -55,6 +61,7 @@ const OG_IMAGE_TYPES: OGImageType[] = [
       content: 'Exploring how artificial intelligence is transforming learning experiences for millions of students worldwide. From personalized tutoring with Khan Academy to adaptive curricula that adjust to individual learning styles, AI is reshaping education. Schools use machine learning to identify learning gaps and create customized study plans. Teachers leverage Gradescope and automated essay scoring to manage workloads. Startups like Duolingo use gamification and AI to make learning languages engaging. Institutions implement intelligent tutoring systems for personalized feedback. AI-powered platforms analyze student performance data in real-time.',
       sponsors: '12',
     },
+    section: 'content',
   },
   {
     id: 'content-with-sponsors',
@@ -68,6 +75,7 @@ const OG_IMAGE_TYPES: OGImageType[] = [
       content: "A comprehensive guide to building businesses that balance profit with purpose while maintaining competitive advantage. Learn actionable strategies via B Lab certification, ESG frameworks, and conscious capitalism principles. Discover how companies like Patagonia and Ben & Jerry's built billion-dollar brands on sustainability. Explore funding options through impact investors and ESG-focused venture capital firms. Implement circular economy practices, carbon offsetting, and ethical supply chain management. Learn about double bottom-line reporting, stakeholder capitalism, and stakeholder engagement models that drive long-term value creation.",
       sponsors: '47',
     },
+    section: 'content',
   },
   {
     id: 'content-no-sponsors',
@@ -81,6 +89,7 @@ const OG_IMAGE_TYPES: OGImageType[] = [
       content: 'Everything you need about creating and maintaining sourdough starter from scratch. Day one feeding schedules, weekly maintenance routines, and troubleshooting with expert baking resources. Understand the fermentation science behind wild yeast and bacteria cultures. Learn temperature control techniques, hydration ratios, and achieving the perfect crumb structure. Discover common starter problems like mold and separation, with proven solutions. Master the autolyse method, stretch-and-fold techniques, and optimal baking temperatures for crispy crust. Explore different flour types and their effects on fermentation and flavor development.',
       sponsors: '0',
     },
+    section: 'content',
   },
   {
     id: 'content-long-title',
@@ -94,6 +103,7 @@ const OG_IMAGE_TYPES: OGImageType[] = [
       content: 'An in-depth exploration of blockchain fundamentals using Bitcoin and Ethereum as primary case studies. Understand the cryptographic principles that secure decentralized networks. Explore smart contracts on Solana and Polygon, NFTs and tokenomics, and DeFi protocols reshaping finance. Discover real-world applications across supply chain management, healthcare data sharing, and voting systems. Learn about consensus mechanisms like Proof of Work and Proof of Stake, transaction throughput, and layer-two scaling solutions. Understand regulatory landscapes and enterprise blockchain implementations. Explore emerging use cases in digital identity.',
       sponsors: '23',
     },
+    section: 'content',
   },
   {
     id: 'api-png',
@@ -107,7 +117,23 @@ const OG_IMAGE_TYPES: OGImageType[] = [
       content: 'Learn photography fundamentals including exposure control, ISO sensitivity, and aperture priority modes. Master zone system and metering techniques for perfect exposure. Study composition rules like the rule of thirds, leading lines, and framing techniques. Understand color theory, white balance, and how light direction affects mood and dimension. Learn post-processing workflows with professional tools for stunning results. Explore different genres from portrait lighting to landscape and macro photography. Study masters like Henri Cartier-Bresson to develop artistic vision. Practice advanced techniques like bracketing, focus stacking, and creative use of depth of field.',
       sponsors: '8',
     },
+    section: 'content',
   },
+];
+
+// Routes that need OG image audit - these don't have dedicated opengraph-image files
+const ROUTES_NEEDING_AUDIT = [
+  { path: '/u/[username]', description: 'User profile pages', priority: 'high' },
+  { path: '/auth/login', description: 'Login page', priority: 'medium' },
+  { path: '/auth/register', description: 'Registration page', priority: 'medium' },
+  { path: '/home', description: 'Logged-in home feed', priority: 'medium' },
+  { path: '/trending', description: 'Trending pages', priority: 'medium' },
+  { path: '/search', description: 'Search page', priority: 'low' },
+  { path: '/leaderboard', description: 'Leaderboard page', priority: 'low' },
+  { path: '/invite', description: 'Invite page', priority: 'medium' },
+  { path: '/welcome', description: 'Welcome/onboarding flow', priority: 'medium' },
+  { path: '/terms', description: 'Terms of service', priority: 'low' },
+  { path: '/privacy', description: 'Privacy policy', priority: 'low' },
 ];
 
 export default function OpenGraphImagesPage() {
@@ -354,125 +380,32 @@ export default function OpenGraphImagesPage() {
           </div>
 
           {viewMode === 'grid' ? (
-            /* Grid View */
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {OG_IMAGE_TYPES.map((ogType) => (
-                <div key={ogType.id} className="wewrite-card p-4">
-                  {/* Preview Image */}
-                  <a
-                    href={buildPreviewUrl(ogType.route, ogType.customParams)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block relative rounded-lg overflow-hidden border border-border bg-muted/30 mb-3 cursor-pointer hover:border-primary transition-colors"
-                    style={{ aspectRatio: '1200/630' }}
-                  >
-                    {loadingImages[ogType.id] && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                        <Loader className="h-5 w-5 animate-spin text-primary" />
-                      </div>
-                    )}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      key={`${ogType.id}-${refreshKey}-${lookupPageData?.id || 'default'}`}
-                      src={buildPreviewUrl(ogType.route, ogType.customParams)}
-                      alt={`${ogType.name} preview`}
-                      className="w-full h-full object-cover"
-                      onLoadStart={() => handleImageLoadStart(ogType.id)}
-                      onLoad={() => handleImageLoad(ogType.id)}
-                      onError={() => handleImageLoad(ogType.id)}
-                    />
-                  </a>
-                  
-                  {/* Header */}
-                  <div className="mb-2">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold truncate">{ogType.name}</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{ogType.description}</p>
-                  </div>
-                  
-                  {/* Route */}
-                  <div className="bg-muted/50 rounded p-2 mb-2">
-                    <code className="text-[10px] text-muted-foreground break-all">{ogType.route}</code>
-                  </div>
-                  
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1">
-                    {ogType.usedIn.map((use) => (
-                      <Badge key={use} variant="secondary-static" size="sm">
-                        {use}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* List View */
-            <div className="space-y-6">
-              {OG_IMAGE_TYPES.map((ogType) => (
-                <div key={ogType.id} className="wewrite-card">
-                  <div className="flex flex-col gap-4">
-                    {/* Header */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-lg font-semibold">{ogType.name}</h3>
-                        <Badge variant="secondary-static" size="sm">
-                          {ogType.id}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{ogType.description}</p>
-                    </div>
-
-                    {/* Route info */}
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <code className="text-sm text-muted-foreground">{ogType.route}</code>
-                    </div>
-
-                    {/* Parameters if any */}
-                    {ogType.params && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">Parameters:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(ogType.params).map(([key, desc]) => (
-                            <Badge key={key} variant="outline-static" size="sm">
-                              {key}: {desc}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Used in */}
-                    <div>
-                      <p className="text-sm font-medium mb-2">Used in:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {ogType.usedIn.map((use) => (
-                          <Badge key={use} variant="secondary-static" size="sm">
-                            {use}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Preview */}
-                    <div className="mt-2">
-                      <p className="text-sm font-medium mb-2">Preview (1200×630):</p>
+            /* Grid View organized by sections */
+            <div className="space-y-8">
+              {/* Branding Section */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500" />
+                  Branding Images
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {OG_IMAGE_TYPES.filter(t => t.section === 'branding').map((ogType) => (
+                    <div key={ogType.id} className="wewrite-card p-4">
                       <a
                         href={buildPreviewUrl(ogType.route, ogType.customParams)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block relative rounded-lg overflow-hidden border border-border bg-muted/30 cursor-pointer hover:border-primary transition-colors"
+                        className="block relative rounded-lg overflow-hidden border border-border bg-muted/30 mb-3 cursor-pointer hover:border-primary transition-colors"
                         style={{ aspectRatio: '1200/630' }}
                       >
                         {loadingImages[ogType.id] && (
                           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                            <Loader className="h-6 w-6 animate-spin text-primary" />
+                            <Loader className="h-5 w-5 animate-spin text-primary" />
                           </div>
                         )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          key={`${ogType.id}-${refreshKey}-${lookupPageData?.id || 'default'}`}
+                          key={`${ogType.id}-${refreshKey}`}
                           src={buildPreviewUrl(ogType.route, ogType.customParams)}
                           alt={`${ogType.name} preview`}
                           className="w-full h-full object-cover"
@@ -481,10 +414,262 @@ export default function OpenGraphImagesPage() {
                           onError={() => handleImageLoad(ogType.id)}
                         />
                       </a>
+                      <div className="mb-2">
+                        <h3 className="text-sm font-semibold truncate">{ogType.name}</h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{ogType.description}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded p-2 mb-2">
+                        <code className="text-[10px] text-muted-foreground break-all">{ogType.route}</code>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {ogType.usedIn.map((use) => (
+                          <Badge key={use} variant="secondary-static" size="sm">{use}</Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Content Pages Section */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-green-500" />
+                  Content Page Variants
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {OG_IMAGE_TYPES.filter(t => t.section === 'content').map((ogType) => (
+                    <div key={ogType.id} className="wewrite-card p-4">
+                      <a
+                        href={buildPreviewUrl(ogType.route, ogType.customParams)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block relative rounded-lg overflow-hidden border border-border bg-muted/30 mb-3 cursor-pointer hover:border-primary transition-colors"
+                        style={{ aspectRatio: '1200/630' }}
+                      >
+                        {loadingImages[ogType.id] && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                            <Loader className="h-5 w-5 animate-spin text-primary" />
+                          </div>
+                        )}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          key={`${ogType.id}-${refreshKey}`}
+                          src={buildPreviewUrl(ogType.route, ogType.customParams)}
+                          alt={`${ogType.name} preview`}
+                          className="w-full h-full object-cover"
+                          onLoadStart={() => handleImageLoadStart(ogType.id)}
+                          onLoad={() => handleImageLoad(ogType.id)}
+                          onError={() => handleImageLoad(ogType.id)}
+                        />
+                      </a>
+                      <div className="mb-2">
+                        <h3 className="text-sm font-semibold truncate">{ogType.name}</h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{ogType.description}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded p-2 mb-2">
+                        <code className="text-[10px] text-muted-foreground break-all">{ogType.route}</code>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {ogType.usedIn.map((use) => (
+                          <Badge key={use} variant="secondary-static" size="sm">{use}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Routes Needing OG Images */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-orange-500" />
+                  Routes Needing OG Images
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  These routes currently fall back to the default WeWrite branding. Consider adding custom OG images.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {ROUTES_NEEDING_AUDIT.map((route) => (
+                    <div key={route.path} className="wewrite-card p-4 border-l-4 border-l-orange-500">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <code className="text-sm font-mono text-foreground">{route.path}</code>
+                          <p className="text-xs text-muted-foreground mt-1">{route.description}</p>
+                        </div>
+                        <Badge
+                          variant={route.priority === 'high' ? 'destructive-static' : route.priority === 'medium' ? 'secondary-static' : 'outline-static'}
+                          size="sm"
+                        >
+                          {route.priority}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* List View organized by sections */
+            <div className="space-y-8">
+              {/* Branding Section */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500" />
+                  Branding Images
+                </h2>
+                <div className="space-y-4">
+                  {OG_IMAGE_TYPES.filter(t => t.section === 'branding').map((ogType) => (
+                    <div key={ogType.id} className="wewrite-card">
+                      <div className="flex flex-col gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold">{ogType.name}</h3>
+                            <Badge variant="secondary-static" size="sm">{ogType.id}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{ogType.description}</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <code className="text-sm text-muted-foreground">{ogType.route}</code>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium mb-2">Used in:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {ogType.usedIn.map((use) => (
+                              <Badge key={use} variant="secondary-static" size="sm">{use}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-sm font-medium mb-2">Preview (1200×630):</p>
+                          <a
+                            href={buildPreviewUrl(ogType.route, ogType.customParams)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block relative rounded-lg overflow-hidden border border-border bg-muted/30 cursor-pointer hover:border-primary transition-colors"
+                            style={{ aspectRatio: '1200/630' }}
+                          >
+                            {loadingImages[ogType.id] && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                              </div>
+                            )}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              key={`${ogType.id}-${refreshKey}`}
+                              src={buildPreviewUrl(ogType.route, ogType.customParams)}
+                              alt={`${ogType.name} preview`}
+                              className="w-full h-full object-cover"
+                              onLoadStart={() => handleImageLoadStart(ogType.id)}
+                              onLoad={() => handleImageLoad(ogType.id)}
+                              onError={() => handleImageLoad(ogType.id)}
+                            />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content Pages Section */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-green-500" />
+                  Content Page Variants
+                </h2>
+                <div className="space-y-4">
+                  {OG_IMAGE_TYPES.filter(t => t.section === 'content').map((ogType) => (
+                    <div key={ogType.id} className="wewrite-card">
+                      <div className="flex flex-col gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold">{ogType.name}</h3>
+                            <Badge variant="secondary-static" size="sm">{ogType.id}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{ogType.description}</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <code className="text-sm text-muted-foreground">{ogType.route}</code>
+                        </div>
+                        {ogType.params && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">Parameters:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(ogType.params).map(([key, desc]) => (
+                                <Badge key={key} variant="outline-static" size="sm">{key}: {desc}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium mb-2">Used in:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {ogType.usedIn.map((use) => (
+                              <Badge key={use} variant="secondary-static" size="sm">{use}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-sm font-medium mb-2">Preview (1200×630):</p>
+                          <a
+                            href={buildPreviewUrl(ogType.route, ogType.customParams)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block relative rounded-lg overflow-hidden border border-border bg-muted/30 cursor-pointer hover:border-primary transition-colors"
+                            style={{ aspectRatio: '1200/630' }}
+                          >
+                            {loadingImages[ogType.id] && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                              </div>
+                            )}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              key={`${ogType.id}-${refreshKey}`}
+                              src={buildPreviewUrl(ogType.route, ogType.customParams)}
+                              alt={`${ogType.name} preview`}
+                              className="w-full h-full object-cover"
+                              onLoadStart={() => handleImageLoadStart(ogType.id)}
+                              onLoad={() => handleImageLoad(ogType.id)}
+                              onError={() => handleImageLoad(ogType.id)}
+                            />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Routes Needing OG Images */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-orange-500" />
+                  Routes Needing OG Images
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  These routes currently fall back to the default WeWrite branding. Consider adding custom OG images.
+                </p>
+                <div className="space-y-2">
+                  {ROUTES_NEEDING_AUDIT.map((route) => (
+                    <div key={route.path} className="wewrite-card p-4 border-l-4 border-l-orange-500">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <code className="text-sm font-mono text-foreground">{route.path}</code>
+                          <p className="text-xs text-muted-foreground mt-1">{route.description}</p>
+                        </div>
+                        <Badge
+                          variant={route.priority === 'high' ? 'destructive-static' : route.priority === 'medium' ? 'secondary-static' : 'outline-static'}
+                          size="sm"
+                        >
+                          {route.priority}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

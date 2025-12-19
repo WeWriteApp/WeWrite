@@ -57,34 +57,37 @@ export default function UsdAllocationDisplay({
   return (
     <Card className={className}>
       <CardContent className="space-y-4 p-4">
-        {/* Progress Bar with Percentage */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Allocated</span>
-            <span className="font-semibold">{Math.round(allocationPercentage)}%</span>
-          </div>
-          <Progress
-            value={progressValue}
-            className="h-3"
-            indicatorClassName={
-              status === 'overspent' ? 'bg-red-500' :
-              status === 'warning' ? 'bg-yellow-500' :
-              status === 'fully-allocated' ? 'bg-primary' :
-              status === 'no-subscription' ? 'bg-orange-500' :
-              'bg-primary'
-            }
-          />
-        </div>
+        {/* Progress Bar - no percentage label */}
+        <Progress
+          value={progressValue}
+          className="h-3"
+          indicatorClassName={
+            status === 'overspent' ? 'bg-red-500' :
+            status === 'warning' ? 'bg-yellow-500' :
+            status === 'fully-allocated' ? 'bg-primary' :
+            status === 'no-subscription' ? 'bg-orange-500' :
+            'bg-primary'
+          }
+        />
 
-        {/* Simple Key: Allocated and Remaining */}
-        <div className="flex justify-between text-sm">
-          <div>
-            <span className="text-muted-foreground">Allocated</span>
-            <div className="font-semibold">{formatUsdCents(allocatedUsdCents)}</div>
+        {/* Vertical Key List */}
+        <div className="space-y-2">
+          {/* Allocated - primary color */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-primary flex-shrink-0" />
+              <span className="text-sm">Allocated</span>
+            </div>
+            <span className="font-medium text-sm text-primary tabular-nums">{formatUsdCents(allocatedUsdCents)}</span>
           </div>
-          <div className="text-right">
-            <span className="text-muted-foreground">Remaining</span>
-            <div className="font-semibold">{formatUsdCents(Math.max(0, availableUsdCents))}</div>
+
+          {/* Available to spend - grey */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-muted flex-shrink-0" />
+              <span className="text-sm">Available to spend</span>
+            </div>
+            <span className="font-medium text-sm text-muted-foreground tabular-nums">{formatUsdCents(Math.max(0, availableUsdCents))}</span>
           </div>
         </div>
       </CardContent>
