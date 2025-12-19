@@ -46,7 +46,11 @@ import {
   User,
   UserCheck,
   UserX,
-  Eye
+  Eye,
+  CreditCard,
+  Banknote,
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { useToast } from '../../components/ui/use-toast';
@@ -84,6 +88,34 @@ interface GroupedTemplates {
   engagementInactive: EmailTemplate[];
   system: EmailTemplate[];
   notifications: EmailTemplate[];
+}
+
+// User type for the user details drawer
+interface UserFinancialInfo {
+  hasSubscription: boolean;
+  subscriptionAmount?: number | null;
+  subscriptionStatus?: string | null;
+  subscriptionCancelReason?: string | null;
+  availableEarningsUsd?: number;
+  payoutsSetup: boolean;
+  earningsTotalUsd?: number;
+  earningsThisMonthUsd?: number;
+}
+
+interface UserDetails {
+  uid: string;
+  email: string;
+  username?: string;
+  createdAt?: any;
+  lastLogin?: any;
+  totalPages?: number;
+  stripeConnectedAccountId?: string | null;
+  isAdmin?: boolean;
+  emailVerified?: boolean;
+  referredBy?: string;
+  referredByUsername?: string;
+  referralSource?: string;
+  financial?: UserFinancialInfo;
 }
 
 // Templates that target inactive users (for re-activation drip campaigns)
@@ -732,13 +764,32 @@ function getNextCronRun(schedule: string): Date {
 function formatTimeUntil(date: Date): string {
   const now = new Date();
   const diff = date.getTime() - now.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(hours / 24);
 
-  if (days > 0) {
-    return `in ${days}d ${hours % 24}h`;
+  // Format the actual date/time
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
+
+  // Show relative + absolute time
+  if (minutes < 60) {
+    return `in ${minutes}m · ${timeStr}`;
   }
-  return `in ${hours}h`;
+  if (hours < 24) {
+    return `in ${hours}h ${minutes % 60}m · ${timeStr}`;
+  }
+  if (days < 7) {
+    return `${dateStr} · ${timeStr}`;
+  }
+  return `${dateStr} · ${timeStr}`;
 }
 
 function AdminEmailsPageContent() {
@@ -789,6 +840,11 @@ function AdminEmailsPageContent() {
   const [emailPreviewUsername, setEmailPreviewUsername] = useState<string | null>(null);
   const [emailPreviewIsPersonalized, setEmailPreviewIsPersonalized] = useState(false);
   const [emailPreviewError, setEmailPreviewError] = useState<string | null>(null);
+
+  // User details drawer state
+  const [userDetailsOpen, setUserDetailsOpen] = useState(false);
+  const [userDetailsLoading, setUserDetailsLoading] = useState(false);
+  const [selectedUserDetails, setSelectedUserDetails] = useState<UserDetails | null>(null);
 
   // Check admin access
   useEffect(() => {
@@ -1002,6 +1058,90 @@ function AdminEmailsPageContent() {
     }
   };
 
+  // Open user details drawer
+  const openUserDetails = async (userId?: string, username?: string) => {
+    if (!userId && !username) return;
+
+    setUserDetailsOpen(true);
+    setUserDetailsLoading(true);
+    setSelectedUserDetails(null);
+
+    try {
+      // Fetch all users with financial data and find the matching one
+      const response = await adminFetch('/api/admin/users?includeFinancial=true&limit=300');
+      const data = await response.json();
+
+      if (data.users) {
+        // Find user by uid or username
+        const foundUser = data.users.find((u: UserDetails) =>
+          (userId && u.uid === userId) || (username && u.username === username)
+        );
+
+        if (foundUser) {
+          setSelectedUserDetails(foundUser);
+        } else {
+          toast({
+            title: 'User not found',
+            description: `Could not find user ${username || userId}`,
+            variant: 'destructive',
+          });
+          setUserDetailsOpen(false);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user details:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load user details',
+        variant: 'destructive',
+      });
+      setUserDetailsOpen(false);
+    } finally {
+      setUserDetailsLoading(false);
+    }
+  };
+
+  // Helper function to format date/time
+  const formatUserDateTime = (dateValue: any): string => {
+    if (!dateValue) return '—';
+    try {
+      const date = dateValue?.toDate?.() ||
+        (dateValue?._seconds ? new Date(dateValue._seconds * 1000) : new Date(dateValue));
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch {
+      return '—';
+    }
+  };
+
+  // Render subscription badge
+  const renderSubscription = (financial?: UserFinancialInfo) => {
+    if (!financial?.hasSubscription) {
+      return <Badge variant="outline-static">No subscription</Badge>;
+    }
+    const status = financial.subscriptionStatus || 'active';
+    if (status === 'active') {
+      return <Badge variant="success-secondary">Active</Badge>;
+    }
+    if (status === 'canceled') {
+      return <Badge variant="destructive-secondary">Canceled</Badge>;
+    }
+    return <Badge variant="outline-static">{status}</Badge>;
+  };
+
+  // Render payout badge
+  const renderPayout = (financial?: UserFinancialInfo, stripeId?: string | null) => {
+    if (financial?.payoutsSetup || stripeId) {
+      return <Badge variant="success-secondary">Connected</Badge>;
+    }
+    return <Badge variant="outline-static">Not connected</Badge>;
+  };
+
   // Filter templates by search
   const filteredTemplates = templates.filter(t => 
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1195,12 +1335,12 @@ function AdminEmailsPageContent() {
                       </td>
                       <td className="px-3 py-2">
                         {log.recipientUsername ? (
-                          <Link
-                            href={`/u/${log.recipientUsername}`}
-                            className="text-primary hover:underline"
+                          <button
+                            onClick={() => openUserDetails(log.recipientUserId, log.recipientUsername)}
+                            className="text-primary hover:underline cursor-pointer"
                           >
                             @{log.recipientUsername}
-                          </Link>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -1606,12 +1746,12 @@ function AdminEmailsPageContent() {
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                       {log.recipientUsername ? (
-                                        <Link
-                                          href={`/u/${log.recipientUsername}`}
-                                          className="font-medium text-sm text-primary hover:underline truncate"
+                                        <button
+                                          onClick={() => openUserDetails(log.recipientUserId, log.recipientUsername)}
+                                          className="font-medium text-sm text-primary hover:underline truncate cursor-pointer"
                                         >
                                           @{log.recipientUsername}
-                                        </Link>
+                                        </button>
                                       ) : (
                                         <span className="font-medium text-sm truncate">
                                           {log.recipientEmail}
@@ -1898,6 +2038,155 @@ function AdminEmailsPageContent() {
                 <ExternalLink className="h-4 w-4 mr-2" />
                 View Full Details
               </Button>
+            </div>
+          </SideDrawerFooter>
+        </SideDrawerContent>
+      </SideDrawer>
+
+      {/* User Details Drawer */}
+      <SideDrawer open={userDetailsOpen} onOpenChange={(open) => !open && setUserDetailsOpen(false)}>
+        <SideDrawerContent side="right" size="xl">
+          <SideDrawerHeader>
+            <SideDrawerTitle>User details</SideDrawerTitle>
+            <SideDrawerDescription>
+              View subscription, payout, and account metadata for {selectedUserDetails?.email || 'user'}.
+            </SideDrawerDescription>
+          </SideDrawerHeader>
+          <SideDrawerBody>
+            {userDetailsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : selectedUserDetails ? (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-3 grid-cols-2">
+                  <div>
+                    <div className="text-muted-foreground">Email</div>
+                    <div className="font-medium break-all">{selectedUserDetails.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Username</div>
+                    <div className="font-medium">{selectedUserDetails.username || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Admin</div>
+                    {selectedUserDetails.isAdmin ? (
+                      <Badge variant="success-secondary">Admin</Badge>
+                    ) : (
+                      <Badge variant="outline-static">Not admin</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Email verified</div>
+                    <div className="flex items-center gap-2">
+                      {selectedUserDetails.emailVerified ? (
+                        <Badge variant="success-secondary">Verified</Badge>
+                      ) : (
+                        <Badge variant="destructive-secondary">Unverified</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Created</div>
+                    <div className="font-medium">{formatUserDateTime(selectedUserDetails.createdAt)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Last login</div>
+                    <div className="font-medium">{formatUserDateTime(selectedUserDetails.lastLogin)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Total pages</div>
+                    <div className="font-medium">{selectedUserDetails.totalPages ?? '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Stripe account</div>
+                    <div className="font-medium break-all text-xs">{selectedUserDetails.stripeConnectedAccountId || '—'}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-blue-400" />
+                    <span className="font-medium">Subscription</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {renderSubscription(selectedUserDetails.financial)}
+                    {selectedUserDetails.financial?.subscriptionAmount ? (
+                      <span className="text-muted-foreground text-xs">
+                        ${selectedUserDetails.financial.subscriptionAmount.toFixed(2)} / mo
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Banknote className="h-4 w-4 text-emerald-400" />
+                    <span className="font-medium">Payouts</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {renderPayout(selectedUserDetails.financial, selectedUserDetails.stripeConnectedAccountId)}
+                    <span className="text-muted-foreground text-xs">
+                      Available: {selectedUserDetails.financial?.availableEarningsUsd !== undefined
+                        ? `$${selectedUserDetails.financial.availableEarningsUsd.toFixed(2)}`
+                        : '—'}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Total: {selectedUserDetails.financial?.earningsTotalUsd !== undefined
+                        ? `$${selectedUserDetails.financial.earningsTotalUsd.toFixed(2)}`
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedUserDetails.referredBy && (
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-4 w-4 text-purple-400" />
+                      <span className="font-medium">Referral</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Referred by: </span>
+                      {selectedUserDetails.referredByUsername ? (
+                        <button
+                          onClick={() => openUserDetails(selectedUserDetails.referredBy, selectedUserDetails.referredByUsername)}
+                          className="text-primary hover:underline"
+                        >
+                          @{selectedUserDetails.referredByUsername}
+                        </button>
+                      ) : (
+                        <span className="font-mono text-xs">{selectedUserDetails.referredBy}</span>
+                      )}
+                      {selectedUserDetails.referralSource && (
+                        <span className="text-muted-foreground ml-2">
+                          via {selectedUserDetails.referralSource}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No user selected</p>
+              </div>
+            )}
+          </SideDrawerBody>
+          <SideDrawerFooter>
+            <div className="flex items-center justify-between w-full gap-2">
+              <Button variant="outline" onClick={() => setUserDetailsOpen(false)}>
+                Close
+              </Button>
+              {selectedUserDetails?.username && (
+                <Button
+                  variant="secondary"
+                  onClick={() => window.open(`/u/${selectedUserDetails.username}`, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Public Profile
+                </Button>
+              )}
             </div>
           </SideDrawerFooter>
         </SideDrawerContent>

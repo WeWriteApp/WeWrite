@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '../ui/card';
-import { Progress } from '../ui/progress';
+import { PieChart, PieChartSegment } from '../ui/pie-chart';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdBalance } from '../../types/database';
 
@@ -26,70 +26,67 @@ export default function UsdAllocationDisplay({
   const hasNoSubscription = subscriptionAmount === 0;
 
   // Calculate available USD as total minus allocated (can be negative)
-  const availableUsdCents = totalUsdCents - allocatedUsdCents;
+  const availableUsdCents = Math.max(0, totalUsdCents - allocatedUsdCents);
 
   // Check for overspending (or no subscription at all)
-  const isOverspent = availableUsdCents < 0 || hasNoSubscription;
+  const isOverspent = (totalUsdCents - allocatedUsdCents) < 0 || hasNoSubscription;
 
   // Add warning state for high allocation (90% threshold for "Nearly Full", 100% for "Fully Allocated")
   const allocationPercentage = totalUsdCents > 0 ? (allocatedUsdCents / totalUsdCents) * 100 : 0;
   const isNearlyFull = allocationPercentage >= 90 && allocationPercentage < 100 && totalUsdCents > 0 && !hasNoSubscription;
-  const isFullyAllocated = allocationPercentage >= 100 && totalUsdCents > 0 && !hasNoSubscription;
 
-  // Progress bar value (capped at 100%)
-  const progressValue = Math.min(allocationPercentage, 100);
-
-  // Status determination for progress bar color
-  let status: 'healthy' | 'warning' | 'fully-allocated' | 'overspent' | 'no-subscription';
+  // Determine allocated color based on status
+  let allocatedColor = 'stroke-primary';
+  let allocatedBgColor = 'bg-primary';
+  let allocatedTextColor = 'text-primary';
 
   if (hasNoSubscription) {
-    status = 'no-subscription';
+    allocatedColor = 'stroke-orange-500';
+    allocatedBgColor = 'bg-orange-500';
+    allocatedTextColor = 'text-orange-500';
   } else if (isOverspent) {
-    status = 'overspent';
-  } else if (isFullyAllocated) {
-    status = 'fully-allocated';
+    allocatedColor = 'stroke-red-500';
+    allocatedBgColor = 'bg-red-500';
+    allocatedTextColor = 'text-red-500';
   } else if (isNearlyFull) {
-    status = 'warning';
-  } else {
-    status = 'healthy';
+    allocatedColor = 'stroke-yellow-500';
+    allocatedBgColor = 'bg-yellow-500';
+    allocatedTextColor = 'text-yellow-500';
   }
+
+  // Build segments for pie chart - allocated first, then available
+  const segments: PieChartSegment[] = [
+    {
+      id: 'allocated',
+      value: allocatedUsdCents,
+      label: 'Allocated',
+      color: allocatedColor,
+      bgColor: allocatedBgColor,
+      textColor: allocatedTextColor,
+    },
+    {
+      id: 'available',
+      value: availableUsdCents,
+      label: 'Available',
+      color: 'stroke-green-500',
+      bgColor: 'bg-green-500',
+      textColor: 'text-green-500',
+    },
+  ];
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 p-4">
-        {/* Progress Bar - no percentage label */}
-        <Progress
-          value={progressValue}
-          className="h-3"
-          indicatorClassName={
-            status === 'overspent' ? 'bg-red-500' :
-            status === 'warning' ? 'bg-yellow-500' :
-            status === 'fully-allocated' ? 'bg-primary' :
-            status === 'no-subscription' ? 'bg-orange-500' :
-            'bg-primary'
-          }
+      <CardContent className="p-4">
+        <PieChart
+          segments={segments}
+          size={120}
+          strokeWidth={16}
+          showPercentage={true}
+          centerLabel="allocated"
+          formatValue={(value) => formatUsdCents(value)}
+          showTotal={true}
+          totalLabel="Monthly budget"
         />
-
-        {/* Vertical Key List */}
-        <div className="space-y-2">
-          {/* Allocated - primary color */}
-          <div className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-primary flex-shrink-0" />
-              <span className="text-sm">Allocated</span>
-            </div>
-            <span className="font-medium text-sm text-primary tabular-nums">{formatUsdCents(allocatedUsdCents)}</span>
-          </div>
-
-          {/* Available to spend - grey */}
-          <div className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-muted flex-shrink-0" />
-              <span className="text-sm">Available to spend</span>
-            </div>
-            <span className="font-medium text-sm text-muted-foreground tabular-nums">{formatUsdCents(Math.max(0, availableUsdCents))}</span>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

@@ -59,7 +59,7 @@ export default function UserRecentEdits({
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const fetchUserEdits = useCallback(async (cursor?: string, append = false) => {
+  const fetchUserEdits = useCallback(async (cursor?: string, append = false, bustCache = false) => {
     try {
       if (!append) {
         setLoading(true);
@@ -78,7 +78,14 @@ export default function UserRecentEdits({
         params.set('cursor', cursor);
       }
 
-      const response = await fetch(`/api/recent-edits/user?${params}`);
+      // Add cache-busting timestamp when refreshing after a save
+      if (bustCache) {
+        params.set('_t', Date.now().toString());
+      }
+
+      const response = await fetch(`/api/recent-edits/user?${params}`, {
+        cache: bustCache ? 'no-store' : 'default'
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch user edits: ${response.status}`);
@@ -151,8 +158,11 @@ export default function UserRecentEdits({
       const { userId: eventUserId } = event.detail || {};
       // Only refresh if this is for the same user or no specific user
       if (!eventUserId || eventUserId === userId) {
-        console.log('🔄 UserRecentEdits: Received refresh event, refetching data');
-        fetchUserEdits();
+        console.log('🔄 UserRecentEdits: Received refresh event, refetching data with cache bust');
+        // Reset state and fetch fresh data with cache busting
+        setEdits([]);
+        setNextCursor(null);
+        fetchUserEdits(undefined, false, true); // bustCache = true
       }
     };
 

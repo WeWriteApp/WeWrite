@@ -3397,6 +3397,21 @@ button.bg-transparent[type] {
 .bg-neutral-alpha-dark-15 { background-color: transparent; }
 .dark .bg-neutral-alpha-dark-15 { background-color: rgba(255, 255, 255, 0.15); }
 
+/* SVG Fill - Neutral Alpha (for pie charts and SVG elements)
+   Usage: fill-neutral-alpha-{N} */
+.fill-neutral-alpha-5 { fill: rgba(0, 0, 0, 0.05); }
+.dark .fill-neutral-alpha-5 { fill: rgba(255, 255, 255, 0.05); }
+.fill-neutral-alpha-10 { fill: rgba(0, 0, 0, 0.1); }
+.dark .fill-neutral-alpha-10 { fill: rgba(255, 255, 255, 0.1); }
+.fill-neutral-alpha-15 { fill: rgba(0, 0, 0, 0.15); }
+.dark .fill-neutral-alpha-15 { fill: rgba(255, 255, 255, 0.15); }
+.fill-neutral-alpha-20 { fill: rgba(0, 0, 0, 0.2); }
+.dark .fill-neutral-alpha-20 { fill: rgba(255, 255, 255, 0.2); }
+.fill-neutral-alpha-25 { fill: rgba(0, 0, 0, 0.25); }
+.dark .fill-neutral-alpha-25 { fill: rgba(255, 255, 255, 0.25); }
+.fill-neutral-alpha-30 { fill: rgba(0, 0, 0, 0.3); }
+.dark .fill-neutral-alpha-30 { fill: rgba(255, 255, 255, 0.3); }
+
 /* Success Background Colors */
 .bg-success { background-color: oklch(var(--success-base)); }
 .bg-success-1 { background-color: oklch(var(--success-base) / 0.01); }

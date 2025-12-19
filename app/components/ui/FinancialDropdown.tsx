@@ -301,16 +301,19 @@ export function SpendBreakdown({
       
       <div className="mt-3">
         <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full flex">
+          <div className="h-full flex gap-0.5">
             {allocatedUsdCents > 0 && totalUsdCents > 0 && (
               <div
-                className={isOutOfFunds ? "bg-orange-500" : "bg-primary"}
+                className={cn(
+                  "rounded-full",
+                  isOutOfFunds ? "bg-orange-500" : "bg-primary"
+                )}
                 style={{ width: `${Math.min((allocatedUsdCents / totalUsdCents) * 100, 100)}%` }}
               />
             )}
             {availableUsdCents > 0 && totalUsdCents > 0 && (
               <div
-                className="bg-green-500"
+                className="bg-green-500 rounded-full"
                 style={{ width: `${Math.min((availableUsdCents / totalUsdCents) * 100, 100)}%` }}
               />
             )}

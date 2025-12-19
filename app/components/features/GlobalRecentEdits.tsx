@@ -128,7 +128,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
     }
   }, [isAuthenticated, user?.uid]);
 
-  const fetchEdits = useCallback(async (append = false, cursor?: string) => {
+  const fetchEdits = useCallback(async (append = false, cursor?: string, bustCache = false) => {
     try {
       if (!append) {
         setLoading(true);
@@ -152,10 +152,17 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
         params.set('cursor', cursor);
       }
 
+      // Add cache-busting timestamp when refreshing after a save
+      if (bustCache) {
+        params.set('_t', Date.now().toString());
+      }
+
       console.log('🌍 [GlobalRecentEdits] Fetching from /api/recent-edits/global with params:', params.toString());
 
       // Call the NEW global recent edits API
-      const response = await fetch(`/api/recent-edits/global?${params}`);
+      const response = await fetch(`/api/recent-edits/global?${params}`, {
+        cache: bustCache ? 'no-store' : 'default'
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch global recent edits: ${response.status}`);
@@ -224,12 +231,12 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
   // Listen for refresh events from page saves
   useEffect(() => {
     const handleRefreshRecentEdits = (event: CustomEvent) => {
-      console.log('🔄 GlobalRecentEdits: Received refresh event, refetching data');
-      // Reset data and fetch fresh
+      console.log('🔄 GlobalRecentEdits: Received refresh event, refetching data with cache bust');
+      // Reset data and fetch fresh with cache busting
       setEdits([]);
       setNextCursor(null);
       setAutoLoadCount(0);
-      fetchEdits();
+      fetchEdits(false, undefined, true); // bustCache = true
     };
 
     if (typeof window !== 'undefined') {

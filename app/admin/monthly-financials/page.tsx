@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
+import { useAdminData } from '../../providers/AdminDataProvider';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
@@ -191,6 +192,7 @@ interface FinancialsResponse {
 
 export default function MonthlyFinancialsPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const { adminFetch, isHydrated, dataSource } = useAdminData();
   const router = useRouter();
 
   const [data, setData] = useState<FinancialsResponse | null>(null);
@@ -222,7 +224,7 @@ export default function MonthlyFinancialsPage() {
       setError(null);
 
       const url = sync ? '/api/admin/monthly-financials?sync=true' : '/api/admin/monthly-financials';
-      const response = await fetch(url);
+      const response = await adminFetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch financial data');
       }
@@ -243,10 +245,10 @@ export default function MonthlyFinancialsPage() {
   };
 
   useEffect(() => {
-    if (user && !authLoading && isAdmin(user.email || '')) {
+    if (user && !authLoading && isHydrated && isAdmin(user.email || '')) {
       fetchData();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, isHydrated, dataSource]);
 
   // Format month for display
   const formatMonth = (month: string) => {

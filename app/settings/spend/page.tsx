@@ -12,6 +12,7 @@ import { useAllocationInterval } from '../../contexts/AllocationIntervalContext'
 import { AllocationIntervalModal } from '../../components/payments/AllocationIntervalModal';
 import { UsdAllocation } from '../../types/database';
 import Link from 'next/link';
+import { RollingCounter } from '../../components/ui/rolling-counter';
 import { getLoggedOutUsdBalance, clearLoggedOutUsd } from '../../utils/simulatedUsd';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
@@ -21,7 +22,7 @@ export default function SpendPage() {
   const { usdBalance, refreshUsdBalance } = useUsdBalance();
   const { allocationIntervalCents } = useAllocationInterval();
   const [allocations, setAllocations] = useState<UsdAllocation[]>([]);
-  const [countdown, setCountdown] = useState('');
+  const [countdownValues, setCountdownValues] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [subscriptionAmount, setSubscriptionAmount] = useState<number>(0);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
@@ -294,7 +295,7 @@ export default function SpendPage() {
       const minutes = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeUntil % (1000 * 60)) / 1000);
 
-      setCountdown(`${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`);
+      setCountdownValues({ days, hours, minutes, seconds });
     };
 
     // Update immediately
@@ -387,15 +388,50 @@ export default function SpendPage() {
             {/* Payment Schedule */}
             <Card>
               <CardContent className="p-4">
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    You have this much time to adjust allocations before they're sent out to writers for the month of{' '}
+                    Time to adjust allocations before they're sent to writers for{' '}
                     <span className="font-medium text-foreground">
                       {new Date().toLocaleDateString('en-US', { month: 'long' })}
                     </span>
                   </p>
-                  <div className="text-2xl font-bold text-primary font-mono">
-                    {countdown}
+                  <div className="flex items-center justify-center gap-4 text-2xl font-bold font-mono">
+                    <div className="flex flex-col items-center">
+                      <RollingCounter
+                        value={countdownValues.days}
+                        className="text-primary"
+                        formatWithCommas={false}
+                        duration={300}
+                      />
+                      <span className="text-xs text-muted-foreground font-normal">days</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <RollingCounter
+                        value={countdownValues.hours}
+                        className="text-primary"
+                        formatWithCommas={false}
+                        duration={300}
+                      />
+                      <span className="text-xs text-muted-foreground font-normal">hrs</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <RollingCounter
+                        value={countdownValues.minutes}
+                        className="text-primary"
+                        formatWithCommas={false}
+                        duration={300}
+                      />
+                      <span className="text-xs text-muted-foreground font-normal">min</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <RollingCounter
+                        value={countdownValues.seconds}
+                        className="text-primary"
+                        formatWithCommas={false}
+                        duration={300}
+                      />
+                      <span className="text-xs text-muted-foreground font-normal">sec</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>

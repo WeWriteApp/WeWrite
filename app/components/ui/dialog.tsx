@@ -151,12 +151,14 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
   showOverlay?: boolean
   /** Add blur effect to overlay */
   blurOverlay?: boolean
+  /** Show X close button in top right corner */
+  showCloseButton?: boolean
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, showOverlay = true, blurOverlay = false, ...props }, ref) => {
+>(({ className, children, showOverlay = true, blurOverlay = false, showCloseButton = false, ...props }, ref) => {
   // Determine overlay classes based on options
   const overlayClasses = cn(
     "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -175,7 +177,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Position centered - use CSS custom property for animation
-        "fixed left-[50%] top-[50%] z-[1100] grid w-[85%] max-w-lg translate-x-[-50%] gap-4 p-6 rounded-2xl",
+        "fixed left-[50%] top-[50%] z-[1100] flex flex-col w-[85%] max-w-lg translate-x-[-50%] rounded-2xl",
         // Slide up animation from bottom
         "duration-300 ease-out",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -192,6 +194,12 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
+      {showCloseButton && (
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      )}
       {children}
     </DialogPrimitive.Content>
   </DialogPortal>
@@ -205,7 +213,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-1.5 text-center",
+      "flex flex-col space-y-1.5 text-center shrink-0 p-6 pb-4",
       className
     )}
     {...props}
@@ -213,13 +221,31 @@ const DialogHeader = ({
 )
 DialogHeader.displayName = "DialogHeader"
 
+/**
+ * DialogBody - Scrollable content area between header and footer
+ * Use this to wrap your main content when you need header/footer to stay fixed
+ */
+const DialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex-1 overflow-y-auto px-6",
+      className
+    )}
+    {...props}
+  />
+)
+DialogBody.displayName = "DialogBody"
+
 const DialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 shrink-0 p-6 pt-4 border-t",
       className
     )}
     {...props}
@@ -262,6 +288,8 @@ export {
   DialogTrigger,
   DialogContent,
   DialogHeader,
+  DialogBody,
   DialogFooter,
   DialogTitle,
-  DialogDescription}
+  DialogDescription,
+}

@@ -24,7 +24,7 @@ import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin, FieldValue } from '../../../firebase/firebaseAdmin';
 import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
+import { getStripeSecretKeyAsync } from '../../../utils/stripeConfig';
 import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
 
 // Use the centralized platform fee config for allocation fee (7%)
@@ -102,8 +102,8 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    // Initialize Stripe
-    const stripeKey = getStripeSecretKey() || '';
+    // Initialize Stripe (uses async version to respect X-Force-Production-Data header)
+    const stripeKey = await getStripeSecretKeyAsync() || '';
     const stripe = new Stripe(stripeKey, {
       apiVersion: '2024-06-20'
     });

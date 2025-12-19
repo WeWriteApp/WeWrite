@@ -178,12 +178,11 @@ export function UsdAllocationBreakdown({
     <div className="space-y-3">
       {/* Summary info for non-card layout */}
       {!showSectionHeader && (
-        <div className="flex items-center justify-between mb-4 p-3 bg-muted/30 rounded-lg">
-          <div>
-            <p className="text-sm font-medium">
-              {allocations.length} allocation{allocations.length !== 1 ? 's' : ''} • {formatUsdCents(totalAllocatedCents)} total
-            </p>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Allocation breakdown</h3>
+          <span className="text-sm text-muted-foreground">
+            {allocations.length} allocation{allocations.length !== 1 ? 's' : ''}
+          </span>
         </div>
       )}
 

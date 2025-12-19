@@ -326,26 +326,77 @@ export async function GET(request: Request) {
           overflow: 'hidden'
         }}
       >
-        {/* Title with 3-line truncation */}
+        {/* Blurred gradient blobs - bigger and brighter */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '-300px',
+            left: '-150px',
+            width: '800px',
+            height: '800px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.5) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-350px',
+            right: '-100px',
+            width: '900px',
+            height: '900px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.45) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: '50px',
+            right: '200px',
+            width: '600px',
+            height: '600px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(34, 197, 94, 0.35) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+
+        {/* Subtle sparkles */}
+        <div style={{ position: 'absolute', top: '80px', left: '120px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.8)' }} />
+        <div style={{ position: 'absolute', top: '150px', right: '180px', width: '3px', height: '3px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.6)' }} />
+        <div style={{ position: 'absolute', top: '200px', left: '350px', width: '2px', height: '2px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.7)' }} />
+        <div style={{ position: 'absolute', top: '100px', right: '400px', width: '3px', height: '3px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.5)' }} />
+        <div style={{ position: 'absolute', top: '280px', left: '800px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.6)' }} />
+        <div style={{ position: 'absolute', top: '60px', right: '300px', width: '2px', height: '2px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.9)' }} />
+        <div style={{ position: 'absolute', top: '320px', left: '200px', width: '3px', height: '3px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.5)' }} />
+        <div style={{ position: 'absolute', top: '180px', right: '600px', width: '2px', height: '2px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.7)' }} />
+
+        {/* Title with 3-line truncation - bolder and brighter */}
         <div style={{
           display: 'flex',
           fontSize: 72,
-          fontWeight: 'bold',
+          fontWeight: 800,
           marginBottom: '30px',
           lineHeight: '1.2',
           maxHeight: '259px',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          color: '#ffffff',
+          textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
         }}>
           {displayTitleFormatted}
         </div>
         
-        {/* Body content with inline pill-style links */}
+        {/* Body content with inline pill-style links - bolder */}
         <div style={{
           display: 'flex',
           flexWrap: 'wrap',
           fontSize: 28,
+          fontWeight: 500,
           marginBottom: '0px',
-          color: 'rgba(255, 255, 255, 0.9)',
+          color: 'rgba(255, 255, 255, 0.95)',
           lineHeight: '1.6',
           flex: 1,
           position: 'relative',

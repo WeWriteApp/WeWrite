@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
-import { DollarSign, Clock, CheckCircle, AlertCircle, Copy, TrendingUp } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 // Use API calls instead of complex services
 import { SimpleBankAccountManager } from './SimpleBankAccountManager';
 import { Progress } from '../ui/progress';
@@ -228,7 +228,39 @@ export default function SimpleEarningsDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stripe Connected Account & Bank - moved to top */}
+      {/* Payout Threshold - Simple progress indicator */}
+      {(() => {
+        const availableBalance = Number(earnings?.availableBalance) || 0;
+        const availableCents = Math.round(availableBalance * 100);
+        const progressPercent = Math.min((availableCents / MINIMUM_PAYOUT_CENTS) * 100, 100);
+        const isAboveThreshold = availableCents >= MINIMUM_PAYOUT_CENTS;
+        const amountNeeded = Math.max(0, (MINIMUM_PAYOUT_CENTS - availableCents) / 100);
+
+        return (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-medium">Payout Threshold</span>
+                <span className="text-sm text-muted-foreground">
+                  ${availableBalance.toFixed(2)} / ${MINIMUM_PAYOUT_DOLLARS.toFixed(2)}
+                </span>
+              </div>
+              <Progress
+                value={progressPercent}
+                className={`h-2 ${isAboveThreshold ? '[&>div]:bg-green-500' : ''}`}
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                {isAboveThreshold
+                  ? 'Ready to pay out'
+                  : `$${amountNeeded.toFixed(2)} more needed to pay out`
+                }
+              </p>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Stripe Connected Account & Bank */}
       <Card className="border-border bg-card">
         <CardContent className="pt-6 space-y-4">
           <div>
@@ -374,87 +406,23 @@ export default function SimpleEarningsDashboard() {
         </Card>
       </div>
 
-      {/* Payout Threshold Progress & Action */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Payout Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(() => {
-            // Ensure we have a valid number for calculations
-            const availableBalance = Number(earnings?.availableBalance) || 0;
-            const availableCents = Math.round(availableBalance * 100);
-            const progressPercent = Math.min((availableCents / MINIMUM_PAYOUT_CENTS) * 100, 100);
-            const isAboveThreshold = availableCents >= MINIMUM_PAYOUT_CENTS;
-            const amountNeeded = Math.max(0, (MINIMUM_PAYOUT_CENTS - availableCents) / 100);
-            
-            return (
-              <>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      ${availableBalance.toFixed(2)} of ${MINIMUM_PAYOUT_DOLLARS.toFixed(2)} minimum
-                    </span>
-                    <span className="font-medium">{progressPercent.toFixed(0)}%</span>
-                  </div>
-                  <Progress 
-                    value={progressPercent} 
-                    className={`h-3 ${isAboveThreshold ? '[&>div]:bg-green-500' : ''}`}
-                  />
-                  {!isAboveThreshold && (
-                    <p className="text-xs text-muted-foreground">
-                      ${amountNeeded.toFixed(2)} more needed to request a payout
-                    </p>
-                  )}
-                  {isAboveThreshold && (
-                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                      ✓ You've reached the minimum payout threshold!
-                    </p>
-                  )}
-                </div>
+      {/* Request Payout Button */}
+      {(() => {
+        const availableBalance = Number(earnings?.availableBalance) || 0;
+        const availableCents = Math.round(availableBalance * 100);
+        const isAboveThreshold = availableCents >= MINIMUM_PAYOUT_CENTS;
+        const amountNeeded = Math.max(0, (MINIMUM_PAYOUT_CENTS - availableCents) / 100);
 
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <div>
-                    <h3 className="font-semibold">Request Payout</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {isAboveThreshold 
-                        ? `You have $${availableBalance.toFixed(2)} available for payout`
-                        : `Minimum payout is $${MINIMUM_PAYOUT_DOLLARS.toFixed(2)}`
-                      }
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={handleRequestPayout}
-                    disabled={requesting || !isAboveThreshold || !isBankConnected}
-                    className={isAboveThreshold && isBankConnected 
-                      ? "bg-green-600 hover:bg-green-700" 
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
-                    }
-                    title={
-                      !isBankConnected 
-                        ? "Connect a bank account first" 
-                        : !isAboveThreshold 
-                          ? `Need $${amountNeeded.toFixed(2)} more to reach minimum` 
-                          : "Request payout"
-                    }
-                  >
-                    {requesting ? 'Processing...' : 'Request Payout'}
-                  </Button>
-                </div>
-
-                {!isBankConnected && isAboveThreshold && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    ⚠️ Connect a bank account above to request your payout
-                  </p>
-                )}
-              </>
-            );
-          })()}
-        </CardContent>
-      </Card>
+        return isAboveThreshold && isBankConnected ? (
+          <Button
+            onClick={handleRequestPayout}
+            disabled={requesting}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+          >
+            {requesting ? 'Processing...' : `Request Payout ($${availableBalance.toFixed(2)})`}
+          </Button>
+        ) : null;
+      })()}
 
       {/* Payout History */}
       {payoutHistory.length > 0 && (

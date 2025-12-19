@@ -1,18 +1,26 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Plus, Minus, DollarSign } from 'lucide-react';
+import { Plus, Minus, DollarSign } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
+import { PieChart, PieChartSegment } from '../ui/pie-chart';
 import { formatUsdCents, dollarsToCents, centsToDollars, parseDollarInputToCents } from '../../utils/formatCurrency';
 import { USD_UI_TEXT } from '../../utils/usdConstants';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
 import { toast } from '../ui/use-toast';
-import { ALLOCATION_BAR_STYLES } from '../../constants/allocation-styles';
 
 interface UsdAllocationModalProps {
   isOpen: boolean;
@@ -44,13 +52,7 @@ export function UsdAllocationModal({
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [incrementAmount, setIncrementAmount] = useState(0.50); // Default $0.50 increment
-
-  // Ensure we're mounted on the client side
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Initialize input value when modal opens
   useEffect(() => {
@@ -59,9 +61,6 @@ export function UsdAllocationModal({
       setError(null);
     }
   }, [isOpen, currentAllocation]);
-
-  // Quick allocation amounts in dollars
-  const quickAmounts = [0.00, 0.01, 0.10, 1.00, 5.00, 10.00];
 
   // Increment amount options in dollars
   const incrementOptions = [0.10, 0.50, 1.00, 2.50];
@@ -81,11 +80,6 @@ export function UsdAllocationModal({
   useEffect(() => {
     localStorage.setItem('usdIncrementAmount', incrementAmount.toString());
   }, [incrementAmount]);
-
-  const handleQuickAmount = (dollarAmount: number) => {
-    setInputValue(dollarAmount.toFixed(2));
-    setError(null);
-  };
 
   const handlePlusClick = () => {
     const currentCents = parseDollarInputToCents(inputValue) || 0;
@@ -110,7 +104,7 @@ export function UsdAllocationModal({
 
   const handleSave = async () => {
     const newAllocationCents = parseDollarInputToCents(inputValue);
-    
+
     if (newAllocationCents === null) {
       setError('Please enter a valid dollar amount');
       return;
@@ -136,13 +130,13 @@ export function UsdAllocationModal({
 
     try {
       await onAllocationChange(newAllocationCents);
-      
+
       toast({
         title: "Allocation Updated",
         description: `${formatUsdCents(newAllocationCents)} allocated to ${isUserAllocation ? username : pageTitle}`,
         duration: 3000,
       });
-      
+
       onClose();
     } catch (error) {
       console.error('Error updating allocation:', error);
@@ -152,65 +146,114 @@ export function UsdAllocationModal({
     }
   };
 
-  const handleRemoveAllocation = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await onAllocationChange(0);
-      
-      toast({
-        title: "Allocation Removed",
-        description: `Removed allocation from ${isUserAllocation ? username : pageTitle}`,
-        duration: 3000,
-      });
-      
-      onClose();
-    } catch (error) {
-      console.error('Error removing allocation:', error);
-      setError('Failed to remove allocation. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!isOpen || !mounted) return null;
-
   const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
-  const availableUsdCents = currentBalance?.availableUsdCents || 0;
   const totalUsdCents = currentBalance?.totalUsdCents || 0;
 
-  const modalContent = (
-    <div
-      className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0 duration-200"
-      onClick={onClose}
-    >
-      <div
-        className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md flex flex-col max-h-[90vh] animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold">
-              {isUserAllocation ? `Allocate to ${username}` : 'Page Allocation Details'}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {isUserAllocation ? `Direct support for ${username}` : pageTitle}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-10 w-10 p-0"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+  // Build pie chart segments
+  const buildPieChartSegments = (): PieChartSegment[] => {
+    if (!currentBalance) return [];
 
-        {/* Content */}
-        <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-0">
+    const newAllocationCents = parseDollarInputToCents(inputValue) || 0;
+    const totalCents = currentBalance.totalUsdCents;
+    const originalAllocatedCents = currentBalance.allocatedUsdCents;
+
+    // Calculate other pages allocation (all allocations except current page)
+    const otherFromAllocated = Math.max(0, originalAllocatedCents - currentAllocation);
+    const otherFromBalances = Math.max(0, totalCents - currentBalance.availableUsdCents - newAllocationCents);
+    const otherPagesCents = Math.max(otherFromAllocated, otherFromBalances);
+
+    // Calculate available funds for current page
+    const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
+
+    // Split new allocation into funded and overfunded portions
+    const newPageFundedCents = Math.min(newAllocationCents, availableFundsForCurrentPage);
+    const newPageOverfundedCents = Math.max(0, newAllocationCents - availableFundsForCurrentPage);
+
+    // Calculate available funds after new allocation
+    const newAvailableCents = Math.max(0, totalCents - otherPagesCents - newPageFundedCents);
+
+    const segments: PieChartSegment[] = [];
+
+    // Order: This page first, Other allocations second, Available to spend third
+
+    // Current page funded (primary) - FIRST
+    if (newPageFundedCents > 0) {
+      segments.push({
+        id: 'current',
+        value: newPageFundedCents,
+        label: isUserAllocation ? username || 'This user' : 'This page',
+        color: 'stroke-primary',
+        bgColor: 'bg-primary',
+        textColor: 'text-primary',
+      });
+    }
+
+    // Overfunded portion (orange) - after current page
+    if (newPageOverfundedCents > 0) {
+      segments.push({
+        id: 'overfunded',
+        value: newPageOverfundedCents,
+        label: 'Overspent',
+        color: 'stroke-orange-500',
+        bgColor: 'bg-orange-500',
+        textColor: 'text-orange-500',
+      });
+    }
+
+    // Other pages (light neutral - matches allocation bar) - SECOND
+    if (otherPagesCents > 0) {
+      segments.push({
+        id: 'other',
+        value: otherPagesCents,
+        label: 'Other allocations',
+        color: 'stroke-neutral-alpha-15',
+        bgColor: 'bg-neutral-alpha-15',
+        textColor: 'text-muted-foreground',
+      });
+    }
+
+    // Available to spend (green) - THIRD/LAST
+    if (newAvailableCents > 0) {
+      segments.push({
+        id: 'available',
+        value: newAvailableCents,
+        label: 'Available to spend',
+        color: 'stroke-green-500',
+        bgColor: 'bg-green-500',
+        textColor: 'text-green-500',
+      });
+    }
+
+    return segments;
+  };
+
+  const pieChartSegments = buildPieChartSegments();
+
+  // Check if out of funds
+  const isOutOfFunds = (() => {
+    const newAllocationCents = parseDollarInputToCents(inputValue) || 0;
+    const remainingUsdCents = Math.max(0, totalUsdCents - Math.max(currentAllocation, newAllocationCents));
+    return remainingUsdCents === 0 && totalUsdCents > 0;
+  })();
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      hashId="allocation-details"
+      analyticsId="allocation_details_modal"
+    >
+      <DialogContent className="max-w-md max-h-[90vh]" showCloseButton>
+        <DialogHeader>
+          <DialogTitle>
+            {isUserAllocation ? `Allocate to ${username}` : 'Page Allocation Details'}
+          </DialogTitle>
+          <DialogDescription>
+            {isUserAllocation ? `Direct support for ${username}` : pageTitle}
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody className="space-y-4">
           {/* Demo Balance Notice */}
           {isDemoBalance && (
             <div className="bg-muted/50 dark:bg-muted/20 border border-border dark:border-border rounded-lg p-3">
@@ -229,136 +272,46 @@ export function UsdAllocationModal({
             </div>
           )}
 
-
-
-          {/* Four-Section Allocation Overview */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Allocation Overview</Label>
-
-            {(() => {
-              const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
-              if (!currentBalance) return null;
-
-              const newAllocationCents = parseDollarInputToCents(inputValue) || 0;
-              const totalCents = currentBalance.totalUsdCents;
-              const originalAllocatedCents = currentBalance.allocatedUsdCents;
-
-              // Calculate other pages allocation (all allocations except current page)
-              // Use both allocated and balance-based to avoid underreporting
-              const otherFromAllocated = Math.max(0, originalAllocatedCents - currentAllocation);
-              const otherFromBalances = Math.max(0, totalCents - currentBalance.availableUsdCents - newAllocationCents);
-              const otherPagesCents = Math.max(otherFromAllocated, otherFromBalances);
-
-              // Calculate available funds for current page
-              const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);
-
-              // Split new allocation into funded and overfunded portions
-              const newPageFundedCents = Math.min(newAllocationCents, availableFundsForCurrentPage);
-              const newPageOverfundedCents = Math.max(0, newAllocationCents - availableFundsForCurrentPage);
-
-              // Calculate available funds after new allocation
-              const newAvailableCents = Math.max(0, totalCents - otherPagesCents - newPageFundedCents);
-
-              // For display purposes, show all sections proportionally
-              const displayTotal = totalCents + newPageOverfundedCents;
-
-              const otherPagesPercentage = displayTotal > 0 ? (otherPagesCents / displayTotal) * 100 : 0;
-              const currentPageFundedPercentage = displayTotal > 0 ? (newPageFundedCents / displayTotal) * 100 : 0;
-              const currentPageOverfundedPercentage = displayTotal > 0 ? (newPageOverfundedCents / displayTotal) * 100 : 0;
-              const availablePercentage = displayTotal > 0 ? (newAvailableCents / displayTotal) * 100 : 0;
-
-              return (
-                <div className="space-y-2">
-                  {/* Four-Section Composition Bar */}
-                  <div className="h-6 flex gap-1 bg-muted rounded-md overflow-hidden">
-                    {/* OTHER - Other pages (grey, leftmost) */}
-                    {otherPagesPercentage > 0 && (
-                      <div
-                        className={`${ALLOCATION_BAR_STYLES.sections.other} transition-all duration-300 rounded-l-md`}
-                        style={{ width: `${otherPagesPercentage}%` }}
-                      />
-                    )}
-
-                    {/* CURRENT - Current page funded portion (accent color) */}
-                    {currentPageFundedPercentage > 0 && (
-                      <div
-                        className="bg-primary transition-all duration-300"
-                        style={{ width: `${currentPageFundedPercentage}%` }}
-                      />
-                    )}
-
-                    {/* OVERSPENT - Current page overfunded portion (orange) */}
-                    {currentPageOverfundedPercentage > 0 && (
-                      <div
-                        className="bg-orange-500 transition-all duration-300"
-                        style={{ width: `${currentPageOverfundedPercentage}%` }}
-                      />
-                    )}
-
-                    {/* AVAILABLE - Available funds (outline style, rightmost) */}
-                    {availablePercentage > 0 && (
-                      <div
-                        className={`${ALLOCATION_BAR_STYLES.sections.available} rounded-r-md`}
-                        style={{ width: `${availablePercentage}%` }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Legend with values from the bar */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center space-x-1">
-                      <div className={`w-3 h-3 ${ALLOCATION_BAR_STYLES.sections.other} rounded-full`}></div>
-                      <span className="text-muted-foreground">Other: {formatUsdCents(otherPagesCents)}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-primary rounded-full"></div>
-                      <span className="text-muted-foreground">Current: {formatUsdCents(newPageFundedCents)}</span>
-                    </div>
-                    {newPageOverfundedCents > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span className="text-muted-foreground">Overspent: {formatUsdCents(newPageOverfundedCents)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-muted-foreground/10 rounded-full"></div>
-                      <span className="text-muted-foreground">Available: {newAvailableCents <= 0 ? 'Out' : formatUsdCents(newAvailableCents)}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
+          {/* Pie Chart Allocation Overview */}
+          {pieChartSegments.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Allocation Overview</Label>
+              <PieChart
+                segments={pieChartSegments}
+                size={120}
+                strokeWidth={16}
+                showPercentage={true}
+                centerLabel="allocated"
+                formatValue={(value) => formatUsdCents(value)}
+                showTotal={true}
+                totalLabel="Monthly budget"
+                gap={6}
+                cornerRadius={3}
+              />
+            </div>
+          )}
 
           {/* Out of funds message with link */}
-          {(() => {
-              const newAllocationCents = parseDollarInputToCents(inputValue) || 0;
-              const remainingUsdCents = Math.max(0, totalUsdCents - Math.max(currentAllocation, newAllocationCents));
-
-              if (remainingUsdCents === 0 && totalUsdCents > 0) {
-                return (
-                  <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-orange-800 dark:text-orange-200">
-                        You've allocated your full monthly budget
-                      </span>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          onClose();
-                          window.location.href = '/settings/fund-account';
-                        }}
-                        className="text-orange-800 dark:text-orange-200 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50"
-                      >
-                        Add more funds
-                      </Button>
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-          })()}
+          {isOutOfFunds && (
+            <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-orange-800 dark:text-orange-200">
+                  You've allocated your full monthly budget
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    window.location.href = '/settings/fund-account';
+                  }}
+                  className="text-orange-800 dark:text-orange-200 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50"
+                >
+                  Add more funds
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Increment Amount Selector */}
           <div className="space-y-2">
@@ -377,8 +330,6 @@ export function UsdAllocationModal({
               ))}
             </div>
           </div>
-
-
 
           {/* Custom amount input with plus/minus buttons */}
           <div>
@@ -429,30 +380,26 @@ export function UsdAllocationModal({
           <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
             <p>{USD_UI_TEXT.TOOLTIP_TEXT}</p>
           </div>
-        </div>
+        </DialogBody>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-border flex-shrink-0">
+        <DialogFooter className="flex-row gap-2 sm:gap-2">
           <Button
             variant="secondary"
             onClick={onClose}
             disabled={isLoading}
+            className="flex-1 sm:flex-initial"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isLoading}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="flex-1 sm:flex-initial bg-green-600 hover:bg-green-700 text-white"
           >
             {isLoading ? 'Saving...' : 'Save Allocation'}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-
-  // Use portal to render modal at document body level
-  if (!mounted) return null;
-  return createPortal(modalContent, document.body);
 }

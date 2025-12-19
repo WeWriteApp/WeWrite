@@ -43,7 +43,7 @@ export default function InviteFriendsPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [copiedVertical, setCopiedVertical] = useState<string | null>(null);
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [expandedCard, setExpandedCard] = useState<string | null>('general');
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [revenue, setRevenue] = useState<ReferralRevenue | null>(null);
   const [loading, setLoading] = useState(true);
@@ -312,85 +312,90 @@ export default function InviteFriendsPage() {
         </div>
       )}
 
-      {/* Targeted Landing Pages Section */}
+      {/* General Landing Page Section */}
       <div className="mt-8 mb-8">
         <h2 className="text-xl font-semibold mb-4">
-          Targeted Landing Pages
+          General landing page
+        </h2>
+        <div
+          className={cn(
+            "p-4 border border-border rounded-xl bg-card transition-all cursor-pointer",
+            expandedCard === 'general' ? "ring-2 ring-primary" : "hover:bg-muted/50"
+          )}
+          onClick={() => setExpandedCard(expandedCard === 'general' ? null : 'general')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+              {getVerticalIcon('general')}
+            </div>
+            <div className="flex-1">
+              <p className="font-medium">General</p>
+              <p className="text-xs text-muted-foreground">/welcome</p>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                expandedCard === 'general' && "rotate-180"
+              )}
+            />
+          </div>
+          {/* Expanded actions */}
+          <div
+            className={cn(
+              "grid transition-all duration-200 ease-out",
+              expandedCard === 'general' ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="flex gap-2 mt-4 pt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push('/welcome');
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Preview
+                </Button>
+                <Button
+                  variant={copiedVertical === 'general' ? 'success' : 'default'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyVerticalLink('general');
+                  }}
+                >
+                  {copiedVertical === 'general' ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Link
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Targeted Landing Pages Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">
+          Targeted landing pages
         </h2>
         <p className="text-muted-foreground mb-6">
           Share links customized for specific audiences. Click on a card to see options.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {/* General Landing Page */}
-          <div
-            className={cn(
-              "p-4 border border-border rounded-xl bg-card transition-all cursor-pointer",
-              expandedCard === 'general' ? "ring-2 ring-primary" : "hover:bg-muted/50"
-            )}
-            onClick={() => setExpandedCard(expandedCard === 'general' ? null : 'general')}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                {getVerticalIcon('general')}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">General</p>
-                <p className="text-xs text-muted-foreground">/welcome</p>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "h-5 w-5 text-muted-foreground transition-transform duration-200",
-                  expandedCard === 'general' && "rotate-180"
-                )}
-              />
-            </div>
-            {/* Expanded actions */}
-            <div
-              className={cn(
-                "grid transition-all duration-200 ease-out",
-                expandedCard === 'general' ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-              )}
-            >
-              <div className="overflow-hidden">
-                <div className="flex gap-2 mt-4 pt-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push('/welcome');
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Preview
-                  </Button>
-                  <Button
-                    variant={copiedVertical === 'general' ? 'success' : 'default'}
-                    size="sm"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyVerticalLink('general');
-                    }}
-                  >
-                    {copiedVertical === 'general' ? (
-                      <>
-                        <Check className="h-4 w-4 mr-2" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy Link
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Vertical-specific Landing Pages */}
           {Object.entries(LANDING_VERTICALS)
             .filter(([slug]) => slug !== 'general')

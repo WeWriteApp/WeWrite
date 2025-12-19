@@ -32,14 +32,16 @@ export function GlobalLandingBlobs() {
   // Show blobs on auth pages
   const isAuthPage = pathname?.startsWith("/auth");
 
-  // Show blobs on landing page for logged-out users
-  // Also show for unverified users since they'll see the verify-email-pending page
-  const isLandingForLoggedOut = pathname === "/" && !isAuthenticated;
+  // Show blobs on welcome/landing pages (including /welcome and /welcome/*)
+  const isWelcomePage = pathname === "/welcome" || pathname?.startsWith("/welcome/");
+
+  // Show blobs on root page for logged-out users (they'll be redirected to /welcome)
+  const isRootForLoggedOut = pathname === "/" && !isAuthenticated;
 
   // Show blobs if user exists but is not verified (they're on auth-like flow)
   const isUnverifiedUser = user && !user.emailVerified;
 
-  const shouldShowBlobs = isAuthPage || isLandingForLoggedOut || isUnverifiedUser;
+  const shouldShowBlobs = isAuthPage || isWelcomePage || isRootForLoggedOut || isUnverifiedUser;
 
   if (!shouldShowBlobs) {
     return null;

@@ -21,6 +21,7 @@ import Link from 'next/link';
 
 import { isAdmin } from '../utils/isAdmin';
 import { Flag } from 'lucide-react';
+import { useAdminData } from '../providers/AdminDataProvider';
 
 interface User {
   id: string;
@@ -36,6 +37,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { resetBannerState } = usePWA();
+  const { adminFetch, isHydrated } = useAdminData();
   // Tab state removed - simplified admin interface
 
   // Removed user management state - users tab deleted
@@ -69,7 +71,7 @@ export default function AdminPage() {
     const loadWritingIdeasCount = async () => {
       try {
         console.log('Loading writing ideas count...');
-        const response = await fetch('/api/admin/writing-ideas');
+        const response = await adminFetch('/api/admin/writing-ideas');
         console.log('Writing ideas API response status:', response.status);
 
         if (!response.ok) {
@@ -99,11 +101,11 @@ export default function AdminPage() {
       }
     };
 
-    // Only load if user is authenticated and admin
-    if (user && !authLoading) {
+    // Only load if user is authenticated, admin, and hydrated
+    if (user && !authLoading && isHydrated) {
       loadWritingIdeasCount();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, isHydrated, adminFetch]);
 
   // Handle email banner override changes
   useEffect(() => {
@@ -199,7 +201,7 @@ export default function AdminPage() {
   useEffect(() => {
     const loadUserCount = async () => {
       try {
-        const res = await fetch('/api/admin/users?countOnly=true');
+        const res = await adminFetch('/api/admin/users?countOnly=true');
         const data = await res.json();
         if (res.ok && data?.total !== undefined) {
           setUsersCount(data.total);
@@ -210,10 +212,10 @@ export default function AdminPage() {
         setUsersCount(null);
       }
     };
-    if (user && !authLoading) {
+    if (user && !authLoading && isHydrated) {
       loadUserCount();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, isHydrated, adminFetch]);
 
   // Feature flags have been removed
 
