@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 
 interface ModernAuthLayoutProps {
@@ -36,17 +35,9 @@ export function ModernAuthLayout({
             Back to landing page
           </Link>
 
-          <motion.div
-            className="wewrite-card rounded-xl p-6 md:p-8"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{
-              duration: 0.4,
-              ease: [0.25, 0.46, 0.45, 0.94]
-            }}
-          >
+          <div className="wewrite-card rounded-xl p-6 md:p-8">
             {children}
-          </motion.div>
+          </div>
 
           {/* Terms and privacy policy below the card */}
           {showTerms && (

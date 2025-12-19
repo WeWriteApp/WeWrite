@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { extractTextContent } from '../../../utils/text-extraction';
 
 /**
  * Unified Stats API
@@ -311,6 +312,51 @@ export async function DELETE(
 }
 
 /**
+ * Sanitize text that might be raw JSON (Slate.js content) into plain text
+ * This handles legacy diffPreview data that was stored as raw JSON
+ */
+function sanitizeTextFromJson(text: string | undefined | null): string {
+  if (!text) return '';
+
+  // Check if it looks like raw JSON content (Slate.js format)
+  if (text.startsWith('[{') || text.startsWith('{"')) {
+    try {
+      const parsed = JSON.parse(text);
+      // Use extractTextContent for proper text extraction
+      return extractTextContent(parsed);
+    } catch {
+      // JSON is likely truncated, try to extract text manually
+      // Look for patterns like {"text":"..."} and extract the text values
+      const textMatches = text.match(/"text"\s*:\s*"([^"]*)"/g);
+      if (textMatches && textMatches.length > 0) {
+        const extractedTexts = textMatches.map(match => {
+          const textMatch = match.match(/"text"\s*:\s*"([^"]*)"/);
+          return textMatch ? textMatch[1] : '';
+        });
+        return extractedTexts.join(' ').trim();
+      }
+    }
+  }
+
+  return text;
+}
+
+/**
+ * Sanitize a diffPreview object to ensure all text fields are plain text
+ */
+function sanitizeDiffPreview(preview: any): any {
+  if (!preview || typeof preview !== 'object') return preview;
+
+  return {
+    ...preview,
+    beforeContext: sanitizeTextFromJson(preview.beforeContext),
+    addedText: sanitizeTextFromJson(preview.addedText),
+    removedText: sanitizeTextFromJson(preview.removedText),
+    afterContext: sanitizeTextFromJson(preview.afterContext),
+  };
+}
+
+/**
  * Fetch actual page statistics from Firebase
  */
 async function fetchPageStats(pageId: string) {
@@ -364,7 +410,9 @@ async function fetchPageStats(pageId: string) {
     const mostRecentEdit = recentEdits.length > 0 ? recentEdits[0] : null;
     const lastEditedAt = mostRecentEdit?.createdAt || mostRecentEdit?.lastModified || null;
     const lastDiff = mostRecentEdit?.diff || mostRecentEdit?.lastDiff || null;
-    const diffPreview = mostRecentEdit?.diffPreview || mostRecentEdit?.preview || null;
+    const rawDiffPreview = mostRecentEdit?.diffPreview || mostRecentEdit?.preview || null;
+    // Sanitize diffPreview to ensure text fields don't contain raw JSON (legacy data issue)
+    const diffPreview = sanitizeDiffPreview(rawDiffPreview);
 
     // Supporters: query USD allocations for this page (current month active allocations)
     let supporterCount = 0;

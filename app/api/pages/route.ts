@@ -879,6 +879,28 @@ export async function PUT(request: NextRequest) {
         pageData = newPageData;
 
         logger.info('New page document created', { pageId: id }, 'PAGE_SAVE');
+
+        // Sync new page to Algolia immediately (fire-and-forget)
+        try {
+          const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
+          syncPageToAlgoliaServer({
+            pageId: id,
+            title: newPageData.title,
+            content: JSON.stringify(newPageData.content),
+            authorId: currentUserId,
+            authorUsername: username,
+            isPublic: newPageData.isPublic ?? true,
+            alternativeTitles: [],
+            lastModified: newPageData.lastModified,
+            createdAt: newPageData.createdAt,
+          }).then(result => {
+            console.log('✅ Algolia sync result for new page:', result);
+          }).catch(err => {
+            console.error('⚠️ Algolia sync failed for new page (non-fatal):', err);
+          });
+        } catch (algoliaError) {
+          console.error('⚠️ Error importing Algolia sync (non-fatal):', algoliaError);
+        }
       } else {
         logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
         return createErrorResponse('NOT_FOUND', 'Page not found');
@@ -1295,6 +1317,34 @@ export async function PUT(request: NextRequest) {
               console.log('✅ [BG] Graph cache rebuild triggered');
             } catch (err) {
               console.error('⚠️ [BG] Graph cache trigger failed:', err);
+            }
+          })(),
+
+          // Sync to Algolia for search indexing
+          (async () => {
+            try {
+              console.log('🔍 [BG] Syncing page to Algolia:', id);
+              const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
+
+              // Get the content string for Algolia
+              const contentString = typeof content === 'string'
+                ? content
+                : JSON.stringify(contentNodes);
+
+              const algoliaResult = await syncPageToAlgoliaServer({
+                pageId: id,
+                title: pageTitle,
+                content: contentString,
+                authorId: currentUserId,
+                authorUsername: pageUsername,
+                isPublic: pageData?.isPublic ?? true,
+                alternativeTitles: pageData?.alternativeTitles || [],
+                lastModified: new Date().toISOString(),
+                createdAt: pageData?.createdAt || new Date().toISOString(),
+              });
+              console.log('✅ [BG] Algolia sync result:', algoliaResult);
+            } catch (err) {
+              console.error('⚠️ [BG] Algolia sync failed:', err);
             }
           })()
         ]);

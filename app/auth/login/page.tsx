@@ -39,16 +39,44 @@ function LoginContent() {
   )
 }
 
+// Static fallback that matches the form structure to prevent layout shift
+function LoginFormSkeleton() {
+  return (
+    <div className="w-full max-w-md mx-auto space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
+        <p className="text-muted-foreground">
+          Welcome back to WeWrite
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+          <div className="h-10 w-full bg-muted rounded animate-pulse" />
+        </div>
+
+        <div className="space-y-2">
+          <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+          <div className="h-10 w-full bg-muted rounded animate-pulse" />
+        </div>
+
+        <div className="h-10 w-full bg-muted rounded animate-pulse" />
+      </div>
+
+      <div className="text-center space-y-4">
+        <div className="h-4 w-40 mx-auto bg-muted rounded animate-pulse" />
+        <div className="h-10 w-full bg-muted rounded animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <ModernAuthLayout
-        title="Sign In"
-        description="Welcome back to WeWrite"
-      >
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
-        </div>
+      <ModernAuthLayout>
+        <LoginFormSkeleton />
       </ModernAuthLayout>
     }>
       <LoginContent />
