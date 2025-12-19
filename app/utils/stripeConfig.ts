@@ -25,6 +25,63 @@ export const getStripeSecretKey = (): string | undefined => {
 };
 
 /**
+ * Async version that checks the X-Force-Production-Data header
+ * Use this in API routes to respect the admin data toggle
+ *
+ * SECURITY: This function ONLY respects the X-Force-Production-Data header for admin routes.
+ * Non-admin routes will always use environment-based key selection to prevent
+ * unauthorized access to production Stripe data.
+ */
+export const getStripeSecretKeyAsync = async (): Promise<string | undefined> => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // Check if force production header is set (for admin data toggle)
+  if (isDevelopment && typeof window === 'undefined') {
+    try {
+      const { headers } = require('next/headers');
+      const headersList = await headers();
+      const forceProduction = headersList.get('x-force-production-data') === 'true';
+
+      if (forceProduction) {
+        // SECURITY CHECK: Only allow production Stripe keys for admin routes
+        const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+        const referer = headersList.get('referer') || '';
+
+        const isAdminApiRoute = pathname.startsWith('/api/admin/') || pathname.includes('/api/admin/');
+        const isFromAdminPage = referer.includes('/admin/') || referer.includes('/admin');
+
+        if (!isAdminApiRoute && !isFromAdminPage) {
+          console.warn('[Stripe Config] ⚠️ SECURITY: X-Force-Production-Data header ignored for non-admin route');
+          return getStripeSecretKey();
+        }
+
+        const prodKey = process.env.STRIPE_PROD_SECRET_KEY;
+
+        if (!prodKey) {
+          console.error(`[Stripe Config] ⚠️  STRIPE_PROD_SECRET_KEY is not set! Add it to .env.local to view production data.`);
+          console.error(`[Stripe Config] Falling back to test keys - you will see TEST data, not production data.`);
+          return process.env.STRIPE_SECRET_KEY;
+        }
+
+        if (prodKey.startsWith('sk_test_')) {
+          console.error(`[Stripe Config] ⚠️  STRIPE_PROD_SECRET_KEY is set to a TEST key (sk_test_...)!`);
+          console.error(`[Stripe Config] Set it to your LIVE key (sk_live_...) to view production data.`);
+        } else {
+          console.log(`[Stripe Config] ✓ Using PRODUCTION keys due to X-Force-Production-Data header: ${prodKey.substring(0, 12)}...`);
+        }
+
+        return prodKey;
+      }
+    } catch (error) {
+      // Headers not available, fall through to normal logic
+    }
+  }
+
+  // Fall back to normal environment-based logic
+  return getStripeSecretKey();
+};
+
+/**
  * Get the appropriate Stripe publishable key based on the current environment
  */
 export const getStripePublishableKey = (): string | undefined => {

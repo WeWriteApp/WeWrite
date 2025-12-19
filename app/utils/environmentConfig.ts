@@ -119,6 +119,10 @@ const shouldUseProductionCollections = (): boolean => {
 
 /**
  * Async version for use in server components that can await headers
+ *
+ * SECURITY: This function ONLY respects the X-Force-Production-Data header for admin routes.
+ * Non-admin routes will always use environment-based collection detection to prevent
+ * unauthorized access to production data.
  */
 const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
   // Check if we're in a server context with headers available
@@ -128,7 +132,29 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
       // This works in API routes and server components
       const { headers } = require('next/headers');
       const headersList = await headers();
-      return headersList.get('x-force-production-data') === 'true';
+      const forceProduction = headersList.get('x-force-production-data') === 'true';
+
+      if (forceProduction) {
+        // SECURITY CHECK: Only allow production data override for admin routes
+        // Check the request path to ensure this is an admin API call
+        const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+        const referer = headersList.get('referer') || '';
+
+        // Allow if the request is to an admin API route
+        const isAdminApiRoute = pathname.startsWith('/api/admin/') || pathname.includes('/api/admin/');
+
+        // Also check if the referer is from an admin page (for client-side requests)
+        const isFromAdminPage = referer.includes('/admin/') || referer.includes('/admin');
+
+        if (!isAdminApiRoute && !isFromAdminPage) {
+          console.warn('[Environment Config] ⚠️ SECURITY: X-Force-Production-Data header ignored for non-admin route');
+          console.warn(`[Environment Config] Pathname: ${pathname}, Referer: ${referer}`);
+          return false;
+        }
+
+        console.log('[Environment Config] Force production data header detected for admin route');
+      }
+      return forceProduction;
     } catch (error) {
       // Headers not available in this context, use normal environment detection
       return false;
