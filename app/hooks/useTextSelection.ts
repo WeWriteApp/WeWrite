@@ -5,7 +5,7 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface TextSelectionState {
   selectedText: string;
@@ -38,6 +38,10 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
 
   // Track if any modal is currently open to prevent clearing selection
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Debounce ref to prevent oscillation on iOS
+  const selectionDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPositionRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleSelectionChange = useCallback(() => {
     const selection = window.getSelection();
@@ -144,26 +148,58 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     const rect = selectionRange.getBoundingClientRect();
 
     // Calculate position for the menu (center of selection, above it)
-    const position = {
+    // Use viewport-relative position (not scroll-adjusted) for fixed positioning
+    const newPosition = {
       x: rect.left + rect.width / 2,
-      y: rect.top + window.scrollY - 45, // Position above selection with more space
+      y: rect.top - 10, // Position above selection (fixed positioning, no scrollY needed)
     };
 
-    setSelectionState({
-      selectedText,
-      selectedHtml,
-      position,
-      isVisible: true,
-      selectionRange: selectionRange.cloneRange(), // Store a copy of the range
-    });
-  }, [options.contentRef]);
+    // iOS oscillation prevention: Only update position if it changed significantly
+    // This prevents rapid position updates that cause the native menu to jump
+    const POSITION_THRESHOLD = 5; // pixels
+    const lastPos = lastPositionRef.current;
+    const positionChanged = !lastPos ||
+      Math.abs(newPosition.x - lastPos.x) > POSITION_THRESHOLD ||
+      Math.abs(newPosition.y - lastPos.y) > POSITION_THRESHOLD;
+
+    // Debounce position updates on iOS to prevent oscillation
+    if (selectionDebounceRef.current) {
+      clearTimeout(selectionDebounceRef.current);
+    }
+
+    // If position hasn't changed significantly, don't update (prevents oscillation)
+    if (!positionChanged && selectionState.isVisible && selectionState.selectedText === selectedText) {
+      return;
+    }
+
+    // Use debounced update to prevent rapid state changes
+    selectionDebounceRef.current = setTimeout(() => {
+      lastPositionRef.current = newPosition;
+      setSelectionState({
+        selectedText,
+        selectedHtml,
+        position: newPosition,
+        isVisible: true,
+        selectionRange: selectionRange.cloneRange(),
+      });
+    }, 50); // 50ms debounce to stabilize on iOS
+  }, [options.contentRef, selectionState.isVisible, selectionState.selectedText]);
 
   const clearSelection = useCallback(() => {
+    // Clear any pending debounce
+    if (selectionDebounceRef.current) {
+      clearTimeout(selectionDebounceRef.current);
+      selectionDebounceRef.current = null;
+    }
+    lastPositionRef.current = null;
+
     setSelectionState({
       selectedText: '',
+      selectedHtml: '',
       position: null,
       isVisible: false,
-      selectionRange: null});
+      selectionRange: null
+    });
 
     // Clear the browser selection
     const selection = window.getSelection();
@@ -323,6 +359,10 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
       document.removeEventListener('click', handleClick);
+      // Clean up debounce timer on unmount
+      if (selectionDebounceRef.current) {
+        clearTimeout(selectionDebounceRef.current);
+      }
     };
   }, [handleSelectionChange]);
 

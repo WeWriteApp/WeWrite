@@ -191,6 +191,7 @@ const config: Config = {
         'collapsible-up': 'collapsible-up 0.2s ease-out',
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'slide-up-fade': 'slide-up-fade 0.3s ease-out forwards',
       },
       keyframes: {
         'gradient-x': {
@@ -227,6 +228,10 @@ const config: Config = {
         'accordion-up': {
           '0%': { height: 'var(--radix-accordion-content-height)' },
           '100%': { height: '0' },
+        },
+        'slide-up-fade': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

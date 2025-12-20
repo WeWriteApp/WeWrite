@@ -225,7 +225,7 @@ export interface WriterUsdEarnings {
     allocationId: string;
     fromUserId: string;
     fromUsername?: string;
-    resourceType: 'page' | 'user_bio' | 'user';
+    resourceType: 'page' | 'user_bio' | 'user' | 'referral';
     resourceId: string;
     resourceTitle?: string;
     usdCents: number; // USD amount in cents

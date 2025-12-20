@@ -155,8 +155,24 @@ interface DebugInfo {
   firebaseRecordCount: number;
 }
 
+interface RealtimeBalanceBreakdown {
+  stripeAvailableCents: number;
+  stripePendingCents: number;
+  totalOwedToWritersCents: number;
+  platformRevenueCents: number;
+  hasSufficientFunds: boolean;
+  lastUpdated: string;
+  breakdown: {
+    unallocatedFundsCents: number;
+    platformFeesCents: number;
+    writerPendingCents: number;
+    writerAvailableCents: number;
+  };
+}
+
 interface FinancialsResponse {
   success: boolean;
+  realtimeBalanceBreakdown?: RealtimeBalanceBreakdown;
   currentMonth: {
     data: MonthlyFinancialData;
     daysRemaining: number;
@@ -346,6 +362,131 @@ export default function MonthlyFinancialsPage() {
                         <p className="text-yellow-600 dark:text-yellow-400">Records</p>
                         <p className="font-mono font-medium">{data.debug.stripeSubscriptionCount} Stripe / {data.debug.firebaseRecordCount} Firebase</p>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Real-Time Balance Breakdown - TOP PRIORITY SECTION */}
+            {data.realtimeBalanceBreakdown && (
+              <div className="wewrite-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                <div className="flex items-center gap-2 mb-4">
+                  <DollarSign className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl font-bold">Real-Time Balance</h2>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                    Live
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    Updated: {new Date(data.realtimeBalanceBreakdown.lastUpdated).toLocaleTimeString()}
+                  </span>
+                </div>
+
+                {/* Main Balance Display */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Stripe Balance */}
+                  <div className="p-4 bg-background rounded-lg border">
+                    <p className="text-sm text-muted-foreground flex items-center">
+                      Stripe Available
+                      <InfoTooltip text="Current available balance in your Stripe account. This is cash that can be used for payouts or withdrawn." />
+                    </p>
+                    <p className="text-3xl font-bold">{formatUsdCents(data.realtimeBalanceBreakdown.stripeAvailableCents)}</p>
+                    {data.realtimeBalanceBreakdown.stripePendingCents > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        + {formatUsdCents(data.realtimeBalanceBreakdown.stripePendingCents)} pending
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Writer Obligations */}
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <p className="text-sm text-muted-foreground flex items-center">
+                      Owed to Writers
+                      <InfoTooltip text="Total amount owed to writers (pending + available earnings). This money is reserved for writer payouts and should not be withdrawn as company revenue." />
+                    </p>
+                    <p className="text-3xl font-bold text-orange-700 dark:text-orange-400">
+                      -{formatUsdCents(data.realtimeBalanceBreakdown.totalOwedToWritersCents)}
+                    </p>
+                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                      <p>{formatUsdCents(data.realtimeBalanceBreakdown.breakdown.writerPendingCents)} pending</p>
+                      <p>{formatUsdCents(data.realtimeBalanceBreakdown.breakdown.writerAvailableCents)} available for payout</p>
+                    </div>
+                  </div>
+
+                  {/* Platform Revenue (Safe to Withdraw) */}
+                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-muted-foreground flex items-center">
+                      Platform Revenue
+                      <InfoTooltip text="Safe to withdraw as company revenue. This is Stripe Balance minus Writer Obligations. Includes unallocated subscription funds and platform fees." />
+                    </p>
+                    <p className="text-3xl font-bold text-green-700 dark:text-green-400">
+                      {formatUsdCents(data.realtimeBalanceBreakdown.platformRevenueCents)}
+                    </p>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {data.realtimeBalanceBreakdown.hasSufficientFunds ? (
+                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <CheckCircle className="h-3 w-3" /> Sufficient funds for all payouts
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                          <AlertCircle className="h-3 w-3" /> Insufficient funds warning
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Visual Balance Bar */}
+                <div className="mt-4">
+                  <div className="h-4 bg-muted rounded-full overflow-hidden flex">
+                    {data.realtimeBalanceBreakdown.stripeAvailableCents > 0 && (
+                      <>
+                        {/* Platform Revenue portion */}
+                        <div
+                          className="h-full bg-green-500 transition-all"
+                          style={{
+                            width: `${(data.realtimeBalanceBreakdown.platformRevenueCents / data.realtimeBalanceBreakdown.stripeAvailableCents) * 100}%`
+                          }}
+                          title={`Platform Revenue: ${formatUsdCents(data.realtimeBalanceBreakdown.platformRevenueCents)}`}
+                        />
+                        {/* Writer Obligations portion */}
+                        <div
+                          className="h-full bg-orange-500 transition-all"
+                          style={{
+                            width: `${(data.realtimeBalanceBreakdown.totalOwedToWritersCents / data.realtimeBalanceBreakdown.stripeAvailableCents) * 100}%`
+                          }}
+                          title={`Writer Obligations: ${formatUsdCents(data.realtimeBalanceBreakdown.totalOwedToWritersCents)}`}
+                        />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded" />
+                      Platform Revenue ({((data.realtimeBalanceBreakdown.platformRevenueCents / Math.max(1, data.realtimeBalanceBreakdown.stripeAvailableCents)) * 100).toFixed(0)}%)
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-orange-500 rounded" />
+                      Writer Obligations ({((data.realtimeBalanceBreakdown.totalOwedToWritersCents / Math.max(1, data.realtimeBalanceBreakdown.stripeAvailableCents)) * 100).toFixed(0)}%)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Revenue Breakdown */}
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm font-medium mb-2">Platform Revenue Sources (Current Month)</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between p-2 bg-muted/30 rounded">
+                      <span className="text-muted-foreground">Unallocated Funds</span>
+                      <span className="font-medium text-green-700 dark:text-green-400">
+                        {formatUsdCents(data.realtimeBalanceBreakdown.breakdown.unallocatedFundsCents)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-muted/30 rounded">
+                      <span className="text-muted-foreground">Platform Fees (7%)</span>
+                      <span className="font-medium text-green-700 dark:text-green-400">
+                        {formatUsdCents(data.realtimeBalanceBreakdown.breakdown.platformFeesCents)}
+                      </span>
                     </div>
                   </div>
                 </div>

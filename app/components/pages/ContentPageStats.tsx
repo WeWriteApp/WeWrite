@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, Clock, Heart, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { InlineError } from '../ui/InlineError';
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
+import AnimatedNumber from '../ui/AnimatedNumber';
 
 interface PageStatsData {
   totalViews: number;
@@ -69,59 +70,103 @@ export default function ContentPageStats({
   const [stats, setStats] = useState<PageStatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [diffAnimating, setDiffAnimating] = useState(false);
+  const prevDiffRef = useRef<PageStatsData['diffPreview'] | null>(null);
 
   // Fetch page statistics from API
-  useEffect(() => {
-    const fetchPageStats = async () => {
-      if (!pageId) return;
+  const fetchPageStats = useCallback(async (bustCache = false) => {
+    if (!pageId) return;
 
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      if (!stats) setLoading(true);
+      setError(null);
 
-        // Use environment-aware API endpoint
-        const response = await fetch(`/api/stats/page?pageId=${pageId}`);
+      // Use environment-aware API endpoint
+      const url = bustCache
+        ? `/api/stats/page?pageId=${pageId}&_t=${Date.now()}`
+        : `/api/stats/page?pageId=${pageId}`;
+      const response = await fetch(url);
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch page stats: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch page stats: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const newDiffPreview = result.data.diffPreview || null;
+
+        // Check if diff preview changed (trigger animation)
+        if (stats?.diffPreview && newDiffPreview &&
+            JSON.stringify(newDiffPreview) !== JSON.stringify(stats.diffPreview)) {
+          setDiffAnimating(true);
+          setTimeout(() => setDiffAnimating(false), 500);
         }
 
-        const result = await response.json();
+        prevDiffRef.current = stats?.diffPreview || null;
 
-        if (result.success && result.data) {
-          setStats({
-            totalViews: result.data.totalViews || 0,
-            viewData: result.data.viewData || Array(24).fill(0),
-            recentChanges: result.data.recentChanges || 0,
-            changeData: result.data.changeData || Array(24).fill(0),
-            supporterCount: result.data.supporterCount || 0,
-            supporterData: result.data.supporterData || Array(24).fill(0),
-            lastEditedAt: result.data.lastEditedAt || null,
-            lastDiff: result.data.lastDiff || null,
-            diffPreview: result.data.diffPreview || null,
-          });
-        } else {
-          throw new Error(result.error || 'Failed to load page statistics');
-        }
-      } catch (err) {
-        console.error('Error fetching page stats:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load page statistics');
-        // Set fallback data
         setStats({
-          totalViews: 0,
-          viewData: Array(24).fill(0),
-          recentChanges: 0,
-          changeData: Array(24).fill(0),
-      supporterCount: 0,
-      supporterData: Array(24).fill(0),
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+          totalViews: result.data.totalViews || 0,
+          viewData: result.data.viewData || Array(24).fill(0),
+          recentChanges: result.data.recentChanges || 0,
+          changeData: result.data.changeData || Array(24).fill(0),
+          supporterCount: result.data.supporterCount || 0,
+          supporterData: result.data.supporterData || Array(24).fill(0),
+          lastEditedAt: result.data.lastEditedAt || null,
+          lastDiff: result.data.lastDiff || null,
+          diffPreview: newDiffPreview,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to load page statistics');
+      }
+    } catch (err) {
+      console.error('Error fetching page stats:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load page statistics');
+      // Set fallback data
+      setStats({
+        totalViews: 0,
+        viewData: Array(24).fill(0),
+        recentChanges: 0,
+        changeData: Array(24).fill(0),
+        supporterCount: 0,
+        supporterData: Array(24).fill(0),
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [pageId, stats]);
 
+  // Initial fetch
+  useEffect(() => {
     fetchPageStats();
   }, [pageId]);
+
+  // Listen for pageSaved events to refresh stats in real-time
+  useEffect(() => {
+    const handlePageSaved = (event: CustomEvent) => {
+      const { pageId: savedPageId } = event.detail || {};
+      if (savedPageId === pageId) {
+        // Small delay to let the server process the save
+        setTimeout(() => fetchPageStats(true), 300);
+      }
+    };
+
+    const handleRefreshEdits = (event: CustomEvent) => {
+      const { pageId: eventPageId } = event.detail || {};
+      if (!eventPageId || eventPageId === pageId) {
+        fetchPageStats(true);
+      }
+    };
+
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('pageSaved', handlePageSaved as EventListener);
+    window.addEventListener('refresh-recent-edits', handleRefreshEdits as EventListener);
+    return () => {
+      window.removeEventListener('pageSaved', handlePageSaved as EventListener);
+      window.removeEventListener('refresh-recent-edits', handleRefreshEdits as EventListener);
+    };
+  }, [pageId, fetchPageStats]);
 
   // Use CSS variable for accent color instead of hardcoded values
   const accentColorValue = 'oklch(var(--primary))';
@@ -152,7 +197,7 @@ export default function ContentPageStats({
   if (error) {
     return (
       <InlineError
-        variant="card"
+        variant="error"
         message={`Failed to load page statistics: ${error}`}
         className="mb-6"
       />
@@ -202,7 +247,7 @@ export default function ContentPageStats({
               color: pillTextColor
             }}
           >
-            {(stats.totalViews + (includeCurrentView ? 1 : 0)).toLocaleString()}
+            <AnimatedNumber value={stats.totalViews + (includeCurrentView ? 1 : 0)} />
           </div>
         </div>
       </div>
@@ -240,7 +285,7 @@ export default function ContentPageStats({
                 color: pillTextColor
               }}
             >
-              {stats.recentChanges.toLocaleString()}
+              <AnimatedNumber value={stats.recentChanges} />
             </div>
           </div>
         </div>
@@ -255,7 +300,11 @@ export default function ContentPageStats({
 
             {/* Diff preview */}
             {stats.diffPreview && typeof stats.diffPreview === 'object' && (
-              <div className="text-xs overflow-hidden line-clamp-2">
+              <div
+                className={`text-xs overflow-hidden line-clamp-2 transition-all duration-300 ${
+                  diffAnimating ? 'animate-slide-up-fade' : ''
+                }`}
+              >
                 {/* Before context */}
                 {stats.diffPreview.beforeContext && (
                   <span className="text-muted-foreground">{stats.diffPreview.beforeContext}</span>

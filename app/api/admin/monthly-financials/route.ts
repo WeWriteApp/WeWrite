@@ -693,8 +693,39 @@ export async function GET(request: NextRequest) {
       console.error('[MONTHLY FINANCIALS] Error fetching writer earnings:', writerEarningsError);
     }
 
+    // ========================================
+    // Calculate real-time balance breakdown
+    // Shows: Stripe Balance - Writer Obligations = Platform Revenue (safe to withdraw)
+    // ========================================
+    const totalOwedToWritersCents = writerEarnings.reduce(
+      (sum, w) => sum + (w.pendingEarningsCents || 0) + (w.availableEarningsCents || 0),
+      0
+    );
+
+    const stripeAvailableCents = stripeBalance?.availableCents || 0;
+    const platformRevenueCents = Math.max(0, stripeAvailableCents - totalOwedToWritersCents);
+    const hasSufficientFunds = stripeAvailableCents >= totalOwedToWritersCents;
+
+    const realtimeBalanceBreakdown = {
+      stripeAvailableCents,
+      stripePendingCents: stripeBalance?.pendingCents || 0,
+      totalOwedToWritersCents,
+      platformRevenueCents,
+      hasSufficientFunds,
+      lastUpdated: new Date().toISOString(),
+      breakdown: {
+        // Platform revenue sources
+        unallocatedFundsCents: currentMonthData.totalUnallocatedCents,
+        platformFeesCents: currentMonthData.platformFeeCents,
+        // What makes up writer obligations
+        writerPendingCents: writerEarnings.reduce((sum, w) => sum + (w.pendingEarningsCents || 0), 0),
+        writerAvailableCents: writerEarnings.reduce((sum, w) => sum + (w.availableEarningsCents || 0), 0),
+      }
+    };
+
     return NextResponse.json({
       success: true,
+      realtimeBalanceBreakdown,
       currentMonth: {
         data: currentMonthData,
         daysRemaining,

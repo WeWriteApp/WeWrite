@@ -1,0 +1,76 @@
+PODS:
+  - Capacitor (7.4.4):
+    - CapacitorCordova
+  - CapacitorApp (7.1.1):
+    - Capacitor
+  - CapacitorBrowser (7.0.3):
+    - Capacitor
+  - CapacitorClipboard (7.0.3):
+    - Capacitor
+  - CapacitorCordova (7.4.4)
+  - CapacitorHaptics (7.0.3):
+    - Capacitor
+  - CapacitorKeyboard (7.0.4):
+    - Capacitor
+  - CapacitorNetwork (7.0.3):
+    - Capacitor
+  - CapacitorPreferences (7.0.3):
+    - Capacitor
+  - CapacitorPushNotifications (7.0.4):
+    - Capacitor
+  - CapacitorShare (7.0.3):
+    - Capacitor
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/.bun/@capacitor+ios@7.4.4+1d43a6a1837411c8/node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/.bun/@capacitor+app@7.1.1+1d43a6a1837411c8/node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/.bun/@capacitor+browser@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/browser`)"
+  - "CapacitorClipboard (from `../../node_modules/.bun/@capacitor+clipboard@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/clipboard`)"
+  - "CapacitorCordova (from `../../node_modules/.bun/@capacitor+ios@7.4.4+1d43a6a1837411c8/node_modules/@capacitor/ios`)"
+  - "CapacitorHaptics (from `../../node_modules/.bun/@capacitor+haptics@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/haptics`)"
+  - "CapacitorKeyboard (from `../../node_modules/.bun/@capacitor+keyboard@7.0.4+1d43a6a1837411c8/node_modules/@capacitor/keyboard`)"
+  - "CapacitorNetwork (from `../../node_modules/.bun/@capacitor+network@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/network`)"
+  - "CapacitorPreferences (from `../../node_modules/.bun/@capacitor+preferences@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/preferences`)"
+  - "CapacitorPushNotifications (from `../../node_modules/.bun/@capacitor+push-notifications@7.0.4+1d43a6a1837411c8/node_modules/@capacitor/push-notifications`)"
+  - "CapacitorShare (from `../../node_modules/.bun/@capacitor+share@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/share`)"
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/.bun/@capacitor+ios@7.4.4+1d43a6a1837411c8/node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/.bun/@capacitor+app@7.1.1+1d43a6a1837411c8/node_modules/@capacitor/app"
+  CapacitorBrowser:
+    :path: "../../node_modules/.bun/@capacitor+browser@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/browser"
+  CapacitorClipboard:
+    :path: "../../node_modules/.bun/@capacitor+clipboard@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/clipboard"
+  CapacitorCordova:
+    :path: "../../node_modules/.bun/@capacitor+ios@7.4.4+1d43a6a1837411c8/node_modules/@capacitor/ios"
+  CapacitorHaptics:
+    :path: "../../node_modules/.bun/@capacitor+haptics@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/haptics"
+  CapacitorKeyboard:
+    :path: "../../node_modules/.bun/@capacitor+keyboard@7.0.4+1d43a6a1837411c8/node_modules/@capacitor/keyboard"
+  CapacitorNetwork:
+    :path: "../../node_modules/.bun/@capacitor+network@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/network"
+  CapacitorPreferences:
+    :path: "../../node_modules/.bun/@capacitor+preferences@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/preferences"
+  CapacitorPushNotifications:
+    :path: "../../node_modules/.bun/@capacitor+push-notifications@7.0.4+1d43a6a1837411c8/node_modules/@capacitor/push-notifications"
+  CapacitorShare:
+    :path: "../../node_modules/.bun/@capacitor+share@7.0.3+1d43a6a1837411c8/node_modules/@capacitor/share"
+
+SPEC CHECKSUMS:
+  Capacitor: 358dd1c3fdd71d969547b17e159fd8a7736cb45f
+  CapacitorApp: 63b237168fc869e758481dba283315a85743ee78
+  CapacitorBrowser: b98aa3db018a2ce4c68242d27e596c344f3b81b3
+  CapacitorClipboard: 2a282bc14e8f47d430f2f9698ed95fbe25dcc21c
+  CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
+  CapacitorHaptics: ce15be8f287fa2c61c7d2d9e958885b90cf0bebc
+  CapacitorKeyboard: 5660c760113bfa48962817a785879373cf5339c3
+  CapacitorNetwork: 1a22460c6f900686f12ffa52f3074ee313821b08
+  CapacitorPreferences: 913eef88272c13eb6445b21e51fe8ef6635412cc
+  CapacitorPushNotifications: 7604512af53bbfdf1dd8fb2256b9ef1e8a69cdc2
+  CapacitorShare: a4f4f86eabd4b3ff52ba6a11b754713c6926a8d1
+
+PODFILE CHECKSUM: 6a34c392c1e046ef9d1d3eb2757c2cd053382970
+
+COCOAPODS: 1.16.2

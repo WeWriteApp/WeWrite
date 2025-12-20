@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { FileText, Users, TrendingUp, Copy, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, Users, TrendingUp, Copy, ChevronDown, ChevronRight, UserPlus } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { toast } from '../ui/use-toast';
@@ -37,7 +37,14 @@ interface PageContribution {
   amount: number;
 }
 
-type BreakdownMode = 'pages' | 'sponsors';
+interface ReferralEarning {
+  referredUserId: string;
+  referredUsername: string;
+  totalEarnings: number;
+  payoutCount: number;
+}
+
+type BreakdownMode = 'pages' | 'sponsors' | 'referrals';
 
 /**
  * EarningsSourceBreakdown - Shows where earnings are coming from
@@ -109,7 +116,7 @@ export default function EarningsSourceBreakdown() {
   }, [earnings?.availableBalance, loadingHistorical]);
 
   // Process both pending allocations AND historical earnings data
-  const { pageBreakdown, sponsorBreakdown } = useMemo(() => {
+  const { pageBreakdown, sponsorBreakdown, referralBreakdown } = useMemo(() => {
     console.log('[EarningsSourceBreakdown] Processing earnings data:', {
       earnings,
       pendingAllocations: earnings?.pendingAllocations,
@@ -122,7 +129,7 @@ export default function EarningsSourceBreakdown() {
     });
 
     // Combine current pending allocations with historical earnings data
-    const allEarningsData = [];
+    const allEarningsData: any[] = [];
 
     // Add current month pending allocations
     if (earnings?.pendingAllocations) {
@@ -133,7 +140,7 @@ export default function EarningsSourceBreakdown() {
     if (historicalEarnings.length > 0) {
       historicalEarnings.forEach(earning => {
         if (earning.allocations) {
-          allEarningsData.push(...earning.allocations.map(allocation => ({
+          allEarningsData.push(...earning.allocations.map((allocation: any) => ({
             ...allocation,
             isHistorical: true
           })));
@@ -145,14 +152,18 @@ export default function EarningsSourceBreakdown() {
 
     if (allEarningsData.length === 0) {
       console.log('[EarningsSourceBreakdown] No earnings data found (pending or historical)');
-      return { pageBreakdown: [], sponsorBreakdown: [] };
+      return { pageBreakdown: [], sponsorBreakdown: [], referralBreakdown: [] };
     }
 
-    // Group by pages
+    // Separate referral allocations from page allocations
+    const pageAllocations = allEarningsData.filter(a => a.resourceType !== 'referral');
+    const referralAllocations = allEarningsData.filter(a => a.resourceType === 'referral');
+
+    // Group by pages (excluding referrals)
     const pageMap = new Map<string, PageEarning>();
     const sponsorMap = new Map<string, SponsorInfo>();
 
-    allEarningsData.forEach((allocation: any) => {
+    pageAllocations.forEach((allocation: any) => {
       const pageId = allocation.resourceId;
       const pageTitle = allocation.pageTitle || allocation.resourceTitle || 'Untitled Page';
       const userId = allocation.fromUserId || allocation.userId;
@@ -171,7 +182,7 @@ export default function EarningsSourceBreakdown() {
       }
       const pageData = pageMap.get(pageId)!;
       pageData.totalEarnings += amount;
-      
+
       // Add sponsor to page if not already there
       if (!pageData.sponsors.find(s => s.userId === userId)) {
         pageData.sponsors.push({
@@ -208,14 +219,37 @@ export default function EarningsSourceBreakdown() {
       }
     });
 
+    // Group referral allocations by referred user
+    const referralMap = new Map<string, ReferralEarning>();
+    referralAllocations.forEach((allocation: any) => {
+      const referredUserId = allocation.fromUserId;
+      const referredUsername = allocation.fromUsername || 'Anonymous';
+      const amount = allocation.usdCents / 100;
+
+      if (!referralMap.has(referredUserId)) {
+        referralMap.set(referredUserId, {
+          referredUserId,
+          referredUsername,
+          totalEarnings: 0,
+          payoutCount: 0
+        });
+      }
+      const referralData = referralMap.get(referredUserId)!;
+      referralData.totalEarnings += amount;
+      referralData.payoutCount++;
+    });
+
     // Convert to arrays and sort
     const pageBreakdown = Array.from(pageMap.values())
       .sort((a, b) => b.totalEarnings - a.totalEarnings);
-    
+
     const sponsorBreakdown = Array.from(sponsorMap.values())
       .sort((a, b) => b.totalContribution - a.totalContribution);
 
-    return { pageBreakdown, sponsorBreakdown };
+    const referralBreakdown = Array.from(referralMap.values())
+      .sort((a, b) => b.totalEarnings - a.totalEarnings);
+
+    return { pageBreakdown, sponsorBreakdown, referralBreakdown };
   }, [earnings?.pendingAllocations, historicalEarnings]);
 
   if (loading) {
@@ -245,7 +279,8 @@ export default function EarningsSourceBreakdown() {
     );
   }
 
-  const hasEarnings = pageBreakdown.length > 0 || sponsorBreakdown.length > 0;
+  const hasEarnings = pageBreakdown.length > 0 || sponsorBreakdown.length > 0 || referralBreakdown.length > 0;
+  const hasReferrals = referralBreakdown.length > 0;
 
   return (
     <div className="space-y-4">
@@ -276,6 +311,17 @@ export default function EarningsSourceBreakdown() {
               <Users className="h-3 w-3" />
               Sponsors
             </Button>
+            {hasReferrals && (
+              <Button
+                variant={mode === 'referrals' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMode('referrals')}
+                className="flex items-center gap-1"
+              >
+                <UserPlus className="h-3 w-3" />
+                Referrals
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -378,7 +424,7 @@ export default function EarningsSourceBreakdown() {
                 </Card>
               );
             })
-            ) : (
+            ) : mode === 'sponsors' ? (
               // Sponsors breakdown - Each sponsor gets its own card
               sponsorBreakdown.map((sponsor, index) => {
                 const cardId = `sponsor-${sponsor.userId}`;
@@ -456,19 +502,55 @@ export default function EarningsSourceBreakdown() {
                   </Card>
                 );
               })
-            )}
-            
+            ) : mode === 'referrals' ? (
+              // Referrals breakdown - Each referred user gets their own card
+              referralBreakdown.map((referral, index) => (
+                <Card key={referral.referredUserId} className="overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
+                          <UserPlus className="h-4 w-4 text-purple-500" />
+                          <PillLink
+                            href={`/u/${referral.referredUserId}`}
+                            isPublic={true}
+                          >
+                            @{referral.referredUsername}
+                          </PillLink>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {referral.payoutCount} payout{referral.payoutCount !== 1 ? 's' : ''} • 30% of platform fee
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-purple-600">
+                          {formatUsdCents(referral.totalEarnings * 100)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">earned</div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : null}
+
             {/* Summary */}
             <div className="pt-3 mt-3 border-t border-neutral-15">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {mode === 'pages' 
+                  {mode === 'pages'
                     ? `${pageBreakdown.length} earning page${pageBreakdown.length !== 1 ? 's' : ''}`
-                    : `${sponsorBreakdown.length} sponsor${sponsorBreakdown.length !== 1 ? 's' : ''}`
+                    : mode === 'sponsors'
+                    ? `${sponsorBreakdown.length} sponsor${sponsorBreakdown.length !== 1 ? 's' : ''}`
+                    : `${referralBreakdown.length} referral${referralBreakdown.length !== 1 ? 's' : ''}`
                   }
                 </span>
                 <span className="font-medium">
-                  Total: {formatUsdCents((earnings?.pendingBalance || 0) * 100)}/month
+                  {mode === 'referrals'
+                    ? `Total: ${formatUsdCents(referralBreakdown.reduce((sum, r) => sum + r.totalEarnings, 0) * 100)}`
+                    : `Total: ${formatUsdCents((earnings?.pendingBalance || 0) * 100)}/month`
+                  }
                 </span>
               </div>
             </div>

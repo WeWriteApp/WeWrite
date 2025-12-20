@@ -51,18 +51,25 @@ export default function RootPage() {
   useEffect(() => {
     if (!mounted || isLoading || authRedirectPending) return;
 
+    const native = isNativeApp();
+    console.log('[RootPage] isNativeApp:', native, 'isAuthenticated:', isAuthenticated);
+
     // Check for native app onboarding
-    if (isNativeApp()) {
+    if (native) {
       const onboardingComplete = localStorage.getItem('wewrite_mobile_onboarding_complete');
+      console.log('[RootPage] onboardingComplete:', onboardingComplete);
       if (onboardingComplete !== 'true') {
+        console.log('[RootPage] Redirecting to /onboarding');
         router.replace('/onboarding');
         return;
       }
     }
 
     if (isAuthenticated) {
+      console.log('[RootPage] Redirecting to /home');
       router.replace('/home');
     } else {
+      console.log('[RootPage] Redirecting to /welcome');
       router.replace('/welcome');
     }
   }, [mounted, isAuthenticated, isLoading, authRedirectPending, router]);

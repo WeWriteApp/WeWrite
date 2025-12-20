@@ -189,16 +189,13 @@ export class PayoutService {
       const amountDollars = payout.amountCents / 100;
       // Platform fee from centralized config (10%)
       const platformFeeAmount = amountDollars * PLATFORM_FEE_CONFIG.PERCENTAGE;
-      // Payout fee (audit metadata only; charged by Stripe) – standard $0.25
-      const PAYOUT_FEE_CENTS = 25;
 
       const payoutResult = await stripeStorageBalanceService.processPayoutFromStorage(
         amountDollars,
         stripeAccountId,
         payout.userId,
         `Payout ${payoutId}`,
-        platformFeeAmount,
-        PAYOUT_FEE_CENTS
+        platformFeeAmount
       );
 
       if (!payoutResult.success || !payoutResult.transferId) {
@@ -252,14 +249,14 @@ export class PayoutService {
       });
       
       // Send payout email notification (fire-and-forget)
+      const userData = userDoc.data();
       try {
-        const userData = userDoc.data();
         if (userData?.email) {
           const amount = payout.amountCents / 100;
           const processingDate = new Date();
           const arrivalDate = new Date(processingDate);
           arrivalDate.setDate(arrivalDate.getDate() + 3); // Estimate 3 business days
-          
+
           sendPayoutProcessed({
             to: userData.email,
             username: userData.username || 'there',
@@ -272,7 +269,30 @@ export class PayoutService {
       } catch (emailErr) {
         console.error('[Payout] Error preparing payout email:', emailErr);
       }
-      
+
+      // Process referral earnings if this user was referred by someone
+      // The referrer earns 30% of the 10% platform fee
+      try {
+        const referredBy = userData?.referredBy;
+        if (referredBy) {
+          const platformFeeCents = Math.round(payout.amountCents * PLATFORM_FEE_CONFIG.PERCENTAGE);
+
+          await ServerUsdEarningsService.processReferralEarning(
+            referredBy,                           // referrerUserId
+            payout.userId,                        // referredUserId
+            userData?.username || 'Anonymous',    // referredUsername
+            payout.id,                            // payoutId
+            payout.amountCents,                   // payoutAmountCents
+            platformFeeCents                      // platformFeeCents
+          );
+
+          console.log('[Payout] Referral earnings processed for referrer:', referredBy);
+        }
+      } catch (referralErr) {
+        // Don't fail the payout if referral earnings fail - log and continue
+        console.error('[Payout] Error processing referral earnings (non-fatal):', referralErr);
+      }
+
       return { success: true, transferId: payoutResult.transferId };
 
     } catch (error) {

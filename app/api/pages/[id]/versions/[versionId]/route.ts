@@ -9,16 +9,25 @@ import { initAdmin } from '../../../../../firebase/admin';
 import { getCollectionName } from '../../../../../utils/environmentConfig';
 import { isUserAdmin } from '../../../../../utils/adminSecurity';
 
+interface VersionNavData {
+  id: string;
+  title?: string;
+  createdAt: any;
+  username?: string;
+  diff?: any;
+  [key: string]: any;
+}
+
 // GET /api/pages/[id]/versions/[versionId]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; versionId: string } }
+  { params }: { params: Promise<{ id: string; versionId: string }> }
 ) {
   try {
-    const { id: pageId, versionId } = params;
-    
+    const { id: pageId, versionId } = await params;
+
     if (!pageId || !versionId) {
-      return createErrorResponse('Page ID and Version ID are required', 'BAD_REQUEST');
+      return createErrorResponse('BAD_REQUEST', 'Page ID and Version ID are required');
     }
 
     console.log(`📊 [VERSION_DETAIL] Fetching version:`, {
@@ -36,7 +45,7 @@ export async function GET(
     const pageDoc = await pageRef.get();
 
     if (!pageDoc.exists) {
-      return createErrorResponse('Page not found', 'NOT_FOUND');
+      return createErrorResponse('NOT_FOUND', 'Page not found');
     }
 
     const pageData = pageDoc.data();
@@ -54,7 +63,6 @@ export async function GET(
     const isDevelopment = process.env.NODE_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
-    const canView = true; // All pages are accessible
 
     console.log(`📊 [VERSION_DETAIL] Permission check:`, {
       pageId,
@@ -76,36 +84,38 @@ export async function GET(
     const versionDoc = await versionRef.get();
 
     if (!versionDoc.exists) {
-      return createErrorResponse('Version not found', 'NOT_FOUND');
+      return createErrorResponse('NOT_FOUND', 'Version not found');
     }
 
     const versionData = versionDoc.data();
 
     // Get the previous version for comparison if it exists
-    let previousVersion = null;
+    let previousVersion: VersionNavData | null = null;
     if (versionData?.previousVersionId) {
       const prevVersionRef = pageRef.collection('versions').doc(versionData.previousVersionId);
       const prevVersionDoc = await prevVersionRef.get();
       if (prevVersionDoc.exists) {
+        const prevData = prevVersionDoc.data();
         previousVersion = {
           id: prevVersionDoc.id,
-          ...prevVersionDoc.data()
+          ...prevData
         };
       }
     }
 
     // Get the next version (version that has this version as previousVersionId)
-    let nextVersion = null;
+    let nextVersion: VersionNavData | null = null;
     const nextVersionQuery = pageRef.collection('versions')
       .where('previousVersionId', '==', versionId)
       .limit(1);
     const nextVersionSnapshot = await nextVersionQuery.get();
-    
+
     if (!nextVersionSnapshot.empty) {
       const nextVersionDoc = nextVersionSnapshot.docs[0];
+      const nextData = nextVersionDoc.data();
       nextVersion = {
         id: nextVersionDoc.id,
-        ...nextVersionDoc.data()
+        ...nextData
       };
     }
 
@@ -149,6 +159,6 @@ export async function GET(
 
   } catch (error) {
     console.error('❌ [VERSION_DETAIL] Error fetching version:', error);
-    return createErrorResponse('Failed to fetch page version', 'INTERNAL_ERROR');
+    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch page version');
   }
 }

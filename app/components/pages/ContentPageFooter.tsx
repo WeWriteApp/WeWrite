@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import ContentPageActions from "./ContentPageActions";
 import WordCounter from "../editor/WordCounter";
 import ContentPageStats from "./ContentPageStats";
+import SameTitlePages from "./SameTitlePages";
 import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
@@ -222,6 +223,14 @@ export default function ContentPageFooter({
               pageId={page.id}
               realTime={true}
               showSparklines={true}
+            />
+          )}
+
+          {/* Same title pages section - show other users who wrote about this topic */}
+          {!page.isNewPage && page.title && (
+            <SameTitlePages
+              pageId={page.id}
+              pageTitle={page.title}
             />
           )}
         </>

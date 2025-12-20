@@ -19,6 +19,7 @@ import {
 import { getCollectionName } from '../utils/environmentConfig';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../utils/stripeConfig';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 
 const stripe = new Stripe(getStripeSecretKey());
 
@@ -314,8 +315,8 @@ export class EarningsVisualizationService {
   ): Promise<{ payoutEligible: boolean; reasonsIneligible?: string[] }> {
     const reasons: string[] = [];
 
-    if (unpaidEarnings < 25) {
-      reasons.push('Earnings below $25 minimum threshold');
+    if (unpaidEarnings < PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS) {
+      reasons.push(`Earnings below $${PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS} minimum threshold`);
     }
 
     if (bankAccountStatus === 'none') {

@@ -10,6 +10,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import UnifiedLoader from '../../components/ui/unified-loader';
 import { InlineError } from '../../components/ui/InlineError';
 import VersionActivityCard from '../../components/activity/VersionActivityCard';
+import DiffTimelineChart from '../../components/activity/DiffTimelineChart';
 import { getDiff } from '../../utils/diffService';
 import PageVersionsHeader from '../../components/pages/PageVersionsHeader';
 import { useAuth } from '../../providers/AuthProvider';
@@ -306,6 +307,27 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
 
         {/* Clean spacing for fixed header */}
         <div className="p-2" style={{ paddingTop: '120px' }}>
+          {/* Diff Timeline Chart */}
+          {activities.length > 1 && (
+            <div className="mb-6 p-4 wewrite-card">
+              <DiffTimelineChart
+                data={activities.map(a => ({
+                  added: a.diff?.added || 0,
+                  removed: a.diff?.removed || 0,
+                  timestamp: a.timestamp,
+                  id: a.versionId
+                }))}
+                height={80}
+                onBarClick={(index) => {
+                  const activity = activities[index];
+                  if (activity?.versionId) {
+                    router.push(`/${id}/versions/${activity.versionId}`);
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {activities.length === 0 ? (
             <div className="text-center p-8 border rounded-md">
               <p className="text-muted-foreground">No versions available for this page</p>

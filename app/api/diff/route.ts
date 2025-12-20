@@ -287,8 +287,17 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
   let collectingAfterContext = false;
   let afterContextLength = 0;
 
+  // Track pending equal content that might be part of a larger change
+  // (whitespace or short words between consecutive changes)
+  let pendingEqual = '';
+  let pendingEqualIsWhitespace = false;
+
   for (let i = firstChangeIndex; i < operations.length; i++) {
     const op = operations[i];
+
+    // Check if this operation is just whitespace or very short
+    const isWhitespaceOnly = /^\s+$/.test(op.text);
+    const isShortConnector = op.text.length <= 3 && /^[\s.,;:'"!?-]+$/.test(op.text);
 
     if (op.type === 'add') {
       // If we were collecting after context and hit another change, stop
@@ -297,9 +306,15 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
       }
       // Don't exceed max length
       if (addedText.length < maxChangeLength) {
+        // Include pending equal content if we're continuing a change
+        if (pendingEqual && addedText.length > 0) {
+          addedText += pendingEqual;
+        }
         addedText += op.text;
         hasAdditions = true;
       }
+      pendingEqual = '';
+      pendingEqualIsWhitespace = false;
       collectingAfterContext = false;
     } else if (op.type === 'remove') {
       // If we were collecting after context and hit another change, stop
@@ -308,11 +323,48 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
       }
       // Don't exceed max length
       if (removedText.length < maxChangeLength) {
+        // Include pending equal content if we're continuing a change
+        if (pendingEqual && removedText.length > 0) {
+          removedText += pendingEqual;
+        }
         removedText += op.text;
         hasRemovals = true;
       }
+      pendingEqual = '';
+      pendingEqualIsWhitespace = false;
       collectingAfterContext = false;
     } else if (op.type === 'equal') {
+      // Check if there's a change coming soon after this equal
+      // Look ahead to see if we should include this as part of the change
+      const lookAheadLimit = Math.min(i + 4, operations.length);
+      let hasUpcomingChange = false;
+      for (let j = i + 1; j < lookAheadLimit; j++) {
+        if (operations[j].type === 'add' || operations[j].type === 'remove') {
+          hasUpcomingChange = true;
+          break;
+        }
+      }
+
+      // If this is whitespace/punctuation and there's an upcoming change,
+      // save it as pending to include with the next change
+      if ((isWhitespaceOnly || isShortConnector) && hasUpcomingChange && !collectingAfterContext) {
+        // If we already have changes, include this whitespace with them
+        if (hasAdditions || hasRemovals) {
+          pendingEqual = op.text;
+          pendingEqualIsWhitespace = isWhitespaceOnly;
+          continue;
+        }
+      }
+
+      // If we were collecting pending equal content but found no more changes,
+      // add it to after context instead
+      if (pendingEqual) {
+        afterContextParts.push(pendingEqual);
+        afterContextLength += pendingEqual.length;
+        pendingEqual = '';
+        pendingEqualIsWhitespace = false;
+      }
+
       // Collect equal text as after context
       collectingAfterContext = true;
       afterContextParts.push(op.text);
@@ -323,6 +375,11 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
         break;
       }
     }
+  }
+
+  // Handle any remaining pending equal content
+  if (pendingEqual) {
+    afterContextParts.unshift(pendingEqual);
   }
 
   // Join all after context parts and take the first N characters

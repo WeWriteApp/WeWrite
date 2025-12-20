@@ -192,6 +192,7 @@ function updateLinksInContent(content: any, targetPageId: string, oldTitle: stri
 interface PageData {
   id?: string;
   title: string;
+  titleLower?: string; // Lowercase title for efficient same-title queries
   content?: any;
   userId: string;
   username?: string;
@@ -534,8 +535,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const trimmedTitleForData = title.trim();
     const pageData: PageData = {
-      title: title.trim(),
+      title: trimmedTitleForData,
+      titleLower: trimmedTitleForData.toLowerCase().trim(), // For efficient same-title queries
       content: validatedContent, // Store as proper structure, not string
       userId: currentUserId,
       username,
@@ -943,6 +946,7 @@ export async function PUT(request: NextRequest) {
 
       const trimmedTitle = title.trim();
       updateData.title = trimmedTitle;
+      updateData.titleLower = trimmedTitle.toLowerCase().trim(); // For efficient same-title queries
     }
 
     if (content !== undefined) {

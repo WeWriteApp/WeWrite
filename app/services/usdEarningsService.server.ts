@@ -128,7 +128,7 @@ export class ServerUsdEarningsService {
     fromUserId: string,
     recipientUserId: string,
     resourceId: string,
-    resourceType: 'page' | 'user_bio' | 'user',
+    resourceType: 'page' | 'user_bio' | 'user' | 'referral',
     usdCentsChange: number,
     month: string
   ): Promise<void> {
@@ -334,6 +334,118 @@ export class ServerUsdEarningsService {
     } catch (error) {
       console.error('[ServerUsdEarningsService] Error processing monthly distribution:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Process referral earnings when a referred user gets a payout
+   *
+   * Called after a successful writer payout. The referrer earns 30% of the 10% platform fee.
+   * Referral earnings are immediately "available" since they're based on completed payouts.
+   *
+   * @param referrerUserId - The user who referred the writer
+   * @param referredUserId - The writer who received the payout
+   * @param referredUsername - Username of the referred writer (for display)
+   * @param payoutId - The payout ID this referral earning is based on
+   * @param payoutAmountCents - The total payout amount (before platform fee)
+   * @param platformFeeCents - The platform fee (10% of payout)
+   */
+  static async processReferralEarning(
+    referrerUserId: string,
+    referredUserId: string,
+    referredUsername: string,
+    payoutId: string,
+    payoutAmountCents: number,
+    platformFeeCents: number
+  ): Promise<{ success: boolean; referralEarningsCents: number; error?: string }> {
+    const REFERRAL_SHARE = 0.30; // Referrer gets 30% of platform fee
+
+    try {
+      const { db } = getFirebaseAdminAndDb();
+
+      // Calculate referral earnings: 30% of the 10% platform fee = 3% of payout
+      const referralEarningsCents = Math.round(platformFeeCents * REFERRAL_SHARE);
+
+      if (referralEarningsCents <= 0) {
+        console.log(`[REFERRAL EARNINGS] Skipping - no earnings for payout ${payoutId}`);
+        return { success: true, referralEarningsCents: 0 };
+      }
+
+      console.log(`💰 [REFERRAL EARNINGS] Processing referral for ${referrerUserId}`, {
+        referredUserId,
+        referredUsername,
+        payoutId,
+        payoutAmountCents,
+        platformFeeCents,
+        referralEarningsCents,
+        referralSharePercent: REFERRAL_SHARE * 100
+      });
+
+      // Get current month for the earnings record
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      const earningsId = `${referrerUserId}_${month}`;
+      const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
+
+      // Referral earnings are immediately available since they're from completed payouts
+      const allocationData = {
+        allocationId: `referral_${referredUserId}_${payoutId}_${Date.now()}`,
+        fromUserId: referredUserId, // The referred user who triggered this earning
+        fromUsername: referredUsername,
+        resourceType: 'referral' as const,
+        resourceId: payoutId, // Reference to the payout that triggered this
+        resourceTitle: `Referral from @${referredUsername}'s payout`,
+        usdCents: referralEarningsCents,
+        timestamp: new Date()
+      };
+
+      await db.runTransaction(async (transaction) => {
+        const earningsDoc = await transaction.get(earningsRef);
+
+        if (earningsDoc.exists) {
+          // Update existing earnings record
+          const currentEarnings = earningsDoc.data();
+          const updatedAllocations = [...(currentEarnings?.allocations || []), allocationData];
+          const totalUsdCents = updatedAllocations.reduce((sum, alloc) => sum + alloc.usdCents, 0);
+
+          transaction.update(earningsRef, {
+            totalUsdCentsReceived: totalUsdCents,
+            allocations: updatedAllocations,
+            // Keep existing status - don't override to 'available' if some allocations are pending
+            updatedAt: FieldValue.serverTimestamp()
+          });
+        } else {
+          // Create new earnings record - immediately available since it's from a completed payout
+          const newEarnings = {
+            userId: referrerUserId,
+            month,
+            totalUsdCentsReceived: referralEarningsCents,
+            status: 'available', // Referral earnings are immediately available
+            allocations: [allocationData],
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
+          };
+
+          transaction.set(earningsRef, newEarnings);
+        }
+      });
+
+      console.log(`✅ [REFERRAL EARNINGS] Recorded $${(referralEarningsCents / 100).toFixed(2)} for ${referrerUserId}`, {
+        earningsId,
+        referredUserId,
+        payoutId
+      });
+
+      return { success: true, referralEarningsCents };
+
+    } catch (error) {
+      console.error('[ServerUsdEarningsService] Error processing referral earning:', error);
+      return {
+        success: false,
+        referralEarningsCents: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 }

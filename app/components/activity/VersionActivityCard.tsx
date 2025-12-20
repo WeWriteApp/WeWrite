@@ -32,7 +32,10 @@ export default function VersionActivityCard({ activity, className = "" }) {
                         activity.changeType === 'content_and_title_change';
 
   const handleCardClick = () => {
-    if (activity.pageId) {
+    if (activity.pageId && activity.versionId) {
+      // Navigate to the version snapshot view
+      router.push(`/${activity.pageId}/versions/${activity.versionId}`);
+    } else if (activity.pageId) {
       router.push(`/${activity.pageId}`);
     }
   };

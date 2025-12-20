@@ -1,8 +1,16 @@
 /**
- * Stripe Storage Balance Service
- * 
- * Uses Stripe's built-in Storage Balance system for better auditability
- * and compliance while maintaining "use it or lose it" functionality.
+ * Stripe Balance Service (Simplified)
+ *
+ * Uses Payments Balance only - no Storage Balance needed for standard platform payouts.
+ * Firebase tracks allocations as the ledger; Stripe holds all funds in Payments Balance.
+ *
+ * Flow:
+ * 1. Subscription payments → Payments Balance (automatic via Stripe)
+ * 2. User allocates to writers → Firebase ledger entries only (no Stripe movement)
+ * 3. Month-end "use it or lose it" → Firebase marks unallocated as platform revenue
+ * 4. Writer requests payout → stripe.transfers.create() to Connected Account
+ *
+ * This approach is recommended by Stripe for standard platform payouts.
  */
 
 import Stripe from 'stripe';
@@ -11,10 +19,11 @@ import { db } from '../firebase/config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCollectionName } from '../utils/environmentConfig';
 import { formatUsdCents } from '../utils/formatCurrency';
+import { PLATFORM_FEE_CONFIG, calculatePlatformFee } from '../config/platformFee';
 
 export interface StorageBalanceOperation {
   id: string;
-  type: 'allocation_to_storage' | 'unallocated_to_payments' | 'payout_from_storage';
+  type: 'allocation_to_storage' | 'unallocated_to_payments' | 'payout_from_storage' | 'writer_payout' | 'platform_revenue';
   amount: number; // in dollars
   userId?: string;
   description: string;
@@ -29,7 +38,7 @@ export class StripeStorageBalanceService {
 
   constructor() {
     this.stripe = new Stripe(getStripeSecretKey() || '', {
-      apiVersion: '2024-06-20'
+      apiVersion: '2024-12-18.acacia'
     });
   }
 
@@ -41,177 +50,115 @@ export class StripeStorageBalanceService {
   }
 
   /**
-   * Move allocated funds from Payments Balance to Storage Balance
+   * Move allocated funds to "storage" - NOW A NO-OP
+   * Funds stay in Payments Balance; Firebase tracks allocations
    */
   async moveAllocatedFundsToStorage(
     amount: number,
     description: string,
     userId?: string
   ): Promise<{ success: boolean; transferId?: string; error?: string }> {
-    try {
-      console.log(`💰 [STORAGE BALANCE] Moving ${formatUsdCents(amount * 100)} to storage balance`);
+    console.log(`📝 [LEDGER] Recording allocation of ${formatUsdCents(amount * 100)} for ${userId || 'system'}`);
+    console.log(`   Note: Funds remain in Payments Balance; Firebase tracks allocations`);
 
-      const amountInCents = Math.round(amount * 100);
+    // Record in Firebase for audit trail
+    const operationId = `allocation_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    await this.recordOperation({
+      id: operationId,
+      type: 'allocation_to_storage',
+      amount,
+      userId,
+      description,
+      createdAt: new Date(),
+      status: 'completed'
+    });
 
-      // Create transfer from payments to storage balance
-      const transfer = await this.stripe.transfers.create({
-        amount: amountInCents,
-        currency: 'usd',
-        destination: 'storage', // Special destination for storage balance
-        description,
-        metadata: {
-          type: 'allocation_to_storage',
-          userId: userId || 'unknown',
-          fundHoldingModel: 'storage_balance'
-        }
-      });
-
-      // Record the operation
-      await this.recordStorageBalanceOperation({
-        id: transfer.id,
-        type: 'allocation_to_storage',
-        amount,
-        userId,
-        description,
-        stripeTransferId: transfer.id,
-        createdAt: new Date(),
-        status: 'completed'
-      });
-
-      console.log(`✅ [STORAGE BALANCE] Successfully moved ${formatUsdCents(amount * 100)} to storage`);
-
-      return {
-        success: true,
-        transferId: transfer.id
-      };
-
-    } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error moving funds to storage:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    return {
+      success: true,
+      transferId: operationId
+    };
   }
 
   /**
-   * Move unallocated funds back from Storage Balance to Payments Balance ("use it or lose it")
+   * Mark unallocated funds as platform revenue - NOW A NO-OP
+   * Funds are already in Payments Balance (platform revenue)
    */
   async moveUnallocatedFundsToPayments(
     amount: number,
-    description: string = 'Unallocated funds returned to platform revenue'
+    description: string = 'Unallocated funds - platform revenue'
   ): Promise<{ success: boolean; transferId?: string; error?: string }> {
-    try {
-      console.log(`🔄 [STORAGE BALANCE] Moving ${formatUsdCents(amount * 100)} unallocated funds back to payments`);
+    console.log(`📝 [LEDGER] Recording platform revenue of ${formatUsdCents(amount * 100)} (unallocated funds)`);
+    console.log(`   Note: Funds already in Payments Balance as platform revenue`);
 
-      const amountInCents = Math.round(amount * 100);
+    // Record in Firebase for audit trail
+    const operationId = `revenue_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    await this.recordOperation({
+      id: operationId,
+      type: 'platform_revenue',
+      amount,
+      description,
+      createdAt: new Date(),
+      status: 'completed'
+    });
 
-      // Create transfer from storage back to payments balance
-      const transfer = await this.stripe.transfers.create({
-        amount: amountInCents,
-        currency: 'usd',
-        source_transaction: 'storage', // Transfer from storage balance
-        description,
-        metadata: {
-          type: 'unallocated_to_payments',
-          reason: 'use_it_or_lose_it',
-          fundHoldingModel: 'storage_balance'
-        }
-      });
-
-      // Record the operation
-      await this.recordStorageBalanceOperation({
-        id: transfer.id,
-        type: 'unallocated_to_payments',
-        amount,
-        description,
-        stripeTransferId: transfer.id,
-        createdAt: new Date(),
-        status: 'completed'
-      });
-
-      console.log(`✅ [STORAGE BALANCE] Successfully moved ${formatUsdCents(amount * 100)} unallocated funds to payments`);
-
-      return {
-        success: true,
-        transferId: transfer.id
-      };
-
-    } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error moving unallocated funds:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    return {
+      success: true,
+      transferId: operationId
+    };
   }
 
   /**
-   * Process payout from Storage Balance to creator's connected account
+   * Transfer funds to a writer's Connected Account
+   * This is the actual Stripe transfer from Payments Balance
    */
   async processPayoutFromStorage(
     amount: number,
     destinationAccountId: string,
     userId: string,
     description: string,
-    platformFeeAmount?: number,
-    payoutFeeCents?: number
+    platformFeeAmount?: number
   ): Promise<{ success: boolean; transferId?: string; feeTransferId?: string; error?: string }> {
     try {
-      console.log(`💸 [STORAGE BALANCE] Processing payout of ${formatUsdCents(amount * 100)} from storage to ${destinationAccountId}`);
+      const grossAmountCents = Math.round(amount * 100);
 
-      const amountInCents = Math.round(amount * 100);
-      const feeInCents = platformFeeAmount ? Math.round(platformFeeAmount * 100) : 0;
-      const payoutFee = payoutFeeCents ? Math.round(payoutFeeCents) : 0;
+      // Calculate platform fee (10%) if not provided
+      const feeCents = platformFeeAmount
+        ? Math.round(platformFeeAmount * 100)
+        : calculatePlatformFee(grossAmountCents);
 
-      // Create transfer from storage balance to connected account
+      const netAmountCents = grossAmountCents - feeCents;
+
+      console.log(`💸 [PAYOUT] Transferring ${formatUsdCents(netAmountCents)} to writer ${userId}`);
+      console.log(`   Gross: ${formatUsdCents(grossAmountCents)}, Fee: ${formatUsdCents(feeCents)} (${PLATFORM_FEE_CONFIG.PERCENTAGE_DISPLAY}%)`);
+
+      if (netAmountCents <= 0) {
+        return {
+          success: false,
+          error: 'Amount after fees is zero or negative'
+        };
+      }
+
+      // Create transfer from Payments Balance to Connected Account
       const transfer = await this.stripe.transfers.create({
-        amount: amountInCents,
+        amount: netAmountCents,
         currency: 'usd',
         destination: destinationAccountId,
-        source_transaction: 'storage', // Transfer from storage balance
         description,
         metadata: {
-          type: 'payout_from_storage',
+          type: 'writer_payout',
           userId,
-          payoutAmountCents: amountInCents.toString(),
-          platformFeeCents: feeInCents.toString(),
-          platformFeeUsd: feeInCents ? formatUsdCents(feeInCents) : '0.00',
-          payoutFeeCents: payoutFee.toString(),
-          payoutFeeUsd: payoutFee ? formatUsdCents(payoutFee) : '0.00',
-          fundHoldingModel: 'storage_balance'
+          grossAmountCents: grossAmountCents.toString(),
+          netAmountCents: netAmountCents.toString(),
+          platformFeeCents: feeCents.toString(),
+          platformFeePercentage: (PLATFORM_FEE_CONFIG.PERCENTAGE * 100).toString()
         }
       });
 
-      let feeTransferId: string | undefined;
-
-      // Route platform fee back to payments balance (platform revenue)
-      if (feeInCents > 0) {
-        const feeTransfer = await this.stripe.transfers.create({
-          amount: feeInCents,
-          currency: 'usd',
-          destination: null as any, // to platform’s payments balance
-          source_transaction: 'storage',
-          description: `Platform fee for payout ${transfer.id}`,
-          metadata: {
-            type: 'platform_fee_from_storage',
-            relatedPayout: transfer.id,
-            userId,
-            platformFeeCents: feeInCents.toString(),
-            platformFeeUsd: formatUsdCents(feeInCents),
-            payoutFeeCents: payoutFee.toString(),
-            payoutFeeUsd: payoutFee ? formatUsdCents(payoutFee) : '0.00',
-            fundHoldingModel: 'storage_balance'
-          }
-        });
-        feeTransferId = feeTransfer.id;
-      }
-
-      // Record the operation
-      await this.recordStorageBalanceOperation({
+      // Record the payout operation
+      await this.recordOperation({
         id: transfer.id,
-        type: 'payout_from_storage',
-        amount,
+        type: 'writer_payout',
+        amount: netAmountCents / 100,
         userId,
         description,
         stripeTransferId: transfer.id,
@@ -219,29 +166,15 @@ export class StripeStorageBalanceService {
         status: 'completed'
       });
 
-      if (feeTransferId) {
-        await this.recordStorageBalanceOperation({
-          id: feeTransferId,
-          type: 'payout_from_storage',
-          amount: platformFeeAmount || 0,
-          userId,
-          description: `Platform fee for payout ${transfer.id}`,
-          stripeTransferId: feeTransferId,
-          createdAt: new Date(),
-          status: 'completed'
-        });
-      }
-
-      console.log(`✅ [STORAGE BALANCE] Successfully processed payout ${transfer.id}`);
+      console.log(`✅ [PAYOUT] Successfully transferred ${formatUsdCents(netAmountCents)} (transfer: ${transfer.id})`);
 
       return {
         success: true,
-        transferId: transfer.id,
-        feeTransferId
+        transferId: transfer.id
       };
 
     } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error processing payout from storage:', error);
+      console.error('❌ [PAYOUT] Error transferring to writer:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -250,101 +183,75 @@ export class StripeStorageBalanceService {
   }
 
   /**
-   * Get current Storage Balance amount
-   */
-  async getStorageBalance(): Promise<{ amount: number; currency: string } | null> {
-    try {
-      const balance = await this.stripe.balance.retrieve();
-      
-      // Find storage balance (if it exists)
-      const storageBalance = balance.available.find(b => {
-        const sourceTypes = (b as any).source_types || {};
-        return typeof sourceTypes.storage === 'number' || (Array.isArray(sourceTypes) && sourceTypes.includes('storage'));
-      });
-      
-      if (storageBalance) {
-        return {
-          amount: storageBalance.amount / 100, // Convert cents to dollars
-          currency: storageBalance.currency
-        };
-      }
-
-      return { amount: 0, currency: 'usd' };
-
-    } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error getting storage balance:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get current Payments Balance amount
+   * Get current Payments Balance (this is now the only balance we use)
    */
   async getPaymentsBalance(): Promise<{ amount: number; currency: string } | null> {
     try {
       const balance = await this.stripe.balance.retrieve();
-      
-      // Main available balance (excluding storage)
-      const paymentsBalance = balance.available.find(b => {
-        if (b.currency !== 'usd') return false;
-        const sourceTypes = (b as any).source_types || {};
-        const hasStorage = typeof sourceTypes.storage === 'number' || (Array.isArray(sourceTypes) && sourceTypes.includes('storage'));
-        return !hasStorage;
-      });
-      
-      if (paymentsBalance) {
-        return {
-          amount: paymentsBalance.amount / 100, // Convert cents to dollars
-          currency: paymentsBalance.currency
-        };
-      }
 
-      return { amount: 0, currency: 'usd' };
+      const available = balance.available.find(b => b.currency === 'usd');
+
+      return {
+        amount: (available?.amount || 0) / 100,
+        currency: 'usd'
+      };
 
     } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error getting payments balance:', error);
+      console.error('❌ [BALANCE] Error getting payments balance:', error);
       return null;
     }
   }
 
   /**
-   * Get comprehensive balance breakdown
+   * Get "storage" balance - returns 0 since we don't use storage balance
+   */
+  async getStorageBalance(): Promise<{ amount: number; currency: string } | null> {
+    // We don't use storage balance - return 0
+    return { amount: 0, currency: 'usd' };
+  }
+
+  /**
+   * Get balance breakdown
+   * Note: Without Firebase data, we can't split platform vs writer funds
+   * This just returns the total Stripe balance
    */
   async getBalanceBreakdown(): Promise<{
     paymentsBalance: number;
     storageBalance: number;
     totalBalance: number;
     breakdown: {
-      platformRevenue: number; // Payments Balance
-      creatorObligations: number; // Storage Balance
+      platformRevenue: number;
+      creatorObligations: number;
     };
   } | null> {
     try {
-      const paymentsBalance = await this.getPaymentsBalance();
-      const storageBalance = await this.getStorageBalance();
+      const balance = await this.getPaymentsBalance();
 
-      if (!paymentsBalance || !storageBalance) {
+      if (!balance) {
         return null;
       }
 
+      // Note: Actual split between platform revenue and creator obligations
+      // requires Firebase allocation data - this is just the Stripe view
       return {
-        paymentsBalance: paymentsBalance.amount,
-        storageBalance: storageBalance.amount,
-        totalBalance: paymentsBalance.amount + storageBalance.amount,
+        paymentsBalance: balance.amount,
+        storageBalance: 0,
+        totalBalance: balance.amount,
         breakdown: {
-          platformRevenue: paymentsBalance.amount,
-          creatorObligations: storageBalance.amount
+          platformRevenue: balance.amount, // All funds shown as platform until Firebase provides allocation data
+          creatorObligations: 0
         }
       };
 
     } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error getting balance breakdown:', error);
+      console.error('❌ [BALANCE] Error getting balance breakdown:', error);
       return null;
     }
   }
 
   /**
-   * Monthly processing: Handle "use it or lose it" logic with Storage Balance
+   * Monthly processing - now just records in Firebase
+   * No actual Stripe transfers needed since we use Payments Balance only
    */
   async processMonthlyStorageBalance(
     allocatedAmount: number,
@@ -352,56 +259,41 @@ export class StripeStorageBalanceService {
     month: string
   ): Promise<{ success: boolean; operations: StorageBalanceOperation[]; error?: string }> {
     try {
-      console.log(`📅 [STORAGE BALANCE] Processing monthly storage balance for ${month}`);
+      console.log(`📅 [MONTHLY] Processing month-end for ${month}`);
+      console.log(`   Allocated: ${formatUsdCents(allocatedAmount * 100)} (tracked in Firebase)`);
+      console.log(`   Unallocated: ${formatUsdCents(unallocatedAmount * 100)} (platform revenue)`);
 
       const operations: StorageBalanceOperation[] = [];
 
-      // Move allocated funds to storage balance
+      // Record allocated amount (funds stay in Payments Balance, Firebase tracks who it's for)
       if (allocatedAmount > 0) {
-        const allocationResult = await this.moveAllocatedFundsToStorage(
-          allocatedAmount,
-          `Allocated funds for ${month}`,
-          'system'
-        );
-
-        if (allocationResult.success) {
-          operations.push({
-            id: allocationResult.transferId!,
-            type: 'allocation_to_storage',
-            amount: allocatedAmount,
-            description: `Allocated funds for ${month}`,
-            stripeTransferId: allocationResult.transferId,
-            createdAt: new Date(),
-            status: 'completed'
-          });
-        }
+        const allocatedOp: StorageBalanceOperation = {
+          id: `allocated_${month}_${Date.now()}`,
+          type: 'allocation_to_storage',
+          amount: allocatedAmount,
+          description: `Allocated funds for ${month} (tracked in Firebase)`,
+          createdAt: new Date(),
+          status: 'completed'
+        };
+        await this.recordOperation(allocatedOp);
+        operations.push(allocatedOp);
       }
 
-      // Move unallocated funds back to payments balance ("use it or lose it")
+      // Record unallocated amount as platform revenue
       if (unallocatedAmount > 0) {
-        const unallocatedResult = await this.moveUnallocatedFundsToPayments(
-          unallocatedAmount,
-          `Unallocated funds for ${month} - use it or lose it`
-        );
-
-        if (unallocatedResult.success) {
-          operations.push({
-            id: unallocatedResult.transferId!,
-            type: 'unallocated_to_payments',
-            amount: unallocatedAmount,
-            description: `Unallocated funds for ${month} - use it or lose it`,
-            stripeTransferId: unallocatedResult.transferId,
-            createdAt: new Date(),
-            status: 'completed'
-          });
-        }
+        const unallocatedOp: StorageBalanceOperation = {
+          id: `unallocated_${month}_${Date.now()}`,
+          type: 'platform_revenue',
+          amount: unallocatedAmount,
+          description: `Unallocated funds for ${month} - platform revenue`,
+          createdAt: new Date(),
+          status: 'completed'
+        };
+        await this.recordOperation(unallocatedOp);
+        operations.push(unallocatedOp);
       }
 
-      console.log(`✅ [STORAGE BALANCE] Monthly processing completed for ${month}:`, {
-        allocated: formatUsdCents(allocatedAmount * 100),
-        unallocated: formatUsdCents(unallocatedAmount * 100),
-        operations: operations.length
-      });
+      console.log(`✅ [MONTHLY] Month-end processing complete for ${month}`);
 
       return {
         success: true,
@@ -409,7 +301,7 @@ export class StripeStorageBalanceService {
       };
 
     } catch (error) {
-      console.error('❌ [STORAGE BALANCE] Error in monthly processing:', error);
+      console.error('❌ [MONTHLY] Error in monthly processing:', error);
       return {
         success: false,
         operations: [],
@@ -419,10 +311,10 @@ export class StripeStorageBalanceService {
   }
 
   /**
-   * Private helper methods
+   * Record operation in Firebase for audit trail
    */
-  private async recordStorageBalanceOperation(operation: StorageBalanceOperation): Promise<void> {
-    await setDoc(doc(db, getCollectionName('storageBalanceOperations'), operation.id), {
+  private async recordOperation(operation: StorageBalanceOperation): Promise<void> {
+    await setDoc(doc(db, getCollectionName('balanceOperations'), operation.id), {
       ...operation,
       createdAt: serverTimestamp()
     });
