@@ -5,7 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { useAdminData } from '../../providers/AdminDataProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle } from 'lucide-react';
+import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle, CreditCard, Banknote, Bell, Filter } from 'lucide-react';
+import { Badge } from '../../components/ui/badge';
+import {
+  SideDrawer,
+  SideDrawerContent,
+  SideDrawerHeader,
+  SideDrawerBody,
+  SideDrawerFooter,
+  SideDrawerTitle,
+  SideDrawerDescription,
+} from '../../components/ui/side-drawer';
 import { isAdmin } from '../../utils/isAdmin';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { PLATFORM_FEE_CONFIG } from '../../config/platformFee';
@@ -215,6 +225,9 @@ export default function MonthlyFinancialsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
+  const [selectedUserData, setSelectedUserData] = useState<any>(null);
+  const [loadingUserData, setLoadingUserData] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -258,6 +271,31 @@ export default function MonthlyFinancialsPage() {
   // Sync Firebase with Stripe
   const handleSync = () => {
     fetchData(true);
+  };
+
+  // Fetch user details when clicking on a user row
+  const handleUserClick = async (email: string) => {
+    setSelectedUserEmail(email);
+    setLoadingUserData(true);
+    try {
+      // Search for user by email
+      const response = await adminFetch(`/api/admin/users?search=${encodeURIComponent(email)}&includeFinancial=true&limit=1`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.users && result.users.length > 0) {
+          setSelectedUserData(result.users[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch user data:', err);
+    } finally {
+      setLoadingUserData(false);
+    }
+  };
+
+  const closeUserDrawer = () => {
+    setSelectedUserEmail(null);
+    setSelectedUserData(null);
   };
 
   useEffect(() => {
@@ -683,9 +721,13 @@ export default function MonthlyFinancialsPage() {
                         </thead>
                         <tbody>
                           {data.stripeSubscriptions.subscribers.map((sub) => (
-                            <tr key={sub.id} className="border-b border-border hover:bg-muted/30">
+                            <tr
+                              key={sub.id}
+                              className="border-b border-border hover:bg-muted/30 cursor-pointer"
+                              onClick={() => handleUserClick(sub.email)}
+                            >
                               <td className="py-2 px-2">
-                                <div className="font-medium truncate max-w-[150px]" title={sub.email}>
+                                <div className="font-medium truncate max-w-[150px] text-primary hover:underline" title={sub.email}>
                                   {sub.name || sub.email}
                                 </div>
                                 {sub.name && (
@@ -826,9 +868,13 @@ export default function MonthlyFinancialsPage() {
                       </thead>
                       <tbody>
                         {data.writerEarnings.map((writer) => (
-                          <tr key={writer.userId} className="border-b border-border hover:bg-muted/30">
+                          <tr
+                            key={writer.userId}
+                            className="border-b border-border hover:bg-muted/30 cursor-pointer"
+                            onClick={() => handleUserClick(writer.email)}
+                          >
                             <td className="py-2 px-2">
-                              <div className="font-medium truncate max-w-[150px]" title={writer.email}>
+                              <div className="font-medium truncate max-w-[150px] text-primary hover:underline" title={writer.email}>
                                 {writer.name || writer.email}
                               </div>
                               {writer.name && (
@@ -1191,6 +1237,137 @@ export default function MonthlyFinancialsPage() {
           </>
         )}
       </div>
+
+      {/* User Details Side Drawer */}
+      <SideDrawer open={!!selectedUserEmail} onOpenChange={(open) => !open && closeUserDrawer()}>
+        <SideDrawerContent side="right" size="xl">
+          <SideDrawerHeader>
+            <SideDrawerTitle>User Details</SideDrawerTitle>
+            <SideDrawerDescription>
+              {selectedUserEmail}
+            </SideDrawerDescription>
+          </SideDrawerHeader>
+          <SideDrawerBody>
+            {loadingUserData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : selectedUserData ? (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-3 grid-cols-2">
+                  <div>
+                    <div className="text-muted-foreground">Email</div>
+                    <div className="font-medium break-all">{selectedUserData.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Username</div>
+                    <div className="font-medium">{selectedUserData.username || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Admin</div>
+                    {selectedUserData.isAdmin ? (
+                      <Badge variant="success-secondary">Admin</Badge>
+                    ) : (
+                      <Badge variant="outline-static">Not admin</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Email verified</div>
+                    {selectedUserData.emailVerified ? (
+                      <Badge variant="success-secondary">Verified</Badge>
+                    ) : (
+                      <Badge variant="destructive-secondary">Unverified</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Created</div>
+                    <div className="font-medium">
+                      {selectedUserData.createdAt
+                        ? new Date(selectedUserData.createdAt?._seconds ? selectedUserData.createdAt._seconds * 1000 : selectedUserData.createdAt).toLocaleString()
+                        : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Last login</div>
+                    <div className="font-medium">
+                      {selectedUserData.lastLogin
+                        ? new Date(selectedUserData.lastLogin?._seconds ? selectedUserData.lastLogin._seconds * 1000 : selectedUserData.lastLogin).toLocaleString()
+                        : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Total pages</div>
+                    <div className="font-medium">{selectedUserData.totalPages ?? '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Stripe account</div>
+                    <div className="font-medium break-all text-xs">{selectedUserData.stripeConnectedAccountId || '—'}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-blue-400" />
+                    <span className="font-medium">Subscription</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {selectedUserData.financial?.hasSubscription ? (
+                      <Badge variant="success-secondary">
+                        Active • ${(selectedUserData.financial.subscriptionAmount ?? 0).toFixed(2)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline-static">None</Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Banknote className="h-4 w-4 text-emerald-400" />
+                    <span className="font-medium">Payouts</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {selectedUserData.financial?.payoutsSetup || selectedUserData.stripeConnectedAccountId ? (
+                      <Badge variant="success-secondary">Connected</Badge>
+                    ) : (
+                      <Badge variant="outline-static">Not set up</Badge>
+                    )}
+                    <span className="text-muted-foreground text-xs">
+                      Available: {selectedUserData.financial?.availableEarningsUsd !== undefined
+                        ? `$${selectedUserData.financial.availableEarningsUsd.toFixed(2)}`
+                        : '—'}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Total: {selectedUserData.financial?.earningsTotalUsd !== undefined
+                        ? `$${selectedUserData.financial.earningsTotalUsd.toFixed(2)}`
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/admin/users?search=${encodeURIComponent(selectedUserData.email)}`)}
+                  >
+                    View in Users Admin
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                User not found in system
+              </div>
+            )}
+          </SideDrawerBody>
+          <SideDrawerFooter>
+            <Button variant="outline" onClick={closeUserDrawer}>
+              Close
+            </Button>
+          </SideDrawerFooter>
+        </SideDrawerContent>
+      </SideDrawer>
     </div>
   );
 }

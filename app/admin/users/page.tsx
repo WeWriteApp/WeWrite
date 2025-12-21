@@ -157,34 +157,6 @@ function UpcomingNotifications({ user }: { user: User }) {
         }
       }
 
-      // Add non-eligible items for context
-      if (user.emailVerified) {
-        upcoming.push({
-          id: 'verification-reminder',
-          name: 'Email Verification Reminder',
-          reason: 'Email already verified',
-          eligible: false
-        });
-      }
-
-      if (!hasAutoUsername && user.username) {
-        upcoming.push({
-          id: 'username-reminder',
-          name: 'Choose Username Reminder',
-          reason: 'User has custom username',
-          eligible: false
-        });
-      }
-
-      if (hasStripe) {
-        upcoming.push({
-          id: 'payout-setup-reminder',
-          name: 'Payout Setup Reminder',
-          reason: 'Stripe already connected',
-          eligible: false
-        });
-      }
-
       setNotifications(upcoming);
       setLoading(false);
     };
@@ -197,7 +169,6 @@ function UpcomingNotifications({ user }: { user: User }) {
   }
 
   const eligibleNotifications = notifications.filter(n => n.eligible);
-  const ineligibleNotifications = notifications.filter(n => !n.eligible);
 
   return (
     <div className="space-y-3">
@@ -218,20 +189,6 @@ function UpcomingNotifications({ user }: { user: User }) {
         </div>
       )}
 
-      {ineligibleNotifications.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground mt-4 mb-2">Won&apos;t receive (conditions not met):</div>
-          {ineligibleNotifications.map(n => (
-            <div key={n.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/30">
-              <div className="flex-1">
-                <div className="font-medium text-muted-foreground">{n.name}</div>
-                <div className="text-xs text-muted-foreground/70">{n.reason}</div>
-              </div>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
