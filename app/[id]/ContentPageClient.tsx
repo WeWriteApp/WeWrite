@@ -63,7 +63,7 @@ class ContentPageViewErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ContentPageView Error Boundary caught error:', error, errorInfo);
+    // Error boundary caught an error - handled by showing fallback UI
   }
 
   render() {
@@ -132,7 +132,7 @@ export default function ContentPageClient({
             router.replace(`/u/${pageId}`);
           }
         } catch (error) {
-          console.error('Error checking user ID:', error);
+          // Failed to check user ID - non-fatal
         }
       };
       checkUser();

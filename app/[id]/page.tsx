@@ -15,9 +15,10 @@ export const dynamicParams = true;
 async function getPageData(pageId: string, userId?: string | null) {
   try {
     // Build the API URL - use absolute URL for server-side fetch
+    // CRITICAL: Use NEXT_PUBLIC_APP_URL which should be the canonical production URL
+    // VERCEL_URL gives deployment-specific URLs which may not work correctly
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-                    'http://localhost:3000';
+                    'https://www.getwewrite.app';
 
     const url = new URL(`/api/pages/${pageId}`, baseUrl);
     if (userId) {
@@ -49,7 +50,9 @@ async function getPageData(pageId: string, userId?: string | null) {
         }
         return { status: 'not-found' as const, pageId };
       }
-      return { status: 'error' as const, pageId };
+      // For non-404 errors, fall back to client-side fetching
+      // This prevents SSR issues from blocking page loads
+      return { status: 'client-fetch' as const, pageId };
     }
 
     const data = await response.json();
@@ -68,8 +71,9 @@ async function getPageData(pageId: string, userId?: string | null) {
       pageId
     };
   } catch (error) {
-    console.error('[Page SSR] Error fetching page:', error);
-    return { status: 'error' as const, pageId };
+    // SSR fetch failed - fall back to client-side fetching
+    // This is non-fatal; the client will fetch the data
+    return { status: 'client-fetch' as const, pageId };
   }
 }
 
@@ -209,6 +213,19 @@ export default async function ContentPage({
         <ContentPageClient
           pageId={id}
           initialStatus="error"
+        />
+      </Suspense>
+    );
+  }
+
+  // SSR fetch failed - let client fetch the data
+  // This gracefully handles SSR issues without showing errors to users
+  if (result.status === 'client-fetch') {
+    return (
+      <Suspense fallback={<ContentPageSkeleton />}>
+        <ContentPageClient
+          pageId={id}
+          initialStatus="page"
         />
       </Suspense>
     );
