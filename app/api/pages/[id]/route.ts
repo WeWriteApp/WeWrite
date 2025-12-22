@@ -157,12 +157,50 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       }
     }
 
+    // Fetch SEO stats in parallel: sponsor count and reply count
+    // These are used by ServerContentForSEO for Schema.org interactionStatistic
+    let sponsorCount = 0;
+    let replyCount = 0;
+
+    try {
+      const [sponsorSnapshot, replySnapshot] = await Promise.all([
+        // Get sponsor count from USD allocations (current month)
+        db.collection(await getCollectionNameAsync('usdAllocations'))
+          .where('pageId', '==', pageId)
+          .where('status', 'in', ['pending', 'completed'])
+          .get(),
+        // Get reply count (pages that reply to this page)
+        db.collection(collectionName)
+          .where('replyTo', '==', pageId)
+          .where('deleted', '!=', true)
+          .get()
+      ]);
+
+      // Count unique sponsors
+      const uniqueSponsors = new Set<string>();
+      sponsorSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.fromUserId) {
+          uniqueSponsors.add(data.fromUserId);
+        }
+      });
+      sponsorCount = uniqueSponsors.size;
+
+      // Count non-deleted replies
+      replyCount = replySnapshot.docs.filter(doc => !doc.data().deleted).length;
+    } catch (statsError) {
+      // Non-fatal: SEO stats are optional, continue without them
+    }
+
     // Return the page data in the expected format
     return {
       pageData: {
         id: pageId,
         ...processedPageData,
-        username: username || 'Unknown'
+        username: username || 'Unknown',
+        // SEO stats
+        sponsorCount,
+        replyCount
       }
     };
 

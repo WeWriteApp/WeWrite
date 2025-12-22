@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { Metadata } from 'next';
 import ContentPageClient from './ContentPageClient';
 import { ContentPageSkeleton } from '../components/pages/ContentPageSkeleton';
+import ServerContentForSEO from '../components/seo/ServerContentForSEO';
 
 // ISR: Revalidate pages every 60 seconds for better cache hit rate
 // Pages are served from cache and revalidated in background
@@ -232,13 +233,35 @@ export default async function ContentPage({
   }
 
   // Success - render with pre-fetched data
+  // Include ServerContentForSEO for search engine crawlers that don't execute JS
+  const pageData = result.pageData;
+
   return (
-    <Suspense fallback={<ContentPageSkeleton />}>
-      <ContentPageClient
-        pageId={id}
-        initialStatus="page"
-        initialPageData={result.pageData}
-      />
-    </Suspense>
+    <>
+      {/* Server-rendered content for SEO crawlers */}
+      {pageData && (
+        <ServerContentForSEO
+          title={pageData.title || 'Untitled'}
+          content={pageData.content}
+          authorUsername={pageData.authorUsername || pageData.username}
+          createdAt={pageData.created?.toDate?.()?.toISOString() || pageData.created}
+          lastModified={pageData.lastModified?.toDate?.()?.toISOString() || pageData.lastModified}
+          pageId={id}
+          // Engagement stats for Schema.org interactionStatistic
+          viewCount={pageData.viewCount || pageData.views}
+          sponsorCount={pageData.sponsorCount}
+          replyCount={pageData.replyCount}
+        />
+      )}
+
+      {/* Interactive client component */}
+      <Suspense fallback={<ContentPageSkeleton />}>
+        <ContentPageClient
+          pageId={id}
+          initialStatus="page"
+          initialPageData={pageData}
+        />
+      </Suspense>
+    </>
   );
 }
