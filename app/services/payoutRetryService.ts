@@ -107,7 +107,6 @@ export class PayoutRetryService {
     error?: string;
   }> {
     try {
-      console.log(`Scheduling retry for payout ${payoutId}`);
 
       // Get current payout data
       const payoutDoc = await getDoc(doc(db, getCollectionName('payouts'), payoutId));
@@ -120,7 +119,6 @@ export class PayoutRetryService {
 
       // Check if retryable
       if (!this.isRetryable(failureReason, currentRetryCount)) {
-        console.log(`Payout ${payoutId} is not retryable (count: ${currentRetryCount}, reason: ${failureReason})`);
         return { success: false, error: 'Payout is not retryable' };
       }
 
@@ -157,8 +155,6 @@ export class PayoutRetryService {
         retryDelayMs
       });
 
-      console.log(`Payout ${payoutId} scheduled for retry at ${nextRetryAt.toISOString()}`);
-
       // Send retry notification
       await payoutNotificationService.sendPayoutNotification(
         payoutId,
@@ -185,7 +181,6 @@ export class PayoutRetryService {
     errors: string[];
   }> {
     try {
-      console.log('Processing payout retries...');
 
       // Query for payouts due for retry
       const now = new Date();
@@ -203,8 +198,6 @@ export class PayoutRetryService {
         ...doc.data()
       })) as Payout[];
 
-      console.log(`Found ${payouts.length} payouts due for retry`);
-
       let successful = 0;
       let failed = 0;
       const errors: string[] = [];
@@ -212,7 +205,6 @@ export class PayoutRetryService {
       // Process each payout
       for (const payout of payouts) {
         try {
-          console.log(`Retrying payout ${payout.id} (attempt ${(payout.retryCount || 0) + 1})`);
 
           // Attempt to process the payout
           const stripePayoutService = StripePayoutService.getInstance();
@@ -220,10 +212,8 @@ export class PayoutRetryService {
 
           if (result.success) {
             successful++;
-            console.log(`Payout ${payout.id} retry successful`);
           } else {
             failed++;
-            console.log(`Payout ${payout.id} retry failed: ${result.error}`);
 
             // Schedule another retry if applicable
             const scheduleResult = await this.scheduleRetry(payout.id, result.error || 'Unknown error');
@@ -252,8 +242,6 @@ export class PayoutRetryService {
         failed,
         errors: errors.length
       });
-
-      console.log(`Retry processing complete: ${successful} successful, ${failed} failed`);
 
       return {
         success: true,
@@ -328,7 +316,6 @@ export class PayoutRetryService {
    */
   updateRetryConfig(config: Partial<RetryConfig>): void {
     this.retryConfig = { ...this.retryConfig, ...config };
-    console.log('Retry configuration updated:', this.retryConfig);
   }
 
   /**

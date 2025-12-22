@@ -133,7 +133,10 @@ function extractContentWithLinks(content: string | any[]): ContentSegment[] {
   return segments;
 }
 
-interface PageData {
+/**
+ * Page data type for OG images - minimal subset for image generation
+ */
+interface OGPageData {
   title?: string;
   content?: string | any[];
   username?: string;
@@ -141,7 +144,7 @@ interface PageData {
   sponsorCount?: number;
 }
 
-async function fetchPageData(pageId: string): Promise<PageData | null> {
+async function fetchPageData(pageId: string): Promise<OGPageData | null> {
   try {
     // Get base URL - always use production URL when in production
     const baseUrl = process.env.VERCEL_ENV === 'production'

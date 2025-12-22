@@ -109,7 +109,7 @@ export default function DailyNotesCarousel({
               dateSet.add(dateString);
             }
           } catch (error) {
-            console.warn('Invalid date string in notesByDate:', dateString);
+            // Invalid date string in notesByDate
           }
         }
       }
@@ -181,9 +181,6 @@ export default function DailyNotesCarousel({
       // Get user's timezone for the API
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      // Reduced logging to prevent terminal spam
-      // console.log(`Daily notes: querying date range ${startDate} to ${endDate} (${dateRange.length} days)`);
-
       // Call efficient daily notes API that groups pages by creation date with timezone
       const response = await fetch(`/api/daily-notes?userId=${user?.uid}&startDate=${startDate}&endDate=${endDate}&timezone=${encodeURIComponent(userTimezone)}`)
 
@@ -193,58 +190,11 @@ export default function DailyNotesCarousel({
 
       const result = await response.json()
 
-      console.log('🔍 DailyNotesCarousel: API response summary:', {
-        totalFound: result.totalFound,
-        pagesReturned: result.pages.length,
-        sortBy: result.sortBy,
-        sortDirection: result.sortDirection
-      });
-
-      // Check for the specific page you mentioned
-      const legacyPage = result.pages.find(p => p.id === 'BYojetF6H58rq1xvf0mY');
-      if (legacyPage) {
-        console.log('🔍 DailyNotesCarousel: Found specific page BYojetF6H58rq1xvf0mY:', {
-          id: legacyPage.id,
-          title: legacyPage.title,
-          customDate: legacyPage.customDate,
-          hasCustomDate: !!legacyPage.customDate,
-          deleted: legacyPage.deleted,
-          isPublic: legacyPage.isPublic,
-          userId: legacyPage.userId
-        });
-      } else {
-        console.log('🔍 DailyNotesCarousel: Specific page BYojetF6H58rq1xvf0mY NOT FOUND in API response');
-
-        // Check if it exists in the raw response but with different properties
-        const allPageIds = result.pages.map(p => p.id);
-        console.log('🔍 DailyNotesCarousel: All page IDs in response:', allPageIds.slice(0, 10), '... (showing first 10)');
-      }
-
       if (result.error) {
         throw new Error(result.error || 'Failed to fetch pages')
       }
 
       const notesByDateMap = new Map<string, Array<{id: string, title: string}>>();
-
-      console.log('🔍 DailyNotesCarousel: Processing', result.pages.length, 'pages for daily notes');
-
-      // Debug: Show what we're getting from the API
-      console.log('🔍 DailyNotesCarousel: API returned', result.pages.length, 'pages');
-      console.log('🔍 DailyNotesCarousel: First 5 pages from API:',
-        result.pages.slice(0, 5).map(p => ({
-          id: p.id,
-          title: p.title,
-          createdDate: p.createdDate,
-          createdAt: p.createdAt,
-          customDate: p.customDate // Show both for comparison
-        }))
-      );
-
-      // Check if any pages have createdDate
-      const pagesWithCreatedDate = result.pages.filter(p => p.createdDate);
-      const pagesWithCustomDate = result.pages.filter(p => p.customDate);
-      console.log('🔍 DailyNotesCarousel: Pages with createdDate:', pagesWithCreatedDate.length);
-      console.log('🔍 DailyNotesCarousel: Pages with customDate:', pagesWithCustomDate.length);
 
       let processedPagesCount = 0;
 
@@ -260,30 +210,14 @@ export default function DailyNotesCarousel({
           }
           notesByDateMap.get(dateString)!.push({ id: page.id, title: noteTitle });
           processedPagesCount++;
-
-          console.log('🔍 DailyNotesCarousel: Added to map:', {
-            date: dateString,
-            id: page.id,
-            title: noteTitle
-          });
         }
-      });
-
-      console.log('🔍 DailyNotesCarousel: Summary:', {
-        totalPages: result.pages.length,
-        pagesWithCreatedDate: pagesWithCreatedDate.length,
-        processedPagesCount,
-        totalDailyNotes: notesByDateMap.size,
-        dateKeys: Array.from(notesByDateMap.keys()).sort()
       });
 
       setNotesByDate(notesByDateMap);
     } catch (error) {
-      console.error('Error checking existing notes:', error);
-
       // Handle specific Firebase quota exhaustion error
       if (error instanceof Error && (error.message.includes('Quota exceeded') || error.message.includes('RESOURCE_EXHAUSTED'))) {
-        console.warn('Daily notes temporarily unavailable due to high usage');
+        // Daily notes temporarily unavailable due to high usage
         // Set empty notes map to show empty state instead of loading forever
         setNotesByDate(new Map());
       }
@@ -324,7 +258,6 @@ export default function DailyNotesCarousel({
       const eventUserId = event.detail?.userId;
       // Refresh if no specific user ID or if it matches current user
       if (!eventUserId || eventUserId === user.uid) {
-        // Reduced logging: console.log('🔄 DailyNotesCarousel: Debounced refresh due to page update for user:', user.uid);
         debouncedRefresh();
       }
     };
@@ -339,12 +272,11 @@ export default function DailyNotesCarousel({
       unregisterGlobal = registerUserPagesInvalidation((data: any) => {
         // Only refresh if this invalidation is for our user or if no specific user is mentioned
         if (!data?.userId || data.userId === user.uid) {
-          // Reduced logging: console.log('🔄 DailyNotesCarousel: Debounced refresh due to global cache invalidation for user:', user.uid);
           debouncedRefresh();
         }
       });
     } catch (error) {
-      console.warn('Global cache invalidation not available:', error);
+      // Global cache invalidation not available
     }
 
     return () => {
@@ -363,7 +295,6 @@ export default function DailyNotesCarousel({
     try {
       router.push(`/pages/${noteId}`);
     } catch (error) {
-      console.error('Error handling note click:', error);
       // Fallback to home page if navigation fails
       router.push('/');
     }
@@ -377,7 +308,6 @@ export default function DailyNotesCarousel({
 
       // Only allow creating new notes for today since daily notes are based on createdAt
       if (!isToday) {
-        console.warn('📅 DailyNotesCarousel: Cannot create note for past/future dates in daily notes');
         return;
       }
 
@@ -385,7 +315,6 @@ export default function DailyNotesCarousel({
       // The page will automatically be grouped under today's date in the daily notes carousel
       router.push('/new?type=daily-note');
     } catch (error) {
-      console.error('📅 DailyNotesCarousel: Error handling add new click:', error);
       // Fallback to home page if navigation fails
       router.push('/');
     }
@@ -397,18 +326,13 @@ export default function DailyNotesCarousel({
   const scrollToDateElement = useCallback((dateString: string, animated: boolean = true) => {
     const carousel = carouselRef.current;
     if (!carousel) {
-      console.log('📅 DailyNotesCarousel: No carousel ref');
       return;
     }
-
-    console.log('📅 DailyNotesCarousel: Looking for date', dateString);
 
     // Find the element with the target date
     const targetElement = carousel.querySelector(`[data-date="${dateString}"]`);
 
     if (targetElement) {
-      console.log('📅 DailyNotesCarousel: Found target element');
-
       // Get the element's position relative to the carousel
       const elementRect = targetElement.getBoundingClientRect();
       const carouselRect = carousel.getBoundingClientRect();
@@ -420,14 +344,11 @@ export default function DailyNotesCarousel({
 
       const newScrollLeft = carousel.scrollLeft + scrollOffset;
 
-      console.log('📅 DailyNotesCarousel: Scrolling to center element at', newScrollLeft);
-
       carousel.scrollTo({
         left: Math.max(0, newScrollLeft),
         behavior: animated ? 'smooth' : 'instant'
       });
     } else {
-      console.log('📅 DailyNotesCarousel: Target element not found, scrolling to center');
       // Fallback: scroll to approximate center
       const scrollPosition = carousel.scrollWidth / 2 - carousel.clientWidth / 2;
       carousel.scrollTo({ left: scrollPosition, behavior: animated ? 'smooth' : 'instant' });

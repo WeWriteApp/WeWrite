@@ -36,7 +36,6 @@ export async function getPageVersions(pageId: string, limit: number = 10): Promi
   }
 
   try {
-    console.log(`🔄 [VERSION_SERVICE] Fetching versions for page ${pageId}`);
 
     // In development or when Firebase is offline, use API endpoint
     const shouldUseAPI = process.env.NODE_ENV === 'development' || 
@@ -57,7 +56,6 @@ export async function getPageVersions(pageId: string, limit: number = 10): Promi
         if (response.ok) {
           const result = await response.json();
           versions = result.versions || [];
-          console.log(`✅ [VERSION_SERVICE] API returned ${versions.length} versions for page ${pageId}`);
         } else {
           console.warn(`⚠️ [VERSION_SERVICE] API error ${response.status}, falling back to Firebase`);
           throw new Error(`API error: ${response.status}`);
@@ -101,12 +99,10 @@ export async function getPageVersionById(pageId: string, versionId: string): Pro
   try {
     const versions = await getPageVersions(pageId, 50); // Get more versions to find the specific one
     const version = versions.find(v => v.id === versionId);
-    
+
     if (version) {
-      console.log(`✅ [VERSION_SERVICE] Found version ${versionId} for page ${pageId}`);
       return version;
     } else {
-      console.warn(`⚠️ [VERSION_SERVICE] Version ${versionId} not found for page ${pageId}`);
       return null;
     }
   } catch (error) {
@@ -140,7 +136,6 @@ export async function savePageVersion(pageId: string, data: any): Promise<any> {
 export function clearPageVersionCache(pageId: string): void {
   const keysToDelete = Array.from(versionCache.keys()).filter(key => key.startsWith(`versions-${pageId}-`));
   keysToDelete.forEach(key => versionCache.delete(key));
-  console.log(`🧹 [VERSION_SERVICE] Cleared cache for page ${pageId}`);
 }
 
 /**
@@ -148,7 +143,6 @@ export function clearPageVersionCache(pageId: string): void {
  */
 export function clearAllVersionCache(): void {
   versionCache.clear();
-  console.log('🧹 [VERSION_SERVICE] Cleared all version cache');
 }
 
 // Private helper functions
@@ -176,7 +170,6 @@ async function getVersionsFromFirebase(pageId: string, limit: number): Promise<P
       ...doc.data()
     } as PageVersion));
 
-    console.log(`✅ [VERSION_SERVICE] Firebase returned ${versions.length} versions for page ${pageId}`);
     return versions.slice(0, limit);
 
   } catch (error) {

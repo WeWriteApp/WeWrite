@@ -75,13 +75,9 @@ export function RegisterForm({
           const result = await response.json()
           if (result.success && result.data) {
             setReferrerInfo(result.data)
-            console.log('[Register] Resolved referral code:', referralCode, '→', result.data)
           }
-        } else {
-          console.warn('[Register] Invalid referral code:', referralCode)
         }
       } catch (error) {
-        console.error('[Register] Error resolving referral code:', error)
       } finally {
         setReferralLoading(false)
       }
@@ -167,7 +163,6 @@ export function RegisterForm({
           }
         }
       } catch (error) {
-        console.error("Error checking username:", error)
         setIsAvailable(false)
         setValidationError("CHECK_FAILED")
         setValidationMessage("Could not verify username availability. Please try again.")
@@ -231,16 +226,13 @@ export function RegisterForm({
 
     try {
       // Step 1: Create user with Firebase Client SDK (no server-side firebase-admin needed)
-      console.log('[Register] Creating user with Firebase Client SDK...')
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
-      console.log('[Register] Firebase user created:', user.uid)
 
       // Step 2: Get the ID token for API authentication
       const idToken = await user.getIdToken()
 
       // Step 3: Call API to create Firestore documents (uses REST API, not firebase-admin)
-      console.log('[Register] Creating user documents via API...')
       const response = await fetch('/api/auth/register-user', {
         method: 'POST',
         headers: {
@@ -263,14 +255,11 @@ export function RegisterForm({
         // Clear any previous errors on success
         setError(null)
         setErrorDetails(null)
-        console.log("Account created successfully:", result.data)
 
         // Step 4: Get a fresh ID token (after Firestore docs are created)
-        console.log('[Register] Getting fresh ID token for session...')
         const freshIdToken = await user.getIdToken(true) // force refresh
 
         // Step 5: Create server-side session (same as login flow)
-        console.log('[Register] Creating server-side session...')
         const sessionResponse = await fetch('/api/auth/session', {
           method: 'POST',
           headers: {
@@ -282,18 +271,13 @@ export function RegisterForm({
 
         if (!sessionResponse.ok) {
           const sessionError = await sessionResponse.text()
-          console.error('[Register] Session creation failed:', sessionResponse.status, sessionError)
           // Don't fail registration, but log the issue
         } else {
           const sessionData = await sessionResponse.json()
-          console.log('[Register] Session created successfully:', sessionData)
         }
 
         // Transfer any logged-out USD allocations to the new user
         const transferResult = transferLoggedOutAllocationsToUser(user.uid)
-        if (transferResult.success && transferResult.transferredCount > 0) {
-          console.log(`Transferred ${transferResult.transferredCount} USD allocations to new user`)
-        }
 
         // Send verification email via our custom Resend template
         try {
@@ -307,19 +291,11 @@ export function RegisterForm({
               idToken: freshIdToken,
             }),
           })
-          
-          if (verificationResponse.ok) {
-            console.log('Verification email sent successfully to:', email)
-          } else {
-            console.error('Failed to send verification email via API')
-          }
-          
+
           // Create a reminder notification in the notification center
           await createEmailVerificationNotification(user.uid)
-          console.log('Email verification reminder notification created')
         } catch (emailError) {
           // Don't fail registration if email sending fails - user can resend from banner
-          console.error('Failed to send verification email:', emailError)
         }
 
         // Track user creation event
@@ -333,15 +309,11 @@ export function RegisterForm({
         // Show redirect overlay
         setIsRedirecting(true)
 
-        // Redirect to home page
-        console.log("Account created successfully, refreshing auth state and redirecting to home")
-
         // Refresh the auth provider state so it picks up the new session
         try {
           await refreshUser()
-          console.log('[Register] Auth state refreshed successfully')
         } catch (refreshError) {
-          console.warn('[Register] Auth refresh warning (non-blocking):', refreshError)
+          // Non-blocking error
         }
 
         // Navigate to email verification pending page after a short delay
@@ -371,8 +343,7 @@ export function RegisterForm({
           note: 'Firebase Auth user was created but Firestore documents may have failed'
         }, null, 2)
         setErrorDetails(details)
-        console.error("Registration API error:", details)
-        
+
         setError(errorMessage)
         setIsLoading(false)
       }
@@ -407,9 +378,7 @@ export function RegisterForm({
         step: 'firebase_auth_create_user'
       }, null, 2)
       setErrorDetails(details)
-      console.error("Registration client error:", details)
-      console.error("Registration error (raw):", error)
-      
+
       setError(errorMessage)
       setIsLoading(false)
     }

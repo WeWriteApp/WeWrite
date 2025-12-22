@@ -79,7 +79,10 @@ function extractTextFromContent(content: string | any[]): string {
   return '';
 }
 
-interface PageData {
+/**
+ * Page data type for Twitter images - minimal subset for image generation
+ */
+interface TwitterPageData {
   title?: string;
   content?: string | any[];
   username?: string;
@@ -87,7 +90,7 @@ interface PageData {
   sponsorCount?: number;
 }
 
-async function fetchPageData(pageId: string): Promise<PageData | null> {
+async function fetchPageData(pageId: string): Promise<TwitterPageData | null> {
   try {
     // Always use production URL for consistent OG images
     const baseUrl = process.env.VERCEL_ENV === 'production'

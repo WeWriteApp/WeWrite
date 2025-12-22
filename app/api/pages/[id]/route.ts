@@ -17,7 +17,6 @@ function cleanLinkElements(content: any[]): any[] {
 
       // Remove invalid 'text' property from link elements
       if ('text' in element) {
-        console.log('🔧 API NORMALIZATION: Removing text property from link element:', element.text);
         const { text, ...elementWithoutText } = element;
         cleanElement = elementWithoutText;
       }
@@ -27,13 +26,6 @@ function cleanLinkElements(content: any[]): any[] {
       if (cleanElement.isCustomText === true && cleanElement.customText && cleanElement.children && cleanElement.children[0]) {
         const currentChildrenText = cleanElement.children[0].text;
         if (currentChildrenText !== cleanElement.customText) {
-          console.log('🔧 API NORMALIZATION: Synchronizing children with custom text:', {
-            pageTitle: cleanElement.pageTitle,
-            customText: cleanElement.customText,
-            oldChildrenText: currentChildrenText,
-            fixing: true
-          });
-
           cleanElement = {
             ...cleanElement,
             children: [{ text: cleanElement.customText }]
@@ -43,13 +35,6 @@ function cleanLinkElements(content: any[]): any[] {
 
       // 🔧 CRITICAL FIX: Repair links with undefined pageId
       if (cleanElement.type === 'link' && cleanElement.pageId === undefined && cleanElement.pageTitle) {
-        console.warn('🔧 [NAVIGATION REPAIR] Found link with undefined pageId, attempting repair:', {
-          pageTitle: cleanElement.pageTitle,
-          customText: cleanElement.customText,
-          isCustomText: cleanElement.isCustomText,
-          url: cleanElement.url
-        });
-
         // TODO: Implement actual repair logic here
         // For now, we'll mark these for manual repair
         cleanElement = {
@@ -57,20 +42,6 @@ function cleanLinkElements(content: any[]): any[] {
           needsRepair: true,
           repairReason: 'undefined_pageId'
         };
-      }
-
-      // Monitor for any remaining navigation issues after repair
-      if (cleanElement.type === 'link' && cleanElement.pageId === undefined && cleanElement.url === '/undefined') {
-        console.warn('⚠️ [NAVIGATION] Link still has undefined pageId after repair:', cleanElement.pageTitle);
-      }
-
-      // Essential monitoring for custom text synchronization issues
-      if (cleanElement.type === 'link' && cleanElement.isCustomText === true && cleanElement.customText && cleanElement.children?.[0]?.text !== cleanElement.customText) {
-        console.warn('⚠️ Link custom text synchronization issue detected:', {
-          pageTitle: cleanElement.pageTitle,
-          customText: cleanElement.customText,
-          childrenText: cleanElement.children?.[0]?.text
-        });
       }
 
       return cleanElement;
@@ -93,14 +64,12 @@ function cleanLinkElements(content: any[]): any[] {
  * This avoids circular calls and properly handles production data headers
  */
 async function fetchPageDirectly(pageId: string, userId: string | null, request: NextRequest) {
-  console.log('🔧 FETCH PAGE DIRECTLY: Starting for page', pageId);
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Use async collection name resolution to handle X-Force-Production-Data header
     const collectionName = await getCollectionNameAsync('pages');
-    console.log(`[Page API] Using collection: ${collectionName} for pageId: ${pageId}`);
 
     // Get the page document
     const pageRef = db.collection(collectionName).doc(pageId);
@@ -138,16 +107,6 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
     // Check if user is admin using centralized config (no hardcoded IDs)
     const isAdmin = userId ? isAdminUserId(userId) : false;
 
-    console.log(`📄 [Page API] Permission check for ${pageId}:`, {
-      userId,
-      pageUserId: pageData?.userId,
-      isOwner,
-      isAdmin,
-      isDevelopment,
-      pageTitle: pageData?.title,
-      note: 'All pages are now public'
-    });
-
     // Content validation and conversion (read-only, no database writes)
     let processedPageData = { ...pageData };
 
@@ -170,19 +129,11 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
     // CRITICAL FIX: Remove 'text' property from link elements
     // This ensures compatibility with Slate.js which requires inline elements to only have 'children', not 'text'
     if (processedPageData.content && Array.isArray(processedPageData.content)) {
-      console.log('🔧 API NORMALIZATION: About to clean link elements for page', pageId);
       processedPageData.content = cleanLinkElements(processedPageData.content);
-      console.log('🔧 API NORMALIZATION: Finished cleaning link elements for page', pageId);
     }
 
     // Fetch username if userId exists - USE RTDB (primary user store)
     let username = processedPageData.username;
-    console.log('📊 [PAGE API] Username fetch attempt:', {
-      pageId,
-      userId: processedPageData.userId,
-      existingUsername: username,
-      needsUsernameFetch: !!(processedPageData.userId && !username)
-    });
 
     if (processedPageData.userId && !username) {
       try {
@@ -191,25 +142,17 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
         const userRef = rtdb.ref(`users/${processedPageData.userId}`);
         const userSnapshot = await userRef.get();
 
-        console.log('📊 [PAGE API] RTDB User query result:', {
-          userId: processedPageData.userId,
-          exists: userSnapshot.exists()
-        });
-
         if (userSnapshot.exists()) {
           const userData = userSnapshot.val();
           // Only use username field, never displayName or email
           username = userData.username || null;
-          console.log('📊 [PAGE API] Username found from RTDB:', username);
         }
 
         // If still no username, fall back to a safe identifier
         if (!username) {
-          console.warn('📊 [PAGE API] No username found in RTDB for userId:', processedPageData.userId);
           username = `user_${processedPageData.userId.slice(0, 8)}`;
         }
       } catch (error) {
-        console.warn('Failed to fetch username from RTDB:', error);
         username = `user_${processedPageData.userId.slice(0, 8)}`;
       }
     }
@@ -224,7 +167,6 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
     };
 
   } catch (error) {
-    console.error('[Page API] Error fetching page directly:', error);
     return { error: 'Failed to fetch page data' };
   }
 }
@@ -262,7 +204,6 @@ export async function GET(
       currentUserId = await getUserIdFromRequest(request);
     } catch (error) {
       // Anonymous access is allowed for public pages
-      console.log('🔓 Anonymous access to page:', pageId);
     }
 
     // Use the requested userId if provided, otherwise use authenticated user
@@ -296,7 +237,6 @@ export async function GET(
 
           if (clientEtag === currentEtag) {
             // Data hasn't changed - return 304 Not Modified
-            console.log(`⚡ [Page API] 304 Not Modified for ${pageId}`);
             trackFirebaseRead('pages', 'getPageById-validation', 1, 'api-etag-check');
 
             // Check if user is page owner for cache headers
@@ -320,8 +260,6 @@ export async function GET(
         }
       }
     }
-
-    console.log(`📄 [Page API] Fetching page ${pageId} for user ${effectiveUserId || 'anonymous'}`);
 
     // Track this read for cost monitoring
     trackFirebaseRead('pages', 'getPageById', 1, 'api-fetch');
@@ -369,33 +307,6 @@ export async function GET(
     pageCache.set(pageId, result, effectiveUserId, etag);
 
     const responseTime = Date.now() - startTime;
-    console.log(`✅ [Page API] Successfully fetched ${pageId} (${responseTime}ms)`);
-
-    // Essential monitoring for loaded content
-    if (result.pageData?.content && Array.isArray(result.pageData.content)) {
-      const findLinks = (nodes: any[]): any[] => {
-        const links: any[] = [];
-        const traverse = (node: any) => {
-          if (node.type === 'link') {
-            links.push(node);
-          }
-          if (node.children) {
-            node.children.forEach(traverse);
-          }
-        };
-        nodes.forEach(traverse);
-        return links;
-      };
-
-      const linksInLoadedContent = findLinks(result.pageData.content);
-      const unsyncedLinks = linksInLoadedContent.filter(link =>
-        link.isCustomText === true && link.customText && link.children?.[0]?.text !== link.customText
-      );
-
-      if (unsyncedLinks.length > 0) {
-        console.warn('⚠️ Loaded content contains unsynchronized custom text links:', unsyncedLinks.length);
-      }
-    }
 
     // Return successful result with smart cache headers
     const response = NextResponse.json({
@@ -426,8 +337,6 @@ export async function GET(
     return response;
 
   } catch (error) {
-    console.error('[Page API] Error fetching page:', error);
-    
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -467,8 +376,6 @@ export async function PATCH(
       );
     }
 
-    console.log(`[Page API] Updating page ${pageId} for user ${currentUserId}`);
-
     // Track this write for cost monitoring
     trackFirebaseRead('pages', 'updatePage', 1, 'api-update');
 
@@ -480,8 +387,6 @@ export async function PATCH(
     );
 
   } catch (error) {
-    console.error('[Page API] Error updating page:', error);
-    
     return NextResponse.json(
       { 
         error: 'Internal server error',

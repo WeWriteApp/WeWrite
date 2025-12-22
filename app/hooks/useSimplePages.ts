@@ -3,18 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { registerUserPagesInvalidation } from "../utils/globalCacheInvalidation";
 import { useSmartDataFetching } from './useSmartDataFetching';
+import type { Page } from '../types/database';
 
-// Types
-interface PageData {
-  id: string;
-  title?: string;
-  lastModified?: any;
-  isPublic?: boolean;
-  userId?: string;
-  groupId?: string;
-  createdAt?: any;
-  [key: string]: any;
-}
+/**
+ * Page data type - uses centralized Page type with partial fields
+ */
+type PageData = Partial<Page> & { id: string; [key: string]: any };
 
 interface UseSimplePagesReturn {
   loading: boolean;
@@ -78,14 +72,12 @@ const useSimplePages = (
 
     // Check if this is a duplicate call
     if (lastFetchRef.current === cacheKey && loading && !forceRefresh) {
-      console.log('🚫 QUERY OPTIMIZATION: Skipping duplicate fetch request');
       return;
     }
 
     // Check cache first to reduce query volume (unless forcing refresh or appending)
     const cached = pagesCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL && !forceRefresh && !append) {
-      console.log('📦 QUERY OPTIMIZATION: Using cached data for', cacheKey);
       setPages(cached.data);
       setLoading(false);
       return;
@@ -100,8 +92,6 @@ const useSimplePages = (
     lastFetchRef.current = cacheKey;
 
     try {
-      console.log(`🚨 CRITICAL FIX: Fetching pages for user ${userId} sorted by ${effectiveSortBy} ${effectiveSortDirection}`);
-
       const params = new URLSearchParams({
         userId,
         sortBy: effectiveSortBy,
@@ -146,10 +136,7 @@ const useSimplePages = (
         setLoading(false);
       }
 
-      console.log(`✅ QUERY SUCCESS: ${pagesArray.length} pages sorted by ${effectiveSortBy} ${effectiveSortDirection}${append ? ' (appended)' : ''}`);
-
     } catch (err) {
-      console.error("❌ QUERY ERROR:", err);
       setError("Failed to load pages. Please try again later.");
       if (append) {
         setLoadingMore(false);
@@ -176,13 +163,11 @@ const useSimplePages = (
 
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
       // Use cached data immediately for fast loading
-      console.log('📦 MOUNT: Using cached data for immediate display');
       setPages(cached.data);
       setLoading(false);
 
-      // But also fetch fresh data in background to detect changes
+      // Fetch fresh data in background to detect changes
       setTimeout(() => {
-        console.log('🔄 MOUNT: Fetching fresh data in background to detect changes');
         fetchPages(undefined, undefined, true);
       }, 100);
     } else {
@@ -191,16 +176,14 @@ const useSimplePages = (
     }
   }, [userId, refreshTrigger]); // Depend on userId and refreshTrigger for automatic updates
 
-  // Manual refresh function that clears cache (kept for compatibility but not exposed in UI)
+  // Manual refresh function that clears cache
   const refreshData = useCallback(() => {
-    console.log('🔄 Manual refresh - clearing cache');
     pagesCache.clear();
-    fetchPages(undefined, undefined, true); // Force refresh
+    fetchPages(undefined, undefined, true);
   }, [fetchPages]);
 
   // Function to fetch with custom sorting (with debouncing and cache invalidation)
   const fetchWithSort = useCallback((newSortBy: string, newSortDirection: string) => {
-    console.log(`🔄 SORT CHANGE: ${newSortBy} ${newSortDirection}`);
 
     // Update current sort state
     setCurrentSort({ sortBy: newSortBy, sortDirection: newSortDirection });
@@ -225,15 +208,9 @@ const useSimplePages = (
   useEffect(() => {
     if (!userId) return;
 
-    console.log('🔄 useSimplePages: Setting up automatic cache invalidation for user:', userId);
-
     // Register for global cache invalidation events
     const unregister = registerUserPagesInvalidation((data) => {
-      // Only refresh if this invalidation is for our user or if no specific user is mentioned
       if (!data?.userId || data.userId === userId) {
-        console.log('🔄 useSimplePages: Auto-refreshing due to cache invalidation for user:', userId);
-
-        // Clear cache and trigger refresh
         pagesCache.clear();
         setRefreshTrigger(prev => prev + 1);
       }
@@ -243,26 +220,22 @@ const useSimplePages = (
     const handleUserPagesInvalidation = (event: CustomEvent) => {
       const eventUserId = event.detail?.userId;
       if (!eventUserId || eventUserId === userId) {
-        console.log('🔄 useSimplePages: Auto-refreshing due to window event for user:', userId);
         pagesCache.clear();
         setRefreshTrigger(prev => prev + 1);
       }
     };
 
     const handlePageCreated = () => {
-      console.log('🔄 useSimplePages: Auto-refreshing due to page creation');
       pagesCache.clear();
       setRefreshTrigger(prev => prev + 1);
     };
 
     const handlePageUpdated = () => {
-      console.log('🔄 useSimplePages: Auto-refreshing due to page update');
       pagesCache.clear();
       setRefreshTrigger(prev => prev + 1);
     };
 
     const handlePageDeleted = () => {
-      console.log('🔄 useSimplePages: Auto-refreshing due to page deletion');
       pagesCache.clear();
       setRefreshTrigger(prev => prev + 1);
     };
@@ -276,7 +249,6 @@ const useSimplePages = (
     }
 
     return () => {
-      console.log('🔄 useSimplePages: Cleaning up cache invalidation listeners for user:', userId);
       unregister();
 
       // Remove event listeners

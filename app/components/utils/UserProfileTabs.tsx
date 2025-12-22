@@ -1,20 +1,16 @@
 "use client";
 import React, { useState, useRef, useContext } from "react";
+import dynamic from "next/dynamic";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import { InlineError } from '../ui/InlineError';
-import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon, Network, Calendar, MapPin } from "lucide-react";
+import { Clock, FileText, Loader, BookText, Check, ChevronUp, ChevronDown, Link as LinkIcon, Network, Calendar, MapPin } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useAuth } from '../../providers/AuthProvider';
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
 import UserRecentEdits from "../features/UserRecentEdits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useSimplePages from "../../hooks/useSimplePages";
-import UsernameHistory from "../auth/UsernameHistory";
-import FollowingList from './FollowingList';
 import { Input } from "../ui/input";
 
 import UserBioTab from './UserBioTab';
@@ -22,11 +18,53 @@ import UserBioTab from './UserBioTab';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
 import { useInfiniteScrollWithLoadMore } from '../../hooks/useInfiniteScroll';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
-import ExternalLinksTab from './ExternalLinksTab';
-import UserGraphTab from './UserGraphTab';
-import UserMapTab from './UserMapTab';
-import TimelineSection from '../timeline/TimelineSection';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
+
+// PERFORMANCE: Lazy-load heavy tab components to reduce initial bundle size
+// These tabs are not visible on initial load, so we can defer their loading
+const ExternalLinksTab = dynamic(() => import('./ExternalLinksTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-32 bg-muted rounded mb-4" />
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => <div key={i} className="h-10 bg-muted rounded" />)}
+      </div>
+    </div>
+  )
+});
+
+const UserGraphTab = dynamic(() => import('./UserGraphTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-28 bg-muted rounded mb-4" />
+      <div className="h-64 bg-muted rounded" />
+    </div>
+  )
+});
+
+const UserMapTab = dynamic(() => import('./UserMapTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-24 bg-muted rounded mb-4" />
+      <div className="h-64 bg-muted rounded" />
+    </div>
+  )
+});
+
+const TimelineSection = dynamic(() => import('../timeline/TimelineSection'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-28 bg-muted rounded mb-4" />
+      <div className="space-y-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted rounded" />)}
+      </div>
+    </div>
+  )
+});
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -552,8 +590,6 @@ export default function UserProfileTabs({ profile }) {
                   <Button variant="secondary" size="sm" className="gap-2">
                     {sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     {getSortLabel(sortBy, sortDirection)}
-                    {/* 🚨 DEBUG: Log current sort state */}
-                    {console.log('🔍 Current sort state:', { sortBy, sortDirection, label: getSortLabel(sortBy, sortDirection) }) || ''}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -675,10 +711,8 @@ export default function UserProfileTabs({ profile }) {
             value="map"
             className="mt-0 transition-all duration-300"
           >
-            {console.log('🗺️ UserProfileTabs: Map TabsContent ALWAYS renders, activeTab:', activeTab, 'condition result:', activeTab === "map")}
             {activeTab === "map" && (
               <>
-                {console.log('🗺️ UserProfileTabs: Map TabsContent CONDITIONAL rendering, activeTab:', activeTab, 'profile?.uid:', profile?.uid)}
                 <UserMapTab
                   userId={profile?.uid}
                   username={profile?.username || 'this user'}

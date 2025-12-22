@@ -57,7 +57,7 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
     const cachedData = getCacheItem(cacheKey);
 
     if (cachedData) {
-      console.log(`Using cached comprehensive activity data for user ${userId}`);
+      // Using cached data
       return cachedData;
     }
 
@@ -103,14 +103,12 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
                   isNoOpEdit = versionData.isNoOp === true;
                 }
               } catch (error) {
-                console.error(`Error checking version for no-op status: ${error}`);
-                // Continue processing if version check fails
+                // Error occurred - non-fatal, continue processing
               }
             }
 
             // Skip no-op edits from activity counts
             if (isNoOpEdit) {
-              console.log(`Filtering no-op edit from comprehensive activity sparkline for page ${pageId}`);
               continue;
             }
 
@@ -122,7 +120,7 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
         }
       }
     } catch (error) {
-      console.error("Error fetching page creation data:", error);
+      // Error occurred - non-fatal
     }
 
     // 2. Get view activity data from user's pages
@@ -176,12 +174,12 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
               }
             }
           } catch (pageError) {
-            console.error(`Error fetching view data for page ${pageId}:`, pageError);
+            // Error occurred - non-fatal
           }
         }));
       }
     } catch (error) {
-      console.error("Error fetching view count data:", error);
+      // Error occurred - non-fatal
     }
 
     // 3. Get follower growth data
@@ -214,7 +212,7 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
         }
       });
     } catch (error) {
-      console.error("Error fetching follower growth data:", error);
+      // Error occurred - non-fatal
       // If the index doesn't exist or there's another error,
       // we'll just return empty data for follower growth
       // The index can be created at: https://console.firebase.google.com/project/wewrite-ccd82/firestore/indexes
@@ -231,7 +229,7 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
 
     return result;
   } catch (error) {
-    console.error("Error getting comprehensive user activity:", error);
+    // Error occurred - non-fatal
     return {
       pageCreation: Array(24).fill(0),
       viewCount: Array(24).fill(0),
@@ -297,14 +295,12 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
                 isNoOpEdit = versionData.isNoOp === true;
               }
             } catch (error) {
-              console.error(`Error checking version for no-op status: ${error}`);
-              // Continue processing if version check fails
+              // Error occurred - non-fatal, continue processing
             }
           }
 
           // Skip no-op edits from activity counts
           if (isNoOpEdit) {
-            console.log(`Filtering no-op edit from user activity sparkline for page ${pageId}`);
             continue;
           }
 
@@ -342,7 +338,6 @@ collection(db, getCollectionName("pages"), pageId, "versions"),
 
         // Skip no-op edits from version-based activity counts
         if (versionData.isNoOp === true) {
-          console.log(`Filtering no-op edit version ${versionDoc.id} from user activity sparkline`);
           return;
         }
 
@@ -370,7 +365,7 @@ collection(db, getCollectionName("pages"), pageId, "versions"),
       hourly: hourlyData
     };
   } catch (error) {
-    console.error("Error getting user activity:", error);
+    // Error occurred - non-fatal
     return { total: 0, hourly: Array(24).fill(0) };
   }
 };
@@ -438,7 +433,7 @@ export const getGroupUserActivityLast24Hours = async (userId: string, groupId: s
       hourly: hourlyData
     };
   } catch (err) {
-    console.error("Error fetching group user activity:", err);
+    // Error occurred - non-fatal
     return { total: 0, hourly: Array(24).fill(0) };
   }
 };
@@ -449,10 +444,8 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
   try {
     // Start performance tracking
     const startTime = performance.now();
-    console.log('getBatchUserActivityLast24Hours: Starting with userIds:', userIds);
 
     if (!userIds || userIds.length === 0) {
-      console.log('getBatchUserActivityLast24Hours: No userIds provided, returning empty object');
       return {};
     }
 
@@ -461,17 +454,15 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
     const cachedData = getCachedActivityData(cacheKey);
 
     if (cachedData) {
-      console.log('getBatchUserActivityLast24Hours: Using cached activity data');
+      // Using cached data
       return cachedData;
     }
 
     // CRITICAL FIX: Use more precise time calculation to avoid timezone issues
     const now = new Date();
-    console.log('getBatchUserActivityLast24Hours: Current time:', now.toISOString());
 
     // Calculate 24 hours ago using milliseconds for precision
     const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-    console.log('getBatchUserActivityLast24Hours: 24 hours ago:', twentyFourHoursAgo.toISOString());
 
     // Initialize result object with empty data for all users
     const result = {};
@@ -482,7 +473,6 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
         lastUpdated: now.toISOString()
       };
     });
-    console.log('getBatchUserActivityLast24Hours: Initialized result object with empty data for each user');
 
     // Process users in batches of 10 (Firestore limit for 'in' queries)
     const batchSize = 10;
@@ -492,11 +482,8 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
       batches.push(userIds.slice(i, i + batchSize));
     }
 
-    console.log(`getBatchUserActivityLast24Hours: Split ${userIds.length} users into ${batches.length} batches`);
-
     // Process each batch with Promise.all for better performance
     await Promise.all(batches.map(async (batchUserIds) => {
-      console.log('getBatchUserActivityLast24Hours: Processing batch with users:', batchUserIds);
 
       // CRITICAL FIX: Try both Timestamp and ISO string queries since lastModified format may vary
       let pagesSnapshot;
@@ -514,8 +501,7 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
 
         pagesSnapshot = await getDocs(pagesQuery);
       } catch (timestampError) {
-        console.log('Timestamp query failed, trying ISO string query:', timestampError.message);
-
+        // Timestamp query failed, trying ISO string query
         // Fallback to ISO string query
         const twentyFourHoursAgoISO = twentyFourHoursAgo.toISOString();
 
@@ -528,7 +514,6 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
 
         pagesSnapshot = await getDocs(pagesQueryISO);
       }
-      console.log(`getBatchUserActivityLast24Hours: Found ${pagesSnapshot.size} pages for batch`);
 
       // Process each page edit/creation
       pagesSnapshot.forEach(pageDoc => {
@@ -543,7 +528,7 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
           } else if (typeof pageData.lastModified === 'string') {
             lastModified = new Date(pageData.lastModified);
           } else {
-            console.warn('Invalid lastModified format for page:', pageDoc.id);
+            // Invalid lastModified format - skip
             return;
           }
 
@@ -559,7 +544,6 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
             if (arrayIndex >= 0 && arrayIndex < 24) {
               result[userId].hourly[arrayIndex]++;
               result[userId].total++;
-              console.log(`Activity recorded for user ${userId}: ${hoursAgo} hours ago (index ${arrayIndex})`);
             }
           }
         }
@@ -567,7 +551,6 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
     }));
 
     // Also check versions collection for more detailed edit history - using Promise.all for better performance
-    console.log('getBatchUserActivityLast24Hours: Checking versions collection for additional activity');
 
     // Process versions in parallel for better performance
     const versionsPromises = userIds.map(async (userId) => {
@@ -617,7 +600,7 @@ collection(db, getCollectionName("pages"), pageId, "versions"),
               } else if (typeof versionData.createdAt === 'string') {
                 createdAt = new Date(versionData.createdAt);
               } else {
-                console.warn('Invalid createdAt format for version:', versionDoc.id);
+                // Invalid createdAt format - skip
                 return;
               }
 
@@ -631,15 +614,13 @@ collection(db, getCollectionName("pages"), pageId, "versions"),
                 if (arrayIndex >= 0 && arrayIndex < 24) {
                   result[userId].hourly[arrayIndex]++;
                   result[userId].total++;
-                  console.log(`Version activity recorded for user ${userId}: ${hoursAgo} hours ago (index ${arrayIndex})`);
                 }
               }
             }
           });
         }));
       } catch (err) {
-        console.error(`Error processing versions for user ${userId}:`, err);
-        // Continue with other users
+        // Error occurred - non-fatal, continue with other users
       }
     });
 
@@ -652,7 +633,7 @@ collection(db, getCollectionName("pages"), pageId, "versions"),
 
       // Ensure hourly data is valid
       if (!userData.hourly || !Array.isArray(userData.hourly) || userData.hourly.length !== 24) {
-        console.warn(`Invalid hourly data for user ${userId}, resetting`);
+        // Invalid hourly data - resetting
         userData.hourly = Array(24).fill(0);
       }
 
@@ -669,25 +650,9 @@ collection(db, getCollectionName("pages"), pageId, "versions"),
     // Cache the results
     setCachedActivityData(cacheKey, result);
 
-    // CRITICAL FIX: Add detailed logging for debugging
-    const endTime = performance.now();
-    console.log(`getBatchUserActivityLast24Hours: Completed in ${(endTime - startTime).toFixed(2)}ms`);
-
-    // Log summary of results for debugging
-    const totalActivities = Object.values(result).reduce((sum: number, user: ActivityData) => sum + user.total, 0);
-    console.log(`getBatchUserActivityLast24Hours: Summary - Total activities found: ${totalActivities}`);
-
-    Object.keys(result).forEach(userId => {
-      const userData = result[userId];
-      if (userData.total > 0) {
-        console.log(`User ${userId}: ${userData.total} activities, hourly: [${userData.hourly.join(', ')}]`);
-      }
-    });
-
     return result;
   } catch (error) {
-    console.error("Error getting batch user activity:", error);
-
+    // Error occurred - non-fatal
     // Return empty data for all requested users
     const emptyResult = {};
     userIds.forEach(userId => {
@@ -715,7 +680,7 @@ const getCachedActivityData = (key: string): Record<string, ActivityData> | null
 
     return data;
   } catch (error) {
-    console.error('Error getting cached activity data:', error);
+    // Error occurred - non-fatal
     return null;
   }
 };
@@ -730,6 +695,6 @@ const setCachedActivityData = (key: string, data: Record<string, ActivityData>):
       timestamp: Date.now()
     }));
   } catch (error) {
-    console.error('Error caching activity data:', error);
+    // Error occurred - non-fatal
   }
 };

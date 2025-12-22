@@ -53,8 +53,6 @@ export interface UseLinkSuggestionsOptions {
   onSuggestionDismissed?: (matchedText: string) => void;
 }
 
-console.log('🔗 HOOK: useLinkSuggestions.ts file loaded');
-
 export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
   const {
     enabled = true,
@@ -63,12 +61,6 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     onSuggestionSelected,
     onSuggestionDismissed
   } = options;
-
-  console.warn('🔗 HOOK: useLinkSuggestions initialized with options:', {
-    enabled,
-    minConfidence,
-    debounceDelay
-  });
 
   // State
   const [state, setState] = useState<LinkSuggestionState>({
@@ -101,30 +93,10 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     currentUserId?: string,
     excludePageId?: string
   ) => {
-    console.warn('🔗 HOOK: analyzeText called with:', {
-      textLength: text.length,
-      isEnabled: state.isEnabled,
-      text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-      currentUserId,
-      excludePageId
-    });
-
-    // DEBUG: Always try to make the API call regardless of conditions
-    console.warn('🔗 HOOK: DEBUG - Making API call regardless of conditions');
-
-    // TEMPORARY: Skip the isEnabled check for debugging
+    // Skip if text is too short
     if (!text || text.trim().length < 10) {
-      console.warn('🔗 HOOK: Skipping analysis - text too short:', {
-        textLength: text.length,
-        trimmedLength: text.trim().length,
-        isEnabled: state.isEnabled
-      });
       setState(prev => ({ ...prev, activeSuggestion: null, allSuggestions: [], isLoading: false }));
       return;
-    }
-
-    if (!state.isEnabled) {
-      console.warn('🔗 HOOK: Hook is disabled but proceeding anyway for debugging');
     }
 
     // Avoid re-analyzing the same text
@@ -142,30 +114,12 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      console.warn('🔗 LINK_SUGGESTIONS_HOOK: Analyzing text for suggestions');
-      console.warn('🔗 HOOK: About to call debouncedFindLinkSuggestions with:', {
-        text: text.substring(0, 50) + '...',
-        currentUserId,
-        excludePageId,
-        debounceDelay
-      });
-
       const result: LinkSuggestionResult = await debouncedFindLinkSuggestions(
         text,
         currentUserId,
         excludePageId,
         debounceDelay
       );
-
-      console.warn('🔗 HOOK: *** API RETURNED SUGGESTIONS ***', {
-        suggestionsCount: result.suggestions.length,
-        totalMatches: result.totalMatches,
-        allSuggestions: result.suggestions.map(s => ({
-          title: s.title,
-          confidence: s.confidence,
-          matchedText: s.matchedText
-        }))
-      });
 
       // Filter suggestions by confidence and dismissed status
       const filteredSuggestions = result.suggestions.filter(suggestion => {
@@ -208,21 +162,10 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
           setState(prev => ({
             ...prev,
             activeSuggestion,
-            allSuggestions: allUniqueSuggestions, // Add this new field
+            allSuggestions: allUniqueSuggestions,
             isLoading: false,
             error: null
           }));
-
-          console.log('🔗 LINK_SUGGESTIONS_HOOK: Found suggestions:', {
-            totalUniqueSuggestions: allUniqueSuggestions.length,
-            allMatchedTexts: allUniqueSuggestions.map(s => s.matchedText),
-            bestSuggestion: {
-              matchedText: bestSuggestion.matchedText,
-              confidence: bestSuggestion.confidence
-            }
-          });
-
-          console.log('🔗 LINK_SUGGESTIONS_HOOK: Setting state with allSuggestions:', allUniqueSuggestions);
         } else {
           setState(prev => ({ ...prev, activeSuggestion: null, allSuggestions: [], isLoading: false }));
         }
@@ -231,7 +174,6 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
       }
 
     } catch (error) {
-      console.error('🔴 LINK_SUGGESTIONS_HOOK: Error analyzing text:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -278,7 +220,6 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     });
 
     onSuggestionDismissed?.(matchedText);
-    console.log('🔗 LINK_SUGGESTIONS_HOOK: Dismissed suggestion:', matchedText);
   }, [onSuggestionDismissed]);
 
   // Clear all suggestions
@@ -310,11 +251,6 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
   const selectSuggestion = useCallback((suggestion: LinkSuggestion) => {
     onSuggestionSelected?.(suggestion);
     setState(prev => ({ ...prev, showModal: false }));
-    console.log('🔗 LINK_SUGGESTIONS_HOOK: Selected suggestion:', {
-      title: suggestion.title,
-      matchedText: suggestion.matchedText,
-      confidence: suggestion.confidence
-    });
   }, [onSuggestionSelected]);
 
   // Actions object

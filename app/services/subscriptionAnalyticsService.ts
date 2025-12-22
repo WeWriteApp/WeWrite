@@ -44,8 +44,6 @@ export class SubscriptionAnalyticsService {
           ...metadata
         }
       });
-      
-      console.log('📊 Tracked subscription flow started:', { userId, tier, amount, tokens });
     } catch (error) {
       console.error('❌ Failed to track subscription flow started:', error);
     }
@@ -72,8 +70,6 @@ export class SubscriptionAnalyticsService {
           ...metadata
         }
       });
-      
-      console.log('📊 Tracked subscription abandoned before payment:', { userId, tier, amount });
     } catch (error) {
       console.error('❌ Failed to track subscription abandoned before payment:', error);
     }
@@ -102,8 +98,6 @@ export class SubscriptionAnalyticsService {
           ...metadata
         }
       });
-      
-      console.log('📊 Tracked subscription abandoned during payment:', { userId, tier, amount, errorCode });
     } catch (error) {
       console.error('❌ Failed to track subscription abandoned during payment:', error);
     }
@@ -134,8 +128,6 @@ export class SubscriptionAnalyticsService {
           ...metadata
         }
       });
-      
-      console.log('📊 Tracked subscription completed:', { userId, subscriptionId, tier, amount, tokens });
     } catch (error) {
       console.error('❌ Failed to track subscription completed:', error);
     }
@@ -164,8 +156,6 @@ export class SubscriptionAnalyticsService {
           ...metadata
         }
       });
-      
-      console.log('📊 Tracked first token allocation:', { userId, pageId, tokens, recipientUserId });
     } catch (error) {
       console.error('❌ Failed to track first token allocation:', error);
     }
@@ -194,8 +184,6 @@ export class SubscriptionAnalyticsService {
           ...metadata
         }
       });
-      
-      console.log('📊 Tracked ongoing token allocation:', { userId, pageId, tokens, recipientUserId });
     } catch (error) {
       console.error('❌ Failed to track ongoing token allocation:', error);
     }

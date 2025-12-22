@@ -53,12 +53,10 @@ export interface BacklinkSummary {
  * Get all backlinks for a page (fast index-based lookup)
  */
 export async function getBacklinks(
-  targetPageId: string, 
+  targetPageId: string,
   limit?: number
 ): Promise<BacklinkSummary[]> {
   try {
-    console.log(`🔍 Getting backlinks for page ${targetPageId} (limit: ${limit || 'none'})`);
-    
     // Query the backlinks index
     let backlinksQuery = query(
       collection(db, getCollectionName('backlinks')),
@@ -84,17 +82,12 @@ export async function getBacklinks(
         linkText: data.linkText
       };
     });
-    
-    console.log(`✅ Found ${backlinks.length} backlinks for page ${targetPageId}`);
+
     return backlinks;
     
   } catch (error) {
-    console.error('Error getting backlinks:', error);
-
     // If the error is due to index building, provide a fallback
     if (error.code === 'failed-precondition' && error.message.includes('index')) {
-      console.log('🔄 Backlinks index is building, using fallback method');
-
       try {
         // Fallback: Use the old findBacklinks method from links.ts
         const { findBacklinks } = await import('./links');
@@ -110,7 +103,6 @@ export async function getBacklinks(
           linkText: undefined // Not available in fallback
         }));
       } catch (fallbackError) {
-        console.error('Fallback backlinks method also failed:', fallbackError);
         return [];
       }
     }
@@ -131,33 +123,15 @@ export async function updateBacklinksIndex(
   lastModified: any
 ): Promise<void> {
   try {
-    console.log(`🔄 [BACKLINKS] Updating backlinks index for page ${pageId}`);
-    console.log(`🔄 [BACKLINKS] Page details:`, {
-      pageId,
-      pageTitle,
-      username,
-      isPublic,
-      contentType: typeof content,
-      contentLength: Array.isArray(content) ? content.length : 'not array',
-      environment: getCollectionName('backlinks')
-    });
-
     // First, remove all existing backlinks from this page
     await removeBacklinksFromPage(pageId);
 
     // Extract links from the page content
     const links = extractLinksFromNodes(content);
-    console.log(`🔄 [BACKLINKS] Extracted ${links.length} total links from content`);
 
     const pageLinks = links.filter(link => link.type === 'page' && link.pageId);
-    console.log(`🔄 [BACKLINKS] Found ${pageLinks.length} page links:`, pageLinks.map(link => ({
-      pageId: link.pageId,
-      text: link.text,
-      url: link.url
-    })));
 
     if (pageLinks.length === 0) {
-      console.log(`📝 [BACKLINKS] No page links found in ${pageId}, backlinks index updated`);
       return;
     }
 
@@ -185,16 +159,12 @@ export async function updateBacklinksIndex(
     }
 
     // Commit the batch
-    console.log(`🔄 [BACKLINKS] Committing batch with ${pageLinks.length} backlink entries...`);
     await batch.commit();
-
-    console.log(`✅ [BACKLINKS] Successfully updated backlinks index: ${pageLinks.length} links from page ${pageId}`);
 
     // Create notifications for page mentions (links)
     await createLinkNotifications(pageId, pageTitle, username, pageLinks);
-    
+
   } catch (error) {
-    console.error('Error updating backlinks index:', error);
     throw error;
   }
 }
@@ -209,8 +179,6 @@ async function createLinkNotifications(
   pageLinks: any[]
 ): Promise<void> {
   try {
-    console.log(`🔔 [NOTIFICATIONS] Creating link notifications for ${pageLinks.length} page links`);
-
     // Import notification service (this is safe for client-side)
     const { createNotification } = await import('../../services/notificationsApi');
 
@@ -243,8 +211,6 @@ async function createLinkNotifications(
               }
             });
 
-            console.log(`🔔 [NOTIFICATIONS] Created link notification for user ${targetUserId}`);
-
             // Send email notification via API (fire-and-forget)
             // We use an API call here because emailService uses firebase-admin which can't run client-side
             try {
@@ -254,10 +220,10 @@ async function createLinkNotifications(
                 const targetUserData = targetUserDoc.data();
                 const targetEmail = targetUserData.email;
                 const targetUsername = targetUserData.username || `user_${targetUserId.slice(0, 8)}`;
-                
+
                 // Check if user wants email notifications for page links
                 const shouldSendEmail = targetUserData.emailPreferences?.engagement !== false;
-                
+
                 if (targetEmail && shouldSendEmail) {
                   // Call the email API endpoint instead of directly importing emailService
                   fetch('/api/email/send', {
@@ -274,26 +240,21 @@ async function createLinkNotifications(
                       },
                       userId: targetUserId
                     })
-                  }).catch(err => {
-                    console.error(`📧 [EMAIL] Failed to send page linked email:`, err);
+                  }).catch(() => {
+                    // Email send failed, but don't log
                   });
-                  
-                  console.log(`📧 [EMAIL] Page linked email queued for ${targetEmail}`);
                 }
               }
             } catch (emailError) {
-              console.error(`📧 [EMAIL] Error preparing page linked email:`, emailError);
               // Don't fail notifications if email fails
             }
           }
         }
       } catch (notificationError) {
-        console.error(`❌ [NOTIFICATIONS] Error creating notification for link to ${link.pageId}:`, notificationError);
         // Continue with other notifications even if one fails
       }
     }
   } catch (error) {
-    console.error(`❌ [NOTIFICATIONS] Error creating link notifications:`, error);
     // Don't throw - notifications are not critical for backlinks functionality
   }
 }
@@ -322,10 +283,7 @@ export async function removeBacklinksFromPage(sourcePageId: string): Promise<voi
 
     await batch.commit();
 
-    console.log(`🗑️ Removed ${snapshot.docs.length} backlinks from page ${sourcePageId}`);
-
   } catch (error) {
-    console.error('Error removing backlinks from page:', error);
     throw error;
   }
 }
@@ -335,8 +293,6 @@ export async function removeBacklinksFromPage(sourcePageId: string): Promise<voi
  */
 export async function removePageFromBacklinksIndex(pageId: string): Promise<void> {
   try {
-    console.log(`🗑️ Removing page ${pageId} from backlinks index`);
-    
     // Remove backlinks FROM this page
     await removeBacklinksFromPage(pageId);
     
@@ -354,14 +310,11 @@ export async function removePageFromBacklinksIndex(pageId: string): Promise<void
       snapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
       });
-      
+
       await batch.commit();
-      
-      console.log(`🗑️ Removed ${snapshot.docs.length} backlinks to page ${pageId}`);
     }
-    
+
   } catch (error) {
-    console.error('Error removing page from backlinks index:', error);
     throw error;
   }
 }
@@ -379,9 +332,8 @@ export async function getBacklinksCount(targetPageId: string): Promise<number> {
     
     const snapshot = await getDocs(backlinksQuery);
     return snapshot.size;
-    
+
   } catch (error) {
-    console.error('Error getting backlinks count:', error);
     return 0;
   }
 }

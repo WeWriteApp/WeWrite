@@ -60,8 +60,6 @@ export class AdminAnalyticsService {
    * Get new accounts created within date range
    */
   static async getNewAccountsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting new accounts created...');
-    
     try {
       const db = getAdminFirestore();
       const usersCollectionName = await getCollectionNameAsync('users');
@@ -69,7 +67,6 @@ export class AdminAnalyticsService {
 
       // Fetch all users and filter in memory (simple and reliable)
       const snapshot = await usersRef.limit(1000).get();
-      console.log(`✅ [Admin Analytics] Found ${snapshot.size} users`);
       
       // Group by day
       const dailyCounts = new Map<string, number>();
@@ -112,12 +109,11 @@ export class AdminAnalyticsService {
         
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      
-      console.log(`📊 [Admin Analytics] Accounts result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total accounts`);
+
       return result;
-      
+
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching accounts:', error);
+      console.error('Error fetching accounts:', error);
       return [];
     }
   }
@@ -126,8 +122,6 @@ export class AdminAnalyticsService {
    * Get new pages created within date range
    */
   static async getNewPagesCreated(dateRange: DateRange): Promise<PagesDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting new pages created...');
-
     try {
       const db = getAdminFirestore();
       const pagesCollectionName = await getCollectionNameAsync('pages');
@@ -135,7 +129,6 @@ export class AdminAnalyticsService {
 
       // Fetch all pages and filter in memory (simple and reliable)
       const snapshot = await pagesRef.limit(1000).get();
-      console.log(`✅ [Admin Analytics] Found ${snapshot.size} pages`);
       
       // Group by day
       const dailyCounts = new Map<string, number>();
@@ -199,27 +192,11 @@ export class AdminAnalyticsService {
         
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      
-      console.log(`📊 [Admin Analytics] Pages processing summary:`, {
-        totalDocuments: snapshot.size,
-        processedCount,
-        skippedDeleted,
-        skippedNoCreatedAt,
-        skippedOutOfRange,
-        addedToResults,
-        dateRange: {
-          start: dateRange.startDate.toISOString(),
-          end: dateRange.endDate.toISOString()
-        },
-        resultDays: result.length,
-        totalPagesInResult: result.reduce((sum, item) => sum + item.totalPages, 0)
-      });
 
-      console.log(`📊 [Admin Analytics] Pages result: ${result.length} days, ${result.reduce((sum, item) => sum + item.totalPages, 0)} total pages`);
       return result;
-      
+
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching pages:', error);
+      console.error('Error fetching pages:', error);
       return [];
     }
   }
@@ -229,8 +206,6 @@ export class AdminAnalyticsService {
    * For content_change events, also aggregates character counts
    */
   static async getAnalyticsEvents(dateRange: DateRange, eventType?: string): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting analytics events...', { eventType });
-
     try {
       const db = getAdminFirestore();
       const eventsCollectionName = await getCollectionNameAsync('analytics_events');
@@ -238,7 +213,6 @@ export class AdminAnalyticsService {
 
       // Fetch all events and filter in memory (simple and reliable)
       const snapshot = await eventsRef.limit(1000).get();
-      console.log(`✅ [Admin Analytics] Found ${snapshot.size} analytics events`);
       
       // Group by day - track counts and character totals for content_change
       const dailyData = new Map<string, { 
@@ -327,29 +301,11 @@ export class AdminAnalyticsService {
         
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      
-      console.log(`📊 [Admin Analytics] Events processing summary:`, {
-        eventType,
-        totalDocuments: snapshot.size,
-        processedEvents,
-        matchedEvents,
-        skippedWrongType,
-        skippedNoTimestamp,
-        skippedOutOfRange,
-        addedToResults,
-        dateRange: {
-          start: dateRange.startDate.toISOString(),
-          end: dateRange.endDate.toISOString()
-        },
-        resultDays: result.length,
-        totalEventsInResult: result.reduce((sum, item) => sum + item.count, 0)
-      });
 
-      console.log(`📊 [Admin Analytics] Events result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total events`);
       return result;
-      
+
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching analytics events:', error);
+      console.error('Error fetching analytics events:', error);
       return [];
     }
   }
@@ -359,8 +315,6 @@ export class AdminAnalyticsService {
    * SOURCE OF TRUTH: Stripe API
    */
   static async getSubscriptionsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting subscriptions created from Stripe (source of truth)...');
-
     try {
       const stripe = getStripe();
 
@@ -394,8 +348,6 @@ export class AdminAnalyticsService {
         }
       }
 
-      console.log(`✅ [Admin Analytics] Found ${subscriptions.length} subscriptions from Stripe`);
-
       // Group by day
       const dailyCounts = new Map<string, number>();
 
@@ -422,11 +374,10 @@ export class AdminAnalyticsService {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      console.log(`📊 [Admin Analytics] Subscriptions result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total subscriptions`);
       return result;
 
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching subscriptions from Stripe:', error);
+      console.error('Error fetching subscriptions from Stripe:', error);
       return [];
     }
   }
@@ -436,8 +387,6 @@ export class AdminAnalyticsService {
    * SOURCE OF TRUTH: Stripe Charges API
    */
   static async getSubscriptionRevenue(dateRange: DateRange): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Admin Analytics] Getting subscription revenue from Stripe (source of truth)...');
-
     try {
       const stripe = getStripe();
 
@@ -495,8 +444,6 @@ export class AdminAnalyticsService {
         }
       }
 
-      console.log(`✅ [Admin Analytics] Found ${totalCharges} charges from Stripe`);
-
       // Convert to chart data
       const result: ChartDataPoint[] = [];
       const currentDate = new Date(dateRange.startDate);
@@ -514,12 +461,10 @@ export class AdminAnalyticsService {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      const totalRevenue = result.reduce((sum, item) => sum + item.count, 0);
-      console.log(`📊 [Admin Analytics] Revenue result: ${result.length} days, $${totalRevenue.toFixed(2)} total revenue`);
       return result;
 
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching subscription revenue from Stripe:', error);
+      console.error('Error fetching subscription revenue from Stripe:', error);
       return [];
     }
   }
@@ -528,8 +473,6 @@ export class AdminAnalyticsService {
    * Get all dashboard analytics in one call
    */
   static async getAllDashboardAnalytics(dateRange: DateRange) {
-    console.log('🔍 [Admin Analytics] Getting all dashboard analytics...');
-
     try {
       const [accounts, pages, shares, contentChanges, subscriptions, revenue] = await Promise.all([
         this.getNewAccountsCreated(dateRange),
@@ -553,7 +496,7 @@ export class AdminAnalyticsService {
       };
 
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching all analytics:', error);
+      console.error('Error fetching all analytics:', error);
       throw error;
     }
   }
@@ -562,8 +505,6 @@ export class AdminAnalyticsService {
    * Get page views analytics within date range
    */
   static async getPageViewsAnalytics(dateRange: DateRange): Promise<any[]> {
-    console.log('🔍 [Admin Analytics] Getting page views analytics...');
-
     try {
       const db = getAdminFirestore();
       const pageViewsCollectionName = await getCollectionNameAsync('pageViews');
@@ -573,7 +514,6 @@ export class AdminAnalyticsService {
       const snapshot = await pageViewsRef.limit(5000).get();
 
       if (snapshot.empty) {
-        console.log('📊 [Admin Analytics] No page views found');
         return [];
       }
 
@@ -629,11 +569,10 @@ export class AdminAnalyticsService {
       // Sort by date
       result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      console.log(`📊 [Admin Analytics] Found ${result.length} days of page view data`);
       return result;
 
     } catch (error) {
-      console.error('❌ [Admin Analytics] Error fetching page views analytics:', error);
+      console.error('Error fetching page views analytics:', error);
       throw error;
     }
   }

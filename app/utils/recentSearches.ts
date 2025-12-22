@@ -18,8 +18,6 @@ async function syncRecentSearchesToDatabase(userId: string, recentSearches: Rece
       return;
     }
 
-    console.log(`Syncing ${unsyncedSearches.length} recent searches to database`);
-
     const mostRecent = unsyncedSearches[0];
     const response = await fetch('/api/user-preferences/recent-searches', {
       method: 'POST',
@@ -34,12 +32,9 @@ async function syncRecentSearchesToDatabase(userId: string, recentSearches: Rece
       const updatedSearches = recentSearches.map(item => ({ ...item, synced: true }));
       localStorage.setItem(storageKey, JSON.stringify(updatedSearches));
       localStorage.setItem(`lastSearchSync_${userId}`, Date.now().toString());
-      console.log('Recent searches synced to database successfully');
-    } else {
-      console.warn('Failed to sync recent searches to database');
     }
   } catch (error) {
-    console.error('Error syncing recent searches to database:', error);
+    // Silently fail - sync is not critical
   }
 }
 
@@ -80,7 +75,6 @@ export const addRecentSearch = async (searchTerm: string, userId: string | null 
     });
 
     if (isIncrementalSearch) {
-      console.log(`Skipping incremental search: "${trimmedTerm}"`);
       return;
     }
 
@@ -91,7 +85,6 @@ export const addRecentSearch = async (searchTerm: string, userId: string | null 
       if (existingTerm === newTerm) return false;
 
       if (newTerm.startsWith(existingTerm) && newTerm.length > existingTerm.length) {
-        console.log(`Removing prefix search: "${item.term}" (replaced by "${trimmedTerm}")`);
         return false;
       }
 
@@ -118,13 +111,13 @@ export const addRecentSearch = async (searchTerm: string, userId: string | null 
         unsyncedCount >= 5;
 
       if (shouldSync) {
-        syncRecentSearchesToDatabase(userId, recentSearches).catch(error => {
-          console.warn('Background sync of recent searches failed:', error);
+        syncRecentSearchesToDatabase(userId, recentSearches).catch(() => {
+          // Silently fail - background sync is not critical
         });
       }
     }
   } catch (error) {
-    console.error("Error adding recent search to localStorage:", error);
+    // Silently fail - localStorage errors are not critical
   }
 };
 
@@ -162,19 +155,17 @@ export const getRecentSearches = async (userId: string | null = null): Promise<R
         if (response.ok) {
           const data = await response.json();
           if (data.success && Array.isArray(data.data.recentSearches)) {
-            console.log('Recent searches loaded from database (first time)');
             localStorage.setItem(storageKey, JSON.stringify(data.data.recentSearches));
             return data.data.recentSearches;
           }
         }
       } catch (error) {
-        console.warn('Error fetching recent searches from database:', error);
+        // Silently fail - will fallback to localStorage
       }
     }
 
     return recentSearches;
   } catch (error) {
-    console.error("Error getting recent searches from localStorage:", error);
     return [];
   }
 };
@@ -189,15 +180,12 @@ export const clearRecentSearches = async (userId: string | null = null): Promise
       });
 
       if (response.ok) {
-        console.log('Recent searches cleared from database');
         const storageKey = `recentSearches_${userId}`;
         localStorage.removeItem(storageKey);
         return;
-      } else {
-        console.warn('Failed to clear recent searches from database, falling back to localStorage');
       }
     } catch (error) {
-      console.warn('Error clearing recent searches from database, falling back to localStorage:', error);
+      // Silently fail - will fallback to localStorage
     }
   }
 
@@ -205,7 +193,7 @@ export const clearRecentSearches = async (userId: string | null = null): Promise
     const storageKey = userId ? `recentSearches_${userId}` : 'recentSearches';
     localStorage.removeItem(storageKey);
   } catch (error) {
-    console.error("Error clearing recent searches from localStorage:", error);
+    // Silently fail - localStorage errors are not critical
   }
 };
 
@@ -226,13 +214,10 @@ export const removeRecentSearch = async (
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Recent search removed from database');
         return data.data.recentSearches || [];
-      } else {
-        console.warn('Failed to remove recent search from database, falling back to localStorage');
       }
     } catch (error) {
-      console.warn('Error removing recent search from database, falling back to localStorage:', error);
+      // Silently fail - will fallback to localStorage
     }
   }
 
@@ -254,7 +239,6 @@ export const removeRecentSearch = async (
 
     return recentSearches;
   } catch (error) {
-    console.error("Error removing recent search from localStorage:", error);
     return [];
   }
 };
@@ -277,10 +261,8 @@ export const addRecentlyViewedPageId = (pageId: string): void => {
     recentPages = recentPages.slice(0, MAX_RECENT_PAGES);
 
     localStorage.setItem('recentlyVisitedPages', JSON.stringify(recentPages));
-
-    console.log('Added page to recently viewed:', pageId);
   } catch (error) {
-    console.error("Error adding recently viewed page:", error);
+    // Silently fail - localStorage errors are not critical
   }
 };
 
@@ -291,7 +273,6 @@ export const getRecentlyViewedPageIds = (): string[] => {
     const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
     return recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
   } catch (error) {
-    console.error("Error getting recently viewed pages:", error);
     return [];
   }
 };

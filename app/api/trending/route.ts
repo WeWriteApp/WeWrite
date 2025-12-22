@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
+import type { Page } from '../../types/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,14 +28,14 @@ interface PageViewData {
   hourly: number[];
 }
 
-interface PageData {
-  title?: string;
+/**
+ * Page data type for trending - uses centralized Page type
+ */
+type PageData = Pick<Page, 'title' | 'userId' | 'deleted'> & {
   views?: number;
-  userId?: string;
   lastModified?: string;
   isPublic?: boolean;
-  deleted?: boolean;
-}
+};
 
 // GET endpoint - Get trending pages
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -42,25 +43,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
     const limitCount = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50); // Cap at 50
 
-    console.log(`Fetching trending pages with limit: ${limitCount}`);
-
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Simple trending algorithm: get public pages and sort by actual view data
-    // Don't rely on 'views' field since it might not exist on all pages
-    console.log(`🔥 [TRENDING_API] Querying public pages, limit: ${limitCount * 5}`);
-    console.log(`🔥 [TRENDING_API] Using collection:`, getCollectionName('pages'));
-
     const pagesQuery = db.collection(getCollectionName('pages'))
       .where('isPublic', '==', true)
       .limit(limitCount * 5); // Get more to filter and sort by actual views
 
     const pagesSnapshot = await pagesQuery.get();
-    console.log(`🔥 [TRENDING_API] Raw query returned ${pagesSnapshot.size} documents`);
 
     if (pagesSnapshot.empty) {
-      console.log('🔥 [TRENDING_API] No pages found in query - collection might be empty');
       return createApiResponse({
         trendingPages: []
       });
@@ -112,22 +105,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     });
 
-    console.log(`🔥 [TRENDING_API] Filtering results:`, {
-      totalDocuments: pagesSnapshot.size,
-      filteredOut: filteredCount,
-      notPublic: publicCount,
-      deleted: deletedCount,
-      noTitle: noTitleCount,
-      lowViews: lowViewsCount,
-      finalTrendingPages: trendingPages.length,
-      samplePages: trendingPages.slice(0, 3).map(p => ({
-        id: p.id,
-        title: p.title,
-        views: p.views,
-        isPublic: p.isPublic
-      }))
-    });
-
     // Get real 24-hour view data from pageViews collection
     // OPTIMIZATION: Batch fetch all pageViews documents in 2 reads instead of N*2 reads
     const viewData = await getBatchPageViewData(db, trendingPages.map(p => p.id));
@@ -166,8 +143,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Limit to requested count
     const finalPages = trendingPages.slice(0, limitCount);
-
-    console.log(`Found ${finalPages.length} trending pages`);
 
     return createApiResponse({
       trendingPages: finalPages
@@ -254,7 +229,6 @@ async function getBatchPageViewData(db: any, pageIds: string[]): Promise<Map<str
       });
     }
 
-    console.log(`🔥 [TRENDING_API] Batch fetched view data for ${pageIds.length} pages in 2 reads`);
     return result;
   } catch (error) {
     console.warn(`Error batch fetching page view data:`, error.message);

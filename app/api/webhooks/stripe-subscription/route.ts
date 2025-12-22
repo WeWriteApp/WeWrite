@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     const signature = headersList.get('stripe-signature');
 
     if (!signature) {
-      console.error('No Stripe signature found');
       return NextResponse.json({ error: 'No signature' }, { status: 400 });
     }
 
@@ -45,7 +44,6 @@ export async function POST(request: NextRequest) {
         getStripeWebhookSecret() || ''
       );
     } catch (err) {
-      console.error('Webhook signature verification failed:', err);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -87,7 +85,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error(`[SUBSCRIPTION WEBHOOK] Error processing webhook event ${event?.type || 'unknown'}:`, error);
     return NextResponse.json({
       error: 'Webhook processing failed',
       eventType: event?.type || 'unknown',
@@ -106,11 +103,8 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
 
     const userId = session.metadata?.firebaseUID;
     if (!userId) {
-      console.error('No Firebase UID in checkout session metadata:', session.id);
       return;
     }
-
-    console.log(`[SUBSCRIPTION WEBHOOK] Checkout session completed for user ${userId}, session ${session.id}`);
 
     // Retrieve the subscription to get the latest status
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
@@ -118,10 +112,7 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
     // Update subscription with the latest data from Stripe
     await handleSubscriptionUpdated(subscription, 'checkout.session.completed');
 
-    console.log(`[SUBSCRIPTION WEBHOOK] Processed checkout completion for user ${userId}, subscription status: ${subscription.status}`);
-
   } catch (error) {
-    console.error('[SUBSCRIPTION WEBHOOK] Error handling checkout session completed:', error);
     throw error;
   }
 }
@@ -134,11 +125,8 @@ export async function handleSubscriptionUpdated(
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
-      console.error('No Firebase UID in subscription metadata:', subscription.id);
       return;
     }
-
-    console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription update for user ${userId}, subscription ${subscription.id}, status: ${subscription.status}`);
 
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
@@ -178,13 +166,6 @@ export async function handleSubscriptionUpdated(
     const currentStatus = existingData?.status;
     const newStatus = subscription.status;
 
-    console.log(`[SUBSCRIPTION WEBHOOK] Status transition for user ${userId}: '${currentStatus}' -> '${newStatus}'`);
-
-    // CRITICAL: Log incomplete status specifically for debugging
-    if (newStatus === 'incomplete') {
-      console.log(`[SUBSCRIPTION WEBHOOK] 🚨 INCOMPLETE STATUS: Subscription ${subscription.id} for user ${userId} is incomplete - this should show in UI as "Payment Required"`);
-    }
-
     subscriptionData.status = newStatus; // Always use Stripe's status
 
     if (subscriptionDoc.exists()) {
@@ -201,10 +182,7 @@ export async function handleSubscriptionUpdated(
     // Do NOT allocate funds on subscription status change alone; wait for payment success
     // Token compatibility is handled on payment success; skipped here intentionally
 
-    console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
-
   } catch (error) {
-    console.error('Error handling subscription updated:', error);
     throw error; // Re-throw to ensure webhook returns error status
   }
 }
@@ -213,11 +191,8 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
-      console.error('[SUBSCRIPTION WEBHOOK] No Firebase UID in subscription metadata for deletion');
       return;
     }
-
-    console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription deletion for user ${userId}, subscription ${subscription.id}`);
 
     // Get existing subscription data for audit logging
     const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
@@ -245,19 +220,14 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
           cancelReason: 'Subscription deleted in Stripe'
         }
       });
-      console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription cancellation to audit trail`);
     } catch (auditError) {
-      console.error(`[SUBSCRIPTION WEBHOOK] ❌ Failed to log cancellation audit event:`, auditError);
       // Don't fail the webhook if audit logging fails
     }
 
     // Reset USD allocation to 0
     await ServerUsdService.updateMonthlyUsdAllocation(userId, 0);
 
-    console.log(`[SUBSCRIPTION WEBHOOK] Subscription deleted for user ${userId} - Status set to cancelled`);
-
   } catch (error) {
-    console.error('[SUBSCRIPTION WEBHOOK] Error handling subscription deleted:', error);
     throw error;
   }
 }
@@ -272,7 +242,6 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     const userId = subscription.metadata.firebaseUID;
 
     if (!userId) {
-      console.error('No Firebase UID in subscription metadata for payment succeeded');
       return;
     }
 
@@ -293,7 +262,7 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         previousFailureCount = currentSub.data().failureCount || 0;
       }
     } catch (error) {
-      console.warn('[PAYMENT SUCCEEDED] Could not get previous failure count:', error);
+      // Could not get previous failure count - continue with default 0
     }
 
     const subscriptionData = {
@@ -319,8 +288,6 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
       const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
       await updateDoc(subscriptionRef, subscriptionData);
-
-      console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}`);
 
     // CRITICAL: Log subscription changes to audit trail for proper history
     try {
@@ -357,7 +324,6 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
             amountChange: beforeState.amount !== amount
           }
         });
-        console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription update to audit trail`);
       } else {
         // This is a creation - log as created
         await subscriptionAuditService.logSubscriptionCreated(userId, subscriptionData, {
@@ -369,27 +335,20 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
             initialStatus: newStatus
           }
         });
-        console.log(`[SUBSCRIPTION WEBHOOK] ✅ Logged subscription creation to audit trail`);
       }
     } catch (auditError) {
-      console.error(`[SUBSCRIPTION WEBHOOK] ❌ Failed to log audit event:`, auditError);
       // Don't fail the webhook if audit logging fails
     }
 
     // CRITICAL: Invalidate subscription cache after webhook update
     try {
-      console.log(`[SUBSCRIPTION WEBHOOK] Invalidating subscription cache for user ${userId}`);
-
       // Import and use the cache invalidation function
       const { invalidateCache } = await import('../../../utils/serverCache');
       invalidateCache.user(userId);
-
-      console.log(`[SUBSCRIPTION WEBHOOK] ✅ Successfully invalidated subscription caches for user ${userId}`);
     } catch (cacheError) {
-      console.error(`[SUBSCRIPTION WEBHOOK] ❌ Error invalidating caches for user ${userId}:`, cacheError);
+      // Cache invalidation failed - non-fatal
     }
     } catch (error) {
-      console.error(`[SUBSCRIPTION WEBHOOK] Failed to update subscription for user ${userId}:`, error);
       throw error;
     }
 
@@ -417,7 +376,6 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
           }
         });
       } catch (auditError) {
-        console.warn('[PAYMENT SUCCEEDED] Failed to log payment recovery audit event:', auditError);
         // Don't fail the webhook if audit logging fails
       }
     }
@@ -426,10 +384,7 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
 
-    console.log(`[PAYMENT SUCCEEDED] Updating USD allocation for user ${userId}: $${amount} (funds held in platform account)`);
     await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
-
-    console.log(`[PAYMENT SUCCEEDED] Payment processed, funds held in platform account for allocation and payout processing`);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance
     // Reuse the correlationId from the sync operation above
@@ -450,32 +405,17 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
         if (trackingResult.success) {
           trackingSuccess = true;
-          console.log(`[SUBSCRIPTION WEBHOOK] Successfully tracked payment transaction [${correlationId}] on attempt ${trackingAttempts}`, {
-            invoiceId: invoice.id,
-            subscriptionId: subscription.id,
-            userId,
-            amount,
-            transactionId: trackingResult.data?.id
-          });
         } else {
           throw new Error(trackingResult.error?.message || 'Transaction tracking failed');
         }
       } catch (trackingError: any) {
-        console.error(`[SUBSCRIPTION WEBHOOK] Transaction tracking attempt ${trackingAttempts} failed:`, {
-          error: trackingError.message,
-          correlationId,
-          invoiceId: invoice.id,
-          userId
-        });
-
         if (trackingAttempts >= maxTrackingAttempts) {
           // Critical: Transaction tracking failed after all retries
           // Create a fallback tracking record for manual reconciliation
           try {
             await createFallbackTransactionRecord(invoice.id, subscription.id, userId, amount, correlationId, trackingError.message);
-            console.error(`[SUBSCRIPTION WEBHOOK] CRITICAL: Created fallback transaction record for manual reconciliation [${correlationId}]`);
           } catch (fallbackError) {
-            console.error(`[SUBSCRIPTION WEBHOOK] CRITICAL: Failed to create fallback transaction record [${correlationId}]:`, fallbackError);
+            // Failed to create fallback - will be logged in monitoring
           }
 
           // Log to monitoring system for immediate attention
@@ -510,19 +450,15 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
             day: 'numeric' 
           }),
           userId
-        }).catch(err => {
-          console.error('[SUBSCRIPTION WEBHOOK] Failed to send subscription confirmation email:', err);
+        }).catch(() => {
+          // Email send failed - non-fatal
         });
-        
-        console.log(`[SUBSCRIPTION WEBHOOK] Queued subscription confirmation email for ${userData.email}`);
       }
     } catch (emailErr) {
-      console.error('[SUBSCRIPTION WEBHOOK] Error preparing subscription email:', emailErr);
       // Don't fail the webhook if email fails
     }
 
   } catch (error) {
-    console.error('Error handling payment succeeded:', error);
     throw error; // Re-throw to ensure webhook returns error status
   }
 }
@@ -535,7 +471,6 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const userId = subscription.metadata.firebaseUID;
 
     if (!userId) {
-      console.error('No Firebase UID in subscription metadata');
       return;
     }
 
@@ -552,15 +487,6 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
     // Parse the error for detailed user-friendly information
     const detailedError = parseStripeError(rawError);
     const failureReason = detailedError.userMessage;
-
-    // Log detailed error information for debugging
-    console.log('[PAYMENT FAILED] Detailed error analysis:', createDetailedErrorLog(rawError, {
-      invoiceId: invoice.id,
-      subscriptionId: subscription.id,
-      userId,
-      amount: invoice.amount_due / 100,
-      attemptCount: invoice.attempt_count
-    }));
 
     const amount = invoice.amount_due / 100; // Convert from cents
 
@@ -599,7 +525,6 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
         }
       });
     } catch (auditError) {
-      console.warn('[PAYMENT FAILED] Failed to log audit event:', auditError);
       // Don't fail the webhook if audit logging fails
     }
 
@@ -608,21 +533,13 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
     // Revoke allocations until a successful payment occurs
     try {
-      console.log(`[PAYMENT FAILED] Clearing USD allocation for user ${userId} to prevent unfunded payouts`);
       await ServerUsdService.updateMonthlyUsdAllocation(userId, 0);
     } catch (allocError) {
-      console.warn('[PAYMENT FAILED] Failed to clear USD allocation after failure:', allocError);
+      // Failed to clear USD allocation - non-fatal
     }
 
-    console.log(`[ENHANCED PAYMENT RECOVERY] Payment failed for user ${userId}`, {
-      failureCount: failureRecord.failureCount,
-      failureType: failureRecord.failureType,
-      nextRetryAt: failureRecord.nextRetryAt?.toISOString(),
-      correlationId
-    });
-
   } catch (error) {
-    console.error('Error handling payment failed:', error);
+    // Payment failure handling error - non-fatal
   }
 }
 
@@ -665,10 +582,8 @@ async function createFailedPaymentNotification(
         dueDate: new Date(invoice.due_date * 1000).toISOString()
       }
     });
-
-    console.log(`Created ${notificationType} notification for user ${userId}`);
   } catch (error) {
-    console.error('Error creating failed payment notification:', error);
+    // Notification creation failed - non-fatal
   }
 }
 
@@ -747,13 +662,4 @@ async function logCriticalTrackingFailure(
 
   // Log to critical alerts collection for monitoring dashboard
   await addDoc(collection(db, 'criticalAlerts'), criticalAlert);
-
-  // Also log to console for immediate visibility
-  console.error('🚨 CRITICAL TRACKING FAILURE LOGGED:', {
-    correlationId,
-    invoiceId,
-    userId,
-    errorMessage,
-    timestamp: new Date().toISOString()
-  });
 }

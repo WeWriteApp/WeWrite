@@ -11,6 +11,7 @@ import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Reply, Save, RotateCcw, Trash2, Check, Link } from "lucide-react";
 import { useToast } from "../ui/use-toast";
+import type { Page } from '../../types/database';
 
 
 // Dynamically import AddToPageButton to avoid SSR issues
@@ -21,13 +22,10 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 // Removed old stats imports - now using UnifiedStatsService via PageStats component
 import { useAuth } from '../../providers/AuthProvider';
 
-interface PageData {
-  id: string;
-  title: string;
-  userId: string;
-  isNewPage?: boolean;
-  [key: string]: any;
-}
+/**
+ * Page data type for footer - uses centralized Page type
+ */
+type PageData = Pick<Page, 'id' | 'title' | 'userId'> & { isNewPage?: boolean; [key: string]: any };
 
 interface PageFooterProps {
   page: PageData;

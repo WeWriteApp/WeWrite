@@ -45,7 +45,6 @@ export async function logEmailSend(entry: Omit<EmailLogEntry, 'id' | 'createdAt'
 
     const collectionName = await getEmailLogsCollectionName();
     const docRef = await db.collection(collectionName).add(logEntry);
-    console.log('[EmailLog] Logged email:', entry.templateId, 'to:', entry.recipientEmail, 'ID:', docRef.id);
     return docRef.id;
   } catch (error) {
     console.error('[EmailLog] Failed to log email:', error);

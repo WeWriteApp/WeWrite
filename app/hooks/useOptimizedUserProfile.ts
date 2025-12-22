@@ -40,12 +40,12 @@ interface UseOptimizedUserProfileResult {
 
 /**
  * Optimized user profile hook with aggressive caching for smooth navigation
- * 
+ *
  * Features:
+ * - Uses batched /api/users/full-profile endpoint (profile + subscription in 1 request)
  * - 10-minute client-side cache to prevent repeated API calls
  * - Background refresh to keep data fresh
  * - Optimistic loading with cached data
- * - Automatic subscription data fetching
  * - Smart cache invalidation
  */
 export function useOptimizedUserProfile(
@@ -69,13 +69,15 @@ export function useOptimizedUserProfile(
     async () => {
       if (!userId) return null;
 
-      console.log(`[useOptimizedUserProfile] Fetching profile for user: ${userId}`);
+      console.log(`[useOptimizedUserProfile] Fetching full profile for user: ${userId}`);
 
       try {
-        // Fetch user profile data
-        const response = await fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`, {
+        // PERFORMANCE: Use batched endpoint that fetches profile + subscription in single request
+        // This reduces 2 sequential API calls to 1, significantly improving page load time
+        const url = `/api/users/full-profile?id=${encodeURIComponent(userId)}&includeSubscription=${includeSubscription}`;
+        const response = await fetch(url, {
           headers: {
-            'Cache-Control': 'max-age=300', // Browser cache for 5 minutes
+            'Cache-Control': 'max-age=120', // Browser cache for 2 minutes
           },
         });
 
@@ -84,40 +86,17 @@ export function useOptimizedUserProfile(
         }
 
         const result = await response.json();
-        
+
         if (!result.success) {
           throw new Error(result.error || 'Failed to fetch user profile');
         }
 
-        let profileData = result.data;
+        const profileData = result.data;
 
-        // Fetch subscription data if requested
-        if (includeSubscription && profileData) {
-          try {
-            console.log(`[useOptimizedUserProfile] Fetching subscription for user: ${userId}`);
-
-            // Use API endpoint to fetch subscription data
-            const response = await fetch(`/api/account-subscription?userId=${userId}`);
-            if (response.ok) {
-              const subscriptionData = await response.json();
-              const subscription = subscriptionData.fullData;
-
-              profileData = {
-                ...profileData,
-                tier: subscription?.tier || null,
-                subscriptionStatus: subscription?.status || null,
-                subscriptionAmount: subscription?.amount || null
-              };
-            }
-          } catch (subscriptionError) {
-            console.warn(`[useOptimizedUserProfile] Failed to fetch subscription for ${userId}:`, subscriptionError);
-            // Don't fail the entire request if subscription fetch fails
-          }
-        }
-
-        console.log(`[useOptimizedUserProfile] Profile loaded for ${userId}:`, {
+        console.log(`[useOptimizedUserProfile] Full profile loaded for ${userId}:`, {
           username: profileData?.username,
           tier: profileData?.tier,
+          hasSubscription: profileData?.hasSubscription,
           fromCache: false
         });
 

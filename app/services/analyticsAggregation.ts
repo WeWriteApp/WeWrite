@@ -61,7 +61,6 @@ export class AnalyticsAggregationService {
       }
 
       // If no counter exists, initialize it by counting existing pages
-      console.log('🔄 Initializing global counters...');
       return await this.initializeGlobalCounters();
 
     } catch (error) {
@@ -95,7 +94,6 @@ export class AnalyticsAggregationService {
       // Store the initialized counters using the data layer
       await AnalyticsDataLayer.setGlobalCounters(counters);
 
-      console.log('✅ Global counters initialized:', counters);
       return counters;
 
     } catch (error) {
@@ -143,13 +141,10 @@ export class AnalyticsAggregationService {
       });
 
       await batch.commit();
-      console.log('📊 Page creation counters updated');
-      
+
     } catch (error: any) {
-      // Handle permission denied errors gracefully
-      if (error?.code === 'permission-denied') {
-        console.log('Permission denied incrementing page created counters - this is expected in some environments');
-      } else {
+      // Handle permission denied errors gracefully - this is expected in some environments
+      if (error?.code !== 'permission-denied') {
         console.error('Error incrementing page created counters:', error);
       }
     }
@@ -191,8 +186,7 @@ const dailyRef = doc(db, getCollectionName("analytics_daily"), today);
       }, { merge: true });
 
       await batch.commit();
-      console.log('📊 Page deletion counters updated');
-      
+
     } catch (error) {
       console.error('Error incrementing page deleted counters:', error);
     }
@@ -295,8 +289,6 @@ await updateDoc(doc(db, getCollectionName("analytics_daily"), day.date), {
         runningActive -= (day.netChange || 0);
         runningTotal -= (day.pagesCreated || 0);
       }
-
-      console.log('✅ Cumulative totals updated for daily aggregations');
 
     } catch (error) {
       console.error('Error updating cumulative totals:', error);

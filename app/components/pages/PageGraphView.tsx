@@ -6,7 +6,7 @@ import { X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2, Loader2,
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
-import { useRelatedPages } from '../../hooks/useRelatedPages';
+import { useRelatedPagesV2 } from '../../hooks/useRelatedPagesV2';
 import { useAuth } from '../../providers/AuthProvider';
 import SubscriptionGate from '../subscription/SubscriptionGate';
 import { PillLink } from '../utils/PillLink';
@@ -130,8 +130,13 @@ export default function PageGraphView({
     refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
 
-  // Use related pages hook - exclude current user's pages
-  const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle, undefined, user?.username);
+  // Use related pages hook - V2 returns relatedByOthers (pages by other authors)
+  const { relatedByOthers: relatedPages, loading: relatedLoading } = useRelatedPagesV2({
+    pageId,
+    pageTitle,
+    limitByOthers: 10,
+    limitByAuthor: 0 // We only need related pages by others for the graph
+  });
 
   // Compute page link statistics for the page list
   const pageLinkStats = useMemo(() => {
@@ -389,11 +394,7 @@ export default function PageGraphView({
       }
     });
 
-    // Add all related pages as disconnected nodes (no links)
-    relatedNodes.forEach(relatedNode => {
-      // Don't add links for related pages - they should appear as disconnected nodes
-      console.log('🎯 Adding related page as disconnected node:', relatedNode.title);
-    });
+    // Related pages are added as disconnected nodes (no links) - they float in the graph
 
     setNodes(allNodes);
     setLinks(allLinks);

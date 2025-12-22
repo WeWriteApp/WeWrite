@@ -95,7 +95,6 @@ export class PlatformRevenueService {
     error?: string;
   }> {
     try {
-      console.log(`💰 [PLATFORM REVENUE] Calculating platform revenue for ${month}`);
 
       // Get earnings report for platform fees
       const earningsReport = await earningsCalculationEngine.getMonthlyEarningsReport(month);
@@ -174,14 +173,6 @@ export class PlatformRevenueService {
       // Save the revenue report
       await this.savePlatformRevenueReport(report);
 
-      console.log(`✅ [PLATFORM REVENUE] Platform revenue calculated for ${month}:`, {
-        totalRevenue: formatUsdCents(totalRevenue * 100),
-        platformFees: formatUsdCents(platformFeesAmount * 100),
-        unallocatedFunds: formatUsdCents(unallocatedFundsAmount * 100),
-        revenueEfficiency: `${report.revenueEfficiency.toFixed(1)}%`,
-        monthOverMonthGrowth: `${monthOverMonthGrowth.toFixed(1)}%`
-      });
-
       return {
         success: true,
         report
@@ -228,7 +219,6 @@ export class PlatformRevenueService {
     period: 'monthly' | 'quarterly' | 'yearly' = 'monthly'
   ): Promise<RevenueAnalytics | null> {
     try {
-      console.log(`📊 [PLATFORM REVENUE] Generating analytics from ${startMonth} to ${endMonth}`);
 
       // Get all revenue reports in the period
       const reports = await this.getRevenueReportsInPeriod(startMonth, endMonth);
@@ -308,13 +298,6 @@ export class PlatformRevenueService {
           }
         }
       };
-
-      console.log(`✅ [PLATFORM REVENUE] Analytics generated:`, {
-        period: `${startMonth} to ${endMonth}`,
-        totalRevenue: formatUsdCents(totalRevenue * 100),
-        averageMonthlyRevenue: formatUsdCents(averageMonthlyRevenue * 100),
-        revenueGrowthRate: `${revenueGrowthRate.toFixed(1)}%`
-      });
 
       return analytics;
 

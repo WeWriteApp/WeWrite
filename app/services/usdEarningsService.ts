@@ -49,7 +49,6 @@ export class UsdEarningsService {
    */
   static async getWriterUsdBalance(userId: string): Promise<WriterUsdBalance | null> {
     try {
-      console.log('[UsdEarningsService] Getting writer USD balance for:', userId);
 
       // Calculate balance from earnings records (Phase 2 - single source of truth)
       const earningsQuery = query(
@@ -61,7 +60,6 @@ export class UsdEarningsService {
 
       // If no earnings, return null (user has no balance)
       if (earningsSnapshot.empty) {
-        console.log('[UsdEarningsService] No earnings found for user:', userId);
         return null;
       }
 
@@ -100,7 +98,6 @@ export class UsdEarningsService {
         updatedAt: new Date().toISOString() as any
       };
 
-      console.log('[UsdEarningsService] Calculated writer USD balance:', balance);
       return balance;
     } catch (error) {
       console.error('[UsdEarningsService] Error getting writer USD balance:', error);
@@ -113,7 +110,6 @@ export class UsdEarningsService {
    */
   static async getWriterEarningsHistory(userId: string, limitCount: number = 12): Promise<WriterUsdEarnings[]> {
     try {
-      console.log('[UsdEarningsService] Getting writer earnings history for:', userId);
       const earningsQuery = query(
         collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
         where('userId', '==', userId),
@@ -123,7 +119,6 @@ export class UsdEarningsService {
 
       const earningsSnapshot = await getDocs(earningsQuery);
       const earnings = earningsSnapshot.docs.map(doc => doc.data() as WriterUsdEarnings);
-      console.log('[UsdEarningsService] Found earnings history:', earnings.length, 'records');
       return earnings;
     } catch (error) {
       console.error('[UsdEarningsService] Error getting writer earnings history:', error);
@@ -501,8 +496,6 @@ export class UsdEarningsService {
     pendingAllocations: any | null;
   }> {
     try {
-      console.log('[UsdEarningsService] Loading complete writer earnings for user:', userId);
-
       const [balance, earnings, unfunded, pendingData] = await Promise.all([
         this.getWriterUsdBalance(userId),
         this.getWriterEarningsHistory(userId, 6),
@@ -510,22 +503,9 @@ export class UsdEarningsService {
         // Fetch pending allocations for this user as recipient
         fetch('/api/usd/pending-allocations?mode=recipient')
           .then(res => res.json())
-          .then(data => {
-            console.log('[UsdEarningsService] Pending allocations response:', data);
-            return data.success ? data.data : null;
-          })
-          .catch(err => {
-            console.warn('[UsdEarningsService] Failed to load pending allocations:', err);
-            return null;
-          })
+          .then(data => data.success ? data.data : null)
+          .catch(() => null)
       ]);
-
-      console.log('[UsdEarningsService] Complete earnings data loaded:', {
-        balance,
-        earnings: earnings.length,
-        unfunded,
-        pendingAllocations: pendingData
-      });
 
       return {
         balance,

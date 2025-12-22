@@ -167,43 +167,33 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
           // Load from database for authenticated users
           try {
-            console.log('[AppBackground] Fetching background preference for user:', currentUserId);
             const response = await fetch('/api/user/background-preference', {
               method: 'GET',
               credentials: 'include'
             });
 
-            console.log('[AppBackground] API response status:', response.status);
             if (response.ok) {
               const data = await response.json();
-              console.log('[AppBackground] API response data:', data);
 
               // Always store the uploaded image if it exists
               if (data.backgroundImage?.url) {
-                console.log('[AppBackground] Found uploaded image:', data.backgroundImage.url);
                 setLastUploadedImage(data.backgroundImage.url);
-              } else {
-                console.log('[AppBackground] No uploaded image found');
               }
 
               // Apply the user's preference (solid color or image)
               if (data.backgroundPreference) {
-                console.log('[AppBackground] Found background preference:', data.backgroundPreference);
                 if (data.backgroundPreference.type === 'image' && data.backgroundPreference.data) {
                   const imageUrl = data.backgroundPreference.data.url;
                   // Allow default background images even without subscription, but require subscription for custom uploads
                   if (hasActiveSubscription || isDefaultBackgroundImage(imageUrl)) {
                     // Use the saved preference data directly, which contains the full image background object
                     setBackground(data.backgroundPreference.data);
-                    console.log('[AppBackground] Loaded image background from preference:', imageUrl);
                   } else {
                     // User doesn't have active subscription and it's a custom image, fall back to default solid background
-                    console.log('[AppBackground] Custom image background blocked - no active subscription');
                     setBackground(DEFAULT_BACKGROUND);
                   }
                 } else if (data.backgroundPreference.type === 'solid' && data.backgroundPreference.data) {
                   setBackground(data.backgroundPreference.data);
-                  console.log('[AppBackground] Loaded solid background from preference');
                 }
               } else if (data.backgroundImage?.url) {
                 // Fallback: if no preference but image exists, check subscription before using
@@ -215,10 +205,8 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
                     opacity: 0.15
                   };
                   setBackground(imageBackground);
-                  console.log('[AppBackground] Loaded image background from fallback, saving as preference:', imageUrl);
                 } else {
                   // User doesn't have active subscription and it's a custom image, use default background
-                  console.log('[AppBackground] Custom image background blocked - no active subscription');
                   setBackground(DEFAULT_BACKGROUND);
                 }
 
@@ -236,7 +224,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
                     })
                   });
                 } catch (error) {
-                  console.warn('[AppBackground] Failed to save fallback preference:', error);
+                  // Error saving fallback preference
                 }
               }
 
@@ -244,7 +232,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
               loadedForUserRef.current = currentUserId;
             }
           } catch (error) {
-            console.warn('Failed to load background from database:', error);
+            // Failed to load background from database
           }
         } else if (!isAuthenticated && isInitialized) {
           // Reset the loaded user ref when user logs out
@@ -280,7 +268,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
         setIsInitialized(true);
       } catch (error) {
-        console.warn('Failed to load saved settings:', error);
         setIsInitialized(true);
       }
     };
@@ -294,7 +281,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
     // Validate background data before saving
     if (!backgroundData || !backgroundData.type) {
-      console.warn('Invalid background data, skipping save');
       return;
     }
 
@@ -316,7 +302,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
         throw new Error(errorData.message || `HTTP ${response.status}: Failed to save background preference`);
       }
     } catch (error) {
-      console.warn('Failed to save background preference:', error);
       // Don't re-throw the error to prevent unhandled promise rejections
     }
   };
@@ -345,12 +330,12 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
             localStorage.setItem('app-background', JSON.stringify(background));
           }
         } catch (error) {
-          console.warn('Failed to save background settings:', error);
+          // Failed to save background settings
         }
       };
 
-      saveBackground().catch(error => {
-        console.warn('Failed to save background (debounced):', error);
+      saveBackground().catch(() => {
+        // Failed to save background (debounced)
       });
     }, 500); // 500ms debounce
 
@@ -372,7 +357,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
       const root = document.documentElement;
       root.style.setProperty('--card-opacity', cardOpacity.toString());
     } catch (error) {
-      console.warn('Failed to save card opacity:', error);
+      // Failed to save card opacity
     }
   }, [cardOpacity, isInitialized]);
 
@@ -386,7 +371,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
       const root = document.documentElement;
       root.style.setProperty('--card-blur', cardBlur.toString());
     } catch (error) {
-      console.warn('Failed to save card blur:', error);
+      // Failed to save card blur
     }
   }, [cardBlur, isInitialized]);
 
@@ -400,7 +385,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
       const root = document.documentElement;
       root.style.setProperty('--background-blur', `${backgroundBlur * 20}px`); // Scale 0-1 to 0-20px
     } catch (error) {
-      console.warn('Failed to save background blur:', error);
+      // Failed to save background blur
     }
   }, [backgroundBlur, isInitialized]);
 
@@ -432,7 +417,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
       // If we have an image background but the CSS variable is missing, re-apply
       if (background.type === 'image' && background.url && !currentBgImage) {
-        console.log('Background image CSS variable missing, re-applying...');
         applyBackgroundToDOM(background, cardOpacity, resolvedTheme);
       }
     };
@@ -451,7 +435,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
     // If user doesn't have active subscription and is currently using a custom image background
     // (but allow default background images to continue working)
     if (!hasActiveSubscription && background.type === 'image' && background.url && !isDefaultBackgroundImage(background.url)) {
-      console.log('[AppBackground] Subscription expired, resetting custom image background to default');
       setBackground(DEFAULT_BACKGROUND);
     }
   }, [hasActiveSubscription, isInitialized, isAuthenticated]);
@@ -501,7 +484,6 @@ function updateOverlayOpacity(background: AppBackground, theme: string) {
   const overlayColor = isDark ? '0.00% 0.0000 0.0' : '98.22% 0.0061 255.5';
 
   root.style.setProperty('--background-overlay', `oklch(${overlayColor} / ${overlayOpacity})`);
-  console.log('Updated overlay opacity to:', overlayOpacity, 'with color:', overlayColor);
 }
 
 // Helper function to apply background to DOM with theme awareness
@@ -521,13 +503,11 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
 
       // Safeguard: prevent black background in light mode
       if (!isDark && oklchValue.startsWith('0.00%')) {
-        console.warn('Preventing black background in light mode, using default');
         oklchValue = '98.22% 0.0061 255.5'; // Default light background
       }
 
       // Safeguard: prevent white background in dark mode
       if (isDark && (oklchValue.startsWith('100.00%') || oklchValue.startsWith('98.') || oklchValue.startsWith('99.'))) {
-        console.warn('Preventing white background in dark mode, using default');
         oklchValue = '0.00% 0.0000 0.0'; // Default dark background
       }
     } else {
@@ -536,10 +516,8 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
 
       // Safeguards: prevent inappropriate colors for each theme
       if (!isDark && (color === '#000000' || color.includes('0.00%'))) {
-        console.warn('Preventing black background in light mode, using default');
         oklchValue = '98.22% 0.0061 255.5'; // Default light background
       } else if (isDark && (color === '#ffffff' || color === '#FFFFFF' || color.includes('100.00%') || color.includes('98.') || color.includes('99.'))) {
-        console.warn('Preventing white background in dark mode, using default');
         oklchValue = '0.00% 0.0000 0.0'; // Default dark background
       } else {
         const oklch = hexToOklch(color);
@@ -556,7 +534,6 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
   } else if (background.type === 'image') {
     // For images, set background image and overlay
     if (!background.url) {
-      console.warn('Image background has no URL, falling back to solid color');
       root.style.setProperty('--background-image', 'none');
       root.style.setProperty('--background-overlay', 'none');
       // Use theme-appropriate default background
@@ -580,11 +557,10 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
         root.style.setProperty('--background-image', `url("${background.url}")`);
         root.style.setProperty('--background-overlay', `oklch(${overlayColor} / ${overlayOpacity})`);
       } catch (error) {
-        console.error('Failed to set background image CSS:', error);
+        // Failed to set background image CSS
       }
     };
-    img.onerror = (event) => {
-      console.error('Failed to load background image:', background.url, event);
+    img.onerror = () => {
       // Fallback to solid color if image fails
       try {
         root.style.setProperty('--background-image', 'none');
@@ -593,14 +569,13 @@ function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, th
         const fallbackColor = isDark ? '0.00% 0.0000 0.0' : '98.22% 0.0061 255.5';
         root.style.setProperty('--background', fallbackColor);
       } catch (error) {
-        console.error('Failed to set fallback background:', error);
+        // Failed to set fallback background
       }
     };
 
     try {
       img.src = background.url;
     } catch (error) {
-      console.error('Failed to set image src:', error);
       root.style.setProperty('--background-image', 'none');
       root.style.setProperty('--background-overlay', 'none');
     }

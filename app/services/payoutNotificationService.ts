@@ -183,7 +183,6 @@ export class PayoutNotificationService {
     channels: ('email' | 'in_app' | 'push')[] = ['email', 'in_app']
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log(`Sending ${type} notification for payout ${payoutId}`);
 
       // Get payout data
       const payoutDoc = await getDoc(doc(db, getCollectionName('payouts'), payoutId));
@@ -275,10 +274,6 @@ export class PayoutNotificationService {
       const body = this.replaceTemplateVariables(template.emailTemplate, notification.data);
 
       // TODO: Integrate with actual email service (SendGrid, AWS SES, etc.)
-      console.log(`[EMAIL] To: ${notification.userId}`);
-      console.log(`[EMAIL] Subject: ${subject}`);
-      console.log(`[EMAIL] Body: ${body}`);
-
       // For now, just log the email content
       // In production, you would send via your email service
       
@@ -320,7 +315,6 @@ export class PayoutNotificationService {
         inAppNotification
       );
 
-      console.log(`[IN-APP] Notification created for user ${notification.userId}`);
       return true;
     } catch (error) {
       console.error('Error sending in-app notification:', error);
@@ -339,13 +333,6 @@ export class PayoutNotificationService {
       }
 
       // TODO: Integrate with push notification service (FCM, APNs, etc.)
-      const title = this.replaceTemplateVariables(template.pushTitle, notification.data);
-      const message = this.replaceTemplateVariables(template.pushMessage || '', notification.data);
-
-      console.log(`[PUSH] To: ${notification.userId}`);
-      console.log(`[PUSH] Title: ${title}`);
-      console.log(`[PUSH] Message: ${message}`);
-
       // For now, just log the push notification
       // In production, you would send via FCM/APNs
       

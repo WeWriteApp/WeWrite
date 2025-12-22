@@ -206,7 +206,7 @@ const getPageTitle = async (pageId: string): Promise<string | null> => {
       return pageData.title;
     }
   } catch (error) {
-    console.error("Error fetching page title:", error);
+    // Error fetching page title
   }
 
   return null;
@@ -229,12 +229,6 @@ const TextView: React.FC<TextViewProps> = ({
   const handleEditLink = () => {
     alert('Link editing is not available in TextView. Please use the main Editor component for full editing capabilities.');
   };
-  console.log('🔍 TextView: Component called with content:', {
-    content,
-    contentType: typeof content,
-    isArray: Array.isArray(content),
-    contentLength: content ? (Array.isArray(content) ? content.length : content.length) : 0
-  });
 
   const [parsedContents, setParsedContents] = useState<EditorContent | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
@@ -251,9 +245,6 @@ const TextView: React.FC<TextViewProps> = ({
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
   const { user } = useAuth();
   const { page } = usePage();
-
-  // Debug: Check if context is working (disabled to prevent spam)
-  // console.log('🔍 TextView: Full context:', lineSettingsContext);
 
   // Check if current user can edit this page (enhanced for group support)
   // Use prop value if provided, otherwise calculate
@@ -313,11 +304,6 @@ const TextView: React.FC<TextViewProps> = ({
   useEffect(() => {
     // Skip processing if content is null or undefined
     if (!content) {
-      console.log("🔍 TextView: Content is null or undefined, using empty content", {
-        content,
-        contentType: typeof content,
-        contentValue: content
-      });
       setParsedContents([]);
       setLoadedParagraphs([]);
       setIsInitialLoad(true);
@@ -326,12 +312,6 @@ const TextView: React.FC<TextViewProps> = ({
 
     let contents;
     try {
-      console.log("🔍 TextView: Starting content processing", {
-        content,
-        contentType: typeof content,
-        isArray: Array.isArray(content),
-        contentLength: content ? (Array.isArray(content) ? content.length : content.length) : 0
-      });
 
       // Handle different content types
       if (typeof content === "string") {
@@ -339,7 +319,6 @@ const TextView: React.FC<TextViewProps> = ({
           // Check if content is already parsed (double parsing issue)
           if (content.startsWith('[{"type":"paragraph"') || content.startsWith('[{\\\"type\\\":\\\"paragraph\\\"')) {
             contents = JSON.parse(content);
-            console.log("TextView: Successfully parsed string content");
           } else {
             // Content might be double-stringified, try to parse twice
             try {
@@ -348,20 +327,15 @@ const TextView: React.FC<TextViewProps> = ({
                   (firstParse.startsWith('[{"type":"paragraph"') ||
                    firstParse.startsWith('[{\\\"type\\\":\\\"paragraph\\\"'))) {
                 contents = JSON.parse(firstParse);
-                console.log("TextView: Successfully parsed double-stringified content");
               } else {
                 contents = firstParse;
-                console.log("TextView: Using first-level parsed content");
               }
             } catch (doubleParseError) {
-              console.error("TextView: Error parsing potentially double-stringified content:", doubleParseError);
               // Fall back to original parsing
               contents = JSON.parse(content);
             }
           }
         } catch (parseError) {
-          console.error("TextView: Error parsing string content:", parseError);
-          console.error("TextView: Content that failed to parse:", content?.substring(0, 200) + "...");
 
           // Try to determine if this is a completely empty or invalid page
           if (!content || content.trim() === '' || content === 'null' || content === 'undefined') {
@@ -380,28 +354,16 @@ const TextView: React.FC<TextViewProps> = ({
       } else if (Array.isArray(content)) {
         // Content is already an array, use it directly
         contents = content;
-        console.log("TextView: Using array content directly");
       } else if (content && typeof content === 'object') {
         // Content is an object, convert to array if needed
         contents = [content];
-        console.log("TextView: Converted object content to array");
       } else {
         // Fallback for null or undefined content
         contents = [{
           type: "paragraph",
           children: [{ text: "No content available." }]
         }];
-        console.log("TextView: Using fallback empty content");
       }
-
-      // CRITICAL FIX: Log the parsed content structure for debugging
-      console.log("CONTENT_DEBUG: Content processed successfully", {
-        parsedContentType: typeof contents,
-        isArray: Array.isArray(contents),
-        length: Array.isArray(contents) ? contents.length : 0,
-        firstItem: Array.isArray(contents) && contents.length > 0 ?
-          JSON.stringify(contents[0]).substring(0, 50) + '...' : 'none'
-      });
 
       // IMPROVED: More thorough link detection in content
       if (Array.isArray(contents)) {
@@ -443,28 +405,18 @@ const TextView: React.FC<TextViewProps> = ({
           findLinksInNode(node, `node-${i}`);
         });
 
-        // Log any found links
-        if (foundLinks.length > 0) {
-          console.log(`CONTENT_DEBUG: Found ${foundLinks.length} links in content:`, foundLinks);
-        } else {
-          console.log('CONTENT_DEBUG: No links found in content');
-        }
       }
 
       // Validate content structure - ensure each item has type and children
       if (Array.isArray(contents)) {
         contents = contents.filter((item, index) => {
           if (!item || !item.type) {
-            console.warn(`TextView: Filtering out invalid content item at index ${index}`);
             return false;
           }
           return true;
         });
       }
     } catch (e) {
-      console.error("TextView: Unexpected error processing content:", e);
-      console.error("TextView: Content type:", typeof content);
-      console.error("TextView: Content preview:", content?.toString().substring(0, 100) + "...");
 
       // Create a more helpful fallback content structure
       contents = [{
@@ -490,8 +442,6 @@ const TextView: React.FC<TextViewProps> = ({
         if (!seen.has(itemHash)) {
           seen.add(itemHash);
           uniqueItems.push(item);
-        } else {
-          console.log("TextView: Filtered out duplicate content item");
         }
       });
 
@@ -508,7 +458,6 @@ const TextView: React.FC<TextViewProps> = ({
       // Create an array with indices for all paragraphs
       const allParagraphIndices = Array.from({ length: contents.length }, (_, i) => i);
       setLoadedParagraphs(allParagraphIndices);
-      console.log("TextView: Immediately loading all paragraphs:", allParagraphIndices);
     } else {
       setLoadedParagraphs([]);
     }
@@ -555,9 +504,6 @@ const TextView: React.FC<TextViewProps> = ({
         // Create an array with indices for all paragraphs
         const allParagraphIndices = Array.from({ length: totalNodes }, (_, i) => i);
         setLoadedParagraphs(allParagraphIndices);
-
-        // Log the loaded paragraphs for debugging
-        console.log("TextView: Loading all paragraphs at once:", allParagraphIndices);
 
         // Mark as complete after a short delay
         setTimeout(() => {
@@ -684,7 +630,7 @@ const TextView: React.FC<TextViewProps> = ({
     if (typeof window !== 'undefined') {
       // Check if Intl.Segmenter is available (polyfill should provide this)
       if (!window.Intl || !window.Intl.Segmenter) {
-        console.warn('TextView: Intl.Segmenter not available, some text features may be limited');
+        // Intl.Segmenter not available, some text features may be limited
       }
     }
 
@@ -769,17 +715,6 @@ const TextView: React.FC<TextViewProps> = ({
       </div>
     );
   } catch (error) {
-    console.error('Error rendering TextView:', error);
-    console.error('TextView render error details:', {
-      pageId: page?.id,
-      contentType: typeof content,
-      hasContent: !!content,
-      errorMessage: error.message,
-      errorStack: error.stack,
-      userAgent: typeof window !== 'undefined' ? window.navigator?.userAgent : 'server',
-      hasIntlSegmenter: typeof window !== 'undefined' ? !!(window.Intl && window.Intl.Segmenter) : 'unknown'
-    });
-
     return (
       <div className="p-6 text-center space-y-4">
         <div className="text-muted-foreground">
@@ -856,7 +791,6 @@ export const RenderContent = (props: {
             try {
               return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
             } catch (error) {
-              console.error('DENSE_LINK_ERROR: Error rendering link in dense mode:', error);
               return <span key={i} className="text-red-500">[Link Error]</span>;
             }
           }
@@ -961,7 +895,6 @@ export const RenderContent = (props: {
     return null;
 
   } catch (error) {
-    console.error('Error rendering content:', error);
     return (
       <div className="p-6 text-center space-y-4">
         <div className="text-muted-foreground">
@@ -1029,14 +962,6 @@ const SimpleParagraphNode = (props: {
 
   // Helper function to render child nodes
   const renderChild = (child, i) => {
-    console.log('🔍 TextView renderChild: Processing child:', {
-      childType: child?.type,
-      childText: child?.text,
-      childIndex: i,
-      isLink: child?.type === 'link',
-      fullChild: JSON.stringify(child)
-    });
-
     // Legacy link fallback: treat nodes with a url but missing type as links
     if (!child.type && child.url) {
       child = {
@@ -1050,12 +975,9 @@ const SimpleParagraphNode = (props: {
     // Handle link nodes with error handling
     if (child.type === 'link') {
       try {
-        console.log('🔗 PARAGRAPH_LINK_DEBUG: Rendering link in paragraph:', JSON.stringify(child));
         const linkComponent = <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
-        console.log('🔗 PARAGRAPH_LINK_DEBUG: LinkNode component created successfully');
         return linkComponent;
       } catch (error) {
-        console.error('🚨 PARAGRAPH_LINK_ERROR: Error rendering link in paragraph:', error);
         return <span key={i} className="text-red-500">[Link Error]</span>;
       }
     }

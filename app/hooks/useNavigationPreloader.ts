@@ -45,10 +45,10 @@ export function useNavigationPreloader() {
       }
 
       if (debugLogging) {
-        console.log(`🚀 OPTIMIZED: Preloaded profile for ${userId} with deduplication`);
+        // Debug logging disabled
       }
     } catch (error) {
-      console.warn(`Navigation preloader: Failed to preload profile for ${userId}:`, error);
+      // Silent error handling
     }
   }, [user?.uid]);
 
@@ -63,14 +63,14 @@ export function useNavigationPreloader() {
           'Cache-Control': 'max-age=300', // 5 minutes browser cache
         },
       }).catch(error => {
-        console.warn('Navigation preloader: Home data preload failed:', error);
+        // Silent error handling
       });
 
       if (debugLogging) {
-        console.log('🚀 Navigation preloader: Preloaded home data');
+        // Debug logging disabled
       }
     } catch (error) {
-      console.warn('Navigation preloader: Failed to preload home data:', error);
+      // Silent error handling
     }
   }, [user?.uid]);
 
@@ -85,14 +85,14 @@ export function useNavigationPreloader() {
           'Cache-Control': 'max-age=60', // 1 minute browser cache
         },
       }).catch(error => {
-        console.warn('Navigation preloader: Notifications preload failed:', error);
+        // Silent error handling
       });
 
       if (debugLogging) {
-        console.log('🚀 Navigation preloader: Preloaded notifications');
+        // Debug logging disabled
       }
     } catch (error) {
-      console.warn('Navigation preloader: Failed to preload notifications:', error);
+      // Silent error handling
     }
   }, [user?.uid]);
 
@@ -105,14 +105,14 @@ export function useNavigationPreloader() {
           'Cache-Control': 'max-age=300', // 5 minutes browser cache
         },
       }).catch(error => {
-        console.warn('Navigation preloader: Recent pages preload failed:', error);
+        // Silent error handling
       });
 
       if (debugLogging) {
-        console.log('🚀 Navigation preloader: Preloaded recent pages');
+        // Debug logging disabled
       }
     } catch (error) {
-      console.warn('Navigation preloader: Failed to preload recent pages:', error);
+      // Silent error handling
     }
   }, []);
 
@@ -125,14 +125,14 @@ export function useNavigationPreloader() {
           'Cache-Control': 'max-age=600', // 10 minutes browser cache
         },
       }).catch(error => {
-        console.warn('Navigation preloader: Trending pages preload failed:', error);
+        // Silent error handling
       });
 
       if (debugLogging) {
-        console.log('🚀 Navigation preloader: Preloaded trending pages');
+        // Debug logging disabled
       }
     } catch (error) {
-      console.warn('Navigation preloader: Failed to preload trending pages:', error);
+      // Silent error handling
     }
   }, []);
 
@@ -147,14 +147,14 @@ export function useNavigationPreloader() {
           'Cache-Control': 'max-age=300', // 5 minutes browser cache
         },
       }).catch(error => {
-        console.warn('Navigation preloader: Search data preload failed:', error);
+        // Silent error handling
       });
 
       if (debugLogging) {
-        console.log('🚀 Navigation preloader: Preloaded search data');
+        // Debug logging disabled
       }
     } catch (error) {
-      console.warn('Navigation preloader: Failed to preload search data:', error);
+      // Silent error handling
     }
   }, [user?.uid]);
 
@@ -163,7 +163,7 @@ export function useNavigationPreloader() {
     if (!user?.uid) return;
 
     if (debugLogging) {
-      console.log('🚀 OPTIMIZED: Smart preloading enabled with rate limiting and caching');
+      // Debug logging disabled
     }
 
     const timeouts: NodeJS.Timeout[] = [];
@@ -206,7 +206,7 @@ export function useNavigationPreloader() {
     // Rate limit: Only preload if not preloaded in last 5 minutes
     if (lastPreload && (now - parseInt(lastPreload)) < 5 * 60 * 1000) {
       if (debugLogging) {
-        console.log(`🚀 OPTIMIZED: Skipping preload for ${route} (recently preloaded)`);
+        // Debug logging disabled
       }
       return;
     }
@@ -218,14 +218,11 @@ export function useNavigationPreloader() {
     if (route.startsWith('/u/') || route.startsWith('/user/')) {
       const userId = route.split('/')[2];
       if (userId && userId !== user?.uid) {
-        console.log(`🚀 OPTIMIZED: Preloading user profile for ${userId}`);
         preloadUserProfile(userId);
       }
     } else if (route === '/') {
-      console.log('🚀 OPTIMIZED: Preloading home data');
       preloadHomeData();
     } else if (route === '/search') {
-      console.log('🚀 OPTIMIZED: Preloading search data');
       preloadSearchData();
     }
   }, [user?.uid, preloadUserProfile, preloadHomeData, preloadSearchData]);
@@ -257,10 +254,7 @@ export function useIntelligentPrefetch() {
 
   useEffect(() => {
     if (!user?.uid) return;
-
-    // 🚨 EMERGENCY: Disable route-based prefetching to prevent excessive Firebase reads
-    console.warn('🚨 EMERGENCY: Route-based prefetching disabled to prevent excessive database reads (20K-30K reads/min crisis)');
-    // DISABLED: All route-based prefetching to prevent database read overload
+    // Route-based prefetching disabled to prevent excessive database reads
     return;
   }, [user?.uid, router]);
 }

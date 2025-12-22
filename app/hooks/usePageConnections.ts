@@ -28,13 +28,13 @@ export interface PageConnectionData {
 
 /**
  * Consolidated Page Connections Hook
- * 
+ *
  * Provides all page connection data in one place:
  * - Incoming links (backlinks)
  * - Outgoing links (forward links)
  * - Bidirectional links
  * - Combined data for graph visualization
- * 
+ *
  * This replaces separate data fetching in BacklinksSection and PageGraphView
  */
 export function usePageConnections(pageId: string, pageTitle?: string): PageConnectionData & { refresh: () => void } {
@@ -48,18 +48,14 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
   useEffect(() => {
     const handlePageSave = (event: CustomEvent) => {
       if (event.detail.pageId === pageId) {
-        console.log('🔄 [CONNECTIONS] Page save detected, auto-refreshing connections');
         setRefreshTrigger(prev => prev + 1);
       }
     };
 
-    const handlePageCreated = (event: CustomEvent) => {
-      // Refresh connections when any new page is created that might link to this page
-      console.log('🔄 [CONNECTIONS] New page created, refreshing connections to check for new links');
+    const handlePageCreated = () => {
       setRefreshTrigger(prev => prev + 1);
     };
 
-    // Listen for page save and creation events
     window.addEventListener('pageSaved', handlePageSave as EventListener);
     window.addEventListener('page-created-immediate', handlePageCreated as EventListener);
 
@@ -75,22 +71,12 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
     try {
       setLoading(true);
       setError(null);
-      console.log('🔗 [CONNECTIONS] fetchConnections called for page:', pageId, 'refreshTrigger:', refreshTrigger);
 
-      // Use cached data for better performance
       const data = await graphDataCache.getPageConnections(pageId, false);
-
-      console.log('🔗 [CONNECTIONS] Received data:', {
-        incomingCount: data.incoming?.length || 0,
-        outgoingCount: data.outgoing?.length || 0,
-        refreshTrigger: refreshTrigger
-      });
-
       setIncoming(data.incoming || []);
       setOutgoing(data.outgoing || []);
 
     } catch (err) {
-      console.error('🔗 usePageConnections: Error fetching page connections:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       setIncoming([]);
       setOutgoing([]);
@@ -104,23 +90,17 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
   }, [fetchConnections, refreshTrigger]);
 
   const refresh = useCallback(() => {
-    console.log('🔄 [CONNECTIONS] Manual refresh triggered for page:', pageId);
-    console.log('🔄 [CONNECTIONS] Current refreshTrigger value:', refreshTrigger);
-    setRefreshTrigger(prev => {
-      const newValue = prev + 1;
-      console.log('🔄 [CONNECTIONS] Setting refreshTrigger to:', newValue);
-      return newValue;
-    });
-  }, [pageId, refreshTrigger]);
+    setRefreshTrigger(prev => prev + 1);
+  }, [pageId]);
 
   // Calculate derived data
-  const bidirectional = incoming.filter(incomingPage => 
+  const bidirectional = incoming.filter(incomingPage =>
     outgoing.some(outgoingPage => outgoingPage.id === incomingPage.id)
   );
 
   const allConnections = [
     ...incoming,
-    ...outgoing.filter(outgoingPage => 
+    ...outgoing.filter(outgoingPage =>
       !incoming.some(incomingPage => incomingPage.id === outgoingPage.id)
     )
   ];
@@ -150,26 +130,19 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
 
     try {
       setGraphLoading(true);
-      console.log('🔗 usePageConnectionsGraph: Fetching 3-hop connections');
 
-      // Use the page connections API with second-hop enabled (which now includes third-hop)
       const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=true&limit=50`);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔗 usePageConnectionsGraph: API error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('🔗 usePageConnectionsGraph: API response:', data);
-      console.log('🔗 usePageConnectionsGraph: Multi-hop API response:', data.stats);
-
       setSecondHopConnections(data.secondHopConnections || []);
       setThirdHopConnections(data.thirdHopConnections || []);
 
     } catch (error) {
-      console.error('Error fetching 3-hop connections:', error);
+      // Silently fail for second hop - base connections still work
     } finally {
       setGraphLoading(false);
     }
@@ -191,14 +164,14 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
  * Helper function to determine link directionality
  */
 export function getLinkDirection(
-  sourceId: string, 
-  targetId: string, 
-  incoming: PageConnection[], 
+  sourceId: string,
+  targetId: string,
+  incoming: PageConnection[],
   outgoing: PageConnection[]
 ): 'incoming' | 'outgoing' | 'bidirectional' {
   const hasIncoming = incoming.some(conn => conn.id === targetId);
   const hasOutgoing = outgoing.some(conn => conn.id === targetId);
-  
+
   if (hasIncoming && hasOutgoing) return 'bidirectional';
   if (hasOutgoing) return 'outgoing';
   return 'incoming';

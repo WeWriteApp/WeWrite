@@ -17,36 +17,12 @@ interface UserData {
   uid: string;
   username?: string;
   email?: string;
-  tier?: number;
+  tier?: number | string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
   pageCount?: number;
   followerCount?: number;
   viewCount?: number;
-}
-
-// Helper function to get effective tier
-function getEffectiveTier(amount: number | null, tier: number | null, status: string | null): number {
-  // If subscription is not active, return tier 0
-  if (!status || status !== 'active') {
-    return 0;
-  }
-
-  // If we have an explicit tier, use it
-  if (tier !== null && tier !== undefined) {
-    return tier;
-  }
-
-  // Calculate tier based on amount
-  if (!amount || amount <= 0) {
-    return 0;
-  } else if (amount < 20) {
-    return 1;
-  } else if (amount < 30) {
-    return 2;
-  } else {
-    return 3;
-  }
 }
 
 // POST endpoint - Get batch user data with enhanced caching

@@ -81,15 +81,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Identify user in LogRocket when user logs in
     if (enrichedUser) {
       try {
-        console.log('✅ LogRocket user identification:', {
-          uid: enrichedUser.uid,
-          username: enrichedUser.username,
-          email: enrichedUser.email,
-          hasUsername: !!enrichedUser.username,
-          hasEmail: !!enrichedUser.email,
-          isAdmin: enrichedUser.isAdmin
-        });
-
         identifyUser({
           id: enrichedUser.uid,
           username: enrichedUser.username,
@@ -98,18 +89,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           createdAt: enrichedUser.createdAt,
           isAdmin: enrichedUser.isAdmin
         });
-        console.log('✅ LogRocket user identified successfully:', enrichedUser.username || enrichedUser.email);
       } catch (error) {
-        console.error('❌ Failed to identify user in LogRocket:', error);
+        // Failed to identify user in LogRocket - non-fatal
       }
-    } else {
     }
   }, []);
 
   // Check current session
   const checkSession = useCallback(async () => {
     try {
-      console.log('[Auth] 🔍 Starting session check...');
       setLoading(true);
       clearError();
 
@@ -118,33 +106,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         credentials: 'include'
       });
 
-      console.log('[Auth] 🔍 Session check response:', {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText
-      });
-
       if (response.ok) {
         const data = await response.json();
-        console.log('[Auth] 🔍 Session data received:', {
-          isAuthenticated: data.isAuthenticated,
-          hasUser: !!data.user,
-          userEmail: data.user?.email
-        });
 
         if (data.isAuthenticated && data.user) {
           setUser(data.user);
-          console.log('[Auth] ✅ Session restored for user:', data.user.email);
         } else {
           setUser(null);
-          console.log('[Auth] ❌ No active session found - data:', data);
         }
       } else {
-        const errorData = await response.text();
         setUser(null);
       }
     } catch (error) {
-      console.error('[Auth] ❌ Session check error:', error);
       setError('Failed to check authentication status');
       setUser(null);
     }
@@ -161,14 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const useDevAuth = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_DEV_AUTH === 'true';
 
       // SIMPLIFIED: Always use the login API endpoint
-      console.log('[Auth] Using simplified login API for all environments', {
-        NODE_ENV: process.env.NODE_ENV,
-        NEXT_PUBLIC_USE_DEV_AUTH: process.env.NEXT_PUBLIC_USE_DEV_AUTH,
-        useDevAuth: useDevAuth
-      });
-
       if (useDevAuth) {
-        console.log('[Auth] Using dev auth system (local development only)');
 
 
 
@@ -186,7 +152,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const loginData = await loginResponse.json();
           if (loginData.success && loginData.user) {
             setUser(loginData.user);
-            console.log('[Auth] Dev auth sign in successful for user:', loginData.user.email);
           } else {
             throw new AuthError(loginData.error || 'Login failed', AuthErrorCode.INVALID_CREDENTIALS);
           }
@@ -196,29 +161,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } else {
         // Use client-side Firebase Auth for production
-        console.log('[Auth] Using Firebase Auth for production', {
-          nodeEnv: process.env.NODE_ENV,
-          hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
-          isClient: typeof window !== 'undefined'
-        });
 
         const { loginUser } = await import('../firebase/auth');
         const result = await loginUser(emailOrUsername, password);
 
         if (result.user) {
-          console.log('[Auth] Firebase user authenticated:', {
-            uid: result.user.uid,
-            email: result.user.email,
-            emailVerified: result.user.emailVerified
-          });
-
           // Get ID token for server-side session
-          console.log('[Auth] Getting ID token for session creation...');
           const idToken = await result.user.getIdToken();
-          console.log('[Auth] ID token obtained, length:', idToken.length);
 
           // Create server-side session
-          console.log('[Auth] Creating server-side session...');
           const sessionResponse = await fetch('/api/auth/session', {
             method: 'POST',
             headers: {
@@ -228,37 +179,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
             body: JSON.stringify({ idToken })
           });
 
-          console.log('[Auth] Session response status:', sessionResponse.status);
-          console.log('[Auth] Session response ok:', sessionResponse.ok);
-
           if (sessionResponse.ok) {
             const sessionData = await sessionResponse.json();
-            console.log('[Auth] Session data received:', sessionData);
             if (sessionData.user) {
               setUser(sessionData.user);
             } else {
-              console.error('[Auth] Session response missing user data:', sessionData);
               throw new AuthError('Session creation failed', AuthErrorCode.UNKNOWN_ERROR);
             }
           } else {
-            const errorData = await sessionResponse.text();
-            console.error('[Auth] Session creation failed:', {
-              status: sessionResponse.status,
-              statusText: sessionResponse.statusText,
-              error: errorData
-            });
             throw new AuthError('Session creation failed', AuthErrorCode.UNKNOWN_ERROR);
           }
         } else {
-          console.error('[Auth] Firebase login failed:', result);
           const errorCode = result.code || AuthErrorCode.INVALID_CREDENTIALS;
           const errorMessage = result.message || 'Sign in failed';
-          console.error('[Auth] Firebase error details:', { errorCode, errorMessage });
           throw new AuthError(errorMessage, errorCode);
         }
       }
     } catch (error) {
-      console.error('[Auth] Sign in error:', error);
       if (error instanceof AuthError) {
         setError(error.message);
       } else {
@@ -271,15 +208,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Consolidated sign out - single source of truth for logout
   const signOut = useCallback(async () => {
-    console.log('[Auth] 🔴 LOGOUT: Starting consolidated logout process');
-
     try {
       setLoading(true);
       clearError();
 
       // Step 1: Clear local React state immediately
       setUser(null);
-      console.log('[Auth] 🔴 LOGOUT: Local state cleared');
 
       // Step 2: Sign out from Firebase Auth
       try {
@@ -287,7 +221,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { auth } = await import('../firebase/auth');
         await firebaseSignOut(auth);
       } catch (firebaseError) {
-        console.warn('[Auth] 🔴 LOGOUT: Firebase logout error (continuing):', firebaseError);
+        // Firebase logout error - continue with cleanup
       }
 
       // Step 3: Clear client-side cookies and localStorage
@@ -326,37 +260,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorageKeysToRemove.forEach(key => {
           localStorage.removeItem(key);
         });
-
-        console.log('[Auth] 🔴 LOGOUT: Client-side cleanup completed');
       } catch (cleanupError) {
-        console.warn('[Auth] 🔴 LOGOUT: Client cleanup error (continuing):', cleanupError);
+        // Client cleanup error - continue
       }
 
       // Step 4: Call server-side logout API
       try {
-        const response = await fetch('/api/auth/logout', {
+        await fetch('/api/auth/logout', {
           method: 'POST',
           credentials: 'include'
         });
-
-        if (response.ok) {
-          console.log('[Auth] 🔴 LOGOUT: Server-side logout completed');
-        } else {
-          console.warn('[Auth] 🔴 LOGOUT: Server logout API failed (continuing)');
-        }
       } catch (apiError) {
-        console.warn('[Auth] 🔴 LOGOUT: Server logout API error (continuing):', apiError);
+        // Server logout API error - continue
       }
 
-      console.log('[Auth] 🔴 LOGOUT: All logout steps completed');
-
     } catch (error) {
-      console.error('[Auth] 🔴 LOGOUT: Unexpected error during logout:', error);
       // Still clear local state even if everything fails
       setUser(null);
     } finally {
       // ALWAYS force refresh to ensure clean state, regardless of errors
-      console.log('[Auth] 🔴 LOGOUT: Force refreshing page to complete logout');
       setTimeout(() => {
         // Redirect to /welcome instead of / to avoid race condition where
         // the root page might detect stale cookies and redirect to /home
@@ -393,7 +315,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const data = await response.json();
           if (data.isAuthenticated && data.user) {
             setUser(data.user);
-            console.log('[Auth] User data refreshed with updated emailVerified status:', data.user.emailVerified);
             return;
           }
         }
@@ -402,7 +323,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Fallback to regular session check
       await checkSession();
     } catch (error) {
-      console.error('[Auth] Error refreshing user data:', error);
       // Fallback to regular session check
       await checkSession();
     }
@@ -431,14 +351,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const data = await response.json();
         if (data.user) {
           setUser(data.user);
-          console.log('[Auth] Profile updated successfully');
         }
       } else {
         const errorData = await response.json();
         throw new AuthError(errorData.error || 'Profile update failed', AuthErrorCode.UNKNOWN_ERROR);
       }
     } catch (error) {
-      console.error('[Auth] Profile update error:', error);
       if (error instanceof AuthError) {
         setError(error.message);
       } else {
@@ -482,7 +400,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(null);
         }
       } catch (error) {
-        console.error('[Auth] Session check error:', error);
         setAuthState(prev => ({ ...prev, user: null, isLoading: false, error: 'Failed to check authentication status' }));
       }
     };
@@ -495,7 +412,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && authState.user && !authState.user.emailVerified) {
-        console.log('[Auth] Page became visible and user is unverified, refreshing user data');
         refreshUser();
       }
     };

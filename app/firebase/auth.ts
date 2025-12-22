@@ -24,7 +24,6 @@ import type { User } from '../types/database';
 import { getCollectionName } from '../utils/environmentConfig';
 
 // Firebase auth - clean and simple
-console.log('[Firebase Auth] Using authentication system');
 
 // Export auth instance for backward compatibility
 export { auth } from './config';
@@ -61,111 +60,141 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
     const trimmedInput = emailOrUsername?.trim() || '';
     const trimmedPassword = password?.trim() || '';
 
-    console.log('[Firebase Auth] Starting login process for:', trimmedInput);
-    console.log('[Firebase Auth] Input validation:', {
-      originalLength: emailOrUsername?.length || 0,
-      trimmedLength: trimmedInput.length,
-      hasWhitespace: emailOrUsername !== trimmedInput,
-      inputType: trimmedInput.includes('@') ? 'email' : 'username'
-    });
-    console.log('[Firebase Auth] Firebase config check:', {
-      hasAuth: !!auth,
-      hasFirestore: !!firestore,
-      authCurrentUser: auth?.currentUser?.email || 'none'
-    });
-
     let email = trimmedInput;
+    let usedUsername = false;
 
     // Check if the input is a username (doesn't contain @)
     if (!trimmedInput.includes('@')) {
-      console.log('[Firebase Auth] Looking up email for username:', trimmedInput);
+      usedUsername = true;
       const usernameCollection = getCollectionName('usernames');
-      console.log('[Firebase Auth] Username collection:', usernameCollection);
 
       // Look up the email by username
       const usernameDoc = await getDoc(doc(firestore, usernameCollection, trimmedInput.toLowerCase()));
 
       if (!usernameDoc.exists()) {
-        console.log('[Firebase Auth] Username not found in collection:', usernameCollection);
         return {
           code: "auth/user-not-found",
-          message: "No account found with this username or email."
+          message: "No account found with this username. Please check your spelling or try your email address instead."
         };
       }
 
       // Get the user's email from the users collection
       const userData = usernameDoc.data();
-      console.log('[Firebase Auth] Found UID for username:', userData.uid);
 
       const userCollection = getCollectionName('users');
-      console.log('[Firebase Auth] User collection:', userCollection);
       const userDoc = await getDoc(doc(firestore, userCollection, userData.uid));
       if (!userDoc.exists()) {
-        console.log('[Firebase Auth] User document not found for UID:', userData.uid);
         return {
           code: "auth/user-not-found",
-          message: "No account found with this username or email."
+          message: "No account found with this username. Please check your spelling or try your email address instead."
         };
       }
 
       email = userDoc.data().email;
-      console.log('[Firebase Auth] Resolved email for username:', email);
+    } else {
+      // User entered an email - validate the format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedInput)) {
+        // Check for common typos in email domains
+        const commonTypos: Record<string, string> = {
+          '.con': '.com',
+          '.cpm': '.com',
+          '.ocm': '.com',
+          '.vom': '.com',
+          '.xom': '.com',
+          '.comm': '.com',
+          '.copm': '.com',
+          '.coom': '.com',
+          '.ckm': '.com',
+          '.cm': '.com',
+          '.co': '.com',
+          'gmial.com': 'gmail.com',
+          'gmai.com': 'gmail.com',
+          'gamil.com': 'gmail.com',
+          'gnail.com': 'gmail.com',
+          'gmal.com': 'gmail.com',
+          'gmail.con': 'gmail.com',
+          'hotmal.com': 'hotmail.com',
+          'hotmial.com': 'hotmail.com',
+          'hotmail.con': 'hotmail.com',
+          'outlok.com': 'outlook.com',
+          'outloo.com': 'outlook.com',
+          'outlook.con': 'outlook.com',
+          'yahooo.com': 'yahoo.com',
+          'yaho.com': 'yahoo.com',
+          'yahoo.con': 'yahoo.com',
+          'iclud.com': 'icloud.com',
+          'icoud.com': 'icloud.com',
+          'icloud.con': 'icloud.com',
+        };
+
+        // Check for typo suggestions
+        const lowerInput = trimmedInput.toLowerCase();
+        for (const [typo, correction] of Object.entries(commonTypos)) {
+          if (lowerInput.includes(typo)) {
+            const suggested = lowerInput.replace(typo, correction);
+            return {
+              code: "auth/invalid-email",
+              message: `Invalid email format. Did you mean "${suggested}"?`
+            };
+          }
+        }
+
+        return {
+          code: "auth/invalid-email",
+          message: "Invalid email format. Please check for typos (e.g., '.com' not '.con')."
+        };
+      }
+
+      // Check if user exists with this email before attempting password auth
+      // This allows us to give more specific error messages
+      const userCollection = getCollectionName('users');
+      const { query, where, getDocs, collection } = await import('firebase/firestore');
+      const usersQuery = query(
+        collection(firestore, userCollection),
+        where('email', '==', trimmedInput.toLowerCase())
+      );
+      const userSnapshot = await getDocs(usersQuery);
+
+      if (userSnapshot.empty) {
+        // Also check with original case
+        const usersQueryOriginal = query(
+          collection(firestore, userCollection),
+          where('email', '==', trimmedInput)
+        );
+        const userSnapshotOriginal = await getDocs(usersQueryOriginal);
+
+        if (userSnapshotOriginal.empty) {
+          return {
+            code: "auth/user-not-found",
+            message: "No account found with this email address. Please check your spelling or sign up for a new account."
+          };
+        }
+      }
     }
 
     // CRITICAL: Final email validation before Firebase call
     const finalEmail = email.trim();
-    console.log('[Firebase Auth] Final email validation:', {
-      email: finalEmail,
-      length: finalEmail.length,
-      hasAt: finalEmail.includes('@'),
-      hasDot: finalEmail.includes('.'),
-      isValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(finalEmail)
-    });
 
-    console.log('[Firebase Auth] Attempting Firebase signInWithEmailAndPassword for:', finalEmail);
     const userCredential = await signInWithEmailAndPassword(auth, finalEmail, trimmedPassword);
-    console.log('[Firebase Auth] Firebase login successful for:', userCredential.user.email);
     return { user: userCredential.user };
   } catch (error: any) {
-    console.error("[Firebase Auth] Login error:", error);
-    console.error("[Firebase Auth] Error details:", {
-      code: error.code,
-      message: error.message,
-      stack: error.stack,
-      // Check for any timing information in the error
-      customData: error.customData,
-      details: error.details,
-      serverResponse: error.serverResponse,
-      // Additional debugging for Android PWA issues
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
-      platform: typeof navigator !== 'undefined' ? navigator.platform : 'server',
-      isAndroid: typeof navigator !== 'undefined' ? /Android/i.test(navigator.userAgent) : false,
-      isPWA: typeof window !== 'undefined' ? window.matchMedia('(display-mode: standalone)').matches : false
-    });
-
     // Convert Firebase error codes to user-friendly messages
     let message = "Unable to sign in. Please check your credentials and try again.";
 
-    if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-      message = "Incorrect username/email or password. Please try again.";
+    // Firebase v9+ returns auth/invalid-credential for wrong password (security measure)
+    if (error.code === "auth/invalid-credential" || error.code === "auth/wrong-password") {
+      message = "Incorrect password. Please try again or use 'Forgot Password' to reset it.";
+    } else if (error.code === "auth/user-not-found") {
+      message = "No account found with this email or username.";
     } else if (error.code === "auth/invalid-email") {
-      // ENHANCED: Better error message for invalid email on Android PWA
-      message = "Please check your email address and try again. Make sure there are no extra spaces.";
+      message = "Invalid email format. Please check for typos.";
     } else if (error.code === "auth/user-disabled") {
-      message = "This account has been disabled.";
+      message = "This account has been disabled. Please contact support.";
     } else if (error.code === "auth/too-many-requests") {
-      // Log detailed error information to see if Firebase provides any timing data
-      console.error("[Firebase Auth] Rate limit error details:", {
-        fullError: error,
-        customData: error.customData,
-        details: error.details,
-        serverResponse: error.serverResponse,
-        timestamp: new Date().toISOString()
-      });
-
       message = "Too many failed login attempts. Please wait 15-30 minutes before trying again, or use 'Forgot Password' to reset your password.";
     } else if (error.code === "auth/network-request-failed") {
-      message = "Network error. Please check your internet connection.";
+      message = "Network error. Please check your internet connection and try again.";
     }
 
     return { code: error.code, message: message };
@@ -182,8 +211,6 @@ interface LogoutResult {
 
 export const logoutUser = async (): Promise<LogoutResult> => {
   try {
-    console.log('🔴 LOGOUT: Logout started');
-
     // Sign out from Firebase
     await firebaseSignOut(auth);
 
@@ -225,7 +252,7 @@ export const logoutUser = async (): Promise<LogoutResult> => {
         localStorage.removeItem(key);
       });
     } catch (error) {
-      console.warn('Failed to clear localStorage:', error);
+      // Failed to clear localStorage
     }
 
     // Clear server-side session
@@ -235,13 +262,11 @@ export const logoutUser = async (): Promise<LogoutResult> => {
         credentials: 'include'
       });
     } catch (error) {
-      console.warn('Failed to clear server-side session:', error);
+      // Failed to clear server-side session
     }
 
-    console.log('🔴 LOGOUT: Logout completed');
     return { success: true };
   } catch (error) {
-    console.error("🔴 LOGOUT: Logout error:", error);
     return { success: false, error };
   }
 }
@@ -268,9 +293,7 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
         username: username,
         lastModified: new Date().toISOString()
       });
-      console.log(`✅ Username updated in RTDB for user ${userId}`);
     } catch (rtdbError) {
-      console.error('❌ Failed to update username in RTDB:', rtdbError);
       // Don't fail the request, but log for monitoring
     }
 
@@ -306,7 +329,6 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating username:", error);
     return { success: false, error };
   }
 }
@@ -325,7 +347,6 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 
     return null;
   } catch (error) {
-    console.error("Error fetching user profile:", error);
     return null;
   }
 }
@@ -343,7 +364,6 @@ export const updateEmail = async (user: FirebaseUser, newEmail: string): Promise
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating email:", error);
     return { success: false, error };
   }
 }
@@ -377,8 +397,6 @@ export const updatePassword = async (currentPassword: string, newPassword: strin
 
     return { success: true };
   } catch (error: any) {
-    console.error("Error updating password:", error);
-
     // Convert Firebase error codes to user-friendly messages
     let message = "Failed to update password. Please try again.";
 
@@ -483,7 +501,6 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
       };
     }
   } catch (error) {
-    console.error("Error checking username availability:", error);
     return {
       isAvailable: false,
       message: "Error checking username availability",
@@ -539,7 +556,7 @@ const checkSuggestionsAvailability = async (suggestions: string[]): Promise<stri
         }
       }
     } catch (error) {
-      console.error(`Error checking suggestion availability for ${suggestion}:`, error);
+      // Error checking suggestion availability
     }
   }
 
@@ -577,12 +594,11 @@ const userDocRef = doc(firestore, getCollectionName("users"), userCredential.use
         registration_method: 'anonymous'
       });
     } catch (error) {
-      console.error('Error tracking anonymous user creation:', error);
+      // Error tracking anonymous user creation
     }
 
     return { user: userCredential.user };
   } catch (error: any) {
-    console.error("Anonymous login error:", error);
     return { code: error.code, message: error.message };
   }
 }

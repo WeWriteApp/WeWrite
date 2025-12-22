@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import { Loader2, AlertTriangle, ArrowLeft, CreditCard } from 'lucide-react';
 import Link from 'next/link';
-import { apiClient } from '../../../utils/unifiedApiClient';
+import { apiClient } from '../../../utils/apiClient';
 
 interface Subscription {
   id: string;

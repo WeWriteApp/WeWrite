@@ -45,12 +45,11 @@ class SimpleErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error) {
-    console.error('🚫 Editor error:', error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('🚫 Editor error details:', error, errorInfo);
+    // Error logged by React
   }
 
   render() {
@@ -120,18 +119,9 @@ const Editor: React.FC<EditorProps> = ({
     }
   });
 
-  // Debug: Log when suggestions change
+  // Notify parent when suggestions change (debug removed)
   useEffect(() => {
-    if (linkSuggestionState.allSuggestions.length > 0) {
-      console.log('🔗 [EDITOR] Suggestions updated:', {
-        count: linkSuggestionState.allSuggestions.length,
-        suggestions: linkSuggestionState.allSuggestions.map(s => ({
-          matchedText: s.matchedText,
-          title: s.title,
-          confidence: s.confidence
-        }))
-      });
-    }
+    // Suggestions updated
   }, [linkSuggestionState.allSuggestions]);
 
   // Notify parent of loading state changes
@@ -190,7 +180,6 @@ const Editor: React.FC<EditorProps> = ({
               if (prevSibling && typeof prevSibling === 'object' && 'type' in prevSibling && prevSibling.type === 'link') {
                 // We're at the very beginning of text immediately after a link
                 Transforms.removeNodes(editor, { at: prevSiblingPath });
-                console.log('🗑️ Link deleted via backspace');
                 return;
               }
             }
@@ -227,7 +216,6 @@ const Editor: React.FC<EditorProps> = ({
                   if (nextSibling && typeof nextSibling === 'object' && 'type' in nextSibling && nextSibling.type === 'link') {
                     // We're at the very end of text immediately before a link
                     Transforms.removeNodes(editor, { at: nextSiblingPath });
-                    console.log('🗑️ Link deleted via delete key');
                     return;
                   }
                 } catch (e) {
@@ -279,7 +267,6 @@ const Editor: React.FC<EditorProps> = ({
       try {
         originalNormalizeNode(entry);
       } catch (error) {
-        console.error('Error in normalizeNode:', error);
         // Skip normalization if it fails to prevent crashes
       }
     };
@@ -298,9 +285,8 @@ const Editor: React.FC<EditorProps> = ({
             // Use start of the target path so we always land on a valid text node
             return SlateEditor.start(editor, initialSelectionPath);
           }
-          console.warn('Editor: initialSelectionPath missing in value, falling back', initialSelectionPath);
         } catch (error) {
-          console.warn('Editor: failed to resolve initial selection path, falling back', error);
+          // Failed to resolve initial selection path, falling back
         }
       }
 
@@ -320,7 +306,7 @@ const Editor: React.FC<EditorProps> = ({
         Transforms.select(editor, { anchor: point, focus: point });
         ReactEditor.focus(editor);
       } catch (e) {
-        console.error('Error setting initial selection:', e);
+        // Error setting initial selection
       }
     });
   }, [editor, initialSelectionPath, readOnly]);
@@ -395,20 +381,15 @@ const Editor: React.FC<EditorProps> = ({
       const normalized = content.map(normalizeNode);
 
       if (normalized.length === 0) {
-        console.log('🔧 Editor: Empty content, using default paragraph');
         return [{ type: 'paragraph', children: [{ text: '' }] }];
       }
 
-      console.log('🔧 Editor: Normalized content:', normalized);
-
       const validated = normalized.map((node, index) => {
         if (!node || typeof node !== 'object') {
-          console.warn(`🔧 Editor: Invalid node at index ${index}, replacing with paragraph`);
           return { type: 'paragraph', children: [{ text: '' }] };
         }
 
         if (!node.children || !Array.isArray(node.children) || node.children.length === 0) {
-          console.warn(`🔧 Editor: Node at index ${index} has invalid children, fixing`);
           return { ...node, children: [{ text: '' }] };
         }
 
@@ -417,8 +398,6 @@ const Editor: React.FC<EditorProps> = ({
 
       return validated;
     } catch (error) {
-      console.error('🚫 Error normalizing initial content:', error);
-      console.error('🚫 Original content that caused error:', content);
       return [{ type: 'paragraph', children: [{ text: '' }] }];
     }
   }, []);
@@ -444,13 +423,11 @@ const Editor: React.FC<EditorProps> = ({
     if (prevContentRef.current !== currentContentStr) {
       // If this change was triggered by the editor's own onChange, skip the reset
       if (isInternalChangeRef.current) {
-        console.log('🔧 [EDITOR] Skipping reset - internal change');
         prevContentRef.current = currentContentStr;
         isInternalChangeRef.current = false;
         return;
       }
 
-      console.log('🔧 [EDITOR] Detected external content change, updating editor');
       prevContentRef.current = currentContentStr;
 
       // Update state
@@ -480,7 +457,7 @@ const Editor: React.FC<EditorProps> = ({
       try {
         onChange(newValue);
       } catch (error) {
-        console.error('Error in onChange:', error);
+        // Error in onChange callback
       }
     });
   }, [onChange]);
@@ -500,37 +477,19 @@ const Editor: React.FC<EditorProps> = ({
 
   // Analyze text for link suggestions when content changes or toggle is enabled
   useEffect(() => {
-    console.log('🔗 [EDITOR] Link suggestions effect triggered:', {
-      showLinkSuggestions,
-      hasEditorValue: !!editorValue,
-      readOnly,
-      userId: user?.uid,
-      pageId
-    });
-
     if (!showLinkSuggestions || !editorValue || readOnly) {
-      console.log('🔗 [EDITOR] Skipping analysis - conditions not met');
       return;
     }
 
     const plainText = extractPlainText(editorValue);
-    console.log('🔗 [EDITOR] Extracted plain text:', {
-      length: plainText.length,
-      preview: plainText.substring(0, 100)
-    });
 
     if (plainText.length >= 10) {
-      console.log('🔗 [EDITOR] Triggering link suggestion analysis...');
       linkSuggestionActions.analyzeText(plainText, user?.uid, pageId);
-    } else {
-      console.log('🔗 [EDITOR] Text too short for analysis (< 10 chars)');
     }
   }, [showLinkSuggestions, editorValue, user?.uid, pageId, readOnly, extractPlainText, linkSuggestionActions]);
 
   // Helper function to insert a link from a suggestion
   const insertLinkFromSuggestion = useCallback((suggestion: LinkSuggestion) => {
-    console.log('🔗 [SUGGESTION] Inserting link from suggestion:', suggestion);
-
     // Find the text in the editor and wrap it with a link (case-insensitive)
     const searchText = suggestion.matchedText;
     const searchTextLower = searchText.toLowerCase();
@@ -563,7 +522,6 @@ const Editor: React.FC<EditorProps> = ({
         setShowSuggestionModal(false);
         setActiveSuggestionForModal(null);
 
-        console.log('🔗 [SUGGESTION] Successfully inserted link');
         break;
       }
     }
@@ -592,13 +550,6 @@ const Editor: React.FC<EditorProps> = ({
       let index = textLower.indexOf(searchText);
 
       while (index !== -1) {
-        console.log('🔗 [DECORATE] Found match:', {
-          searchText,
-          textPreview: text.substring(index, index + searchText.length),
-          path,
-          index
-        });
-
         ranges.push({
           anchor: { path, offset: index },
           focus: { path, offset: index + searchText.length },
@@ -610,24 +561,11 @@ const Editor: React.FC<EditorProps> = ({
       }
     }
 
-    if (ranges.length > 0) {
-      console.log('🔗 [DECORATE] Returning ranges:', ranges.length);
-    }
-
     return ranges;
   }, [showLinkSuggestions, linkSuggestionState.allSuggestions]);
 
   // Simple link insertion - no complex timing dependencies
   const insertLink = useCallback((linkData: any) => {
-    console.log('🔗 [EDITOR DEBUG] insertLink called with data:', {
-      linkData: linkData,
-      isEditing: linkData.isEditing,
-      isCustomText: linkData.isCustomText,
-      customText: linkData.text,
-      pageTitle: linkData.pageTitle,
-      editingElement: linkData.element
-    });
-
     try {
       // Ensure editor is focused
       if (!ReactEditor.isFocused(editor)) {
@@ -650,13 +588,6 @@ const Editor: React.FC<EditorProps> = ({
         // Use explicit isCustomText flag instead of comparing text values
         // This allows users to set custom text that matches the page title
         const hasCustomText = linkData.isCustomText;
-
-        console.log('🔗 [EDITOR DEBUG] Processing internal link:', {
-          isCustomTextFlag: linkData.isCustomText,
-          textValue: linkData.text,
-          hasCustomText: hasCustomText,
-          pageTitle: linkData.pageTitle
-        });
 
         if (hasCustomText) {
           linkElement = LinkNodeHelper.createCustomLink(
@@ -682,13 +613,6 @@ const Editor: React.FC<EditorProps> = ({
           (linkElement as any).authorTier = linkData.authorTier;
           (linkElement as any).authorSubscriptionStatus = linkData.authorSubscriptionStatus;
           (linkElement as any).authorSubscriptionAmount = linkData.authorSubscriptionAmount;
-
-          console.log('🔗 Added author attribution to link element:', {
-            showAuthor: linkData.showAuthor,
-            authorUsername: linkData.authorUsername,
-            authorUserId: linkData.authorUserId,
-            authorTier: linkData.authorTier
-          });
         }
 
         // Add metadata
@@ -733,11 +657,8 @@ const Editor: React.FC<EditorProps> = ({
             if (Element.isElement(nodeAtPath) && nodeAtPath.type === 'link' &&
                 nodeAtPath.pageId === editingLink.element.pageId) {
               replaceLinkAtPath(editingLink.path);
-              console.log('🔗 [EDITOR DEBUG] Link replaced at existing path with updated text');
             } else {
               // Path is stale, try to find the element again
-              console.warn('🔗 Stale path detected, searching for link element');
-
               const linkNodes = Array.from(SlateNode.nodes(editor, {
                 match: n => Element.isElement(n) && n.type === 'link' && n.pageId === editingLink.element.pageId
               }));
@@ -745,19 +666,11 @@ const Editor: React.FC<EditorProps> = ({
               if (linkNodes.length > 0) {
                 const [, newPath] = linkNodes[0];
                 replaceLinkAtPath(newPath);
-                console.log('🔗 Updated existing link at new path via replacement', {
-                  oldPath: editingLink.path,
-                  newPath,
-                  isCustomText: linkData.isCustomText,
-                  customText: linkText
-                });
               } else {
-                console.error('🔗 Could not find link element to update');
                 throw new Error('Link element not found');
               }
             }
           } catch (error) {
-            console.error('🔗 Error updating existing link:', error);
             // Fallback: insert as new link at current selection
             if (selection) {
               Transforms.insertNodes(editor, linkElement);
@@ -786,7 +699,6 @@ const Editor: React.FC<EditorProps> = ({
       setSelectedText('');
 
     } catch (error) {
-      console.error('Error inserting link:', error);
       // Simple error handling - show user-friendly message
       alert('Failed to insert link. Please try again.');
     }
@@ -839,12 +751,6 @@ const Editor: React.FC<EditorProps> = ({
 
       const { fullUrl, displayText } = cleanUrl(pastedText);
 
-      console.log('🔗 Auto-linking pasted URL:', {
-        original: pastedText,
-        fullUrl,
-        displayText
-      });
-
       // Create link element with cleaned display text
       const linkElement = LinkNodeHelper.createCustomExternalLink(fullUrl, displayText);
 
@@ -875,14 +781,6 @@ const Editor: React.FC<EditorProps> = ({
 
     if (isLinkShortcut) {
       event.preventDefault();
-
-      console.log('🔗 Link shortcut triggered:', {
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        key: event.key,
-        platform: navigator.platform
-      });
-
       triggerLinkInsertion();
     }
   }, [triggerLinkInsertion, readOnly]);
@@ -999,7 +897,7 @@ const Editor: React.FC<EditorProps> = ({
       }
       Transforms.removeNodes(editor, { at: path });
     } catch (error) {
-      console.error('Error deleting empty paragraph:', error);
+      // Error deleting empty paragraph
     }
   }, [editor, editorValue.length]);
 
@@ -1026,7 +924,7 @@ const Editor: React.FC<EditorProps> = ({
       try {
         Transforms.removeNodes(editor, { at: path });
       } catch (error) {
-        console.error('Error deleting empty paragraph at path:', path, error);
+        // Error deleting empty paragraph at path
       }
     });
   }, [editor, editorValue]);
@@ -1194,7 +1092,6 @@ const Editor: React.FC<EditorProps> = ({
   }, [handleSuggestionClick]);
 
   if (!editorValue || !Array.isArray(editorValue)) {
-    console.warn('Editor skipping Slate render because value is invalid', editorValue);
     return (
       <div className="min-h-[200px] w-full rounded-lg p-4 bg-muted/10" />
     );

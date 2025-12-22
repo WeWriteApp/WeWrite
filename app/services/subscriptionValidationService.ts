@@ -74,12 +74,7 @@ export class SubscriptionValidationService {
     }
   }
 
-  /**
-   * Log subscription validation events for debugging
-   */
-  static logValidationEvent(event: string, details: any) {
-    console.log(`[SUBSCRIPTION VALIDATION] ${event}:`, details);
-  }
 }
+
 
 export const subscriptionValidationService = new SubscriptionValidationService();

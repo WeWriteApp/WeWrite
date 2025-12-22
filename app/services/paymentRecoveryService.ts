@@ -144,8 +144,6 @@ export class PaymentRecoveryService {
       await this.scheduleRetryAttempt(failureRecord.id, failureRecord.nextRetryAt);
     }
 
-    console.log(`[PAYMENT RECOVERY] Recorded failure for user ${userId}, attempt ${failureCount}, next retry: ${failureRecord.nextRetryAt?.toISOString() || 'none'}`);
-
     return failureRecord;
   }
 
@@ -442,7 +440,6 @@ export class PaymentRecoveryService {
    */
   private async scheduleRetryAttempt(failureRecordId: string, retryAt: Date): Promise<void> {
     // Implementation would schedule a job to execute the retry
-    // For now, just log the scheduling
-    console.log(`[PAYMENT RECOVERY] Scheduled retry for ${failureRecordId} at ${retryAt.toISOString()}`);
+    // For now, this is a placeholder for future job scheduler integration
   }
 }

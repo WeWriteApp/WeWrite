@@ -113,7 +113,6 @@ export const startResendCooldown = (): void => {
     localStorage.setItem(RESEND_COOLDOWN_KEY, JSON.stringify({ expiresAt }));
     localStorage.setItem(RESEND_COUNT_KEY, newCount.toString());
 
-    console.log(`Email verification resend cooldown started: ${cooldownSeconds}s (attempt ${newCount})`);
   } catch (error) {
     console.error('Error starting resend cooldown:', error);
   }
@@ -189,7 +188,6 @@ export const createEmailVerificationNotificationIfNeeded = async (): Promise<boo
     
     if (notificationId) {
       recordNotificationCreated();
-      console.log('Email verification notification created:', notificationId);
       return true;
     }
     
@@ -244,7 +242,6 @@ export const forceCreateEmailVerificationNotification = async (): Promise<boolea
 
     if (notificationId) {
       recordNotificationCreated();
-      console.log('Email verification notification force created:', notificationId);
       return true;
     }
 

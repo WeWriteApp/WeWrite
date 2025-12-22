@@ -38,11 +38,8 @@ export interface FirebaseUser {
 export async function verifyIdToken(idToken: string): Promise<{ success: boolean; uid?: string; email?: string; emailVerified?: boolean; error?: string }> {
   try {
     if (!FIREBASE_API_KEY) {
-      console.error('[Firebase REST] Missing API key. NEXT_PUBLIC_FIREBASE_API_KEY:', FIREBASE_API_KEY ? 'set' : 'not set');
       return { success: false, error: 'API key not configured' };
     }
-
-    console.log('[Firebase REST] Verifying token, API key prefix:', FIREBASE_API_KEY?.substring(0, 10) + '...');
 
     const response = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
@@ -53,18 +50,13 @@ export async function verifyIdToken(idToken: string): Promise<{ success: boolean
       }
     );
 
-    console.log('[Firebase REST] Token verification response status:', response.status);
-
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firebase REST] Token verification failed:', response.status, errorText);
       return { success: false, error: `Token verification failed: ${response.status}` };
     }
 
     const data = await response.json();
     if (data.users && data.users.length > 0) {
       const user = data.users[0];
-      console.log('[Firebase REST] Token verified for user:', user.localId);
       return {
         success: true,
         uid: user.localId,
@@ -72,10 +64,8 @@ export async function verifyIdToken(idToken: string): Promise<{ success: boolean
         emailVerified: user.emailVerified || false,
       };
     }
-    console.error('[Firebase REST] No users in response');
     return { success: false, error: 'No user found' };
   } catch (error) {
-    console.error('[Firebase REST] Token verification error:', error);
     return { success: false, error: 'Token verification error' };
   }
 }
@@ -107,8 +97,6 @@ export async function getUserById(uid: string): Promise<{ success: boolean; user
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firebase REST] Get user by ID failed:', response.status, errorText);
       return { success: false, error: `Failed to get user: ${response.status}` };
     }
 
@@ -131,7 +119,6 @@ export async function getUserById(uid: string): Promise<{ success: boolean; user
     }
     return { success: false, error: 'User not found' };
   } catch (error) {
-    console.error('[Firebase REST] Get user by ID error:', error);
     return { success: false, error: 'Failed to get user' };
   }
 }
@@ -160,8 +147,6 @@ export async function getUserByEmail(email: string): Promise<{ success: boolean;
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firebase REST] Get user by email failed:', response.status, errorText);
       return { success: false, error: `Failed to get user: ${response.status}` };
     }
 
@@ -184,7 +169,6 @@ export async function getUserByEmail(email: string): Promise<{ success: boolean;
     }
     return { success: false, error: 'User not found' };
   } catch (error) {
-    console.error('[Firebase REST] Get user by email error:', error);
     return { success: false, error: 'Failed to get user' };
   }
 }
@@ -206,7 +190,6 @@ async function getServiceAccountToken(): Promise<string | null> {
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     
     if (!serviceAccountKey) {
-      console.error('[Firebase REST] No service account key configured');
       return null;
     }
 
@@ -214,7 +197,6 @@ async function getServiceAccountToken(): Promise<string | null> {
     try {
       serviceAccount = JSON.parse(serviceAccountKey);
     } catch {
-      console.error('[Firebase REST] Invalid service account key format');
       return null;
     }
 
@@ -251,8 +233,6 @@ async function getServiceAccountToken(): Promise<string | null> {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firebase REST] Token exchange failed:', errorText);
       return null;
     }
 
@@ -266,7 +246,6 @@ async function getServiceAccountToken(): Promise<string | null> {
 
     return data.access_token;
   } catch (error) {
-    console.error('[Firebase REST] Service account token error:', error);
     return null;
   }
 }
@@ -298,7 +277,6 @@ async function signJwt(header: object, payload: object, privateKeyPem: string): 
     const encodedSignature = base64UrlEncode(new Uint8Array(signature));
     return `${signingInput}.${encodedSignature}`;
   } catch (error) {
-    console.error('[Firebase REST] JWT signing error:', error);
     return null;
   }
 }
@@ -324,7 +302,6 @@ async function importPrivateKey(pem: string): Promise<CryptoKey | null> {
       ['sign']
     );
   } catch (error) {
-    console.error('[Firebase REST] Import private key error:', error);
     return null;
   }
 }
@@ -348,7 +325,6 @@ function base64UrlEncode(input: string | Uint8Array): string {
 export async function getUserFromToken(idToken: string): Promise<FirebaseUser | null> {
   try {
     if (!FIREBASE_API_KEY) {
-      console.error('[Firebase REST] Missing API key');
       return null;
     }
 
@@ -371,7 +347,6 @@ export async function getUserFromToken(idToken: string): Promise<FirebaseUser | 
     }
     return null;
   } catch (error) {
-    console.error('[Firebase REST] Get user error:', error);
     return null;
   }
 }
@@ -414,7 +389,6 @@ export async function createUser(
       refreshToken: data.refreshToken,
     };
   } catch (error: any) {
-    console.error('[Firebase REST] Create user error:', error);
     return { error: error?.message || 'Failed to create user' };
   }
 }
@@ -458,7 +432,6 @@ export async function signInWithEmailPassword(
       emailVerified: data.emailVerified || false,
     };
   } catch (error: any) {
-    console.error('[Firebase REST] Sign in error:', error);
     return { error: error?.message || 'Failed to sign in' };
   }
 }
@@ -483,7 +456,6 @@ export async function deleteUser(idToken: string): Promise<boolean> {
 
     return response.ok;
   } catch (error) {
-    console.error('[Firebase REST] Delete user error:', error);
     return false;
   }
 }
@@ -515,14 +487,11 @@ export async function deleteUserByUid(uid: string): Promise<{ success: boolean; 
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Firebase REST] Admin delete user failed:', response.status, errorText);
       return { success: false, error: `Failed to delete user: ${response.status} - ${errorText}` };
     }
 
-    console.log('[Firebase REST] Admin deleted user:', uid);
     return { success: true };
   } catch (error: any) {
-    console.error('[Firebase REST] Admin delete user error:', error);
     return { success: false, error: error?.message || 'Failed to delete user' };
   }
 }
@@ -556,7 +525,6 @@ export async function sendPasswordResetEmail(email: string): Promise<{ success: 
 
     return { success: true };
   } catch (error: any) {
-    console.error('[Firebase REST] Send password reset error:', error);
     return { success: false, error: error?.message || 'Failed to send reset email' };
   }
 }
@@ -590,7 +558,6 @@ export async function sendEmailVerification(idToken: string): Promise<{ success:
 
     return { success: true };
   } catch (error: any) {
-    console.error('[Firebase REST] Send verification error:', error);
     return { success: false, error: error?.message || 'Failed to send verification email' };
   }
 }
@@ -691,17 +658,12 @@ export async function getFirestoreDoc(
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      console.error('[Firestore REST] Get doc error:', response.status);
       return null;
     }
 
     const doc = await response.json();
     return fromFirestoreDoc(doc);
   } catch (error) {
-    console.error('[Firestore REST] Get doc error:', error);
     return null;
   }
 }
@@ -741,14 +703,11 @@ export async function setFirestoreDoc(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firestore REST] Set doc error:', errorText);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('[Firestore REST] Set doc error:', error);
     return false;
   }
 }
@@ -821,12 +780,11 @@ export async function queryFirestore(
     });
 
     if (!response.ok) {
-      console.error('[Firestore REST] Query error:', response.status);
       return [];
     }
 
     const results = await response.json();
-    
+
     return results
       .filter((r: any) => r.document)
       .map((r: any) => {
@@ -838,7 +796,6 @@ export async function queryFirestore(
         };
       });
   } catch (error) {
-    console.error('[Firestore REST] Query error:', error);
     return [];
   }
 }
@@ -904,14 +861,12 @@ export async function getFirestoreDocument(
       if (response.status === 404) {
         return { success: false, error: 'Document not found' };
       }
-      console.error('[Firestore REST] Get doc error:', response.status);
       return { success: false, error: `Failed to get document: ${response.status}` };
     }
 
     const doc = await response.json();
     return { success: true, data: fromFirestoreDoc(doc) || {} };
   } catch (error) {
-    console.error('[Firestore REST] Get doc error:', error);
     return { success: false, error: 'Failed to get document' };
   }
 }
@@ -948,14 +903,11 @@ export async function setFirestoreDocument(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firestore REST] Set doc error:', errorText);
       return { success: false, error: `Failed to set document: ${response.status}` };
     }
 
     return { success: true };
   } catch (error) {
-    console.error('[Firestore REST] Set doc error:', error);
     return { success: false, error: 'Failed to set document' };
   }
 }
@@ -993,14 +945,11 @@ export async function updateFirestoreDocument(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Firestore REST] Update doc error:', errorText);
       return { success: false, error: `Failed to update document: ${response.status}` };
     }
 
     return { success: true };
   } catch (error) {
-    console.error('[Firestore REST] Update doc error:', error);
     return { success: false, error: 'Failed to update document' };
   }
 }
@@ -1051,12 +1000,11 @@ export async function queryFirestoreDocuments(
     });
 
     if (!response.ok) {
-      console.error('[Firestore REST] Query error:', response.status);
       return { success: false, error: `Query failed: ${response.status}` };
     }
 
     const results = await response.json();
-    
+
     const documents = results
       .filter((r: any) => r.document)
       .map((r: any) => {
@@ -1070,7 +1018,6 @@ export async function queryFirestoreDocuments(
 
     return { success: true, documents };
   } catch (error) {
-    console.error('[Firestore REST] Query error:', error);
     return { success: false, error: 'Query failed' };
   }
 }
@@ -1103,7 +1050,6 @@ export async function getRtdbData(
     const data = await response.json();
     return { success: true, data };
   } catch (error) {
-    console.error('[RTDB REST] Get error:', error);
     return { success: false, error: 'Failed to get data' };
   }
 }
@@ -1134,7 +1080,6 @@ export async function setRtdbData(
 
     return { success: true };
   } catch (error) {
-    console.error('[RTDB REST] Set error:', error);
     return { success: false, error: 'Failed to set data' };
   }
 }
@@ -1165,7 +1110,6 @@ export async function updateRtdbData(
 
     return { success: true };
   } catch (error) {
-    console.error('[RTDB REST] Update error:', error);
     return { success: false, error: 'Failed to update data' };
   }
 }

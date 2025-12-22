@@ -30,8 +30,6 @@ interface TrendingPagesResponse {
 }
 
 export default function TrendingPages({ limit = 5 }) {
-  console.log('🚀 [TRENDING] Component mounted/rendered');
-
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +41,9 @@ export default function TrendingPages({ limit = 5 }) {
       const userIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
 
       if (userIds.length === 0) {
-        console.log('TrendingPagesCore: No user IDs found for subscription data');
         setTrendingPages(pages);
         return;
       }
-
-      console.log(`TrendingPagesCore: Fetching subscription data for ${userIds.length} users`);
 
       // Fetch user data with subscription information
       const userData = await getBatchUserData(userIds);
@@ -62,10 +57,8 @@ export default function TrendingPages({ limit = 5 }) {
         username: page.userId ? (userData[page.userId]?.username || page.username) : page.username
       }));
 
-      console.log('TrendingPagesCore: Successfully merged subscription data');
       setTrendingPages(pagesWithSubscriptions);
     } catch (error) {
-      console.error('TrendingPagesCore: Error fetching subscription data:', error);
       // Set pages without subscription data as fallback
       setTrendingPages(pages);
     }
@@ -80,31 +73,25 @@ export default function TrendingPages({ limit = 5 }) {
         const lastFetch = parseInt(localStorage.getItem(lastFetchKey) || '0');
 
         if ((now - lastFetch) < 30000) {
-          console.log('TrendingPages: Throttling API call, too recent');
           return;
         }
 
         localStorage.setItem(lastFetchKey, now.toString());
 
         setLoading(true);
-        console.log('🔥 [TRENDING] Fetching trending pages with limit:', limit);
 
         // Get trending pages for the last 24 hours using API endpoint
         const apiUrl = `/api/trending?limit=${limit}`;
-        console.log('🔥 [TRENDING] API URL:', apiUrl);
 
         const apiResponse = await fetch(apiUrl);
         if (!apiResponse.ok) {
           const errorText = await apiResponse.text();
-          console.error('🔥 [TRENDING] API error:', apiResponse.status, errorText);
           throw new Error(`API request failed: ${apiResponse.status} - ${errorText}`);
         }
         const response = await apiResponse.json();
-        console.log('🔥 [TRENDING] API response:', response);
 
         // Check if we got the expected response format
         if (!response || typeof response !== 'object') {
-          console.error('🔥 [TRENDING] Unexpected response format:', response);
           setError('Failed to load trending pages: Invalid response format');
           setLoading(false);
           return;
@@ -112,7 +99,6 @@ export default function TrendingPages({ limit = 5 }) {
 
         // Check for API error
         if (!response.success) {
-          console.error('🔥 [TRENDING] API returned error:', response.error);
           setError(response.error || 'Failed to load trending pages');
           setLoading(false);
           setTrendingPages([]);
@@ -121,15 +107,8 @@ export default function TrendingPages({ limit = 5 }) {
 
         // Get pages from standardized API response
         const pages = response.data?.trendingPages || [];
-        console.log(`🔥 [TRENDING] Found ${pages.length} trending pages`);
-        console.log('🔥 [TRENDING] Sample pages:', pages.slice(0, 3));
 
         if (pages.length === 0) {
-          console.log('🔥 [TRENDING] No trending pages found in API response');
-          console.log('🔥 [TRENDING] This could mean:');
-          console.log('  - No public pages exist');
-          console.log('  - No pages have sufficient views');
-          console.log('  - Pages are filtered out by trending criteria');
           setTrendingPages([]);
           setLoading(false);
           return;
@@ -139,11 +118,9 @@ export default function TrendingPages({ limit = 5 }) {
         const needsHourlyData = !pages[0].hourlyViews;
 
         if (needsHourlyData) {
-          console.log('TrendingPages: Adding fallback hourly data for pages without sparklines');
           // For pages without hourly data, add fallback
           const pagesWithSparklines = pages.map((page) => {
             if (!page.hourlyViews || page.hourlyViews.length === 0) {
-              console.log(`Adding fallback hourly data for page ${page.id}`);
               // Use empty array for pages without real hourly data
               // This ensures consistent behavior - if there's no real data, show flat line
               return {
@@ -154,13 +131,9 @@ export default function TrendingPages({ limit = 5 }) {
             return page;
           });
 
-          console.log('TrendingPages: Setting trending pages with consistent hourly data');
-
           // Fetch subscription data for all users
           await fetchSubscriptionData(pagesWithSparklines);
         } else {
-          console.log('TrendingPages: Pages already have hourly data');
-
           // Fetch subscription data for all users
           await fetchSubscriptionData(pages);
         }
@@ -178,7 +151,6 @@ export default function TrendingPages({ limit = 5 }) {
   // Listen for refresh events from the trending pages page
   useEffect(() => {
     const handleRefreshEvent = () => {
-      console.log('TrendingPages: Refresh event received');
       // Force a refresh by clearing the throttle and refetching
       localStorage.removeItem('trendingPages_lastFetch');
 
@@ -186,7 +158,6 @@ export default function TrendingPages({ limit = 5 }) {
       const fetchTrendingPages = async () => {
         try {
           setLoading(true);
-          console.log('🔥 [TRENDING] Force refreshing trending pages with limit:', limit);
 
           const apiUrl = `/api/trending?limit=${limit}`;
           const apiResponse = await fetch(apiUrl);
@@ -205,7 +176,6 @@ export default function TrendingPages({ limit = 5 }) {
           const pages = response.trendingPages || [];
           await fetchSubscriptionData(pages);
         } catch (err) {
-          console.error('Error refreshing trending pages:', err);
           setError(`Failed to refresh trending pages: ${err.message}`);
         } finally {
           setLoading(false);

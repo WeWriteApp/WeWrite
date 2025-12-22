@@ -44,8 +44,6 @@ export class VisitorValidationService {
    */
   static async validateCurrentMetrics(): Promise<ValidationResult> {
     try {
-      console.log('🔍 [VISITOR VALIDATION] Validating current metrics via API');
-
       // Get traffic patterns from API
       const response = await visitorValidationApi.getTrafficPatterns(1, true); // Last 1 hour with details
 

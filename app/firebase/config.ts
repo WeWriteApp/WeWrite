@@ -48,8 +48,6 @@ const missingVars = Object.entries(requiredEnvVars)
   .map(([key]) => key);
 
 if (missingVars.length > 0) {
-  console.error('[Firebase Config] Missing required environment variables:', missingVars);
-  console.error('[Firebase Config] Available env vars:', Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_FIREBASE')));
   throw new Error(`Missing Firebase configuration: ${missingVars.join(', ')}`);
 }
 
@@ -73,7 +71,6 @@ const newConfig: FirebaseConfig = {
 initializeErrorSuppression();
 
 // Initialize Firebase with simple configuration
-console.log('[Firebase Config] Initializing Firebase with simple configuration');
 export const app: FirebaseApp = initializeApp(newConfig);
 export const auth: Auth = getAuth(app);
 
@@ -82,8 +79,6 @@ export const auth: Auth = getAuth(app);
 export const firestore: Firestore = getFirestore(app);
 
 export const rtdb: Database = getDatabase(app);
-
-console.log('[Firebase Config] Configured Firestore with minimal connection settings');
 
 // Connect to Firebase emulators if enabled
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
@@ -94,20 +89,16 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULAT
   try {
     // Connect Firestore to emulator
     connectFirestoreEmulator(firestore, emulatorHost, parseInt(firestorePort));
-    console.log(`[Firebase Config] Connected Firestore to emulator at ${emulatorHost}:${firestorePort}`);
 
     // Connect Auth to emulator
     connectAuthEmulator(auth, `http://${emulatorHost}:${authPort}`);
-    console.log(`[Firebase Config] Connected Auth to emulator at ${emulatorHost}:${authPort}`);
   } catch (error) {
-    console.warn('[Firebase Config] Failed to connect to emulators:', error);
+    // Silently handle emulator connection errors
   }
 }
 
 // Legacy exports for backward compatibility
 export const db: Firestore = firestore;
-
-console.log('[Firebase Config] Successfully initialized Firebase services');
 
 /**
  * Initialize Firebase Analytics
@@ -126,19 +117,10 @@ export const initializeAnalytics = async (): Promise<Analytics | null> => {
       const supported = await isSupported();
       if (supported) {
         const analytics: Analytics = getAnalytics(app);
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Firebase Analytics initialized successfully');
-        }
-
         return analytics;
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Firebase Analytics is not supported in this environment');
-        }
       }
     } catch (error) {
-      console.error('Error initializing Firebase Analytics:', error);
+      // Silently handle analytics initialization errors
     }
   }
 
@@ -154,31 +136,23 @@ export const initializeAnalytics = async (): Promise<Analytics | null> => {
 export const testFirebaseAnalytics = async (): Promise<boolean> => {
   try {
     // Check if analytics is supported
-    console.log('🔍 Checking if Firebase Analytics is supported...');
     const supported = await isSupported();
-    console.log('🔍 Firebase Analytics supported:', supported);
 
     if (!supported) {
-      console.warn('❌ Firebase Analytics is not supported in this environment');
       return false;
     }
 
     // Get analytics instance
-    console.log('🔄 Initializing Firebase Analytics...');
     const analytics: Analytics = getAnalytics(app);
-    console.log('✅ Firebase Analytics initialized successfully');
 
     // Log a test event
-    console.log('📊 Sending test event...');
     logEvent(analytics, 'test_event', {
       test_param: 'test_value',
       timestamp: new Date().toISOString()
     });
-    console.log('✅ Test event sent successfully');
 
     return true;
   } catch (error) {
-    console.error('❌ Error testing Firebase Analytics:', error);
     return false;
   }
 };

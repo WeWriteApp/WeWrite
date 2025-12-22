@@ -51,12 +51,6 @@ export class SharesTrackingService {
         eventType: 'share_event'
       });
 
-      console.log('📊 Share succeeded event tracked:', {
-        pageId,
-        shareMethod,
-        userId
-      });
-
     } catch (error) {
       console.error('Error tracking share succeeded event:', error);
       // Don't throw error to avoid disrupting the share process
@@ -94,13 +88,6 @@ export class SharesTrackingService {
         ...shareEvent,
         timestamp: Timestamp.fromDate(shareEvent.timestamp),
         eventType: 'share_event'
-      });
-
-      console.log('📊 Share aborted event tracked:', {
-        pageId,
-        shareMethod,
-        abortReason,
-        userId
       });
 
     } catch (error) {

@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from '../providers/AuthProvider';
 import { formatUsdCents } from '../utils/formatCurrency';
 import { UsdDataService, type UsdBalance } from '../services/usdDataService';
-import { usdBalanceCache } from '../utils/simplifiedCache';
+import { usdBalanceCache } from '../utils/financialDataCache';
 import { useSubscription } from './SubscriptionContext';
 import { useShouldUseDemoBalance } from './DemoBalanceContext';
 import { createNotification } from '../services/notificationsApi';
@@ -61,7 +61,6 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
       if (cached) {
         setUsdBalance(cached);
         setLastUpdated(new Date());
-        console.log('[UsdBalanceContext] Using cached balance data');
         return;
       }
     }
@@ -140,9 +139,6 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
                 localStorage.setItem('wewrite_notified_90', 'true');
                 localStorage.setItem('wewrite_notified_90_key', monthKey);
                 localStorage.setItem('wewrite_notified_90_timestamp', now.toString());
-                console.log(`[UsdBalanceContext] Created 90% allocation threshold notification for ${monthKey}`);
-              } else {
-                console.log(`[UsdBalanceContext] Skipping 90% notification - already notified for ${monthKey} or too recent`);
               }
             }
           }

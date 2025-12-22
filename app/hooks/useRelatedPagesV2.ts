@@ -63,8 +63,6 @@ export function useRelatedPagesV2({
       setLoading(true);
       setError(null);
 
-      console.log('🔍 [RELATED_V2] Fetching related pages for:', pageId);
-
       const params = new URLSearchParams({
         pageId,
         limitByOthers: limitByOthers.toString(),
@@ -95,25 +93,15 @@ export function useRelatedPagesV2({
       const response = await fetch(`/api/related-pages-v2?${params.toString()}`);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔍 [RELATED_V2] API error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-
-      console.log('🔍 [RELATED_V2] Results:', {
-        byOthers: data.relatedByOthers?.length || 0,
-        byAuthor: data.relatedByAuthor?.length || 0,
-        responseTime: data.responseTime,
-      });
-
       setRelatedByOthers(data.relatedByOthers || []);
       setRelatedByAuthor(data.relatedByAuthor || []);
       setResultAuthorUsername(data.authorUsername || authorUsername || null);
 
     } catch (err: any) {
-      console.error('🔍 [RELATED_V2] Error:', err);
       setError(err.message);
       setRelatedByOthers([]);
       setRelatedByAuthor([]);
@@ -127,7 +115,6 @@ export function useRelatedPagesV2({
   }, [fetchRelatedPages]);
 
   const refresh = useCallback(() => {
-    console.log('🔄 [RELATED_V2] Manual refresh triggered');
     setRefreshTrigger(prev => prev + 1);
   }, []);
 

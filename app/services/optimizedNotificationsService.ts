@@ -69,7 +69,6 @@ class OptimizedNotificationsService {
     if (!forceRefresh) {
       const cached = this.getCachedNotifications(userId);
       if (cached && Date.now() - cached.lastUpdated < this.NOTIFICATION_LIST_CACHE_TTL) {
-        console.log('🔔 [OptimizedNotifications] Using cached notification list');
         return {
           notifications: cached.notifications.slice(0, limit),
           hasMore: cached.hasMore,
@@ -81,7 +80,6 @@ class OptimizedNotificationsService {
 
     try {
       // Fetch from API
-      console.log('🔔 [OptimizedNotifications] Fetching fresh notification list');
       const response = await this.fetchNotificationsFromAPI(limit, lastVisible);
       
       // Update cache
@@ -104,7 +102,6 @@ class OptimizedNotificationsService {
       // Return cached data if available
       const cached = this.getCachedNotifications(userId);
       if (cached) {
-        console.log('🔔 [OptimizedNotifications] Returning stale cached data due to error');
         return {
           notifications: cached.notifications.slice(0, limit),
           hasMore: cached.hasMore,
@@ -127,13 +124,11 @@ class OptimizedNotificationsService {
     if (!forceRefresh) {
       const cached = this.getCachedNotifications(userId);
       if (cached && Date.now() - cached.lastUpdated < this.NOTIFICATION_COUNT_CACHE_TTL) {
-        console.log('🔔 [OptimizedNotifications] Using cached unread count');
         return cached.unreadCount;
       }
     }
 
     try {
-      console.log('🔔 [OptimizedNotifications] Fetching fresh unread count');
       const response = await fetch('/api/notifications?action=count');
       const data = await response.json();
       
@@ -270,8 +265,6 @@ class OptimizedNotificationsService {
    * Handle WebSocket updates
    */
   private handleWebSocketUpdate(update: NotificationUpdate): void {
-    console.log('🔔 [OptimizedNotifications] Received WebSocket update:', update);
-    
     // Invalidate relevant cache entries
     this.invalidateCache(update);
     
@@ -389,7 +382,6 @@ class OptimizedNotificationsService {
   private invalidateCache(update: NotificationUpdate): void {
     // For now, we'll keep the cache and update it optimistically
     // In a more sophisticated implementation, we might selectively invalidate
-    console.log('🔔 [OptimizedNotifications] Cache invalidation triggered by:', update.type);
   }
 
   /**
@@ -418,7 +410,6 @@ class OptimizedNotificationsService {
         for (const [key, value] of Object.entries(data)) {
           this.cache.set(key, value as NotificationCache);
         }
-        console.log('🔔 [OptimizedNotifications] Loaded cache from storage');
       }
     } catch (error) {
       console.error('🔔 [OptimizedNotifications] Error loading cache from storage:', error);

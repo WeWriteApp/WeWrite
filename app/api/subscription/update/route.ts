@@ -23,15 +23,12 @@ function initializeFirebase() {
   try {
     admin = getFirebaseAdmin();
     if (!admin) {
-      console.warn('Firebase Admin initialization skipped during build time');
       return { admin: null, adminDb: null, FieldValue: null };
     }
 
     adminDb = admin.firestore();
     FieldValue = admin.firestore.FieldValue;
-    console.log('Firebase Admin initialized successfully in subscription update route');
   } catch (error) {
-    console.error('Error initializing Firebase Admin in subscription update route:', error);
     return { admin: null, adminDb: null, FieldValue: null };
   }
 
@@ -46,7 +43,6 @@ export async function POST(request: NextRequest) {
     const { admin: firebaseAdmin, adminDb: firestore, FieldValue: FirestoreFieldValue } = initializeFirebase();
 
     if (!firebaseAdmin || !firestore || !FirestoreFieldValue) {
-      console.error('Firebase Admin not initialized properly in subscription update route');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
@@ -65,12 +61,10 @@ export async function POST(request: NextRequest) {
     const { subscriptionId, newTier, newAmount, paymentMethodId } = body;
 
     if (!subscriptionId || !newAmount) {
-      return NextResponse.json({ 
-        error: 'subscriptionId and newAmount are required' 
+      return NextResponse.json({
+        error: 'subscriptionId and newAmount are required'
       }, { status: 400 });
     }
-
-    console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount}`);
 
     // Get current subscription data for audit logging and upgrade detection
     const { parentPath, subCollectionName } = getSubCollectionPath(
@@ -91,11 +85,9 @@ export async function POST(request: NextRequest) {
     const oldAmount = oldSubscriptionData?.amount || 0;
     const isUpgrade = newAmount > oldAmount;
     const prorationBehavior: 'create_prorations' | 'none' = isUpgrade ? 'create_prorations' : 'none';
-    
+
     if (isTestSubscription) {
       // Handle test subscription - skip Stripe API calls
-      console.log(`[SUBSCRIPTION UPDATE] Detected test subscription ${subscriptionId}, skipping Stripe API`);
-      
       updatedSubscription = {
         id: subscriptionId,
         status: 'active',
@@ -142,18 +134,14 @@ export async function POST(request: NextRequest) {
             await stripe.subscriptions.update(subscriptionId, {
               default_payment_method: paymentMethodId,
             });
-            console.log(`[SUBSCRIPTION UPDATE] Updated payment method to ${paymentMethodId}`);
           } catch (paymentMethodError) {
-            console.error('[SUBSCRIPTION UPDATE] Failed to update payment method:', paymentMethodError);
             // Don't fail the entire update if payment method update fails
           }
         }
 
-        console.log(`[SUBSCRIPTION UPDATE] Successfully updated Stripe subscription ${subscriptionId}`);
       } catch (stripeError) {
-        console.error('[SUBSCRIPTION UPDATE] Stripe API error:', stripeError);
-        return NextResponse.json({ 
-          error: 'Failed to update subscription in Stripe' 
+        return NextResponse.json({
+          error: 'Failed to update subscription in Stripe'
         }, { status: 500 });
       }
     }
@@ -171,7 +159,6 @@ export async function POST(request: NextRequest) {
         currentPeriodEnd = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
       }
     } catch (error) {
-      console.warn('[SUBSCRIPTION UPDATE] Error converting timestamp, using fallback:', error);
       currentPeriodEnd = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
     }
 
@@ -188,7 +175,6 @@ export async function POST(request: NextRequest) {
     await subscriptionRef.update(subscriptionData);
 
     // Do not allocate funds here; wait for the next successful payment to set balances
-    console.log(`[SUBSCRIPTION UPDATE] Skipping USD allocation update until payment succeeds for user ${userId}`);
 
     // Log subscription update to audit trail for proper history
     try {
@@ -219,29 +205,13 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log(`[SUBSCRIPTION UPDATE] ✅ Logged subscription update to audit trail`);
     } catch (auditError) {
-      console.error(`[SUBSCRIPTION UPDATE] ❌ Failed to log audit event:`, auditError);
       // Don't fail the update if audit logging fails
     }
 
-    console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription:`, {
-      userId,
-      subscriptionId,
-      oldAmount: oldSubscriptionData?.amount || 0,
-      newAmount,
-      oldTier: oldSubscriptionData?.tier || 'none',
-      newTier: tier,
-      isTestSubscription
-    });
-
     // CRITICAL: Invalidate all subscription-related caches immediately after update
     // SECURITY: Uses validated internal API URL to prevent SSRF
-    console.log(`[SUBSCRIPTION UPDATE] Invalidating caches for user ${userId}`);
     await invalidateCache('/api/account-subscription', { action: 'invalidate-cache', userId });
-    console.log(`[SUBSCRIPTION UPDATE] ✅ Cache invalidation request sent for user ${userId}`);
-
-    console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription for user ${userId}`);
 
     return NextResponse.json({
       success: true,
@@ -250,7 +220,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating subscription:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to update subscription' },
       { status: 500 }

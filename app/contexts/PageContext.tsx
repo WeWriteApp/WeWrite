@@ -1,20 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import type { Page } from '../types/database';
 
 /**
- * Page data interface
+ * Page data type - uses centralized Page type with partial fields
  */
-interface PageData {
-  id?: string;
-  title?: string;
-  content?: string;
-  authorId?: string;
-  createdAt?: any;
-  updatedAt?: any;
-  groupId?: string;
-  [key: string]: any;
-}
+type PageData = Partial<Page> & { [key: string]: any };
 
 /**
  * Page context interface

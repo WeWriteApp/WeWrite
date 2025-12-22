@@ -79,7 +79,6 @@ export class BalanceMonitoringService {
    */
   async generateBalanceReport(): Promise<BalanceMonitoringReport> {
     try {
-      console.log(`📊 [BALANCE MONITOR] Generating balance monitoring report`);
 
       // Get platform balance from Stripe
       const balance = await this.stripe.balance.retrieve();
@@ -117,13 +116,6 @@ export class BalanceMonitoringService {
       // Save report
       await this.saveBalanceReport(report);
 
-      console.log(`✅ [BALANCE MONITOR] Balance report generated:`, {
-        availableBalance: formatUsdCents(platformBalance.available * 100),
-        outstandingObligations: formatUsdCents(outstandingObligations.totalUnpaidEarnings * 100),
-        riskLevel: balanceHealth.riskLevel,
-        alertCount: alerts.length
-      });
-
       return report;
 
     } catch (error) {
@@ -157,7 +149,6 @@ export class BalanceMonitoringService {
    * Start continuous balance monitoring
    */
   startContinuousMonitoring(): void {
-    console.log(`🔄 [BALANCE MONITOR] Starting continuous balance monitoring`);
 
     // Check balance every 15 minutes
     setInterval(async () => {
@@ -179,10 +170,9 @@ export class BalanceMonitoringService {
     setInterval(async () => {
       try {
         const report = await this.generateBalanceReport();
-        console.log(`📊 [BALANCE MONITOR] Daily balance report generated`);
-        
+
         // Could send daily report to admin email here
-        
+
       } catch (error) {
         console.error('❌ [BALANCE MONITOR] Error in daily reporting:', error);
       }

@@ -7,203 +7,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
-import logger from '../../utils/unifiedLogger';
+import logger from '../../utils/logger';
 import { cachedQuery, cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
 import { trackFirebaseRead } from '../../utils/costMonitor';
 import { pagesListCache } from '../../utils/pagesListCache';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
-
-// OPTIMIZED SOLUTION: Update all links to a page when its title changes
-// Uses backlinks index to find only pages that actually link to this page
-// This avoids the O(n) scan of all pages in the database
-async function updateAllLinksToPage(pageId: string, oldTitle: string, newTitle: string) {
-  try {
-    console.log(`🔄 TITLE_PROPAGATION: Starting propagation for page ${pageId}: "${oldTitle}" -> "${newTitle}"`);
-
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
-    const collectionName = getCollectionName('pages');
-
-    // OPTIMIZATION: Use backlinks collection to find pages that link to this page
-    // This is O(k) where k is the number of incoming links, instead of O(n) for all pages
-    const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
-      .where('targetPageId', '==', pageId)
-      .limit(500) // Safety limit - if a page has >500 incoming links, we process in batches
-      .get();
-
-    // Extract unique source page IDs from backlinks
-    const sourcePageIds = [...new Set(backlinksSnapshot.docs.map(doc => doc.data().sourcePageId))];
-
-    console.log(`🔄 TITLE_PROPAGATION: Found ${sourcePageIds.length} pages with backlinks to ${pageId}`);
-
-    if (sourcePageIds.length === 0) {
-      console.log(`🔄 TITLE_PROPAGATION: No backlinks found, nothing to update`);
-      return { success: true, updatedCount: 0 };
-    }
-
-    // Fetch all source pages in batches (Firestore getAll has a limit of 10)
-    const batch = db.batch();
-    let updatedCount = 0;
-    let checkedCount = 0;
-
-    // Process in chunks of 10 (Firestore getAll limit)
-    const chunkSize = 10;
-    for (let i = 0; i < sourcePageIds.length; i += chunkSize) {
-      const chunk = sourcePageIds.slice(i, i + chunkSize);
-      const pageRefs = chunk.map(id => db.collection(collectionName).doc(id));
-      const pageDocs = await db.getAll(...pageRefs);
-
-      for (const pageDoc of pageDocs) {
-        if (!pageDoc.exists) continue;
-
-        // Skip the page being updated (shouldn't happen with backlinks, but safety check)
-        if (pageDoc.id === pageId) continue;
-
-        const pageData = pageDoc.data();
-
-        // Skip deleted pages
-        if (pageData?.deleted === true) continue;
-
-        if (!pageData?.content) continue;
-
-        checkedCount++;
-
-        // Parse content if it's stored as a string
-        let contentArray: any[];
-        try {
-          contentArray = typeof pageData.content === 'string'
-            ? JSON.parse(pageData.content)
-            : pageData.content;
-
-          if (!Array.isArray(contentArray)) {
-            console.warn(`🔄 TITLE_PROPAGATION: Page ${pageDoc.id} has non-array content, skipping`);
-            continue;
-          }
-        } catch (parseError) {
-          console.warn(`🔄 TITLE_PROPAGATION: Failed to parse content for page ${pageDoc.id}:`, parseError);
-          continue;
-        }
-
-        // Quick check if this page even references the target pageId
-        const contentString = JSON.stringify(contentArray);
-        if (!contentString.includes(pageId)) {
-          continue; // Skip pages that don't reference this page at all
-        }
-
-        // Update links in the content
-        const updatedContent = updateLinksInContent(contentArray, pageId, oldTitle, newTitle);
-
-        // Check if anything actually changed
-        const updatedString = JSON.stringify(updatedContent);
-        if (updatedString !== contentString) {
-          // Store in same format as original
-          const contentToSave = typeof pageData.content === 'string'
-            ? updatedString
-            : updatedContent;
-
-          batch.update(pageDoc.ref, {
-            content: contentToSave,
-            lastModified: new Date().toISOString()
-          });
-          updatedCount++;
-          console.log(`🔄 TITLE_PROPAGATION: Queued update for page ${pageDoc.id}`);
-        }
-      }
-    }
-
-    if (updatedCount > 0) {
-      await batch.commit();
-      console.log(`✅ TITLE_PROPAGATION: Successfully updated ${updatedCount} pages (checked ${checkedCount})`);
-    } else {
-      console.log(`🔄 TITLE_PROPAGATION: No pages needed updating (checked ${checkedCount})`);
-    }
-
-    return { success: true, updatedCount };
-
-  } catch (error) {
-    console.error('❌ TITLE_PROPAGATION: Error updating links:', error);
-    return { success: false, error };
-  }
-}
+import { updateAllLinksToPage } from '../../services/pageLinkService';
+import type { Page } from '../../types/database';
 
 /**
- * TITLE PROPAGATION SYSTEM
- *
- * When a page title changes, this system updates all links to that page:
- * - Auto-generated links (isCustomText: false): Update display text to new title
- * - Custom text links (isCustomText: true): Keep custom text, only update pageTitle reference
+ * Page data type for API operations - uses centralized Page type with API-specific fields
  */
-
-// Helper function to update links in content recursively
-function updateLinksInContent(content: any, targetPageId: string, oldTitle: string, newTitle: string): any {
-  if (!content) return content;
-
-  if (Array.isArray(content)) {
-    return content.map(item => updateLinksInContent(item, targetPageId, oldTitle, newTitle));
-  }
-
-  if (typeof content === 'object' && content !== null) {
-    // Check if this is a link node that references our target page
-    if (content.type === 'link' && content.pageId === targetPageId) {
-      // Determine if this link has custom text
-      // Legacy links might not have isCustomText flag, so we check multiple indicators
-      const hasCustomText = content.isCustomText === true || 
-        (content.customText && content.customText !== content.pageTitle);
-      
-      // Get current display text
-      const currentDisplayText = content.children?.[0]?.text || content.displayText || '';
-      
-      // For auto-generated links, update the display text
-      // For custom text links, keep the display text but update pageTitle reference
-      if (!hasCustomText) {
-        // Auto-generated link - update display text to new title
-        return {
-          ...content,
-          pageTitle: newTitle,
-          // Also update these legacy fields for backwards compatibility
-          originalPageTitle: newTitle,
-          displayText: newTitle,
-          children: [{ text: newTitle }],
-          // Explicitly mark as not custom text
-          isCustomText: false
-        };
-      } else {
-        // Custom text link - only update pageTitle reference, keep display text
-        return {
-          ...content,
-          pageTitle: newTitle,
-          originalPageTitle: newTitle,
-          // Keep existing isCustomText, customText, and children unchanged
-        };
-      }
-    }
-
-    // Recursively update nested objects
-    const updated: any = {};
-    for (const [key, value] of Object.entries(content)) {
-      updated[key] = updateLinksInContent(value, targetPageId, oldTitle, newTitle);
-    }
-    return updated;
-  }
-
-  return content;
-}
-
-interface PageData {
+type PageData = Partial<Page> & {
   id?: string;
   title: string;
   titleLower?: string; // Lowercase title for efficient same-title queries
-  content?: any;
   userId: string;
-  username?: string;
   groupId?: string;
   location?: any; // Location data with lat/lng coordinates
-  lastModified?: string;
-  createdAt?: string;
-  deleted?: boolean;
   deletedAt?: string;
-  customDate?: string; // YYYY-MM-DD format for daily notes and date-based pages
-}
+};
 
 interface PageQuery {
   userId?: string;
@@ -236,17 +59,9 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
-    console.log('📄 API /pages - Query info:', {
-      currentUserId: currentUserId,
-      requestedUserId: query.userId,
-      userIdMatch: currentUserId === query.userId,
-      limit: query.limit
-    });
-
     // ENHANCED CACHING: Check our aggressive pages list cache first
     const cachedPages = pagesListCache.get(query.userId!, query);
     if (cachedPages) {
-      console.log(`🚀 API /pages - Cache hit for user ${query.userId} (${cachedPages.length} pages)`);
 
       const response = NextResponse.json({
         pages: cachedPages,
@@ -263,15 +78,11 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    console.log(`💸 API /pages - Cache miss for user ${query.userId} - fetching from database`);
-
     // Create cache key based on query parameters (fallback cache)
     const cacheKey = `pages_${currentUserId}_${JSON.stringify(query)}`;
-    console.log('📄 API /pages - Fallback cache key:', cacheKey);
 
     // Use cached data if available (existing cache system as fallback)
     const cachedResult = await cacheHelpers.getApiData(cacheKey, async () => {
-      console.log('🗺️ API /pages - Cache miss, executing fresh query');
       const admin = getFirebaseAdmin();
       const db = admin.firestore();
 
@@ -299,8 +110,6 @@ export async function GET(request: NextRequest) {
       // Execute query
       const snapshot = await firestoreQuery.get();
 
-      console.log('🗺️ API /pages - Firestore query returned:', snapshot.size, 'documents');
-
       const pages: PageData[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -311,12 +120,6 @@ export async function GET(request: NextRequest) {
           data.userId === currentUserId;
 
         if (!canAccess) {
-          console.log('🗺️ API /pages - Skipping page due to access control:', {
-            pageId: doc.id,
-            pageUserId: data.userId,
-            currentUserId: currentUserId,
-            pageTitle: data.title
-          });
           return; // Skip pages user can't access
         }
 
@@ -352,28 +155,6 @@ export async function GET(request: NextRequest) {
         });
       });
 
-      console.log('🗺️ API /pages - After filtering:', {
-        totalPagesFound: pages.length,
-        pagesWithLocation: pages.filter(p => p.location).length,
-        samplePages: pages.slice(0, 3).map(p => ({
-          id: p.id,
-          title: p.title,
-          hasLocation: !!p.location,
-          location: p.location
-        }))
-      });
-
-      console.log('🗺️ API /pages - After filtering:', {
-        totalPagesFound: pages.length,
-        pagesWithLocation: pages.filter(p => p.location).length,
-        samplePages: pages.slice(0, 3).map(p => ({
-          id: p.id,
-          title: p.title,
-          hasLocation: !!p.location,
-          location: p.location
-        }))
-      });
-
       // Sort by deletedAt if requested (client-side since it might not be indexed)
       if (query.orderBy === 'deletedAt') {
         pages.sort((a, b) => {
@@ -389,18 +170,6 @@ export async function GET(request: NextRequest) {
       // Check if there are more pages (if we got more results than the limit, there are more)
       const hasMore = pages.length > query.limit;
       const lastPageId = limitedPages.length > 0 ? limitedPages[limitedPages.length - 1].id : null;
-
-      console.log('🗺️ API /pages - Final results:', {
-        totalPagesFound: pages.length,
-        limitedPagesCount: limitedPages.length,
-        pagesWithLocation: pages.filter(p => p.location).length,
-        samplePages: pages.slice(0, 3).map(p => ({
-          id: p.id,
-          title: p.title,
-          hasLocation: !!p.location,
-          userId: p.userId
-        }))
-      });
 
       // Track database read for cost monitoring
       trackFirebaseRead('pages', 'list', limitedPages.length, 'api-pages-list');
@@ -443,7 +212,6 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - Create a new page
 export async function POST(request: NextRequest) {
-  console.log('🔵 PAGE CREATION: POST endpoint called');
   try {
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -509,29 +277,24 @@ export async function POST(request: NextRequest) {
           if (Array.isArray(parsed)) {
             validatedContent = parsed;
             contentString = content; // Keep string for version system
-            console.log('🔧 NEW_PAGE_VALIDATION: Parsed JSON string to proper array structure');
           } else {
             // Convert non-array JSON to paragraph structure
             validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(parsed) }] }];
             contentString = JSON.stringify(validatedContent);
-            console.log('🔧 NEW_PAGE_VALIDATION: Converted non-array JSON to paragraph structure');
           }
         } catch (e) {
           // If it's not valid JSON, treat as plain text
           validatedContent = [{ type: "paragraph", children: [{ text: content }] }];
           contentString = JSON.stringify(validatedContent);
-          console.log('🔧 NEW_PAGE_VALIDATION: Converted plain text to paragraph structure');
         }
       } else if (Array.isArray(content)) {
         // Content is already in proper format
         validatedContent = content;
         contentString = JSON.stringify(content);
-        console.log('🔧 NEW_PAGE_VALIDATION: Content already in proper array format');
       } else {
         // Convert other types to paragraph structure
         validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(content) }] }];
         contentString = JSON.stringify(validatedContent);
-        console.log('🔧 NEW_PAGE_VALIDATION: Converted non-array content to paragraph structure');
       }
     }
 
@@ -564,16 +327,13 @@ export async function POST(request: NextRequest) {
       pageId = requestedId.trim();
       pageRef = db.collection(collectionName).doc(pageId);
       await pageRef.set(pageData);
-      console.log('🔵 PAGE CREATION: Created page with requested ID:', pageId);
     } else {
       // Auto-generate ID
       pageRef = await db.collection(collectionName).add(pageData);
       pageId = pageRef.id;
-      console.log('🔵 PAGE CREATION: Created page with auto-generated ID:', pageId);
     }
 
     // Create activity record with pre-computed diff data for new page
-    console.log('🔵 PAGE CREATION: Starting activity/version creation section');
     try {
       // Import the diff service
       const { calculateDiff } = await import('../../utils/diffService');
@@ -627,13 +387,6 @@ export async function POST(request: NextRequest) {
       }
 
       // UNIFIED VERSION SYSTEM: Create initial version for new page
-      console.log('🔵 PAGE CREATION: Starting version creation for new page', {
-        pageId: pageId,
-        contentLength: (contentString || '').length,
-        diffAdded: diffResult.added,
-        diffRemoved: diffResult.removed
-      });
-
       const versionData = {
         content: contentString || '',
         title: pageData.title || 'Untitled',
@@ -686,28 +439,10 @@ export async function POST(request: NextRequest) {
         isNoOp: false
       };
 
-      console.log('🔵 PAGE CREATION: Version data prepared', {
-        hasContent: !!versionData.content,
-        hasTitle: !!versionData.title,
-        hasDiff: !!versionData.diff,
-        isNewPage: versionData.isNewPage
-      });
-
       // Create version in pages/{pageId}/versions subcollection
       const pageVersionsRef = db.collection(getCollectionName('pages')).doc(pageId).collection('versions');
-      console.log('🔵 PAGE CREATION: Creating version in subcollection', {
-        collectionPath: `${getCollectionName('pages')}/${pageId}/versions`
-      });
 
       const versionRef = await pageVersionsRef.add(versionData);
-
-      console.log("✅ UNIFIED VERSION: Created initial version for new page", {
-        versionId: versionRef.id,
-        pageId: pageId,
-        added: diffResult.added,
-        removed: diffResult.removed,
-        hasChanges: versionData.diff.hasChanges
-      });
 
       // Update page document with lastDiff for recent edits display
       await pageRef.update({
@@ -721,11 +456,8 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log("✅ PAGE CREATION: Updated page with lastDiff and currentVersion");
-
       // Process link mentions for notifications
       try {
-        console.log('🔔 Processing link mentions for notifications:', pageId);
         const { processPageLinksForNotifications } = await import('../../services/linkMentionService');
 
         // Parse content to extract links
@@ -741,18 +473,14 @@ export async function POST(request: NextRequest) {
           username || 'Anonymous',
           contentNodes
         );
-
-        console.log('✅ Link mentions processed for notifications');
       } catch (notificationError) {
-        console.error('⚠️ Error processing link mentions (non-fatal):', notificationError);
         // Don't fail the page creation if notification processing fails
       }
 
       // Sync to Algolia for search indexing
       try {
-        console.log('🔍 Syncing new page to Algolia:', pageId);
         const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-        const algoliaResult = await syncPageToAlgoliaServer({
+        await syncPageToAlgoliaServer({
           pageId,
           title: pageData.title || '',
           content: contentString || '',
@@ -763,20 +491,11 @@ export async function POST(request: NextRequest) {
           lastModified: now,
           createdAt: now,
         });
-        console.log('✅ Algolia sync result:', algoliaResult);
       } catch (algoliaError) {
-        console.error('⚠️ Error syncing to Algolia (non-fatal):', algoliaError);
         // Don't fail the page creation if Algolia sync fails
       }
 
     } catch (error: any) {
-      console.error('❌ PAGE CREATION: Error creating new page or version:', error);
-      console.error('❌ PAGE CREATION: Error details:', {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack || 'No stack trace',
-        pageId: pageId,
-        hasPageRef: !!pageRef
-      });
       return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
     }
 
@@ -786,7 +505,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in POST endpoint:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
   }
 }
@@ -896,13 +614,11 @@ export async function PUT(request: NextRequest) {
             alternativeTitles: [],
             lastModified: newPageData.lastModified,
             createdAt: newPageData.createdAt,
-          }).then(result => {
-            console.log('✅ Algolia sync result for new page:', result);
-          }).catch(err => {
-            console.error('⚠️ Algolia sync failed for new page (non-fatal):', err);
+          }).catch(() => {
+            // Non-fatal Algolia sync error
           });
         } catch (algoliaError) {
-          console.error('⚠️ Error importing Algolia sync (non-fatal):', algoliaError);
+          // Non-fatal Algolia import error
         }
       } else {
         logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
@@ -960,21 +676,17 @@ export async function PUT(request: NextRequest) {
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed)) {
             validatedContent = parsed;
-            console.log('🔧 CONTENT_VALIDATION: Converted JSON string to proper array structure');
           } else {
             // Convert non-array JSON to paragraph structure
             validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(parsed) }] }];
-            console.log('🔧 CONTENT_VALIDATION: Converted non-array JSON to paragraph structure');
           }
         } catch (e) {
           // If it's not valid JSON, treat as plain text
           validatedContent = [{ type: "paragraph", children: [{ text: content }] }];
-          console.log('🔧 CONTENT_VALIDATION: Converted plain text to paragraph structure');
         }
       } else if (!Array.isArray(content)) {
         // Ensure content is always an array
         validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(content) }] }];
-        console.log('🔧 CONTENT_VALIDATION: Converted non-array content to paragraph structure');
       }
 
       updateData.content = validatedContent;
@@ -991,7 +703,6 @@ export async function PUT(request: NextRequest) {
     // NEW PAGE SAVE: Remove isNewPage flag when saving for first time
     if (markAsSaved === true && pageData.isNewPage === true) {
       updateData.isNewPage = false;
-      console.log('📝 NEW PAGE SAVE: Marking page as saved', { pageId: id });
     }
 
     if (customDate !== undefined) {
@@ -1070,11 +781,6 @@ export async function PUT(request: NextRequest) {
           return links;
         };
 
-        const linksInContent = findLinks(content);
-        if (linksInContent.some(link => link.isCustomText === true && link.customText && link.children?.[0]?.text !== link.customText)) {
-          console.warn('⚠️ Saving content with unsynchronized custom text links');
-        }
-
         // Save new version (this creates activity records and updates lastDiff)
 
         versionResult = await saveNewVersionServer(id, versionData);
@@ -1094,12 +800,6 @@ export async function PUT(request: NextRequest) {
         }, 'PAGE_SAVE');
 
       } catch (versionError) {
-        console.error('🔴 API: Error in version saving process', {
-          error: versionError.message,
-          stack: versionError.stack,
-          pageId: id,
-          userId: currentUserId
-        });
         logger.critical('Version saving process failed', {
           error: versionError.message,
           stack: versionError.stack,
@@ -1149,8 +849,6 @@ export async function PUT(request: NextRequest) {
 
       // If content was NOT updated, create a separate version for the title change
       if (!contentChanged) {
-        console.log('🔄 TITLE_CHANGE: Creating separate version for title-only change');
-
         try {
           const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
           const { getUserProfile } = await import('../../firebase/database/users');
@@ -1209,22 +907,15 @@ export async function PUT(request: NextRequest) {
               }
             }
           });
-
-          console.log('✅ TITLE_CHANGE: Created version for title-only change');
         } catch (versionError) {
-          console.error('❌ TITLE_CHANGE: Error creating version for title change:', versionError);
+          // Error creating version for title change - non-fatal
         }
-      } else {
-        // Content was also updated - the content diff from saveNewVersionServer is already stored
-        // and is more meaningful than the title diff, so we DON'T overwrite lastDiff here
-        console.log('🔄 TITLE_CHANGE: Content was also updated, keeping content diff (more meaningful than title diff)');
       }
 
       // Update all links in background - don't block the save response
       // This is expensive (scans all pages) so we fire and forget
       updateAllLinksToPage(id, pageData.title, title.trim())
-        .then(() => console.log('✅ TITLE_CHANGE: Links updated in background'))
-        .catch(err => console.error('❌ TITLE_CHANGE: Background link update failed:', err));
+        .catch(() => { /* Non-fatal background link update error */ });
     }
 
     // PERFORMANCE OPTIMIZATION: Run non-blocking operations in background
@@ -1237,7 +928,7 @@ export async function PUT(request: NextRequest) {
           try {
             contentNodes = JSON.parse(content);
           } catch (parseError) {
-            console.warn('Could not parse content string:', parseError);
+            // Could not parse content string
           }
         } else if (Array.isArray(content)) {
           contentNodes = content;
@@ -1251,7 +942,7 @@ export async function PUT(request: NextRequest) {
           try {
             previousContentNodes = JSON.parse(pageData.content);
           } catch (parseError) {
-            console.warn('Could not parse previous content string:', parseError);
+            // Could not parse previous content string
           }
         } else if (Array.isArray(pageData.content)) {
           previousContentNodes = pageData.content;
@@ -1267,7 +958,6 @@ export async function PUT(request: NextRequest) {
           // Update backlinks index
           (async () => {
             try {
-              console.log('🔗 [BG] Updating backlinks index for page:', id);
               const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
               await updateBacklinksIndex(
                 id,
@@ -1277,16 +967,14 @@ export async function PUT(request: NextRequest) {
                 pageData?.isPublic || false,
                 new Date().toISOString()
               );
-              console.log('✅ [BG] Backlinks index updated');
             } catch (err) {
-              console.error('⚠️ [BG] Backlinks update failed:', err);
+              // Backlinks update failed - non-fatal
             }
           })(),
 
           // Process link mentions for notifications (only for NEW links)
           (async () => {
             try {
-              console.log('🔔 [BG] Processing link mentions for page:', id);
               const { processPageLinksForNotifications } = await import('../../services/linkMentionService');
               await processPageLinksForNotifications(
                 id,
@@ -1296,16 +984,14 @@ export async function PUT(request: NextRequest) {
                 contentNodes,
                 previousContentNodes // Pass previous content to compare and only notify about NEW links
               );
-              console.log('✅ [BG] Link mentions processed');
             } catch (err) {
-              console.error('⚠️ [BG] Link mentions failed:', err);
+              // Link mentions failed - non-fatal
             }
           })(),
 
           // Rebuild graph cache for this page (fire-and-forget API call)
           (async () => {
             try {
-              console.log('📊 [BG] Triggering graph cache rebuild for page:', id);
               // Use internal fetch to trigger cache rebuild
               const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
                 ? `https://${process.env.VERCEL_URL}`
@@ -1315,19 +1001,17 @@ export async function PUT(request: NextRequest) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pageId: id, invalidateAffected: true })
-              }).catch(err => {
-                console.error('⚠️ [BG] Graph cache rebuild request failed:', err);
+              }).catch(() => {
+                // Graph cache rebuild request failed - non-fatal
               });
-              console.log('✅ [BG] Graph cache rebuild triggered');
             } catch (err) {
-              console.error('⚠️ [BG] Graph cache trigger failed:', err);
+              // Graph cache trigger failed - non-fatal
             }
           })(),
 
           // Sync to Algolia for search indexing
           (async () => {
             try {
-              console.log('🔍 [BG] Syncing page to Algolia:', id);
               const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
 
               // Get the content string for Algolia
@@ -1335,7 +1019,7 @@ export async function PUT(request: NextRequest) {
                 ? content
                 : JSON.stringify(contentNodes);
 
-              const algoliaResult = await syncPageToAlgoliaServer({
+              await syncPageToAlgoliaServer({
                 pageId: id,
                 title: pageTitle,
                 content: contentString,
@@ -1346,22 +1030,17 @@ export async function PUT(request: NextRequest) {
                 lastModified: new Date().toISOString(),
                 createdAt: pageData?.createdAt || new Date().toISOString(),
               });
-              console.log('✅ [BG] Algolia sync result:', algoliaResult);
             } catch (err) {
-              console.error('⚠️ [BG] Algolia sync failed:', err);
+              // Algolia sync failed - non-fatal
             }
           })()
         ]);
       };
 
       // Fire and forget - don't await
-      backgroundOps().catch(err => console.error('⚠️ Background ops failed:', err));
+      backgroundOps().catch(() => { /* Background ops failed - non-fatal */ });
     }
 
-    console.log('✅ API: Page save completed successfully', {
-      pageId: id,
-      updateFields: Object.keys(updateData)
-    });
     logger.info('Page save completed successfully', {
       pageId: id,
       updateFields: Object.keys(updateData)
@@ -1377,10 +1056,8 @@ export async function PUT(request: NextRequest) {
       // 2. Invalidate in-memory page cache (used by GET /api/pages/[id])
       const { pageCache } = await import('../../utils/pageCache');
       pageCache.invalidate(id);
-
-      console.log('✅ All caches invalidated for:', id);
     } catch (err) {
-      console.warn('⚠️ Cache invalidation failed:', err);
+      // Cache invalidation failed - non-fatal
     }
 
     const responseData = {
@@ -1390,7 +1067,6 @@ export async function PUT(request: NextRequest) {
       ...(titleChanged && { titleChanged: true, titleChangeInfo })
     };
 
-    console.log('✅ API: Page update completed', { pageId: id, titleChanged });
     return createApiResponse(responseData);
 
   } catch (error: any) {
@@ -1426,18 +1102,13 @@ export async function PUT(request: NextRequest) {
       }
     };
 
-    console.error('🔴 API: Page save failed with comprehensive error details', errorDetails);
-
     logger.critical('Page save failed with comprehensive error details', errorDetails, 'PAGE_SAVE');
-
-    // REMOVED: Heavy error logging to prevent performance issues
 
     // Don't expose internal errors that might cause session issues
     const userMessage = error.message?.includes('permission') || error.message?.includes('auth')
       ? 'Authentication error. Please refresh the page and try again.'
       : 'Failed to save page version';
 
-    console.error('🔴 API: Returning error response', { userMessage, errorId: errorDetails.context.timestamp });
     return createErrorResponse('INTERNAL_ERROR', userMessage);
   }
 }
@@ -1486,12 +1157,10 @@ export async function DELETE(request: NextRequest) {
 
       // Remove from Algolia search index
       try {
-        console.log('🔍 Removing permanently deleted page from Algolia:', pageId);
         const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
         await removePageFromAlgoliaServer(pageId);
-        console.log('✅ Page removed from Algolia');
       } catch (algoliaError) {
-        console.error('⚠️ Error removing from Algolia (non-fatal):', algoliaError);
+        // Error removing from Algolia - non-fatal
       }
 
       return createApiResponse({
@@ -1512,8 +1181,6 @@ export async function DELETE(request: NextRequest) {
 
       // Clean up backlinks when page is deleted
       try {
-        console.log(`🗑️ Cleaning up backlinks for deleted page ${pageId}`);
-
         // Remove backlinks FROM this page (outgoing links)
         const outgoingBacklinksQuery = db.collection(getCollectionName('backlinks'))
           .where('sourcePageId', '==', pageId);
@@ -1530,16 +1197,12 @@ export async function DELETE(request: NextRequest) {
         incomingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
 
         await batch.commit();
-
-        console.log(`✅ Cleaned up ${outgoingSnapshot.size + incomingSnapshot.size} backlinks for deleted page ${pageId}`);
       } catch (backlinkError) {
-        console.error('Error cleaning up backlinks for deleted page:', backlinkError);
         // Don't fail the deletion if backlink cleanup fails
       }
 
       // Clean up USD allocations when page is deleted - cancel active allocations
       try {
-        console.log(`🗑️ Cleaning up USD allocations for deleted page ${pageId}`);
 
         // Get current month for active allocations
         const now = new Date();
@@ -1565,32 +1228,17 @@ export async function DELETE(request: NextRequest) {
           });
 
           await allocationBatch.commit();
-          console.log(`✅ Cancelled ${allocationsSnapshot.size} USD allocations for deleted page ${pageId}`);
-        } else {
-          console.log(`ℹ️ No active USD allocations to clean up for page ${pageId}`);
         }
       } catch (allocationError) {
-        console.error('Error cleaning up USD allocations for deleted page:', allocationError);
         // Don't fail the deletion if allocation cleanup fails
-      }
-
-      // Clear graph cache for this page to ensure deleted pages don't appear in graphs
-      try {
-        // Note: This is server-side, so we can't directly access the client-side cache
-        // The cache will be cleared when the client makes new requests and gets updated data
-        console.log(`🗑️ Page ${pageId} deleted - graph cache will be refreshed on next request`);
-      } catch (cacheError) {
-        console.error('Error clearing cache for deleted page:', cacheError);
       }
 
       // Remove from Algolia search index (soft-deleted pages shouldn't appear in search)
       try {
-        console.log('🔍 Removing soft-deleted page from Algolia:', pageId);
         const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
         await removePageFromAlgoliaServer(pageId);
-        console.log('✅ Page removed from Algolia');
       } catch (algoliaError) {
-        console.error('⚠️ Error removing from Algolia (non-fatal):', algoliaError);
+        // Error removing from Algolia - non-fatal
       }
 
       return createApiResponse({
@@ -1600,7 +1248,6 @@ export async function DELETE(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error deleting page:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to delete page');
   }
 }

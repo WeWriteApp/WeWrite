@@ -52,8 +52,6 @@ export class MonthEndCronService {
   ): Promise<MonthEndProcessingResult> {
     const processStartTime = Date.now();
     const targetMonth = month || this.getCurrentMonth();
-    
-    console.log(`🗓️ [MONTH END] Starting month-end processing for ${targetMonth}`);
 
     const result: MonthEndProcessingResult = {
       month: targetMonth,
@@ -77,7 +75,6 @@ export class MonthEndCronService {
 
     try {
       // Step 1: Lock current month allocations
-      console.log(`🔒 [MONTH END] Step 1: Locking allocations for ${targetMonth}`);
       const lockStartTime = Date.now();
       
       const lockResult = await monthlyAllocationLockService.lockMonthlyAllocations(
@@ -103,10 +100,7 @@ export class MonthEndCronService {
         result.summary.totalAmountLocked = lockResult.lockStatus.totalAmountLocked;
       }
 
-      console.log(`✅ [MONTH END] Step 1 completed: ${result.summary.usersProcessed} users, ${formatUsdCents(result.summary.totalAmountLocked * 100)} locked`);
-
       // Step 2: Calculate earnings
-      console.log(`💰 [MONTH END] Step 2: Calculating earnings for ${targetMonth}`);
       const earningsStartTime = Date.now();
 
       try {
@@ -122,18 +116,10 @@ export class MonthEndCronService {
           result.summary.totalEarningsCalculated = earningsResult.report.totalNetEarnings;
 
           // Process unallocated funds ("use it or lose it")
-          const unallocatedResult = await useItOrLoseItService.processUnallocatedFunds(targetMonth);
-          if (unallocatedResult.success && unallocatedResult.report) {
-            console.log(`💰 [MONTH END] Unallocated funds processed: ${formatUsdCents(unallocatedResult.report.totalUnallocatedFunds * 100)} becomes platform revenue`);
-          }
+          await useItOrLoseItService.processUnallocatedFunds(targetMonth);
 
           // Calculate platform revenue
-          const revenueResult = await platformRevenueService.calculatePlatformRevenue(targetMonth);
-          if (revenueResult.success && revenueResult.report) {
-            console.log(`💰 [MONTH END] Platform revenue calculated: ${formatUsdCents(revenueResult.report.totalRevenue * 100)} total revenue`);
-          }
-
-          console.log(`✅ [MONTH END] Step 2 completed: ${earningsResult.report.userEarnings.length} users, ${formatUsdCents(earningsResult.report.totalNetEarnings * 100)} earnings calculated`);
+          await platformRevenueService.calculatePlatformRevenue(targetMonth);
         } else {
           throw new Error(earningsResult.error || 'Earnings calculation failed');
         }
@@ -146,11 +132,9 @@ export class MonthEndCronService {
           duration: Date.now() - earningsStartTime
         };
         result.errors.push(`Earnings calculation failed: ${errorMsg}`);
-        console.error(`❌ [MONTH END] Step 2 failed: ${errorMsg}`);
       }
 
       // Step 3: Open next month allocation window
-      console.log(`🚀 [MONTH END] Step 3: Opening next month allocation window`);
       const nextMonthStartTime = Date.now();
       
       try {
@@ -162,11 +146,8 @@ export class MonthEndCronService {
           duration: Date.now() - nextMonthStartTime
         };
 
-        if (transition.status === 'completed') {
-          console.log(`✅ [MONTH END] Step 3 completed: Next month window opened`);
-        } else {
+        if (transition.status !== 'completed') {
           result.errors.push(`Next month opening failed: ${transition.errors.join(', ')}`);
-          console.error(`❌ [MONTH END] Step 3 failed: ${transition.errors.join(', ')}`);
         }
 
       } catch (error) {
@@ -177,11 +158,9 @@ export class MonthEndCronService {
           duration: Date.now() - nextMonthStartTime
         };
         result.errors.push(`Next month opening failed: ${errorMsg}`);
-        console.error(`❌ [MONTH END] Step 3 failed: ${errorMsg}`);
       }
 
       // Step 4: Schedule payouts (placeholder for now)
-      console.log(`💸 [MONTH END] Step 4: Scheduling payouts for ${targetMonth}`);
       const payoutsStartTime = Date.now();
       
       try {
@@ -194,8 +173,6 @@ export class MonthEndCronService {
           duration: Date.now() - payoutsStartTime
         };
 
-        console.log(`✅ [MONTH END] Step 4 completed: Payouts scheduled`);
-
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         result.steps.schedulePayouts = {
@@ -204,7 +181,6 @@ export class MonthEndCronService {
           duration: Date.now() - payoutsStartTime
         };
         result.errors.push(`Payout scheduling failed: ${errorMsg}`);
-        console.error(`❌ [MONTH END] Step 4 failed: ${errorMsg}`);
       }
 
       // Determine overall success

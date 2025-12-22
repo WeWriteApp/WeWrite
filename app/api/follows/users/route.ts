@@ -122,7 +122,6 @@ export async function GET(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error in follows users API:', error);
     return createErrorResponse('Failed to fetch follow data', 'INTERNAL_ERROR');
   }
 }
@@ -130,74 +129,52 @@ export async function GET(request: NextRequest) {
 // POST /api/follows/users
 export async function POST(request: NextRequest) {
   try {
-    console.log('[FOLLOWS API] POST request received');
-
     const currentUserId = await getUserIdFromRequest(request);
-    console.log('[FOLLOWS API] Current user ID:', currentUserId);
 
     if (!currentUserId) {
-      console.log('[FOLLOWS API] No current user ID - unauthorized');
       return createErrorResponse('Authentication required', 'UNAUTHORIZED');
     }
 
     const body = await request.json();
-    console.log('[FOLLOWS API] Request body:', body);
 
     const { userId: targetUserId } = body;
 
     if (!targetUserId) {
-      console.log('[FOLLOWS API] No target user ID provided');
       return createErrorResponse('Target user ID is required', 'BAD_REQUEST');
     }
 
     if (currentUserId === targetUserId) {
-      console.log('[FOLLOWS API] User trying to follow themselves');
       return createErrorResponse('Cannot follow yourself', 'BAD_REQUEST');
     }
 
-    console.log('[FOLLOWS API] Initializing admin and firestore');
     const admin = initAdmin();
     const db = admin.firestore();
-    console.log('[FOLLOWS API] Admin and firestore initialized successfully');
 
     // Check if target user exists
-    console.log('[FOLLOWS API] Checking if target user exists:', targetUserId);
-    console.log('[FOLLOWS API] Using users collection:', getCollectionName('users'));
-
     const targetUserDoc = await db.collection(getCollectionName('users')).doc(targetUserId).get();
-    console.log('[FOLLOWS API] Target user exists:', targetUserDoc.exists);
 
     if (!targetUserDoc.exists) {
-      console.log('[FOLLOWS API] Target user not found');
       return createErrorResponse('User not found', 'NOT_FOUND');
     }
 
     // Add target user to current user's following list
-    console.log('[FOLLOWS API] Adding to following list');
-    console.log('[FOLLOWS API] Using userFollowing collection:', getCollectionName('userFollowing'));
-
     const userFollowingRef = db.collection(getCollectionName('userFollowing')).doc(currentUserId);
     const userFollowingDoc = await userFollowingRef.get();
-    console.log('[FOLLOWS API] User following doc exists:', userFollowingDoc.exists);
 
     if (userFollowingDoc.exists) {
       // Update existing document
-      console.log('[FOLLOWS API] Updating existing following document');
       await userFollowingRef.update({
         following: admin.firestore.FieldValue.arrayUnion(targetUserId),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
-      console.log('[FOLLOWS API] Following document updated successfully');
     } else {
       // Create new document
-      console.log('[FOLLOWS API] Creating new following document');
       await userFollowingRef.set({
         userId: currentUserId,
         following: [targetUserId],
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
-      console.log('[FOLLOWS API] Following document created successfully');
     }
 
     // Add current user to target user's followers list
@@ -270,17 +247,14 @@ export async function POST(request: NextRequest) {
             followerUsername,
             followerBio,
             userId: targetUserId
-          }).catch(err => {
-            console.error('[FOLLOWS API] Failed to send new follower email:', err);
+          }).catch(() => {
+            // Silently catch email errors
           });
         }
       }
     } catch (emailErr) {
       // Don't fail the follow operation if email fails
-      console.error('[FOLLOWS API] Error preparing follower email:', emailErr);
     }
-
-    console.log('[FOLLOWS API] Follow operation completed successfully');
 
     return createApiResponse({
       success: true,
@@ -289,12 +263,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[FOLLOWS API] Error following user:', error);
-    console.error('[FOLLOWS API] Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
-      name: error instanceof Error ? error.name : 'Unknown error type'
-    });
     return createErrorResponse('Failed to follow user', 'INTERNAL_ERROR');
   }
 }
@@ -347,7 +315,6 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error unfollowing user:', error);
     return createErrorResponse('Failed to unfollow user', 'INTERNAL_ERROR');
   }
 }

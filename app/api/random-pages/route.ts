@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Page } from '../../types/database';
 
 export const dynamic = 'force-dynamic';
 
-interface PageData {
-  id: string;
-  title: string;
-  userId?: string;
-  username?: string;
+/**
+ * Page data type for random pages - uses centralized Page type with additional fields
+ */
+type PageData = Pick<Page, 'id' | 'title' | 'userId' | 'username' | 'deleted'> & {
   lastModified?: string;
   createdAt?: string;
   groupId?: string | null;
-  deleted?: boolean;
   tier?: string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
   groupIsPublic?: boolean;
-}
+};
 
 interface UserData {
   uid: string;

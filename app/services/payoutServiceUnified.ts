@@ -45,7 +45,6 @@ export class PayoutService {
     transferId?: string;
   }> {
     try {
-      console.log('[Payout] Requesting payout for user:', userId);
 
       const admin = getFirebaseAdmin();
       if (!admin) throw new Error('Database not available');
@@ -68,11 +67,9 @@ export class PayoutService {
 
         if (requestedAt > fiveMinutesAgo) {
           if (recentPayout.status === 'pending') {
-            console.log('[Payout] Duplicate request blocked - pending payout exists:', recentPayout.id);
             return { success: false, error: 'A payout is already being processed. Please wait a few minutes before trying again.' };
           }
           if (recentPayout.status === 'completed') {
-            console.log('[Payout] Duplicate request blocked - recently completed:', recentPayout.id);
             return { success: false, error: 'Your payout was just processed. Please wait before requesting another payout.' };
           }
         }
@@ -119,7 +116,6 @@ export class PayoutService {
         return { success: false, error: processResult.error };
       }
 
-      console.log('[Payout] Payout requested and processed:', payoutId);
       return { success: true, payoutId, transferId: processResult.transferId };
 
     } catch (error) {
@@ -140,7 +136,6 @@ export class PayoutService {
     transferId?: string;
   }> {
     try {
-      console.log('[Payout] Processing payout:', payoutId);
 
       const admin = getFirebaseAdmin();
       if (!admin) throw new Error('Database not available');
@@ -240,7 +235,6 @@ export class PayoutService {
 
       await batch.commit();
 
-      console.log('[Payout] Payout completed successfully:', payoutId, 'transferId:', payoutResult.transferId);
       await sendUserNotification(payout.userId, {
         type: 'payout_completed',
         title: 'Payout sent',
@@ -285,8 +279,6 @@ export class PayoutService {
             payout.amountCents,                   // payoutAmountCents
             platformFeeCents                      // platformFeeCents
           );
-
-          console.log('[Payout] Referral earnings processed for referrer:', referredBy);
         }
       } catch (referralErr) {
         // Don't fail the payout if referral earnings fail - log and continue
@@ -358,7 +350,6 @@ export class PayoutService {
         else failed++;
       }
 
-      console.log('[Payout] Batch processing complete:', { processed, failed });
       return { processed, failed };
 
     } catch (error) {

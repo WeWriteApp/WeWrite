@@ -176,8 +176,6 @@ export class UsdService {
 
       // Commit the batch
       await batch.commit();
-
-      console.log(`UsdService: Successfully allocated ${formatUsdCents(newPageAllocationCents)} to page ${pageId} for user ${userId}`);
     } catch (error) {
       console.error('UsdService: Error allocating USD to page:', error);
       throw error;
@@ -283,8 +281,6 @@ export class UsdService {
 
       // Commit the batch
       await batch.commit();
-
-      console.log(`UsdService: Successfully allocated ${formatUsdCents(newUserAllocationCents)} to user ${recipientUserId} from user ${userId}`);
     } catch (error) {
       console.error('UsdService: Error allocating USD to user:', error);
       throw error;

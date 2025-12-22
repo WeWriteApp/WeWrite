@@ -21,7 +21,7 @@ const CACHE_CONFIG = {
 
 /**
  * Create optimized React Query client for cost reduction
- * Now using unified cache configuration
+ * Now using unified cache configuration with aggressive caching
  */
 export const createOptimizedQueryClient = (): QueryClient => {
   const defaultConfig = getReactQueryConfig('default');
@@ -29,27 +29,35 @@ export const createOptimizedQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Ultra-aggressive defaults from unified config
+        // Aggressive defaults - 2 minutes stale, 10 minutes garbage collection
         staleTime: defaultConfig.staleTime,
         gcTime: defaultConfig.gcTime,
 
-        // Retry configuration from unified config
+        // Retry configuration - disabled to prevent Firebase quota abuse
         retry: defaultConfig.retry,
         retryDelay: defaultConfig.retryDelay,
 
-        // Reduce network requests
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: true,
-        refetchOnMount: false,
+        // Reduce network requests - critical for performance
+        refetchOnWindowFocus: false, // Don't refetch on tab focus
+        refetchOnReconnect: 'always', // Do refetch on reconnect
+        refetchOnMount: false, // Don't refetch if data is fresh
 
         // Network mode for offline support
         networkMode: 'online',
+
+        // Structural sharing for better React performance
+        structuralSharing: true,
+
+        // Use stale data while revalidating
+        placeholderData: (previousData: unknown) => previousData,
       },
 
       mutations: {
         // EMERGENCY FIX: Disable mutation retries to prevent Firebase quota abuse
         retry: 0,
         retryDelay: 1000,
+        // Use optimistic updates where possible
+        networkMode: 'online',
       },
     },
   });

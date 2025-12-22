@@ -54,7 +54,6 @@ export class PayoutStatusService {
    */
   async updatePayoutStatus(update: PayoutStatusUpdate): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log(`Updating payout ${update.payoutId} status to ${update.status}`);
 
       // Get current payout data
       const payoutDoc = await getDoc(doc(db, getCollectionName('payouts'), update.payoutId));
@@ -145,8 +144,6 @@ export class PayoutStatusService {
         reason: update.reason,
         metadata: update.metadata
       });
-
-      console.log(`Successfully updated payout ${update.payoutId} from ${previousStatus} to ${update.status}`);
 
       // Send notification for status change
       await this.sendStatusChangeNotification(update.payoutId, update.status, previousStatus);
@@ -275,8 +272,6 @@ export class PayoutStatusService {
     const successCount = results.filter(r => r.success).length;
     const overallSuccess = successCount === results.length;
 
-    console.log(`Bulk status update: ${successCount}/${results.length} successful`);
-
     return {
       success: overallSuccess,
       results
@@ -293,8 +288,6 @@ export class PayoutStatusService {
     try {
       // Implementation would query for payouts that have been in processing state too long
       // This is a placeholder for the monitoring functionality
-      console.log('Checking for stuck payouts...');
-      
       return {
         success: true,
         stuckPayouts: []

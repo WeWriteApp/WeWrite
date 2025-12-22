@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getUserTotalViewCount } from '../../../firebase/counters';
-import logger from '../../../utils/unifiedLogger';
+import logger from '../../../utils/logger';
 
 /**
  * GET /api/users/view-count

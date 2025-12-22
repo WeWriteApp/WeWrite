@@ -138,8 +138,6 @@ class PageViewBatcher {
     const viewsToProcess = Array.from(this.pendingViews.values());
     this.pendingViews.clear();
 
-    console.log(`[PageViews] Processing batch of ${viewsToProcess.length} page views`);
-
     // Group by page and date for efficient updates
     const groupedViews = new Map<string, PendingPageView[]>();
 
@@ -156,7 +154,7 @@ class PageViewBatcher {
       try {
         await this.processViewGroup(views);
       } catch (error) {
-        console.error(`Error processing view group ${groupKey}:`, error);
+        // Error processing view group - silently continue
       }
     }
   }
@@ -239,20 +237,13 @@ export const recordPageView = async (pageId: string, userId: string | null = nul
 
       // Skip view counting only for production Vercel previews, not dev/test
       if (!isDevelopment && hostname.includes('vercel.app') && !hostname.includes('wewrite.app')) {
-        console.log("Production Vercel preview view, not counting");
         return;
-      }
-
-      // Allow localhost and dev environments to count views for testing
-      if (hostname.includes('localhost') || hostname.includes('dev-wewrite')) {
-        console.log("Development/test environment view, counting for testing purposes");
       }
     }
 
     // Check if we've already recorded a view for this page in this session
     const sessionKey = `${pageId}_${userId || 'anonymous'}`;
     if (viewedPages.has(sessionKey)) {
-      console.log("Already recorded view for this page in this session");
       return;
     }
 
@@ -260,7 +251,6 @@ export const recordPageView = async (pageId: string, userId: string | null = nul
     if (userId) {
 const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       if (pageDoc.exists() && pageDoc.data()?.userId === userId) {
-        console.log("Page owner view, not counting");
         return;
       }
     }
@@ -271,10 +261,8 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     // OPTIMIZATION: Use new optimized batcher with better performance
     const { recordPageViewOptimized } = await import('../utils/pageViewBatcher');
     recordPageViewOptimized(pageId, userId);
-
-    console.log(`Page view queued for optimized batching: ${pageId}`);
   } catch (error) {
-    console.error("Error recording page view:", error);
+    // Error recording page view - silently fail
   }
 };
 
@@ -355,11 +343,6 @@ await updateDoc(doc(db, getCollectionName("pages"), pageId), {
     };
   } catch (error) {
     // Handle permission denied errors gracefully - this is expected for private pages
-    if (error?.code === 'permission-denied') {
-      console.log("Permission denied getting page views - this is expected for private pages");
-    } else {
-      console.error("Error getting page views:", error);
-    }
     return { total: 0, hourly: Array(24).fill(0) };
   }
 };
@@ -382,7 +365,6 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
 
     return 0;
   } catch (error) {
-    console.error("Error getting total page views:", error);
     return 0;
   }
 };
@@ -395,11 +377,8 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
  */
 export const getTrendingPages = async (limitCount: number = 5): Promise<TrendingPage[]> => {
   try {
-    console.log('getTrendingPages: Starting with limit', limitCount);
-
     // Check if we're in a browser environment
     if (typeof window === 'undefined') {
-      console.log('getTrendingPages called in server context, returning empty array');
       return [];
     }
 
@@ -441,7 +420,6 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
         getDocs(yesterdayViewsQuery)
       ]);
     } catch (error) {
-      console.error("Error querying page views:", error);
       // If we can't get page views, try to get pages directly
       return await getFallbackTrendingPages(limitCount);
     }
@@ -460,7 +438,6 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
 
       // Only add pages with actual views
       if (views > 0) {
-        console.log(`Yesterday's views for page ${pageId}: ${views}`);
         pageViewsMap.set(pageId, { id: pageId, views });
       }
     });
@@ -479,12 +456,10 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
 
       // Only add pages with actual views
       if (views > 0) {
-        console.log(`Today's views for page ${pageId}: ${views}`);
         // Add to existing entry or create new one
         if (pageViewsMap.has(pageId)) {
           const totalViews = pageViewsMap.get(pageId).views + views;
           pageViewsMap.get(pageId).views = totalViews;
-          console.log(`Combined views for page ${pageId}: ${totalViews}`);
         } else {
           pageViewsMap.set(pageId, { id: pageId, views });
         }
@@ -504,7 +479,6 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
     // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
     if (trendingPages.length < limitCount) {
       try {
-        console.log(`Not enough trending pages (${trendingPages.length}), fetching additional pages`);
 
         // Query for pages with the most 24-hour views (only non-deleted pages)
         // First try to query using views24h field
@@ -519,7 +493,6 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
         );
 
         const pagesSnapshot = await getDocs(pagesQuery);
-        console.log(`Found ${pagesSnapshot.size} additional pages with views`);
 
         // Get the page IDs we already have
         const existingPageIds = new Set(trendingPages.map(p => p.id));
@@ -532,7 +505,6 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
           const pageViews = pageData.views || 0;
 
           if (!existingPageIds.has(pageId) && (pageViews24h > 0 || pageViews > 0)) {
-            console.log(`Adding page ${pageId} with ${pageViews24h} views in 24h (total: ${pageViews})`);
             trendingPages.push({
               id: pageId,
               views: pageViews,
@@ -551,7 +523,7 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
           })
           .slice(0, limitCount);
       } catch (err) {
-        console.error('Error fetching additional trending pages:', err);
+        // Error fetching additional trending pages - continue with what we have
       }
     }
 
@@ -576,7 +548,7 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), page.id));
                 }
               }
             } catch (userErr) {
-              console.error(`Error fetching username for user ${pageData.userId}:`, userErr);
+              // Error fetching username - continue with default
             }
 
             return {
@@ -589,7 +561,6 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), page.id));
           }
           return { ...page, title: 'Untitled' };
         } catch (err) {
-          console.error(`Error fetching page data for ${page.id}:`, err);
           return { ...page, title: 'Untitled' };
         }
       })
@@ -608,7 +579,6 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), page.id));
             hourlyViews: hourly
           };
         } catch (err) {
-          console.error(`Error fetching hourly data for ${page.id}:`, err);
           return {
             ...page,
             hourlyViews: Array(24).fill(Math.floor(page.views / 24)) // Distribute views evenly
@@ -617,12 +587,9 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), page.id));
       })
     );
 
-    console.log(`getTrendingPages: Returning ${pagesWithHourlyData.length} trending pages`);
     // For backward compatibility, return the array directly
     return pagesWithHourlyData;
   } catch (error) {
-    console.error("Error getting trending pages:", error);
-    console.error("Error stack:", error.stack);
     // Try fallback method if main method fails
     return await getFallbackTrendingPages(limitCount);
   }
@@ -636,7 +603,6 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), page.id));
  */
 async function getFallbackTrendingPages(limitCount: number = 5): Promise<TrendingPage[]> {
   try {
-    console.log('Using fallback method to get trending pages');
 
     // Query for pages with the most views (only non-deleted pages)
     const { getCollectionName } = await import('../utils/environmentConfig');
@@ -649,7 +615,6 @@ async function getFallbackTrendingPages(limitCount: number = 5): Promise<Trendin
     );
 
     const pagesSnapshot = await getDocs(pagesQuery);
-    console.log(`Found ${pagesSnapshot.size} pages with views`);
 
     // Convert to array of page objects
     const pages = [];
@@ -672,7 +637,6 @@ async function getFallbackTrendingPages(limitCount: number = 5): Promise<Trendin
 
     return pages;
   } catch (error) {
-    console.error("Error in fallback trending pages:", error);
     // Return empty array as last resort
     return [];
   }

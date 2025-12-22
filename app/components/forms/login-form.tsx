@@ -125,7 +125,6 @@ export function LoginForm() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      console.log('[LoginForm] User already authenticated, redirecting to home');
       router.push('/home');
     }
   }, [isAuthenticated, authLoading, router]);
@@ -147,15 +146,6 @@ export function LoginForm() {
       const trimmedEmailOrUsername = emailOrUsername.trim();
       const trimmedPassword = password.trim();
 
-      console.log('[LoginForm] Submitting with trimmed inputs:', {
-        originalEmailLength: emailOrUsername.length,
-        trimmedEmailLength: trimmedEmailOrUsername.length,
-        hasEmailWhitespace: emailOrUsername !== trimmedEmailOrUsername,
-        originalPasswordLength: password.length,
-        trimmedPasswordLength: trimmedPassword.length,
-        hasPasswordWhitespace: password !== trimmedPassword
-      });
-
       await signIn(trimmedEmailOrUsername, trimmedPassword);
       // Clear attempts on successful login
       clearAttempts();
@@ -174,9 +164,8 @@ export function LoginForm() {
               await cache.delete(window.location.origin + '/');
             })
           );
-          console.log('[LoginForm] Cleared homepage from service worker cache');
         } catch (cacheError) {
-          console.warn('[LoginForm] Failed to clear SW cache:', cacheError);
+          // Failed to clear SW cache - non-fatal
         }
       }
 
@@ -184,8 +173,6 @@ export function LoginForm() {
       // The timestamp ensures service worker doesn't serve stale cache
       window.location.href = '/home?_auth=' + Date.now();
     } catch (err: any) {
-      console.error('[LoginForm] Login error:', err);
-      
       // Check if this is a rate limit error
       const isRateLimited = err.message?.includes('Too many failed login attempts') || 
                            err.code === 'auth/too-many-requests';

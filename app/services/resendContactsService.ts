@@ -99,9 +99,7 @@ async function resendRequest<T>(
  */
 export async function createContact(options: CreateContactOptions): Promise<{ id: string }> {
   const { email, firstName, lastName, unsubscribed = false, audienceId = GENERAL_AUDIENCE_ID } = options;
-  
-  console.log('[ResendContacts] Creating contact:', email);
-  
+
   const result = await resendRequest<{ id: string }>(
     `/audiences/${audienceId}/contacts`,
     'POST',
@@ -112,8 +110,7 @@ export async function createContact(options: CreateContactOptions): Promise<{ id
       unsubscribed,
     }
   );
-  
-  console.log('[ResendContacts] Contact created:', result.id);
+
   return result;
 }
 
@@ -151,8 +148,6 @@ export async function updateContact(
   options: UpdateContactOptions,
   audienceId: string = GENERAL_AUDIENCE_ID
 ): Promise<{ id: string }> {
-  console.log('[ResendContacts] Updating contact:', contactId);
-  
   const body: any = {};
   if (options.email !== undefined) body.email = options.email;
   if (options.firstName !== undefined) body.first_name = options.firstName;
@@ -173,7 +168,6 @@ export async function deleteContact(
   contactId: string,
   audienceId: string = GENERAL_AUDIENCE_ID
 ): Promise<void> {
-  console.log('[ResendContacts] Deleting contact:', contactId);
   await resendRequest(`/audiences/${audienceId}/contacts/${contactId}`, 'DELETE');
 }
 
@@ -239,7 +233,6 @@ export async function syncUserToResend(user: {
       audienceId,
     });
     
-    console.log(`[ResendContacts] User synced to ${envType === 'development' ? 'dev-test' : 'general'} audience:`, user.email, result.created ? '(new)' : '(updated)');
     return result;
   } catch (error) {
     console.error('[ResendContacts] Failed to sync user:', user.email, error);
@@ -258,7 +251,6 @@ export async function unsubscribeByEmail(
     const contact = await getContactByEmail(email, audienceId);
     if (contact) {
       await updateContact(contact.id, { unsubscribed: true }, audienceId);
-      console.log('[ResendContacts] Unsubscribed:', email);
       return true;
     }
     return false;

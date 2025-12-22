@@ -49,13 +49,6 @@ class SubscriptionAuditService {
       const db = getAdminDb();
       await db.collection(getCollectionName('auditTrail')).add(auditEvent);
 
-      console.log(`[SUBSCRIPTION AUDIT] ${event.eventType.toUpperCase()}`, {
-        userId: event.userId,
-        description: event.description,
-        source: event.source,
-        correlationId: event.correlationId
-      });
-
     } catch (error) {
       console.error('[SUBSCRIPTION AUDIT] Failed to log event:', error);
       // Don't throw error to avoid disrupting the main operation
@@ -101,8 +94,6 @@ class SubscriptionAuditService {
     oldAmount: number,
     newAmount: number
   ): Promise<void> {
-    console.log(`[AUDIT] Adding missing downgrade event: $${oldAmount} -> $${newAmount}`);
-
     await this.logEvent({
       userId,
       eventType: 'plan_changed',

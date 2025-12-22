@@ -33,8 +33,6 @@ async function fetchPageData(pageId: string) {
       : (process.env.NEXT_PUBLIC_BASE_URL ||
          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
 
-    console.log(`📄 [OG] Fetching page data from: ${baseUrl}/api/pages/${pageId}`);
-
     const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
       headers: {
         'User-Agent': 'WeWrite-OG-Generator/1.0'
@@ -44,22 +42,15 @@ async function fetchPageData(pageId: string) {
     });
 
     if (!response.ok) {
-      console.warn(`Failed to fetch page data for ${pageId}: ${response.status}`);
       return null;
     }
 
     const data = await response.json();
     // Extract pageData from the response wrapper
     const pageData = data.pageData || data;
-    console.log(`📄 [OG] Fetched page data for ${pageId}:`, {
-      title: pageData.title,
-      author: pageData.authorUsername || pageData.username,
-      contentLength: pageData.content?.length || 0
-    });
 
     return pageData;
   } catch (error) {
-    console.warn(`Error fetching page data for ${pageId}:`, error);
     return null;
   }
 }
@@ -86,47 +77,28 @@ async function fetchSponsorCount(pageId: string) {
     const data = await response.json();
     return data.sponsorCount || 0;
   } catch (error) {
-    console.warn(`Error fetching sponsor count for ${pageId}:`, error);
     return 0;
   }
 }
 
 export async function GET(request: Request) {
   try {
-    console.log('🖼️ [OG] Route handler started');
-    
     const url = new URL(request.url);
-    console.log('🖼️ [OG] URL created:', url.pathname + url.search);
-    
-    const searchParams = url.searchParams;
-    console.log('🖼️ [OG] SearchParams created');
-    
-    const pageId = searchParams.get('id');
-    console.log('🖼️ [OG] pageId:', pageId);
-    
-    const title = searchParams.get('title');
-    console.log('🖼️ [OG] title:', title?.substring(0, 20));
-    
-    const author = searchParams.get('author');
-    console.log('🖼️ [OG] author:', author);
-    
-    const content = searchParams.get('content');
-    console.log('🖼️ [OG] content:', content?.substring(0, 20));
-    
-    const sponsors = searchParams.get('sponsors');
-    console.log('🖼️ [OG] sponsors:', sponsors);
 
-    console.log('🖼️ [OG] Parsed params:', {
-      pageId,
-      hasTitle: !!title,
-      hasAuthor: !!author,
-      hasContent: !!content,
-      sponsors
-    });
+    const searchParams = url.searchParams;
+
+    const pageId = searchParams.get('id');
+
+    const title = searchParams.get('title');
+
+    const author = searchParams.get('author');
+
+    const content = searchParams.get('content');
+
+    const sponsors = searchParams.get('sponsors');
 
     // Default WeWrite branding if no pageId AND no title provided
     if (!pageId && !title) {
-      console.log('🖼️ [OG] No pageId or title, returning default');
       return new ImageResponse(
         (
           <div
@@ -184,14 +156,11 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log('🖼️ [OG] pageId exists, continuing to generate dynamic image');
-
     // Fetch real page data when we have a pageId and no overrides
     let pageData = null;
     let sponsorCount = 0;
 
     if (pageId && !title && !author && !content) {
-      console.log('🖼️ [OG] Fetching real data for pageId:', pageId);
       [pageData, sponsorCount] = await Promise.all([
         fetchPageData(pageId),
         fetchSponsorCount(pageId)
@@ -203,8 +172,6 @@ export async function GET(request: Request) {
     const displayAuthor = author || pageData?.authorUsername || pageData?.username || 'WeWrite User';
     const displayContent = content || pageData?.content || 'This is a sample content preview for testing the OpenGraph image generation. The actual content will be fetched from the page data.';
     const displaySponsorCount = sponsors ? parseInt(sponsors) : sponsorCount;
-
-    console.log('🖼️ [OG] Step 1: Variables created');
 
     // Process content to get a clean preview
     let contentPreview = '';
@@ -242,7 +209,6 @@ export async function GET(request: Request) {
         }
       }
     } catch (e) {
-      console.error('🖼️ [OG] Error processing content:', e);
       contentPreview = 'Content preview';
     }
 
@@ -251,12 +217,8 @@ export async function GET(request: Request) {
       contentPreview = 'Discover this page on WeWrite';
     }
 
-    console.log('🖼️ [OG] Step 2: Content processed:', { contentLength: contentPreview.length });
-
     // Don't truncate too aggressively - let it be longer and fade
     const longContent = contentPreview.substring(0, 500);
-
-    console.log('🖼️ [OG] Step 3: Content ready, about to create JSX');
 
     // Truncate title to 3 lines (approximately 70 chars to be safe)
     let displayTitleFormatted = displayTitle.substring(0, 70);
@@ -293,22 +255,6 @@ export async function GET(request: Request) {
     if (lastIndex < longContent.length) {
       contentParts.push(longContent.substring(lastIndex));
     }
-
-    console.log('🖼️ [OG] contentParts built:', { 
-      partsLength: contentParts.length,
-      firstFewParts: contentParts.slice(0, 3).map(p => ({ type: p.type, text: typeof p === 'string' ? p.substring(0, 20) : p.text?.substring(0, 20) }))
-    });
-
-    console.log('🖼️ [OG] About to generate JSX with contentParts:');
-    contentParts.forEach((part, idx) => {
-      if (idx < 5) {
-        console.log(`  Part ${idx}:`, {
-          type: part.type || 'text',
-          length: typeof part === 'string' ? part.length : part.text?.length,
-          preview: typeof part === 'string' ? part.substring(0, 30) : part.text?.substring(0, 30)
-        });
-      }
-    });
 
     // Generate the dynamic OpenGraph image with gradient fade
     const imageJsx = (
@@ -537,37 +483,19 @@ export async function GET(request: Request) {
       </div>
     );
 
-    console.log('🖼️ [OG] JSX created, about to return ImageResponse...');
-    console.log('🖼️ [OG] displayTitle:', displayTitle.substring(0, 50));
-    console.log('🖼️ [OG] longContent:', longContent.substring(0, 50));
-    console.log('🖼️ [OG] displayAuthor:', displayAuthor);
-    console.log('🖼️ [OG] contentParts count:', contentParts.length);
-    
     try {
-      console.log('🖼️ [OG] Creating ImageResponse with JSX...');
       const result = new ImageResponse(imageJsx, {
         width: 1200,
         height: 630
       });
-      console.log('🖼️ [OG] ImageResponse created successfully');
       return result;
     } catch (innerError) {
-      console.error('🖼️ [OG] ImageResponse creation error:', {
-        message: innerError instanceof Error ? innerError.message : String(innerError),
-        stack: innerError instanceof Error ? innerError.stack : undefined,
-        error: innerError
-      });
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'Failed to generate image',
         details: innerError instanceof Error ? innerError.message : String(innerError)
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
   } catch (error) {
-    console.error('🖼️ [OG] Outer error generating image:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      error: error
-    });
     return new Response(JSON.stringify({
       error: 'Error generating image',
       details: error instanceof Error ? error.message : String(error)

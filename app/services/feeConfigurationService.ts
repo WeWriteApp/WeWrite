@@ -101,7 +101,6 @@ export class FeeConfigurationService {
         newStructure
       );
 
-      console.log('Fee structure updated:', { updates, updatedBy });
     } catch (error) {
       console.error('Error updating fee structure:', error);
       throw error;

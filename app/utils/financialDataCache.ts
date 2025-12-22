@@ -1,7 +1,7 @@
 /**
- * Simplified Caching Utility
- * 
- * Replaces complex multi-layer caching with a simple, unified approach.
+ * Financial Data Cache
+ *
+ * Caches user financial data (USD balance, subscriptions, earnings).
  * Handles both memory and persistent cache with clear expiration logic.
  */
 
@@ -23,9 +23,9 @@ interface CacheConfig {
 }
 
 /**
- * Simple cache manager with memory and optional persistent storage
+ * Financial data cache manager with memory and optional persistent storage
  */
-export class SimpleCache<T> {
+export class FinancialDataCache<T> {
   private memoryCache = new Map<string, CacheEntry<T>>();
   private config: CacheConfig;
 
@@ -42,7 +42,6 @@ export class SimpleCache<T> {
     // Check memory cache first
     const memoryCached = this.memoryCache.get(userId);
     if (memoryCached && this.isValid(memoryCached, now)) {
-      console.log(`[SimpleCache:${this.config.keyPrefix}] ✅ Memory cache hit for user ${userId}`);
       return memoryCached.data;
     }
 
@@ -52,8 +51,6 @@ export class SimpleCache<T> {
       const persistentCached = getCacheItem<T>(persistentKey);
       
       if (persistentCached) {
-        console.log(`[SimpleCache:${this.config.keyPrefix}] 💾 Persistent cache hit for user ${userId}`);
-        
         // Update memory cache
         this.memoryCache.set(userId, {
           data: persistentCached,
@@ -65,7 +62,6 @@ export class SimpleCache<T> {
       }
     }
 
-    console.log(`[SimpleCache:${this.config.keyPrefix}] ❌ Cache miss for user ${userId}`);
     return null;
   }
 
@@ -89,7 +85,6 @@ export class SimpleCache<T> {
       setCacheItem(persistentKey, data, this.config.duration);
     }
 
-    console.log(`[SimpleCache:${this.config.keyPrefix}] 💾 Cached data for user ${userId}`);
   }
 
   /**
@@ -104,7 +99,6 @@ export class SimpleCache<T> {
       setCacheItem(persistentKey, null, 0);
     }
 
-    console.log(`[SimpleCache:${this.config.keyPrefix}] 🗑️ Cleared cache for user ${userId}`);
   }
 
   /**
@@ -112,7 +106,6 @@ export class SimpleCache<T> {
    */
   clearAll(): void {
     this.memoryCache.clear();
-    console.log(`[SimpleCache:${this.config.keyPrefix}] 🗑️ Cleared all memory cache`);
   }
 
   /**
@@ -142,29 +135,29 @@ export class SimpleCache<T> {
 import type { UsdBalance, SubscriptionData, EarningsData } from '../services/usdDataService';
 
 // USD Balance cache - 30 minutes duration with persistent storage
-export const usdBalanceCache = new SimpleCache<UsdBalance>({
+export const usdBalanceCache = new FinancialDataCache<UsdBalance>({
   duration: 30 * 60 * 1000, // 30 minutes
   persistent: true,
   keyPrefix: 'usd_balance'
 });
 
 // Subscription cache - 15 minutes duration with persistent storage
-export const subscriptionCache = new SimpleCache<SubscriptionData>({
+export const subscriptionCache = new FinancialDataCache<SubscriptionData>({
   duration: 15 * 60 * 1000, // 15 minutes
   persistent: true,
   keyPrefix: 'subscription'
 });
 
 // Earnings cache - 10 minutes duration with persistent storage
-export const earningsCache = new SimpleCache<EarningsData>({
+export const earningsCache = new FinancialDataCache<EarningsData>({
   duration: 10 * 60 * 1000, // 10 minutes
   persistent: true,
   keyPrefix: 'earnings'
 });
 
 /**
- * Utility function to create a cache with custom config
+ * Utility function to create a financial data cache with custom config
  */
-export function createCache<T>(config: CacheConfig): SimpleCache<T> {
-  return new SimpleCache<T>(config);
+export function createFinancialDataCache<T>(config: CacheConfig): FinancialDataCache<T> {
+  return new FinancialDataCache<T>(config);
 }

@@ -5,20 +5,12 @@ import useSimplePages from "../hooks/useSimplePages";
 import { auth } from "../firebase/config";
 import { useAuth } from './AuthProvider';
 import Cookies from 'js-cookie';
+import type { Page } from '../types/database';
 
 /**
- * Page data interface
+ * Page data type - uses centralized Page type with partial fields
  */
-interface PageData {
-  id: string;
-  title?: string;
-  content?: string;
-  authorId?: string;
-  createdAt?: any;
-  updatedAt?: any;
-  groupId?: string;
-  [key: string]: any;
-}
+type PageData = Partial<Page> & { id: string; [key: string]: any };
 
 /**
  * Data context interface

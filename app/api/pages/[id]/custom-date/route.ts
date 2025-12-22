@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../../auth-helper';
+import type { Page } from '../../../../types/database';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-interface PageData {
-  content?: string;
-  title?: string;
-  userId?: string;
-  deleted?: boolean;
-  customDate?: string | null;
-  currentVersion?: string | null;
+/**
+ * Page data type for custom date operations - uses centralized Page type
+ */
+type PageData = Pick<Page, 'content' | 'title' | 'userId' | 'deleted' | 'customDate' | 'currentVersion'> & {
   groupId?: string | null;
-}
+};
 
 interface UserData {
   username?: string;

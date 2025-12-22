@@ -66,7 +66,6 @@ export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyti
     if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
         !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
         isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
-      console.log('🔍 [useDashboardAnalytics] Skipping fetch - dateRange not properly initialized:', debouncedDateRange);
       setLoading(false);
       return;
     }
@@ -133,7 +132,6 @@ export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyti
         shareSuccessRate
       });
     } catch (err) {
-      console.error('Error fetching dashboard analytics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
     } finally {
       setLoading(false);
@@ -171,7 +169,6 @@ export function useAccountsMetrics(dateRange: DateRange, granularity?: number) {
     if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
         !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
         isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
-      console.log('🔍 [useAccountsMetrics] Skipping fetch - dateRange not properly initialized');
       setLoading(false);
       return;
     }
@@ -205,15 +202,8 @@ export function useAccountsMetrics(dateRange: DateRange, granularity?: number) {
       // Fix: API returns nested structure {data: {data: [array]}}
       const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
-      console.log('🔍 [useAccountsMetrics] API Response:', {
-        fullResult: result,
-        extractedData: responseData,
-        safeData,
-        dataLength: safeData.length
-      });
       setData(safeData);
     } catch (err) {
-      console.error('Error fetching accounts metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch accounts data');
     } finally {
       setLoading(false);
@@ -273,15 +263,8 @@ export function usePagesMetrics(dateRange: DateRange, granularity?: number) {
       // Fix: API returns nested structure {data: {data: [array]}}
       const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
-      console.log('🔍 [usePagesMetrics] API Response:', {
-        fullResult: result,
-        extractedData: responseData,
-        safeData,
-        dataLength: safeData.length
-      });
       setData(safeData);
     } catch (err) {
-      console.error('Error fetching pages metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages data');
     } finally {
       setLoading(false);
@@ -355,7 +338,6 @@ export function useSharesMetrics(dateRange: DateRange, granularity?: number) {
 
       setData(transformedData);
     } catch (err) {
-      console.error('Error fetching shares metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch shares data');
     } finally {
       setLoading(false);
@@ -428,7 +410,6 @@ export function useEditsMetrics(dateRange: DateRange, granularity?: number) {
 
       setData(transformedData);
     } catch (err) {
-      console.error('Error fetching edits metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch edits data');
     } finally {
       setLoading(false);
@@ -506,7 +487,6 @@ export function useContentChangesMetrics(dateRange: DateRange, granularity?: num
 
       setData(transformedData);
     } catch (err) {
-      console.error('Error fetching content changes metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch content changes data');
     } finally {
       setLoading(false);
@@ -579,7 +559,6 @@ export function usePWAInstallsMetrics(dateRange: DateRange, granularity?: number
 
       setData(transformedData);
     } catch (err) {
-      console.error('Error fetching PWA installs metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch PWA installs data');
     } finally {
       setLoading(false);
@@ -648,7 +627,6 @@ export function usePWANotificationsMetrics(dateRange: DateRange, granularity?: n
 
       setData(transformedData);
     } catch (err) {
-      console.error('Error fetching PWA notifications metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch PWA notifications data');
     } finally {
       setLoading(false);
@@ -713,7 +691,6 @@ export function useVisitorMetrics(dateRange: DateRange, granularity?: number) {
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
-      console.error('Error fetching visitor metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch visitor data');
     } finally {
       setLoading(false);
@@ -787,7 +764,6 @@ export function useCompositePagesMetrics(dateRange: DateRange, granularity?: num
 
       setData(transformedData);
     } catch (err) {
-      console.error('Error fetching composite pages metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch composite pages data');
     } finally {
       setLoading(false);
@@ -845,7 +821,6 @@ export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: nu
       const result = apiResult.data?.data || apiResult.data;
       setData(result);
     } catch (err) {
-      console.error('Error fetching cumulative pages metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch cumulative pages data');
     } finally {
       setLoading(false);
@@ -892,7 +867,6 @@ export function useTotalPagesEverCreated() {
       const result = Array.isArray(pagesData) ? pagesData.reduce((sum: number, item: any) => sum + (item.totalPages || 0), 0) : 0;
       setData(result);
     } catch (err) {
-      console.error('Error fetching total pages count:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch total pages count');
     } finally {
       setLoading(false);
@@ -961,7 +935,6 @@ export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number
       });
 
     } catch (err) {
-      console.error('Error fetching platform fee metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch platform fee data');
     } finally {
       setLoading(false);
@@ -990,7 +963,6 @@ export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: numb
     // Early return if dateRange is not properly initialized
     if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
         isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
-      console.log('⏳ useFollowedUsersMetrics: Invalid date range, skipping fetch');
       return;
     }
 
@@ -1018,7 +990,6 @@ export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: numb
 
       setData(result.data || []);
     } catch (err) {
-      console.error('Error fetching followed users analytics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch followed users analytics');
       setData([]);
     } finally {
@@ -1074,7 +1045,6 @@ export function usePageViewsMetrics(dateRange: DateRange, granularity?: number) 
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
-      console.error('Error fetching page views metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch page views data');
     } finally {
       setLoading(false);

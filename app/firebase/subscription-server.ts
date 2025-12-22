@@ -16,13 +16,10 @@ function initializeFirebase() {
   try {
     adminApp = initAdmin();
     if (!adminApp) {
-      console.warn('Firebase Admin initialization skipped during build time');
       return { adminApp: null, adminDb: null };
     }
     adminDb = adminApp.firestore();
-    console.log('Firebase Admin initialized successfully in subscription-server');
   } catch (error) {
-    console.error('Error initializing Firebase Admin in subscription-server:', error);
     return { adminApp: null, adminDb: null };
   }
 
@@ -64,7 +61,6 @@ export const updateSubscriptionServer = async (userId: string, subscriptionData:
   try {
     const { adminDb } = initializeFirebase();
     if (!adminDb) {
-      console.warn('Firebase Admin not available for subscription update');
       return false;
     }
 
@@ -75,7 +71,6 @@ export const updateSubscriptionServer = async (userId: string, subscriptionData:
       updatedAt: new Date()}, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error updating subscription:", error);
     return false;
   }
 };
@@ -88,38 +83,17 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
   try {
     const { adminDb } = initializeFirebase();
     if (!adminDb) {
-      console.warn('Firebase Admin not available for subscription fetch');
       return null;
-    }
-
-    // Log environment info for debugging
-    if (verbose) {
-      console.log(`[getUserSubscriptionServer] Environment info:`, {
-        VERCEL_ENV: process.env.VERCEL_ENV,
-        NODE_ENV: process.env.NODE_ENV
-      });
-      console.log(`[getUserSubscriptionServer] Fetching subscription for user: ${userId}`);
     }
 
     // Check the primary location (user path) using environment-aware path
     const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
-
-    if (verbose) {
-      console.log(`[getUserSubscriptionServer] Using collection path:`, {
-        parentPath,
-        subCollectionName,
-        fullPath: `${parentPath}/${subCollectionName}/current`
-      });
-    }
 
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc("current");
     const subscriptionSnap = await subscriptionRef.get();
 
     // If no subscription found, return inactive state
     if (!subscriptionSnap.exists) {
-      if (verbose) {
-        console.log(`[getUserSubscriptionServer] No subscription found for user: ${userId} - returning inactive state`);
-      }
       return {
         id: 'inactive',
         status: 'inactive',
@@ -134,20 +108,6 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
 
     // Validate that we have a proper status - null/undefined status indicates data corruption
     if (!rawData.status) {
-      console.error(`[getUserSubscriptionServer] 🔴 CRITICAL: Invalid subscription data for user ${userId}: missing status field`, {
-        userId,
-        documentExists: true,
-        rawDataKeys: Object.keys(rawData || {}),
-        rawDataSample: {
-          status: rawData.status,
-          amount: rawData.amount,
-          tier: rawData.tier,
-          stripeSubscriptionId: rawData.stripeSubscriptionId,
-          createdAt: rawData.createdAt,
-          updatedAt: rawData.updatedAt
-        },
-        environment: process.env.VERCEL_ENV || process.env.NODE_ENV
-      });
       // Return null to indicate error state rather than defaulting to 'canceled'
       return null;
     }
@@ -174,10 +134,6 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       // If the subscription is older than 5 minutes and has a Stripe ID, treat it as active
       // This handles cases where webhooks are delayed or failed to update the status
       if (createdAt && createdAt < fiveMinutesAgo) {
-        if (verbose) {
-          console.log(`[getUserSubscriptionServer] 🔧 FIXING: Incomplete subscription with valid Stripe ID, treating as active for user ${userId} (created: ${createdAt}, age: ${Math.round((now.getTime() - createdAt.getTime()) / 60000)} minutes)`);
-        }
-
         subscriptionData.status = 'active';
 
         // Update the subscription in Firestore to fix the status
@@ -185,10 +141,6 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
           status: 'active',
           updatedAt: new Date().toISOString()
         });
-      } else {
-        if (verbose) {
-          console.log(`[getUserSubscriptionServer] Incomplete subscription is recent (created: ${createdAt}). Waiting for webhook to process.`);
-        }
       }
     }
 
@@ -201,10 +153,6 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       // Only auto-cancel if the subscription is older than 10 minutes
       // This gives webhooks time to process and update the subscription
       if (createdAt && createdAt < tenMinutesAgo) {
-        if (verbose) {
-          console.log(`[getUserSubscriptionServer] Auto-cancelling stale subscription for user ${userId} (created: ${createdAt}, age: ${Math.round((now.getTime() - createdAt.getTime()) / 60000)} minutes)`);
-        }
-
         subscriptionData.status = 'canceled';
         subscriptionData.tier = null;
         subscriptionData.amount = 0;
@@ -216,16 +164,7 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
           amount: 0,
           canceledAt: new Date().toISOString()
         });
-      } else {
-        if (verbose) {
-          console.log(`[getUserSubscriptionServer] Subscription is active but missing stripeSubscriptionId, but it's recent (created: ${createdAt}). Waiting for webhook to process.`);
-        }
       }
-    }
-
-    // Log subscription status for debugging but don't automatically change it
-    if (verbose) {
-      console.log(`[getUserSubscriptionServer] Current subscription status: '${subscriptionData.status}'`);
     }
 
     // CRITICAL: Verify subscription status against Stripe (source of truth)
@@ -242,10 +181,6 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
           const isStripeActive = stripeStatus === 'active' || stripeStatus === 'trialing';
 
           if (!isStripeActive) {
-            if (verbose) {
-              console.log(`[getUserSubscriptionServer] 🔄 STRIPE SYNC: Firebase says 'active' but Stripe says '${stripeStatus}' for user ${userId}`);
-            }
-
             // Update Firebase to match Stripe (sync the data)
             subscriptionData.status = stripeStatus === 'canceled' ? 'canceled' : stripeStatus;
 
@@ -255,16 +190,11 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
               canceledAt: stripeSubscription.canceled_at ? new Date(stripeSubscription.canceled_at * 1000).toISOString() : undefined,
               updatedAt: new Date().toISOString()
             });
-
-            console.log(`[getUserSubscriptionServer] ✅ Updated Firebase subscription status to '${subscriptionData.status}' for user ${userId}`);
           }
         }
       } catch (stripeError) {
         // If the subscription doesn't exist in Stripe, mark it as canceled
         if ((stripeError as any)?.code === 'resource_missing') {
-          if (verbose) {
-            console.log(`[getUserSubscriptionServer] 🔄 STRIPE SYNC: Subscription ${subscriptionData.stripeSubscriptionId} not found in Stripe, marking as canceled`);
-          }
           subscriptionData.status = 'canceled';
 
           await updateSubscriptionServer(userId, {
@@ -272,19 +202,12 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
             canceledAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
-        } else {
-          console.warn(`[getUserSubscriptionServer] Could not verify Stripe subscription:`, stripeError);
         }
       }
     }
 
-    if (verbose) {
-      console.log(`[getUserSubscriptionServer] Returning subscription data:`, subscriptionData);
-    }
-
     return subscriptionData;
   } catch (error) {
-    console.error("[getUserSubscriptionServer] Error getting user subscription:", error);
     return null;
   }
 };

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { UsdDataService, type EarningsData } from '../services/usdDataService';
-import { earningsCache } from '../utils/simplifiedCache';
+import { earningsCache } from '../utils/financialDataCache';
 
 /**
  * Earnings Context
@@ -63,7 +63,6 @@ export function EarningsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleEarningsTestingChange = () => {
       const isEnabled = localStorage.getItem('wewrite_admin_earnings_testing_mode') === 'true';
-      console.log('[EarningsContext] Earnings testing mode changed:', isEnabled);
       setEarningsTestingMode(isEnabled);
     };
 
@@ -77,11 +76,8 @@ export function EarningsProvider({ children }: { children: React.ReactNode }) {
    * Fetch earnings data from API or cache
    */
   const fetchEarnings = useCallback(async (forceRefresh = false): Promise<void> => {
-    console.log('[EarningsContext] fetchEarnings called', { userId: user?.uid, forceRefresh });
-
     // Handle logged out users
     if (!user?.uid) {
-      console.log('[EarningsContext] No user, clearing earnings');
       setEarnings(null);
       setHasEarnings(false);
       setLastUpdated(new Date());
@@ -92,11 +88,9 @@ export function EarningsProvider({ children }: { children: React.ReactNode }) {
     if (!forceRefresh) {
       const cached = earningsCache.get(user.uid);
       if (cached) {
-        console.log('[EarningsContext] Using cached data:', cached);
         setEarnings(cached);
         setHasEarnings(cached.hasEarnings || false);
         setLastUpdated(new Date());
-
         return;
       }
     }
@@ -108,11 +102,9 @@ export function EarningsProvider({ children }: { children: React.ReactNode }) {
 
     const fetchPromise = (async () => {
       try {
-        console.log('[EarningsContext] Starting API call to fetchEarnings');
         setIsLoading(true);
 
         const result = await UsdDataService.fetchEarnings();
-        console.log('[EarningsContext] API call result:', result);
 
         if (!result.success) {
           if (UsdDataService.isAuthenticationError(result.status)) {
@@ -207,7 +199,6 @@ export function EarningsProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch earnings when user changes
   useEffect(() => {
-    console.log('[EarningsContext] useEffect triggered, user:', user?.uid);
     // Clear cache and force refresh to get fresh data
     if (user?.uid) {
       earningsCache.clear(user.uid);

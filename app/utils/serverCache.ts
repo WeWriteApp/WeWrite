@@ -282,14 +282,79 @@ export const CACHE_TTL = {
 
 /**
  * React Query configuration helper
+ * Returns appropriate caching config based on data type
  */
 export function getReactQueryConfig(queryType: string) {
-  return {
-    staleTime: FAST_TTL,
-    gcTime: FAST_TTL * 2,
+  // Base retry config
+  const retryConfig = {
     retry: false, // Disable retries to prevent Firebase quota abuse
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000)
   };
+
+  switch (queryType) {
+    case 'static':
+    case 'config':
+      // Static data rarely changes - cache aggressively
+      return {
+        staleTime: 30 * 60 * 1000, // 30 minutes
+        gcTime: 60 * 60 * 1000, // 1 hour
+        ...retryConfig
+      };
+
+    case 'user':
+    case 'profile':
+      // User data changes occasionally - moderate caching
+      return {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 15 * 60 * 1000, // 15 minutes
+        ...retryConfig
+      };
+
+    case 'page':
+    case 'content':
+      // Page content - moderate caching, users expect fresh content
+      return {
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+        ...retryConfig
+      };
+
+    case 'analytics':
+    case 'stats':
+      // Analytics can be stale - cache aggressively
+      return {
+        staleTime: 10 * 60 * 1000, // 10 minutes
+        gcTime: 30 * 60 * 1000, // 30 minutes
+        ...retryConfig
+      };
+
+    case 'search':
+    case 'results':
+      // Search results - short cache, users expect fresh results
+      return {
+        staleTime: 60 * 1000, // 1 minute
+        gcTime: 5 * 60 * 1000, // 5 minutes
+        ...retryConfig
+      };
+
+    case 'realtime':
+    case 'activity':
+    case 'live':
+      // Real-time data - very short cache
+      return {
+        staleTime: 30 * 1000, // 30 seconds
+        gcTime: 2 * 60 * 1000, // 2 minutes
+        ...retryConfig
+      };
+
+    default:
+      // Default - moderate caching
+      return {
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+        ...retryConfig
+      };
+  }
 }
 
 /**

@@ -45,7 +45,7 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
       const originalData = await getPageById(pageId);
       originalPageData = originalData?.pageData;
     } catch (pageDataError) {
-      console.error('⚠️ Error getting original page data (non-fatal):', pageDataError);
+      // Error getting original page data (non-fatal)
     }
 
     const result = await updateDoc('pages', pageId, data);
@@ -55,7 +55,7 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
     try {
       pageData = await getPageById(pageId);
     } catch (pageDataError) {
-      console.error('⚠️ Error getting page data for post-update operations (non-fatal):', pageDataError);
+      // Error getting page data for post-update operations (non-fatal)
     }
 
     // If the update includes content changes, update the backlinks index
@@ -69,7 +69,7 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
           try {
             contentNodes = JSON.parse(data.content);
           } catch (parseError) {
-            console.warn('Could not parse content for backlinks indexing:', parseError);
+            // Could not parse content for backlinks indexing
           }
         }
 
@@ -82,9 +82,8 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
           data.lastModified || pageData.pageData.lastModified
         );
 
-        console.log('✅ Backlinks index updated for page update');
       } catch (backlinkError) {
-        console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
+        // Error updating backlinks index (non-fatal)
       }
     }
 
@@ -96,15 +95,13 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
       try {
         const { invalidateCache } = await import('../utils/serverCache');
         invalidateCache.user(pageData.pageData.userId);
-        console.log('✅ Cache invalidation triggered after page update for user:', pageData.pageData.userId);
       } catch (cacheError) {
-        console.error('Error triggering cache invalidation (non-fatal):', cacheError);
+        // Error triggering cache invalidation (non-fatal)
       }
     }
 
     return result;
   } catch (error) {
-    console.error('Error updating page:', error);
     return false;
   }
 };
@@ -115,14 +112,11 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
  */
 export const deletePage = async (pageId: string): Promise<boolean> => {
   try {
-    console.log(`Starting soft delete for page ${pageId}`);
-
     // Get the page data first to check if it exists
     const pageRef = doc(db, getCollectionName('pages'), pageId);
     const pageDoc = await getDoc(pageRef);
 
     if (!pageDoc.exists()) {
-      console.warn(`Page ${pageId} not found for deletion`);
       return false;
     }
 
@@ -136,15 +130,11 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
     });
 
     if (deleteResult) {
-      console.log(`Successfully soft deleted page ${pageId}`);
-
       // Update user page count
       try {
         const { decrementUserPageCount } = await import('./counters');
         await decrementUserPageCount(pageData.userId, pageData.isPublic);
-        console.log("Updated user page count for deletion");
       } catch (counterError) {
-        console.error("Error updating user page count for deletion:", counterError);
         // Don't fail page deletion if counter update fails
       }
 
@@ -167,10 +157,8 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
                           error?.message?.includes('Failed to get document because the client is offline');
 
     if (isOfflineError) {
-      console.warn('Cannot delete page while offline. Please check your internet connection and try again.');
       throw new Error('Cannot delete page while offline. Please check your internet connection and try again.');
     } else {
-      console.error('Error deleting page:', error);
       throw new Error('Failed to delete page. Please try again.');
     }
   }
@@ -201,11 +189,6 @@ export const getPageMetadata = async (pageId: string): Promise<any> => {
     return null;
   } catch (error) {
     // Handle permission denied errors gracefully - this is expected for private pages
-    if (error?.code === 'permission-denied') {
-      console.log('Permission denied getting page metadata - this is expected for private pages');
-    } else {
-      console.error('Error getting page metadata:', error);
-    }
     return null;
   }
 };
@@ -218,7 +201,6 @@ export const getCachedPageTitle = async (pageId: string): Promise<string> => {
     const metadata = await getPageMetadata(pageId);
     return metadata?.title || 'Untitled';
   } catch (error) {
-    console.error('Error getting cached page title:', error);
     return 'Untitled';
   }
 };
@@ -244,7 +226,6 @@ export const getPageStats = async (pageId: string): Promise<any> => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting page stats:', error);
     return null;
   }
 };
@@ -291,7 +272,6 @@ export const appendPageReference = async (
           sourceContent = sourcePageData.content;
         }
       } catch (e) {
-        console.error("Error parsing source page content:", e);
         // Create a fallback content if parsing fails
         sourceContent = [{
           type: "paragraph",
@@ -333,13 +313,10 @@ export const appendPageReference = async (
     });
 
     // Cache invalidation is now handled by useSimplePages automatically
-    console.log('✅ Page content appended successfully');
-
     // Notifications functionality removed
 
     return true;
   } catch (error) {
-    console.error("Error appending page reference:", error);
     return false;
   }
 };

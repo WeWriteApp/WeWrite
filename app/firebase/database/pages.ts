@@ -44,11 +44,8 @@ import type { User } from "../../types/database";
  */
 export const createPage = async (data: CreatePageData): Promise<string | null> => {
   try {
-    console.log('🔵 createPage: Starting page creation with data:', { ...data, content: '(content omitted)' });
-
     // Validate required fields to prevent empty path errors
     if (!data || !data.userId) {
-      console.error("🔴 createPage: Cannot create page: Missing required user ID");
       return null;
     }
 
@@ -66,16 +63,13 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             if (userDoc.exists()) {
               const userData = userDoc.data() as User;
               username = userData.username;
-              console.log('Using username from Firestore:', username);
             }
           } catch (firestoreError) {
-            console.error("Error fetching username from Firestore:", firestoreError);
             // Continue with a default username rather than failing
             username = 'Missing username';
           }
         }
       } catch (error) {
-        console.error("Error fetching username:", error);
         // Set a default username rather than failing
         username = 'Anonymous';
       }
@@ -110,12 +104,8 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       customDate: data.customDate || null
     };
 
-    console.log("Creating page with username:", username);
-    console.log("🔍 DEBUG: Page data being saved:", { ...pageData, content: '(omitted)' });
-
     try {
       const collectionName = getCollectionName("pages");
-      console.log("🔍 DEBUG: Writing page to collection:", collectionName);
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
@@ -124,10 +114,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
       const writePromise = addDoc(collection(db, collectionName), pageData);
 
-      console.log("🔍 DEBUG: Starting Firestore write operation...");
       const pageRef = await Promise.race([writePromise, timeoutPromise]) as any;
-      console.log("Created page with ID:", pageRef.id);
-      console.log("🔍 DEBUG: Page created successfully with customDate:", pageData.customDate);
 
       // Ensure we have content before creating a version
       const versionData = {
@@ -162,7 +149,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         };
         (versionData as any).diffPreview = diffResult.preview || null;
       } catch (diffError) {
-        console.error('⚠️ createPage: Failed to calculate initial diff (non-fatal):', diffError);
+        // Failed to calculate initial diff - non-fatal
       }
 
       // Fallback preview if diff service failed to produce one
@@ -187,7 +174,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             };
           }
         } catch (fallbackError) {
-          console.error('⚠️ createPage: Failed to build fallback diff preview:', fallbackError);
+          // Failed to build fallback diff preview - non-fatal
         }
       }
 
@@ -211,17 +198,14 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
       try {
         // create a subcollection for versions with timeout
-        console.log("🔍 DEBUG: Creating version document...");
         const versionTimeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Version creation timeout after 10 seconds')), 10000);
         });
 
         const versionWritePromise = addDoc(collection(db, getCollectionName("pages"), pageRef.id, "versions"), versionData);
         const version = await Promise.race([versionWritePromise, versionTimeoutPromise]) as any;
-        console.log("Created version with ID:", version.id);
 
         // take the version id and add it as the currentVersion on the page with timeout
-        console.log("🔍 DEBUG: Updating page with current version ID...");
         const updateTimeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Page update timeout after 10 seconds')), 10000);
         });
@@ -238,14 +222,11 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         }
         const updatePromise = setDoc(doc(db, getCollectionName("pages"), pageRef.id), pageUpdateData, { merge: true });
         await Promise.race([updatePromise, updateTimeoutPromise]);
-        console.log("Updated page with current version ID and lastDiff");
 
         // Record user activity for streak tracking
         try {
           await recordUserActivity(data.userId);
-          console.log("Recorded user activity for streak tracking");
         } catch (activityError) {
-          console.error("Error recording user activity (non-fatal):", activityError);
           // Don't fail page creation if activity recording fails
         }
 
@@ -255,14 +236,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         try {
           const { incrementUserPageCount } = await import('../counters');
           await incrementUserPageCount(data.userId, pageData.isPublic);
-          console.log("Updated user page count");
         } catch (counterError: any) {
-          // Handle permission denied errors gracefully
-          if (counterError?.code === 'permission-denied') {
-            console.log("Permission denied updating user page count - this is expected in some environments");
-          } else {
-            console.error("Error updating user page count:", counterError);
-          }
           // Don't fail page creation if counter update fails
         }
 
@@ -276,7 +250,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             try {
               contentNodes = JSON.parse(versionData.content);
             } catch (parseError) {
-              console.warn('Could not parse content for backlinks indexing:', parseError);
+              // Could not parse content for backlinks indexing
             }
           }
 
@@ -288,10 +262,8 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             pageData.isPublic,
             pageData.lastModified
           );
-
-          console.log('✅ Backlinks index updated for new page');
         } catch (backlinkError) {
-          console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
+          // Error updating backlinks index - non-fatal
         }
 
         // Sync to Algolia for real-time search updates
@@ -313,35 +285,27 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             lastModified: now,
             createdAt: now,
           });
-          console.log('✅ Algolia sync completed for new page');
         } catch (algoliaError) {
           // Don't fail page creation if Algolia sync fails
-          console.error('⚠️ Algolia sync failed (non-fatal):', algoliaError);
         }
 
         return pageRef.id;
       } catch (versionError) {
-        console.error("Error creating version:", versionError);
-
         // CRITICAL FIX: If version creation fails, delete the page and return null
         // This prevents orphaned pages without currentVersion
         try {
-          console.log(`Deleting orphaned page ${pageRef.id} due to version creation failure`);
           await deleteDoc(doc(db, getCollectionName("pages"), pageRef.id));
-          console.log(`Successfully deleted orphaned page ${pageRef.id}`);
         } catch (deleteError) {
-          console.error(`Failed to delete orphaned page ${pageRef.id}:`, deleteError);
+          // Failed to delete orphaned page
         }
 
         return null;
       }
     } catch (pageError) {
-      console.error("Error creating page document:", pageError);
       return null;
     }
 
   } catch (e) {
-    console.error('Error creating page:', e);
     return null;
   }
 };
@@ -358,7 +322,6 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
         // Validate pageId
         if (!pageId) {
-          console.error("getPageById called with empty pageId");
           return { pageData: null, error: "Invalid page ID" };
         }
 
@@ -366,7 +329,6 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         const { pageCache } = await import('../../utils/pageCache');
         const cachedData = pageCache.get(pageId, userId);
         if (cachedData) {
-          console.log(`getPageById: Using cached data for ${pageId}`);
           return cachedData;
         }
 
@@ -375,19 +337,11 @@ export const getPageById = async (pageId: string, userId: string | null = null):
       // OPTIMIZATION: Use API route for client-side requests for better performance
       if (typeof window !== 'undefined') {
         try {
-          console.log(`getPageById: Using optimized API route for client-side request: ${pageId}`);
-
-          // Add performance timing
-          const startTime = Date.now();
-
           const response = await fetch(`/api/pages/${pageId}${userId ? `?userId=${userId}` : ''}`, {
             headers: {
               'Cache-Control': 'no-cache', // CRITICAL: No caching for immediate updates after saves
             }
           });
-
-          const endTime = Date.now();
-          console.log(`API request took ${endTime - startTime}ms`);
 
           if (response.ok) {
             const pageData = await response.json();
@@ -403,20 +357,16 @@ export const getPageById = async (pageId: string, userId: string | null = null):
             const etag = response.headers.get('ETag');
             pageCache.set(pageId, result, userId, etag || undefined);
 
-            console.log("getPageById: Successfully used API route for client-side request");
             return result;
           } else if (response.status === 404) {
             return { pageData: null, error: "Page not found" };
-          } else {
-            console.warn(`API route failed with status ${response.status}, falling back to direct Firestore`);
           }
         } catch (apiError) {
-          console.warn('API route failed, falling back to direct Firestore:', apiError);
+          // API route failed, falling back to direct Firestore
         }
       }
 
       // Fallback to direct Firestore access (for server-side or when API fails)
-      console.log(`getPageById: Using direct Firestore access for: ${pageId}`);
 
       // Get the page document with only the fields we need
       // Use field selection to reduce data transfer
@@ -430,23 +380,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         // CRITICAL: Check access permissions including soft delete status
         const accessCheck = await checkPageAccess(pageData, userId);
         if (!accessCheck.hasAccess) {
-          // Use console.log instead of console.error for access denied - this is expected behavior
-          console.log(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
           return { pageData: null, error: accessCheck.error };
-        }
-
-        // If this is a deleted page and user is the owner, we allow access
-        // but the calling code should determine if this is the appropriate context
-        if (accessCheck.isDeleted && userId && pageData.userId === userId) {
-          console.log(`Owner access granted to deleted page ${pageId} for user ${userId}`);
-          // Continue with normal processing but mark as deleted
         }
 
         // Check if the page has content directly (from a save operation)
         if (pageData.content) {
           try {
-            console.log(`getPageById: Page ${pageId} has direct content, length:`, pageData.content.length);
-
             // Create a version data object from the page content
             const versionData = {
               content: pageData.content,
@@ -459,10 +398,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
             try {
               const contentString = typeof versionData.content === 'string' ? versionData.content : JSON.stringify(versionData.content);
               parsedContent = JSON.parse(contentString);
-              console.log(`getPageById: Successfully parsed content for page ${pageId}, nodes:`,
-                Array.isArray(parsedContent) ? parsedContent.length : 'not an array');
             } catch (parseError) {
-              console.error(`getPageById: Error parsing content for page ${pageId}:`, parseError);
               // If we can't parse the content, try to fix it or use empty content
               parsedContent = [];
             }
@@ -472,12 +408,8 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
             const result = { pageData, versionData, links };
 
-
-
-            console.log("getPageById: Using content directly from page document");
             return result;
           } catch (error) {
-            console.error("Error parsing page content in getPageById:", error);
             // Continue to fetch from version document as fallback
           }
         }
@@ -487,11 +419,8 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
         // Validate that we have a current version ID
         if (!currentVersionId) {
-          console.warn(`Page ${pageId} has no currentVersion ID, attempting recovery`);
-
           // Try to recover by creating a version if the page has content
           if (pageData.content) {
-            console.log(`Attempting to recover page ${pageId} by creating missing version`);
             try {
               // Create a recovery version with the existing content
               const versionData = {
@@ -505,7 +434,6 @@ export const getPageById = async (pageId: string, userId: string | null = null):
               // Create the version document
               const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
               const versionRef = await addDoc(versionCollectionRef, versionData);
-              console.log(`Created recovery version ${versionRef.id} for page ${pageId}`);
 
               // Update the page with the new currentVersion
               await setDoc(doc(db, getCollectionName("pages"), pageId), {
@@ -514,9 +442,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
               // Update pageData with the new currentVersion
               pageData.currentVersion = versionRef.id;
-              console.log(`Successfully recovered page ${pageId} with version ${versionRef.id}`);
             } catch (recoveryError) {
-              console.error(`Failed to recover page ${pageId}:`, recoveryError);
               return { pageData: null, error: "Page version not found and recovery failed" };
             }
           } else {
@@ -532,8 +458,6 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
         if (pageData.content) {
           // Use content directly from page document (most recent version)
-          console.log(`Using content directly from page document for ${pageId}`);
-
           try {
             // Parse content to extract links
             const contentToParse = typeof pageData.content === 'string'
@@ -550,14 +474,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
               username: pageData.username
             };
           } catch (parseError) {
-            console.warn(`Failed to parse content from page document for ${pageId}:`, parseError);
             // Continue to try version document as fallback
           }
         }
 
         // Fallback: Get content from version document if page content is missing or invalid
         if (!versionData && currentVersionId) {
-          console.log(`Falling back to version document for ${pageId}, currentVersion: ${currentVersionId}`);
 
           const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
           const versionRef = doc(versionCollectionRef, currentVersionId);
@@ -573,18 +495,15 @@ export const getPageById = async (pageId: string, userId: string | null = null):
                 : versionData.content;
               links = extractLinksFromNodes(contentToParse);
             } catch (parseError) {
-              console.warn(`Failed to parse content from version document for ${pageId}:`, parseError);
               links = [];
             }
           } else {
-            console.error(`Version document not found for ${pageId}, currentVersion: ${currentVersionId}`);
             return { pageData: null, error: "Version not found" };
           }
         }
 
         // If we still don't have version data, create a minimal one
         if (!versionData) {
-          console.warn(`No content found for page ${pageId}, creating minimal version data`);
           versionData = {
             content: "[]", // Empty content
             title: pageData.title || "Untitled",
@@ -621,12 +540,9 @@ export const listenToPageById = (
 ): Unsubscribe => {
   // Validate pageId
   if (!pageId) {
-    console.error("listenToPageById called with empty pageId");
     onPageUpdate({ pageData: null, error: "Invalid page ID" });
     return () => {};
   }
-
-  console.log(`Setting up listener for page ${pageId} with userId ${userId || 'anonymous'}`);
 
   // Cache for version data to avoid unnecessary reads
   let cachedVersionData: VersionData | null = null;
@@ -638,10 +554,7 @@ export const listenToPageById = (
   // Variables to store unsubscribe functions
   let unsubscribeVersion: Unsubscribe | null = null;
 
-  // DISABLED FOR COST OPTIMIZATION - Listen for changes to the page document
-  console.warn('🚨 COST OPTIMIZATION: Page real-time listener disabled. Use API polling instead.');
-
-  // Return no-op unsubscribe function
+  // DISABLED FOR COST OPTIMIZATION - Return no-op unsubscribe function
   return () => {};
 
   /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
@@ -682,11 +595,8 @@ export const listenToPageById = (
 
         // Validate that we have a current version ID
         if (!currentVersionId) {
-          console.warn(`Page ${pageId} has no currentVersion ID, attempting recovery`);
-
           // Try to recover by creating a version if the page has content
           if (pageData.content) {
-            console.log(`Attempting to recover page ${pageId} by creating missing version`);
             try {
               // Create a recovery version with the existing content
               const versionData = {
@@ -953,7 +863,6 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
 
     return pages;
   } catch (error) {
-    console.error('Error fetching editable pages:', error);
     return [];
   }
 };
@@ -971,14 +880,12 @@ export const getAlternativeTitles = async (pageId: string): Promise<string[]> =>
     const pageDoc = await getDoc(pageRef);
 
     if (!pageDoc.exists()) {
-      console.error('Page not found:', pageId);
       return [];
     }
 
     const data = pageDoc.data();
     return data.alternativeTitles || [];
   } catch (error) {
-    console.error('Error getting alternative titles:', error);
     return [];
   }
 };
@@ -1031,10 +938,8 @@ export const addAlternativeTitle = async (
       lastModified: new Date().toISOString()
     }, { merge: true });
 
-    console.log(`Added alternative title "${trimmedTitle}" to page ${pageId}`);
     return { success: true };
   } catch (error) {
-    console.error('Error adding alternative title:', error);
     return { success: false, error: 'Failed to add alternative title' };
   }
 };
@@ -1076,10 +981,8 @@ export const removeAlternativeTitle = async (
       lastModified: new Date().toISOString()
     }, { merge: true });
 
-    console.log(`Removed alternative title "${titleToRemove}" from page ${pageId}`);
     return { success: true };
   } catch (error) {
-    console.error('Error removing alternative title:', error);
     return { success: false, error: 'Failed to remove alternative title' };
   }
 };
@@ -1135,10 +1038,8 @@ export const promoteAlternativeTitle = async (
       lastModified: new Date().toISOString()
     }, { merge: true });
 
-    console.log(`Promoted "${exactTitle}" to primary title, demoted "${currentPrimary}" to alternative`);
     return { success: true };
   } catch (error) {
-    console.error('Error promoting alternative title:', error);
     return { success: false, error: 'Failed to promote alternative title' };
   }
 };
@@ -1188,10 +1089,8 @@ export const setAlternativeTitles = async (
       lastModified: new Date().toISOString()
     }, { merge: true });
 
-    console.log(`Set ${uniqueTitles.length} alternative titles for page ${pageId}`);
     return { success: true };
   } catch (error) {
-    console.error('Error setting alternative titles:', error);
     return { success: false, error: 'Failed to set alternative titles' };
   }
 };

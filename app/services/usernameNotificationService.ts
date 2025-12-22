@@ -180,7 +180,6 @@ export const createUsernameSetupNotificationIfNeeded = async (user: UserData | n
     
     if (notificationId) {
       recordNotificationCreated();
-      console.log('Username setup notification created:', notificationId);
       return true;
     }
     
@@ -198,7 +197,6 @@ export const sendUsernameSetupEmail = async (userId: string, email: string, curr
   try {
     // Don't send if already sent
     if (hasUsernameSetupEmailBeenSent()) {
-      console.log('Username setup email already sent, skipping');
       return false;
     }
     
@@ -218,7 +216,6 @@ export const sendUsernameSetupEmail = async (userId: string, email: string, curr
     
     if (response.ok) {
       markUsernameSetupEmailSent();
-      console.log('Username setup email sent successfully');
       return true;
     } else {
       const error = await response.json();

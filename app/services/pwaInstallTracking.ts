@@ -31,7 +31,6 @@ export class PWAInstallTrackingService {
 
     if (this.isInitialized || typeof window === 'undefined') {
       // If already initialized, just update the user context
-      console.log('📱 PWA tracking user context updated:', userId ? `${username} (${userId})` : 'anonymous');
       return;
     }
 
@@ -47,8 +46,6 @@ export class PWAInstallTrackingService {
 
       // Track that the install prompt was shown using current user context
       this.trackInstallEvent('install_prompt_shown', this.currentUserId, this.currentUsername);
-
-      console.log('📱 PWA install prompt available');
     });
 
     // Listen for appinstalled event
@@ -58,11 +55,7 @@ export class PWAInstallTrackingService {
 
       // Clear the deferredPrompt
       this.deferredPrompt = null;
-
-      console.log('📱 PWA was installed successfully');
     });
-
-    console.log('📱 PWA installation tracking initialized');
   }
 
   /**
@@ -70,7 +63,6 @@ export class PWAInstallTrackingService {
    */
   static async showInstallPrompt(): Promise<boolean> {
     if (!this.deferredPrompt) {
-      console.log('📱 No install prompt available');
       return false;
     }
 
@@ -83,11 +75,9 @@ export class PWAInstallTrackingService {
 
       if (outcome === 'accepted') {
         this.trackInstallEvent('install_accepted', this.currentUserId, this.currentUsername);
-        console.log('📱 User accepted the install prompt');
         return true;
       } else {
         this.trackInstallEvent('install_dismissed', this.currentUserId, this.currentUsername);
-        console.log('📱 User dismissed the install prompt');
         return false;
       }
     } catch (error) {
@@ -143,12 +133,6 @@ export class PWAInstallTrackingService {
       // Store in Firestore analytics collection
       const analyticsRef = collection(db, 'analytics_events');
       await addDoc(analyticsRef, firestoreData);
-
-      console.log('📊 PWA install event tracked:', {
-        eventType,
-        userId: userId || 'anonymous',
-        platform: installEvent.platform
-      });
 
     } catch (error) {
       console.error('Error tracking PWA install event:', error);

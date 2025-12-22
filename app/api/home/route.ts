@@ -31,7 +31,6 @@ interface HomeData {
  * Uses batch queries, server-side caching, and consolidated operations for maximum performance
  */
 export async function GET(request: NextRequest) {
-  console.log('🏠 HOME API: Request received!', request.url);
   const startTime = performance.now();
 
   try {
@@ -43,15 +42,6 @@ export async function GET(request: NextRequest) {
     const cached = homeCache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < cached.ttl) {
-      console.log('🚀 HOME API: Cache hit - returning cached data:', {
-        recentlyVisitedPagesCount: cached.data.recentlyVisitedPages?.length || 0,
-        hasUserStats: !!cached.data.userStats,
-        cacheAge: Math.round((Date.now() - cached.timestamp) / 1000) + 's'
-      });
-
-      // Track cache hit for monitoring
-      console.log('📊 DB READ: /api/home - 0 reads, 0ms, cache: true');
-
       const cachedResponse = NextResponse.json({
         ...cached.data,
         cached: true,
@@ -61,8 +51,6 @@ export async function GET(request: NextRequest) {
       cachedResponse.headers.set('Vary', 'Authorization');
       return cachedResponse;
     }
-
-    console.log('🏠 HOME API: Fetching fresh data with enhanced caching');
 
     // Enhanced data fetching with individual cache checks
     const [
@@ -98,7 +86,6 @@ export async function GET(request: NextRequest) {
       try {
         batchUserData = await getBatchUserDataWithCache(uniqueUserIds);
       } catch (error) {
-        console.warn('🚨 Error fetching batch user data:', error);
         // Continue without user data rather than failing the entire request
       }
     }
@@ -125,22 +112,13 @@ export async function GET(request: NextRequest) {
     // Enhanced cache cleanup with size limits
     cleanupCaches();
 
-    console.log(`🏠 HOME API: Fresh data fetched in ${loadTime.toFixed(2)}ms:`, {
-      recentlyVisitedPagesCount: recentlyVisitedPages.length,
-      trendingPagesCount: trendingPages.length,
-      hasUserStats: !!userStats,
-      hasBatchUserData: !!batchUserData && Object.keys(batchUserData).length > 0
-    });
-
     // Add cache headers for browser caching
     const response = NextResponse.json(homeData);
     response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5 min browser, 10 min CDN
     response.headers.set('Vary', 'Authorization'); // Vary by user authentication
     return response;
-    
-  } catch (error) {
-    console.error('Error fetching home data:', error);
 
+  } catch (error) {
     return NextResponse.json(
       {
         error: 'Failed to fetch home data',
@@ -189,7 +167,6 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     }
 
     const snapshot = await pagesQuery.get();
-    console.log(`🏠 [HOME_API] Raw query returned ${snapshot.size} documents`);
 
     const pages = snapshot.docs.map(doc => {
       const data = doc.data();
@@ -206,38 +183,11 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
       };
     });
 
-    console.log(`🏠 [HOME_API] Raw pages analysis:`, {
-      totalDocs: snapshot.size,
-      samplePages: pages.slice(0, 3).map(p => ({
-        id: p.id,
-        title: p.title,
-        isPublic: p.isPublic,
-        deleted: p.deleted,
-        userId: p.userId,
-        lastModified: p.lastModified,
-        hasLastDiff: !!p.lastDiff,
-        lastDiffHasChanges: p.lastDiff?.hasChanges
-      }))
-    });
-
     // Filter out deleted pages in application code to avoid composite index requirement
     const filteredPages = pages
       .filter(page => page.deleted !== true) // Filter deleted pages in code
       // All pages are now public - no visibility filtering needed
       .slice(0, limitCount);
-
-    console.log(`🏠 [HOME_API] Filtered pages result:`, {
-      totalPages: pages.length,
-      afterDeletedFilter: pages.filter(page => page.deleted !== true).length,
-      afterVisibilityFilter: filteredPages.length,
-      samplePages: filteredPages.slice(0, 3).map(p => ({
-        id: p.id,
-        title: p.title,
-        isPublic: p.isPublic,
-        deleted: p.deleted,
-        userId: p.userId
-      }))
-    });
 
     // Return pages without subscription data - client will fetch this using getBatchUserData
     const pagesWithCompleteInfo = filteredPages;
@@ -245,7 +195,6 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     return pagesWithCompleteInfo;
 
   } catch (error) {
-    console.error('Error fetching recent pages:', error);
     return [];
   }
 }
@@ -272,7 +221,6 @@ async function getUserStatsOptimized(userId: string): Promise<any> {
     try {
       rtdb = adminApp.database();
     } catch (rtdbError) {
-      console.warn('Realtime Database not available for user stats:', rtdbError.message);
       return null;
     }
 
@@ -289,7 +237,6 @@ async function getUserStatsOptimized(userId: string): Promise<any> {
       lastUpdated: Date.now()
     };
   } catch (error) {
-    console.error('Error fetching user stats:', error);
     return null;
   }
 }
@@ -312,7 +259,7 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
     try {
       rtdb = adminApp.database();
     } catch (rtdbError) {
-      console.warn('Realtime Database not available, continuing without it:', rtdbError.message);
+      // Continue without RTDB
     }
 
     const results: Record<string, any> = {};
@@ -341,7 +288,6 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
               subscription: subDoc.exists ? subDoc.data() : null
             };
           } catch (error) {
-            console.warn(`Error fetching subscription for user ${userId}:`, error);
             return { userId, subscription: null };
           }
         });
@@ -384,8 +330,6 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
         const rtdbUserIds = batch.filter(id => !firestoreUserIds.has(id));
 
         if (rtdbUserIds.length > 0 && rtdb) {
-          console.log(`Home: Falling back to RTDB for ${rtdbUserIds.length} users`);
-
           const rtdbPromises = rtdbUserIds.map(async (userId) => {
             try {
               const userSnapshot = await rtdb.ref(`users/${userId}`).get();
@@ -409,7 +353,6 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
 
               return { userId, user: null };
             } catch (error) {
-              console.warn(`Error fetching user ${userId} from RTDB:`, error);
               return { userId, user: null };
             }
           });
@@ -423,7 +366,6 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
           });
         } else if (rtdbUserIds.length > 0 && !rtdb) {
           // If RTDB is not available, create fallback user data for missing users
-          console.log(`Home: RTDB not available, creating fallback data for ${rtdbUserIds.length} users`);
           rtdbUserIds.forEach(userId => {
             results[userId] = {
               uid: userId,
@@ -436,8 +378,6 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
         }
 
       } catch (error) {
-        console.error(`Error fetching batch ${i}-${i + batchSize}:`, error);
-
         // Create fallback user data for failed fetches
         batch.forEach(userId => {
           if (!results[userId]) {
@@ -455,7 +395,6 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
 
     return results;
   } catch (error) {
-    console.error('Error in getBatchUserDataOptimized:', error);
     return {};
   }
 }
@@ -468,11 +407,9 @@ async function getUserStatsWithCache(userId: string): Promise<any> {
   const cached = userStatsCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < USER_STATS_TTL) {
-    console.log(`🚀 USER STATS: Cache hit for ${userId}`);
     return cached.data;
   }
 
-  console.log(`💸 USER STATS: Cache miss for ${userId} - fetching from database`);
   const stats = await getUserStatsOptimized(userId);
 
   if (stats) {
@@ -494,7 +431,6 @@ async function getBatchUserDataWithCache(userIds: string[]): Promise<Record<stri
   const cached = batchUserDataCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < BATCH_USER_DATA_TTL) {
-    console.log(`🚀 BATCH USER DATA: Cache hit for ${userIds.length} users`);
     return cached.data;
   }
 
@@ -512,8 +448,6 @@ async function getBatchUserDataWithCache(userIds: string[]): Promise<Record<stri
       uncachedUserIds.push(userId);
     }
   }
-
-  console.log(`💸 BATCH USER DATA: ${Object.keys(cachedUsers).length} cached, ${uncachedUserIds.length} need fetching`);
 
   // Fetch only uncached users
   let freshData = {};

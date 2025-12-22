@@ -5,7 +5,7 @@
 
 import { getPageById } from '../firebase/database/pages';
 import { clearDeletedPageCaches } from './clearDeletedPageCaches';
-import { invalidatePageDeletedStatus } from './apiDeduplication';
+import { invalidatePageDeletedStatus } from './apiClient';
 
 export const testDeletedPageDetection = async (pageId: string) => {
   console.log(`🧪 Testing deleted page detection for: ${pageId}`);

@@ -6,7 +6,7 @@ import { getRecentSearches, clearRecentSearches, removeRecentSearch } from "../.
 import { Button } from "../ui/button";
 import PillLink from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
-import { getBatchUserData } from '../../utils/apiDeduplication';
+import { getBatchUserData } from '../../utils/apiClient';
 
 interface SearchResult {
   term: string;

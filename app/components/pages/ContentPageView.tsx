@@ -1,21 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-// OPTIMIZATION: Use optimized data fetching instead of real-time listeners
-import { getPageById } from "../../utils/apiClient";
-import { getPageVersions, getPageVersionById } from "../../services/versionService";
+import { getPageById, recordPageView } from "../../utils/apiClient";
 import { getOptimizedPageData } from "../../utils/readOptimizer";
-import { recordPageView } from "../../utils/apiClient";
-import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
 import { useAuth } from '../../providers/AuthProvider';
-import { DataContext } from "../../providers/DataProvider";
 import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
 import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
-import { useLineSettings } from "../../contexts/LineSettingsContext";
-import logger, { createLogger } from '../../utils/logger';
+import { createLogger } from '../../utils/logger';
 import { extractNewPageReferences, createNewPagesFromLinks } from '../../utils/pageContentHelpers';
 import { createReplyContent } from '../../utils/replyUtils';
 
@@ -24,24 +18,53 @@ import PublicLayout from "../layout/PublicLayout";
 import ContentPageHeader from "./ContentPageHeader";
 import ContentPageFooter from "./ContentPageFooter";
 import AllocationBar from "../payments/AllocationBar";
-import RelatedPagesSection from "../features/RelatedPagesSection";
-import RepliesSection from "../features/RepliesSection";
-import PageGraphView from "./PageGraphView";
+
+// PERFORMANCE: Lazy-load below-the-fold components to reduce initial bundle size
+// These components are heavy and not needed for initial page render
+const RelatedPagesSection = dynamic(() => import("../features/RelatedPagesSection"), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+      <div className="h-5 w-32 bg-muted rounded mb-3" />
+      <div className="flex flex-wrap gap-2">
+        {[1, 2, 3].map(i => <div key={i} className="h-8 w-24 bg-muted rounded-full" />)}
+      </div>
+    </div>
+  )
+});
+
+const RepliesSection = dynamic(() => import("../features/RepliesSection"), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+      <div className="h-5 w-24 bg-muted rounded mb-3" />
+      <div className="space-y-2">
+        {[1, 2].map(i => <div key={i} className="h-12 bg-muted rounded" />)}
+      </div>
+    </div>
+  )
+});
+
+const PageGraphView = dynamic(() => import("./PageGraphView"), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+      <div className="h-5 w-36 bg-muted rounded mb-3" />
+      <div className="h-48 bg-muted rounded" />
+    </div>
+  )
+});
 
 import DeletedPageBanner from "../utils/DeletedPageBanner";
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import { UnifiedErrorBoundary } from "../utils/UnifiedErrorBoundary";
-import TextView from "../editor/TextView";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import Link from "next/link";
 
 import DenseModeToggle from "../viewer/DenseModeToggle";
-import UnifiedLoader from "../ui/unified-loader";
-import { ErrorDisplay } from "../ui/error-display";
 import FullPageError from "../ui/FullPageError";
-import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 import StickySaveHeader from "../layout/StickySaveHeader";
 import { motion } from "framer-motion";
 import { ContentPageSkeleton, ContentPageMinimalSkeleton } from "./ContentPageSkeleton";
@@ -63,8 +86,6 @@ if (typeof window !== 'undefined') {
   import("../content/ContentDisplay");
 }
 import EmptyLinesAlert from "../editor/EmptyLinesAlert";
-import ContentPageActions from "./ContentPageActions";
-// CustomDateField and LocationField are now handled by PageFooter
 
 // Types
 interface PageViewProps {
@@ -73,6 +94,7 @@ interface PageViewProps {
   versionId?: string;
   showDiff?: boolean;
   compareVersionId?: string; // For diff comparison between two versions
+  initialPageData?: any; // PERFORMANCE: Pre-fetched data from server component
 }
 
 interface Location {
@@ -85,12 +107,15 @@ interface Page {
   title: string;
   content: any;
   userId: string;
-
+  username?: string;
   location?: Location | null;
   createdAt: any;
   updatedAt: any;
+  lastModified?: any;
+  customDate?: string | null;
   isDeleted?: boolean;
   deletedAt?: any;
+  isNewPage?: boolean;
   replyTo?: string | null;
   replyType?: 'agree' | 'disagree' | 'neutral';
   replyToTitle?: string | null;
@@ -134,7 +159,8 @@ export default function ContentPageView({
   showVersion = false,
   versionId,
   showDiff = false,
-  compareVersionId
+  compareVersionId,
+  initialPageData
 }: PageViewProps) {
   // Handle both Promise and object params
   const unwrappedParams = useMemo(() => {
@@ -193,9 +219,6 @@ export default function ContentPageView({
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const graphRefreshRef = useRef<(() => void) | null>(null);
 
-  // Focus state management - coordinate with title focus
-  const [isEditorFocused, setIsEditorFocused] = useState(false);
-
   // Hooks
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -228,6 +251,46 @@ export default function ContentPageView({
     }
   }, [isNewPageMode, isScrollReady]);
 
+  // PERFORMANCE: Hydrate from server-side pre-fetched data
+  // This eliminates the client-side fetch waterfall for page loads
+  useEffect(() => {
+    if (initialPageData && !page && !hasOptimisticPage) {
+      pageLogger.debug('Hydrating from server-side initialPageData', {
+        pageId: initialPageData.id,
+        title: initialPageData.title
+      });
+
+      setPage(initialPageData);
+      setPageId(initialPageData.id);
+      setTitle(initialPageData.title || '');
+      setCustomDate(initialPageData.customDate || null);
+      setLocation(initialPageData.location || null);
+
+      // Parse and set content
+      if (initialPageData.content) {
+        try {
+          const parsedContent = typeof initialPageData.content === 'string'
+            ? JSON.parse(initialPageData.content)
+            : initialPageData.content;
+          setEditorState(parsedContent);
+        } catch (parseError) {
+          pageLogger.warn('Failed to parse initialPageData content', { parseError });
+          setEditorState([]);
+        }
+      } else {
+        setEditorState([]);
+      }
+
+      setIsLoading(false);
+
+      // Record page view for SSR-hydrated pages
+      if (!viewRecorded.current && initialPageData.id) {
+        recordPageView(initialPageData.id, user?.uid || null);
+        viewRecorded.current = true;
+      }
+    }
+  }, [initialPageData, page, hasOptimisticPage, user?.uid]);
+
   // Listen for focus changes to coordinate with title focus
   useEffect(() => {
     const handleFocusChange = () => {
@@ -242,8 +305,6 @@ export default function ContentPageView({
         editorElement.contains(activeElement) ||
         (contentContainer && contentContainer.contains(activeElement))
       );
-
-      setIsEditorFocused(!!isEditorActive);
 
       // Remove title-focused class when editor is focused
       if (isEditorActive) {
@@ -296,20 +357,17 @@ export default function ContentPageView({
         // If username is missing or potentially outdated, fetch it from user profile
         if (pageData && pageData.userId) {
           try {
-            console.log('Fetching username for user:', pageData.userId);
             const userResponse = await fetch(`/api/users/profile?id=${encodeURIComponent(pageData.userId)}`);
             if (userResponse.ok) {
               const userResult = await userResponse.json();
               if (userResult.success && userResult.data?.username) {
-                // Update username if it's missing, 'Anonymous', or different from the actual username
                 if (!pageData.username || pageData.username === 'Anonymous' || pageData.username !== userResult.data.username) {
                   pageData = { ...pageData, username: userResult.data.username };
-                  console.log('Updated page with username:', userResult.data.username);
                 }
               }
             }
           } catch (userError) {
-            console.warn('Failed to fetch username:', userError);
+            // Failed to fetch username, will use existing value
           }
         }
 
@@ -734,15 +792,8 @@ export default function ContentPageView({
           }
         }
 
-        // CRITICAL FIX: Handle missing or corrupted page data
+        // Handle missing or corrupted page data
         if (pageData && (!pageData.title || pageData.title === 'Untitled' || !pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username')) {
-          console.warn('⚠️ [PageView] Page has missing data, attempting to fix:', {
-            pageId,
-            title: pageData.title,
-            username: pageData.username,
-            userId: pageData.userId
-          });
-
           // Try to fetch missing username from user profile
           if (pageData.userId && (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username')) {
             try {
@@ -754,7 +805,7 @@ export default function ContentPageView({
                 }
               }
             } catch (userError) {
-              console.warn('❌ [PageView] Failed to fetch username:', userError);
+              // Failed to fetch username
             }
           }
 
@@ -763,21 +814,16 @@ export default function ContentPageView({
             pageData = { ...pageData, title: versionData.title };
           }
 
-          // If we still have missing data, show a helpful error
-          // BUT: For new pages, we WANT an empty title so user can fill it in
+          // Handle missing title - new pages can have empty title
           if (!pageData.title || pageData.title === 'Untitled') {
             if (pageData.isNewPage) {
-              // New page mode: keep empty title, don't create fallback
-              console.log('📝 [PageView] New page with empty title - this is expected');
               pageData = { ...pageData, title: '' };
             } else {
-              console.warn('⚠️ [PageView] Page still has missing title after fix attempts');
               pageData = { ...pageData, title: `Page ${pageId.substring(0, 8)}...` };
             }
           }
 
           if (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'missing username') {
-            console.warn('⚠️ [PageView] Page still has missing username after fix attempts');
             pageData = { ...pageData, username: 'Unknown Author' };
           }
         }
@@ -805,50 +851,25 @@ export default function ContentPageView({
 
           if (contentToUse) {
             try {
-              console.log('📄 PageView: Content to use details:', {
-                contentToUse,
-                type: typeof contentToUse,
-                length: typeof contentToUse === 'string' ? contentToUse.length : 'not string',
-                contentSource,
-                pageLastModified: page?.lastModified,
-                versionTimestamp: versionData?.timestamp
-              });
-
-              // CRITICAL FIX: Handle malformed JSON content (stored as string instead of array)
+              // Handle malformed JSON content (stored as string instead of array)
               let parsedContent;
               if (typeof contentToUse === 'string') {
                 try {
                   parsedContent = JSON.parse(contentToUse);
-
-                  // Check if we got a string back (double-encoded JSON)
+                  // Handle double-encoded JSON
                   if (typeof parsedContent === 'string') {
-                    console.log('🔧 DOUBLE_ENCODED: Detected double-encoded JSON, parsing again');
                     parsedContent = JSON.parse(parsedContent);
                   }
-
-
                 } catch (e) {
-                  console.warn('📄 PageView: Failed to parse content as JSON, treating as plain text');
                   parsedContent = contentToUse;
                 }
               } else {
                 parsedContent = contentToUse;
               }
 
-              console.log('📄 PageView: Parsed content details:', {
-                source: contentSource,
-                type: typeof parsedContent,
-                isArray: Array.isArray(parsedContent),
-                length: Array.isArray(parsedContent) ? parsedContent.length : 'not array',
-                firstElement: Array.isArray(parsedContent) && parsedContent.length > 0 ? parsedContent[0] : null,
-                fullContent: parsedContent
-              });
-
-              // SIMPLIFIED: Pass raw content to components - let them handle conversion
               setEditorState(parsedContent);
             } catch (error) {
-              console.error("📄 PageView: Error parsing content:", error, { contentToUse });
-              // SIMPLIFIED: Pass raw content even on error - components will handle it
+              console.error("Error parsing content:", error);
               setEditorState(contentToUse || null);
             }
           } else {
@@ -1321,9 +1342,7 @@ export default function ContentPageView({
           content: editorState // Preserve the current editor content
         });
         // Update URL using history.replaceState to avoid triggering React re-renders
-        // This is safer than router.replace which can cause the page loading effect to re-run
         const newUrl = `/${pageId}`;
-        console.log('📝 New page saved, updating URL via history.replaceState to:', newUrl);
         window.history.replaceState(null, '', newUrl);
       }
 
@@ -1361,18 +1380,9 @@ export default function ContentPageView({
       // Page data should already be updated after save
       // No need to reload since the save operation updates the page state
     } catch (error) {
-      console.error('🚨 SAVE_ERROR: Save operation failed with detailed info', {
-        pageId,
-        title,
-        errorMessage: error.message,
-        errorName: error.name,
-        errorStack: error.stack,
-        errorType: typeof error,
-        isNetworkError: error.message === 'Failed to fetch',
-        timestamp: new Date().toISOString()
-      });
+      console.error('Save operation failed:', error.message);
 
-      // Simplified LogRocket error logging (reduced to prevent performance issues)
+      // LogRocket error logging
       try {
         const { logRocketService } = await import('../../utils/logrocket');
         if (logRocketService.isReady) {
@@ -1414,7 +1424,6 @@ export default function ContentPageView({
     // NEW PAGE MODE: Simply navigate away - page doesn't exist in database yet
     if (isNewPageMode && page?.isNewPage) {
       setIsClosingNewPage(true);
-      console.log('📝 Canceling new page creation (no database entry to delete)');
 
       // Navigate back after animation
       setTimeout(() => {
@@ -1435,27 +1444,17 @@ export default function ContentPageView({
     setError(null);
   }, [hasUnsavedChanges, setEditorState, isNewPageMode, page?.isNewPage, router]);
 
-  // BULLETPROOF: Simplified keyboard shortcuts with extensive debugging
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('⌨️ KEYBOARD: Key pressed:', {
-        key: e.key,
-        metaKey: e.metaKey,
-        ctrlKey: e.ctrlKey,
-        isEditing,
-        hasUnsavedChanges,
-        canEdit,
-        timestamp: new Date().toISOString()
-      });
-
-      // Cmd/Ctrl + S to save - ALWAYS try to save, ignore conditions
+      // Cmd/Ctrl + S to save
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
         handleSave();
         return;
       }
 
-      // Cmd/Ctrl + Enter to save - ALWAYS try to save, ignore conditions
+      // Cmd/Ctrl + Enter to save
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
         handleSave();
@@ -1492,7 +1491,6 @@ export default function ContentPageView({
       });
 
       if (response.ok) {
-        console.log(`Successfully soft deleted page ${pageId}`);
         // Navigate back to previous page (e.g., user's pages list) instead of home
         if (typeof window !== 'undefined' && window.history.length > 1) {
           router.back();
@@ -1626,7 +1624,9 @@ export default function ContentPageView({
           {isPreviewingDeleted && page && (
             <DeletedPageBanner
               pageId={pageId}
+              pageTitle={page.title || 'Untitled'}
               deletedAt={page.deletedAt}
+              daysLeft={page.deletedAt ? Math.max(0, 30 - Math.floor((Date.now() - new Date(page.deletedAt).getTime()) / (1000 * 60 * 60 * 24))) : 30}
             />
           )}
 
@@ -1657,14 +1657,6 @@ export default function ContentPageView({
                     )}>
 
                       {/* Unified content display system */}
-                      {(() => {
-                        console.log('📄 Content display debug:', {
-                          canEdit,
-                          isEditable: canEdit,
-                          hasContent: !!editorState?.length
-                        });
-
-                        return (
                           <div className="space-y-4">
                             <ContentDisplay
                               content={editorState}
@@ -1696,8 +1688,6 @@ export default function ContentPageView({
                               </div>
                             )}
                           </div>
-                        );
-                      })()}
                     </UnifiedErrorBoundary>
 
                     {/* Custom Date Field and Location Field are now handled by PageFooter */}

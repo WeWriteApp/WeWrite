@@ -73,23 +73,19 @@ export const getPagePledgeStats = async (pageId: string): Promise<PagePledgeStat
         };
       }
     } catch (globalError) {
-      console.log('Global pledges collection not available, using fallback method');
+      // Global pledges collection not available, using fallback method
     }
 
     // Fallback: Use the token allocation API to get page stats
     // This is more efficient than querying all user subcollections
-    console.log('🔍 Falling back to API for page stats');
     const response = await fetch(`/api/tokens/page-stats?pageId=${pageId}`);
     if (response.ok) {
       const data = await response.json();
-      console.log('🔍 API response:', data);
       return {
         sponsorCount: data.data?.sponsorCount || 0,
         totalPledgedTokens: data.data?.totalPledgedTokens || 0,
         uniqueSponsors: data.data?.uniqueSponsors || []
       };
-    } else {
-      console.log('🔍 API response not ok:', response.status, response.statusText);
     }
 
     // Final fallback: return empty stats
@@ -162,13 +158,6 @@ export const getSupporterSparklineData = async (pageId: string): Promise<number[
 
     querySnapshot.forEach(doc => {
       const allocationData = doc.data();
-      console.log('🔍 Processing allocation:', {
-        id: doc.id,
-        userId: allocationData.userId,
-        tokens: allocationData.tokens,
-        createdAt: allocationData.createdAt,
-        resourceId: allocationData.resourceId
-      });
 
       if (allocationData.createdAt && allocationData.userId) {
         const allocationDate = allocationData.createdAt instanceof Date ?
@@ -191,7 +180,6 @@ export const getSupporterSparklineData = async (pageId: string): Promise<number[
       hourlyBuckets[i] = supportersByHour[i] ? supportersByHour[i].size : 0;
     }
 
-    console.log('🔍 Final hourly buckets:', hourlyBuckets);
     return hourlyBuckets;
   } catch (error) {
     console.error('Error getting supporter sparkline data:', error);

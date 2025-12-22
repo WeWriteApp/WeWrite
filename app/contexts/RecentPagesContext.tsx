@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import type { Page } from '../types/database';
 
 /**
  * Recently viewed page data interface
@@ -15,15 +16,9 @@ export interface RecentPage {
 }
 
 /**
- * Page data interface for adding to recently viewed pages
+ * Page data type for adding to recently viewed pages - uses centralized Page type
  */
-export interface PageData {
-  id: string;
-  title?: string;
-  userId?: string;
-  username?: string;
-  [key: string]: any;
-}
+export type PageData = Pick<Page, 'id'> & Partial<Page> & { [key: string]: any };
 
 /**
  * Recently viewed pages context interface

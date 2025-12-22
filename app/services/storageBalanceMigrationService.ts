@@ -46,7 +46,6 @@ export class StorageBalanceMigrationService {
     error?: string;
   }> {
     try {
-      console.log(`🚀 [STORAGE MIGRATION] Starting migration to Stripe Storage Balance system`);
 
       // Check if migration is already completed
       const existingStatus = await this.getStorageBalanceMigrationStatus();
@@ -101,7 +100,6 @@ export class StorageBalanceMigrationService {
 
         if (moveResult.success) {
           migrationStatus.summary.fundsMovedToStorage = analysis.totalOutstandingObligations;
-          console.log(`✅ [STORAGE MIGRATION] Moved ${formatUsdCents(analysis.totalOutstandingObligations * 100)} to Storage Balance`);
         } else {
           throw new Error(`Failed to move funds to Storage Balance: ${moveResult.error}`);
         }
@@ -114,7 +112,6 @@ export class StorageBalanceMigrationService {
       const updatedBalance = await stripeStorageBalanceService.getBalanceBreakdown();
       if (updatedBalance) {
         migrationStatus.summary.platformRevenueIdentified = updatedBalance.paymentsBalance;
-        console.log(`💰 [STORAGE MIGRATION] Platform revenue in Payments Balance: ${formatUsdCents(updatedBalance.paymentsBalance * 100)}`);
       }
       migrationStatus.completedSteps = 4;
       await this.saveStorageBalanceMigrationStatus(migrationStatus);
@@ -131,13 +128,6 @@ export class StorageBalanceMigrationService {
       migrationStatus.completedAt = new Date();
       migrationStatus.completedSteps = 5;
       await this.saveStorageBalanceMigrationStatus(migrationStatus);
-
-      console.log(`✅ [STORAGE MIGRATION] Storage Balance migration completed:`, {
-        success: validation.isValid,
-        fundsMovedToStorage: formatUsdCents(migrationStatus.summary.fundsMovedToStorage * 100),
-        platformRevenueIdentified: formatUsdCents(migrationStatus.summary.platformRevenueIdentified * 100),
-        errors: migrationStatus.errors.length
-      });
 
       return {
         success: validation.isValid,
@@ -275,16 +265,6 @@ export class StorageBalanceMigrationService {
       const balanceBreakdown = await stripeStorageBalanceService.getBalanceBreakdown();
       if (!balanceBreakdown) {
         errors.push('Storage Balance service not accessible');
-      } else {
-        console.log(`✅ [STORAGE MIGRATION] Storage Balance system operational:`, {
-          paymentsBalance: formatUsdCents(balanceBreakdown.paymentsBalance * 100),
-          storageBalance: formatUsdCents(balanceBreakdown.storageBalance * 100)
-        });
-      }
-
-      // Validate that funds are properly separated
-      if (balanceBreakdown && balanceBreakdown.storageBalance > 0) {
-        console.log(`✅ [STORAGE MIGRATION] Creator obligations properly moved to Storage Balance`);
       }
 
       return {

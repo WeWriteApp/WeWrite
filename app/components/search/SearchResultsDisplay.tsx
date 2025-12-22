@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { ErrorCard } from "../ui/ErrorCard";
-import { getBatchUserData } from '../../utils/apiDeduplication';
+import { getBatchUserData } from '../../utils/apiClient';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 import PerformanceMonitor from '../utils/PerformanceMonitor';
 

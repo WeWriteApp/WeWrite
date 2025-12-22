@@ -55,16 +55,12 @@ export class PlatformAccountConfigService {
     error?: string;
   }> {
     try {
-      console.log('🔧 [PLATFORM CONFIG] Configuring platform account for fund holding model...');
-
       // Get current account information
       const account = await this.stripe.accounts.retrieve();
-      
+
       if (!account) {
         throw new Error('Unable to retrieve platform account information');
       }
-
-      console.log(`🔧 [PLATFORM CONFIG] Current account ID: ${account.id}`);
 
       // Configure payout settings for manual control
       const updatedAccount = await this.stripe.accounts.update(account.id, {
@@ -85,20 +81,12 @@ export class PlatformAccountConfigService {
         }
       });
 
-      console.log(`✅ [PLATFORM CONFIG] Successfully configured platform account:`, {
-        accountId: updatedAccount.id,
-        payoutSchedule: config.payoutSchedule,
-        payoutsEnabled: updatedAccount.payouts_enabled,
-        chargesEnabled: updatedAccount.charges_enabled
-      });
-
       return {
         success: true,
         accountId: updatedAccount.id
       };
 
     } catch (error) {
-      console.error('❌ [PLATFORM CONFIG] Error configuring platform account:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -134,7 +122,6 @@ export class PlatformAccountConfigService {
       };
 
     } catch (error) {
-      console.error('❌ [PLATFORM CONFIG] Error getting platform account status:', error);
       return null;
     }
   }
@@ -144,10 +131,8 @@ export class PlatformAccountConfigService {
    */
   async enableManualPayouts(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔧 [PLATFORM CONFIG] Enabling manual payouts for fund holding control...');
-
       const account = await this.stripe.accounts.retrieve();
-      
+
       await this.stripe.accounts.update(account.id, {
         settings: {
           payouts: {
@@ -158,12 +143,9 @@ export class PlatformAccountConfigService {
         }
       });
 
-      console.log('✅ [PLATFORM CONFIG] Manual payouts enabled successfully');
-
       return { success: true };
 
     } catch (error) {
-      console.error('❌ [PLATFORM CONFIG] Error enabling manual payouts:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -179,8 +161,6 @@ export class PlatformAccountConfigService {
     description: string = 'Platform revenue payout'
   ): Promise<{ success: boolean; payoutId?: string; error?: string }> {
     try {
-      console.log(`💰 [PLATFORM PAYOUT] Creating platform payout: $${amount}`);
-
       // Convert to cents
       const amountInCents = Math.round(amount * 100);
 
@@ -197,20 +177,12 @@ export class PlatformAccountConfigService {
         }
       });
 
-      console.log(`✅ [PLATFORM PAYOUT] Platform payout created successfully:`, {
-        payoutId: payout.id,
-        amount: payout.amount / 100,
-        status: payout.status,
-        arrivalDate: payout.arrival_date
-      });
-
       return {
         success: true,
         payoutId: payout.id
       };
 
     } catch (error) {
-      console.error('❌ [PLATFORM PAYOUT] Error creating platform payout:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -230,20 +202,13 @@ export class PlatformAccountConfigService {
     }
   ): Promise<{ success: boolean; payoutId?: string; error?: string }> {
     try {
-      console.log(`💰 [PLATFORM REVENUE] Transferring platform revenue for ${month}: $${revenueBreakdown.total}`);
-
       const description = `Platform revenue for ${month} - Fees: $${revenueBreakdown.platformFees.toFixed(2)}, Unallocated: $${revenueBreakdown.unallocatedFunds.toFixed(2)}`;
 
       const result = await this.createPlatformPayout(revenueBreakdown.total, description);
 
-      if (result.success) {
-        console.log(`✅ [PLATFORM REVENUE] Platform revenue transferred successfully for ${month}`);
-      }
-
       return result;
 
     } catch (error) {
-      console.error('❌ [PLATFORM REVENUE] Error transferring platform revenue:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -282,7 +247,6 @@ export class PlatformAccountConfigService {
       };
 
     } catch (error) {
-      console.error('❌ [PLATFORM CONFIG] Error checking balance sufficiency:', error);
       return {
         sufficient: false,
         availableBalance: 0,
@@ -312,7 +276,6 @@ export class PlatformAccountConfigService {
       };
 
     } catch (error) {
-      console.error('❌ [PLATFORM CONFIG] Error getting balance breakdown:', error);
       return null;
     }
   }
@@ -322,8 +285,6 @@ export class PlatformAccountConfigService {
    */
   async initializeFundHoldingModel(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🚀 [PLATFORM CONFIG] Initializing fund holding model...');
-
       // Step 1: Enable manual payouts
       const manualPayoutResult = await this.enableManualPayouts();
       if (!manualPayoutResult.success) {
@@ -350,12 +311,9 @@ export class PlatformAccountConfigService {
         throw new Error('Fund holding configuration verification failed');
       }
 
-      console.log('✅ [PLATFORM CONFIG] Fund holding model initialized successfully');
-
       return { success: true };
 
     } catch (error) {
-      console.error('❌ [PLATFORM CONFIG] Error initializing fund holding model:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

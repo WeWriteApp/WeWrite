@@ -45,8 +45,6 @@ export const getNotifications = async (
   lastVisible?: string | null
 ): Promise<NotificationResult> => {
   try {
-    console.log('🔔 getNotifications: Fetching notifications, limit:', limit);
-    
     const params = new URLSearchParams({
       action: 'list',
       limit: limit.toString()
@@ -57,18 +55,16 @@ export const getNotifications = async (
     }
 
     const response = await fetch(`/api/notifications?${params.toString()}`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch notifications: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch notifications');
     }
-
-    console.log('🔔 getNotifications: Found', data.notifications.length, 'notifications');
 
     return {
       notifications: data.notifications || [],
@@ -76,7 +72,6 @@ export const getNotifications = async (
       hasMore: data.hasMore || false
     };
   } catch (error) {
-    console.error('🔔 getNotifications: Error fetching notifications:', error);
     throw error;
   }
 };
@@ -86,26 +81,22 @@ export const getNotifications = async (
  */
 export const getUnreadNotificationsCount = async (): Promise<number> => {
   try {
-    console.log('🔔 getUnreadNotificationsCount: Fetching unread count');
-    
     const response = await fetch('/api/notifications?action=count');
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch unread count: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch unread count');
     }
 
     const count = data.count || 0;
-    console.log('🔔 getUnreadNotificationsCount: Count:', count);
-    
+
     return count;
   } catch (error) {
-    console.error('🔔 getUnreadNotificationsCount: Error fetching count:', error);
     throw error;
   }
 };
@@ -115,8 +106,6 @@ export const getUnreadNotificationsCount = async (): Promise<number> => {
  */
 export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
   try {
-    console.log('🔔 markNotificationAsRead: Marking notification as read:', notificationId);
-    
     if (!notificationId) {
       throw new Error('Notification ID is required');
     }
@@ -137,14 +126,11 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to mark notification as read');
     }
-
-    console.log('🔔 markNotificationAsRead: Successfully marked as read');
   } catch (error) {
-    console.error('🔔 markNotificationAsRead: Error marking notification as read:', error);
     throw error;
   }
 };
@@ -154,8 +140,6 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
  */
 export const markNotificationAsUnread = async (notificationId: string): Promise<void> => {
   try {
-    console.log('🔔 markNotificationAsUnread: Marking notification as unread:', notificationId);
-    
     if (!notificationId) {
       throw new Error('Notification ID is required');
     }
@@ -176,14 +160,11 @@ export const markNotificationAsUnread = async (notificationId: string): Promise<
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to mark notification as unread');
     }
-
-    console.log('🔔 markNotificationAsUnread: Successfully marked as unread');
   } catch (error) {
-    console.error('🔔 markNotificationAsUnread: Error marking notification as unread:', error);
     throw error;
   }
 };
@@ -193,8 +174,6 @@ export const markNotificationAsUnread = async (notificationId: string): Promise<
  */
 export const markAllNotificationsAsRead = async (): Promise<void> => {
   try {
-    console.log('🔔 markAllNotificationsAsRead: Marking all notifications as read');
-
     const response = await fetch('/api/notifications', {
       method: 'POST',
       headers: {
@@ -210,14 +189,11 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to mark all notifications as read');
     }
-
-    console.log('🔔 markAllNotificationsAsRead: Successfully marked all as read');
   } catch (error) {
-    console.error('🔔 markAllNotificationsAsRead: Error marking all notifications as read:', error);
     throw error;
   }
 };
@@ -227,8 +203,6 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
  */
 export const createNotification = async (notificationData: NotificationData): Promise<string> => {
   try {
-    console.log('🔔 createNotification: Creating notification for user:', notificationData.userId);
-
     if (!notificationData.userId) {
       throw new Error('User ID is required');
     }
@@ -249,15 +223,13 @@ export const createNotification = async (notificationData: NotificationData): Pr
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to create notification');
     }
 
-    console.log('🔔 createNotification: Successfully created notification:', data.notificationId);
     return data.notificationId;
   } catch (error) {
-    console.error('🔔 createNotification: Error creating notification:', error);
     throw error;
   }
 };
@@ -267,8 +239,6 @@ export const createNotification = async (notificationData: NotificationData): Pr
  */
 export const deleteNotification = async (notificationId: string): Promise<void> => {
   try {
-    console.log('🔔 deleteNotification: Deleting notification:', notificationId);
-
     if (!notificationId) {
       throw new Error('Notification ID is required');
     }
@@ -293,10 +263,7 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
     if (!data.success) {
       throw new Error(data.error || 'Failed to delete notification');
     }
-
-    console.log('🔔 deleteNotification: Successfully deleted notification');
   } catch (error) {
-    console.error('🔔 deleteNotification: Error deleting notification:', error);
     throw error;
   }
 };
@@ -309,8 +276,6 @@ export const updateNotificationCriticality = async (
   criticality: NotificationCriticality
 ): Promise<void> => {
   try {
-    console.log('🔔 updateNotificationCriticality: Updating criticality for notification:', notificationId, 'to:', criticality);
-
     const response = await fetch('/api/notifications', {
       method: 'PATCH',
       headers: {
@@ -332,10 +297,7 @@ export const updateNotificationCriticality = async (
     if (!data.success) {
       throw new Error(data.error || 'Failed to update notification criticality');
     }
-
-    console.log('🔔 updateNotificationCriticality: Successfully updated notification criticality');
   } catch (error) {
-    console.error('🔔 updateNotificationCriticality: Error updating notification criticality:', error);
     throw error;
   }
 };
@@ -345,8 +307,6 @@ export const updateNotificationCriticality = async (
  */
 export const createEmailVerificationNotification = async (userId: string): Promise<string | null> => {
   try {
-    console.log('🔔 createEmailVerificationNotification: Creating email verification notification for user:', userId);
-
     if (!userId) {
       return null;
     }
@@ -366,7 +326,6 @@ export const createEmailVerificationNotification = async (userId: string): Promi
 
     return await createNotification(notificationData);
   } catch (error) {
-    console.error('🔔 createEmailVerificationNotification: Error creating email verification notification:', error);
     return null;
   }
 };

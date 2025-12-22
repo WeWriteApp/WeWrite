@@ -356,13 +356,6 @@ export class PayoutErrorLogger {
           errorLog.severity === PayoutErrorSeverity.CRITICAL) {
         
         // TODO: Integrate with external monitoring service (Sentry, DataDog, etc.)
-        console.log('[EXTERNAL_MONITORING] Would send to monitoring service:', {
-          id: errorLog.id,
-          correlationId: errorLog.correlationId,
-          category: errorLog.category,
-          severity: errorLog.severity,
-          message: errorLog.message
-        });
       }
     } catch (error) {
       console.error('Failed to send to external monitoring:', error);

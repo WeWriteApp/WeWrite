@@ -104,8 +104,6 @@ export class EmbeddedCheckoutService {
    * Refresh user subscription data using simple API
    */
   private static async refreshUserSubscription(userId: string) {
-    console.log(`[EMBEDDED CHECKOUT] Starting subscription sync for user: ${userId}`);
-
     try {
       const response = await fetch('/api/subscription/simple', {
         method: 'GET',
@@ -122,7 +120,6 @@ export class EmbeddedCheckoutService {
       }
 
       const result = await response.json();
-      console.log(`[EMBEDDED CHECKOUT] Subscription refresh successful:`, result);
       return result;
     } catch (error) {
       console.error(`[EMBEDDED CHECKOUT] Error during subscription refresh:`, error);

@@ -47,8 +47,6 @@ export default function SpendPage() {
       // Check for simulated USD allocations that need to be converted
       const usdBalance = getLoggedOutUsdBalance();
       if (usdBalance.allocations && usdBalance.allocations.length > 0) {
-        console.log('🎯 Spend: Converting simulated USD allocations to real allocations');
-
         for (const allocation of usdBalance.allocations) {
           try {
             const response = await fetch('/api/usd/allocate', {
@@ -61,19 +59,18 @@ export default function SpendPage() {
             });
 
             if (response.ok) {
-              console.log(`🎯 Spend: Converted simulated ${allocation.usdCents} cents for page ${allocation.pageTitle}`);
+              // Allocation converted successfully
             }
           } catch (error) {
-            console.error('Error converting USD allocation:', error);
+            // Error converting allocation
           }
         }
 
         // Clear simulated USD data after conversion
         clearLoggedOutUsd();
-        console.log('🎯 Spend: Cleared simulated USD data after conversion');
       }
     } catch (error) {
-      console.error('Error converting simulated data:', error);
+      // Error converting simulated data
     }
   };
 
@@ -86,17 +83,14 @@ export default function SpendPage() {
       const response = await fetch('/api/account-subscription');
       if (response.ok) {
         const data = await response.json();
-        console.log('🎯 Spend: Subscription data:', data);
         // Get the actual subscription amount, not the USD balance total
         const isActive = data.status === 'active';
         const amount = isActive ? (data.fullData?.amount || 0) : 0;
         setSubscriptionAmount(amount);
       } else {
-        console.error('🎯 Spend: Subscription API error:', response.status, response.statusText);
         setSubscriptionAmount(0);
       }
     } catch (error) {
-      console.error('Error fetching subscription:', error);
       setSubscriptionAmount(0);
     } finally {
       setLoadingSubscription(false);
@@ -111,13 +105,12 @@ export default function SpendPage() {
       const response = await fetch('/api/usd/allocations');
       if (response.ok) {
         const data = await response.json();
-        console.log('🎯 Spend: API response:', data);
         setAllocations(data.allocations || []);
       } else {
-        console.error('🎯 Spend: API error:', response.status, response.statusText);
+        // API error
       }
     } catch (error) {
-      console.error('Error fetching allocations:', error);
+      // Error fetching allocations
     }
   };
 
@@ -140,7 +133,7 @@ export default function SpendPage() {
           loadAllocations()
         ]);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        // Error fetching data
       } finally {
         setIsLoading(false);
       }
@@ -152,7 +145,6 @@ export default function SpendPage() {
   // Handle allocation editing
   const handleEditAllocation = async (allocation: UsdAllocation) => {
     // This would open an edit modal or navigate to edit page
-    console.log('Edit allocation:', allocation);
   };
 
   // Handle allocation removal
@@ -174,7 +166,7 @@ export default function SpendPage() {
         setAllocations(prev => prev.filter(a => a.id !== allocation.id));
       }
     } catch (error) {
-      console.error('Error removing allocation:', error);
+      // Error removing allocation
     }
   };
 
@@ -210,11 +202,11 @@ export default function SpendPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(error => {
-        console.error('Error increasing allocation (background):', error);
+      }).catch(() => {
+        // Error increasing allocation (background)
       });
     } catch (error) {
-      console.error('Error increasing allocation:', error);
+      // Error increasing allocation
     }
   };
 
@@ -244,11 +236,11 @@ export default function SpendPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(error => {
-        console.error('Error decreasing allocation (background):', error);
+      }).catch(() => {
+        // Error decreasing allocation (background)
       });
     } catch (error) {
-      console.error('Error decreasing allocation:', error);
+      // Error decreasing allocation
     }
   };
 
@@ -275,11 +267,11 @@ export default function SpendPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(error => {
-        console.error('Error setting allocation (background):', error);
+      }).catch(() => {
+        // Error setting allocation (background)
       });
     } catch (error) {
-      console.error('Error setting allocation amount:', error);
+      // Error setting allocation amount
     }
   };
 

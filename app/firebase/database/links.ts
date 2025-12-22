@@ -182,19 +182,14 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
   lastModified: any;
   isPublic: boolean;
 }>> => {
-  console.warn('⚠️ findBacklinks is deprecated. Use getBacklinks from backlinks.ts for better performance.');
-
   // Use the new efficient backlinks system
   try {
     const { getBacklinks } = await import('./backlinks');
     return await getBacklinks(pageId, limitCount);
   } catch (error) {
-    console.error('Error using new backlinks system, falling back to old method:', error);
     // Fall back to the old inefficient method if the new one fails
   }
   try {
-    console.log(`Finding backlinks for page ${pageId} (limit: ${limitCount})`);
-
     const { db } = await import('../config');
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
     const { getCollectionName } = await import('../../utils/environmentConfig');
@@ -210,7 +205,6 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
     );
 
     const snapshot = await getDocs(pagesQuery);
-    console.log(`Found ${snapshot.docs.length} pages to search through`);
 
     const backlinks: Array<{
       id: string;
@@ -253,7 +247,6 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
           try {
             contentNodes = JSON.parse(data.content);
           } catch (parseError) {
-            console.warn(`Failed to parse content for page ${doc.id}:`, parseError);
             continue;
           }
         } else if (Array.isArray(data.content)) {
@@ -271,16 +264,8 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
 
         // Check if any link points to our target page
         const hasLinkToTarget = links.some(link => {
-          // Debug logging for link matching
-          if (links.length > 0 && pagesProcessed <= 5) { // Only log for first few pages to avoid spam
-            console.log(`    Checking link: type=${link.type}, url=${link.url}, pageId=${link.pageId}, target=${pageId}`);
-          }
-
           // Check for page links that match our target
           if (link.type === 'page' && link.pageId === pageId) {
-            if (pagesProcessed <= 5) {
-              console.log(`    ✅ Match found via pageId: ${link.pageId} === ${pageId}`);
-            }
             return true;
           }
 
@@ -290,9 +275,6 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
             if (link.url.startsWith('/pages/')) {
               const urlPageId = link.url.replace('/pages/', '').split(/[\/\?#]/)[0];
               if (urlPageId === pageId) {
-                if (pagesProcessed <= 5) {
-                  console.log(`    ✅ Match found via /pages/ URL: ${urlPageId} === ${pageId}`);
-                }
                 return true;
               }
             }
@@ -302,9 +284,6 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
               const urlPageId = link.url.substring(1).split(/[\/\?#]/)[0];
               // Only match if it's a simple page ID (no additional path segments)
               if (!urlPageId.includes('/') && urlPageId === pageId) {
-                if (pagesProcessed <= 5) {
-                  console.log(`    ✅ Match found via direct URL: ${urlPageId} === ${pageId}`);
-                }
                 return true;
               }
             }
@@ -328,20 +307,12 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
           }
         }
       } catch (error) {
-        console.error(`Error processing page ${doc.id} for backlinks:`, error);
         continue;
       }
     }
 
-    console.log(`Backlinks search completed for page ${pageId}:`);
-    console.log(`  - Pages processed: ${pagesProcessed}`);
-    console.log(`  - Pages with content: ${pagesWithContent}`);
-    console.log(`  - Pages with links: ${pagesWithLinks}`);
-    console.log(`  - Backlinks found: ${backlinks.length}`);
-
     return backlinks;
   } catch (error) {
-    console.error("Error finding backlinks:", error);
     return [];
   }
 };
@@ -373,7 +344,6 @@ export const validateLinkUrl = async (url: string): Promise<boolean> => {
     // For now, assume they're valid if they look like URLs
     return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
   } catch (error) {
-    console.error("Error validating link URL:", error);
     return false;
   }
 };
@@ -395,23 +365,14 @@ export const extractPageReferences = (content: string | EditorContent): string[]
 
     const links = extractLinksFromNodes(nodes);
 
-    // Debug logging for the specific page we're testing
-    if (typeof content === 'string' && content.includes('V02vyPf2YYgwz18M8JTd')) {
-      console.log(`🔗 [DEBUG] extractPageReferences - Found ${links.length} total links:`, links.map(l => ({ type: l.type, pageId: l.pageId, text: l.text, isExternal: l.isExternal })));
-    }
-
     links.forEach(link => {
       // Accept both 'page' and 'link' types, and ensure it's not external
       if (link.pageId && !link.isExternal) {
         pageIds.push(link.pageId);
       }
     });
-
-    if (typeof content === 'string' && content.includes('V02vyPf2YYgwz18M8JTd')) {
-      console.log(`🔗 [DEBUG] extractPageReferences - Filtered to ${pageIds.length} page IDs:`, pageIds);
-    }
   } catch (error) {
-    console.error("Error extracting page references:", error);
+    // Silent error handling
   }
 
   // Remove duplicates
@@ -483,14 +444,12 @@ export const findPagesLinkingToExternalUrl = async (
           }
         }
       } catch (error) {
-        console.error(`Error processing page ${doc.id}:`, error);
         continue;
       }
     }
 
     return matchingPages;
   } catch (error) {
-    console.error("Error finding pages linking to external URL:", error);
     return [];
   }
 };
@@ -518,7 +477,7 @@ export const extractUserMentions = (content: string | EditorContent): string[] =
       }
     });
   } catch (error) {
-    console.error("Error extracting user mentions:", error);
+    // Silent error handling
   }
 
   // Remove duplicates
@@ -587,14 +546,12 @@ export const findUserPagesLinkingToExternalUrl = async (
           });
         }
       } catch (error) {
-        console.error(`Error processing page ${page.id} for external URL:`, error);
         continue;
       }
     }
 
     return matchingPages;
   } catch (error) {
-    console.error("Error finding user pages linking to external URL:", error);
     return [];
   }
 };
@@ -682,7 +639,6 @@ export const getUserExternalLinks = async (
           });
         });
       } catch (error) {
-        console.error(`Error processing page ${page.id} for external links:`, error);
         continue;
       }
     }
@@ -696,7 +652,6 @@ export const getUserExternalLinks = async (
 
     return externalLinkEntries;
   } catch (error) {
-    console.error("Error getting user external links:", error);
     return [];
   }
 };
@@ -819,7 +774,6 @@ export const getUserExternalLinksAggregated = async (
 
     return aggregatedLinks;
   } catch (error) {
-    console.error("Error getting aggregated user external links:", error);
     return [];
   }
 };
@@ -874,7 +828,6 @@ export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<n
 
         count += urlCount;
       } catch (error) {
-        console.error(`Error processing page ${doc.id} for global count:`, error);
         continue;
       }
     }
@@ -884,7 +837,6 @@ export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<n
 
     return count;
   } catch (error) {
-    console.error("Error getting global external link count:", error);
     return 0;
   }
 };
@@ -930,14 +882,12 @@ export const getGlobalExternalLinkCounts = async (urls: string[]): Promise<Map<s
           }
         });
       } catch (error) {
-        console.error(`Error processing page ${doc.id} for global counts:`, error);
         continue;
       }
     }
 
     return counts;
   } catch (error) {
-    console.error("Error getting global external link counts:", error);
     return counts;
   }
 };

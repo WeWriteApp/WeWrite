@@ -203,6 +203,24 @@ class ConsolidatedApiClient {
 const consolidatedClient = new ConsolidatedApiClient();
 
 /**
+ * Invalidate page deleted status cache
+ * This ensures deleted page status appears immediately
+ */
+export const invalidatePageDeletedStatus = (pageId: string) => {
+  consolidatedClient.invalidateCache(new RegExp(`page.*${pageId}`));
+
+  // Also clear the page cache if available
+  import('./pageCache').then(({ pageCache }) => {
+    pageCache.clearPage(pageId);
+  }).catch(() => {});
+
+  // Clear InternalLinkWithTitle caches
+  import('../components/editor/InternalLinkWithTitle').then(({ clearPageCaches }) => {
+    clearPageCaches(pageId);
+  }).catch(() => {});
+};
+
+/**
  * Base API client function - now uses consolidated client
  */
 async function apiCall<T = any>(
@@ -785,13 +803,6 @@ export async function addUsername(username: string) {
   return response.success;
 }
 
-// REMOVED: Duplicate getPageById function - using the one above
-
-/**
- * REMOVED: Activity system has been completely removed
- * Use unified version system instead
- */
-
 /**
  * Follows Operations
  */
@@ -901,10 +912,6 @@ export const linksApi = {
     });
   }
 };
-
-// REMOVED: Duplicate analyticsApi declaration - consolidated into the main one above
-
-// REMOVED: Duplicate rtdbApi declaration - using the one above
 
 /**
  * Versions Operations

@@ -44,12 +44,8 @@ function extractPageIdsFromContent(content: string): string[] {
 function extractPageIdsFromNodes(nodes: any[]): string[] {
   if (!Array.isArray(nodes)) return [];
 
-  console.log('🔍 [PAGE_CONNECTIONS_API] Extracting page IDs from nodes:', nodes.length);
-
   // Use the same extraction method as the backlinks system
   const links = extractPageReferences(nodes);
-
-  console.log('🔍 [PAGE_CONNECTIONS_API] Extracted page IDs:', links);
 
   return links;
 }
@@ -78,13 +74,6 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🔗 [PAGE_CONNECTIONS_API] Getting connections for page ${pageId}`, {
-      includeSecondHop,
-      limit,
-      skipCache,
-      timestamp: new Date().toISOString()
-    });
-
     // Try to get from cache first (unless skipCache is true)
     if (!skipCache) {
       try {
@@ -95,8 +84,6 @@ export async function GET(request: NextRequest) {
 
           // Check cache version
           if (cacheData.version === 1) {
-            console.log(`🔗 [PAGE_CONNECTIONS_API] Cache hit for page ${pageId}`, cacheData.stats);
-
             // Return cached data
             return NextResponse.json({
               incoming: cacheData.incoming?.slice(0, limit) || [],
@@ -111,10 +98,8 @@ export async function GET(request: NextRequest) {
             }, { status: 200 });
           }
         }
-
-        console.log(`🔗 [PAGE_CONNECTIONS_API] Cache miss for page ${pageId}, computing...`);
       } catch (cacheError) {
-        console.warn(`🔗 [PAGE_CONNECTIONS_API] Cache read error, falling back to computation:`, cacheError);
+        // Cache read error, falling back to computation
       }
     }
 
@@ -167,53 +152,36 @@ export async function GET(request: NextRequest) {
       }
 
       incoming = validIncoming;
-
-      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${incoming.length} incoming connections using index (filtered from ${backlinksSnapshot.size} total, ${uniqueSourceIds.length} unique sources)`);
     } catch (error) {
-      console.log('🔗 [PAGE_CONNECTIONS_API] Backlinks index not available, using fallback');
+      // Backlinks index not available, using fallback
       // Fallback method would go here if needed
     }
 
     // Get outgoing connections (forward links)
     let outgoing: PageConnection[] = [];
-    console.log(`🔗 [PAGE_CONNECTIONS_API] Getting outgoing connections for page: ${pageId}`);
-    
+
     try {
       const pageDoc = await db.collection(getCollectionName('pages')).doc(pageId).get();
-      
+
       if (pageDoc.exists) {
         const pageData = pageDoc.data();
-        console.log(`🔗 [PAGE_CONNECTIONS_API] Page data:`, {
-          hasContent: !!pageData.content,
-          contentType: typeof pageData.content,
-          contentLength: pageData.content ? JSON.stringify(pageData.content).length : 0,
-          hasNodes: !!pageData.nodes
-        });
 
         let linkedPageIds: string[] = [];
 
         // Extract page references from content using the proper link extraction function
         if (pageData.content) {
-          // Debug: Log the actual content structure for the specific page we're testing
-          if (pageId === 'BvkkVeByRFiRVPbo8lCz') {
-            console.log(`🔗 [DEBUG] Raw content for page ${pageId}:`, JSON.stringify(pageData.content, null, 2));
-          }
-
           const extractedIds = extractPageReferences(pageData.content);
-          console.log(`🔗 [PAGE_CONNECTIONS_API] extractPageReferences found ${extractedIds.length} IDs:`, extractedIds);
           linkedPageIds.push(...extractedIds);
         }
 
         // Extract from nodes (legacy support)
         if (pageData.nodes) {
           const nodeIds = extractPageIdsFromNodes(pageData.nodes);
-          console.log(`🔗 [PAGE_CONNECTIONS_API] extractPageIdsFromNodes found ${nodeIds.length} IDs:`, nodeIds);
           linkedPageIds.push(...nodeIds);
         }
 
         // Remove duplicates and the current page
         linkedPageIds = [...new Set(linkedPageIds)].filter(id => id !== pageId);
-        console.log(`🔗 [PAGE_CONNECTIONS_API] After filtering: ${linkedPageIds.length} unique outgoing links:`, linkedPageIds);
         
         if (linkedPageIds.length > 0) {
           // OPTIMIZATION: Fetch all linked pages in parallel instead of sequential batches
@@ -242,10 +210,8 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-      
-      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${outgoing.length} outgoing connections`);
     } catch (error) {
-      console.error('Error getting outgoing connections:', error);
+      // Error getting outgoing connections
     }
 
     // Calculate bidirectional connections
@@ -258,8 +224,6 @@ export async function GET(request: NextRequest) {
     let thirdHopConnections: PageConnection[] = [];
 
     if (includeSecondHop) {
-      console.log('🔗 [PAGE_CONNECTIONS_API] Fetching second-hop connections (optimized)');
-
       // Get second-hop from incoming connections (backlinks to backlinks)
       const incomingSample = incoming.slice(0, 5);
 
@@ -316,12 +280,8 @@ export async function GET(request: NextRequest) {
         secondHopConnections = secondHopCandidates.filter(c => validSecondHopIds.has(c.id));
       }
 
-      console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${secondHopConnections.length} second-hop connections`);
-
       // Get third-hop connections from second-hop pages
       if (secondHopConnections.length > 0) {
-        console.log('🔗 [PAGE_CONNECTIONS_API] Fetching third-hop connections (optimized)');
-
         // Sample second-level connections to avoid too many requests
         const secondLevelSample = secondHopConnections.slice(0, 3);
 
@@ -373,8 +333,6 @@ export async function GET(request: NextRequest) {
           // Filter to only valid pages
           thirdHopConnections = thirdHopCandidates.filter(c => validThirdHopIds.has(c.id));
         }
-
-        console.log(`🔗 [PAGE_CONNECTIONS_API] Found ${thirdHopConnections.length} third-hop connections`);
       }
     }
 
@@ -394,12 +352,9 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    console.log(`🔗 [PAGE_CONNECTIONS_API] Returning connections:`, result.stats);
-
     return NextResponse.json(result, { status: 200 });
 
   } catch (error) {
-    console.error('Page connections API error:', error);
     return NextResponse.json({
       error: 'Failed to fetch page connections',
       details: error instanceof Error ? error.message : 'Unknown error',

@@ -30,8 +30,6 @@ class ContributorsService {
   async startPollingContributors(pageId: string, callback: (stats: ContributorStats) => void): Promise<() => void> {
     if (!pageId || !callback) return () => {};
 
-    console.log('👥 [CONTRIBUTORS SERVICE] Starting polling for page:', pageId);
-
     // Initial fetch
     await this.fetchAndCacheContributors(pageId, callback);
 
@@ -50,7 +48,6 @@ class ContributorsService {
         this.pollingIntervals.delete(pageId);
       }
       this.cache.delete(pageId);
-      console.log('👥 [CONTRIBUTORS SERVICE] Stopped polling for page:', pageId);
     };
   }
 
@@ -81,7 +78,6 @@ class ContributorsService {
         });
 
         callback(stats);
-        console.log('👥 [CONTRIBUTORS SERVICE] Updated contributors for page:', pageId, 'count:', stats.count);
       } else {
         console.warn('👥 [CONTRIBUTORS SERVICE] Failed to fetch contributors:', response.error);
         // Return cached data if available, otherwise empty stats
@@ -145,7 +141,6 @@ class ContributorsService {
       this.pollingIntervals.delete(pageId);
     }
     this.cache.delete(pageId);
-    console.log('👥 [CONTRIBUTORS SERVICE] Stopped polling for page:', pageId);
   }
 
   /**
@@ -157,7 +152,6 @@ class ContributorsService {
     });
     this.pollingIntervals.clear();
     this.cache.clear();
-    console.log('👥 [CONTRIBUTORS SERVICE] Cleaned up all polling intervals');
   }
 }
 

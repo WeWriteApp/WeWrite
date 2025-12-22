@@ -10,18 +10,12 @@ import { NextRequest } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/admin';
 import { createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import type { Page } from '../../../../types/database';
 
-interface PageData {
-  id: string;
-  title?: string;
-  titleLower?: string;
-  userId?: string;
-  deleted?: boolean;
-  createdAt?: any;
-  updatedAt?: any;
-  lastModified?: any;
-  [key: string]: any;
-}
+/**
+ * Page data type for same-title lookup - uses centralized Page type
+ */
+type PageData = Partial<Page> & { id: string; titleLower?: string; [key: string]: any };
 
 export async function GET(
   request: NextRequest,

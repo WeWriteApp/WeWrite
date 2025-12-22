@@ -203,13 +203,6 @@ class UnifiedStatsService {
     await Promise.all([...pageStatsPromises, ...userStatsPromises]);
 
     result.loadTime = performance.now() - startTime;
-    
-    console.log(`📊 [UnifiedStats] Batch fetch completed in ${result.loadTime.toFixed(2)}ms`, {
-      pageIds: pageIds.length,
-      userIds: userIds.length,
-      cached: result.cached.length,
-      fetched: result.fetched.length
-    });
 
     return result;
   }
@@ -560,13 +553,6 @@ class UnifiedStatsService {
 
       // Count unique editors
       const uniqueEditors = new Set(pageEdits.map(edit => edit.userId));
-
-      console.log(`📊 [UnifiedStats] Fetched recent changes for page ${pageId}:`, {
-        totalEdits: pageEdits.length,
-        recentEdits: recentEdits.length,
-        uniqueEditors: uniqueEditors.size,
-        changeData
-      });
 
       return {
         recentChanges: recentEdits.length,

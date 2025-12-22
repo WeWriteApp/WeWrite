@@ -39,8 +39,6 @@ function getFirebaseAdminAndDb() {
           privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
         })
       }, 'usd-service-app');
-
-      console.log('[USD Service] Firebase Admin initialized successfully');
     }
 
     const db = getFirestore(usdServiceApp);
@@ -149,17 +147,11 @@ export class ServerUsdService {
       const validPageAllocations = pageAllocations.filter(a => validPageIds.has(a.resourceId));
       const skippedCount = pageAllocations.length - validPageAllocations.length;
 
-      if (skippedCount > 0) {
-        console.log(
-          `[USD ALLOCATION] Skipping ${skippedCount} allocations for deleted/missing pages during rollover`
-        );
-      }
 
       // Combine valid allocations
       const validAllocations = [...validPageAllocations, ...userAllocations];
 
       if (validAllocations.length === 0) {
-        console.log(`[USD ALLOCATION] No valid allocations to roll over for user ${userId}`);
         return { copied: false, allocationsCopied: 0, totalUsdCents: 0 };
       }
 
@@ -186,10 +178,6 @@ export class ServerUsdService {
 
       // Note: We no longer store allocatedUsdCents in usdBalances (Phase 1 simplification).
       // The allocated amount is always calculated from SUM(active allocations) to prevent drift.
-
-      console.log(
-        `[USD ALLOCATION] Rolled forward ${validAllocations.length} allocations from ${sourceMonth} to ${currentMonth} for user ${userId}`
-      );
 
       return {
         copied: true,
@@ -242,7 +230,6 @@ export class ServerUsdService {
         });
       }
 
-      console.log(`Server: USD balance initialized for user ${userId}: ${centsToDollars(usdCents)} USD`);
     } catch (error) {
       console.error('ServerUsdService: Error updating monthly USD allocation:', error);
       throw error;
@@ -278,7 +265,6 @@ export class ServerUsdService {
           try {
             // Make internal API call to get subscription
             // SECURITY: Uses validated internal API URL to prevent SSRF
-            console.log(`[USD BALANCE] Attempting to fetch subscription from account API for user ${userId}`);
             const response = await internalApiFetch('/api/account-subscription', {
               method: 'GET',
               headers: {
@@ -287,20 +273,12 @@ export class ServerUsdService {
             });
             if (response.ok) {
               const accountData = await response.json();
-              console.log(`[USD BALANCE] Account API response:`, {
-                hasSubscription: accountData.hasSubscription,
-                status: accountData.status,
-                amount: accountData.amount
-              });
               if (accountData.hasSubscription && accountData.status === 'active' && accountData.amount) {
                 subscriptionData = {
                   status: accountData.status,
                   amount: accountData.amount
                 };
-                console.log(`[USD BALANCE] Retrieved subscription from account API: $${accountData.amount}/mo`);
               }
-            } else {
-              console.warn(`[USD BALANCE] Account API returned status ${response.status}`);
             }
           } catch (error) {
             console.warn(`[USD BALANCE] Could not fetch subscription from account API:`, error.message);
@@ -309,12 +287,9 @@ export class ServerUsdService {
 
         // If user has an active subscription but no balance record, create one automatically
         if (subscriptionData && subscriptionData.status === 'active' && subscriptionData.amount) {
-          console.log(`[USD BALANCE] User ${userId} has active subscription ($${subscriptionData.amount}/mo) but no balance record. Creating balance automatically.`);
-
           try {
             // Use the proper service method to create the balance
             await this.updateMonthlyUsdAllocation(userId, subscriptionData.amount);
-            console.log(`[USD BALANCE] Successfully created balance record for user ${userId} with $${subscriptionData.amount}/mo subscription`);
 
             // Fetch the newly created balance
             const newBalanceDoc = await balanceRef.get();
@@ -338,23 +313,12 @@ export class ServerUsdService {
           }
         }
 
-        console.log(`[USD BALANCE] No balance record found for user ${userId} and no active subscription to auto-create`);
         return null;
       }
 
       const balanceData = balanceDoc.data();
 
-      // Log subscription data for debugging
       const hasActiveSubscription = subscriptionData && subscriptionData.status === 'active';
-
-      if (hasActiveSubscription) {
-        console.log(`[USD BALANCE] Found subscription for user ${userId}:`, {
-          amount: subscriptionData?.amount,
-          status: subscriptionData?.status
-        });
-      } else {
-        console.log(`[USD BALANCE] No active subscription found for user ${userId}`);
-      }
 
       // Get actual allocated USD by summing current allocations
       const actualAllocatedUsdCents = await this.calculateActualAllocatedUsdCents(userId);
@@ -369,7 +333,6 @@ export class ServerUsdService {
 
         // Use calculated USD cents from amount (source of truth)
         if (expectedUsdCents !== totalUsdCents) {
-          console.log(`[USD BALANCE] Balance USD (${centsToDollars(totalUsdCents)}) differs from expected USD (${centsToDollars(expectedUsdCents)}) for $${subscriptionData.amount}/mo, syncing balance`);
           totalUsdCents = expectedUsdCents;
           monthlyAllocationCents = expectedUsdCents;
 
@@ -384,7 +347,6 @@ export class ServerUsdService {
       } else if (!hasActiveSubscription) {
         // Inactive subscription: treat balance as unfunded (overspent against zero)
         if (totalUsdCents !== 0 || monthlyAllocationCents !== 0) {
-          console.log(`[USD BALANCE] Normalizing inactive subscription balance for user ${userId} to $0 to reflect unfunded state`);
           totalUsdCents = 0;
           monthlyAllocationCents = 0;
 
@@ -433,8 +395,6 @@ export class ServerUsdService {
       await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
-      console.log(`[USD CALCULATION] Calculating actual allocated cents for user ${userId}, month ${currentMonth}`);
-
       // Get all active allocations for current month ONLY
       const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
       const allocationsQuery = allocationsRef
@@ -445,22 +405,12 @@ export class ServerUsdService {
       const allocationsSnapshot = await allocationsQuery.get();
 
       let totalAllocatedCents = 0;
-      const allocationDetails = [];
 
       allocationsSnapshot.forEach(doc => {
         const allocation = doc.data();
         const allocationCents = allocation.usdCents || 0;
         totalAllocatedCents += allocationCents;
-
-        allocationDetails.push({
-          id: doc.id,
-          resourceType: allocation.resourceType,
-          resourceId: allocation.resourceId,
-          usdCents: allocationCents
-        });
       });
-
-      console.log(`[USD CALCULATION] Found ${allocationsSnapshot.size} active allocations totaling ${totalAllocatedCents} cents:`, allocationDetails);
 
       // REMOVED: Pending allocations counting to fix double-counting bug
       // Pending allocations should not be included in the total as they may become active allocations
@@ -614,8 +564,6 @@ export class ServerUsdService {
       const { admin, db } = getFirebaseAdminAndDb();
       await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
-      const usdDollarsChange = centsToDollars(usdCentsChange);
-      console.log(`[USD ALLOCATION] [${correlationId}] Starting allocation for user ${userId}, page ${pageId}, change ${usdDollarsChange} USD`);
 
       // Get current USD balance
       const balanceRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
@@ -623,14 +571,11 @@ export class ServerUsdService {
 
       if (!balanceDoc.exists) {
         // Try to auto-initialize USD balance if user has an active subscription
-        console.log(`[USD ALLOCATION] USD balance not found for user ${userId}, attempting auto-initialization`);
-
         try {
           const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
           const subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
 
           if (subscriptionData && subscriptionData.status === 'active' && subscriptionData.amount) {
-            console.log(`[USD ALLOCATION] Found active subscription for user ${userId}, initializing USD balance`);
             await this.updateMonthlyUsdAllocation(userId, subscriptionData.amount);
 
             // Re-fetch the balance after initialization
@@ -641,8 +586,7 @@ export class ServerUsdService {
           } else {
             throw new Error('USD balance not found and no active subscription to initialize from');
           }
-        } catch (initError) {
-          console.error(`[USD ALLOCATION] Failed to auto-initialize USD balance for user ${userId}:`, initError);
+        } catch {
           throw new Error('USD balance not initialized. Please check your subscription status.');
         }
       }
@@ -710,14 +654,6 @@ export class ServerUsdService {
       const newAllocatedCents = actualAllocatedCents + allocationDifference;
       const totalUsdCents = balanceData?.totalUsdCents || 0;
       const newAvailableCents = totalUsdCents - newAllocatedCents;
-
-      console.log(`[USD ALLOCATION] Balance calculation for user ${userId}:`, {
-        actualAllocatedCents,
-        allocationDifference,
-        newAllocatedCents,
-        totalUsdCents,
-        newAvailableCents
-      });
 
       // Validate allocation math to prevent impossible states
       if (newAllocatedCents < 0) {
@@ -805,7 +741,6 @@ export class ServerUsdService {
       // Process earnings for the recipient if there's a valid recipient and positive allocation
       if (recipientUserId && newPageAllocationCents > 0 && allocationDifference > 0) {
         try {
-          console.log(`[USD ALLOCATION] Processing earnings for recipient ${recipientUserId}`);
           const { ServerUsdEarningsService } = await import('./usdEarningsService.server');
           await ServerUsdEarningsService.processUsdAllocation(
             userId,
@@ -815,31 +750,15 @@ export class ServerUsdService {
             allocationDifference,
             currentMonth
           );
-          console.log(`[USD ALLOCATION] Successfully processed earnings for recipient ${recipientUserId}`);
-        } catch (earningsError) {
-          console.error(`[USD ALLOCATION] Failed to process earnings for recipient ${recipientUserId}:`, earningsError);
+        } catch {
           // Don't fail the allocation if earnings processing fails
         }
       }
-
-      console.log(`[USD ALLOCATION] [${correlationId}] Successfully allocated ${centsToDollars(newPageAllocationCents)} USD to page ${pageId} for user ${userId}`);
     } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error(`[USD ALLOCATION] [${correlationId}] Error allocating USD to page (${duration}ms):`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        userId,
-        pageId,
-        usdCentsChange,
-        stack: error instanceof Error ? error.stack : undefined
-      });
-
       // Re-throw with correlation ID for better tracking
       const enhancedError = new Error(`[${correlationId}] USD page allocation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       enhancedError.cause = error;
       throw enhancedError;
-    } finally {
-      const duration = Date.now() - startTime;
-      console.log(`[USD ALLOCATION] [${correlationId}] Page allocation completed in ${duration}ms`);
     }
   }
 
@@ -850,8 +769,6 @@ export class ServerUsdService {
     try {
       const { admin, db } = getFirebaseAdminAndDb();
       const currentMonth = getCurrentMonth();
-      const usdDollarsChange = centsToDollars(usdCentsChange);
-      console.log(`[USD USER ALLOCATION] Starting allocation for user ${userId}, recipient ${recipientUserId}, change ${usdDollarsChange} USD`);
 
       // Get current USD balance
       const balanceRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES)).doc(userId);
@@ -877,14 +794,6 @@ export class ServerUsdService {
       const newAllocatedCents = actualAllocatedCents + allocationDifference;
       const totalUsdCents = balanceData?.totalUsdCents || 0;
       const newAvailableCents = totalUsdCents - newAllocatedCents;
-
-      console.log(`[USD USER ALLOCATION] Balance calculation for user ${userId}:`, {
-        actualAllocatedCents,
-        allocationDifference,
-        newAllocatedCents,
-        totalUsdCents,
-        newAvailableCents
-      });
 
       // Validate allocation math to prevent impossible states
       if (newAllocatedCents < 0) {
@@ -972,7 +881,6 @@ export class ServerUsdService {
       // Process earnings for the recipient if there's a positive allocation difference
       if (newUserAllocationCents > 0 && allocationDifference > 0) {
         try {
-          console.log(`[USD USER ALLOCATION] Processing earnings for recipient ${recipientUserId}`);
           const { ServerUsdEarningsService } = await import('./usdEarningsService.server');
           await ServerUsdEarningsService.processUsdAllocation(
             userId,
@@ -982,14 +890,10 @@ export class ServerUsdService {
             allocationDifference,
             currentMonth
           );
-          console.log(`[USD USER ALLOCATION] Successfully processed earnings for recipient ${recipientUserId}`);
-        } catch (earningsError) {
-          console.error(`[USD USER ALLOCATION] Failed to process earnings for recipient ${recipientUserId}:`, earningsError);
+        } catch {
           // Don't fail the allocation if earnings processing fails
         }
       }
-
-      console.log(`[USD USER ALLOCATION] Successfully allocated ${centsToDollars(newUserAllocationCents)} USD to user ${recipientUserId} from user ${userId}`);
     } catch (error) {
       console.error('ServerUsdService: Error allocating USD to user:', error);
       throw error;

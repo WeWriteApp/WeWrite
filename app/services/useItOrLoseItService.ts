@@ -77,7 +77,6 @@ export class UseItOrLoseItService {
     error?: string;
   }> {
     try {
-      console.log(`🔄 [USE IT OR LOSE IT] Processing unallocated funds for ${month}`);
 
       // Get all user allocation snapshots for the month
       const userSnapshots = await this.getUserAllocationSnapshots(month);
@@ -110,8 +109,6 @@ export class UseItOrLoseItService {
           unallocatedAmount,
           unallocatedPercentage
         });
-
-        console.log(`🔄 [USE IT OR LOSE IT] User ${snapshot.userId}: ${formatUsdCents(unallocatedAmount * 100)} unallocated (${unallocatedPercentage.toFixed(1)}%)`);
       }
 
       // Get platform fees from earnings calculation
@@ -142,10 +139,8 @@ export class UseItOrLoseItService {
             `Unallocated funds for ${month} - use it or lose it (platform revenue)`
           );
 
-          if (storageResult.success) {
-            console.log(`💰 [USE IT OR LOSE IT] ✅ Moved ${formatUsdCents(totalUnallocatedFunds * 100)} unallocated funds to Payments Balance`);
-          } else {
-            console.error(`❌ [USE IT OR LOSE IT] Failed to move unallocated funds: ${storageResult.error}`);
+          if (!storageResult.success) {
+            console.error(`[USE IT OR LOSE IT] Failed to move unallocated funds: ${storageResult.error}`);
           }
         } catch (error) {
           console.error(`❌ [USE IT OR LOSE IT] Storage Balance operation failed:`, error);
@@ -157,14 +152,6 @@ export class UseItOrLoseItService {
 
       // Update user summaries
       await this.updateUserUnallocatedSummaries(unallocatedFundsByUser, month);
-
-      console.log(`✅ [USE IT OR LOSE IT] Processed unallocated funds for ${month}:`, {
-        totalUsers: userSnapshots.length,
-        totalSubscriptionRevenue: formatUsdCents(totalSubscriptionRevenue * 100),
-        totalUnallocatedFunds: formatUsdCents(totalUnallocatedFunds * 100),
-        totalPlatformRevenue: formatUsdCents(report.platformRevenueBreakdown.totalPlatformRevenue * 100),
-        averageAllocationRate: `${((totalAllocatedByUsers / totalSubscriptionRevenue) * 100).toFixed(1)}%`
-      });
 
       return {
         success: true,

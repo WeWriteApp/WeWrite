@@ -95,11 +95,8 @@ export class EarningsCalculationEngine {
     error?: string;
   }> {
     try {
-      console.log(`💰 [EARNINGS ENGINE] Starting earnings calculation for ${month}`);
-
       // Get all user allocation snapshots for the month
       const userSnapshots = await this.getUserAllocationSnapshots(month);
-      console.log(`💰 [EARNINGS ENGINE] Found ${userSnapshots.length} user snapshots for ${month}`);
 
       if (userSnapshots.length === 0) {
         return {
@@ -178,14 +175,6 @@ export class EarningsCalculationEngine {
 
       // Save individual user earnings
       await this.saveUserEarnings(userEarnings);
-
-      console.log(`✅ [EARNINGS ENGINE] Earnings calculation completed for ${month}:`, {
-        totalUsers: userEarnings.length,
-        totalAllocations: formatUsdCents(totalAllocations * 100),
-        totalNetEarnings: formatUsdCents(totalNetEarnings * 100),
-        totalPlatformRevenue: formatUsdCents(report.platformRevenue.total * 100),
-        unallocatedFunds: formatUsdCents(totalUnallocatedFunds * 100)
-      });
 
       return {
         success: true,

@@ -5,18 +5,12 @@ import { collection, query, where, orderBy, limit, getDocs } from "firebase/fire
 import { getFollowedPages } from "../firebase/follows";
 import { generateCacheKey, setCacheItem } from "./cacheUtils";
 import { getCollectionName } from "./environmentConfig";
+import type { Page } from '../types/database';
 
-interface PageData {
-  id: string;
-  title?: string;
-  content?: string;
-  userId?: string;
-  authorName?: string;
-  lastModified?: string;
-  isPublic?: boolean;
-  deleted?: boolean;
-  [key: string]: unknown;
-}
+/**
+ * Page data type for prefetching - uses centralized Page type with additional fields
+ */
+type PageData = Partial<Page> & { id: string; authorName?: string; [key: string]: unknown };
 
 interface CacheData {
   public: PageData[];

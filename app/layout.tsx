@@ -10,25 +10,8 @@ import { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 
 import SessionAuthInitializer from "./components/auth/SessionAuthInitializer"
 import SessionMonitor from "./components/auth/SessionMonitor"
-// SessionZustandBridge removed - functionality integrated into hybrid session system
 import { DataProvider } from "./providers/DataProvider"
-import { DateFormatProvider } from "./contexts/DateFormatContext"
-import { AccentColorProvider } from "./contexts/AccentColorContext"
-import { NeutralColorProvider } from "./contexts/NeutralColorContext"
-import { AppBackgroundProvider } from "./contexts/AppBackgroundContext"
-import { PillStyleProvider } from "./contexts/PillStyleContext"
-// LoggingProvider removed - using unified logger from init-logger.ts
-import { LineSettingsProvider } from "./contexts/LineSettingsContext"
-import { RecentPagesProvider } from "./contexts/RecentPagesContext"
-import { AllocationIncrementProvider } from "./contexts/AllocationIncrementContext"
-import { UsdBalanceProvider } from "./contexts/UsdBalanceContext"
-import { SubscriptionProvider } from "./contexts/SubscriptionContext"
-import { EarningsProvider } from "./contexts/EarningsContext"
-import { DemoBalanceProvider } from "./contexts/DemoBalanceContext"
-import { AllocationIntervalProvider } from "./contexts/AllocationIntervalContext"
-import { NavigationOrderProvider } from "./contexts/NavigationOrderContext"
-import { UnifiedMobileNavProvider } from "./contexts/UnifiedMobileNavContext"
-// import SimpleNavigationOptimizer from "./components/navigation/SimpleNavigationOptimizer" // Temporarily disabled
+import { AllAppProviders } from "./providers/ConsolidatedProviders"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
@@ -44,7 +27,6 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
-import { FeatureFlagProvider } from "./contexts/FeatureFlagContext"
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
 
@@ -234,64 +216,34 @@ export default function RootLayout({
         <UnifiedErrorBoundary>
           <GlobalErrorHandler />
           <ThemeProvider>
-              <ReactQueryProvider>
-                <AuthProvider>
-                  <LogRocketProvider>
-                    <PWAProvider>
-                      <BannerProvider>
-                        <NotificationProvider>
-                      <MobileProvider>
-                      <DataProvider>
-                        <DateFormatProvider>
-                                  <AccentColorProvider>
-                                    <NeutralColorProvider>
-                                      <SubscriptionProvider>
-                                        <AppBackgroundProvider>
-                                          <PillStyleProvider>
-                                <FeatureFlagProvider>
-                                <LineSettingsProvider>
-                                  <RecentPagesProvider>
-                                    <AllocationIncrementProvider>
-                                        <DemoBalanceProvider>
-                                          <UsdBalanceProvider>
-                                            <EarningsProvider>
-                                              <AllocationIntervalProvider>
-                                          <NavigationOrderProvider>
-                                            <UnifiedMobileNavProvider>
-                                              <SessionAuthInitializer>
-                                                <SessionMonitor />
-                                                <AutomaticUpdateManager />
-                                                <ScrollRestorationDisabler />
-                                                <GlobalLandingBlobs />
-                                                <GlobalNavigation>
-                                                  {children}
-                                                </GlobalNavigation>
-                                              </SessionAuthInitializer>
-                                            </UnifiedMobileNavProvider>
-                                            </NavigationOrderProvider>
-                                              </AllocationIntervalProvider>
-                                            </EarningsProvider>
-                                          </UsdBalanceProvider>
-                                        </DemoBalanceProvider>
-                                    </AllocationIncrementProvider>
-                                  </RecentPagesProvider>
-                                </LineSettingsProvider>
-                                </FeatureFlagProvider>
-                                  </PillStyleProvider>
-                                </AppBackgroundProvider>
-                              </SubscriptionProvider>
-                            </NeutralColorProvider>
-                          </AccentColorProvider>
-                        </DateFormatProvider>
-                      </DataProvider>
-                    </MobileProvider>
-                    </NotificationProvider>
-                      </BannerProvider>
-                    </PWAProvider>
-                  </LogRocketProvider>
-                </AuthProvider>
-              </ReactQueryProvider>
-            </ThemeProvider>
+            <ReactQueryProvider>
+              <AuthProvider>
+                <LogRocketProvider>
+                  <PWAProvider>
+                    <BannerProvider>
+                      <NotificationProvider>
+                        <MobileProvider>
+                          <DataProvider>
+                            <AllAppProviders>
+                              <SessionAuthInitializer>
+                                <SessionMonitor />
+                                <AutomaticUpdateManager />
+                                <ScrollRestorationDisabler />
+                                <GlobalLandingBlobs />
+                                <GlobalNavigation>
+                                  {children}
+                                </GlobalNavigation>
+                              </SessionAuthInitializer>
+                            </AllAppProviders>
+                          </DataProvider>
+                        </MobileProvider>
+                      </NotificationProvider>
+                    </BannerProvider>
+                  </PWAProvider>
+                </LogRocketProvider>
+              </AuthProvider>
+            </ReactQueryProvider>
+          </ThemeProvider>
         </UnifiedErrorBoundary>
         <SpeedInsights />
         <Analytics />

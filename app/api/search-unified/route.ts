@@ -280,8 +280,6 @@ async function searchPagesComprehensive(
     const finalIncludeContent = includeContent !== undefined ? includeContent : contextDefaults.includeContent;
     const finalTitleOnly = titleOnly !== undefined ? titleOnly : contextDefaults.titleOnly;
 
-    console.log(`🔍 OPTIMIZED SEARCH: "${searchTerm}" (context: ${context}, maxResults: ${finalMaxResults})`);
-
     const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
     const searchTermLower = searchTerm?.toLowerCase().trim() || '';
 
@@ -345,14 +343,11 @@ async function searchPagesComprehensive(
     }
 
     // Execute all queries in parallel
-    console.log(`⚡ [SEARCH DEBUG] Executing ${queryPromises.length} parallel queries`);
-
     try {
       const queryResults = await Promise.allSettled(queryPromises);
 
       for (const result of queryResults) {
         if (result.status === 'rejected') {
-          console.warn('⚡ [SEARCH DEBUG] Query failed:', result.reason);
           continue;
         }
 
@@ -414,13 +409,11 @@ async function searchPagesComprehensive(
         });
       }
     } catch (error) {
-      console.error('Error in parallel query execution:', error);
+      // Error in parallel query execution
     }
 
     // Comprehensive client-side search for substring matches
     if (!isEmptySearch) {
-      console.log(`⚡ [SEARCH DEBUG] Performing comprehensive client-side search`);
-
       try {
         const broadQuery = query(
           collection(db, getCollectionName('pages')),
@@ -486,9 +479,8 @@ async function searchPagesComprehensive(
           }
         });
 
-        console.log(`⚡ [SEARCH DEBUG] Comprehensive search added ${broadSearchMatches} additional matches`);
       } catch (error) {
-        console.warn('Error in comprehensive client-side search:', error);
+        // Error in comprehensive client-side search
       }
     }
 
@@ -506,11 +498,8 @@ async function searchPagesComprehensive(
     const finalResults = allResults.slice(0, finalMaxResults);
     const searchTime = Date.now() - searchStartTime;
 
-    console.log(`⚡ OPTIMIZED SEARCH COMPLETE: ${finalResults.length} results in ${searchTime}ms`);
-
     return finalResults;
   } catch (error) {
-    console.error('❌ Error in optimized search:', error);
     return [];
   }
 }
@@ -557,7 +546,7 @@ async function searchUsersComprehensive(searchTerm: string, maxResults: number =
         }
       });
     } catch (error) {
-      console.error('Error in comprehensive user search:', error);
+      // Error in comprehensive user search
     }
 
     const sortedResults = Array.from(results.values()).sort((a, b) => {
@@ -570,7 +559,6 @@ async function searchUsersComprehensive(searchTerm: string, maxResults: number =
     return sortedResults.slice(0, maxResults);
 
   } catch (error) {
-    console.error('Error searching users:', error);
     return [];
   }
 }
@@ -590,8 +578,6 @@ async function searchWithAlgolia(
     currentPageId = null,
     context = SEARCH_CONTEXTS.MAIN
   } = options;
-
-  console.log(`🚀 [ALGOLIA] Searching for "${searchTerm}" (maxResults: ${maxResults}, includeUsers: ${includeUsers})`);
 
   try {
     let filters = '';
@@ -651,8 +637,6 @@ async function searchWithAlgolia(
       _highlightResult: hit._highlightResult
     }));
 
-    console.log(`🚀 [ALGOLIA] Found ${pages.length} pages, ${users.length} users`);
-
     return {
       pages,
       users,
@@ -661,7 +645,6 @@ async function searchWithAlgolia(
       totalUsers: (usersResponse as { nbHits?: number }).nbHits || 0
     };
   } catch (error) {
-    console.error('🚀 [ALGOLIA] Search failed, falling back to Firestore:', error);
     throw error;
   }
 }
@@ -692,8 +675,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const cachedResult = getCachedResult(cacheKey);
 
     if (cachedResult) {
-      console.log(`🚀 CACHE HIT: Search served from cache`);
-
       recordProductionRead('/api/search-unified', 'search-cached', 0, {
         userId,
         cacheStatus: 'HIT',
@@ -708,17 +689,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         cacheAge: Date.now() - (cachedResult.timestamp || 0)
       });
     }
-
-    console.log(`🔍 Unified Search API called:`, {
-      searchTerm,
-      userId,
-      context,
-      maxResults,
-      includeContent,
-      includeUsers,
-      titleOnly,
-      useAlgolia: USE_ALGOLIA
-    });
 
     // Handle empty search
     if (!searchTerm || searchTerm.trim().length === 0) {
@@ -757,7 +727,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
           return NextResponse.json(emptySearchResult, { status: 200 });
         } catch (error) {
-          console.error('Error in empty search:', error);
           return NextResponse.json({
             pages: [],
             users: [],
@@ -791,9 +760,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         pages = algoliaResults.pages;
         users = algoliaResults.users;
         searchSource = 'algolia';
-        console.log(`🚀 [ALGOLIA] Search successful: ${pages.length} pages, ${users.length} users`);
       } catch (algoliaError) {
-        console.warn(`🚀 [ALGOLIA] Failed, falling back to Firestore:`, (algoliaError as Error).message);
+        // Algolia failed, falling back to Firestore
       }
     }
 
@@ -816,8 +784,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Batch fetch missing usernames
-    console.log(`🔍 [USERNAME FETCH] Processing ${(pages || []).length} pages for username fetching`);
-
     const needsUsernameFetch = (page: PageSearchResult): boolean =>
       !page.username ||
       page.username === 'Anonymous' ||
@@ -830,8 +796,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .filter(page => needsUsernameFetch(page) && page.userId)
         .map(page => page.userId)
     )];
-
-    console.log(`🔍 [USERNAME FETCH] Need to fetch ${userIdsToFetch.length} unique usernames`);
 
     const usernameMap = new Map<string, string>();
     if (userIdsToFetch.length > 0) {
@@ -850,9 +814,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             }
           });
         }
-        console.log(`🔍 [USERNAME FETCH] Batch fetched ${usernameMap.size} usernames`);
       } catch (error) {
-        console.error(`🔍 [USERNAME FETCH] Error in batch username fetch:`, error);
+        // Error in batch username fetch
       }
     }
 
@@ -864,13 +827,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     const searchTime = Date.now() - startTime;
-
-    console.log(`✅ Unified search completed in ${searchTime}ms:`, {
-      pagesFound: pages?.length || 0,
-      usersFound: users?.length || 0,
-      searchTerm,
-      context
-    });
 
     const totalResults = (pagesWithUsernames?.length || 0) + (users?.length || 0);
     searchPerformanceTracker.recordSearch(
@@ -912,13 +868,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         referer: request.headers.get('referer')
       });
 
-    console.log(`🔍 Search completed and cached: ${pagesWithUsernames?.length || 0} pages, ${users?.length || 0} users in ${searchTime}ms`);
-
     return NextResponse.json(searchResult, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error in unified search API:', error);
-
     searchPerformanceTracker.recordSearch(
       searchTerm || '',
       startTime,

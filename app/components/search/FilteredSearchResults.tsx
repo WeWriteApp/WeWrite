@@ -27,7 +27,7 @@ const generatePageId = (): string => {
   }
   return `${Date.now().toString(36)}${Math.random().toString(36).substring(2, 10)}`;
 };
-import { getBatchUserData } from '../../utils/apiDeduplication';
+import { getBatchUserData } from '../../utils/apiClient';
 import searchPerformanceMonitor from '../../utils/searchPerformanceMonitor';
 import { shouldAllowRequest } from "../../utils/requestThrottle";
 import { cn, wewriteCard } from '../../lib/utils';
@@ -135,14 +135,12 @@ const FilteredSearchResults = forwardRef(({
   // Fetch comprehensive search results and apply filtering client-side
   const fetchFilteredResults = useCallback(async (searchTerm, filter, searchMode = false) => {
     if (!user) {
-      console.log('[FilteredSearchResults] No user, skipping fetch');
       return;
     }
 
     // Check request throttling to prevent excessive API calls
     const requestType = `search:${filter}:${searchMode ? 'search' : 'filter'}`;
     if (!shouldAllowRequest(requestType)) {
-      console.warn('[FilteredSearchResults] Request throttled:', requestType);
       return;
     }
 
@@ -151,7 +149,6 @@ const FilteredSearchResults = forwardRef(({
 
     // IMPROVED: Only skip if the exact same request is in progress AND we haven't cleared it
     if (lastRequestRef.current === requestSignature && abortControllerRef.current) {
-      console.log('[FilteredSearchResults] Skipping duplicate request:', requestSignature);
       return;
     }
 
@@ -163,8 +160,6 @@ const FilteredSearchResults = forwardRef(({
     // Create new abort controller for this request
     abortControllerRef.current = new AbortController();
     lastRequestRef.current = requestSignature;
-
-    console.log('[FilteredSearchResults] Fetching results - filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
     // CRITICAL FIX: Always set loading state immediately
     setIsSearching(true);
@@ -192,8 +187,6 @@ const FilteredSearchResults = forwardRef(({
         queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${user.uid}&context=main&titleOnly=false&maxResults=50&includeContent=true&includeUsers=true`;
       }
 
-      console.log('[FilteredSearchResults] Making API request to:', queryUrl, 'for searchMode:', searchMode);
-
       const response = await fetch(queryUrl, {
         signal: abortControllerRef.current.signal,
         headers: {
@@ -204,24 +197,18 @@ const FilteredSearchResults = forwardRef(({
 
       // Check if request was aborted after fetch
       if (abortControllerRef.current.signal.aborted) {
-        console.log('[FilteredSearchResults] Request was aborted after fetch');
         return;
       }
 
-      console.log('[FilteredSearchResults] Response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[FilteredSearchResults] Response error:', errorText);
         throw new Error(`Search failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('[FilteredSearchResults] Response data:', data);
 
       // CRITICAL FIX: Validate response data structure to prevent null results
       if (!data || typeof data !== 'object') {
-        console.error('[FilteredSearchResults] Invalid response data structure:', data);
         throw new Error('Invalid response data structure');
       }
 
@@ -246,13 +233,6 @@ const FilteredSearchResults = forwardRef(({
         const pageResults = allResults.filter(r => r.type === 'page');
         const userResults = allResults.filter(r => r.type === 'user');
         const groupResults = allResults.filter(r => r.type === 'group');
-
-        console.log('[FilteredSearchResults] Enhanced results:', {
-          total: allResults.length,
-          pages: pageResults.length,
-          users: userResults.length,
-          groups: groupResults.length
-        });
 
         // Apply client-side filtering for enhanced results
         let filteredPages = pageResults;
@@ -280,18 +260,10 @@ const FilteredSearchResults = forwardRef(({
         // Fetch subscription data for page authors
         fetchUserSubscriptionData(filteredPages);
 
-        console.log('[FilteredSearchResults] Set enhanced results:', {
-          pages: filteredPages.length,
-          users: userResults.length,
-          groups: groupResults.length
-        });
-
       } else {
         // Handle regular search results (unified API format: { pages: [], users: [] })
         let allPages = data.pages || [];
         let allUsers = data.users || [];
-        console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
-        console.log('[FilteredSearchResults] Total users from search:', allUsers.length);
 
         // Ensure allPages is an array before filtering
         const safeAllPages = Array.isArray(allPages) ? allPages : [];
@@ -302,7 +274,6 @@ const FilteredSearchResults = forwardRef(({
         if (!searchMode && filter === 'my-pages') {
           // Filter to only show user's own pages (only for non-link editor mode)
           filteredPages = safeAllPages.filter(page => page.userId === user.uid);
-          console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
         } else if (!searchMode && filter === 'recent') {
           // For recent filter in non-link editor mode, sort by recency
           filteredPages = safeAllPages.sort((a, b) => {
@@ -315,16 +286,11 @@ const FilteredSearchResults = forwardRef(({
             const bTime = new Date(b.lastModified || 0).getTime();
             return bTime - aTime;
           });
-          console.log('[FilteredSearchResults] Sorted for recent filter:', filteredPages.length);
-        } else {
-          // Use pages as-is (already filtered server-side)
-          console.log('[FilteredSearchResults] Using server-filtered pages:', filteredPages.length);
         }
 
         // Filter out current page if specified
         if (currentPageId) {
           filteredPages = filteredPages.filter(page => page.id !== currentPageId);
-          console.log('[FilteredSearchResults] Filtered out current page:', currentPageId, 'remaining:', filteredPages.length);
         }
 
         const limitedPages = maxResults ? filteredPages.slice(0, maxResults) : filteredPages;
@@ -336,18 +302,12 @@ const FilteredSearchResults = forwardRef(({
 
         // Fetch subscription data for page authors
         fetchUserSubscriptionData(limitedPages);
-
-        console.log('[FilteredSearchResults] Set filtered pages:', limitedPages.length, 'pages');
-        console.log('[FilteredSearchResults] Set users:', allUsers.length, 'users');
-        console.log('[FilteredSearchResults] Pages state updated:', limitedPages);
       }
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('[FilteredSearchResults] Search request was aborted');
         return;
       }
-      console.error("[FilteredSearchResults] Error fetching results", error);
       resetSearchResults();
     } finally {
       setIsSearching(false);
@@ -362,24 +322,19 @@ const FilteredSearchResults = forwardRef(({
   const debouncedSearch = useCallback(
     debounce(async (searchTerm, searchMode = false) => {
       if (!user) {
-        console.log('[FilteredSearchResults] No user available for search');
         return;
       }
 
       // In link editor mode, always show results (even with empty search)
       // In regular mode, only search if there's a search term
       if (!searchTerm && !isLinkEditor) {
-        console.log('[FilteredSearchResults] Empty search term, resetting results');
         resetSearchResults();
         return;
       }
 
-      console.log('[FilteredSearchResults] Debounced search triggered:', { searchTerm, searchMode, activeFilter });
-
       try {
         await fetchFilteredResults(searchTerm, activeFilter, searchMode);
       } catch (error) {
-        console.error('[FilteredSearchResults] Error in debounced search:', error);
         // Don't reset results on error - let the user retry
       }
     }, 500), // Standardized to 500ms for better responsiveness while preventing excessive requests
@@ -429,7 +384,6 @@ const FilteredSearchResults = forwardRef(({
 
   // Handle filter change
   const handleFilterChange = useCallback((filter) => {
-    console.log('[FilteredSearchResults] Filter changed to:', filter, 'isLinkEditor:', isLinkEditor, 'search:', search);
     setActiveFilter(filter);
     setIsSearchMode(false); // Exit search mode when selecting a filter
 
@@ -437,36 +391,15 @@ const FilteredSearchResults = forwardRef(({
     // This ensures we get all available pages and apply filtering client-side
     if (isLinkEditor) {
       // In link editor mode, always show comprehensive results
-      console.log('[FilteredSearchResults] Calling fetchFilteredResults for link editor mode');
       fetchFilteredResults(search, filter, false);
     } else if (search.trim().length >= characterCount) {
       // In regular mode, only search if we have enough characters
-      console.log('[FilteredSearchResults] Calling fetchFilteredResults for regular mode');
       fetchFilteredResults(search, filter, false);
     }
   }, [search, characterCount, isLinkEditor, fetchFilteredResults]);
 
   // Handle item selection
   const handleSelect = useCallback(async (item) => {
-    console.log('[FilteredSearchResults] handleSelect called:', {
-      itemId: item.id,
-      itemTitle: item.title,
-      preventRedirect,
-      isLinkEditor,
-      willNavigate: !preventRedirect && !isLinkEditor
-    });
-
-    console.log('🔍 [FILTERED_SEARCH] Full item data:', {
-      id: item.id,
-      title: item.title,
-      username: item.username,
-      userId: item.userId,
-      hasUsername: !!item.username,
-      hasUserId: !!item.userId,
-      allKeys: Object.keys(item),
-      fullItem: item
-    });
-
     setSelectedId(item.id);
 
     if (onSelect) {
@@ -497,18 +430,14 @@ const FilteredSearchResults = forwardRef(({
 
   // Initialize search on mount and when filter changes
   useEffect(() => {
-    console.log('[FilteredSearchResults] useEffect triggered - user:', !!user, 'isLinkEditor:', isLinkEditor, 'activeFilter:', activeFilter, 'initialSearch:', initialSearch);
     if (!user) return; // Wait for user to be available
 
     if (initialSearch) {
-      console.log('[FilteredSearchResults] Running initial search:', initialSearch);
       debouncedSearch(initialSearch);
     } else if (isLinkEditor) {
       // In link editor mode, delay the initial search to prevent excessive API requests
       // This prevents the search from firing immediately when the modal opens
-      console.log('[FilteredSearchResults] Setting up delayed search for link editor mode');
       const timer = setTimeout(() => {
-        console.log('[FilteredSearchResults] Executing delayed search for filter:', activeFilter);
         fetchFilteredResults('', activeFilter, false);
       }, 500); // Standardized delay to match debounce timing
 
@@ -540,10 +469,8 @@ const FilteredSearchResults = forwardRef(({
             if (onFocus) {
               onFocus();
             }
-
-            console.log('[FilteredSearchResults] Auto-focused input field');
           } catch (error) {
-            console.error('[FilteredSearchResults] Error during auto-focus:', error);
+            // Silent fail for auto-focus
           }
         }
       }, 100); // Small delay to ensure component is ready

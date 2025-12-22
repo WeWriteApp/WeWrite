@@ -16,7 +16,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { UsdDataService, type SubscriptionData } from '../services/usdDataService';
-import { subscriptionCache } from '../utils/simplifiedCache';
+import { subscriptionCache } from '../utils/financialDataCache';
 
 interface SubscriptionContextType {
   // Subscription data

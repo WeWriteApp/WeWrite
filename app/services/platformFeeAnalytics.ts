@@ -149,11 +149,6 @@ export async function getPlatformFeeAnalytics(
     const { startDate, endDate } = dateRange;
     const timeConfig = getOptimalGranularity(dateRange, granularity);
 
-    console.log('📊 [Platform Fee Analytics] Fetching data:', {
-      dateRange: { startDate, endDate },
-      granularity: timeConfig.granularity,
-      intervals: timeConfig.intervals.length
-    });
 
     // Initialize data map with all intervals
     const dataMap = new Map<string, { revenue: number; payouts: number }>();
@@ -174,7 +169,6 @@ export async function getPlatformFeeAnalytics(
     );
 
     const snapshot = await getDocs(q);
-    console.log(`✅ [Platform Fee Analytics] Found ${snapshot.size} completed payouts`);
 
     // Process payouts and calculate platform fees
     snapshot.forEach(doc => {
@@ -230,12 +224,6 @@ export async function getPlatformFeeAnalytics(
 
     // Temporarily disable caching for server-side usage
     // setCacheItem(cacheKey, result, 30 * 60 * 1000);
-    
-    console.log('📊 [Platform Fee Analytics] Returning result:', {
-      dataPoints: result.length,
-      totalRevenue: result.reduce((sum, item) => sum + item.revenue, 0),
-      totalPayouts: result.reduce((sum, item) => sum + item.payouts, 0)
-    });
 
     return result;
 

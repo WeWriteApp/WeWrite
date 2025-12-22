@@ -84,20 +84,15 @@ export const followPage = async (userId: string, pageId: string): Promise<boolea
     throw new Error('Page ID is required');
   }
 
-  console.warn('🔧 Follow Debug: followPage called (using API)', { pageId, userId });
-
   try {
     const response = await followsApi.followPage(pageId);
 
     if (response.success) {
-      console.warn('🔧 Follow Debug: ✅ Successfully followed page via API');
       return true;
     } else {
-      console.error('🔧 Follow Debug: ❌ Failed to follow page via API:', response.error);
       throw new Error(response.error || 'Failed to follow page');
     }
   } catch (error) {
-    console.error('🔧 Follow Debug: ❌ Error following page:', error);
     throw error;
   }
 };
@@ -116,20 +111,15 @@ export const unfollowPage = async (userId: string, pageId: string): Promise<bool
     throw new Error('Page ID is required');
   }
 
-  console.warn('🔧 Unfollow Debug: unfollowPage called (using API)', { pageId, userId });
-
   try {
     const response = await followsApi.unfollowPage(pageId);
 
     if (response.success) {
-      console.warn('🔧 Unfollow Debug: ✅ Successfully unfollowed page via API');
       return true;
     } else {
-      console.error('🔧 Unfollow Debug: ❌ Failed to unfollow page via API:', response.error);
       throw new Error(response.error || 'Failed to unfollow page');
     }
   } catch (error) {
-    console.error('🔧 Unfollow Debug: ❌ Error unfollowing page:', error);
     throw error;
   }
 };
@@ -157,7 +147,6 @@ export const isFollowingPage = async (userId: string, pageId: string): Promise<b
 
     return false;
   } catch (error) {
-    console.error('Error checking if following page:', error);
     return false;
   }
 };
@@ -184,7 +173,6 @@ export const getFollowedPages = async (userId: string): Promise<string[]> => {
 
     return [];
   } catch (error) {
-    console.error('Error getting followed pages:', error);
     return [];
   }
 };
@@ -211,7 +199,6 @@ export const getPageFollowerCount = async (pageId: string): Promise<number> => {
 
     return 0;
   } catch (error) {
-    console.error('Error getting page follower count:', error);
     return 0;
   }
 };
@@ -239,7 +226,6 @@ export const isFollowingUser = async (followerId: string, followedId: string): P
 
     return false;
   } catch (error) {
-    console.error('Error checking if following user:', error);
     return false;
   }
 };
@@ -268,10 +254,8 @@ export const getUserFollowing = async (userId: string): Promise<string[]> => {
   } catch (error) {
     // Handle permission denied errors gracefully - this is expected when trying to access other users' following lists
     if (error?.code === 'permission-denied') {
-      console.log(`Permission denied accessing following list for user ${userId} - this is expected for privacy`);
       return [];
     }
-    console.error('Error getting user following list:', error);
     return [];
   }
 };
@@ -298,7 +282,6 @@ export const getUserFollowingCount = async (userId: string): Promise<number> => 
 
     return 0;
   } catch (error) {
-    console.error('Error getting user following count:', error);
     return 0;
   }
 };
@@ -361,14 +344,12 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
           }
         });
       } catch (batchError) {
-        console.error(`Error processing batch ${i}:`, batchError);
         // Continue with the next batch instead of failing completely
       }
     }
 
     return uniqueFollowers.size;
   } catch (error) {
-    console.error('Error getting user follower count:', error);
     return 0;
   }
 };
@@ -415,7 +396,6 @@ export const unfollowAllPagesByUser = async (userId: string): Promise<UnfollowRe
 
     return { success: true, count: selfFollows.length };
   } catch (error) {
-    console.error('Error unfollowing all pages by user:', error);
     return { success: false, count: 0 };
   }
 };
@@ -508,7 +488,6 @@ export const followUser = async (followerId: string, followedId: string): Promis
 
     return true;
   } catch (error) {
-    console.error('Error following user:', error);
     throw error;
   }
 };
@@ -582,7 +561,6 @@ export const unfollowUser = async (followerId: string, followedId: string): Prom
 
     return true;
   } catch (error) {
-    console.error('Error unfollowing user:', error);
     throw error;
   }
 };
@@ -611,10 +589,8 @@ export const getFollowedUsers = async (userId: string): Promise<string[]> => {
   } catch (error) {
     // Handle permission denied errors gracefully - this is expected when trying to access other users' following lists
     if (error?.code === 'permission-denied') {
-      console.log(`Permission denied accessing followed users for user ${userId} - this is expected for privacy`);
       return [];
     }
-    console.error('Error getting followed users:', error);
     return [];
   }
 };
@@ -641,7 +617,6 @@ export const getFollowers = async (userId: string): Promise<string[]> => {
 
     return [];
   } catch (error) {
-    console.error('Error getting followers:', error);
     return [];
   }
 };
@@ -669,7 +644,6 @@ export const checkIfFollowing = async (followerId: string, followedId: string): 
 
     return false;
   } catch (error) {
-    console.error('Error checking if following:', error);
     return false;
   }
 };

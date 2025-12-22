@@ -172,7 +172,6 @@ class VisitorTrackingService {
    */
   async trackVisitor(userId?: string, isAuthenticated: boolean = false): Promise<void> {
     // 🚨 EMERGENCY: Completely disable visitor tracking to stop 13K reads/min crisis
-    console.warn('🚨 EMERGENCY: Visitor tracking completely disabled to stop database read crisis');
     return; // Exit early to prevent any database operations
 
     /* DISABLED FOR EMERGENCY COST OPTIMIZATION - ALL CODE BELOW COMMENTED OUT
@@ -193,7 +192,6 @@ class VisitorTrackingService {
       const existingSession = await this.findExistingSession(fingerprint.id, userId);
 
       if (existingSession) {
-        console.log('📱 Resuming existing session:', existingSession.id);
         this.currentAccount = existingSession;
         this.isTracking = true;
         this.sessionStartTime = Date.now();
@@ -206,11 +204,6 @@ class VisitorTrackingService {
 
       // Skip tracking if high-confidence bot (unless it's a legitimate search engine)
       if (botDetection.isBot && botDetection.confidence > 0.8 && botDetection.category !== 'search_engine') {
-        console.log('🤖 Bot detected, skipping tracking:', {
-          confidence: botDetection.confidence,
-          category: botDetection.category,
-          reasons: botDetection.reasons
-        });
         return;
       }
 
@@ -260,19 +253,12 @@ class VisitorTrackingService {
       this.isTracking = true;
       this.setupHeartbeat();
 
-      console.log('✅ New visitor session started:', {
-        sessionId,
-        isBot: botDetection.isBot,
-        confidence: botDetection.confidence,
-        category: botDetection.category
-      });
-
     } catch (error) {
       // Handle permission denied errors gracefully - this is expected for private data
       if (error?.code === 'permission-denied') {
-        console.log('Permission denied tracking visitor - this is expected for private data');
+        // Permission denied - this is expected for private data
       } else {
-        console.error('Error tracking visitor:', error);
+        // Error tracking visitor
       }
       this.isTracking = false;
     }
@@ -332,9 +318,9 @@ class VisitorTrackingService {
     } catch (error) {
       // Handle permission denied errors gracefully - this is expected for private data
       if (error?.code === 'permission-denied') {
-        console.log('Permission denied finding existing session - this is expected for private data');
+        // Permission denied - this is expected for private data
       } else {
-        console.error('Error finding existing session:', error);
+        // Error finding existing session
       }
       return null;
     }
@@ -363,9 +349,8 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
 
       await updateDoc(sessionRef, updateData);
 
-      console.log('🔄 Session authentication updated:', { userId, isAuthenticated });
     } catch (error) {
-      console.error('Error updating session auth:', error);
+      // Error updating session auth
     }
   }
 
@@ -374,8 +359,6 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
    * DISABLED FOR COST OPTIMIZATION - Use API polling instead of frequent heartbeat writes
    */
   private setupHeartbeat(): void {
-    console.warn('🚨 COST OPTIMIZATION: Visitor tracking heartbeat disabled to reduce Firebase writes.');
-
     // Return early to disable heartbeat completely
     return;
 
@@ -418,8 +401,6 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
           this.currentAccount.isBot = true;
           this.currentAccount.botConfidence = Math.max(this.currentAccount.botConfidence, 0.8);
           this.currentAccount.botCategory = 'suspicious';
-
-          console.log('🚨 Suspicious behavior detected:', behaviorValidation.reasons);
         }
 
         // OPTIMIZATION: Batch updates to reduce Firestore writes
@@ -442,7 +423,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         }
 
       } catch (error) {
-        console.error('Error updating visitor heartbeat:', error);
+        // Error updating visitor heartbeat
       }
     }, VisitorTrackingService.HEARTBEAT_INTERVAL);
     */
@@ -466,15 +447,13 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
 const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
       await updateDoc(sessionRef, this.pendingUpdates);
 
-      console.log(`[VisitorTracking] Batched ${this.updateCount} updates for session ${this.currentAccount.id}`);
-
       // Clear pending updates
       this.pendingUpdates = {};
       this.updateCount = 0;
       this.lastBatchUpdate = Date.now();
 
     } catch (error) {
-      console.error('Error processing batch update:', error);
+      // Error processing batch update
     }
   }
 
@@ -489,8 +468,6 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
     bots: number;
     legitimateVisitors: number;
   }) => void): Unsubscribe | null {
-    console.warn('🚨 COST OPTIMIZATION: Visitor count real-time listener disabled. Use API polling instead.');
-
     // Return mock data and no-op unsubscribe to prevent breaking the UI
     setTimeout(() => {
       callback({
@@ -516,8 +493,6 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
       );
 
       // DISABLED FOR COST OPTIMIZATION - Replace with API polling
-      console.warn('🚨 COST OPTIMIZATION: Visitor tracking real-time listener disabled. Use API polling instead.');
-
       // Return mock data and no-op unsubscribe
       setTimeout(() => callback({ total: 0, authenticated: 0, anonymous: 0, bots: 0, legitimateVisitors: 0 }), 100);
       return () => {};
@@ -570,7 +545,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error subscribing to visitor count:', error);
+      // Error subscribing to visitor count
       return null;
     }
     */
@@ -592,13 +567,8 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         lastSeen: this.currentAccount.lastSeen
       });
 
-      console.log('📄 Page view queued for batch update:', {
-        sessionId: this.currentAccount.id,
-        pageViews: this.currentAccount.pageViews,
-        url: pageUrl
-      });
     } catch (error) {
-      console.error('Error tracking page view:', error);
+      // Error tracking page view
     }
   }
 
@@ -641,14 +611,13 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
       await updateDoc(sessionRef, this.pendingUpdates);
 
       success = true;
-      console.log(`📊 Batch update processed: ${this.updateCount} changes`, this.pendingUpdates);
 
       // Reset batch
       this.pendingUpdates = {};
       this.updateCount = 0;
       this.lastBatchUpdate = Date.now();
     } catch (error) {
-      console.error('Error processing batch update:', error);
+      // Error processing batch update
     } finally {
       // Track batch processing for cost optimization monitoring
       const processingTime = Date.now() - batchStartTime;
@@ -674,7 +643,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         this.activeSubscriptions.delete('visitor-counts');
       }
     } catch (error) {
-      console.error('Error unsubscribing from visitor count:', error);
+      // Error unsubscribing from visitor count
     }
   }
 
@@ -698,12 +667,6 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
           active: false
         });
 
-        console.log('📊 Session ended:', {
-          sessionId: this.currentAccount.id,
-          duration: this.currentAccount.sessionDuration,
-          pageViews: this.currentAccount.pageViews
-        });
-
         this.currentAccount = null;
       }
 
@@ -713,7 +676,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
 
       this.isTracking = false;
     } catch (error) {
-      console.error('Error cleaning up visitor tracking:', error);
+      // Error cleaning up visitor tracking
     }
   }
 
@@ -755,7 +718,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         await Promise.all(updatePromises);
       }
     } catch (error) {
-      console.error('Error cleaning up stale visitors:', error);
+      // Error cleaning up stale visitors
     }
   }
 
@@ -802,7 +765,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         topBotCategories: botCategories
       };
     } catch (error) {
-      console.error('Error getting analytics summary:', error);
+      // Error getting analytics summary
       return {
         activeSessions: 0,
         totalBots: 0,

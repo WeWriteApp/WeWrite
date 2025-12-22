@@ -139,8 +139,6 @@ class LiveReadersService {
   private async processBatchUpdates(): Promise<void> {
     if (this.batchUpdates.size === 0) return;
 
-    console.log(`[LiveReaders] Processing ${this.batchUpdates.size} batched updates`);
-
     for (const [pageId, batch] of this.batchUpdates.entries()) {
       try {
         // Only update if we have active readers
@@ -163,8 +161,6 @@ class LiveReadersService {
               lastSeen: Date.now()
             });
           }
-
-          console.log(`[LiveReaders] Updated ${batch.readers.size} readers for page ${pageId}`);
         }
       } catch (error) {
         console.error(`Error processing batch update for page ${pageId}:`, error);
@@ -200,9 +196,6 @@ class LiveReadersService {
 
     expiredEntries.forEach(key => this.readerCache.delete(key));
 
-    if (expiredEntries.length > 0) {
-      console.log(`[LiveReaders] Cleaned up ${expiredEntries.length} expired cache entries`);
-    }
   }
 
   /**
@@ -316,8 +309,6 @@ class LiveReadersService {
     // Clear caches
     this.readerCache.clear();
     this.batchUpdates.clear();
-
-    console.log('[LiveReaders] Service cleaned up');
   }
 
   /**

@@ -103,7 +103,6 @@ export const sendVerificationEmail = async (options: VerificationEmailOptions): 
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'verification',
         templateName: 'Email Verification',
@@ -118,7 +117,6 @@ export const sendVerificationEmail = async (options: VerificationEmailOptions): 
       return false;
     }
 
-    console.log('[EmailService] Verification email sent to:', to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'verification',
       templateName: 'Email Verification',
@@ -132,7 +130,6 @@ export const sendVerificationEmail = async (options: VerificationEmailOptions): 
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send verification email:', error);
     return false;
   }
 };
@@ -155,7 +152,6 @@ export const sendWelcomeEmail = async (options: WelcomeEmailOptions): Promise<bo
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'welcome',
         templateName: 'Welcome Email',
@@ -170,7 +166,6 @@ export const sendWelcomeEmail = async (options: WelcomeEmailOptions): Promise<bo
       return false;
     }
 
-    console.log('[EmailService] Welcome email sent to:', to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'welcome',
       templateName: 'Welcome Email',
@@ -184,7 +179,6 @@ export const sendWelcomeEmail = async (options: WelcomeEmailOptions): Promise<bo
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send welcome email:', error);
     return false;
   }
 };
@@ -207,7 +201,6 @@ export const sendPasswordResetEmail = async (options: PasswordResetEmailOptions)
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'password-reset',
         templateName: 'Password Reset',
@@ -222,7 +215,6 @@ export const sendPasswordResetEmail = async (options: PasswordResetEmailOptions)
       return false;
     }
 
-    console.log('[EmailService] Password reset email sent to:', to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'password-reset',
       templateName: 'Password Reset',
@@ -236,7 +228,6 @@ export const sendPasswordResetEmail = async (options: PasswordResetEmailOptions)
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send password reset email:', error);
     return false;
   }
 };
@@ -259,7 +250,6 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'notification',
         templateName: 'Notification',
@@ -274,7 +264,6 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
       return false;
     }
 
-    console.log('[EmailService] Notification email sent to:', to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'notification',
       templateName: 'Notification',
@@ -288,7 +277,6 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send notification email:', error);
     return false;
   }
 };
@@ -313,14 +301,11 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       return false;
     }
 
-    console.log('[EmailService] Email sent to:', to, 'ID:', data?.id);
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send email:', error);
     return false;
   }
 };
@@ -354,7 +339,6 @@ export const sendPayoutSetupReminder = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'payout-reminder',
         templateName: 'Payout Setup Reminder',
@@ -369,7 +353,6 @@ export const sendPayoutSetupReminder = async (options: {
       return false;
     }
 
-    console.log('[EmailService] Payout setup reminder sent to:', options.to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'payout-reminder',
       templateName: 'Payout Setup Reminder',
@@ -383,7 +366,6 @@ export const sendPayoutSetupReminder = async (options: {
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send payout setup reminder:', error);
     return false;
   }
 };
@@ -410,7 +392,6 @@ export const sendPayoutProcessed = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'payout-processed',
         templateName: 'Payout Processed',
@@ -426,7 +407,6 @@ export const sendPayoutProcessed = async (options: {
       return false;
     }
 
-    console.log('[EmailService] Payout processed email sent to:', options.to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'payout-processed',
       templateName: 'Payout Processed',
@@ -441,7 +421,6 @@ export const sendPayoutProcessed = async (options: {
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send payout processed email:', error);
     return false;
   }
 };
@@ -468,7 +447,6 @@ export const sendSubscriptionConfirmation = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'subscription-confirmation',
         templateName: 'Subscription Confirmation',
@@ -484,7 +462,6 @@ export const sendSubscriptionConfirmation = async (options: {
       return false;
     }
 
-    console.log('[EmailService] Subscription confirmation sent to:', options.to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'subscription-confirmation',
       templateName: 'Subscription Confirmation',
@@ -499,7 +476,6 @@ export const sendSubscriptionConfirmation = async (options: {
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send subscription confirmation:', error);
     return false;
   }
 };
@@ -525,7 +501,6 @@ export const sendNewFollowerEmail = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'new-follower',
         templateName: 'New Follower',
@@ -541,7 +516,6 @@ export const sendNewFollowerEmail = async (options: {
       return false;
     }
 
-    console.log('[EmailService] New follower email sent to:', options.to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'new-follower',
       templateName: 'New Follower',
@@ -556,7 +530,6 @@ export const sendNewFollowerEmail = async (options: {
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send new follower email:', error);
     return false;
   }
 };
@@ -588,7 +561,6 @@ export const sendPageLinkedEmail = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'page-linked',
         templateName: 'Page Linked',
@@ -604,7 +576,6 @@ export const sendPageLinkedEmail = async (options: {
       return false;
     }
 
-    console.log('[EmailService] Page linked email sent to:', options.to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'page-linked',
       templateName: 'Page Linked',
@@ -619,7 +590,6 @@ export const sendPageLinkedEmail = async (options: {
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send page linked email:', error);
     return false;
   }
 };
@@ -646,7 +616,6 @@ export const sendSecurityAlert = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId: 'security-alert',
         templateName: 'Security Alert',
@@ -662,7 +631,6 @@ export const sendSecurityAlert = async (options: {
       return false;
     }
 
-    console.log('[EmailService] Security alert email sent to:', options.to, 'ID:', data?.id);
     await logEmailSend({
       templateId: 'security-alert',
       templateName: 'Security Alert',
@@ -677,7 +645,6 @@ export const sendSecurityAlert = async (options: {
     });
     return true;
   } catch (error) {
-    console.error('[EmailService] Failed to send security alert email:', error);
     return false;
   }
 };
@@ -705,7 +672,6 @@ export const sendTemplatedEmail = async (options: {
 
     const template = getTemplateById(templateId);
     if (!template) {
-      console.error('[EmailService] Template not found:', templateId);
       return { success: false };
     }
 
@@ -719,7 +685,6 @@ export const sendTemplatedEmail = async (options: {
     });
 
     if (error) {
-      console.error('[EmailService] Resend error:', error);
       await logEmailSend({
         templateId,
         templateName: template.name,
@@ -735,10 +700,6 @@ export const sendTemplatedEmail = async (options: {
       return { success: false };
     }
 
-    const logMessage = scheduledAt
-      ? `[EmailService] ${template.name} email scheduled for ${scheduledAt} to:`
-      : `[EmailService] ${template.name} email sent to:`;
-    console.log(logMessage, to, 'ID:', resendData?.id);
     await logEmailSend({
       templateId,
       templateName: template.name,
@@ -753,7 +714,6 @@ export const sendTemplatedEmail = async (options: {
     });
     return { success: true, resendId: resendData?.id };
   } catch (error) {
-    console.error('[EmailService] Failed to send templated email:', error);
     return { success: false };
   }
 };

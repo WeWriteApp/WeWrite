@@ -205,13 +205,6 @@ export class DashboardAnalyticsService {
    * Get new accounts created within date range
    */
   static async getNewAccountsCreated(dateRange: DateRange, granularity?: number): Promise<ChartDataPoint[]> {
-    console.log('🔍 [Analytics Service] getNewAccountsCreated called with:', { dateRange, granularity });
-    console.log('🔍 [Analytics Service] Environment info:', {
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV,
-      usersCollection: getCollectionName('users')
-    });
-
     try {
       // Check enhanced analytics cache first
       const cacheParams = {
@@ -221,17 +214,13 @@ export class DashboardAnalyticsService {
       };
       const cachedData = analyticsCache.get('users', cacheParams);
       if (cachedData) {
-        console.log('🚀 [Analytics Service] Enhanced cache hit for accounts data:', cachedData.length, 'items');
         return cachedData;
       }
-
-      console.log('💸 [Analytics Service] Cache miss for accounts - fetching from database');
 
       // Check legacy cache as fallback
       const cacheKey = getCacheKey('accounts', dateRange) + (granularity ? `-g${granularity}` : '');
       const legacyCachedData = getCachedData<ChartDataPoint[]>(cacheKey);
       if (legacyCachedData) {
-        console.log('📦 [Analytics Service] Legacy cache hit for accounts data');
         // Store in enhanced cache for future requests
         analyticsCache.set('users', legacyCachedData, cacheParams, 100);
         return legacyCachedData;
@@ -247,12 +236,9 @@ export class DashboardAnalyticsService {
       // ISO string or Timestamp, let's use a simpler approach: get all users and filter in memory
       // This is acceptable for analytics since we limit to 1000 users anyway
 
-      console.log('🔍 [Analytics Service] Fetching users for analytics (limited to 1000)...');
       await throttleQuery();
 
       const snapshot = await usersRef.limit(1000).get();
-
-      console.log(`✅ [Analytics Service] Users query successful, found ${snapshot.size} documents, will filter by date in memory`);
 
       // Group by time interval
       const dateMap = new Map<string, number>();
@@ -276,11 +262,9 @@ export class DashboardAnalyticsService {
             date = new Date(createdAt);
             // Validate the parsed date
             if (isNaN(date.getTime())) {
-              console.warn('Invalid date string:', createdAt, 'for user:', doc.id);
               return; // Skip invalid dates
             }
           } else {
-            console.warn('Unknown createdAt format:', typeof createdAt, createdAt, 'for user:', doc.id);
             return; // Skip invalid dates
           }
 
@@ -330,16 +314,10 @@ export class DashboardAnalyticsService {
       setCachedData(cacheKey, result);
       analyticsCache.set('users', result, cacheParams, estimatedReads);
 
-      console.log('📊 [Analytics Service] Returning accounts result:', result.length, 'data points, total accounts:', result.reduce((sum, item) => sum + item.count, 0));
       return result;
 
     } catch (error) {
       console.error('Error fetching new accounts data:', error);
-      console.error('Error details:', {
-        code: (error as any)?.code,
-        message: (error as any)?.message,
-        collection: getCollectionName('users')
-      });
 
       // Return empty data - no mock data
       return [];
@@ -352,15 +330,8 @@ export class DashboardAnalyticsService {
   static async getCompositePagesData(dateRange: DateRange, granularity?: number): Promise<CompositePagesDataPoint[]> {
     // Early return if dateRange is not properly initialized
     if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
-      console.log('🔍 [Analytics Service] getCompositePagesData - dateRange not initialized');
       return [];
     }
-
-    console.log('🔍 [Analytics Service] getCompositePagesData called with dateRange:', {
-      startDate: dateRange.startDate.toISOString(),
-      endDate: dateRange.endDate.toISOString(),
-      daysDifference: Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))
-    });
 
     try {
       // Check cache first
@@ -463,18 +434,11 @@ export class DashboardAnalyticsService {
    * Get new pages created within date range with public/private breakdown
    */
   static async getNewPagesCreated(dateRange: DateRange, granularity?: number): Promise<PagesDataPoint[]> {
-    console.log('🔍 [Analytics Service] getNewPagesCreated called with dateRange:', {
-      startDate: dateRange.startDate.toISOString(),
-      endDate: dateRange.endDate.toISOString(),
-      daysDifference: Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))
-    });
-
     try {
       // Check cache first (include granularity in cache key)
       const cacheKey = getCacheKey('pages', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<PagesDataPoint[]>(cacheKey);
       if (cachedData) {
-        console.log('📦 [Analytics Service] Returning cached pages data:', cachedData.length, 'items');
         return cachedData;
       }
 
@@ -490,32 +454,8 @@ export class DashboardAnalyticsService {
         limit(1000) // Add limit to prevent excessive reads
       );
 
-      console.log('🔍 [Analytics Service] Executing simplified pages query (fetch all, filter in memory)...');
-      console.log('🔍 [Analytics Service] Query details:', {
-        collection: getCollectionName('pages'),
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        approach: 'fetch-all-filter-in-memory'
-      });
-
       await throttleQuery(); // Throttle query execution
       const snapshot = await getDocs(q);
-      console.log(`✅ [Analytics Service] Pages query successful, found ${snapshot.size} documents`);
-
-      // Log all documents found for debugging
-      console.log('🔍 [Analytics Service] All documents found:');
-      snapshot.forEach((doc, index) => {
-        const data = doc.data();
-        console.log(`  Document ${index + 1}:`, {
-          id: doc.id,
-          title: data.title,
-          createdAt: data.createdAt,
-          createdAtType: typeof data.createdAt,
-          createdAtToString: data.createdAt?.toString?.(),
-          deleted: data.deleted,
-          hasCreatedAt: !!data.createdAt
-        });
-      });
 
       // Group by time interval - simplified without public/private breakdown
       const dateMap = new Map<string, number>();
@@ -527,71 +467,35 @@ export class DashboardAnalyticsService {
       });
 
       // Count pages by creation date, filtering out deleted pages in memory
-      console.log('🔍 [Analytics Service] Processing documents...');
-      let processedCount = 0;
-      let skippedDeleted = 0;
-      let skippedNoCreatedAt = 0;
-      let skippedInvalidDate = 0;
-      let skippedOutOfRange = 0;
-      let addedToResults = 0;
 
-      snapshot.forEach((doc, index) => {
+      snapshot.forEach((doc) => {
         const data = doc.data();
         const createdAt = data.createdAt;
         const deleted = data.deleted;
-        processedCount++;
-
-        console.log(`🔍 [Analytics] Processing document ${index + 1}/${snapshot.size}:`, {
-          id: doc.id,
-          title: data.title,
-          deleted: deleted,
-          createdAt: createdAt,
-          createdAtType: typeof createdAt
-        });
 
         // Skip soft-deleted pages (filter in memory to avoid complex query)
         if (deleted === true) {
-          console.log(`⏭️ [Analytics] Skipping deleted page: ${doc.id}`);
-          skippedDeleted++;
           return;
         }
 
         if (!createdAt) {
-          console.log(`⏭️ [Analytics] Skipping page with no createdAt: ${doc.id}`);
-          skippedNoCreatedAt++;
           return;
         }
 
         let date: Date;
         if (createdAt instanceof Timestamp) {
           date = createdAt.toDate();
-          console.log(`📅 [Analytics] Converted Timestamp to Date: ${date.toISOString()}`);
         } else if (typeof createdAt === 'string') {
           date = new Date(createdAt);
-          console.log(`📅 [Analytics] Parsed string to Date: ${date.toISOString()}`);
         } else if (createdAt && typeof createdAt === 'object' && createdAt.seconds) {
           // Handle Firestore timestamp object
           date = new Date(createdAt.seconds * 1000);
-          console.log(`📅 [Analytics] Converted Firestore timestamp to Date: ${date.toISOString()}`);
         } else {
-          console.warn(`❌ [Analytics] Invalid createdAt format:`, createdAt, 'for page:', doc.id);
-          skippedInvalidDate++;
           return;
         }
 
         // Filter by date range in memory (like accounts analytics)
-        console.log(`🔍 [Analytics] Checking date range:`, {
-          pageDate: date.toISOString(),
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          isAfterStart: date >= startDate,
-          isBeforeEnd: date <= endDate,
-          isInRange: date >= startDate && date <= endDate
-        });
-
         if (date < startDate || date > endDate) {
-          console.log(`⏭️ [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
-          skippedOutOfRange++;
           return; // Skip pages outside the date range
         }
         // Find the appropriate interval bucket for this date (like accounts analytics)
@@ -610,19 +514,6 @@ export class DashboardAnalyticsService {
         const dateKey = timeConfig.formatKey(intervalDate);
         const currentCount = dateMap.get(dateKey) || 0;
         dateMap.set(dateKey, currentCount + 1);
-        addedToResults++;
-        console.log(`✅ [Analytics] Added page to results! Date: ${dateKey}, Count: ${currentCount + 1}`);
-      });
-
-      console.log('📊 [Analytics Service] Processing summary:', {
-        totalDocuments: snapshot.size,
-        processedCount,
-        skippedDeleted,
-        skippedNoCreatedAt,
-        skippedInvalidDate,
-        skippedOutOfRange,
-        addedToResults,
-        finalDateMapSize: dateMap.size
       });
 
       // Convert to chart data format - simplified without public/private breakdown
@@ -641,13 +532,6 @@ export class DashboardAnalyticsService {
         };
       });
 
-      console.log('📊 [Analytics Service] New pages result summary:', {
-        totalDays: result.length,
-        totalPages: result.reduce((sum, item) => sum + item.totalPages, 0),
-        daysWithData: result.filter(item => item.totalPages > 0).length,
-        sampleData: result.slice(0, 5)
-      });
-
       // Cache the result
       setCachedData(cacheKey, result);
       return result;
@@ -662,11 +546,6 @@ export class DashboardAnalyticsService {
    * Get cumulative pages data showing running total of active pages over time using aggregation
    */
   static async getCumulativePagesData(dateRange: DateRange, granularity?: number): Promise<CumulativePagesDataPoint[]> {
-    console.log('🔍 [Analytics Service] getCumulativePagesData called with dateRange:', {
-      startDate: dateRange.startDate.toISOString(),
-      endDate: dateRange.endDate.toISOString()
-    });
-
     try {
       // Check cache first
       const cacheKey = getCacheKey('cumulative-pages', dateRange) + (granularity ? `-g${granularity}` : '');
@@ -703,8 +582,6 @@ export class DashboardAnalyticsService {
       const globalCounters = await AnalyticsAggregationService.getGlobalCounters();
       const totalCount = globalCounters.totalPagesEverCreated;
 
-      console.log('📊 [Analytics Service] Total pages ever created:', totalCount);
-
       // Cache for 5 minutes since this changes infrequently
       setCachedData(cacheKey, totalCount);
       return totalCount;
@@ -720,9 +597,6 @@ export class DashboardAnalyticsService {
    * Queries the analytics_events collection for share_event events
    */
   static async getSharesAnalytics(dateRange: DateRange, granularity?: number): Promise<SharesDataPoint[]> {
-    console.log('🔍 [Analytics Service] getSharesAnalytics called with:', { dateRange, granularity });
-    console.log('🔍 [Analytics Service] Will query collection:', getCollectionName('analytics_events'));
-
     try {
       // Check cache first (include granularity in cache key)
       const cacheKey = getCacheKey('shares', dateRange) + (granularity ? `-g${granularity}` : '');
@@ -754,17 +628,8 @@ export class DashboardAnalyticsService {
         limit(1000)
       );
 
-      console.log('🔍 [Analytics Service] Executing shares query...');
-      console.log('🔍 [Analytics Service] Query details:', {
-        collection: getCollectionName('analytics_events'),
-        eventType: 'share_event',
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      });
-
       await throttleQuery();
       const snapshot = await getDocs(q);
-      console.log(`✅ [Analytics Service] Shares query successful, found ${snapshot.size} events`);
 
       // Aggregate share events by time interval
       snapshot.forEach(doc => {
@@ -822,26 +687,12 @@ export class DashboardAnalyticsService {
         };
       });
 
-      console.log('📊 [Analytics Service] Shares result summary:', {
-        totalIntervals: result.length,
-        totalShares: result.reduce((sum, item) => sum + item.total, 0),
-        totalSuccessful: result.reduce((sum, item) => sum + item.successful, 0),
-        totalAborted: result.reduce((sum, item) => sum + item.aborted, 0),
-        intervalsWithData: result.filter(item => item.total > 0).length
-      });
-
       // Cache the result
       setCachedData(cacheKey, result);
       return result;
 
     } catch (error) {
       console.error('Error fetching shares analytics:', error);
-      console.error('Error details:', {
-        code: (error as any)?.code,
-        message: (error as any)?.message,
-        collection: getCollectionName('analytics_events')
-      });
-
       // Return empty data - no mock data
       return [];
     }
@@ -884,10 +735,8 @@ export class DashboardAnalyticsService {
         limit(1000) // Add limit to prevent excessive reads
       );
 
-      console.log('🔍 [Analytics Service] Executing optimized edits query...');
       await throttleQuery(); // Throttle query execution
       const snapshot = await getDocs(q);
-      console.log(`✅ [Analytics Service] Edits query successful, found ${snapshot.size} documents`);
 
       // Count edits by modification date
       snapshot.forEach(doc => {
@@ -933,12 +782,7 @@ export class DashboardAnalyticsService {
               const dateKey = timeConfig.formatKey(intervalDate);
               const currentCount = dateMap.get(dateKey) || 0;
               dateMap.set(dateKey, currentCount + 1);
-              console.log(`📊 [Analytics] Found page edit on ${dateKey}, count now: ${currentCount + 1}`);
-            } else {
-              console.log(`📊 [Analytics] Page ${doc.id} edited outside date range: ${modDate.toISOString()}`);
             }
-          } else {
-            console.log(`📊 [Analytics] Page ${doc.id} not counted as edit (same creation/modification time)`);
           }
         }
       });
@@ -955,13 +799,6 @@ export class DashboardAnalyticsService {
           count,
           label: timeConfig.formatLabel(date)
         };
-      });
-
-      console.log('📊 [Analytics Service] Edits result summary:', {
-        totalDays: result.length,
-        totalEdits: result.reduce((sum, item) => sum + item.count, 0),
-        daysWithData: result.filter(item => item.count > 0).length,
-        sampleData: result.slice(0, 5)
       });
 
       // Cache the result
@@ -1010,10 +847,8 @@ export class DashboardAnalyticsService {
         limit(1000)
       );
 
-      console.log('🔍 [Analytics Service] Executing content changes query...');
       await throttleQuery();
       const snapshot = await getDocs(q);
-      console.log(`✅ [Analytics Service] Content changes query successful, found ${snapshot.size} events`);
 
       // Aggregate content changes by time interval
       snapshot.forEach(doc => {
@@ -1060,24 +895,12 @@ export class DashboardAnalyticsService {
         };
       });
 
-      console.log('📊 [Analytics Service] Content changes result summary:', {
-        totalIntervals: result.length,
-        totalAdded: result.reduce((sum, item) => sum + item.charactersAdded, 0),
-        totalDeleted: result.reduce((sum, item) => sum + item.charactersDeleted, 0),
-        intervalsWithData: result.filter(item => item.charactersAdded > 0 || item.charactersDeleted > 0).length
-      });
-
       // Cache the result
       setCachedData(cacheKey, result);
       return result;
 
     } catch (error) {
       console.error('Error fetching content changes analytics:', error);
-      console.error('Error details:', {
-        code: (error as any)?.code,
-        message: (error as any)?.message,
-        collection: getCollectionName('analytics_events')
-      });
 
       // Return mock data for development/testing
       const timeConfig = getTimeIntervals(dateRange, granularity);
@@ -1091,7 +914,6 @@ export class DashboardAnalyticsService {
         };
       });
 
-      console.log('📊 [Analytics Service] Returning mock content changes data:', mockData.length, 'intervals');
       return mockData;
     }
   }
@@ -1142,7 +964,6 @@ export class DashboardAnalyticsService {
     try {
       // Early return if dateRange is not properly initialized
       if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
-        console.log('🔍 [Analytics Service] getPWAInstallsAnalytics - dateRange not initialized');
         return [];
       }
 
@@ -1176,10 +997,8 @@ export class DashboardAnalyticsService {
         limit(1000)
       );
 
-      console.log('🔍 [Analytics Service] Executing PWA installs query...');
       await throttleQuery();
       const snapshot = await getDocs(q);
-      console.log(`✅ [Analytics Service] PWA installs query successful, found ${snapshot.size} events`);
 
       // Count PWA installations by time interval
       // Only count 'app_installed' events as actual installations
@@ -1219,12 +1038,6 @@ export class DashboardAnalyticsService {
         };
       });
 
-      console.log('📊 [Analytics Service] PWA installs result summary:', {
-        totalIntervals: result.length,
-        totalInstalls: result.reduce((sum, item) => sum + item.count, 0),
-        intervalsWithData: result.filter(item => item.count > 0).length
-      });
-
       // Cache the result
       setCachedData(cacheKey, result);
       return result;
@@ -1239,8 +1052,6 @@ export class DashboardAnalyticsService {
    * Get all dashboard metrics in a single call with optimized batching
    */
   static async getAllMetrics(dateRange: DateRange): Promise<DashboardMetrics> {
-    console.log('🔄 [Analytics Service] getAllMetrics called, executing batch queries...');
-
     try {
       // Execute queries in smaller batches to reduce load
       // Batch 1: Core metrics (accounts and pages)
@@ -1261,8 +1072,6 @@ export class DashboardAnalyticsService {
         this.getPWAInstallsAnalytics(dateRange)
       ]);
 
-      console.log('✅ [Analytics Service] All metrics fetched successfully');
-
       return {
         newAccountsCreated,
         newPagesCreated,
@@ -1272,7 +1081,7 @@ export class DashboardAnalyticsService {
         pwaInstallsAnalytics
       };
     } catch (error) {
-      console.error('❌ [Analytics Service] Error fetching dashboard metrics:', error);
+      console.error('Error fetching dashboard metrics:', error);
       return {
         newAccountsCreated: [],
         newPagesCreated: [],
@@ -1322,7 +1131,6 @@ export class DashboardAnalyticsService {
     try {
       // Early return if dateRange is not properly initialized
       if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
-        console.log('🔍 [Analytics Service] getVisitorAnalytics - dateRange not initialized');
         return [];
       }
 
@@ -1402,7 +1210,7 @@ export class DashboardAnalyticsService {
       return result;
 
     } catch (error) {
-      console.error('❌ [Analytics Service] Error fetching visitor analytics:', error);
+      console.error('Error fetching visitor analytics:', error);
       return [];
     }
   }

@@ -9,13 +9,12 @@
 
 import { createReplyAttribution } from './linkUtils';
 import { getUsernameById } from './userUtils';
+import type { Page } from '../types/database';
 
-interface PageData {
-  id: string;
-  title: string;
-  userId: string;
-  username?: string;
-}
+/**
+ * Page data type for reply operations - uses centralized Page type
+ */
+type PageData = Pick<Page, 'id' | 'title' | 'userId'> & { username?: string };
 
 interface VersionData {
   content: string;

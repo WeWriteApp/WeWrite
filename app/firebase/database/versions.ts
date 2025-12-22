@@ -50,7 +50,6 @@ export const getVersionsByPageId = async (pageId: string): Promise<PageVersion[]
 export const getPageVersionById = async (pageId: string, versionId: string): Promise<PageVersion | null> => {
   try {
     if (!pageId || !versionId) {
-      console.error("getPageVersionById called with invalid parameters:", { pageId, versionId });
       return null;
     }
 
@@ -59,7 +58,6 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
     const versionSnap = await getDoc(versionRef);
 
     if (!versionSnap.exists()) {
-      console.error(`Version ${versionId} not found for page ${pageId}`);
       return null;
     }
 
@@ -79,21 +77,8 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
           };
         }
       } catch (prevError) {
-        console.error("Error fetching previous version:", prevError);
         // Continue without previous version
       }
-    }
-
-    // Debug logging for version content
-    if (process.env.NODE_ENV === 'development') {
-      console.log('getPageVersionById - returning version data:', {
-        pageId,
-        versionId,
-        hasContent: !!versionData.content,
-        contentType: typeof versionData.content,
-        contentLength: versionData.content?.length,
-        contentPreview: versionData.content?.substring(0, 100)
-      });
     }
 
     // Return version data with ID and previous version if available
@@ -107,7 +92,6 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
       ...versionData
     } as PageVersion;
   } catch (error) {
-    console.error("Error fetching page version:", error);
     return null;
   }
 };
@@ -118,7 +102,6 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
 export const getPageVersions = async (pageId: string, versionCount: number = 10): Promise<any[]> => {
   try {
     if (!pageId) {
-      console.error("getPageVersions called with invalid pageId:", pageId);
       return [];
     }
 
@@ -159,7 +142,6 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
             content: data.content || ""
           };
         } catch (err) {
-          console.error(`Error processing version doc ${doc.id}:`, err);
           return null;
         }
       }).filter(version => version !== null);
@@ -178,11 +160,8 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
     } catch (innerError) {
       // Handle permission denied errors gracefully - this is expected for private pages
       if (innerError?.code === 'permission-denied') {
-        console.log(`Permission denied accessing versions for page ${pageId} - this is expected for private pages`);
         return [];
       }
-
-      console.error("Error with simple version fetch, falling back:", innerError);
 
       // Fallback to the original query (which might still fail if index doesn't exist)
       try {
@@ -224,7 +203,6 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
               content: data.content || ""
             };
           } catch (err) {
-            console.error(`Error processing version doc ${doc.id}:`, err);
             return null;
           }
         }).filter(version => version !== null);
@@ -232,21 +210,11 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
         return versions;
       } catch (queryError) {
         // Handle permission denied errors gracefully - this is expected for private pages
-        if (queryError?.code === 'permission-denied') {
-          console.log(`Permission denied accessing versions for page ${pageId} (fallback query) - this is expected for private pages`);
-          return [];
-        }
-        console.error("Error with fallback query:", queryError);
         return [];
       }
     }
   } catch (e) {
     // Handle permission denied errors gracefully - this is expected for private pages
-    if (e?.code === 'permission-denied') {
-      console.log(`Permission denied accessing versions for page ${pageId} - this is expected for private pages`);
-      return [];
-    }
-    console.error("Error fetching page versions:", e);
     return [];
   }
 };
@@ -257,14 +225,12 @@ const pageRef = doc(db, getCollectionName("pages"), pageId);
 export const setCurrentVersion = async (pageId: string, versionId: string): Promise<boolean> => {
   try {
     if (!pageId || !versionId) {
-      console.error("setCurrentVersion called with invalid parameters:", { pageId, versionId });
       return false;
     }
 
     // Get the version to restore
     const versionData = await getPageVersionById(pageId, versionId);
     if (!versionData) {
-      console.error(`Version ${versionId} not found for page ${pageId}`);
       return false;
     }
 
@@ -278,10 +244,8 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), {
       lastModified: Timestamp.now()
     }, { merge: true });
 
-    console.log(`Successfully set version ${versionId} as current for page ${pageId}`);
     return true;
   } catch (error) {
-    console.error("Error setting current version:", error);
     return false;
   }
 };
@@ -291,13 +255,6 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), {
  */
 export const saveNewVersion = async (pageId: string, data: any): Promise<any> => {
   try {
-    console.log('🔵 VERSION: Starting version save process', {
-      pageId,
-      userId: data.userId,
-      username: data.username,
-      hasContent: !!data.content,
-      contentType: typeof data.content
-    });
     logger.info('Starting version save process', {
       pageId,
       userId: data.userId,
@@ -307,35 +264,22 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
 
     // Validate content to prevent saving empty versions
     if (!data.content) {
-      console.error('🔴 VERSION: Cannot save empty content', { pageId });
       logger.error("Cannot save empty content", { pageId }, 'VERSION_SAVE');
       return null;
     }
 
     // Ensure content is a string
-    console.log('🔵 VERSION: Processing content', {
-      contentType: typeof data.content,
-      isString: typeof data.content === 'string'
-    });
     let contentString = typeof data.content === 'string'
       ? data.content
       : JSON.stringify(data.content);
-    console.log('🔵 VERSION: Content processed', {
-      contentStringLength: contentString.length,
-      contentStringSample: contentString.substring(0, 100)
-    });
 
     // CRITICAL FIX: Allow empty content structures to be saved
     // Users should be able to save pages with just a title
     if (contentString === '{}' || contentString === '') {
-      console.log("Empty content detected, creating default structure");
       contentString = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
     } else if (contentString === '[]') {
-      console.log("Empty array content detected, creating default structure");
       contentString = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
     }
-
-    console.log('Content string to save:', contentString.substring(0, 100) + '...');
 
     // Parse content to validate it's proper JSON
     let parsedContent;
@@ -345,14 +289,10 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       // CRITICAL FIX: Allow empty content to be saved
       // Users should be able to save pages with just a title and no content
       if (Array.isArray(parsedContent)) {
-        // Content is valid if it's an array (even if empty)
-        console.log("Content validation passed - array format is valid, length:", parsedContent.length);
-
         // If content is empty, create a default paragraph structure
         if (parsedContent.length === 0) {
           parsedContent = [{ type: "paragraph", children: [{ text: "" }] }];
           contentString = JSON.stringify(parsedContent);
-          console.log("Created default content structure for empty page");
         }
       }
 
@@ -360,14 +300,12 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       // but no notifications are created
 
     } catch (parseError) {
-      console.error("Error parsing content JSON:", parseError);
       return null;
     }
 
     // Get the current page to find the current version
 const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     if (!pageDoc.exists()) {
-      console.error("Page not found:", pageId);
       return null;
     }
 
@@ -378,21 +316,13 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     // Enhanced no-op detection: Check if content has changed using centralized logic
     let isNoOpEdit = false;
     if (pageData.content) {
-      console.log('Checking if content has changed before creating version...');
-
       if (!hasContentChangedSync(contentString, pageData.content)) {
         isNoOpEdit = true;
-        console.log('Content unchanged after normalization - this is a no-op edit');
 
         // If skipIfUnchanged is true, skip version creation entirely
         if (data.skipIfUnchanged) {
-          console.log('Skipping version creation for no-op edit');
           return { success: false, message: 'Content unchanged' };
-        } else {
-          console.log('Creating version for no-op edit (skipIfUnchanged=false) but marking as no-op');
         }
-      } else {
-        console.log('Content has changed, proceeding with version creation');
       }
     }
 
@@ -422,33 +352,15 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       const currentPageContent = pageSnap.exists() ? pageSnap.data().content || '' : '';
 
       diffResult = await calculateDiff(contentString, currentPageContent);
-      console.log("Diff calculated before page update:", {
-        added: diffResult.added,
-        removed: diffResult.removed,
-        hasPreview: !!diffResult.preview
-      });
     } catch (diffError) {
-      console.error("Error calculating diff (non-fatal):", diffError);
+      // Error calculating diff - non-fatal
     }
 
     // Create the new version document
-    console.log('🔵 VERSION: Creating new version document', {
-      pageId,
-      collectionPath: `${getCollectionName("pages")}/${pageId}/versions`,
-      versionDataKeys: Object.keys(versionData)
-    });
-
     let versionRef;
     try {
       versionRef = await addDoc(collection(db, getCollectionName("pages"), pageId, "versions"), versionData);
-      console.log("✅ VERSION: Created new version with ID:", versionRef.id);
     } catch (versionError) {
-      console.error("🔴 VERSION: Failed to create version document:", {
-        error: versionError.message,
-        code: versionError.code,
-        pageId,
-        collectionPath: `${getCollectionName("pages")}/${pageId}/versions`
-      });
       throw versionError;
     }
 
@@ -472,25 +384,10 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
         isNewPage: true
       } : null)
     };
-    console.log('🔵 VERSION: Updating page document with', {
-      pageId,
-      currentVersion: versionRef.id,
-      contentLength: contentString.length,
-      lastModified: now,
-      hasDiff: !!diffResult,
-      collectionPath: `${getCollectionName("pages")}/${pageId}`
-    });
 
     try {
       await setDoc(doc(db, getCollectionName("pages"), pageId), pageUpdateData, { merge: true });
-      console.log("✅ VERSION: Page document updated successfully");
     } catch (pageUpdateError) {
-      console.error("🔴 VERSION: Failed to update page document:", {
-        error: pageUpdateError.message,
-        code: pageUpdateError.code,
-        pageId,
-        collectionPath: `${getCollectionName("pages")}/${pageId}`
-      });
       throw pageUpdateError;
     }
 
@@ -500,18 +397,14 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
 
     // CRITICAL FIX: Invalidate cache after saving new version
     try {
-      console.log('🗑️ [VERSION CLIENT] Invalidating cache for page:', pageId);
-
       // Import cache invalidation utilities
       const { invalidateCache } = await import('../../utils/serverCache');
 
       // Invalidate unified cache
       invalidateCache.page(pageId);
       if (data.userId) invalidateCache.user(data.userId);
-
-      console.log('✅ [VERSION CLIENT] Cache invalidation completed for page:', pageId);
     } catch (cacheError) {
-      console.error('⚠️ [VERSION CLIENT] Cache invalidation failed (non-fatal):', cacheError);
+      // Cache invalidation failed - non-fatal
     }
 
     // Sync to Algolia for real-time search updates
@@ -535,14 +428,11 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
           lastModified: now,
           createdAt: pageSyncData.createdAt,
         });
-        console.log('✅ VERSION: Algolia sync completed');
       }
     } catch (algoliaError) {
       // Don't fail the save if Algolia sync fails
-      console.error('⚠️ VERSION: Algolia sync failed (non-fatal):', algoliaError);
     }
 
-    console.log("✅ VERSION: Successfully saved new version and updated page");
     return {
       success: true,
       versionId: versionRef.id
@@ -563,16 +453,6 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       collectionName: getCollectionName("pages"),
       timestamp: new Date().toISOString()
     };
-
-    console.error("🔴 VERSION: Error saving new version:", {
-      error: {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code
-      },
-      context: errorContext
-    });
 
     logger.critical("Version save failed", {
       error: error.message,

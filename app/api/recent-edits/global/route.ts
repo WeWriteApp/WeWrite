@@ -21,20 +21,14 @@ try {
     const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
     const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
     const serviceAccount = JSON.parse(decodedJson);
-    console.log('[Global Recent Edits Admin SDK] Initializing with project:', serviceAccount.project_id);
-    console.log('[Global Recent Edits Admin SDK] Client email:', serviceAccount.client_email);
 
     globalRecentEditsApp = initializeApp({
       credential: cert({
         projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
         clientEmail: serviceAccount.client_email,
         privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})}, 'global-recent-edits-app');
-    console.log('[Global Recent Edits Admin SDK] Initialized successfully');
-  } else {
-    console.log('[Global Recent Edits Admin SDK] Using existing app');
   }
 } catch (error) {
-  console.error('[Global Recent Edits Admin SDK] Initialization failed:', error);
   throw error;
 }
 
@@ -68,18 +62,6 @@ export async function GET(request: NextRequest) {
     const followingOnly = searchParams.get('followingOnly') === 'true';
     const cursor = searchParams.get('cursor');
 
-    console.log(`🌍 [GLOBAL_RECENT_EDITS] User ID: ${userId} (from ${searchParams.get('userId') ? 'query params' : 'auth'}), includeOwn: ${includeOwn}`);
-
-    // Log environment detection for debugging
-    const { logEnvironmentConfig } = await import('../../../utils/environmentConfig');
-    logEnvironmentConfig();
-
-    // Debug: Log collection names being used
-    console.log('🔍 DEBUG: Collection names being used:', {
-      users: await getCollectionNameAsync('users'),
-      subscriptions: await getCollectionNameAsync('subscriptions')
-    });
-
     // SIMPLIFIED CACHING: Use server cache system
     const { cacheHelpers } = await import('../../../utils/serverCache');
     const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${cursor || 'first'}`;
@@ -88,11 +70,6 @@ export async function GET(request: NextRequest) {
 
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;
-
-    console.log('🔄 GLOBAL RECENT EDITS: Fetching recent edits from pages collection (simplified activity system)');
-
-    // SIMPLIFIED: Use the same approach as homepage recent edits that works
-    console.log(`🔄 [GLOBAL_RECENT_EDITS] Using pages collection approach (same as working homepage)`);
 
     let pagesQuery;
 
@@ -109,7 +86,6 @@ export async function GET(request: NextRequest) {
 
       // Add cursor support for pagination
       if (cursor) {
-        console.log(`🔄 [GLOBAL_RECENT_EDITS] Using cursor: ${cursor}`);
         pagesQuery = pagesQuery.startAfter(cursor);
       }
 
@@ -126,7 +102,6 @@ export async function GET(request: NextRequest) {
 
       // Add cursor support for pagination
       if (cursor) {
-        console.log(`🔄 [GLOBAL_RECENT_EDITS] Using cursor: ${cursor}`);
         pagesQuery = pagesQuery.startAfter(cursor);
       }
 
@@ -140,8 +115,6 @@ export async function GET(request: NextRequest) {
 
     // Track query for cost optimization monitoring
     trackQuery('global-recent-edits', pagesSnapshot.docs.length, queryTime, true);
-
-    console.log(`📊 [GLOBAL_RECENT_EDITS] Found ${pagesSnapshot.docs.length} pages from Firestore (${queryTime}ms, date-filtered)`);
 
     if (pagesSnapshot.empty) {
       return NextResponse.json({
@@ -179,14 +152,11 @@ export async function GET(request: NextRequest) {
 
       // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
       if (!includeOwn && page.userId === userId) {
-        console.log(`🔍 [GLOBAL_RECENT_EDITS] Hiding own edit: ${page.title} by ${page.username}`);
         return false;
       }
 
       return true;
     });
-
-    console.log(`🔍 [GLOBAL_RECENT_EDITS] After filtering: ${filteredPages.length} pages`);
 
     // Convert to edits format
     const edits = filteredPages
@@ -249,15 +219,6 @@ export async function GET(request: NextRequest) {
         };
       });
 
-    console.log(`🔍 [GLOBAL_RECENT_EDITS] Final edits: ${edits.length}`);
-    if (edits.length > 0) {
-      console.log(`🔍 [GLOBAL_RECENT_EDITS] Most recent edit:`, {
-        title: edits[0].title,
-        lastModified: edits[0].lastModified,
-        source: edits[0].source
-      });
-    }
-
     // Fetch subscription data for all unique user IDs
     const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
     const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
@@ -287,8 +248,6 @@ export async function GET(request: NextRequest) {
       ? enhancedEdits[enhancedEdits.length - 1].lastModified
       : null;
 
-    console.log(`🔄 [GLOBAL_RECENT_EDITS] Pagination info: totalFetched=${totalFetched}, filteredPages=${filteredPages.length}, enhancedEdits=${enhancedEdits.length}, hasMore=${hasMorePages}, nextCursor=${nextCursor}`);
-
     const responseData = {
       edits: enhancedEdits,
       hasMore: hasMorePages,
@@ -305,7 +264,6 @@ export async function GET(request: NextRequest) {
     ));
 
   } catch (error) {
-    console.error('Error fetching global recent edits:', error);
     return NextResponse.json(
       {
         error: 'Failed to fetch global recent edits',
@@ -355,7 +313,6 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
               subscription: subscriptionData
             };
           } catch (error) {
-            console.warn(`Error fetching subscription for user ${userId}:`, error);
             return { userId, subscription: null };
           }
         });
@@ -393,12 +350,12 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
         });
 
       } catch (error) {
-        console.warn(`Error fetching batch ${i}-${i + batchSize}:`, error);
+        // Silently continue to next batch
       }
     }
 
   } catch (error) {
-    console.error('Error in fetchBatchUserData:', error);
+    // Silently handle error
   }
 
   return results;
