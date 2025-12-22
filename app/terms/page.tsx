@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | WeWrite',
+  title: 'Terms of Service',
   description: 'WeWrite Terms of Service - Read our terms and conditions for using the WeWrite platform.',
 };
 

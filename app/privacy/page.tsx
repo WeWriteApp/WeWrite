@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | WeWrite',
+  title: 'Privacy Policy',
   description: 'WeWrite Privacy Policy - Learn how we collect, use, and protect your information.',
 };
 

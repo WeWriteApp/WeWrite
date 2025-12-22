@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!isValidVertical(verticalSlug)) {
     return {
-      title: 'Page Not Found | WeWrite',
+      title: 'Page Not Found',
     };
   }
 

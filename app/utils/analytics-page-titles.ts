@@ -23,6 +23,16 @@ const trackedPages = new Set<string>();
 const pendingAnalyticsUpdates = new Map<string, NodeJS.Timeout>();
 
 /**
+ * Strip " | WeWrite" suffix from titles for cleaner analytics
+ * Browser tabs can show "Home | WeWrite" but GA should just show "Home"
+ */
+function stripWeWriteSuffix(title: string): string {
+  if (!title) return title;
+  // Remove " | WeWrite" suffix (and handle potential duplicates like " | WeWrite | WeWrite")
+  return title.replace(/(\s*\|\s*WeWrite)+$/gi, '').trim();
+}
+
+/**
  * Extract a page ID from a URL path
  *
  * @param path - The URL path to extract from
@@ -128,6 +138,19 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
  * @returns Standardized page title for analytics
  */
 export function getAnalyticsPageTitle(
+  pathname: string,
+  searchParams?: URLSearchParams | null,
+  documentTitle?: string
+): string {
+  // Strip " | WeWrite" from document title before processing
+  const cleanDocumentTitle = documentTitle ? stripWeWriteSuffix(documentTitle) : documentTitle;
+
+  // Call internal function and strip suffix from result
+  const result = getAnalyticsPageTitleInternal(pathname, searchParams, cleanDocumentTitle);
+  return stripWeWriteSuffix(result);
+}
+
+function getAnalyticsPageTitleInternal(
   pathname: string,
   searchParams?: URLSearchParams | null,
   documentTitle?: string

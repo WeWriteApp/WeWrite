@@ -104,7 +104,7 @@ export async function generateMetadata({
   // Skip metadata fetch for special routes
   if (id === 'new' || id.startsWith('new:')) {
     return {
-      title: 'New Page | WeWrite',
+      title: 'New Page',
     };
   }
 
@@ -117,7 +117,7 @@ export async function generateMetadata({
       const description = result.pageData.content?.[0]?.children?.[0]?.text?.slice(0, 160) || '';
 
       return {
-        title: `${title} | WeWrite`,
+        title: title,
         description: description || `Read "${title}" on WeWrite`,
         openGraph: {
           title: title,
@@ -131,7 +131,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: 'Page | WeWrite',
+    title: 'Page',
   };
 }
 
