@@ -16,21 +16,17 @@ export default function WelcomePage() {
     // If not, redirect to onboarding instead of showing welcome
     const checkNativeOnboarding = () => {
       const native = isNativeApp();
-      console.log('[WelcomePage] isNativeApp:', native);
 
       if (native) {
         const onboardingComplete = localStorage.getItem('wewrite_mobile_onboarding_complete');
-        console.log('[WelcomePage] onboardingComplete:', onboardingComplete);
 
         if (onboardingComplete !== 'true') {
-          console.log('[WelcomePage] Redirecting to /onboarding');
           router.replace('/onboarding');
           return;
         }
 
         // If authenticated on native and onboarding is complete, go to home
         if (isAuthenticated) {
-          console.log('[WelcomePage] Native + authenticated, redirecting to /home');
           router.replace('/home');
           return;
         }

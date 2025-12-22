@@ -352,17 +352,16 @@ export function getAnalyticsPageTitle(
                       page_title: `Page: ${contentTitle} by ${fetchedUsername}`,
                       page_location: window.location.href
                     });
-                    console.log('Updated analytics with fetched username:', fetchedUsername);
                   }
                 }
               } catch (error) {
-                console.error('Error fetching username for analytics:', error);
+                // Failed to fetch username - non-fatal
               }
             }, 500);
           }
         }
       } catch (error) {
-        console.error('Error trying to get username from page data:', error);
+        // Failed to get username from page data - non-fatal
       }
 
       return `Page: ${contentTitle}`;
@@ -569,11 +568,9 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
     // Skip if we already have this in cache, but still try to update with username
     if (pageTitleCache.has(pageId)) {
       const cachedTitle = pageTitleCache.get(pageId);
-      console.log(`Using cached title for ${pageId}: ${cachedTitle}`);
 
       // Even if we have the title cached, we might need to update analytics with the group name or username
       try {
-        console.log('📊 [ANALYTICS] Fetching page metadata via API for:', pageId);
         const response = await pageApi.getPage(pageId);
         const metadata = response.success ? response.data : null;
         if (metadata) {
@@ -588,7 +585,6 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
                 page_title: pageTitle,
                 page_location: window.location.href
               });
-              console.log('Updated analytics with cached title and group name:', pageTitle);
             }
           } else {
             // For regular pages, try to get the username
@@ -612,7 +608,7 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
                   username = fetchedUsername;
                 }
               } catch (error) {
-                console.error('Error fetching username by ID:', error);
+                // Failed to fetch username by ID - non-fatal
               }
             }
 
@@ -626,13 +622,12 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
                   page_title: pageTitle,
                   page_location: window.location.href
                 });
-                console.log('Updated analytics with cached title and fetched username:', pageTitle);
               }
             }
           }
         }
       } catch (error) {
-        console.error('Error updating analytics with username:', error);
+        // Failed to update analytics with username - non-fatal
       }
 
       return;
@@ -640,7 +635,6 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
 
     // Try to get the page metadata directly
     try {
-      console.log('📊 [ANALYTICS] Fetching page metadata via API for:', pageId);
       const response = await pageApi.getPage(pageId);
       const metadata = response.success ? response.data : null;
       if (metadata && metadata.title && metadata.title !== 'Untitled') {
@@ -678,7 +672,7 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
                   username = fetchedUsername;
                 }
               } catch (error) {
-                console.error('Error fetching username by ID:', error);
+                // Failed to fetch username by ID - non-fatal
               }
             }
 
@@ -693,17 +687,14 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
             page_title: pageTitle,
             page_location: window.location.href
           });
-
-          console.log('Updated analytics with actual page title:', pageTitle);
         }
         return;
       }
     } catch (metadataError) {
-      console.error('Error fetching page metadata:', metadataError);
+      // Failed to fetch page metadata - non-fatal
     }
 
     // If direct metadata fetch failed, try the API approach
-    console.log('📊 [ANALYTICS] Fallback: fetching page title via API for:', pageId);
     const fallbackResponse = await pageApi.getPage(pageId);
     const title = fallbackResponse.success ? fallbackResponse.data?.title : null;
 
@@ -760,8 +751,6 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
           page_title: pageTitle,
           page_location: window.location.href
         });
-
-        console.log('Updated analytics with fetched page title:', pageTitle);
       }
     } else {
       // Even if we couldn't get a good title, update GA with a better generic title
@@ -832,12 +821,10 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
           page_title: pageTitle,
           page_location: window.location.href
         });
-
-        console.log('Updated analytics with improved generic page title:', pageTitle);
       }
     }
   } catch (error) {
-    console.error('Error fetching page title for analytics:', error);
+    // Failed to fetch page title for analytics - non-fatal
   }
 }
 
@@ -977,7 +964,6 @@ export function trackPageViewWhenReady(
   if (isReady) {
     const cacheKey = `${pageId}_${title}`;
     if (!trackedPages.has(cacheKey)) {
-      console.log('Content ready for analytics:', title);
       // Mark this page as tracked to prevent duplicate processing
       trackedPages.add(cacheKey);
     }
@@ -1002,8 +988,6 @@ export function trackPageViewWhenReady(
 
     pendingAnalyticsUpdates.set(pageId, timeout);
   } else {
-    console.log('Max retries reached for tracking page view, using best available title:', title);
-
     // Track with the best title we have as a last resort
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
@@ -1029,7 +1013,6 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
       const cachedTitle = pageTitleCache.get(pageId);
 
       // Try to get the full metadata to include group name or username
-      console.log('📊 [ANALYTICS] Fetching metadata for cached title:', pageId);
       const response = await pageApi.getPage(pageId);
       const metadata = response.success ? response.data : null;
 
@@ -1059,7 +1042,7 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
               username = fetchedUsername;
             }
           } catch (error) {
-            console.error('Error fetching username by ID:', error);
+            // Failed to fetch username by ID - non-fatal
           }
         }
 
@@ -1073,7 +1056,6 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
     }
 
     // Fetch from API
-    console.log('📊 [ANALYTICS] Fetching page metadata from API:', pageId);
     const response = await pageApi.getPage(pageId);
     const metadata = response.success ? response.data : null;
     if (metadata?.title) {
@@ -1106,7 +1088,7 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
               username = fetchedUsername;
             }
           } catch (error) {
-            console.error('Error fetching username by ID:', error);
+            // Failed to fetch username by ID - non-fatal
           }
         }
 
@@ -1119,7 +1101,7 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
       }
     }
   } catch (error) {
-    console.error('Error fetching page title for analytics:', error);
+    // Failed to fetch page title for analytics - non-fatal
   }
 
   // Return a better generic title instead of showing the ID
